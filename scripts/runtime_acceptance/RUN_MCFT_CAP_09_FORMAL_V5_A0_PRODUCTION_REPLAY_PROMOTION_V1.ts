@@ -76,6 +76,8 @@ const EXPECTED_TYPES=[
 const DEFAULT_ARM=path.join(os.homedir(),".geox","mcft-cap09","formal-v5","arm-v1.json");
 const DEFAULT_SCHEMA=path.join(os.homedir(),".geox","mcft-cap09","formal-v5","schema-acl-v1.json");
 const DEFAULT_OUT=path.join(os.homedir(),".geox","mcft-cap09","formal-v5","a0-production-replay-promotion-v1.json");
+const POST_ARM_CONTINUITY_VERIFIER="scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs";
+const DEFAULT_CONTINUITY=path.join(os.homedir(),".geox","mcft-cap09","formal-v5","post-arm-authority-continuity-v1.json");
 
 type SourceFactV1={
   fact_id:string;
@@ -298,9 +300,9 @@ async function main():Promise<void>{
   if(!process.argv.includes("--operator-authorized"))throw new Error("FORMAL_V5_A0_REPLAY_OPERATOR_AUTHORIZATION_REQUIRED");
 
   execFileSync("git",["fetch","--no-tags","origin","main"],{cwd:ROOT,stdio:"ignore"});
-  const subject=execFileSync("git",["rev-parse","HEAD"],{cwd:ROOT,encoding:"utf8"}).trim();
+  const authorityContinuityHead=execFileSync("git",["rev-parse","HEAD"],{cwd:ROOT,encoding:"utf8"}).trim();
   const currentMain=execFileSync("git",["rev-parse","origin/main"],{cwd:ROOT,encoding:"utf8"}).trim();
-  assert.equal(subject,currentMain,"FORMAL_V5_A0_REPLAY_HEAD_MUST_EQUAL_CURRENT_MAIN");
+  assert.equal(authorityContinuityHead,currentMain,"FORMAL_V5_A0_REPLAY_HEAD_MUST_EQUAL_CURRENT_MAIN");
   assert.equal(execFileSync("git",["status","--porcelain"],{cwd:ROOT,encoding:"utf8"}).trim(),"","FORMAL_V5_A0_REPLAY_WORKTREE_MUST_BE_CLEAN");
 
   const armPath=path.resolve(arg("--arm")||DEFAULT_ARM);
@@ -311,14 +313,14 @@ async function main():Promise<void>{
   const schema=readJson(schemaPath);
   assert.equal(arm.schema_version,"geox_mcft_cap09_formal_v5_arm_v1");
   assert.equal(arm.status,"PASS");
-  assert.equal(arm.subject_sha,subject);
+  if(!/^[0-9a-f]{40}$/.test(String(arm.subject_sha||"")))throw new Error("FORMAL_V5_A0_REPLAY_ARM_SUBJECT_INVALID");
   assert.equal(arm.formal_database_name,TARGET_DB);
   assert.equal(arm.formal_v5_arm,true);
   assert.equal(arm.a0_bootstrap,false);
   assert.equal(arm.o00_started,false);
   assert.equal(schema.schema_version,"geox_mcft_cap09_formal_v5_schema_acl_materialization_v1");
   assert.ok(["PASS","PASS_ALREADY_MATERIALIZED_IDEMPOTENT"].includes(schema.status));
-  assert.equal(schema.subject_sha,subject);
+  assert.equal(schema.subject_sha,arm.subject_sha);
   assert.equal(schema.database_name,TARGET_DB);
   assert.equal(schema.public_table_count,29);
   assert.equal(schema.public_routine_count,2);
@@ -327,6 +329,23 @@ async function main():Promise<void>{
 
   const a0=exactHour(arm.a0,"FORMAL_V5_A0_REPLAY_ARM_A0_INVALID");
   const o00=exactHour(arm.o00,"FORMAL_V5_A0_REPLAY_ARM_O00_INVALID");
+  const continuityPath=path.resolve(arg("--continuity-proof")||DEFAULT_CONTINUITY);
+  execFileSync(process.execPath,[
+    path.join(ROOT,POST_ARM_CONTINUITY_VERIFIER),
+    "--arm-subject="+arm.subject_sha,
+    "--logical-time="+a0,
+    "--out="+continuityPath,
+  ],{cwd:ROOT,stdio:"inherit",env:process.env});
+  if(!fs.existsSync(continuityPath))throw new Error("FORMAL_V5_A0_REPLAY_CONTINUITY_PROOF_REQUIRED");
+  const continuity=readJson(continuityPath);
+  assert.equal(continuity.schema_version,"geox_mcft_cap09_formal_v5_post_arm_authority_continuity_v1");
+  assert.equal(continuity.status,"PASS");
+  assert.equal(continuity.arm_runtime_semantic_subject_sha,arm.subject_sha);
+  assert.equal(continuity.authority_continuity_head_sha,authorityContinuityHead);
+  assert.equal(continuity.selected_logical_time,a0);
+  assert.equal(continuity.runtime_code_change_count,0);
+  assert.equal(continuity.qcp_change_count,0);
+  assert.equal(continuity.workflow_change_count,0);
   assert.equal(Date.parse(o00)-Date.parse(a0),3_600_000,"FORMAL_V5_A0_REPLAY_A0_O00_OFFSET_REQUIRED");
 
   const sourceUrl=requiredEnv("GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL");
@@ -499,7 +518,11 @@ async function main():Promise<void>{
     const proof={
       schema_version:"geox_mcft_cap09_formal_v5_a0_production_replay_promotion_v1",
       status:"PASS",
-      subject_sha:subject,
+      subject_sha:arm.subject_sha,
+      authority_continuity_head_sha:authorityContinuityHead,
+      post_arm_authority_continuity_proof_path:continuityPath,
+      selected_current_crop_authority_ref:continuity.selected_current_crop_authority_ref,
+      selected_current_crop_authority_sha256:continuity.selected_current_crop_authority_sha256,
       arm_identity_hash:arm.arm_identity_hash,
       epoch_id:arm.epoch_id,
       formal_database_name:TARGET_DB,
