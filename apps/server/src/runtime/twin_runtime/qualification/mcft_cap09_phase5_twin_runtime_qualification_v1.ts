@@ -23,6 +23,14 @@ export const MCFT_CAP09_PHASE5_TWIN_QUALIFICATION_ENTRYPOINT_ID_V1 =
 export const MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK_V1 =
   "MCFT_CAP09_PHASE5_ACCELERATED_WAIT_AND_CLOCK_ONLY" as const;
 
+export const MCFT_CAP09_PHASE5_ACCELERATED_RUN_CLASS_V1 =
+  "ACCELERATED_24T" as const;
+export const MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1 =
+  "REAL_CLOCK_REHEARSAL" as const;
+export type McftCap09Phase5QualificationRunClassV1 =
+  | typeof MCFT_CAP09_PHASE5_ACCELERATED_RUN_CLASS_V1
+  | typeof MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1;
+
 export const MCFT_CAP09_PHASE5_RUNTIME_START_QUALIFICATION_AUTHORITY_REF_V1 =
   "qualification://mcft-cap09/phase5/runtime-start-authority-v1" as const;
 
@@ -88,7 +96,8 @@ export function buildPhase5TwinQualificationClockBoundaryV1(input: {
 
 export function buildPhase5TwinQualificationRuntimeStartAuthorityV1(input: {
   formal_a0: string;
-  qualification_ack: string;
+  run_class: McftCap09Phase5QualificationRunClassV1;
+  qualification_ack?: string;
   deployment_subject_sha: string;
   scope: {
     tenant_id: string;
@@ -99,8 +108,17 @@ export function buildPhase5TwinQualificationRuntimeStartAuthorityV1(input: {
     zone_id: string;
   };
 }) {
-  if (input.qualification_ack !== MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK_V1) {
+  if (
+    input.run_class === MCFT_CAP09_PHASE5_ACCELERATED_RUN_CLASS_V1
+    && input.qualification_ack !== MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK_V1
+  ) {
     throw new Error("PHASE5_TWIN_QUALIFICATION_RUNTIME_START_ACK_REQUIRED");
+  }
+  if (
+    input.run_class !== MCFT_CAP09_PHASE5_ACCELERATED_RUN_CLASS_V1
+    && input.run_class !== MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1
+  ) {
+    throw new Error("PHASE5_TWIN_QUALIFICATION_RUN_CLASS_INVALID");
   }
   const formalA0 = canonicalHourV1(input.formal_a0);
   const activationFence = new Date(
@@ -116,7 +134,9 @@ export function buildPhase5TwinQualificationRuntimeStartAuthorityV1(input: {
     authority_class:
       "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
     authority_ref:
-      MCFT_CAP09_PHASE5_RUNTIME_START_QUALIFICATION_AUTHORITY_REF_V1,
+      input.run_class === MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1
+        ? "qualification://mcft-cap09/phase5/real-clock-rehearsal/runtime-start-authority-v1"
+        : MCFT_CAP09_PHASE5_RUNTIME_START_QUALIFICATION_AUTHORITY_REF_V1,
     deployment_subject_sha: input.deployment_subject_sha,
     scope: input.scope,
     activation_fence_time: activationFence,
@@ -151,26 +171,34 @@ export async function runMcftCap09Phase5TwinRuntimeQualificationV1(input?: {
   env?: EnvironmentV1;
 }): Promise<void> {
   const env = input?.env ?? process.env;
-  const boundary = buildPhase5TwinQualificationClockBoundaryV1({
-    through_logical_time: requiredEnvV1(
-      env,
-      "GEOX_MCFT_CAP09_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME",
-    ),
-    qualification_ack: requiredEnvV1(
-      env,
-      "GEOX_MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK",
-    ),
-  });
-  const qualificationAck = requiredEnvV1(
-    env,
-    "GEOX_MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK",
-  );
+  const runClass = String(
+    env.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS ?? MCFT_CAP09_PHASE5_ACCELERATED_RUN_CLASS_V1,
+  ).trim() as McftCap09Phase5QualificationRunClassV1;
+  if (
+    runClass !== MCFT_CAP09_PHASE5_ACCELERATED_RUN_CLASS_V1
+    && runClass !== MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1
+  ) {
+    throw new Error("PHASE5_TWIN_QUALIFICATION_RUN_CLASS_INVALID");
+  }
+  const qualificationAck = runClass === MCFT_CAP09_PHASE5_ACCELERATED_RUN_CLASS_V1
+    ? requiredEnvV1(env, "GEOX_MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK")
+    : undefined;
+  const boundary = runClass === MCFT_CAP09_PHASE5_ACCELERATED_RUN_CLASS_V1
+    ? buildPhase5TwinQualificationClockBoundaryV1({
+        through_logical_time: requiredEnvV1(
+          env,
+          "GEOX_MCFT_CAP09_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME",
+        ),
+        qualification_ack: qualificationAck!,
+      })
+    : null;
   const runtimeStartAuthority =
     buildPhase5TwinQualificationRuntimeStartAuthorityV1({
       formal_a0: requiredEnvV1(
         env,
         "GEOX_MCFT_CAP09_PHASE5_A0",
       ),
+      run_class: runClass,
       qualification_ack: qualificationAck,
       deployment_subject_sha: requiredEnvV1(
         env,
@@ -188,8 +216,9 @@ export async function runMcftCap09Phase5TwinRuntimeQualificationV1(input?: {
   const hostname = requiredEnvV1(env, "HOSTNAME");
   await runMcftCap09TwinRuntimeProcessV1({
     env,
-    ...boundary,
+    ...(boundary ?? {}),
     runtime_start_authority: runtimeStartAuthority,
     qualification_lease_owner: `twin-runtime:${hostname}`,
+    qualification_run_class: runClass,
   });
 }
