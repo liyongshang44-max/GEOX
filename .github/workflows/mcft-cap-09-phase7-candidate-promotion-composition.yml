@@ -3,6 +3,7 @@ name: mcft-cap-09-phase7-candidate-promotion-composition
 on:
   pull_request:
     paths:
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts'
@@ -36,6 +37,7 @@ env:
   NODE_VERSION: '20.11.1'
   PNPM_VERSION: '9.15.4'
   EXACT_PREDECESSOR_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
+  CURRENT_SUCCESSOR_BASE_SHA: 'd054b334b3e74f3356b5d02498da9ba845eccdfb'
   POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
   PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
   DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase7_composition'
@@ -89,7 +91,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base="${{ github.event.pull_request.base.sha }}"
-            if [ "$base" != "$EXACT_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA" ]; then
+            if [ "$base" != "$EXACT_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA"  && [ "$base" != "$CURRENT_SUCCESSOR_BASE_SHA" ]]; then
               echo "PHASE7_COMPOSITION_UNGOVERNED_BASE:$base" >&2
               exit 1
             fi
