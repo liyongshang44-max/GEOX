@@ -6,12 +6,13 @@ const os=require("node:os");
 const path=require("node:path");
 const crypto=require("node:crypto");
 const cp=require("node:child_process");
+const {
+  EPOCH_SELECTION_MODE,
+  selectFormalV5EpochClockV1,
+}=require("./MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs");
 
 const ROOT=path.resolve(__dirname,"../..");
 const HOUR=3_600_000;
-const DAY=24*HOUR;
-const STAGE_AUTHORITY_TIME_ZONE="America/Detroit";
-const STAGE_AUTHORITY_FORWARD_STABILITY_HOURS=30;
 const FORMAL_DB="geox_mcft_cap09_s6_formal_t4r1_24h_v5";
 const STORE_AUTH="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json";
 const STORE_AUTH_BLOB="34fd3e92e0e628cf0db16e10df3633337fe81a1a";
@@ -46,91 +47,82 @@ function semhash(v){return "sha256:"+crypto.createHash("sha256").update(canonica
 function iso(ms){return new Date(ms).toISOString();}
 function canonicalIso(v,code){const t=String(v||"");const ms=Date.parse(t);req(Number.isFinite(ms)&&new Date(ms).toISOString()===t,code);return t;}
 function ceilHour(ms){return Math.ceil(ms/HOUR)*HOUR;}
-function partsAt(ms,timeZone){
-  const parts=new Intl.DateTimeFormat("en-US",{
-    timeZone,
-    year:"numeric",month:"2-digit",day:"2-digit",
-    hour:"2-digit",minute:"2-digit",second:"2-digit",
-    hourCycle:"h23",
-  }).formatToParts(new Date(ms));
-  const values=Object.fromEntries(parts.filter((p)=>p.type!=="literal").map((p)=>[p.type,p.value]));
-  return {
-    year:Number(values.year),month:Number(values.month),day:Number(values.day),
-    hour:Number(values.hour),minute:Number(values.minute),second:Number(values.second),
-  };
-}
-function localDateAt(ms,timeZone){
-  const p=partsAt(ms,timeZone);
-  return `${String(p.year).padStart(4,"0")}-${String(p.month).padStart(2,"0")}-${String(p.day).padStart(2,"0")}`;
-}
-function localMidnightUtc(localDate,timeZone){
-  const [year,month,day]=localDate.split("-").map(Number);
-  const targetWall=Date.UTC(year,month-1,day,0,0,0);
-  let guess=targetWall;
-  for(let i=0;i<6;i+=1){
-    const p=partsAt(guess,timeZone);
-    const representedWall=Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second);
-    const offset=representedWall-guess;
-    const next=targetWall-offset;
-    if(next===guess)break;
-    guess=next;
-  }
-  const p=partsAt(guess,timeZone);
-  req(
-    p.year===year&&p.month===month&&p.day===day&&p.hour===0&&p.minute===0&&p.second===0,
-    "FORMAL_V5_ARM_STAGE_AUTHORITY_LOCAL_MIDNIGHT_RESOLUTION_FAILED",
-    localDate+":"+iso(guess)
-  );
-  return guess;
-}
-function stageAuthorityRefreshClockEligibility(a0Ms,o23Ms){
-  const localDate=localDateAt(a0Ms,STAGE_AUTHORITY_TIME_ZONE);
-  const snapshotBoundaryMs=localMidnightUtc(localDate,STAGE_AUTHORITY_TIME_ZONE);
-  const snapshotValidUntilMs=snapshotBoundaryMs+STAGE_AUTHORITY_FORWARD_STABILITY_HOURS*HOUR;
-  return {
-    eligible:snapshotBoundaryMs<a0Ms&&snapshotValidUntilMs>=o23Ms,
-    time_zone:STAGE_AUTHORITY_TIME_ZONE,
-    local_date:localDate,
-    snapshot_boundary_utc:iso(snapshotBoundaryMs),
-    snapshot_valid_until_utc:iso(snapshotValidUntilMs),
-    snapshot_boundary_strictly_before_a0:snapshotBoundaryMs<a0Ms,
-    snapshot_validity_covers_o23:snapshotValidUntilMs>=o23Ms,
-    stage_value_consulted:false,
-    authority_identity_frozen:false,
-  };
-}
 function selectEpoch({armMs,currentCrop}){
-  const horizon=Date.parse(currentCrop.lifecycle?.horizon_end_utc);
-  req(Number.isFinite(horizon),"FORMAL_V5_ARM_LIFECYCLE_HORIZON_REQUIRED");
-  const first=ceilHour(armMs+36*HOUR);
-  let scanned=0;
-  let firstRejected=null;
-  for(let candidate=first;candidate+23*HOUR<=horizon;candidate+=HOUR){
-    const a0=candidate-HOUR;
-    const o23=candidate+23*HOUR;
-    const cadence=stageAuthorityRefreshClockEligibility(a0,o23);
-    scanned+=1;
-    if(!cadence.eligible){
-      if(!firstRejected)firstRejected={candidate_o00:iso(candidate),a0:iso(a0),o23:iso(o23),cadence};
-      continue;
-    }
-    return {
-      o00:iso(candidate),
-      o23:iso(o23),
-      a0:iso(a0),
-      readiness_deadline:iso(candidate-12*HOUR),
-      epoch_selection_mode:"CLOCK_ONLY_LIFECYCLE_AND_STAGE_AUTHORITY_CADENCE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY",
-      stage_authority_refresh_clock_eligibility:cadence,
-      scanned_candidate_hour_count:scanned,
-    };
-  }
-  fail(
-    "FORMAL_V5_ARM_NO_AUTHORITY_CADENCE_COMPATIBLE_CLOCK_WINDOW_BEFORE_LIFECYCLE_HORIZON",
-    JSON.stringify({first_candidate_o00:iso(first),lifecycle_horizon:iso(horizon),first_rejected:firstRejected,scanned_candidate_hour_count:scanned})
-  );
+  return selectFormalV5EpochClockV1({
+    planning_time_utc:iso(armMs),
+    lifecycle_horizon_end_utc:currentCrop.lifecycle?.horizon_end_utc,
+  });
 }
 function epochId(o00){return "mcft_cap09_external_formal_window_epoch_"+o00.replace(/[-:.]/g,"").replace("Z","z").toLowerCase()+"_v5";}
 function manifestRef(epoch){return "formal-arm://mcft-cap09/formal-v5/"+epoch+"/"+FORMAL_DB;}
+function sameScope(left,right){
+  for(const key of ["tenant_id","project_id","group_id","field_id","season_id","zone_id"]){
+    if(String(left?.[key]??"")!==String(right?.[key]??""))return false;
+  }
+  return true;
+}
+function loadEvidenceEpochCandidate({head,epoch,armTime,currentCrop}){
+  const candidatePath=path.resolve(
+    arg("--evidence-epoch-candidate")
+      ||path.join(os.homedir(),".geox","mcft-cap09","runtime",head,"formal-v5-evidence-runtime-handoff-authority.json")
+  );
+  req(fs.existsSync(candidatePath),"FORMAL_V5_ARM_EVIDENCE_EPOCH_CANDIDATE_REQUIRED",candidatePath);
+  const bytes=fs.readFileSync(candidatePath);
+  const candidate=JSON.parse(bytes.toString("utf8"));
+  req(
+    candidate.schema_version==="geox_mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1"
+      &&candidate.authority_id==="GEOX-MCFT-CAP-09-FORMAL-V5-EVIDENCE-RUNTIME-HANDOFF-AUTHORITY-V1"
+      &&candidate.status==="AUTHORIZED"
+      &&candidate.armed===true
+      &&candidate.evidence_runtime_planning_handoff_authorized===true,
+    "FORMAL_V5_ARM_EVIDENCE_EPOCH_CANDIDATE_NOT_AUTHORIZED"
+  );
+  req(candidate.deployment_subject_sha===head,"FORMAL_V5_ARM_EVIDENCE_EPOCH_CANDIDATE_SUBJECT_MISMATCH");
+  req(sameScope(candidate.scope,currentCrop.scope),"FORMAL_V5_ARM_EVIDENCE_EPOCH_CANDIDATE_SCOPE_MISMATCH");
+  req(candidate.formal_v5_arm_match_required===true,"FORMAL_V5_ARM_EVIDENCE_EPOCH_MATCH_REQUIREMENT_MISSING");
+  req(
+    candidate.stage_authority_required_for_evidence_acquisition===false
+      &&candidate.future_stage_pins_frozen===false
+      &&candidate.current_crop_authority_promoted===false,
+    "FORMAL_V5_ARM_EVIDENCE_EPOCH_STAGE_PROMOTION_FORBIDDEN"
+  );
+  req(
+    candidate.runtime_process_start_authorized===false
+      &&candidate.twin_runtime_start_authorized===false
+      &&candidate.production_owner_activation_authorized===false
+      &&candidate.formal_v5_arm_authorized===false
+      &&candidate.a0_authorized===false
+      &&candidate.o00_authorized===false,
+    "FORMAL_V5_ARM_EVIDENCE_EPOCH_AUTHORITY_CEILING_DRIFT"
+  );
+  const activation=canonicalIso(candidate.activation_fence_time,"FORMAL_V5_ARM_EVIDENCE_EPOCH_ACTIVATION_FENCE_INVALID");
+  req(Date.parse(activation)<=Date.parse(armTime),"FORMAL_V5_ARM_EVIDENCE_EPOCH_CANDIDATE_CREATED_AFTER_ARM");
+  req(candidate.minimum_governance_lead_hours===36,"FORMAL_V5_ARM_EVIDENCE_EPOCH_36H_LEAD_REQUIRED");
+  req(candidate.epoch_selection_mode===EPOCH_SELECTION_MODE,"FORMAL_V5_ARM_EVIDENCE_EPOCH_MODE_MISMATCH");
+  req(
+    candidate.formal_a0_logical_time===epoch.a0
+      &&candidate.formal_o00_logical_time===epoch.o00
+      &&candidate.formal_o23_logical_time===epoch.o23
+      &&candidate.readiness_deadline===epoch.readiness_deadline,
+    "FORMAL_V5_ARM_EVIDENCE_EPOCH_CANDIDATE_MISMATCH",
+    JSON.stringify({candidate:{a0:candidate.formal_a0_logical_time,o00:candidate.formal_o00_logical_time,o23:candidate.formal_o23_logical_time},actual:epoch})
+  );
+  req(
+    candidate.lifecycle_horizon_end_utc===currentCrop.lifecycle?.horizon_end_utc,
+    "FORMAL_V5_ARM_EVIDENCE_EPOCH_LIFECYCLE_HORIZON_MISMATCH"
+  );
+  const baseRuntimePath=path.join(path.dirname(candidatePath),"runtime-start-authority.json");
+  req(fs.existsSync(baseRuntimePath),"FORMAL_V5_ARM_EVIDENCE_EPOCH_BASE_RUNTIME_AUTHORITY_REQUIRED");
+  req(
+    candidate.base_runtime_start_authority_sha256===sha256Bytes(fs.readFileSync(baseRuntimePath)),
+    "FORMAL_V5_ARM_EVIDENCE_EPOCH_BASE_RUNTIME_DIGEST_MISMATCH"
+  );
+  return {
+    path:candidatePath,
+    authority:candidate,
+    sha256:sha256Bytes(bytes),
+  };
+}
 function psqlZeroState(url){
   const env={...process.env,PGOPTIONS:"-c default_transaction_read_only=on"};
   const sql="SELECT current_setting('transaction_read_only'),current_database(),(SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),(SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'),transaction_timestamp();";
@@ -237,6 +229,9 @@ function main(){
 
   const epoch=selectEpoch({armMs,currentCrop:current.authority});
   req(Date.parse(epoch.readiness_deadline)>armMs,"FORMAL_V5_ARM_READINESS_DEADLINE_MUST_BE_FUTURE");
+  const evidenceEpoch=loadEvidenceEpochCandidate({
+    head,epoch,armTime:zero.database_now,currentCrop:current.authority,
+  });
   const core={
     schema_version:"geox_mcft_cap09_formal_v5_arm_v1",
     status:"PASS",
@@ -271,6 +266,13 @@ function main(){
     forcing_timing_authority_ref:BUDGET_AUTH,
     forcing_timing_authority_blob_sha:BUDGET_AUTH_BLOB,
     forcing_acquisition_budget_ms:2081804,
+    evidence_epoch_planning_authority_ref:evidenceEpoch.authority.authority_ref,
+    evidence_epoch_planning_authority_sha256:evidenceEpoch.sha256,
+    evidence_epoch_planning_activation_fence_time:evidenceEpoch.authority.activation_fence_time,
+    evidence_epoch_planning_a0:evidenceEpoch.authority.formal_a0_logical_time,
+    evidence_epoch_planning_o00:evidenceEpoch.authority.formal_o00_logical_time,
+    evidence_epoch_planning_o23:evidenceEpoch.authority.formal_o23_logical_time,
+    evidence_epoch_candidate_matched_at_arm:true,
     forcing_acquisition_start_deadline_rule:"BASE_MINUS_QUALIFIED_END_TO_END_BUDGET",
     physical_formal_visibility_deadline_rule:"BASE",
     fixed_35_minute_lead_used:false,
