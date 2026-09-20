@@ -436,7 +436,9 @@
         "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_AUTHORITY_V1.cjs",
         "scripts/runtime_acceptance/MATERIALIZE_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_V1.cjs",
         "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_real_clock_rehearsal_baseline_v1.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_BASELINE_V1.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_BASELINE_V1.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_LAUNCHER_V1.cjs"
       ]
     },
     "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE": {
