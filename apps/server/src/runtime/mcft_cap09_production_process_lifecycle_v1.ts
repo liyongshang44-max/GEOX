@@ -315,6 +315,10 @@ function transientInfrastructureFailureV1(error: unknown): boolean {
     "ECONNREFUSED",
     "ETIMEDOUT",
     "EAI_AGAIN",
+    "ENETDOWN",
+    "ENETUNREACH",
+    "EHOSTUNREACH",
+    "MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED",
   ].includes(code)) return true;
 
   const message = error instanceof Error ? error.message : String(error ?? "");
