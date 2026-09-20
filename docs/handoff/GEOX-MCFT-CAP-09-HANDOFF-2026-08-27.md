@@ -1,3 +1,228 @@
+# AI — 2026-09-20 Real-Clock Qualification Rehearsal / Formal-v5 Successor Regression Closure Frontier
+
+## AI0. 一句话接手结论
+
+当前 MCFT-CAP-09 的 active engineering frontier 已从“直接等待 Formal-v5 A0/O00–O23”改成：先把真实 UTC 时钟运行能力独立证明，再进入最终 Formal closure。
+
+冻结原则：`TEST EARLY / QUALIFY LATE`。`R00-R23 != O00-O23`；`QUALIFICATION_REHEARSAL != FORMAL EVIDENCE != FORMAL V5 ARM != STAGE 1B CLOSURE`。
+
+当前不得 merge PR #3611，不得启动正式 O00-O23。exact head `e8074df9fb31a90a8529386ba1621b1171dcb8c3` 仍有三条真实红灯：accelerated 24T、Formal-v5 post-graduation readiness、QCP。
+
+## AI1. 当前 exact repository / PR 状态
+
+- protected main = `d054b334b3e74f3356b5d02498da9ba845eccdfb`。
+- successor PR = `#3611`，OPEN / Draft / UNMERGED。
+- base = `d054b334b3e74f3356b5d02498da9ba845eccdfb`。
+- head = `e8074df9fb31a90a8529386ba1621b1171dcb8c3`。
+- mergeable = true；merge_state = blocked。
+- changed_files = 38；commits = 92。
+
+没有发生 merge，所以本轮 successor 没有造成 protected-main 漂移，也没有由这轮 PR 修改 production DB、Formal store 或现有 owner runtime。
+
+2026-09-19 已在 d054 protected main 上做过真实 Formal-v5 arm，并完成 Formal-v5 schema + ACL materialization：29 张 public table、2 个 runtime routine、materialization 后 all table rows zero；A0 未执行，O00 未开始。若 #3611 后续 merge，新 main 不能复用旧 d054 arm，必须按 successor contract fresh owner cutover → H5 → fresh arm。
+
+## AI2. 为什么现在要增加 real-clock qualification rehearsal
+
+此前流程把“真实 wall-clock 连续运行能力”留到最终 Formal window 才第一次完整暴露，实际已经出现 provider latency、retry budget、restart behavior、planning clock、stale authority、process lifecycle 等问题。这个安排被判定为有缺陷。
+
+Formal O00-O23 最终要证明的是 24 个真实 UTC hour boundaries、24 个 persisted scheduler slots、24 个 resolved tick outcomes，以及 Evidence causality、cursor durability、lease/fencing、idempotency、restart recovery、oldest-first backfill、stale/missing/late/out-of-order degradation。
+
+因此这些运行性质必须先在非权威 real-clock rehearsal 中证明，而不是把 Formal closure 当成第一次真实 24h integration test。
+
+## AI3. 三层测试 / closure 模型
+
+### AI3.1 ACCELERATED_24T
+
+数分钟完成 deterministic / transaction / state-machine 24T，证明加速逻辑时间下 Twin runtime / persistence / cursor / fencing / idempotency 可以完整运行。它不证明真实 wall clock 连续运行。
+
+### AI3.2 QUALIFICATION_REHEARSAL — R00 → R23
+
+真实 UTC 时钟、隔离 qualification store、非 Formal authority。证明 scheduler / cursor / lease / restart / backfill / stale / missing / provider behavior / persistence / real-hour boundary。
+
+必须固定：run_class = `QUALIFICATION_REHEARSAL`；Formal-v5 arm = false；Formal Evidence = false；Stage 1B closure evidence = false。
+
+### AI3.3 FORMAL_CLOSURE — O00 → O23
+
+最终 authority-bearing Stage 1B closure。仍必须单独满足 Formal-v5 arm、A0、effective Biological Stage Authority、formal evidence/store、O00-O23、final completion adjudication。R00-R23 永远不能 promotion 成 O00-O23。
+
+## AI4. Rehearsal 不允许另造第二套 runtime
+
+Real-clock rehearsal 必须复用 same Twin process / composition / runner / persistent scheduler / cursor / lease-fencing / canonical persistence。只允许 qualification boundary 不同：isolated database、isolated raw store、qualification-only baseline、qualification-only launcher / authority ceiling。
+
+禁止出现 rehearsal-specific Twin algorithm、scheduler semantics、persistence semantics 或 fake production runtime。
+
+## AI5. Controlled engineering baseline
+
+为避免 NOAA / 外部 provider 偶发问题让 scheduler/runtime 本体完全无法被观察，successor 引入隔离 rehearsal baseline，只允许存在于 qualification database / scope，并明确标记 `QUALIFICATION_REHEARSAL_ONLY`、`CONTROLLED_ENGINEERING_BASELINE`、`NOT_FORMAL_EXTERNAL_EVIDENCE`、`NOT_STAGE_1B_CLOSURE_EVIDENCE`。
+
+它只允许 provider plane DEGRADED 时继续观察 clock / scheduler / cursor / lease / restart / persistence / backfill。绝不能冒充 Formal Evidence、真实 NOAA publication、正式 A0 Evidence 或 Stage 1B closure proof。
+
+## AI6. Evidence / GFS 事故与 successor 要解决的问题
+
+此前 d054 owner runtime 真实出现 `PRODUCTION_EVIDENCE_HOST_PLANNER_GFS_MISSED_WINDOW`，旧 planning target 卡在过去 16Z 并造成 Evidence container restart loop。
+
+受控 runtime-start authority rematerialization 在不改 repository、Formal arm、retry row、A0/O00 的前提下，把 planning floor 推到 2026-09-20T05:00:00Z，runtime 一度恢复稳定、lease heartbeat 正常。
+
+但 05Z GFS target 连续 3 次 outer attempt 仍未形成 exact pair。随后 bounded live provider probe 证明 2026-09-20 00Z cycle directory COMPLETE，cycle 可选，PGRB2 F005 / F041 均能成功读取，因此问题不能简单归因于“NOAA 没数据”。
+
+后续工程结论：member 瞬态失败不能让整个 GFS bundle 无限制从头重跑；member-local retry 必须适配冻结 timing budget；Evidence planning clock 不能长期绑定会过期的 current-crop admission window；Formal arm clock 与 Evidence planning clock 必须有显式 handoff；current-crop lineage 不能 silent promotion 成 future Formal-v5 Biological Stage truth。
+
+## AI7. Formal-v5 Evidence epoch candidate successor 语义
+
+目标顺序：fresh owner cutover → materialize pre-arm Evidence epoch candidate → start Evidence owner against candidate clock → H5 → actual Formal-v5 arm 必须 exact-match candidate clock → post-arm/pre-A0 late-bind Biological Stage Authority → A0。
+
+candidate 与 actual arm 共用同一 clock selector，只提供 A0 / O00 / O23 / readiness deadline planning clock。candidate 本身不得获得 runtime start、owner activation、Formal arm、A0、O00、Formal DB mutation、Formal raw write、runtime config write 或 scheduler write authority。
+
+Evidence process 的真实启动 authority 仍来自既有 owner-cutover authority。Future Biological Stage Authority 继续遵守 Amendment-21：arm 只冻结 clock；stage value 和 authority identity 不在 arm 时冻结；post-arm/pre-A0 获取 effective authority，且必须覆盖 A0→O23 inclusive。
+
+## AI8. GFS retry resilience 边界
+
+当前设计意图：single member max attempts = 2；entire bundle local retry budget = 1。一个瞬态 member failure 可原位 retry 一次且不重做前面成功 member；第二个独立瞬态 failure 必须交还 outer fail-closed/retry path。
+
+冻结 timing budget 核算：production HTTP timeout 120000 ms + local retry backoff 1000 ms = worst local retry extra 121000 ms；frozen safety margin 141174 ms；residual margin 20174 ms。不能为了“更稳”把 worst-case runtime 偷偷拉长到超过冻结 Formal deadline。
+
+## AI9. exact head e8074df9 已确认 GREEN 的主要 lanes
+
+- generic CI run `35499523338` = SUCCESS。
+- Phase3 Evidence runtime persistence run `35499523221` = SUCCESS。
+- Phase5 production-equivalent containers run `35499523371` = SUCCESS。
+- EA5E2 runtime dependency graph run `35499523308` = SUCCESS。
+- EA5E2 successor runner qualification run `35499523362` = SUCCESS。
+- Phase6 runtime independence run `35499523293` = SUCCESS。
+- Production Runtime Owner Cutover qualification run `35499523366` = SUCCESS。
+- final semantic closure run `35499523373` = SUCCESS。
+- main-ruleset readiness run `35499523372` = SUCCESS。
+- AM19 persistent-24T qualification run `35499523316` = SUCCESS。
+- EA5C2B1 live KBS soil ingress run `35499523307` = SUCCESS。
+
+real-clock rehearsal launcher selftest / static acceptance 也已输出 `run_class=QUALIFICATION_REHEARSAL`、`formal_v5_store_binding_count=0`、`rehearsal_non_authority_claims_locked=true`、`formal_closure_substitution=false`、`production_effect=false`。
+
+所以当前不是“rehearsal 概念还没落地”，而是新增 wiring 尚未完成 regression closure。
+
+## AI10. 当前三条真实红灯
+
+### AI10.1 Accelerated 24T
+
+Workflow `mcft-cap-09-phase5-two-service-accelerated-24t`，run `35499523231`，job `production-equivalent-24t`。
+
+First red = `Prove isolated real-clock rehearsal baseline boundary`。
+
+已定位确定性 harness 错误：workflow 调用 `docker compose ... run ... database-platform-bootstrap -ceu '...'`，但该 image entrypoint 是 Node，结果 `node: bad option: -ceu`，exit code 9。
+
+这不是 Twin runtime semantic failure。最小修复应显式使用 `sh -ceu` 或等价 entrypoint override。不得因此修改 scheduler / cursor / Twin runtime / DB schema / Formal semantics。修复后必须让原 accelerated 24T 后续步骤真正执行并全绿。
+
+### AI10.2 Formal-v5 post-graduation readiness
+
+Run `35499523346`，first red = `Prove static post-graduation control surface`。
+
+精确错误：static acceptance 仍要求 workflow source 包含 `FORMAL_V5_PUBLIC_BASE_TABLE_COUNT_NONZERO`，当前 workflow wiring 中 marker 不存在。
+
+处理原则：先查 marker 原本对应的真实 fail-closed step；若新 workflow 编辑误删/移走，恢复正确 wiring；只有等价 fail-closed 逻辑确实迁移且机器可证明时，才允许同步 static acceptance。不能为了绿灯直接删除 assertion。
+
+### AI10.3 QCP
+
+Run `35499523384` 已从 earlier IN_PROGRESS 结束为 FAILURE。
+
+但 planner/ownership 是干净的：planner_status=PASS；unknown=0；forbidden=0；authority_errors=0；unknown_changed_paths=0；total_checks=33；pass=21；fail=7；not_applicable=5；required=15；requalify=13；blocker_count=7。
+
+失败主类是 `NO_VALID_REQUALIFICATION_EVIDENCE` / dependency digest mismatch。当前不是新文件没人治理，而是 exact-head dependency/evidence 尚未重新绑定。必须先稳定 implementation 和成功 runs，再做 durable evidence binding。
+
+## AI11. 为什么绝对不能 merge
+
+一：新增 real-clock rehearsal 不能破坏已有 accelerated 24T FAST lane。二：Formal-v5 static fail-closed guard 不能被 successor wiring 弄丢。三：QCP exact-head durable requalification evidence 还没收口。
+
+结论：`PR #3611 = KEEP DRAFT / DO NOT MERGE`。
+
+## AI12. Scope 警报
+
+当前 successor 已达到 38 files / 92 commits，包含 Evidence runtime recovery、GFS retry resilience、Formal-v5 Evidence handoff、real-clock rehearsal construction、qualification wiring。后续停止扩 architecture。
+
+只允许：regression repair、workflow harness repair、acceptance wiring repair、QCP applicability/resolver correction、legal exact-head requalification binding。除非 exact first-red 机器证明现设计无法闭合，否则不新增 authority domain、runtime implementation、scheduler model、persistence model 或 provider semantic layer。
+
+## AI13. 下一步严格执行顺序
+
+1. 锁 main / #3611 base/head；若 head 漂移，旧 run 只作历史 RCA。
+2. 先修 run 35499523231 的 `node: bad option: -ceu`，仅修 Compose/shell harness；要求 baseline acceptance PASS 且 original accelerated 24T remainder 真正执行并 whole workflow SUCCESS。
+3. 修 run 35499523346 的 `FORMAL_V5_PUBLIC_BASE_TABLE_COUNT_NONZERO` static contract mismatch，保留 fail-closed 语义。
+4. head 稳定后重新跑 QCP，继续要求 unknown_changed_paths=0、authority_errors=0。
+5. exact-head convergence 至少覆盖 generic CI、accelerated 24T、Phase3、production-equivalent containers、EA5E2、Phase6、Formal-v5 readiness、real-clock launcher selftest、QCP。
+6. dependency set/head 冻结后才读取实际 generated digest、绑定 exact successful run、写 durable evidence/anchor；不要猜 digest。
+7. 即使全绿仍保持 Draft，人工复核 R00-R23 launcher boundary、store isolation、authority ceiling、non-effects。
+8. 然后才决定启动真正 R00-R23 real-clock qualification rehearsal。
+9. rehearsal 暴露 restart/provider/backfill/lease/cursor/clock/persistence/degradation 问题，就在 rehearsal 阶段修，不把 defect 带到 Formal day。
+10. rehearsal 与 exact-head qualification 收口后，重新走 fresh protected-main owner cutover → H5 → fresh Formal-v5 arm → post-arm/pre-A0 stage authority → A0 → O00-O23。
+
+## AI14. 必须避免的坑
+
+- 不要把第一次真实 24h integration test 留到 Formal closure。
+- 测试入口不能要求 Formal-v5 arm / future stage authority / A0 先成立，否则测试不能前移。
+- Provider failure 不等于 runtime qualification 必须停；要分 provider / scheduler / lease / cursor / persistence planes。
+- controlled baseline 只能用于 qualification，绝不能冒充 Formal Evidence。
+- retry resilience 不能突破冻结 timing budget；禁止每个 member 自由堆 retry。
+- restart 不能绕过原 runtime-start provenance；base authority 应按原 owner-cutover admission time完整 revalidate。
+- current-crop lineage 不能 silent promote 成 future Formal-v5 stage truth。
+- Evidence epoch candidate 只能提供 planning clock，不能获得 owner/A0/DB/scheduler authority。
+- 不要编造固定 GFS publication SLA；必须保留 genuinely available / complete cycle 语义。
+- PR workflow success 不等于 protected-main production authority。
+- exact head 还变化时不要注册 durable evidence，否则 dependency digest 立刻 stale。
+- Formal static gate 红时不要直接删 assertion。
+- Docker Compose shell flags 必须尊重 image entrypoint；Node entrypoint 不能直接吃 `-ceu`。
+- 一条 workflow 红不等于 architecture 错；先查 exact first-red。
+- 当前 QCP `unknown_changed_paths=0 / authority_errors=0` 是重要事实，不要默认继续补 ownership。
+- 38 files / 92 commits 已是 scope 警报，后续只做当前 first-red 必需的最小改动。
+
+## AI15. 已解决、不要重开的旧问题
+
+- Formal Raw R2 bucket / credential separation 已建立，authenticated read-only proof PASS。
+- A0 operator binding preflight 曾达到 13/13 PRESENT / PASS。
+- d054 Formal-v5 schema/ACL materialization PASS：29 tables / 2 routines / zero rows at materialization。
+- A0 未执行；O00 未开始。
+- Evidence old 16Z stale planning target 已通过受控 authority rematerialization 清除。
+- Evidence runtime old restart-loop root cause 已定位。
+- GFS 05Z “provider cycle 完全不存在”已被 bounded live probe 否定。
+- real-clock rehearsal 不需要第二套 Twin runtime。
+- R00-R23 不能替代 Formal closure。
+
+## AI16. Stop conditions
+
+出现以下任一情况立即 STOP：protected main 从 d054 漂移；#3611 head 漂移但仍沿用旧 run 作 exact-head proof；accelerated 24T 仍红；Formal-v5 readiness 仍红；QCP unknown_changed_paths>0；QCP authority_errors>0；方案要求扩 authority 才能方便测试；rehearsal store 与 Formal store 混用；baseline 被当成 Formal Evidence；R00-R23 被描述成 Stage 1B closure；candidate 被赋予 A0/owner/DB-write authority。
+
+## AI17. 下一对话最先看的 artifacts / runs
+
+先看 PR #3611 base/head/state，然后看 run 35499523231、35499523346、35499523384、35499523338、35499523371、35499523221、35499523308。
+
+第一件实际施工：修 35499523231 的 `node: bad option: -ceu`。第二件：修 35499523346 的 `FORMAL_V5_PUBLIC_BASE_TABLE_COUNT_NONZERO` static contract mismatch。第三件：exact head 稳定后再做 QCP durable requalification evidence。
+
+## AI18. 当前状态矩阵
+
+- protected main = d054b334b3e74f3356b5d02498da9ba845eccdfb。
+- PR #3611 = OPEN / DRAFT / UNMERGED。
+- PR head = e8074df9fb31a90a8529386ba1621b1171dcb8c3。
+- generic CI = SUCCESS。
+- Phase3 = SUCCESS。
+- Phase5 production-equivalent containers = SUCCESS。
+- EA5E2 graph = SUCCESS。
+- Phase6 = SUCCESS。
+- Owner Cutover qualification = SUCCESS。
+- Accelerated 24T = FAILURE；first red = rehearsal baseline harness invocation。
+- Formal-v5 post-graduation readiness = FAILURE；first red = static control-surface marker mismatch。
+- QCP = FAILURE；planner PASS；unknown_changed_paths=0；authority_errors=0；blockers=7；frontier=fresh requalification evidence。
+- R00-R23 real-clock rehearsal = NOT STARTED。
+- new successor Formal-v5 arm = NOT EXECUTED。
+- A0 = NOT EXECUTED。
+- O00-O23 = NOT STARTED。
+- MCFT-CAP-09 = NOT COMPLETE。
+
+## AI19. Handoff bottom line
+
+当前任务不是“等 21 号什么都不能做”，而是把真实 24h runtime qualification 前移，并与 Formal authority closure 解耦。
+
+正确顺序已经变成：CODE → focused safety → accelerated 24T → real-clock R00-R23 → 修真实运行问题 → exact-head qualification → Formal arm → O00-O23。
+
+当前 successor 已把正确测试结构建立出来，但尚未达到 merge / rehearsal-start 条件。下一步不要扩 architecture，只修 accelerated 24T harness regression → Formal-v5 static readiness regression → exact-head rerun → QCP fresh requalification binding → all-green exact head → R00-R23 qualification rehearsal。
+
+本 handoff 不授权 merge #3611、production DB mutation、Formal store mutation、production runtime restart、新 production owner activation、新 Formal-v5 arm、A0、O00-O23 或 Stage 1B closure。
+
 # AH — 2026-09-15 Post-Merge 41FC31 Event Attribution / Successor Admission Coverage / Credential Re-Materialization Frontier
 
 > 本 section 是 AG 之后的当前 continuation entry point。AG 的 36B6 re-anchor、P1 first-red 与各旧 exact-head 状态已被后续事实推进；不得把 AG 的待办重新当作当前任务。
