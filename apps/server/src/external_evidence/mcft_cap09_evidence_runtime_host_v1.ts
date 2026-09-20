@@ -34,6 +34,11 @@ export type EvidenceRuntimeHostHealthEventV1 = {
   cycle_attempt: number;
   successful_cycle_count: number;
   consecutive_failure_count: number;
+  attempt_kind?: EvidenceRuntimeHostAttemptResultV1["attempt_kind"];
+  failure_class?: EvidenceRuntimeHostFailureClassV1;
+  error_name?: string;
+  error_code?: string;
+  error_token?: string;
   detail:
     | "HOST_START"
     | "ATTEMPT_IN_PROGRESS"
@@ -111,6 +116,38 @@ function isNotDuePlanV1(
 ): value is EvidenceRuntimeHostNotDueV1 {
   return "status" in value;
 }
+function sanitizedFailureEvidenceV1(
+  error: unknown,
+  classification: EvidenceRuntimeHostFailureClassV1,
+  attemptKind: EvidenceRuntimeHostAttemptResultV1["attempt_kind"],
+): Pick<
+  EvidenceRuntimeHostHealthEventV1,
+  "attempt_kind" | "failure_class" | "error_name" | "error_code" | "error_token"
+> {
+  const record = typeof error === "object" && error !== null
+    ? error as { name?: unknown; code?: unknown; diagnostic_token?: unknown; message?: unknown }
+    : {};
+  const name = typeof record.name === "string" && /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(record.name)
+    ? record.name
+    : "Error";
+  const codeRaw = typeof record.code === "string" ? record.code : "";
+  const code = /^[A-Z0-9_.-]{1,96}$/.test(codeRaw) ? codeRaw : undefined;
+  const diagnosticRaw = typeof record.diagnostic_token === "string" ? record.diagnostic_token : "";
+  const message = typeof record.message === "string" ? record.message : "";
+  const prefix = message.split(":", 1)[0] ?? "";
+  const tokenCandidate = diagnosticRaw || prefix;
+  const token = /^[A-Z0-9_][A-Z0-9_.-]{0,127}$/.test(tokenCandidate)
+    ? tokenCandidate
+    : "UNCLASSIFIED_ERROR";
+  return {
+    attempt_kind: attemptKind,
+    failure_class: classification,
+    error_name: name,
+    ...(code ? { error_code: code } : {}),
+    error_token: token,
+  };
+}
+
 function validateAttemptResultV1(
   plan: EvidenceRuntimeHostAttemptPlanV1,
   result: EvidenceRuntimeHostAttemptResultV1,
@@ -427,6 +464,7 @@ export class EvidenceRuntimeHostV1 {
             successful_cycle_count: successfulCycles,
             consecutive_failure_count: consecutiveFailures,
             detail: "FATAL_ATTEMPT_FAILURE",
+            ...sanitizedFailureEvidenceV1(error, classification, plan.attempt_kind),
           });
           throw error;
         }
@@ -441,6 +479,7 @@ export class EvidenceRuntimeHostV1 {
           successful_cycle_count: successfulCycles,
           consecutive_failure_count: consecutiveFailures,
           detail: "RETRYABLE_ATTEMPT_FAILURE",
+          ...sanitizedFailureEvidenceV1(error, classification, plan.attempt_kind),
         });
         await this.deps.wait.waitAfterAttempt({
           reason: "RETRY_BACKOFF",
