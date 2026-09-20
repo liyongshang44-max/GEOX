@@ -1,8 +1,10 @@
 // MCFT-CAP-09 Phase5 qualification prewindow prepare for the two-service 24T lane.
 //
-// This entrypoint consumes canonical Evidence already committed by the production Evidence
-// process, then uses the existing prewindow authority builder and bootstrap persistence service.
-// It does not fabricate Evidence, call providers, implement a tick, or activate production.
+// This entrypoint uses the existing prewindow authority builder and bootstrap persistence service.
+// ACCELERATED_24T consumes canonical Evidence already committed by the qualification Evidence process.
+// REAL_CLOCK_REHEARSAL may additionally seed an explicitly marked controlled baseline in the isolated
+// qualification database so provider imperfection cannot hide scheduler/runtime behavior.
+// The baseline is never Formal Evidence and this entrypoint never activates production.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -33,6 +35,9 @@ import {
 import {
   PostgresExternalFormalAmendment19EvidenceSourceV1,
 } from "../postgres_external_formal_amendment19_evidence_source_v1.js";
+import {
+  seedMcftCap09RealClockRehearsalBaselineV1,
+} from "./mcft_cap09_real_clock_rehearsal_baseline_v1.js";
 import type {
   ReplayEvidenceSourcePortV1,
 } from "../ports.js";
@@ -77,6 +82,11 @@ class CanonicalA0EvidenceSourceV1 implements ReplayEvidenceSourcePortV1 {
 async function main():Promise<void> {
   const subject=requiredEnvV1("GEOX_DEPLOYMENT_SUBJECT_COMMIT");
   if(!/^[0-9a-f]{40}$/.test(subject)) throw new Error("PHASE5_PREPARE_SUBJECT_INVALID");
+  const runClass=String(process.env.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS??"ACCELERATED_24T").trim();
+  if(runClass!=="ACCELERATED_24T"&&runClass!=="REAL_CLOCK_REHEARSAL") {
+    throw new Error("PHASE5_PREPARE_RUN_CLASS_INVALID:"+runClass);
+  }
+  const realClockRehearsal=runClass==="REAL_CLOCK_REHEARSAL";
   const a0=requiredEnvV1("GEOX_MCFT_CAP09_PHASE5_A0");
   if(new Date(a0).toISOString()!==a0 || !a0.endsWith(":00:00.000Z")) throw new Error("PHASE5_PREPARE_A0_INVALID");
   const createdAt=requiredEnvV1("GEOX_MCFT_CAP09_PHASE5_CREATED_AT");
@@ -91,6 +101,13 @@ async function main():Promise<void> {
   const bootstrapLeaseDurationSeconds=1;
   const pool=new Pool({connectionString:requiredEnvV1("DATABASE_URL"),max:4});
   try {
+    const baseline=realClockRehearsal
+      ?await seedMcftCap09RealClockRehearsalBaselineV1({
+        pool,
+        a0,
+        seeded_at:createdAt,
+      })
+      :null;
     const databaseName=String((await pool.query("SELECT current_database() AS n")).rows[0]?.n??"");
     if(!databaseName) throw new Error("PHASE5_PREPARE_DATABASE_NAME_REQUIRED");
     const epoch="mcft_cap09_phase5_two_service_"+a0.replace(/[^0-9]/g,"")+"_"+subject.slice(0,12);
@@ -150,16 +167,23 @@ async function main():Promise<void> {
     fs.mkdirSync(path.dirname(outputPath),{recursive:true});
     fs.writeFileSync(outputPath,JSON.stringify(manifest,null,2)+"\n");
     const proof={
-      schema_version:"geox_mcft_cap09_phase5_two_service_prepare_24t_v3",
+      schema_version:realClockRehearsal
+        ?"geox_mcft_cap09_real_clock_rehearsal_prepare_v1"
+        :"geox_mcft_cap09_phase5_two_service_prepare_24t_v3",
       status:"PASS",
+      run_class:realClockRehearsal?"QUALIFICATION_REHEARSAL":"ACCELERATED_24T",
       subject_sha:subject,
       database_name:databaseName,
       epoch_id:epoch,
       a0,
-      o00:bundle.o00_logical_time,
-      o23:bundle.o23_logical_time,
-      a0_evidence_source:"CANONICAL_EVIDENCE_DB_ONLY",
-      engineering_bootstrap_fixture_count:0,
+      ...(realClockRehearsal
+        ?{r00:bundle.o00_logical_time,r23:bundle.o23_logical_time}
+        :{o00:bundle.o00_logical_time,o23:bundle.o23_logical_time}),
+      a0_evidence_source:realClockRehearsal
+        ?"CONTROLLED_ISOLATED_REHEARSAL_BASELINE"
+        :"CANONICAL_EVIDENCE_DB_ONLY",
+      engineering_bootstrap_fixture_count:baseline?.fact_count??0,
+      rehearsal_baseline:baseline,
       hourly_runtime_config_count:result.hourly_runtime_config_count,
       scheduler_slot_write_count:result.scheduler_slot_write_count,
       provider_request_count:result.provider_request_count,
@@ -167,6 +191,10 @@ async function main():Promise<void> {
       bootstrap_lease_duration_seconds:bootstrapLeaseDurationSeconds,
       bootstrap_lease_release_mode:"NATURAL_TTL_EXPIRY",
       production_activation:false,
+      rehearsal_is_non_authority_bearing:realClockRehearsal,
+      formal_evidence_claim:false,
+      formal_v5_arm:false,
+      stage_1b_closure_claim:false,
     };
     fs.mkdirSync(path.dirname(proofPath),{recursive:true});
     fs.writeFileSync(proofPath,JSON.stringify(proof,null,2)+"\n");

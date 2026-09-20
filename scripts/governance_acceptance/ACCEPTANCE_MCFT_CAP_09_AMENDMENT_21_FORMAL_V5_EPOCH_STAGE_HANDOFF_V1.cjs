@@ -11,11 +11,13 @@ const INITIAL_BASE="67bfdc5216ccc210c6479548297dd284bcb6a3f6";
 const CADENCE_CORRECTION_BASE="ef9ed91edd260eefa264c85b6826c4ac1bc933f4";
 const SCHEMA_COMPOSITION_CORRECTION_BASE="574777ffddd280b27a7e0ba040c215fb64c12a62";
 const WRITER_OWNER_CLEANUP_CORRECTION_BASE="3ceff8c46a3ccdc4326438c9c4a35ea7e2d16ef0";
+const SUCCESSOR_COMPATIBILITY_BASE="d054b334b3e74f3356b5d02498da9ba845eccdfb";
 const AMENDMENT="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md";
 const AMENDMENT_BLOB="b79e52620865a36d83cdbb0d95e6cccf1fed1ad3";
 const H6="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json";
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const ARM="scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs";
+const EPOCH_SELECTOR="scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs";
 const REGRESSION="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_LATE_SEASON_EPOCH_STAGE_HANDOFF_V1.cjs";
 const WORKFLOW=".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml";
 const SELF=path.relative(ROOT,__filename).replace(/\\/g,"/");
@@ -71,12 +73,19 @@ if(baseEnv){
     expectedFiles=SCHEMA_COMPOSITION_CORRECTION_EXACT_FILES;
   }else if(baseEnv===WRITER_OWNER_CLEANUP_CORRECTION_BASE){
     expectedFiles=WRITER_OWNER_CLEANUP_CORRECTION_EXACT_FILES;
+  }else if(baseEnv===SUCCESSOR_COMPATIBILITY_BASE){
+    expectedFiles=null;
+    assert.equal(
+      git("merge-base",SUCCESSOR_COMPATIBILITY_BASE,head),
+      SUCCESSOR_COMPATIBILITY_BASE,
+      "AM21_SUCCESSOR_COMPATIBILITY_BASE_MUST_BE_ANCESTOR",
+    );
   }else{
     assert.fail("AM21_EXACT_PR_BASE_REQUIRED:"+baseEnv);
   }
   exactPredecessor=baseEnv;
   const changed=git("diff","--name-only",baseEnv+"..."+head).split(/\r?\n/).filter(Boolean).sort();
-  assert.deepEqual(changed,expectedFiles,"AM21_EXACT_BOUNDARY_REQUIRED");
+  if(expectedFiles)assert.deepEqual(changed,expectedFiles,"AM21_EXACT_BOUNDARY_REQUIRED");
   exactBoundaryFileCount=changed.length;
 }
 
@@ -136,10 +145,7 @@ for(const value of [
   'STAGE_HANDOFF_AUTH="'+AMENDMENT+'"',
   'STAGE_HANDOFF_AUTH_BLOB="'+AMENDMENT_BLOB+'"',
   "FORMAL_V5_ARM_AMENDMENT_21_STAGE_HANDOFF_BLOB_DRIFT",
-  "CLOCK_ONLY_LIFECYCLE_AND_STAGE_AUTHORITY_CADENCE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY",
-  'STAGE_AUTHORITY_TIME_ZONE="America/Detroit"',
-  'STAGE_AUTHORITY_FORWARD_STABILITY_HOURS=30',
-  "FORMAL_V5_ARM_NO_AUTHORITY_CADENCE_COMPATIBLE_CLOCK_WINDOW_BEFORE_LIFECYCLE_HORIZON",
+  "selectFormalV5EpochClockV1",
   "stage_authority_refresh_clock_eligibility:epoch.stage_authority_refresh_clock_eligibility",
   "future_stage_pins_deferred_to_post_arm_dt02_a18:true",
   'required_future_stage_authority_coverage:"A0_THROUGH_O23_INCLUSIVE"',
@@ -147,8 +153,22 @@ for(const value of [
   "formal_stage_authority_pins_frozen:false",
   "arm_time_stage_snapshot_is_runtime_pin:false",
   "minimum_epoch_selection_governance_lead_hours:36",
+  "loadEvidenceEpochCandidate",
+  "FORMAL_V5_ARM_EVIDENCE_EPOCH_CANDIDATE_MISMATCH",
 ]){
   marker(arm,value,"AM21_ARM_MARKER_REQUIRED");
+}
+const selector=read(EPOCH_SELECTOR);
+for(const value of [
+  'STAGE_AUTHORITY_TIME_ZONE="America/Detroit"',
+  "STAGE_AUTHORITY_FORWARD_STABILITY_HOURS=30",
+  "CLOCK_ONLY_LIFECYCLE_AND_STAGE_AUTHORITY_CADENCE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY",
+  "FORMAL_V5_EPOCH_CLOCK_NO_AUTHORITY_CADENCE_COMPATIBLE_WINDOW_BEFORE_LIFECYCLE_HORIZON",
+  "minimum_governance_lead_hours:36",
+  "stage_value_consulted:false",
+  "authority_identity_frozen:false",
+]){
+  marker(selector,value,"AM21_SHARED_EPOCH_SELECTOR_MARKER_REQUIRED");
 }
 for(const value of [
   "function evaluateSlot(",
@@ -178,7 +198,7 @@ const qcp=JSON.parse(read(QCP));
 const resolver=qcp.dependency_resolvers?.FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1;
 assert.ok(resolver,"AM21_QCP_RESOLVER_REQUIRED");
 assert.equal(resolver.kind,"EXACT_PATH_SET");
-for(const rel of [AMENDMENT,H6,ARM,REGRESSION,SELF,WORKFLOW]){
+for(const rel of [AMENDMENT,H6,ARM,EPOCH_SELECTOR,REGRESSION,SELF,WORKFLOW]){
   assert.ok(resolver.paths.includes(rel),"AM21_QCP_PATH_REQUIRED:"+rel);
 }
 const check=(qcp.checks||[]).find((row)=>row.check_id==="FORMAL_V5_AMENDMENT21_STAGE_HANDOFF");
@@ -205,7 +225,9 @@ const proof={
   exact_predecessor_sha:exactPredecessor,
   exact_boundary_file_count:exactBoundaryFileCount,
   subject_head_sha:head,
-  exact_boundary_enforced:baseEnv!=="",
+  exact_boundary_enforced:baseEnv!==""&&baseEnv!==SUCCESSOR_COMPATIBILITY_BASE,
+  successor_compatibility_mode:baseEnv===SUCCESSOR_COMPATIBILITY_BASE,
+  shared_epoch_clock_selector:EPOCH_SELECTOR,
   historical_v4_rewritten:false,
   amendment06_clock_semantics_rewritten:false,
   dt02_architecture_rewritten:false,

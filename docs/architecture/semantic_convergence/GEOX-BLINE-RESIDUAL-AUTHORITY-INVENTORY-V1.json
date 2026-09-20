@@ -8046,6 +8046,43 @@
         "future_ET0": "ASSUMED"
       },
       "audit_note": "evidence.raw_observation does not promote all forcing facts to OBSERVED: soil moisture is OBSERVED; future weather and future ET0 are ASSUMED. Production activation is NOT AUTHORIZED."
+    },
+    {
+      "surface_id": "RES-307",
+      "source_path": "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_real_clock_rehearsal_baseline_v1.ts",
+      "entrypoint": "Phase5 REAL_CLOCK_REHEARSAL qualification prepare path only",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "controlled qualification-rehearsal baseline facts into isolated Phase5 qualification database only"
+      ],
+      "reads": [
+        "fixed external-formal scope and binding constants",
+        "isolated qualification database readback"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger",
+        "evidence.qualification",
+        "twin.state",
+        "twin.forecast"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "QUALIFICATION_REHEARSAL_ONLY",
+      "feature_flag": "GEOX_MCFT_CAP09_PHASE5_RUN_CLASS=REAL_CLOCK_REHEARSAL",
+      "downstream_consumers": [
+        "isolated MCFT CAP-09 real-clock rehearsal Twin runtime"
+      ],
+      "removal_target": "Never promote rehearsal baseline to production or Formal evidence; keep isolated qualification-only writer or replace with typed qualification fixture adapter",
+      "b02_registered": false,
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "evidence.qualification",
+        "twin.state",
+        "twin.forecast"
+      ],
+      "authority_owner": "MCFT_CAP09_QUALIFICATION_REHEARSAL",
+      "writer_scope": "isolated Phase5 qualification database only; QUALIFICATION_REHEARSAL; no production/Formal store",
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Introduced solely to let R00-R23 exercise real-clock scheduler/runtime failure paths without requiring perfect live provider availability. Records are explicitly marked QUALIFICATION_REHEARSAL_ONLY and are forbidden as Formal/Stage-1B evidence."
     }
   ],
   "cross_branch_surfaces": [
@@ -8090,10 +8127,10 @@
   "fact_ledger_closure": {
     "status": "EXACT_DIRECT_WRITER_SET_MATERIALIZED_PENDING_POST_COMMIT_PREFLIGHT",
     "source_exact_ci": "33509893507 / job 99862739754",
-    "expected_writer_count": 65,
-    "adjudicated_writer_count": 65,
+    "expected_writer_count": 66,
+    "adjudicated_writer_count": 66,
     "disposition_counts": {
-      "DEVTOOLS_ONLY": 7,
+      "DEVTOOLS_ONLY": 8,
       "LEGACY_COMPATIBILITY": 14,
       "MCFT_FROZEN": 12,
       "PERSISTENCE_ONLY": 1,
@@ -8102,7 +8139,7 @@
     },
     "invariant": "governance.fact_ledger is persistence topology only; it never substitutes for underlying semantic authority ownership",
     "source_subject": "fdfb500799bc726984f7629e899754cc5d02cf34",
-    "direct_writer_set_sha256": "ef22fd0e82e550295979be167e08f66d4c95acd768ed03a865abf30e0530591b",
+    "direct_writer_set_sha256": "dff2c82d5ed79cbdebccae2d22258477543a92ea85b15ccd8712d044f3d6f01f",
     "digest_encoding": "sha256(sorted exact paths joined by newline; no terminal newline)"
   }
 }

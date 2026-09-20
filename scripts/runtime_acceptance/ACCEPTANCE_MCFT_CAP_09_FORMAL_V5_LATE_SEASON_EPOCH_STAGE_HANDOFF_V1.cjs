@@ -11,6 +11,7 @@ const DAY=24*HOUR;
 const CROP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json";
 const CURRENT="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-18T04Z-V1.json";
 const ARM="scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs";
+const EPOCH_SELECTOR="scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs";
 const MANIFEST="scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts";
 const A18="apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts";
 const H6="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json";
@@ -125,6 +126,7 @@ function historicalWindowEligible(o00,crop,currentStage){
 const crop=readJson(CROP);
 const current=readJson(CURRENT);
 const arm=read(ARM);
+const epochSelector=read(EPOCH_SELECTOR);
 const manifest=read(MANIFEST);
 const a18=read(A18);
 const h6=readJson(H6);
@@ -199,6 +201,10 @@ for(const marker of [
   'STAGE_AUTHORITY_FORWARD_STABILITY_HOURS=30',
   'snapshot_boundary_strictly_before_a0',
   'snapshot_validity_covers_o23',
+]){
+  assert.ok(epochSelector.includes(marker),"AM21_REGRESSION_EPOCH_SELECTOR_MARKER_REQUIRED:"+marker);
+}
+for(const marker of [
   'stage_authority_refresh_clock_eligibility:epoch.stage_authority_refresh_clock_eligibility',
   'future_stage_pins_deferred_to_post_arm_dt02_a18:true',
   'required_future_stage_authority_coverage:"A0_THROUGH_O23_INCLUSIVE"',

@@ -10,6 +10,8 @@ import {
   buildPhase5TwinQualificationClockBoundaryV1,
   buildPhase5TwinQualificationRuntimeStartAuthorityV1,
   MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK_V1,
+  MCFT_CAP09_PHASE5_ACCELERATED_RUN_CLASS_V1,
+  MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1,
   MCFT_CAP09_PHASE5_RUNTIME_START_QUALIFICATION_AUTHORITY_REF_V1,
 } from "../../apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.js";
 import {
@@ -46,6 +48,7 @@ async function main(): Promise<void> {
   const qualificationStart =
     buildPhase5TwinQualificationRuntimeStartAuthorityV1({
       formal_a0: "2026-08-27T19:00:00.000Z",
+      run_class: MCFT_CAP09_PHASE5_ACCELERATED_RUN_CLASS_V1,
       qualification_ack: MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK_V1,
       deployment_subject_sha: qualificationSubject,
       scope: qualificationScope,
@@ -79,9 +82,50 @@ async function main(): Promise<void> {
   assert.equal(qualificationStart.formal_v5_arm_authorized, false);
   assert.equal(qualificationStart.a0_authorized, false);
   assert.equal(qualificationStart.o00_authorized, false);
+
+  const realClockStart = buildPhase5TwinQualificationRuntimeStartAuthorityV1({
+    formal_a0: "2026-08-27T19:00:00.000Z",
+    run_class: MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1,
+    rehearsal_activation_fence_time: "2026-08-27T18:11:22.000Z",
+    deployment_subject_sha: qualificationSubject,
+    scope: qualificationScope,
+  });
+  assert.equal(
+    realClockStart.authority_ref,
+    "qualification://mcft-cap09/phase5/real-clock-rehearsal/runtime-start-authority-v1",
+  );
+  assert.equal(realClockStart.activation_fence_time, "2026-08-27T18:11:22.000Z");
+  assert.equal(realClockStart.runtime_process_start_authorized, true);
+  assert.equal(realClockStart.twin_runtime_start_authorized, true);
+  assert.equal(realClockStart.production_owner_activation_authorized, false);
+  assert.equal(realClockStart.formal_v5_arm_authorized, false);
+  assert.equal(realClockStart.a0_authorized, false);
+  assert.equal(realClockStart.o00_authorized, false);
+
   assert.throws(
     () => buildPhase5TwinQualificationRuntimeStartAuthorityV1({
       formal_a0: "2026-08-27T19:00:00.000Z",
+      run_class: MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1,
+      deployment_subject_sha: qualificationSubject,
+      scope: qualificationScope,
+    }),
+    /REAL_CLOCK_REHEARSAL_ACTIVATION_FENCE_REQUIRED/,
+  );
+  assert.throws(
+    () => buildPhase5TwinQualificationRuntimeStartAuthorityV1({
+      formal_a0: "2026-08-27T19:00:00.000Z",
+      run_class: MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1,
+      rehearsal_activation_fence_time: "2026-08-27T19:00:00.000Z",
+      deployment_subject_sha: qualificationSubject,
+      scope: qualificationScope,
+    }),
+    /REAL_CLOCK_REHEARSAL_FENCE_MUST_PRECEDE_A0/,
+  );
+
+  assert.throws(
+    () => buildPhase5TwinQualificationRuntimeStartAuthorityV1({
+      formal_a0: "2026-08-27T19:00:00.000Z",
+      run_class: MCFT_CAP09_PHASE5_ACCELERATED_RUN_CLASS_V1,
       qualification_ack: "WRONG",
       deployment_subject_sha: qualificationSubject,
       scope: qualificationScope,
@@ -125,6 +169,8 @@ async function main(): Promise<void> {
     "MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1",
     "buildPhase5TwinQualificationRuntimeStartAuthorityV1",
     "qualification_lease_owner",
+    "REAL_CLOCK_REHEARSAL",
+    "qualification_run_class",
   ]) {
     assert.equal(
       qualificationSource.includes(required),
@@ -190,7 +236,10 @@ async function main(): Promise<void> {
     qualification_runtime_start_exact_subject_bound: true,
     qualification_runtime_start_exact_scope_bound: true,
     qualification_runtime_start_authority_is_non_owner_non_formal: true,
-    qualification_lease_owner_requires_explicit_engineering_boundaries: true,
+    qualification_lease_owner_requires_explicit_run_class: true,
+    real_clock_rehearsal_forbids_clock_override: true,
+    real_clock_rehearsal_uses_system_database_utc_clock: true,
+    real_clock_rehearsal_activation_fence_is_physical_start_time: true,
     exact_hour_required: true,
     same_production_twin_process_reused: true,
     second_scheduler_or_runner_path: false,

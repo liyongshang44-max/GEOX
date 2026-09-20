@@ -31,6 +31,10 @@ function envV1(name:string):string {
   if(!value) throw new Error("PHASE5_VERIFY_ENV_REQUIRED:"+name);
   return value;
 }
+function optionalEnvV1(name:string,fallback:string):string {
+  const value=String(process.env[name]??fallback).trim();
+  return value || fallback;
+}
 function addHoursV1(value:string,hours:number):string {
   return new Date(Date.parse(value)+hours*3_600_000).toISOString();
 }
@@ -48,6 +52,11 @@ function exactSetV1(actual:readonly string[],expected:readonly string[],code:str
 async function main():Promise<void> {
   const subject=envV1("GEOX_DEPLOYMENT_SUBJECT_COMMIT");
   if(!/^[0-9a-f]{40}$/.test(subject)) throw new Error("PHASE5_VERIFY_SUBJECT_INVALID");
+  const runClass=optionalEnvV1("GEOX_MCFT_CAP09_PHASE5_RUN_CLASS","ACCELERATED_24T");
+  if(runClass!=="ACCELERATED_24T"&&runClass!=="REAL_CLOCK_REHEARSAL") {
+    throw new Error("PHASE5_VERIFY_RUN_CLASS_INVALID:"+runClass);
+  }
+  const realClockRehearsal=runClass==="REAL_CLOCK_REHEARSAL";
   const manifestPath=path.resolve(envV1("GEOX_MCFT_CAP09_TWIN_RUNTIME_MANIFEST_PATH"));
   const manifest=JSON.parse(fs.readFileSync(manifestPath,"utf8")) as ExternalFormalAmendment19WindowManifestV1;
   validateExternalFormalAmendment19WindowManifestV1(manifest,subject);
@@ -59,7 +68,7 @@ async function main():Promise<void> {
     const expectedIds=Array.from({length:24},(_,i)=>"O"+String(i).padStart(2,"0"));
 
     const slots=(await pool.query(
-      `SELECT slot_id,logical_time,state,fencing_token,tick_ref,health_ref,terminal_at
+      `SELECT slot_id,logical_time,scheduler_wall_clock_observed_at,state,fencing_token,tick_ref,health_ref,terminal_at
          FROM public.twin_shadow_online_scheduler_slot_v1
         WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
         ORDER BY logical_time ASC`,scope,
@@ -71,6 +80,13 @@ async function main():Promise<void> {
       if(row.state!=="DEGRADED") throw new Error(`PHASE5_VERIFY_MODE_B_SLOT_NOT_DEGRADED:${row.slot_id}:${row.state}`);
       if(row.fencing_token==null || !row.tick_ref || !row.health_ref || !row.terminal_at) {
         throw new Error("PHASE5_VERIFY_TERMINAL_LINKAGE_REQUIRED:"+row.slot_id);
+      }
+      if(realClockRehearsal) {
+        const logical=Date.parse(new Date(row.logical_time).toISOString());
+        const observed=Date.parse(new Date(row.scheduler_wall_clock_observed_at).toISOString());
+        const terminalAt=Date.parse(new Date(row.terminal_at).toISOString());
+        if(observed<logical) throw new Error("PHASE5_VERIFY_REHEARSAL_FUTURE_BOUNDARY_CLAIM:"+row.slot_id);
+        if(terminalAt<logical) throw new Error("PHASE5_VERIFY_REHEARSAL_TERMINAL_BEFORE_BOUNDARY:"+row.slot_id);
       }
     }
 
@@ -132,16 +148,24 @@ async function main():Promise<void> {
         ORDER BY fact_id ASC`,scope,
     )).rows;
     const evidenceCounts:Record<string,number>={};
+    let rehearsalBaselineFactCount=0;
     for(const row of evidence) {
       const type=String(row.type??"");
       evidenceCounts[type]=(evidenceCounts[type]??0)+1;
       const serialized=JSON.stringify(row.record_json);
+      if(serialized.includes("QUALIFICATION_REHEARSAL_ONLY")) rehearsalBaselineFactCount+=1;
       if(/ENGINEERING_(?:BOOTSTRAP_)?FIXTURE_ONLY|CONTROLLED_SYNTHETIC_REPLAY_PROXY/.test(serialized)) {
         throw new Error("PHASE5_VERIFY_ENGINEERING_CANONICAL_EVIDENCE_FORBIDDEN:"+type);
       }
     }
     for(const type of ["soil_moisture_observation_v1","future_weather_assumption_v1","future_et0_assumption_v1"]) {
       if((evidenceCounts[type]??0)<1) throw new Error("PHASE5_VERIFY_REQUIRED_CANONICAL_EVIDENCE_MISSING:"+type);
+    }
+    if(realClockRehearsal && rehearsalBaselineFactCount!==49) {
+      throw new Error("PHASE5_VERIFY_REHEARSAL_EXACT_49_BASELINE_FACTS_REQUIRED:"+rehearsalBaselineFactCount);
+    }
+    if(!realClockRehearsal && rehearsalBaselineFactCount!==0) {
+      throw new Error("PHASE5_VERIFY_ACCELERATED_REHEARSAL_BASELINE_FORBIDDEN:"+rehearsalBaselineFactCount);
     }
 
     const windows=(await pool.query(
@@ -191,13 +215,22 @@ async function main():Promise<void> {
     }
 
     const proof={
-      schema_version:"geox_mcft_cap09_phase5_two_service_accelerated_24t_v1",
+      schema_version:realClockRehearsal
+        ?"geox_mcft_cap09_real_clock_runtime_rehearsal_readback_v1"
+        :"geox_mcft_cap09_phase5_two_service_accelerated_24t_v1",
       status:"PASS",
+      run_class:realClockRehearsal?"QUALIFICATION_REHEARSAL":"ACCELERATED_24T",
       subject_sha:subject,
       epoch_id:manifest.epoch_id,
       a0:addHoursV1(manifest.o00_logical_time,-1),
-      o00:manifest.o00_logical_time,
-      o23:manifest.o23_logical_time,
+      ...(realClockRehearsal
+        ?{
+          r00:manifest.o00_logical_time,
+          r23:manifest.o23_logical_time,
+          rehearsal_slot_labels:Array.from({length:24},(_,i)=>"R"+String(i).padStart(2,"0")),
+          canonical_engine_slot_ids_remain_internal_o00_o23:true,
+        }
+        :{o00:manifest.o00_logical_time,o23:manifest.o23_logical_time}),
       scheduler_slot_count:24,
       terminal_tick_count:24,
       terminal_slot_state:"DEGRADED",
@@ -206,12 +239,17 @@ async function main():Promise<void> {
       provider_wait_required_count:0,
       canonical_evidence_counts:evidenceCounts,
       engineering_runtime_evidence_fixture_count:0,
+      qualification_rehearsal_baseline_fact_count:rehearsalBaselineFactCount,
       forbidden_action_fact_count:0,
       db_layer_evidence_twin_bidirectional_isolation:true,
       twin_direct_fact_insert:false,
       twin_provider_request_count:0,
       twin_raw_storage_credential_count:0,
-      accelerated_boundary:"CLOCK_AND_WAIT_ONLY",
+      accelerated_boundary:realClockRehearsal?null:"CLOCK_AND_WAIT_ONLY",
+      real_clock_boundary:realClockRehearsal?"SYSTEM_AND_POSTGRESQL_UTC_WALL_CLOCK":null,
+      future_boundary_claim_count:0,
+      rehearsal_is_non_authority_bearing:realClockRehearsal,
+      formal_closure_substituted_by_rehearsal:false,
       late_exact_kbs_batch_covered:false,
       exact_24t_complete:true,
       production_owner_cutover:false,

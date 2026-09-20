@@ -307,6 +307,7 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
   scheduler_clock_authority?: PersistentSequentialSchedulerClockAuthorityV1;
   runtime_start_authority?: unknown;
   qualification_lease_owner?: string;
+  qualification_run_class?: "ACCELERATED_24T" | "REAL_CLOCK_REHEARSAL";
 }): Promise<void> {
   const document = productionAcquisitionHorizonAuthorityJson as {
     runtime_start_binding?: unknown;
@@ -317,14 +318,29 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
     input?.qualification_lease_owner ?? "",
   ).trim();
   if (qualificationLeaseOwner) {
-    if (
-      input?.runtime_start_authority === undefined
-      || input?.database_clock === undefined
-      || input?.scheduler_clock_authority?.mode !== "ACCELERATED_ENGINEERING_ONLY"
-    ) {
+    const runClass = input?.qualification_run_class;
+    if (input?.runtime_start_authority === undefined) {
       throw new Error(
-        "MCFT_CAP09_TWIN_QUALIFICATION_LEASE_OWNER_REQUIRES_EXPLICIT_ENGINEERING_BOUNDARIES",
+        "MCFT_CAP09_TWIN_QUALIFICATION_LEASE_OWNER_REQUIRES_EXPLICIT_RUNTIME_START_AUTHORITY",
       );
+    }
+    if (runClass === "ACCELERATED_24T") {
+      if (
+        input?.database_clock === undefined
+        || input?.scheduler_clock_authority?.mode !== "ACCELERATED_ENGINEERING_ONLY"
+      ) {
+        throw new Error(
+          "MCFT_CAP09_TWIN_ACCELERATED_QUALIFICATION_REQUIRES_EXPLICIT_ENGINEERING_CLOCKS",
+        );
+      }
+    } else if (runClass === "REAL_CLOCK_REHEARSAL") {
+      if (input?.database_clock !== undefined || input?.scheduler_clock_authority !== undefined) {
+        throw new Error(
+          "MCFT_CAP09_TWIN_REAL_CLOCK_REHEARSAL_CLOCK_OVERRIDE_FORBIDDEN",
+        );
+      }
+    } else {
+      throw new Error("MCFT_CAP09_TWIN_QUALIFICATION_RUN_CLASS_REQUIRED");
     }
   }
   const runtimeEnv: EnvironmentV1 = {

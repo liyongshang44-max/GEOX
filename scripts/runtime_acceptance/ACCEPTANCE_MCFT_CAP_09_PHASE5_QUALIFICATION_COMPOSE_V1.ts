@@ -81,6 +81,7 @@ async function main(): Promise<void> {
     GEOX_PHASE5_ZONE_ID: "zone-phase5",
     GEOX_PHASE5_FIXTURE_ROOT: "/tmp/mcft-cap09-phase5-fixtures",
     GEOX_PHASE5_CONTROL_ROOT: "/tmp/mcft-cap09-phase5-control",
+    GEOX_PHASE5_RUN_CLASS: "ACCELERATED_24T",
     GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME: "2026-08-28T07:00:00.000Z",
     GEOX_PHASE5_A0: "2026-08-27T07:00:00.000Z",
     GEOX_PHASE5_CREATED_AT: "2026-08-27T06:30:00.000Z",
@@ -119,6 +120,11 @@ async function main(): Promise<void> {
     twinEnv.GEOX_MCFT_CAP09_PHASE5_A0,
     env.GEOX_PHASE5_A0,
     "PHASE5_TWIN_QUALIFICATION_A0_REQUIRED_FOR_CONTROLLED_RUNTIME_START_AUTHORITY",
+  );
+  assert.equal(
+    twinEnv.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS,
+    "ACCELERATED_24T",
+    "PHASE5_TWIN_DEFAULT_ACCELERATED_RUN_CLASS_REQUIRED",
   );
   assert.equal(
     twinEnv.GEOX_DEPLOYMENT_SUBJECT_COMMIT,
@@ -314,6 +320,50 @@ async function main(): Promise<void> {
     assert.equal(source.includes(forbidden), false, `PHASE5_COMPOSE_FORBIDDEN_OWNER_MARKER:${forbidden}`);
   }
 
+  const rehearsalRendered = execFileSync(
+    "docker",
+    ["compose", "-f", COMPOSE, "--profile", "qualification-runtime", "--profile", "qualification-orchestration", "config", "--format", "json"],
+    {
+      encoding: "utf8",
+      env: {
+        ...env,
+        GEOX_PHASE5_RUN_CLASS: "REAL_CLOCK_REHEARSAL",
+      },
+    },
+  );
+  const rehearsalConfig = JSON.parse(rehearsalRendered) as {
+    services?: Record<string, Record<string, unknown>>;
+  };
+  const rehearsalTwinEnv = environmentMap(
+    rehearsalConfig.services?.["twin-runtime"]?.environment,
+  );
+  const rehearsalPrepareEnv = environmentMap(
+    rehearsalConfig.services?.["qualification-prepare"]?.environment,
+  );
+  const rehearsalVerifyEnv = environmentMap(
+    rehearsalConfig.services?.["qualification-verify"]?.environment,
+  );
+  assert.equal(
+    rehearsalTwinEnv.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS,
+    "REAL_CLOCK_REHEARSAL",
+    "PHASE5_TWIN_REAL_CLOCK_REHEARSAL_RUN_CLASS_REQUIRED",
+  );
+  assert.equal(
+    rehearsalTwinEnv.GEOX_MCFT_CAP09_PHASE5_REHEARSAL_ACTIVATION_FENCE,
+    env.GEOX_PHASE5_CREATED_AT,
+    "PHASE5_TWIN_REAL_CLOCK_REHEARSAL_PHYSICAL_ACTIVATION_FENCE_REQUIRED",
+  );
+  assert.equal(
+    rehearsalPrepareEnv.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS,
+    "REAL_CLOCK_REHEARSAL",
+    "PHASE5_PREPARE_REAL_CLOCK_REHEARSAL_RUN_CLASS_REQUIRED",
+  );
+  assert.equal(
+    rehearsalVerifyEnv.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS,
+    "REAL_CLOCK_REHEARSAL",
+    "PHASE5_VERIFY_REAL_CLOCK_REHEARSAL_RUN_CLASS_REQUIRED",
+  );
+
   const proof = {
     status: "PASS",
     acceptance_id: "MCFT_CAP09_PHASE5_QUALIFICATION_COMPOSE_V1",
@@ -321,6 +371,8 @@ async function main(): Promise<void> {
     separate_evidence_twin_database_logins: true,
     evidence_only_s3_and_fixture_credentials: true,
     compiled_qualification_entrypoints: true,
+    accelerated_and_real_clock_run_classes_share_same_twin_entrypoint: true,
+    real_clock_rehearsal_compose_rendered: true,
     scientific_runtime_image_pinned: true,
     live_raw_capture_has_no_database_or_s3_credentials: true,
     prepare_verify_have_no_provider_or_s3_credentials: true,

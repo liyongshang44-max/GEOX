@@ -13,6 +13,7 @@ export const MCFT_CAP09_PRODUCTION_GFS_TARGET_DUE_POLICY_ID_V1 =
 export const MCFT_CAP09_PRODUCTION_GFS_TARGET_DUE_AUTHORITY_REF_V1 =
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1.json" as const;
 
+export const MCFT_CAP09_GFS_WARM_START_EARLIEST_START_LEAD_MINUTES_V1 = 70 as const;
 export const MCFT_CAP09_GFS_SUBSEQUENT_EARLIEST_START_LEAD_MINUTES_V1 = 70 as const;
 export const MCFT_CAP09_GFS_LATEST_SAFE_START_LEAD_MINUTES_V1 = 30 as const;
 export const MCFT_CAP09_GFS_MAX_ATTEMPTS_PER_TARGET_WINDOW_V1 = 3 as const;
@@ -130,8 +131,12 @@ export function evaluateProductionGfsTargetDueV1(input: {
     durable_paired_targets: input.durable_paired_targets,
   });
   const warmStart = target === a0;
+  const warmStartFloor = addMinutesV1(
+    a0,
+    -MCFT_CAP09_GFS_WARM_START_EARLIEST_START_LEAD_MINUTES_V1,
+  );
   const windowStart = warmStart
-    ? fence
+    ? (Date.parse(fence) > Date.parse(warmStartFloor) ? fence : warmStartFloor)
     : addMinutesV1(
         target,
         -MCFT_CAP09_GFS_SUBSEQUENT_EARLIEST_START_LEAD_MINUTES_V1,

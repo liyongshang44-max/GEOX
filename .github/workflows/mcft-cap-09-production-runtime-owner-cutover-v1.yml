@@ -16,6 +16,8 @@ on:
       - 'apps/server/scripts/write_dist_entries.cjs'
       - 'docker-compose.mcft-cap09-production-preformal.yml'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs'
+      - 'apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts'
       - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RUNTIME_START_ROLLING_REFRESH_TIME_SEMANTICS_V1.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CUTOVER_CURRENT_CROP_PATH_CARRY_V1.cjs'
@@ -100,6 +102,7 @@ jobs:
           GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY: test
           GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH: /tmp/runtime-start.json
           GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH: /tmp/owner-cutover.json
+          GEOX_MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_PATH: /tmp/formal-v5-evidence-runtime-handoff-authority.json
           GEOX_MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_PATH: /tmp/current-crop.json
           GEOX_MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH: /tmp/stage-effectiveness.json
           GEOX_MCFT_CAP09_DURABLE_LOG_ROOT: /tmp/mcft-cap09-logs

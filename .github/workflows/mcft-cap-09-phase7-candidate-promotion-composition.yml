@@ -3,6 +3,7 @@ name: mcft-cap-09-phase7-candidate-promotion-composition
 on:
   pull_request:
     paths:
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts'
@@ -36,6 +37,7 @@ env:
   NODE_VERSION: '20.11.1'
   PNPM_VERSION: '9.15.4'
   EXACT_PREDECESSOR_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
+  CURRENT_SUCCESSOR_BASE_SHA: 'd054b334b3e74f3356b5d02498da9ba845eccdfb'
   POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
   PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
   DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase7_composition'
@@ -89,7 +91,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base="${{ github.event.pull_request.base.sha }}"
-            if [ "$base" != "$EXACT_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA" ]; then
+            if [ "$base" != "$EXACT_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA"  && [ "$base" != "$CURRENT_SUCCESSOR_BASE_SHA" ]]; then
               echo "PHASE7_COMPOSITION_UNGOVERNED_BASE:$base" >&2
               exit 1
             fi
@@ -119,18 +121,18 @@ jobs:
             -p 9000:9000 \
             -e MINIO_ROOT_USER=phase7composition \
             -e MINIO_ROOT_PASSWORD=phase7-composition-secret-key-001 \
-            minio/minio:latest server /data
+            quay.io/minio/minio@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
           for attempt in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
             sleep 1
           done
           curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
-          docker run --rm --network host \
-            -e MC_HOST_phase7=http://phase7composition:phase7-composition-secret-key-001@127.0.0.1:9000 \
-            minio/mc:latest mb --ignore-existing phase7/geox-mcft-cap09-formal-raw-v1
-          docker run --rm --network host \
-            -e MC_HOST_phase7=http://phase7composition:phase7-composition-secret-key-001@127.0.0.1:9000 \
-            minio/mc:latest anonymous set private phase7/geox-mcft-cap09-formal-raw-v1
+          docker run --rm --network host --entrypoint /bin/sh \
+            quay.io/minio/mc@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112 -ceu '
+              mc alias set phase7 http://127.0.0.1:9000 phase7composition phase7-composition-secret-key-001
+              mc mb --ignore-existing phase7/geox-mcft-cap09-formal-raw-v1
+              mc anonymous set private phase7/geox-mcft-cap09-formal-raw-v1
+            '
 
       - name: Run real private candidate to PostgreSQL fenced promotion qualification
         env:

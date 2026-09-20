@@ -80,6 +80,8 @@ for(const marker of [
   "mcft_cap09_evidence_preformal_owner_runtime.js",
   "mcft_cap09_twin_preformal_owner_runtime.js",
   "GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH",
+  "GEOX_MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_PATH",
+  "formal-v5-evidence-runtime-handoff-authority.json",
   "GEOX_MCFT_CAP09_PREFORMAL_MODE",
   "OWNER_CUTOVER",
   "MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json"
@@ -92,6 +94,8 @@ for(const forbidden of ["twin_shadow_online_scheduler_cursor_v1","twin_shadow_on
 const evidenceSource=read(evidencePath);
 const twinSource=read(twinPath);
 assert.ok(evidenceSource.includes("readMcftCap09OwnerCutoverAuthorityV1"));
+assert.ok(evidenceSource.includes("loadMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1"));
+assert.ok(evidenceSource.includes("runtime_start_authority:handoffRuntimeStart"));
 assert.ok(twinSource.includes("readMcftCap09OwnerCutoverAuthorityV1"));
 assert.ok(evidenceSource.includes('const EVIDENCE_LEASE_TABLE = "external_evidence_producer_lease_v1"'));
 assert.ok(twinSource.includes('const TWIN_LEASE_TABLE = "twin_runtime_lease_v1"'));
@@ -155,6 +159,11 @@ for(const marker of [
   "CUTOVER_SELECTED_CURRENT_CROP_DIGEST_MISMATCH",
   "LATEST_EFFECTIVE_AUTHORITY_AS_OF_NOT_AFTER_LOGICAL_TIME_WITHIN_VALIDITY_WINDOW",
   "VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs",
+  "selectFormalV5EpochClockV1",
+  'status:"AUTHORIZED",armed:true',
+  "formal_v5_arm_match_required:true",
+  "stage_authority_required_for_evidence_acquisition:false",
+  "formal-v5-evidence-runtime-handoff-authority.json",
   "down",
   "--remove-orphans"
 ]) assert.ok(runner.includes(marker),marker);
@@ -175,6 +184,7 @@ const cutoverEnvSection=section(
   "fs.mkdirSync(path.join(env.GEOX_MCFT_CAP09_DURABLE_LOG_ROOT"
 );
 assert.ok(cutoverEnvSection.includes('GEOX_MCFT_CAP09_PREFORMAL_MODE:"OWNER_CUTOVER"'),"CUTOVER_PREFORMAL_MODE_EXPLICIT_PIN_REQUIRED");
+assert.ok(cutoverEnvSection.includes("GEOX_MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_PATH:formalV5EvidenceHandoffPath"),"CUTOVER_FORMAL_V5_EVIDENCE_HANDOFF_PATH_BINDING_REQUIRED");
 assert.equal((cutoverEnvSection.match(/GEOX_MCFT_CAP09_PREFORMAL_MODE/g)||[]).length,1,"CUTOVER_PREFORMAL_MODE_SINGLE_PIN_REQUIRED");
 assert.ok(runner.includes("timeout:options.timeoutMs"),"CUTOVER_EXEC_TIMEOUT_FORWARDING_REQUIRED");
 assert.ok(runner.includes("timeoutMs:remainingMs"),"CUTOVER_OWNER_VERIFIER_OUTER_DEADLINE_REQUIRED");
@@ -202,6 +212,9 @@ console.log(JSON.stringify({
   dual_service_start_uses_no_build:true,
   owner_cutover_mode_explicitly_pinned:true,
   exact_subject_image_attestation_before_runtime_start:true,
+  formal_v5_evidence_epoch_candidate_preprovisioned_pre_arm:true,
+  formal_v5_evidence_epoch_candidate_requires_arm_match:true,
+  evidence_epoch_candidate_does_not_authorize_a0:true,
   dual_key_cutover:true,
   registry_backed_current_crop_selection:true,
   github_actions_production_execution:false,

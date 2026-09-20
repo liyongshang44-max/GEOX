@@ -32,8 +32,19 @@ const PROTECTED_TEMPORAL_SEMANTIC_CORE = [
   "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
   "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts",
   "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts",
-  "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts",
-  "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts",
+];
+
+const QUALIFICATION_REHEARSAL_EXTENSION_SEAM = [
+  {
+    path: "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts",
+    old_full_blob: "50fb1ba10677d416282505a27617a599e50c2c39",
+    accepted_rehearsal_blob: "c7ac2f61e38b6e4bb41317507dec2a9f6173e43e",
+  },
+  {
+    path: "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts",
+    old_full_blob: "28e3e4ad83620f44b83ed197dbbf4c896c77f1ac",
+    accepted_rehearsal_blob: "5e39ce5a428d116b02c2ac2970ff525921d03904",
+  },
 ];
 
 const RUNTIME_OWNERSHIP_FENCING_LAYER = [
@@ -146,6 +157,44 @@ if(mode==="plan") {
     "PHASE5_SETTLEMENT_TEMPORAL_SEMANTIC_CORE_CHANGED",
     protectedTemporalChanged,
   );
+
+  const rehearsalExtensionChanged=QUALIFICATION_REHEARSAL_EXTENSION_SEAM.filter((entry)=>
+    git(["diff","--name-only",OLD_FULL_HEAD+".."+subject,"--",entry.path])!==""
+  );
+  for(const entry of QUALIFICATION_REHEARSAL_EXTENSION_SEAM) {
+    const oldBlob=git(["rev-parse",OLD_FULL_HEAD+":"+entry.path]);
+    req(oldBlob===entry.old_full_blob,"PHASE5_SETTLEMENT_REHEARSAL_EXTENSION_OLD_BLOB_DRIFT",{
+      path:entry.path,expected:entry.old_full_blob,actual:oldBlob,
+    });
+    if(rehearsalExtensionChanged.some((candidate)=>candidate.path===entry.path)) {
+      const currentBlob=git(["rev-parse","HEAD:"+entry.path]);
+      req(currentBlob===entry.accepted_rehearsal_blob,"PHASE5_SETTLEMENT_REHEARSAL_EXTENSION_BLOB_UNAPPROVED",{
+        path:entry.path,expected:entry.accepted_rehearsal_blob,actual:currentBlob,
+      });
+    }
+  }
+  req(
+    rehearsalExtensionChanged.length===0 || rehearsalExtensionChanged.length===QUALIFICATION_REHEARSAL_EXTENSION_SEAM.length,
+    "PHASE5_SETTLEMENT_REHEARSAL_EXTENSION_PARTIAL_DRIFT",
+    rehearsalExtensionChanged.map((entry)=>entry.path),
+  );
+  if(rehearsalExtensionChanged.length>0) {
+    const prepare=git(["show","HEAD:"+QUALIFICATION_REHEARSAL_EXTENSION_SEAM[0].path]);
+    const verify=git(["show","HEAD:"+QUALIFICATION_REHEARSAL_EXTENSION_SEAM[1].path]);
+    req(
+      prepare.includes('process.env.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS??"ACCELERATED_24T"')
+        && prepare.includes('const realClockRehearsal=runClass==="REAL_CLOCK_REHEARSAL"')
+        && prepare.includes("?await seedMcftCap09RealClockRehearsalBaselineV1({"),
+      "PHASE5_SETTLEMENT_REHEARSAL_PREPARE_DEFAULT_OR_BRANCH_DRIFT",
+    );
+    req(
+      verify.includes('optionalEnvV1("GEOX_MCFT_CAP09_PHASE5_RUN_CLASS","ACCELERATED_24T")')
+        && verify.includes('const realClockRehearsal=runClass==="REAL_CLOCK_REHEARSAL"')
+        && verify.includes("if(!realClockRehearsal && rehearsalBaselineFactCount!==0)"),
+      "PHASE5_SETTLEMENT_REHEARSAL_VERIFY_ACCELERATED_FAIL_CLOSED_DRIFT",
+    );
+  }
+
   const runtimeOwnershipChanged=RUNTIME_OWNERSHIP_FENCING_LAYER.filter((pth)=>
     git(["diff","--name-only",OLD_FULL_HEAD+".."+subject,"--",pth])!==""
   );
@@ -182,6 +231,16 @@ if(mode==="plan") {
     protected_temporal_semantic_core_unchanged:true,
     protected_temporal_semantic_core_path_count:PROTECTED_TEMPORAL_SEMANTIC_CORE.length,
     protected_temporal_semantic_core_changed_paths:protectedTemporalChanged,
+    qualification_rehearsal_extension_seam_status:
+      rehearsalExtensionChanged.length>0
+        ?"EXACT_BLOB_PINNED_ACCELERATED_DEFAULT_PRESERVED"
+        :"UNCHANGED_FROM_IMMUTABLE_FULL_24T",
+    qualification_rehearsal_extension_seam_changed_paths:rehearsalExtensionChanged.map((entry)=>entry.path),
+    qualification_rehearsal_extension_seam_exact_blob_pins:QUALIFICATION_REHEARSAL_EXTENSION_SEAM.map((entry)=>({
+      path:entry.path,
+      old_full_blob:entry.old_full_blob,
+      accepted_rehearsal_blob:entry.accepted_rehearsal_blob,
+    })),
     runtime_ownership_fencing_layer_path_count:RUNTIME_OWNERSHIP_FENCING_LAYER.length,
     runtime_ownership_fencing_layer_changed:runtimeOwnershipChanged.length>0,
     runtime_ownership_fencing_layer_changed_paths:runtimeOwnershipChanged,

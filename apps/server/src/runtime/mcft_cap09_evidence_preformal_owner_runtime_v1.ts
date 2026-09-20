@@ -12,6 +12,10 @@ import {
   parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
 } from "./mcft_cap09_production_runtime_start_authority_v1.js";
 import { readMcftCap09OwnerCutoverAuthorityV1, type McftCap09OwnerCutoverScopeV1 } from "./mcft_cap09_production_owner_cutover_authority_v1.js";
+import {
+  loadMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1,
+  sha256FileV1,
+} from "./mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.js";
 
 const NON_OWNER_STANDBY_MODE = MCFT_CAP09_NON_OWNER_STANDBY_MODE_V1;
 const OWNER_CUTOVER_MODE = MCFT_CAP09_OWNER_CUTOVER_MODE_V1;
@@ -76,9 +80,37 @@ export async function runMcftCap09EvidencePreFormalOwnerRuntimeV1():Promise<void
  const runtimePath=req("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH");
  const ownerPath=req("GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH");
  const raw=JSON.parse(fs.readFileSync(runtimePath,"utf8"));
- parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
-  deployment_subject_sha:subject,scope:s,runtime_mode:OWNER_CUTOVER_MODE
+ const handoffPath=req("GEOX_MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_PATH");
+ const ownerAuthority=readMcftCap09OwnerCutoverAuthorityV1({authority_path:ownerPath,expected_deployment_subject_sha:subject,expected_scope:s});
+ // The pre-arm Evidence epoch candidate is mandatory once this successor is deployed.
+ // Current-crop validity remains lineage only for this planning seam; the exact base
+ // runtime-start authority and owner identity remain digest/host bound.
+ const baseRuntimeAuthority=parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
+  deployment_subject_sha:subject,
+  scope:s,
+  runtime_mode:OWNER_CUTOVER_MODE,
+  // Revalidate the immutable base at its original owner-cutover admission time.
+  // Current-crop freshness is not silently extended to a later restart.
+  admission_time_utc:String(raw?.activation_fence_time??""),
  });
- readMcftCap09OwnerCutoverAuthorityV1({authority_path:ownerPath,expected_deployment_subject_sha:subject,expected_scope:s});
- await runMcftCap09ProductionEvidenceRuntimeV1({runtime_start_authority:raw});
+ if(baseRuntimeAuthority.host_id!==ownerAuthority.host_id){
+  throw new Error("MCFT_CAP09_PREFORMAL_EVIDENCE_HANDOFF_BASE_HOST_MISMATCH");
+ }
+  const handoff=loadMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1({
+   authority_path:handoffPath,
+   expected:{
+    deployment_subject_sha:subject,
+    scope:s,
+    base_runtime_start_authority_sha256:sha256FileV1(runtimePath),
+   },
+  });
+  const handoffRuntimeStart={
+   ...raw,
+   authority_ref:handoff.authority_ref,
+   activation_fence_time:handoff.activation_fence_time,
+   formal_a0_authority_ref:handoff.formal_a0_authority_ref,
+   formal_a0_authority_sha256:sha256FileV1(handoffPath),
+   formal_a0_logical_time:handoff.formal_a0_logical_time,
+  };
+ await runMcftCap09ProductionEvidenceRuntimeV1({runtime_start_authority:handoffRuntimeStart});
 }
