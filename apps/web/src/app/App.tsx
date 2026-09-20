@@ -61,6 +61,8 @@ const CustomerReportExportPage = React.lazy(() => import("../features/customer/p
 const FieldOperationsHomePage = React.lazy(() => import("../features/operator/pages/FieldOperationsHomePage"));
 const AgronomyPlanningPage = React.lazy(() => import("../features/operator/pages/AgronomyPlanningPage"));
 const FieldOperationsPage = React.lazy(() => import("../features/operator/pages/FieldOperationsPage"));
+const FieldIntelligenceFieldsPage = React.lazy(() => import("../features/operator/pages/FieldIntelligenceFieldsPage"));
+const FieldIntelligenceDetailPage = React.lazy(() => import("../features/operator/pages/FieldIntelligenceDetailPage"));
 const OperatorTwinOverviewPage = React.lazy(() => import("../features/operator/pages/OperatorTwinOverviewPage"));
 const OperatorProductionWorkflowPage = React.lazy(() => import("../features/operator/pages/OperatorProductionWorkflowPage"));
 const OperatorGatewayDemoViewerPage = React.lazy(() => import("../features/operator/pages/OperatorGatewayDemoViewerPage"));
@@ -347,6 +349,8 @@ function OperatorRoutes(): React.ReactElement {
     <Routes>
       <Route path="/" element={<Navigate to="home" replace />} />
       <Route path="home" element={<FieldOperationsHomePage />} />
+      <Route path="field-intelligence" element={<FieldIntelligenceFieldsPage />} />
+      <Route path="field-intelligence/:fieldId" element={<FieldIntelligenceDetailPage />} />
       <Route path="fields/*" element={<OperatorFieldRuntimeRoutes />} />
       <Route path="agronomy" element={<AgronomyPlanningPage />} />
       <Route path="operations" element={<FieldOperationsPage />} />
