@@ -7,6 +7,7 @@ import { localizedText, useLocale, type LocaleCode, type LocalizedCopy } from ".
 import { OPERATOR_SHELL_LABELS, type ShellNavCopy } from "../lib/productSurfaceLabels";
 import "../styles/operatorShell.css";
 import "../styles/operatorShellApple.css";
+import "../styles/fouiFieldOperations.css";
 
 export type OperatorRuntimeContextSource = "governed-static-nonclaim" | "authoritative-read-model";
 
@@ -31,14 +32,53 @@ type OperatorLayoutProps = {
 };
 
 type OperatorNavItem = {
-  key: "overview" | "fields";
+  key: "overview" | "fields" | "agronomy" | "operations" | "reports" | "administration";
   copy: ShellNavCopy;
   to: string;
 };
 
+const FOUI_SHELL_COPY = {
+  brand: { zh: "GEOX 田间运营", en: "GEOX Field Operations" },
+  navigationAria: { zh: "GEOX 田间运营导航", en: "GEOX Field Operations navigation" },
+  productSurface: { zh: "田间运营", en: "Field Operations" },
+  boundaryLabel: { zh: "产品边界", en: "Product boundary" },
+  boundaryValue: {
+    zh: "田块事实由 MCFT 承载；农艺判断与运营授权保持独立权威。",
+    en: "MCFT carries field reality; agronomic judgment and operating authority remain separate.",
+  },
+  footerNote: {
+    zh: "Real Fields. Responsible Outcomes.",
+    en: "Real Fields. Responsible Outcomes.",
+  },
+  topbarPrimary: { zh: "权威感知", en: "Authority-aware" },
+  topbarSecondary: { zh: "产品界面", en: "Product shell" },
+  titles: {
+    home: { zh: "田间智能", en: "Field Intelligence" },
+    agronomy: { zh: "农艺 / 规划", en: "Agronomy / Planning" },
+    operations: { zh: "运营与问责", en: "Operations & Accountability" },
+  },
+  leads: {
+    home: { zh: "从当前田块现实开始，再进入农艺判断与受治理作业。", en: "Start with current field reality, then move into agronomy and governed operations." },
+    agronomy: { zh: "规划、农艺建议与决策历史；未建立的 ADR 产品投影保持明确未开放。", en: "Planning, agronomic guidance, and decision history; ADR product projections that are not built remain explicitly unavailable." },
+    operations: { zh: "组织审批、派发、执行回执与证据复核；写动作仍由 B-Line command API 重新授权。", en: "Organize approvals, dispatch, execution receipts, and evidence review while B-Line command APIs retain authorization." },
+  },
+  nav: {
+    home: { label: { zh: "首页", en: "Home" }, hint: { zh: "田间智能与当前需要处理的事项。", en: "Field intelligence and current items requiring attention." } },
+    fields: { label: { zh: "田块", en: "Fields" }, hint: { zh: "进入 MCFT canonical Field Runtime。", en: "Open the MCFT canonical Field Runtime." } },
+    agronomy: { label: { zh: "农艺", en: "Agronomy" }, hint: { zh: "种植规划、农艺建议与决策历史。", en: "Season planning, agronomic guidance, and decision history." } },
+    operations: { label: { zh: "运营", en: "Operations" }, hint: { zh: "审批、派发、执行与证据复核。", en: "Approval, dispatch, execution, and evidence review." } },
+    reports: { label: { zh: "报告", en: "Reports" }, hint: { zh: "进入客户可见报告中心。", en: "Open the customer-visible reports center." } },
+    administration: { label: { zh: "管理", en: "Administration" }, hint: { zh: "进入独立 Admin Console。", en: "Open the separate Admin Console." } },
+  },
+} as const;
+
 const OPERATOR_NAV_ITEMS: OperatorNavItem[] = [
-  { key: "overview", copy: OPERATOR_SHELL_LABELS.nav.overview, to: "/operator/twin" },
-  { key: "fields", copy: OPERATOR_SHELL_LABELS.nav.fields, to: "/operator/fields" },
+  { key: "overview", copy: FOUI_SHELL_COPY.nav.home, to: "/operator/home" },
+  { key: "fields", copy: FOUI_SHELL_COPY.nav.fields, to: "/operator/fields" },
+  { key: "agronomy", copy: FOUI_SHELL_COPY.nav.agronomy, to: "/operator/agronomy" },
+  { key: "operations", copy: FOUI_SHELL_COPY.nav.operations, to: "/operator/operations" },
+  { key: "reports", copy: FOUI_SHELL_COPY.nav.reports, to: "/customer/reports" },
+  { key: "administration", copy: FOUI_SHELL_COPY.nav.administration, to: "/admin/dashboard" },
 ];
 
 const RUNTIME_CONTEXT_COPY = {
@@ -76,11 +116,18 @@ const DEFAULT_RUNTIME_CONTEXT: OperatorRuntimeContextDescriptor = {
 };
 
 function isItemActive(pathname: string, item: OperatorNavItem): boolean {
-  if (item.key === "overview") return pathname === "/operator/twin" || pathname === "/operator";
-  return pathname.startsWith("/operator/fields") || pathname.startsWith("/operator/twin/fields/");
+  if (item.key === "overview") return pathname === "/operator" || pathname.startsWith("/operator/home") || pathname === "/operator/twin";
+  if (item.key === "fields") return pathname.startsWith("/operator/fields") || pathname.startsWith("/operator/twin/fields/");
+  if (item.key === "agronomy") return pathname.startsWith("/operator/agronomy");
+  if (item.key === "operations") return pathname.startsWith("/operator/operations") || pathname.startsWith("/operator/approvals") || pathname.startsWith("/operator/dispatch") || pathname.startsWith("/operator/acceptance") || pathname.startsWith("/operator/evidence");
+  if (item.key === "reports") return pathname.startsWith("/customer/reports");
+  return pathname.startsWith("/admin");
 }
 
 function resolveTitle(pathname: string, locale: LocaleCode): string {
+  if (pathname === "/operator/home" || pathname === "/operator") return localizedText(FOUI_SHELL_COPY.titles.home, locale);
+  if (pathname === "/operator/agronomy") return localizedText(FOUI_SHELL_COPY.titles.agronomy, locale);
+  if (pathname === "/operator/operations") return localizedText(FOUI_SHELL_COPY.titles.operations, locale);
   if (pathname === "/operator/twin") return localizedText(OPERATOR_SHELL_LABELS.titles.overview, locale);
   if (pathname === "/operator/twin/production-workflow") return localizedText(OPERATOR_SHELL_LABELS.titles.workflow, locale);
   if (pathname === "/operator/twin/gateway-demo") return localizedText(OPERATOR_SHELL_LABELS.titles.gateway, locale);
@@ -90,6 +137,9 @@ function resolveTitle(pathname: string, locale: LocaleCode): string {
 }
 
 function resolveLead(pathname: string, locale: LocaleCode): string {
+  if (pathname === "/operator/home" || pathname === "/operator") return localizedText(FOUI_SHELL_COPY.leads.home, locale);
+  if (pathname === "/operator/agronomy") return localizedText(FOUI_SHELL_COPY.leads.agronomy, locale);
+  if (pathname === "/operator/operations") return localizedText(FOUI_SHELL_COPY.leads.operations, locale);
   if (pathname === "/operator/twin") return localizedText(OPERATOR_SHELL_LABELS.leads.overview, locale);
   if (pathname === "/operator/twin/production-workflow") return localizedText(OPERATOR_SHELL_LABELS.leads.workflow, locale);
   if (pathname === "/operator/twin/gateway-demo") return localizedText(OPERATOR_SHELL_LABELS.leads.gateway, locale);
@@ -99,8 +149,6 @@ function resolveLead(pathname: string, locale: LocaleCode): string {
 }
 
 function navHint(item: OperatorNavItem, locale: LocaleCode, label: string): string {
-  if (locale === "zh-CN" && item.key === "overview") return "查看只读运行总览";
-  if (locale === "zh-CN" && item.key === "fields") return "查看规范地块运行列表与地块级审查标签";
   return item.copy.hint ? localizedText(item.copy.hint, locale) : label;
 }
 
@@ -133,6 +181,7 @@ export default function OperatorLayout({
   const { locale } = useLocale();
   const resolvedTitle = title ?? resolveTitle(location.pathname, locale);
   const resolvedLead = lead ?? resolveLead(location.pathname, locale);
+  const showRuntimeContext = location.pathname.startsWith("/operator/fields") || location.pathname.startsWith("/operator/twin");
   const contextSource = runtimeContext.source === "authoritative-read-model"
     ? RUNTIME_CONTEXT_COPY.authoritativeSource
     : RUNTIME_CONTEXT_COPY.staticSource;
@@ -154,61 +203,64 @@ export default function OperatorLayout({
       className="operatorShell operatorRuntimeVisualRoot"
       data-surface="operator"
       data-layout="operator-runtime-console-shell"
+      data-product-shell="foui-v1"
       data-runtime-context-source={runtimeContext.source}
       data-pfa2-locale={locale}
     >
-      <aside className="operatorShell__sidebar" aria-label={localizedText(OPERATOR_SHELL_LABELS.navigationAria, locale)}>
-        <div className="operatorShell__brand" aria-label={localizedText(OPERATOR_SHELL_LABELS.brand, locale)}>
+      <aside className="operatorShell__sidebar" aria-label={localizedText(FOUI_SHELL_COPY.navigationAria, locale)}>
+        <div className="operatorShell__brand" aria-label={localizedText(FOUI_SHELL_COPY.brand, locale)}>
           <span className="operatorShell__logoMark" aria-hidden="true" />
-          <span>{localizedText(OPERATOR_SHELL_LABELS.brand, locale)}</span>
+          <span>{localizedText(FOUI_SHELL_COPY.brand, locale)}</span>
         </div>
 
-        <nav className="operatorShell__nav" aria-label={localizedText(OPERATOR_SHELL_LABELS.navigationAria, locale)}>
+        <nav className="operatorShell__nav" aria-label={localizedText(FOUI_SHELL_COPY.navigationAria, locale)}>
           {OPERATOR_NAV_ITEMS.map((item) => renderNavItem(item, location.pathname, locale))}
         </nav>
 
-        <div className="operatorShell__scope" aria-label={localizedText(OPERATOR_SHELL_LABELS.productBoundaryAria, locale)}>
-          <span>{localizedText(OPERATOR_SHELL_LABELS.productSurface, locale)}</span>
-          <strong>{localizedText(OPERATOR_SHELL_LABELS.titles.fallback, locale)}</strong>
-          <span>{localizedText(OPERATOR_SHELL_LABELS.boundaryLabel, locale)}</span>
-          <strong>{localizedText(OPERATOR_SHELL_LABELS.boundaryValue, locale)}</strong>
+        <div className="operatorShell__scope" aria-label={localizedText(FOUI_SHELL_COPY.boundaryLabel, locale)}>
+          <span>{localizedText(FOUI_SHELL_COPY.productSurface, locale)}</span>
+          <strong>{localizedText(FOUI_SHELL_COPY.brand, locale)}</strong>
+          <span>{localizedText(FOUI_SHELL_COPY.boundaryLabel, locale)}</span>
+          <strong>{localizedText(FOUI_SHELL_COPY.boundaryValue, locale)}</strong>
         </div>
 
-        <p className="operatorShell__footer">{localizedText(OPERATOR_SHELL_LABELS.footerNote, locale)}</p>
+        <p className="operatorShell__footer">{localizedText(FOUI_SHELL_COPY.footerNote, locale)}</p>
       </aside>
 
       <div className="operatorShell__mainWrap">
         <header className="operatorShell__topbar">
           <div className="operatorShell__heading">
-            <span className="operatorShell__eyebrow">{localizedText(OPERATOR_SHELL_LABELS.titles.fallback, locale)}</span>
+            <span className="operatorShell__eyebrow">{localizedText(FOUI_SHELL_COPY.productSurface, locale)}</span>
             <h1 className="operatorShell__title">{resolvedTitle}</h1>
             <p className="operatorShell__lead">{resolvedLead}</p>
           </div>
           <div className="operatorShell__topActions">
             <LocaleToggle />
             <span className="operatorShell__readOnly">
-              {localizedText(OPERATOR_SHELL_LABELS.topbarReadonly, locale)}
-              <small>{localizedText(OPERATOR_SHELL_LABELS.runtimeShell, locale)}</small>
+              {localizedText(FOUI_SHELL_COPY.topbarPrimary, locale)}
+              <small>{localizedText(FOUI_SHELL_COPY.topbarSecondary, locale)}</small>
             </span>
           </div>
         </header>
 
-        <section className="operatorShell__runtimeContext" aria-label={localizedText(OPERATOR_SHELL_LABELS.productBoundaryAria, locale)}>
-          <div className="operatorShell__runtimePrimary">
-            <span className="operatorShell__eyebrow">{localizedText(RUNTIME_CONTEXT_COPY.currentContext, locale)}</span>
-            <div className="operatorShell__runtimeHeadline">
-              <strong>{localizedText(runtimeContext.mode, locale)}</strong>
-              {runtimeContext.readOnly ? <span>{localizedText(RUNTIME_CONTEXT_COPY.readOnly, locale)}</span> : null}
+        {showRuntimeContext ? (
+          <section className="operatorShell__runtimeContext" aria-label={localizedText(OPERATOR_SHELL_LABELS.productBoundaryAria, locale)}>
+            <div className="operatorShell__runtimePrimary">
+              <span className="operatorShell__eyebrow">{localizedText(RUNTIME_CONTEXT_COPY.currentContext, locale)}</span>
+              <div className="operatorShell__runtimeHeadline">
+                <strong>{localizedText(runtimeContext.mode, locale)}</strong>
+                {runtimeContext.readOnly ? <span>{localizedText(RUNTIME_CONTEXT_COPY.readOnly, locale)}</span> : null}
+              </div>
+              <p>{localizedText(OPERATOR_SHELL_LABELS.boundaryValue, locale)}</p>
             </div>
-            <p>{localizedText(OPERATOR_SHELL_LABELS.boundaryValue, locale)}</p>
-          </div>
 
-          <ProductTechnicalDisclosure
-            summary={localizedText(RUNTIME_CONTEXT_COPY.details, locale)}
-            description={localizedText(RUNTIME_CONTEXT_COPY.detailsLead, locale)}
-            items={technicalItems}
-          />
-        </section>
+            <ProductTechnicalDisclosure
+              summary={localizedText(RUNTIME_CONTEXT_COPY.details, locale)}
+              description={localizedText(RUNTIME_CONTEXT_COPY.detailsLead, locale)}
+              items={technicalItems}
+            />
+          </section>
+        ) : null}
 
         <main className="operatorShell__content">{children}</main>
       </div>
