@@ -107,6 +107,10 @@ export function parseMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1(
     stage_authority_required_for_evidence_acquisition: false,
     future_stage_pins_frozen: false,
     current_crop_authority_promoted: false,
+    formal_database_mutation_authorized: false,
+    formal_raw_write_authorized: false,
+    runtime_config_write_authorized: false,
+    scheduler_write_authorized: false,
   })) {
     if (authority[key] !== required) {
       throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_SCOPE_DRIFT:" + key);
@@ -126,6 +130,19 @@ export function parseMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1(
   if (!sameScopeV1(scope, expectedScope)) {
     throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_SCOPE_MISMATCH");
   }
+
+  textV1(
+    authority.base_runtime_start_authority_ref,
+    "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_BASE_REF_REQUIRED",
+  );
+  textV1(
+    authority.lineage_current_crop_authority_ref,
+    "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_LINEAGE_CROP_REF_REQUIRED",
+  );
+  digestV1(
+    authority.lineage_current_crop_authority_sha256,
+    "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_LINEAGE_CROP_DIGEST_REQUIRED",
+  );
 
   const baseDigest = digestV1(
     authority.base_runtime_start_authority_sha256,
