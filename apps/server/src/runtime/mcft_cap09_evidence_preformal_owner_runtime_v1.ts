@@ -85,15 +85,17 @@ export async function runMcftCap09EvidencePreFormalOwnerRuntimeV1():Promise<void
  // The pre-arm Evidence epoch candidate is mandatory once this successor is deployed.
  // Current-crop validity remains lineage only for this planning seam; the exact base
  // runtime-start authority and owner identity remain digest/host bound.
- parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
-  deployment_subject_sha:subject,scope:s
+ const baseRuntimeAuthority=parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
+  deployment_subject_sha:subject,
+  scope:s,
+  runtime_mode:OWNER_CUTOVER_MODE,
+  // Revalidate the immutable base at its original owner-cutover admission time.
+  // Current-crop freshness is not silently extended to a later restart.
+  admission_time_utc:String(raw?.activation_fence_time??""),
  });
-  if(raw?.runtime_mode!==OWNER_CUTOVER_MODE){
-   throw new Error("MCFT_CAP09_PREFORMAL_EVIDENCE_HANDOFF_BASE_OWNER_MODE_REQUIRED");
-  }
-  if(String(raw?.host_id??"").trim()!==ownerAuthority.host_id){
-   throw new Error("MCFT_CAP09_PREFORMAL_EVIDENCE_HANDOFF_BASE_HOST_MISMATCH");
-  }
+ if(baseRuntimeAuthority.host_id!==ownerAuthority.host_id){
+  throw new Error("MCFT_CAP09_PREFORMAL_EVIDENCE_HANDOFF_BASE_HOST_MISMATCH");
+ }
   const handoff=loadMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1({
    authority_path:handoffPath,
    expected:{
