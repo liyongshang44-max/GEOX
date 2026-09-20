@@ -1,0 +1,477 @@
+[data-product-shell="foui-v1"] {
+  --foui-paper: #f6f3eb;
+  --foui-paper-strong: #fffdf8;
+  --foui-ink: #172019;
+  --foui-muted: #657067;
+  --foui-green: #1f5c3d;
+  --foui-green-soft: #e9f0e8;
+  --foui-line: rgba(35, 48, 39, 0.14);
+  --foui-warn: #8a641d;
+  --foui-warn-soft: #f7efdb;
+  background: var(--foui-paper);
+}
+
+[data-product-shell="foui-v1"] .operatorShell__sidebar {
+  background: rgba(250, 248, 242, 0.96);
+  border-right-color: var(--foui-line);
+}
+
+[data-product-shell="foui-v1"] .operatorShell__brand {
+  color: var(--foui-green);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+}
+
+[data-product-shell="foui-v1"] .operatorShell__logoMark {
+  background: var(--foui-green);
+  box-shadow: none;
+}
+
+[data-product-shell="foui-v1"] .operatorShell__navItem {
+  border-radius: 4px;
+  color: #344039;
+}
+
+[data-product-shell="foui-v1"] .operatorShell__navItem.isActive {
+  color: var(--foui-green);
+  background: rgba(31, 92, 61, 0.08);
+  border-color: rgba(31, 92, 61, 0.12);
+}
+
+[data-product-shell="foui-v1"] .operatorShell__mainWrap {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.62), rgba(246,243,235,0.92) 280px),
+    var(--foui-paper);
+}
+
+[data-product-shell="foui-v1"] .operatorShell__title,
+.fouiPage h2,
+.fouiPage h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--foui-ink);
+}
+
+[data-product-shell="foui-v1"] .operatorShell__topbar {
+  border-bottom-color: var(--foui-line);
+}
+
+[data-product-shell="foui-v1"] .operatorShell__scope {
+  border-radius: 4px;
+  background: rgba(255,255,255,0.54);
+  box-shadow: none;
+  border-color: var(--foui-line);
+}
+
+.fouiPage {
+  display: grid;
+  gap: 18px;
+  color: var(--foui-ink);
+}
+
+.fouiHero {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: end;
+  min-height: 190px;
+  padding: 34px;
+  border: 1px solid var(--foui-line);
+  background:
+    linear-gradient(110deg, rgba(250,248,242,0.98) 0%, rgba(250,248,242,0.86) 54%, rgba(224,233,220,0.78) 100%),
+    linear-gradient(180deg, #eef1e9, #d9e2d5);
+}
+
+.fouiHero > div:first-child {
+  max-width: 760px;
+}
+
+.fouiEyebrow {
+  color: var(--foui-green);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.fouiHero h2 {
+  margin: 10px 0 10px;
+  font-size: clamp(34px, 4.3vw, 64px);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.fouiHero p,
+.fouiPanelHeader p,
+.fouiFeaturePanel p,
+.fouiDomainCard p,
+.fouiAttentionItem p,
+.fouiOperationItem p {
+  margin: 0;
+  color: var(--foui-muted);
+  line-height: 1.55;
+}
+
+.fouiHeroActions,
+.fouiOperationItemActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.fouiPrimaryLink,
+.fouiSecondaryLink,
+.fouiPanelHeader > a,
+.fouiFieldCard > a,
+.fouiAttentionItem > a,
+.fouiOperationItemActions > a {
+  text-decoration: none;
+}
+
+.fouiPrimaryLink,
+.fouiSecondaryLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid var(--foui-green);
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fouiPrimaryLink {
+  background: var(--foui-green);
+  color: #fffdf8;
+}
+
+.fouiSecondaryLink {
+  background: rgba(255,255,255,0.72);
+  color: var(--foui-green);
+}
+
+.fouiMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--foui-line);
+  background: var(--foui-paper-strong);
+}
+
+.fouiMetricCard {
+  display: grid;
+  gap: 5px;
+  padding: 20px 22px;
+  border-right: 1px solid var(--foui-line);
+}
+
+.fouiMetricCard:last-child {
+  border-right: 0;
+}
+
+.fouiMetricCard span,
+.fouiMetricCard small,
+.fouiFieldFacts dt,
+.fouiAttentionItem small,
+.fouiOperationItem small {
+  color: var(--foui-muted);
+  font-size: 12px;
+}
+
+.fouiMetricCard strong {
+  font: 500 clamp(28px, 3vw, 42px)/1 Georgia, "Times New Roman", serif;
+}
+
+.fouiBoundaryNotice {
+  padding: 12px 14px;
+  border-left: 3px solid var(--foui-warn);
+  background: var(--foui-warn-soft);
+  color: #624a1c;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.fouiBoundaryNotice--error {
+  border-left-color: #8a3d32;
+  background: #f6e8e4;
+  color: #74352d;
+}
+
+.fouiDashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.85fr);
+  gap: 18px;
+}
+
+.fouiPanel {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--foui-line);
+  background: var(--foui-paper-strong);
+}
+
+.fouiPanel--wide {
+  min-width: 0;
+}
+
+.fouiPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.fouiPanelHeader h3,
+.fouiFeaturePanel h3 {
+  margin: 5px 0 0;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.fouiPanelHeader > a {
+  color: var(--foui-green);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fouiFieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fouiFieldCard {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--foui-line);
+  background: #fbfaf6;
+}
+
+.fouiFieldCardTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fouiFieldCardTop > div {
+  display: grid;
+  gap: 4px;
+}
+
+.fouiFieldCardTop strong {
+  font-size: 17px;
+}
+
+.fouiFieldCardTop small {
+  color: var(--foui-muted);
+}
+
+.fouiStatePill {
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 3px 8px;
+  border: 1px solid rgba(31,92,61,0.16);
+  border-radius: 999px;
+  background: var(--foui-green-soft);
+  color: var(--foui-green);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.fouiStatePill--limited {
+  border-color: rgba(138,100,29,0.18);
+  background: var(--foui-warn-soft);
+  color: var(--foui-warn);
+}
+
+.fouiFieldFacts {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.fouiFieldFacts > div {
+  display: grid;
+  grid-template-columns: 126px minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--foui-line);
+}
+
+.fouiFieldFacts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.fouiFieldCard > a {
+  color: var(--foui-green);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fouiAttentionList,
+.fouiOperationList {
+  display: grid;
+}
+
+.fouiAttentionItem,
+.fouiOperationItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--foui-line);
+}
+
+.fouiAttentionItem:first-child,
+.fouiOperationItem:first-child {
+  border-top: 0;
+}
+
+.fouiAttentionItem > div,
+.fouiOperationItemMain {
+  display: grid;
+  gap: 6px;
+}
+
+.fouiAttentionItem > a {
+  align-self: center;
+  color: var(--foui-green);
+  font-size: 22px;
+}
+
+.fouiDomainGrid,
+.fouiAgronomyGrid,
+.fouiCapabilityLinks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fouiDomainCard,
+.fouiCapabilityLinks > a {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--foui-line);
+  background: var(--foui-paper-strong);
+  color: var(--foui-ink);
+  text-decoration: none;
+}
+
+.fouiDomainCard > span {
+  color: var(--foui-green);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+
+.fouiDomainCard strong,
+.fouiCapabilityLinks strong {
+  font: 500 22px/1.1 Georgia, "Times New Roman", serif;
+}
+
+.fouiDomainCard:hover,
+.fouiCapabilityLinks > a:hover {
+  border-color: rgba(31,92,61,0.42);
+}
+
+.fouiFeaturePanel {
+  display: grid;
+  align-content: start;
+  gap: 13px;
+}
+
+.fouiFeaturePanel--muted {
+  background: #f2efe7;
+}
+
+.fouiBoundaryFlow {
+  display: grid;
+  grid-template-columns: repeat(7, auto);
+  align-items: center;
+  justify-content: start;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.fouiBoundaryFlow > div {
+  min-width: 150px;
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid var(--foui-line);
+  background: #fbfaf6;
+}
+
+.fouiBoundaryFlow > div span,
+.fouiBoundaryFlow > div small {
+  color: var(--foui-muted);
+  font-size: 11px;
+}
+
+.fouiBoundaryFlow > i {
+  color: var(--foui-green);
+  font-style: normal;
+}
+
+.fouiOperationsBoard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fouiQueuePanel .fouiPanelHeader {
+  margin-bottom: 4px;
+}
+
+.fouiQueueCount {
+  min-width: 34px;
+  text-align: right;
+  font: 500 30px/1 Georgia, "Times New Roman", serif;
+  color: var(--foui-green);
+}
+
+.fouiOperationItemActions {
+  align-content: center;
+  justify-content: end;
+  flex-direction: column;
+}
+
+.fouiOperationItemActions > a {
+  color: var(--foui-green);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fouiTextLink {
+  color: var(--foui-muted) !important;
+  font-weight: 500 !important;
+}
+
+.fouiEmpty {
+  padding: 24px 0;
+  color: var(--foui-muted);
+  line-height: 1.55;
+}
+
+@media (max-width: 1180px) {
+  .fouiMetricGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fouiMetricCard:nth-child(2) { border-right: 0; }
+  .fouiMetricCard:nth-child(-n+2) { border-bottom: 1px solid var(--foui-line); }
+  .fouiDashboardGrid { grid-template-columns: 1fr; }
+  .fouiDomainGrid, .fouiAgronomyGrid, .fouiCapabilityLinks { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .fouiHero { min-height: 0; padding: 24px 20px; align-items: start; flex-direction: column; }
+  .fouiHero h2 { font-size: 38px; }
+  .fouiMetricGrid, .fouiFieldGrid, .fouiOperationsBoard { grid-template-columns: 1fr; }
+  .fouiMetricCard { border-right: 0; border-bottom: 1px solid var(--foui-line); }
+  .fouiMetricCard:last-child { border-bottom: 0; }
+  .fouiAttentionItem, .fouiOperationItem { grid-template-columns: 1fr; }
+  .fouiOperationItemActions { align-items: flex-start; }
+  .fouiFieldFacts > div { grid-template-columns: 1fr; gap: 3px; }
+}
