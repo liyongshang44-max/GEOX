@@ -67,6 +67,30 @@
       "selected_budget_ms": 2081804,
       "applies_to": "FORCING_ACQUISITION_START_DEADLINE_PER_BASE",
       "fixed_35_minute_lead_authorized": false
+    },
+    "pre_arm_store_modes": {
+      "fresh_zero_state": {
+        "mode": "FRESH_ZERO_STATE_PRE_ARM",
+        "public_base_table_count": 0,
+        "public_routine_count": 0,
+        "all_table_rows_zero_required": true,
+        "existing_behavior_preserved": true
+      },
+      "governed_materialized_zero_rearm": {
+        "mode": "MATERIALIZED_ZERO_REARM",
+        "eligibility_verifier_ref": "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_MATERIALIZED_ZERO_REARM_ELIGIBILITY_V1.cjs",
+        "required_store_phase": "SCHEMA_ACL_MATERIALIZED_ZERO_ROWS_PRE_A0",
+        "public_base_table_count": 29,
+        "public_routine_count": 2,
+        "all_table_rows_zero_required": true,
+        "prior_arm_invalidated_by_non_authority_change_required": true,
+        "prior_a0_artifact_absence_required": true,
+        "prior_arm_artifact_overwrite_forbidden": true,
+        "distinct_successor_arm_artifact_required": true,
+        "database_reset_or_truncate_forbidden": true,
+        "formal_database_mutation_allowed": false,
+        "schema_acl_revalidation_required_after_arm": true
+      }
     }
   },
   "schema_materialization": {
@@ -146,7 +170,9 @@
       "twin_state_latest_index_v1",
       "twin_terminal_tick_uniqueness_v1"
     ],
-    "formal_store_must_be_zero_state_before_materialization": true
+    "formal_store_must_be_zero_state_before_materialization": true,
+    "materialized_zero_rearm_idempotent_revalidation_allowed": true,
+    "materialized_zero_rearm_new_schema_creation_required": false
   },
   "a0_adoption": {
     "historical_ea5e2_reference_database_forbidden": true,
