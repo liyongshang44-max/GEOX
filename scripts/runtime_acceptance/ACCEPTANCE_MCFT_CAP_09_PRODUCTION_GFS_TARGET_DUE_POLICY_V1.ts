@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   MCFT_CAP09_GFS_LATEST_SAFE_START_LEAD_MINUTES_V1,
+  MCFT_CAP09_GFS_WARM_START_EARLIEST_START_LEAD_MINUTES_V1,
   MCFT_CAP09_GFS_MAX_ATTEMPTS_PER_TARGET_WINDOW_V1,
   MCFT_CAP09_GFS_RETRY_MINIMUM_INTERVAL_SECONDS_V1,
   MCFT_CAP09_GFS_SUBSEQUENT_EARLIEST_START_LEAD_MINUTES_V1,
@@ -14,14 +15,19 @@ const OUT=path.resolve("acceptance-output/MCFT_CAP_09_PRODUCTION_GFS_TARGET_DUE_
 const A0="2026-09-02T19:00:00.000Z";
 const FENCE="2026-09-02T17:00:00.000Z";
 function main():void{
+  assert.equal(MCFT_CAP09_GFS_WARM_START_EARLIEST_START_LEAD_MINUTES_V1,70);
   assert.equal(MCFT_CAP09_GFS_SUBSEQUENT_EARLIEST_START_LEAD_MINUTES_V1,70);
   assert.equal(MCFT_CAP09_GFS_LATEST_SAFE_START_LEAD_MINUTES_V1,30);
   assert.equal(MCFT_CAP09_GFS_MAX_ATTEMPTS_PER_TARGET_WINDOW_V1,3);
   assert.equal(MCFT_CAP09_GFS_RETRY_MINIMUM_INTERVAL_SECONDS_V1,60);
 
   assert.equal(nextProductionGfsTargetLogicalTimeV1({formal_a0_logical_time:A0,durable_paired_targets:[]}),A0);
-  const warm=evaluateProductionGfsTargetDueV1({planning_time:"2026-09-02T17:30:00.000Z",activation_fence_time:FENCE,formal_a0_logical_time:A0,durable_paired_targets:[]});
-  assert.equal(warm.status,"DUE");assert.equal(warm.target_logical_time,A0);assert.equal(warm.due_window_start,FENCE);assert.equal(warm.due_window_end_exclusive,A0);
+  const warmEarly=evaluateProductionGfsTargetDueV1({planning_time:"2026-09-02T17:30:00.000Z",activation_fence_time:FENCE,formal_a0_logical_time:A0,durable_paired_targets:[]});
+  assert.equal(warmEarly.status,"NOT_DUE");assert.equal(warmEarly.target_logical_time,A0);assert.equal(warmEarly.due_window_start,"2026-09-02T17:50:00.000Z");assert.equal(warmEarly.due_window_end_exclusive,A0);
+  const warm=evaluateProductionGfsTargetDueV1({planning_time:"2026-09-02T17:50:00.000Z",activation_fence_time:FENCE,formal_a0_logical_time:A0,durable_paired_targets:[]});
+  assert.equal(warm.status,"DUE");assert.equal(warm.target_logical_time,A0);assert.equal(warm.due_window_start,"2026-09-02T17:50:00.000Z");assert.equal(warm.due_window_end_exclusive,A0);
+  const lateFence=evaluateProductionGfsTargetDueV1({planning_time:"2026-09-02T18:10:00.000Z",activation_fence_time:"2026-09-02T18:10:00.000Z",formal_a0_logical_time:A0,durable_paired_targets:[]});
+  assert.equal(lateFence.status,"DUE");assert.equal(lateFence.due_window_start,"2026-09-02T18:10:00.000Z");
   const warmMiss=evaluateProductionGfsTargetDueV1({planning_time:A0,activation_fence_time:FENCE,formal_a0_logical_time:A0,durable_paired_targets:[]});
   assert.equal(warmMiss.status,"MISSED_WINDOW");
 
@@ -46,7 +52,7 @@ function main():void{
     durable_paired_targets:[],
   }),/ACTIVATION_FENCE_MUST_PRECEDE_A0/);
 
-  const proof={schema_version:"geox_mcft_cap09_production_gfs_target_due_policy_result_v1",status:"PASS",first_target_source:"EXPLICIT_FORMAL_A0",subsequent_progression:"STRICT_HOURLY_CONTIGUOUS_FROM_A0",warm_start_window:"ACTIVATION_FENCE_TO_A0_EXCLUSIVE",subsequent_due_window_lead_minutes:{earliest:70,latest_exclusive:30},max_attempts_per_target_window:3,retry_minimum_interval_seconds:60,earliest_70m_and_retry_60s_are_new_geox_operational_policy:true,latest_30m_preserves_frozen_hardening:true,max_attempts_3_preserves_qualified_hardening:true,wall_clock_read:false,environment_read:false,database_access:false,provider_request_count:0,runtime_tick_cursor_access:false,production_runtime_start:false};
+  const proof={schema_version:"geox_mcft_cap09_production_gfs_target_due_policy_result_v1",status:"PASS",first_target_source:"EXPLICIT_FORMAL_A0",subsequent_progression:"STRICT_HOURLY_CONTIGUOUS_FROM_A0",warm_start_window:"MAX_ACTIVATION_FENCE_A0_MINUS_70M_TO_A0_EXCLUSIVE",governance_lead_does_not_trigger_early_provider_work:true,subsequent_due_window_lead_minutes:{earliest:70,latest_exclusive:30},max_attempts_per_target_window:3,retry_minimum_interval_seconds:60,earliest_70m_and_retry_60s_are_new_geox_operational_policy:true,latest_30m_preserves_frozen_hardening:true,max_attempts_3_preserves_qualified_hardening:true,wall_clock_read:false,environment_read:false,database_access:false,provider_request_count:0,runtime_tick_cursor_access:false,production_runtime_start:false};
   fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(proof,null,2)+"\n");console.log(JSON.stringify(proof,null,2));
 }
 try{main();}catch(error){fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify({status:"FAIL",error:error instanceof Error?error.message:String(error),production_runtime_start:false},null,2)+"\n");throw error;}
