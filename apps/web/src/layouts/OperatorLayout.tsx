@@ -54,17 +54,19 @@ const FOUI_SHELL_COPY = {
   topbarSecondary: { zh: "产品界面", en: "Product shell" },
   titles: {
     home: { zh: "田间智能", en: "Field Intelligence" },
+    fields: { zh: "田块", en: "Fields" },
     agronomy: { zh: "农艺 / 规划", en: "Agronomy / Planning" },
     operations: { zh: "运营与问责", en: "Operations & Accountability" },
   },
   leads: {
     home: { zh: "从当前田块现实开始，再进入农艺判断与受治理作业。", en: "Start with current field reality, then move into agronomy and governed operations." },
+    fields: { zh: "选择精确田块范围并读取 MCFT current-world 数据；canonical 技术面保持独立。", en: "Resolve exact field scope and read MCFT current-world data while keeping the canonical technical surface separate." },
     agronomy: { zh: "规划、农艺建议与决策历史；未建立的 ADR 产品投影保持明确未开放。", en: "Planning, agronomic guidance, and decision history; ADR product projections that are not built remain explicitly unavailable." },
     operations: { zh: "组织审批、派发、执行回执与证据复核；写动作仍由 B-Line command API 重新授权。", en: "Organize approvals, dispatch, execution receipts, and evidence review while B-Line command APIs retain authorization." },
   },
   nav: {
     home: { label: { zh: "首页", en: "Home" }, hint: { zh: "田间智能与当前需要处理的事项。", en: "Field intelligence and current items requiring attention." } },
-    fields: { label: { zh: "田块", en: "Fields" }, hint: { zh: "进入 MCFT canonical Field Runtime。", en: "Open the MCFT canonical Field Runtime." } },
+    fields: { label: { zh: "田块", en: "Fields" }, hint: { zh: "进入产品级 Field Intelligence；规范 MCFT 技术视图仍可回查。", en: "Open product Field Intelligence while preserving access to the canonical MCFT technical view." } },
     agronomy: { label: { zh: "农艺", en: "Agronomy" }, hint: { zh: "种植规划、农艺建议与决策历史。", en: "Season planning, agronomic guidance, and decision history." } },
     operations: { label: { zh: "运营", en: "Operations" }, hint: { zh: "审批、派发、执行与证据复核。", en: "Approval, dispatch, execution, and evidence review." } },
     reports: { label: { zh: "报告", en: "Reports" }, hint: { zh: "进入客户可见报告中心。", en: "Open the customer-visible reports center." } },
@@ -74,7 +76,7 @@ const FOUI_SHELL_COPY = {
 
 const OPERATOR_NAV_ITEMS: OperatorNavItem[] = [
   { key: "overview", copy: FOUI_SHELL_COPY.nav.home, to: "/operator/home" },
-  { key: "fields", copy: FOUI_SHELL_COPY.nav.fields, to: "/operator/fields" },
+  { key: "fields", copy: FOUI_SHELL_COPY.nav.fields, to: "/operator/field-intelligence" },
   { key: "agronomy", copy: FOUI_SHELL_COPY.nav.agronomy, to: "/operator/agronomy" },
   { key: "operations", copy: FOUI_SHELL_COPY.nav.operations, to: "/operator/operations" },
   { key: "reports", copy: FOUI_SHELL_COPY.nav.reports, to: "/customer/reports" },
@@ -117,7 +119,7 @@ const DEFAULT_RUNTIME_CONTEXT: OperatorRuntimeContextDescriptor = {
 
 function isItemActive(pathname: string, item: OperatorNavItem): boolean {
   if (item.key === "overview") return pathname === "/operator" || pathname.startsWith("/operator/home") || pathname === "/operator/twin";
-  if (item.key === "fields") return pathname.startsWith("/operator/fields") || pathname.startsWith("/operator/twin/fields/");
+  if (item.key === "fields") return pathname.startsWith("/operator/field-intelligence") || pathname.startsWith("/operator/fields") || pathname.startsWith("/operator/twin/fields/");
   if (item.key === "agronomy") return pathname.startsWith("/operator/agronomy");
   if (item.key === "operations") return pathname.startsWith("/operator/operations") || pathname.startsWith("/operator/approvals") || pathname.startsWith("/operator/dispatch") || pathname.startsWith("/operator/acceptance") || pathname.startsWith("/operator/evidence");
   if (item.key === "reports") return pathname.startsWith("/customer/reports");
@@ -126,6 +128,7 @@ function isItemActive(pathname: string, item: OperatorNavItem): boolean {
 
 function resolveTitle(pathname: string, locale: LocaleCode): string {
   if (pathname === "/operator/home" || pathname === "/operator") return localizedText(FOUI_SHELL_COPY.titles.home, locale);
+  if (pathname.startsWith("/operator/field-intelligence")) return localizedText(FOUI_SHELL_COPY.titles.fields, locale);
   if (pathname === "/operator/agronomy") return localizedText(FOUI_SHELL_COPY.titles.agronomy, locale);
   if (pathname === "/operator/operations") return localizedText(FOUI_SHELL_COPY.titles.operations, locale);
   if (pathname === "/operator/twin") return localizedText(OPERATOR_SHELL_LABELS.titles.overview, locale);
@@ -138,6 +141,7 @@ function resolveTitle(pathname: string, locale: LocaleCode): string {
 
 function resolveLead(pathname: string, locale: LocaleCode): string {
   if (pathname === "/operator/home" || pathname === "/operator") return localizedText(FOUI_SHELL_COPY.leads.home, locale);
+  if (pathname.startsWith("/operator/field-intelligence")) return localizedText(FOUI_SHELL_COPY.leads.fields, locale);
   if (pathname === "/operator/agronomy") return localizedText(FOUI_SHELL_COPY.leads.agronomy, locale);
   if (pathname === "/operator/operations") return localizedText(FOUI_SHELL_COPY.leads.operations, locale);
   if (pathname === "/operator/twin") return localizedText(OPERATOR_SHELL_LABELS.leads.overview, locale);
