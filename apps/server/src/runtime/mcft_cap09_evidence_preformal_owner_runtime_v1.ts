@@ -12,6 +12,12 @@ import {
   parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
 } from "./mcft_cap09_production_runtime_start_authority_v1.js";
 import { readMcftCap09OwnerCutoverAuthorityV1, type McftCap09OwnerCutoverScopeV1 } from "./mcft_cap09_production_owner_cutover_authority_v1.js";
+import {
+  MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_ID_V1,
+  MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_SCHEMA_V1,
+  loadMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1,
+  sha256FileV1,
+} from "./mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.js";
 
 const NON_OWNER_STANDBY_MODE = MCFT_CAP09_NON_OWNER_STANDBY_MODE_V1;
 const OWNER_CUTOVER_MODE = MCFT_CAP09_OWNER_CUTOVER_MODE_V1;
@@ -76,9 +82,40 @@ export async function runMcftCap09EvidencePreFormalOwnerRuntimeV1():Promise<void
  const runtimePath=req("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH");
  const ownerPath=req("GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH");
  const raw=JSON.parse(fs.readFileSync(runtimePath,"utf8"));
+ const handoffPath=String(process.env.GEOX_MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_PATH??"").trim();
+ readMcftCap09OwnerCutoverAuthorityV1({authority_path:ownerPath,expected_deployment_subject_sha:subject,expected_scope:s});
+ if(handoffPath){
+  const handoffRaw=JSON.parse(fs.readFileSync(handoffPath,"utf8"));
+  if(
+   handoffRaw?.schema_version===MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_SCHEMA_V1
+   && handoffRaw?.authority_id===MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_ID_V1
+   && handoffRaw?.status==="UNARMED"
+   && handoffRaw?.armed===false
+  ){
+   parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
+    deployment_subject_sha:subject,scope:s,runtime_mode:OWNER_CUTOVER_MODE
+   });
+   await runMcftCap09ProductionEvidenceRuntimeV1({runtime_start_authority:raw});
+   return;
+  }
+  // Once a Formal-v5 handoff is armed, the base runtime-start current-crop window is lineage only.
+  // It must not prevent Evidence acquisition from following the arm-frozen actual A0 clock.
+  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
+   deployment_subject_sha:subject,scope:s
+  });
+  const handoff=loadMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1({
+   authority_path:handoffPath,
+   expected:{
+    deployment_subject_sha:subject,
+    scope:s,
+    base_runtime_start_authority_sha256:sha256FileV1(runtimePath),
+   },
+  });
+  await runMcftCap09ProductionEvidenceRuntimeV1({planner_runtime_start_authority:handoff});
+  return;
+ }
  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
   deployment_subject_sha:subject,scope:s,runtime_mode:OWNER_CUTOVER_MODE
  });
- readMcftCap09OwnerCutoverAuthorityV1({authority_path:ownerPath,expected_deployment_subject_sha:subject,expected_scope:s});
  await runMcftCap09ProductionEvidenceRuntimeV1({runtime_start_authority:raw});
 }
