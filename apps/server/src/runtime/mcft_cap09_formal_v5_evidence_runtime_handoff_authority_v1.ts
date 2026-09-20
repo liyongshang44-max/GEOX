@@ -204,7 +204,7 @@ export function parseMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1(
   if (Date.parse(admission) < Date.parse(activationFence)) {
     throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_FUTURE_AT_PROCESS_ADMISSION");
   }
-  if (Date.parse(admission) >= Date.parse(a0)) {
+  if (Date.parse(admission) > Date.parse(o23)) {
     throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_STALE_AT_PROCESS_ADMISSION");
   }
 
