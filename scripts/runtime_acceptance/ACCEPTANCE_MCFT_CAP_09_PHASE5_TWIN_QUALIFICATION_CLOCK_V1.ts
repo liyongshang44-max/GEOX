@@ -86,6 +86,7 @@ async function main(): Promise<void> {
   const realClockStart = buildPhase5TwinQualificationRuntimeStartAuthorityV1({
     formal_a0: "2026-08-27T19:00:00.000Z",
     run_class: MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1,
+    rehearsal_activation_fence_time: "2026-08-27T18:11:22.000Z",
     deployment_subject_sha: qualificationSubject,
     scope: qualificationScope,
   });
@@ -93,12 +94,33 @@ async function main(): Promise<void> {
     realClockStart.authority_ref,
     "qualification://mcft-cap09/phase5/real-clock-rehearsal/runtime-start-authority-v1",
   );
+  assert.equal(realClockStart.activation_fence_time, "2026-08-27T18:11:22.000Z");
   assert.equal(realClockStart.runtime_process_start_authorized, true);
   assert.equal(realClockStart.twin_runtime_start_authorized, true);
   assert.equal(realClockStart.production_owner_activation_authorized, false);
   assert.equal(realClockStart.formal_v5_arm_authorized, false);
   assert.equal(realClockStart.a0_authorized, false);
   assert.equal(realClockStart.o00_authorized, false);
+
+  assert.throws(
+    () => buildPhase5TwinQualificationRuntimeStartAuthorityV1({
+      formal_a0: "2026-08-27T19:00:00.000Z",
+      run_class: MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1,
+      deployment_subject_sha: qualificationSubject,
+      scope: qualificationScope,
+    }),
+    /REAL_CLOCK_REHEARSAL_ACTIVATION_FENCE_REQUIRED/,
+  );
+  assert.throws(
+    () => buildPhase5TwinQualificationRuntimeStartAuthorityV1({
+      formal_a0: "2026-08-27T19:00:00.000Z",
+      run_class: MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1,
+      rehearsal_activation_fence_time: "2026-08-27T19:00:00.000Z",
+      deployment_subject_sha: qualificationSubject,
+      scope: qualificationScope,
+    }),
+    /REAL_CLOCK_REHEARSAL_FENCE_MUST_PRECEDE_A0/,
+  );
 
   assert.throws(
     () => buildPhase5TwinQualificationRuntimeStartAuthorityV1({
@@ -217,6 +239,7 @@ async function main(): Promise<void> {
     qualification_lease_owner_requires_explicit_run_class: true,
     real_clock_rehearsal_forbids_clock_override: true,
     real_clock_rehearsal_uses_system_database_utc_clock: true,
+    real_clock_rehearsal_activation_fence_is_physical_start_time: true,
     exact_hour_required: true,
     same_production_twin_process_reused: true,
     second_scheduler_or_runner_path: false,
