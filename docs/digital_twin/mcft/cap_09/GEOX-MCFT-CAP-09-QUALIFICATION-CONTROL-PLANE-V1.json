@@ -773,7 +773,8 @@
         "docker-compose.mcft-cap09-production-preformal.yml",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs",
-        "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts"
+        "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs"
       ]
     },
     "T4R1_CURRENT_CROP_ROLLING_CANDIDATE": {
@@ -842,7 +843,8 @@
         "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts",
         "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts",
         "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_V1.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs"
       ]
     },
     "FORMAL_V5_H6_SUCCESSOR_SEAM_V1": {
@@ -870,7 +872,8 @@
         "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts",
         "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts",
         "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_V1.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs"
       ]
     },
     "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1": {
@@ -887,7 +890,8 @@
         "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_LATE_SEASON_EPOCH_STAGE_HANDOFF_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs",
-        ".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml"
+        ".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml",
+        "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs"
       ]
     }
   },
