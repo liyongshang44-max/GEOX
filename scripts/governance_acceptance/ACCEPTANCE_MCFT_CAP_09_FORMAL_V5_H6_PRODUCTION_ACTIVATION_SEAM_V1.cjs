@@ -9,6 +9,7 @@ const ROOT=path.resolve(__dirname,"../..");
 const BASE="2ce0c90ef30b3c04ed112639c87926ac19be4e03";
 const AUTH="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json";
 const ARM="scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs";
+const REARM="scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_MATERIALIZED_ZERO_REARM_ELIGIBILITY_V1.cjs";
 const SCHEMA="scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MATERIALIZATION_V1.ts";
 const RUNNER="apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts";
 const RUNNER_ACCEPT="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts";
@@ -87,6 +88,23 @@ assert.equal(auth.arm.execution_host,"LOCAL_NON_GITHUB_PRODUCTION_HOST_ONLY");
 assert.equal(auth.arm.epoch_selection.minimum_governance_lead_hours,36);
 assert.equal(auth.arm.timing_budget.selected_budget_ms,2081804);
 assert.equal(auth.arm.timing_budget.fixed_35_minute_lead_authorized,false);
+assert.equal(auth.arm.pre_arm_store_modes.fresh_zero_state.mode,"FRESH_ZERO_STATE_PRE_ARM");
+assert.equal(auth.arm.pre_arm_store_modes.fresh_zero_state.public_base_table_count,0);
+assert.equal(auth.arm.pre_arm_store_modes.fresh_zero_state.public_routine_count,0);
+const rearmMode=auth.arm.pre_arm_store_modes.governed_materialized_zero_rearm;
+assert.equal(rearmMode.mode,"MATERIALIZED_ZERO_REARM");
+assert.equal(rearmMode.eligibility_verifier_ref,REARM);
+assert.equal(rearmMode.required_store_phase,"SCHEMA_ACL_MATERIALIZED_ZERO_ROWS_PRE_A0");
+assert.equal(rearmMode.public_base_table_count,29);
+assert.equal(rearmMode.public_routine_count,2);
+assert.equal(rearmMode.all_table_rows_zero_required,true);
+assert.equal(rearmMode.prior_arm_invalidated_by_non_authority_change_required,true);
+assert.equal(rearmMode.prior_a0_artifact_absence_required,true);
+assert.equal(rearmMode.prior_arm_artifact_overwrite_forbidden,true);
+assert.equal(rearmMode.distinct_successor_arm_artifact_required,true);
+assert.equal(rearmMode.database_reset_or_truncate_forbidden,true);
+assert.equal(rearmMode.formal_database_mutation_allowed,false);
+assert.equal(rearmMode.schema_acl_revalidation_required_after_arm,true);
 assert.equal(auth.schema_materialization.canonical_facts_schema_source,"docker/postgres/init/001_schema.sql");
 assert.equal(auth.schema_materialization.canonical_facts_extraction_mode,"FACTS_ONLY");
 assert.deepEqual(auth.schema_materialization.predecessor_schema_files,FORMAL_SCHEMA_MIGRATIONS.slice(0,5));
@@ -112,6 +130,8 @@ assert.deepEqual(
   "H6_AUTHORITY_EXACT_29_TABLE_SET_REQUIRED",
 );
 assert.equal(auth.schema_materialization.formal_store_must_be_zero_state_before_materialization,true);
+assert.equal(auth.schema_materialization.materialized_zero_rearm_idempotent_revalidation_allowed,true);
+assert.equal(auth.schema_materialization.materialized_zero_rearm_new_schema_creation_required,false);
 assert.equal(auth.a0_adoption.historical_ea5e2_reference_database_forbidden,true);
 assert.equal(auth.a0_adoption.provider_refetch_for_a0_forbidden,true);
 assert.equal(auth.runtime_adoption.runtime_kernel_rewrite,false);
@@ -236,6 +256,10 @@ for(const value of [
   "formal_runtime_config_pins_frozen:false",
   "formal_stage_authority_pins_frozen:false",
   "h6_stage_successor_materialization_still_required:true",
+  "MATERIALIZED_ZERO_REARM",
+  "FORMAL_V5_REARM_DISTINCT_ARM_OUTPUT_REQUIRED",
+  "materialized_zero_rearm_revalidated_at_actual_arm",
+  "schema_acl_revalidation_required_after_arm:true",
 ])marker(arm,value,"H6_ARM_MARKER_REQUIRED");
 for(const value of [
   "geox_mcft_cap09_s6_formal_t4r1_24h_v4",
@@ -243,6 +267,19 @@ for(const value of [
   "GITHUB_EVENT_NAME",
   "workflow_dispatch",
 ])notMarker(arm,value,"H6_ARM_HISTORICAL_PATH_FORBIDDEN");
+
+const rearmVerifier=read(REARM);
+for(const value of [
+  "FORMAL_V5_REARM_LOCAL_PRODUCTION_HOST_ONLY",
+  "SCHEMA_ACL_MATERIALIZED_ZERO_ROWS_PRE_A0",
+  "FORMAL_V5_REARM_PRIOR_ARM_NOT_INVALIDATED_BY_SEMANTIC_CHANGE",
+  "FORMAL_V5_REARM_PRE_A0_ROWS_NONZERO",
+  "existing_arm_artifact_must_not_be_overwritten:true",
+  "new_arm_output_must_be_distinct:true",
+  "schema_acl_revalidation_required_after_rearm:true",
+  "formal_database_mutation:false",
+])marker(rearmVerifier,value,"H6_REARM_MARKER_REQUIRED");
+for(const value of ["DROP DATABASE","TRUNCATE ","DELETE FROM ","CREATE DATABASE"])notMarker(rearmVerifier,value,"H6_REARM_DESTRUCTIVE_DATABASE_PATH_FORBIDDEN");
 
 const schema=read(SCHEMA);
 for(const value of [
@@ -353,7 +390,7 @@ const qcp=JSON.parse(read(QCP));
 const h6Resolver=qcp.dependency_resolvers?.FORMAL_V5_H6_SUCCESSOR_SEAM_V1;
 assert.ok(h6Resolver,"H6_QCP_SUCCESSOR_RESOLVER_REQUIRED");
 assert.equal(h6Resolver.kind,"EXACT_PATH_SET");
-for(const rel of [RUNNER,V5_BUNDLE,V5_BUNDLE_TEST,V5_MANIFEST,V5_MANIFEST_TEST,A0_REPLAY]){
+for(const rel of [RUNNER,V5_BUNDLE,V5_BUNDLE_TEST,V5_MANIFEST,V5_MANIFEST_TEST,A0_REPLAY,REARM]){
   assert.ok(h6Resolver.paths.includes(rel),"H6_QCP_SUCCESSOR_PATH_REQUIRED:"+rel);
 }
 const v13Runtime=qcp.dependency_resolvers?.V13_RUNTIME_SEMANTIC_CLOSURE;
@@ -438,6 +475,9 @@ const proof={
   formal_o00_o23_hard_acceptance_unchanged:true,
   actual_arm_exact_pre_arm_evidence_epoch_match_required:true,
   local_operator_arm_surface_present:true,
+  governed_materialized_zero_rearm_surface_present:true,
+  prior_arm_overwrite_forbidden:true,
+  destructive_store_reset_for_rearm_forbidden:true,
   local_operator_secret_binding_contract_frozen:true,
   fresh_v5_schema_acl_surface_present:true,
   v5_stage_aware_runner_composition_present:true,
