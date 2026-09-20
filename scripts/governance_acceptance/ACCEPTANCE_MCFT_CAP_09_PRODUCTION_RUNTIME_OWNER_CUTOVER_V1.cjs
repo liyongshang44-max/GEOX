@@ -95,7 +95,7 @@ const evidenceSource=read(evidencePath);
 const twinSource=read(twinPath);
 assert.ok(evidenceSource.includes("readMcftCap09OwnerCutoverAuthorityV1"));
 assert.ok(evidenceSource.includes("loadMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1"));
-assert.ok(evidenceSource.includes("planner_runtime_start_authority:handoff"));
+assert.ok(evidenceSource.includes("runtime_start_authority:handoffRuntimeStart"));
 assert.ok(twinSource.includes("readMcftCap09OwnerCutoverAuthorityV1"));
 assert.ok(evidenceSource.includes('const EVIDENCE_LEASE_TABLE = "external_evidence_producer_lease_v1"'));
 assert.ok(twinSource.includes('const TWIN_LEASE_TABLE = "twin_runtime_lease_v1"'));
