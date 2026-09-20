@@ -27,6 +27,41 @@ const H5="scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATIO
 const H5_OUT="acceptance-output/MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1_RESULT.json";
 const PHASE6="scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs";
 const DEFAULT_OUT=path.join(os.homedir(),".geox","mcft-cap09","formal-v5","arm-v1.json");
+const EXPECTED_MATERIALIZED_TABLES=[
+  "facts",
+  "twin_action_feedback_cycle_projection_v1",
+  "twin_action_feedback_evidence_index_v1",
+  "twin_action_feedback_projection_v1",
+  "twin_active_lineage_index_v1",
+  "twin_approved_plan_binding_projection_v1",
+  "twin_decision_record_projection_v1",
+  "twin_external_formal_forcing_base_cursor_v1",
+  "twin_external_formal_forcing_base_target_v1",
+  "twin_external_formal_forcing_controller_lease_v1",
+  "twin_forecast_point_projection_v1",
+  "twin_forecast_residual_projection_v1",
+  "twin_forecast_result_latest_index_v1",
+  "twin_forecast_run_projection_v1",
+  "twin_forecast_success_latest_index_v1",
+  "twin_object_idempotency_index_v1",
+  "twin_runtime_authority_snapshot_v1",
+  "twin_runtime_checkpoint_latest_index_v1",
+  "twin_runtime_health_latest_index_v1",
+  "twin_runtime_lease_v1",
+  "twin_scenario_latest_index_v1",
+  "twin_scenario_point_projection_v1",
+  "twin_scenario_set_projection_v1",
+  "twin_scenario_set_uniqueness_v1",
+  "twin_shadow_online_scheduler_cursor_v1",
+  "twin_shadow_online_scheduler_slot_v1",
+  "twin_state_history_projection_v1",
+  "twin_state_latest_index_v1",
+  "twin_terminal_tick_uniqueness_v1",
+].sort();
+const EXPECTED_MATERIALIZED_ROUTINES=[
+  "mcft_cap09_twin_runtime_append_fact_v1",
+  "mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1",
+].sort();
 
 function fail(code,detail){throw new Error(detail===undefined?code:code+":"+String(detail));}
 function req(ok,code,detail){if(!ok)fail(code,detail);}
@@ -123,18 +158,35 @@ function loadEvidenceEpochCandidate({head,epoch,armTime,currentCrop}){
     sha256:sha256Bytes(bytes),
   };
 }
-function psqlZeroState(url){
+function psqlReadOnly(url,sql){
   const env={...process.env,PGOPTIONS:"-c default_transaction_read_only=on"};
+  return cp.execFileSync("psql",[url,"-AtF","|","-v","ON_ERROR_STOP=1","-c",sql],{cwd:ROOT,encoding:"utf8",env}).trim();
+}
+function splitLines(value){return String(value||"").split(/\r?\n/).map(v=>v.trim()).filter(Boolean);}
+function psqlPreArmState(url,mode){
   const sql="SELECT current_setting('transaction_read_only'),current_database(),(SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),(SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'),transaction_timestamp();";
-  const out=cp.execFileSync("psql",[url,"-AtF","|","-v","ON_ERROR_STOP=1","-c",sql],{cwd:ROOT,encoding:"utf8",env}).trim();
-  const parts=out.split("|");
-  req(parts.length===5,"FORMAL_V5_ARM_ZERO_STATE_ROW_INVALID");
+  const parts=psqlReadOnly(url,sql).split("|");
+  req(parts.length===5,"FORMAL_V5_ARM_PRE_ARM_STATE_ROW_INVALID");
   req(parts[0]==="on","FORMAL_V5_ARM_TRANSACTION_READ_ONLY_REQUIRED",parts[0]);
   req(parts[1]===FORMAL_DB,"FORMAL_V5_ARM_DATABASE_IDENTITY_MISMATCH",parts[1]);
-  req(parts[2]==="0","FORMAL_V5_ARM_PUBLIC_TABLES_MUST_BE_ZERO",parts[2]);
-  req(parts[3]==="0","FORMAL_V5_ARM_PUBLIC_ROUTINES_MUST_BE_ZERO",parts[3]);
+  const tableCount=Number(parts[2]),routineCount=Number(parts[3]);
   const dbNow=canonicalIso(new Date(parts[4]).toISOString(),"FORMAL_V5_ARM_DATABASE_NOW_INVALID");
-  return {database_now:dbNow,public_base_table_count:0,public_routine_count:0,transaction_read_only:true};
+  if(mode==="FRESH_ZERO_STATE_PRE_ARM"){
+    req(tableCount===0,"FORMAL_V5_ARM_PUBLIC_TABLES_MUST_BE_ZERO",tableCount);
+    req(routineCount===0,"FORMAL_V5_ARM_PUBLIC_ROUTINES_MUST_BE_ZERO",routineCount);
+    return {database_now:dbNow,public_base_table_count:0,public_routine_count:0,all_table_rows_zero:true,transaction_read_only:true};
+  }
+  req(mode==="MATERIALIZED_ZERO_REARM","FORMAL_V5_ARM_PRE_ARM_MODE_INVALID",mode);
+  req(tableCount===29,"FORMAL_V5_REARM_PUBLIC_TABLE_COUNT_REQUIRED",tableCount);
+  req(routineCount===2,"FORMAL_V5_REARM_PUBLIC_ROUTINE_COUNT_REQUIRED",routineCount);
+  const tables=splitLines(psqlReadOnly(url,"SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' ORDER BY table_name;")).sort();
+  const routines=splitLines(psqlReadOnly(url,"SELECT p.proname FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' ORDER BY p.proname;")).sort();
+  req(JSON.stringify(tables)===JSON.stringify(EXPECTED_MATERIALIZED_TABLES),"FORMAL_V5_REARM_MATERIALIZED_TABLE_SET_MISMATCH",JSON.stringify(tables));
+  req(JSON.stringify(routines)===JSON.stringify(EXPECTED_MATERIALIZED_ROUTINES),"FORMAL_V5_REARM_MATERIALIZED_ROUTINE_SET_MISMATCH",JSON.stringify(routines));
+  const union=EXPECTED_MATERIALIZED_TABLES.map(name=>"SELECT '"+name.replaceAll("'","''")+"' AS rel,count(*)::bigint AS n FROM public.\""+name.replaceAll('"','""')+"\"").join(" UNION ALL ");
+  const nonzero=splitLines(psqlReadOnly(url,union)).map(line=>{const [rel,n]=line.split("|");return {relation:rel,row_count:Number(n)};}).filter(row=>row.row_count!==0);
+  req(nonzero.length===0,"FORMAL_V5_REARM_PRE_A0_ROWS_NONZERO",JSON.stringify(nonzero));
+  return {database_now:dbNow,public_base_table_count:29,public_routine_count:2,all_table_rows_zero:true,transaction_read_only:true};
 }
 function selectCurrentCrop(nowMs){
   const registry=readJson(CURRENT_REGISTRY);
@@ -186,6 +238,10 @@ function selftest(){
     stage_authority_refresh_clock_eligibility:selected.stage_authority_refresh_clock_eligibility,
     minimum_governance_lead_hours:36,
     fixed_35_minute_lead_used:false,
+    supported_pre_arm_modes:["FRESH_ZERO_STATE_PRE_ARM","MATERIALIZED_ZERO_REARM"],
+    materialized_zero_rearm_requires_invalidated_prior_arm:true,
+    materialized_zero_rearm_requires_distinct_arm_output:true,
+    materialized_zero_rearm_requires_exact_29_table_2_routine_zero_row_state:true,
     provider_request_count:0,
     formal_database_mutation:false,
     a0_bootstrap:false,
@@ -197,7 +253,15 @@ function main(){
   req(!process.env.GITHUB_ACTIONS&&!process.env.CI,"FORMAL_V5_ARM_LOCAL_NON_GITHUB_HOST_ONLY");
   req(has("--operator-authorized"),"FORMAL_V5_ARM_EXPLICIT_OPERATOR_AUTHORIZATION_REQUIRED");
   const zeroPath=arg("--zero-state-proof");
-  req(zeroPath&&fs.existsSync(path.resolve(zeroPath)),"FORMAL_V5_ARM_ZERO_STATE_PROOF_REQUIRED");
+  const rearmPath=arg("--materialized-zero-rearm-proof");
+  req(Boolean(zeroPath)!==Boolean(rearmPath),"FORMAL_V5_ARM_EXACTLY_ONE_PRE_ARM_PROOF_REQUIRED");
+  const preArmProofPath=path.resolve(zeroPath||rearmPath);
+  req(fs.existsSync(preArmProofPath),"FORMAL_V5_ARM_PRE_ARM_PROOF_REQUIRED",preArmProofPath);
+  const preArmMode=rearmPath?"MATERIALIZED_ZERO_REARM":"FRESH_ZERO_STATE_PRE_ARM";
+  const rearmProof=rearmPath?JSON.parse(fs.readFileSync(preArmProofPath,"utf8")):null;
+  if(rearmProof){
+    req(rearmProof.schema_version==="geox_mcft_cap09_formal_v5_materialized_zero_rearm_eligibility_v1"&&rearmProof.status==="PASS"&&rearmProof.rearm_eligible===true,"FORMAL_V5_ARM_REARM_PROOF_REQUIRED");
+  }
 
   git("fetch","--no-tags","origin","main");
   const head=git("rev-parse","HEAD"),originMain=git("rev-parse","origin/main");
@@ -208,7 +272,8 @@ function main(){
   req(git("rev-parse","HEAD:"+CROP_AUTH)===CROP_AUTH_BLOB,"FORMAL_V5_ARM_CROP_AUTHORITY_BLOB_DRIFT");
   req(git("rev-parse","HEAD:"+STAGE_HANDOFF_AUTH)===STAGE_HANDOFF_AUTH_BLOB,"FORMAL_V5_ARM_AMENDMENT_21_STAGE_HANDOFF_BLOB_DRIFT");
 
-  cp.execFileSync(process.execPath,[path.join(ROOT,H5),"--zero-state-proof="+path.resolve(zeroPath),"--expected-subject="+head],{cwd:ROOT,stdio:"inherit",env:process.env});
+  const h5ProofArg=(rearmPath?"--materialized-zero-rearm-proof=":"--zero-state-proof=")+preArmProofPath;
+  cp.execFileSync(process.execPath,[path.join(ROOT,H5),h5ProofArg,"--expected-subject="+head],{cwd:ROOT,stdio:"inherit",env:process.env});
   const h5=readJson(H5_OUT);
   req(h5.status==="PASS"&&h5.deployment_subject_sha===head&&h5.formal_v5_arm_ready===true,"FORMAL_V5_ARM_H5_REVERIFICATION_REQUIRED");
   req(h5.exact_one_live_fenced_owner_per_runtime_role_reverified===true,"FORMAL_V5_ARM_LIVE_OWNER_REVERIFICATION_REQUIRED");
@@ -218,8 +283,8 @@ function main(){
 
   const url=String(process.env.GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL||"").trim();
   req(/^postgres(?:ql)?:\/\//.test(url),"FORMAL_V5_ARM_DATABASE_URL_REQUIRED");
-  const zero=psqlZeroState(url);
-  const armMs=Date.parse(zero.database_now);
+  const preArm=psqlPreArmState(url,preArmMode);
+  const armMs=Date.parse(preArm.database_now);
   const current=selectCurrentCrop(armMs);
   const crop=readJson(CROP_AUTH);
   const timing=readJson(BUDGET_AUTH);
@@ -230,7 +295,7 @@ function main(){
   const epoch=selectEpoch({armMs,currentCrop:current.authority});
   req(Date.parse(epoch.readiness_deadline)>armMs,"FORMAL_V5_ARM_READINESS_DEADLINE_MUST_BE_FUTURE");
   const evidenceEpoch=loadEvidenceEpochCandidate({
-    head,epoch,armTime:zero.database_now,currentCrop:current.authority,
+    head,epoch,armTime:preArm.database_now,currentCrop:current.authority,
   });
   const core={
     schema_version:"geox_mcft_cap09_formal_v5_arm_v1",
@@ -239,7 +304,7 @@ function main(){
     formal_database_name:FORMAL_DB,
     formal_store_authority_ref:STORE_AUTH,
     formal_store_authority_blob_sha:STORE_AUTH_BLOB,
-    arm_time_database_utc:zero.database_now,
+    arm_time_database_utc:preArm.database_now,
     epoch_id:epochId(epoch.o00),
     manifest_ref:manifestRef(epochId(epoch.o00)),
     a0:epoch.a0,
@@ -281,9 +346,17 @@ function main(){
     github_production_wake_allowed:false,
     exact_one_live_owner_per_runtime_role_reverified:true,
     retired_github_production_trigger_zero_reverified:true,
-    zero_state_revalidated_at_actual_arm:true,
-    public_base_table_count_before_arm:zero.public_base_table_count,
-    public_routine_count_before_arm:zero.public_routine_count,
+    arm_generation:preArmMode==="MATERIALIZED_ZERO_REARM"?"MATERIALIZED_ZERO_REARM_V1":"FRESH_ZERO_STATE_V1",
+    pre_arm_store_state:preArmMode==="MATERIALIZED_ZERO_REARM"?"SCHEMA_ACL_MATERIALIZED_ZERO_ROWS_PRE_A0":"ZERO_STATE_PRE_ARM",
+    supersedes_arm_identity_hash:rearmProof?.prior_arm_identity_hash??null,
+    supersedes_arm_subject_sha:rearmProof?.prior_arm_subject_sha??null,
+    prior_arm_invalidated_by_non_authority_change:preArmMode==="MATERIALIZED_ZERO_REARM",
+    zero_state_revalidated_at_actual_arm:preArmMode==="FRESH_ZERO_STATE_PRE_ARM",
+    materialized_zero_rearm_revalidated_at_actual_arm:preArmMode==="MATERIALIZED_ZERO_REARM",
+    public_base_table_count_before_arm:preArm.public_base_table_count,
+    public_routine_count_before_arm:preArm.public_routine_count,
+    all_table_rows_zero_before_arm:preArm.all_table_rows_zero,
+    schema_acl_revalidation_required_after_arm:true,
     explicit_operator_authorization:true,
     formal_database_mutation:false,
     schema_materialization:false,
@@ -294,7 +367,12 @@ function main(){
     mcft_cap09_completed:false,
   };
   const arm={...core,arm_identity_hash:semhash(core),formal_v5_arm:true,formal_v5_epoch_selected:true};
-  const out=path.resolve(arg("--out")||DEFAULT_OUT);
+  const requestedOut=arg("--out");
+  if(preArmMode==="MATERIALIZED_ZERO_REARM")req(requestedOut,"FORMAL_V5_REARM_DISTINCT_ARM_OUTPUT_REQUIRED");
+  const out=path.resolve(requestedOut||DEFAULT_OUT);
+  if(rearmProof){
+    req(path.resolve(rearmProof.prior_arm_artifact_path)!==out,"FORMAL_V5_REARM_PRIOR_ARM_OVERWRITE_FORBIDDEN",out);
+  }
   fs.mkdirSync(path.dirname(out),{recursive:true});
   if(fs.existsSync(out)){
     const prior=JSON.parse(fs.readFileSync(out,"utf8"));
