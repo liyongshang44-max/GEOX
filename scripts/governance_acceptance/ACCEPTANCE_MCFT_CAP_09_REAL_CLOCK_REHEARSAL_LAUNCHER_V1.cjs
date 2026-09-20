@@ -40,6 +40,12 @@ try{
     'GEOX_PHASE5_TWIN_RETRY_BASE_MS:"1000"',
     'GEOX_PHASE5_TWIN_RETRY_MAXIMUM_MS:"60000"',
     '"CONTROLLED_PROCESS_RESTART_ACROSS_ONE_REAL_UTC_BOUNDARY"',
+    'GEOX_PHASE5_REHEARSAL_CROP_AUTHORITY_PATH:cropAuthorityFixturePath',
+    '"geox_mcft_cap09_real_clock_rehearsal_crop_authority_overlay_v1"',
+    'synthetic_planting_window:true',
+    'original_planting_event_not_claimed:true',
+    'provider_observation_truth_claimed:false',
+    '"KEEP_EXISTING_A18_V3_MATERIALIZER_INSIDE_STABLE_MID_TEST_ENVELOPE_WITHOUT_CHANGING_RUNTIME_KERNEL"',
     'oldest_first_backfill_observed:true',
     'formal_closure_substituted:false',
     '"qualification-verify"',
@@ -84,6 +90,8 @@ try{
     exact_24_terminal_readback_required:true,
     rehearsal_non_authority_claims_locked:true,
     formal_closure_substitution:false,
+    controlled_rehearsal_crop_authority_fixture:true,
+    production_runtime_kernel_change_required:false,
     production_effect:false,
   });
 }catch(error){
