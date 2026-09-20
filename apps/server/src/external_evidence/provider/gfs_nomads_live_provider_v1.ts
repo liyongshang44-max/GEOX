@@ -20,6 +20,10 @@ export const MCFT_CAP09_GFS_ACQUISITION_AUTHORITY_REF_V1 =
 export const MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1 = 10_000 as const;
 export const MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_RESPONSIBLE_SHARING_REF_V1 =
   "https://nomads.ncep.noaa.gov/info.php?page=gribfilter" as const;
+export const MCFT_CAP09_GFS_MEMBER_MAX_ATTEMPTS_V1 = 3 as const;
+export const MCFT_CAP09_GFS_MEMBER_RETRY_BASE_MS_V1 = 1_000 as const;
+export const MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED_CODE_V1 =
+  "MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED" as const;
 
 export type GfsNomadsGribFilterCadencePortV1 = {
   now_ms(): number;
@@ -83,10 +87,48 @@ export type GfsNomadsRawObjectV1 = {
 export type GfsNomadsLiveProviderConfigV1 = {
   byte_client: ControlledHttpsByteClientV1;
   grib_filter_cadence?: GfsNomadsGribFilterCadencePortV1;
+  member_retry?: {
+    max_attempts?: number;
+    retry_base_ms?: number;
+    wait_ms?: (milliseconds: number) => Promise<void>;
+  };
 };
 
 function requireConditionV1(condition: unknown, code: string): asserts condition {
   if (!condition) throw new Error(code);
+}
+
+type GfsMemberRetryExhaustedErrorV1 = Error & {
+  code: typeof MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED_CODE_V1;
+  diagnostic_token: string;
+  cause?: unknown;
+};
+
+function transientGfsMemberFailureV1(error: unknown): boolean {
+  const code = typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code?: unknown }).code ?? "")
+    : "";
+  if ([
+    "ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "EAI_AGAIN",
+    "ENETDOWN", "ENETUNREACH", "EHOSTUNREACH",
+  ].includes(code)) return true;
+
+  const name = error instanceof Error ? error.name : "";
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (name === "TimeoutError" || name === "AbortError") return true;
+  if (/socket hang up|connection terminated|fetch failed|network|temporar|timeout/i.test(message)) return true;
+  return /_HTTP_STATUS:(408|425|429|500|502|503|504)$/.test(message);
+}
+
+function memberRetryExhaustedV1(token: string, cause: unknown): GfsMemberRetryExhaustedErrorV1 {
+  const error = new Error(
+    `${MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED_CODE_V1}:${token}`,
+    { cause },
+  ) as GfsMemberRetryExhaustedErrorV1;
+  error.name = "GfsMemberRetryExhaustedError";
+  error.code = MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED_CODE_V1;
+  error.diagnostic_token = token;
+  return error;
 }
 
 function canonicalUtcHourV1(value: Date | string, code: string): Date {
@@ -324,6 +366,9 @@ export class GfsNomadsLiveProviderV1 {
     MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_RESPONSIBLE_SHARING_REF_V1;
   private readonly byteClient: ControlledHttpsByteClientV1;
   private readonly gribFilterCadence: GfsNomadsGribFilterCadencePortV1;
+  private readonly memberRetryMaxAttempts: number;
+  private readonly memberRetryBaseMs: number;
+  private readonly memberRetryWaitMs: (milliseconds: number) => Promise<void>;
   private lastGribFilterRequestStartedAtMs: number | null = null;
   private gribFilterCadenceGate: Promise<void> = Promise.resolve();
 
@@ -335,6 +380,43 @@ export class GfsNomadsLiveProviderV1 {
         await waitTimeoutV1(milliseconds);
       },
     };
+    const maxAttempts = config.member_retry?.max_attempts ?? MCFT_CAP09_GFS_MEMBER_MAX_ATTEMPTS_V1;
+    const retryBaseMs = config.member_retry?.retry_base_ms ?? MCFT_CAP09_GFS_MEMBER_RETRY_BASE_MS_V1;
+    requireConditionV1(
+      Number.isInteger(maxAttempts) && maxAttempts >= 1 && maxAttempts <= 5,
+      "MCFT_CAP09_GFS_MEMBER_RETRY_MAX_ATTEMPTS_INVALID",
+    );
+    requireConditionV1(
+      Number.isInteger(retryBaseMs) && retryBaseMs >= 100 && retryBaseMs <= 30_000,
+      "MCFT_CAP09_GFS_MEMBER_RETRY_BASE_MS_INVALID",
+    );
+    this.memberRetryMaxAttempts = maxAttempts;
+    this.memberRetryBaseMs = retryBaseMs;
+    this.memberRetryWaitMs = config.member_retry?.wait_ms ?? (async (milliseconds) => {
+      await waitTimeoutV1(milliseconds);
+    });
+  }
+
+  private async requestMemberWithRetryV1<T>(
+    diagnosticToken: string,
+    request: () => Promise<T>,
+    beforeAttempt?: () => Promise<void>,
+  ): Promise<T> {
+    for (let attempt = 1; attempt <= this.memberRetryMaxAttempts; attempt += 1) {
+      try {
+        if (beforeAttempt) await beforeAttempt();
+        return await request();
+      } catch (error) {
+        if (!transientGfsMemberFailureV1(error)) throw error;
+        if (attempt >= this.memberRetryMaxAttempts) {
+          throw memberRetryExhaustedV1(diagnosticToken, error);
+        }
+        await this.memberRetryWaitMs(
+          Math.min(30_000, this.memberRetryBaseMs * 2 ** (attempt - 1)),
+        );
+      }
+    }
+    throw new Error("MCFT_CAP09_GFS_MEMBER_RETRY_UNREACHABLE");
   }
 
   private async waitForResponsibleGribFilterCadenceV1(): Promise<void> {
@@ -387,14 +469,17 @@ export class GfsNomadsLiveProviderV1 {
 
   async fetchDirectoryRaw(cycle: Date | string): Promise<GfsNomadsRawObjectV1> {
     const issue = canonicalUtcHourV1(cycle, "MCFT_CAP09_GFS_CYCLE_INVALID");
-    const response = await this.byteClient.requestBytes({
-      locator: gfsDirectoryUrlV1(issue),
-      allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,
-      expected_statuses: [200],
-      request_headers: { Accept: "text/html,*/*;q=0.5", "Cache-Control": "no-cache" },
-      max_bytes: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.max_directory_bytes,
-      error_prefix: "MCFT_CAP09_GFS_DIRECTORY",
-    });
+    const response = await this.requestMemberWithRetryV1(
+      "MCFT_CAP09_GFS_DIRECTORY",
+      () => this.byteClient.requestBytes({
+        locator: gfsDirectoryUrlV1(issue),
+        allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,
+        expected_statuses: [200],
+        request_headers: { Accept: "text/html,*/*;q=0.5", "Cache-Control": "no-cache" },
+        max_bytes: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.max_directory_bytes,
+        error_prefix: "MCFT_CAP09_GFS_DIRECTORY",
+      }),
+    );
     return rawObjectV1("GFS_DIRECTORY_LISTING", isoV1(issue), response);
   }
 
@@ -416,6 +501,14 @@ export class GfsNomadsLiveProviderV1 {
           rejected_cycles: rejections,
         };
       } catch (error) {
+        if (
+          typeof error === "object"
+          && error !== null
+          && "code" in error
+          && String((error as { code?: unknown }).code ?? "") === MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED_CODE_V1
+        ) {
+          throw error;
+        }
         const reason = error instanceof Error ? error.message : String(error);
         rejections.push({ cycle, reason: reason.slice(0, 240) });
       }
@@ -424,16 +517,20 @@ export class GfsNomadsLiveProviderV1 {
   }
 
   async fetchPgrb2FilteredRaw(cycle: Date | string, lead: number): Promise<GfsNomadsRawObjectV1> {
-    await this.waitForResponsibleGribFilterCadenceV1();
     const issue = canonicalUtcHourV1(cycle, "MCFT_CAP09_GFS_CYCLE_INVALID");
-    const response = await this.byteClient.requestBytes({
-      locator: gfsPgrb2FilterUrlV1(issue, lead),
-      allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,
-      expected_statuses: [200],
-      request_headers: { Accept: "application/octet-stream,*/*;q=0.5", "Cache-Control": "no-cache" },
-      max_bytes: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.max_pgrb2_bytes,
-      error_prefix: `MCFT_CAP09_GFS_PGRB2_F${String(lead).padStart(3, "0")}`,
-    });
+    const token = `MCFT_CAP09_GFS_PGRB2_F${String(lead).padStart(3, "0")}`;
+    const response = await this.requestMemberWithRetryV1(
+      token,
+      () => this.byteClient.requestBytes({
+        locator: gfsPgrb2FilterUrlV1(issue, lead),
+        allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,
+        expected_statuses: [200],
+        request_headers: { Accept: "application/octet-stream,*/*;q=0.5", "Cache-Control": "no-cache" },
+        max_bytes: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.max_pgrb2_bytes,
+        error_prefix: token,
+      }),
+      () => this.waitForResponsibleGribFilterCadenceV1(),
+    );
     requireConditionV1(
       response.bytes.length >= 8 && new TextDecoder("ascii").decode(response.bytes.slice(0, 4)) === "GRIB",
       `MCFT_CAP09_GFS_PGRB2_NOT_GRIB:F${String(lead).padStart(3, "0")}`,
@@ -445,14 +542,18 @@ export class GfsNomadsLiveProviderV1 {
     const issue = canonicalUtcHourV1(cycle, "MCFT_CAP09_GFS_CYCLE_INVALID");
     const target = canonicalUtcHourV1(tick, "MCFT_CAP09_GFS_TICK_INVALID");
     const [, idxUrl] = gfsSfluxUrlsV1(issue, lead);
-    const response = await this.byteClient.requestBytes({
-      locator: idxUrl,
-      allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,
-      expected_statuses: [200],
-      request_headers: { Accept: "text/plain,*/*;q=0.5", "Cache-Control": "no-cache" },
-      max_bytes: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.max_sflux_idx_bytes,
-      error_prefix: `MCFT_CAP09_GFS_SFLUX_IDX_F${String(lead).padStart(3, "0")}`,
-    });
+    const token = `MCFT_CAP09_GFS_SFLUX_IDX_F${String(lead).padStart(3, "0")}`;
+    const response = await this.requestMemberWithRetryV1(
+      token,
+      () => this.byteClient.requestBytes({
+        locator: idxUrl,
+        allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,
+        expected_statuses: [200],
+        request_headers: { Accept: "text/plain,*/*;q=0.5", "Cache-Control": "no-cache" },
+        max_bytes: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.max_sflux_idx_bytes,
+        error_prefix: token,
+      }),
+    );
     requireConditionV1(
       parseLastModifiedV1(response, `MCFT_CAP09_GFS_SFLUX_IDX_F${String(lead).padStart(3, "0")}`).getTime() <= target.getTime(),
       `MCFT_CAP09_GFS_SFLUX_IDX_AFTER_TICK:F${String(lead).padStart(3, "0")}`,
@@ -470,14 +571,18 @@ export class GfsNomadsLiveProviderV1 {
     const target = canonicalUtcHourV1(tick, "MCFT_CAP09_GFS_TICK_INVALID");
     requireConditionV1(selected.lead === lead, "MCFT_CAP09_GFS_SFLUX_SELECTION_LEAD_MISMATCH");
     const [gribUrl] = gfsSfluxUrlsV1(issue, lead);
-    const response = await this.byteClient.requestBytes({
-      locator: gribUrl,
-      allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,
-      expected_statuses: [206],
-      request_headers: { Accept: "application/octet-stream,*/*;q=0.5", "Cache-Control": "no-cache", Range: `bytes=${selected.offset}-${selected.end}` },
-      max_bytes: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.max_sflux_message_bytes,
-      error_prefix: `MCFT_CAP09_GFS_SFLUX_RANGE_F${String(lead).padStart(3, "0")}`,
-    });
+    const token = `MCFT_CAP09_GFS_SFLUX_RANGE_F${String(lead).padStart(3, "0")}`;
+    const response = await this.requestMemberWithRetryV1(
+      token,
+      () => this.byteClient.requestBytes({
+        locator: gribUrl,
+        allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,
+        expected_statuses: [206],
+        request_headers: { Accept: "application/octet-stream,*/*;q=0.5", "Cache-Control": "no-cache", Range: `bytes=${selected.offset}-${selected.end}` },
+        max_bytes: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.max_sflux_message_bytes,
+        error_prefix: token,
+      }),
+    );
     const contentRange = response.response_headers["content-range"] ?? "";
     const rangeMatch = contentRange.match(/^bytes\s+(\d+)-(\d+)\/(\d+)$/i);
     requireConditionV1(
