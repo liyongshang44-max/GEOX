@@ -105,6 +105,10 @@ assert.equal(rearmMode.distinct_successor_arm_artifact_required,true);
 assert.equal(rearmMode.database_reset_or_truncate_forbidden,true);
 assert.equal(rearmMode.formal_database_mutation_allowed,false);
 assert.equal(rearmMode.schema_acl_revalidation_required_after_arm,true);
+assert.equal(rearmMode.historical_schema_materialization_proof_required,false);
+assert.equal(rearmMode.historical_schema_materialization_proof_role,"OPTIONAL_CROSS_EVIDENCE_ONLY");
+assert.equal(rearmMode.current_exact_store_readback_required,true);
+assert.equal(rearmMode.post_rearm_schema_acl_idempotent_revalidation_required,true);
 assert.equal(auth.schema_materialization.canonical_facts_schema_source,"docker/postgres/init/001_schema.sql");
 assert.equal(auth.schema_materialization.canonical_facts_extraction_mode,"FACTS_ONLY");
 assert.deepEqual(auth.schema_materialization.predecessor_schema_files,FORMAL_SCHEMA_MIGRATIONS.slice(0,5));
@@ -277,6 +281,9 @@ for(const value of [
   "existing_arm_artifact_must_not_be_overwritten:true",
   "new_arm_output_must_be_distinct:true",
   "schema_acl_revalidation_required_after_rearm:true",
+  'prior_schema_proof_role:"OPTIONAL_CROSS_EVIDENCE_ONLY"',
+  "current_exact_store_readback_is_authoritative_for_rearm_eligibility:true",
+  "post_rearm_schema_acl_idempotent_revalidation_required:true",
   "formal_database_mutation:false",
 ])marker(rearmVerifier,value,"H6_REARM_MARKER_REQUIRED");
 for(const value of ["DROP DATABASE","TRUNCATE ","DELETE FROM ","CREATE DATABASE"])notMarker(rearmVerifier,value,"H6_REARM_DESTRUCTIVE_DATABASE_PATH_FORBIDDEN");
