@@ -312,17 +312,13 @@ export async function runMcftCap09ProductionEvidenceRuntimeV1(input: {
   planning_clock?: ProductionEvidencePlanningClockV1;
   work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention">;
   runtime_start_authority?: unknown;
-  planner_runtime_start_authority?: ProductionEvidenceRuntimeStartAuthorityInstanceV1;
 } = {}): Promise<void> {
   const document = productionAcquisitionHorizonAuthorityJson as {
     runtime_start_binding?: unknown;
   };
   const env = input.env ?? process.env;
   const expectedScope = scopeFromEnvironmentV1(env);
-  if (input.runtime_start_authority !== undefined && input.planner_runtime_start_authority !== undefined) {
-    throw new Error("MCFT_CAP09_PRODUCTION_EVIDENCE_RUNTIME_MULTIPLE_PLANNING_AUTHORITIES_FORBIDDEN");
-  }
-  const authority = input.planner_runtime_start_authority ?? loadMcftCap09ProductionRuntimeStartAuthorityV1({
+  const authority = loadMcftCap09ProductionRuntimeStartAuthorityV1({
     plane: "EVIDENCE_RUNTIME",
     expected: {
       deployment_subject_sha: requiredEnvV1(
