@@ -842,7 +842,6 @@
         "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts",
         "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts",
         "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts",
-        "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts",
         "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs"
       ]
@@ -871,7 +870,6 @@
         "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts",
         "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts",
         "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts",
-        "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts",
         "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs"
       ]
