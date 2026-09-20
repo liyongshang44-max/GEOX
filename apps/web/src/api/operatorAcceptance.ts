@@ -35,6 +35,8 @@ export type OperatorActionResponseV1 = {
 
 export type OperatorAcceptanceItem = {
   operationId: string;
+  operationPlanId?: string | null;
+  fieldId?: string | null;
   acceptanceId?: string | null;
   fieldName?: string | null;
   operationName?: string | null;
@@ -114,6 +116,8 @@ function normalizeOfficial(payload: unknown): OperatorAcceptanceItem[] {
     const permissions = row.permissions && typeof row.permissions === "object" ? row.permissions as AnyRecord : {};
     return {
       operationId: text(row.operation_id ?? row.operationId ?? row.operation_plan_id ?? row.id, `operation-${index}`),
+      operationPlanId: text(row.operation_plan_id ?? row.operationPlanId, ""),
+      fieldId: text(row.field_id ?? row.fieldId, ""),
       acceptanceId: text(row.acceptance_id ?? row.acceptance?.acceptance_id, ""),
       fieldName: text(row.field_name ?? row.fieldName, ""),
       operationName: text(row.operation_title ?? row.operation_name ?? row.customer_title ?? row.title, ""),
@@ -142,6 +146,8 @@ function normalizeReportFallback(payload: unknown): OperatorAcceptanceItem[] {
     const operationId = text(row.operation_id ?? row.operation_plan_id ?? row.id, `operation-${index}`);
     return {
       operationId,
+      operationPlanId: text(row.operation_plan_id ?? row.operationPlanId, ""),
+      fieldId: text(row.field_id ?? row.fieldId, ""),
       acceptanceId: text(row.acceptance_id, ""),
       fieldName: text(row.field_name ?? row.fieldName, ""),
       operationName: text(row.operation_title ?? row.customer_title ?? row.title, "作业待确认"),
