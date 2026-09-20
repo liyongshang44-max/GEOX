@@ -46,6 +46,9 @@ try{
     'original_planting_event_not_claimed:true',
     'provider_observation_truth_claimed:false',
     '"KEEP_EXISTING_A18_V3_MATERIALIZER_INSIDE_STABLE_MID_TEST_ENVELOPE_WITHOUT_CHANGING_RUNTIME_KERNEL"',
+    '"PostgreSQL init process complete; ready for start up."',
+    '"REAL_CLOCK_REHEARSAL_POSTGRES_INIT_NOT_COMPLETE"',
+    '"SELECT CASE WHEN to_regclass(\'public.facts\') IS NULL THEN \'0\' ELSE \'1\' END;"',
     'oldest_first_backfill_observed:true',
     'formal_closure_substituted:false',
     '"qualification-verify"',
@@ -91,6 +94,8 @@ try{
     rehearsal_non_authority_claims_locked:true,
     formal_closure_substitution:false,
     controlled_rehearsal_crop_authority_fixture:true,
+    postgres_init_completion_wait_required:true,
+    canonical_facts_relation_readback_required:true,
     production_runtime_kernel_change_required:false,
     production_effect:false,
   });
