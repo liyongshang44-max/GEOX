@@ -149,6 +149,33 @@ function containerState(state,secrets){
   const parsed=JSON.parse(raw);
   return {id,running:parsed.Running===true,status:String(parsed.Status??""),restart_count:Number(parsed.RestartCount??0)};
 }
+function waitForPostgresInitComplete(state,secrets){
+  const deadline=Date.now()+180_000;
+  let initComplete=false;
+  let factsReady=false;
+  let lastLogs="";
+  while(Date.now()<deadline){
+    try{
+      lastLogs=compose(state,secrets,["logs","--no-color","postgres"]);
+      initComplete=lastLogs.includes("PostgreSQL init process complete; ready for start up.");
+    }catch{}
+    if(initComplete){
+      try{
+        factsReady=query(
+          state,
+          secrets,
+          "SELECT CASE WHEN to_regclass('public.facts') IS NULL THEN '0' ELSE '1' END;"
+        )==="1";
+      }catch{}
+    }
+    if(initComplete&&factsReady)return;
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,1000);
+  }
+  fail(
+    "REAL_CLOCK_REHEARSAL_POSTGRES_INIT_NOT_COMPLETE",
+    "init_complete="+String(initComplete)+",facts_ready="+String(factsReady)
+  );
+}
 function writeOverride(file){
   fs.writeFileSync(file,[
     "services:",
@@ -404,6 +431,7 @@ function start(){
   try{
     compose(state,secrets,["build","database-platform-bootstrap"],{capture:false});
     compose(state,secrets,["up","-d","postgres","minio"],{capture:false});
+    waitForPostgresInitComplete(state,secrets);
     compose(state,secrets,["run","--rm","--no-deps","minio-init"],{capture:false});
     compose(state,secrets,["run","--rm","--no-deps","database-platform-bootstrap"],{capture:false});
     compose(state,secrets,["run","--rm","--no-deps","service-principal-bootstrap"],{capture:false});
