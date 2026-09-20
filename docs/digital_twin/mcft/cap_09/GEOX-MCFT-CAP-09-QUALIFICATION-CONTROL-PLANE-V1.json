@@ -774,7 +774,8 @@
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs",
         "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts",
-        "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs"
+        "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs",
+        "apps/server/src/external_evidence/mcft_cap09_production_gfs_target_due_policy_v1.ts"
       ]
     },
     "T4R1_CURRENT_CROP_ROLLING_CANDIDATE": {
@@ -843,7 +844,8 @@
         "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts",
         "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts",
-        "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs"
+        "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs",
+        "apps/server/src/external_evidence/mcft_cap09_production_gfs_target_due_policy_v1.ts"
       ]
     },
     "FORMAL_V5_H6_SUCCESSOR_SEAM_V1": {
@@ -871,7 +873,8 @@
         "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts",
         "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts",
-        "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs"
+        "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs",
+        "apps/server/src/external_evidence/mcft_cap09_production_gfs_target_due_policy_v1.ts"
       ]
     },
     "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1": {
