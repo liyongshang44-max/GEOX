@@ -337,6 +337,9 @@ async function main(): Promise<void> {
   const rehearsalTwinEnv = environmentMap(
     rehearsalConfig.services?.["twin-runtime"]?.environment,
   );
+  const rehearsalPrepareEnv = environmentMap(
+    rehearsalConfig.services?.["qualification-prepare"]?.environment,
+  );
   const rehearsalVerifyEnv = environmentMap(
     rehearsalConfig.services?.["qualification-verify"]?.environment,
   );
@@ -344,6 +347,11 @@ async function main(): Promise<void> {
     rehearsalTwinEnv.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS,
     "REAL_CLOCK_REHEARSAL",
     "PHASE5_TWIN_REAL_CLOCK_REHEARSAL_RUN_CLASS_REQUIRED",
+  );
+  assert.equal(
+    rehearsalPrepareEnv.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS,
+    "REAL_CLOCK_REHEARSAL",
+    "PHASE5_PREPARE_REAL_CLOCK_REHEARSAL_RUN_CLASS_REQUIRED",
   );
   assert.equal(
     rehearsalVerifyEnv.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS,
