@@ -147,7 +147,7 @@ async function main(): Promise<void> {
   );
   assert.match(
     preformalSource,
-    /planner_runtime_start_authority:handoff/,
+    /runtime_start_authority:handoffRuntimeStart/,
   );
   assert.match(
     compose,
