@@ -27,6 +27,19 @@ function main() {
   assert.equal(authority.formal_store.required_public_routine_count, 0);
   assert.equal(authority.formal_store.failed_predecessor_reuse_forbidden, true);
   assert.equal(authority.formal_store.failed_predecessor_clone_forbidden, true);
+  const rearm=authority.formal_store.governed_materialized_zero_rearm;
+  assert.equal(rearm.enabled,true);
+  assert.equal(rearm.required_prior_store_phase,"SCHEMA_ACL_MATERIALIZED_ZERO_ROWS_PRE_A0");
+  assert.equal(rearm.required_public_base_table_count,29);
+  assert.equal(rearm.required_public_routine_count,2);
+  assert.equal(rearm.all_table_rows_zero_required,true);
+  assert.equal(rearm.prior_arm_must_be_invalidated_by_non_authority_change,true);
+  assert.equal(rearm.prior_a0_artifact_absence_required,true);
+  assert.equal(rearm.prior_arm_artifact_overwrite_forbidden,true);
+  assert.equal(rearm.distinct_successor_arm_artifact_required,true);
+  assert.equal(rearm.database_reset_or_truncate_forbidden,true);
+  assert.equal(rearm.formal_database_mutation_allowed_for_rearm,false);
+  assert.equal(rearm.schema_acl_idempotent_revalidation_required_after_rearm,true);
   assert.equal(authority.owner_prerequisite.exact_one_live_fenced_owner_per_runtime_role_required_at_arm_readiness, true);
   assert.equal(authority.owner_prerequisite.historical_owner_evidence_substitute_forbidden, true);
   assert.equal(authority.owner_prerequisite.github_runner_as_live_owner_authority_forbidden, true);
@@ -45,7 +58,9 @@ function main() {
   const workflowRel = authority.qualification_surface.workflow_ref;
   const acceptanceRel = authority.qualification_surface.static_acceptance_ref;
   const localVerifierRel = authority.qualification_surface.local_arm_readiness_verifier_ref;
-  for (const rel of [workflowRel, acceptanceRel, localVerifierRel, authority.owner_prerequisite.live_verifier_ref]) {
+  const rearmVerifierRel = authority.qualification_surface.materialized_zero_rearm_eligibility_verifier_ref;
+  assert.equal(rearmVerifierRel,rearm.eligibility_verifier_ref);
+  for (const rel of [workflowRel, acceptanceRel, localVerifierRel, rearmVerifierRel, authority.owner_prerequisite.live_verifier_ref]) {
     assert.equal(fs.existsSync(path.join(ROOT, rel)), true, `FORMAL_V5_READINESS_PATH_REQUIRED:${rel}`);
   }
 
@@ -74,7 +89,16 @@ function main() {
   const localVerifier = fs.readFileSync(path.join(ROOT, localVerifierRel), "utf8");
   assert.match(localVerifier, /VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1\.cjs/);
   assert.match(localVerifier, /FORMAL_V5_ZERO_STATE_PROOF_SUBJECT_MISMATCH/);
+  assert.match(localVerifier, /FORMAL_V5_REARM_PROOF_PRIOR_ARM_INVALIDATION_REQUIRED/);
+  assert.match(localVerifier, /MATERIALIZED_ZERO_REARM/);
   assert.match(localVerifier, /FORMAL_V5_ARM_REMAINS_UNAUTHORIZED/);
+  const rearmVerifier=fs.readFileSync(path.join(ROOT,rearmVerifierRel),"utf8");
+  assert.match(rearmVerifier,/FORMAL_V5_REARM_LOCAL_PRODUCTION_HOST_ONLY/);
+  assert.match(rearmVerifier,/SCHEMA_ACL_MATERIALIZED_ZERO_ROWS_PRE_A0/);
+  assert.match(rearmVerifier,/FORMAL_V5_REARM_PRIOR_ARM_NOT_INVALIDATED_BY_SEMANTIC_CHANGE/);
+  assert.match(rearmVerifier,/FORMAL_V5_REARM_PRE_A0_ROWS_NONZERO/);
+  assert.match(rearmVerifier,/new_arm_output_must_be_distinct:true/);
+  assert.doesNotMatch(rearmVerifier,/\b(?:DROP|TRUNCATE|DELETE|INSERT|UPDATE|ALTER|CREATE)\s+(?:DATABASE|TABLE|SCHEMA)\b/i);
 
   const resolver = qcp.dependency_resolvers?.FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1;
   assert.ok(resolver, "FORMAL_V5_POST_GRADUATION_RESOLVER_REQUIRED");
@@ -85,6 +109,7 @@ function main() {
     workflowRel,
     acceptanceRel,
     localVerifierRel,
+    rearmVerifierRel,
     authority.owner_prerequisite.live_verifier_ref,
   ]) {
     assert.equal(resolverPaths.has(rel), true, `FORMAL_V5_POST_GRADUATION_RESOLVER_PATH_REQUIRED:${rel}`);
