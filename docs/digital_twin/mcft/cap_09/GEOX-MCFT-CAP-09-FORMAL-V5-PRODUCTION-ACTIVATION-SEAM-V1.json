@@ -367,6 +367,11 @@
       "runtime_config_write_authorized": false
     },
     "effect_source_for_running_evidence_process": "EXISTING_OWNER_CUTOVER_AUTHORITY_NOT_EPOCH_CANDIDATE",
-    "candidate_by_itself_provider_request_authorized": false
+    "candidate_by_itself_provider_request_authorized": false,
+    "governance_lead_controls_epoch_selection_not_provider_fetch": true,
+    "gfs_warm_start_due_window_start": "MAX(ACTIVATION_FENCE,A0_MINUS_PT70M)",
+    "gfs_provider_request_before_warm_start_due_window_authorized": false,
+    "evidence_owner_may_run_idle_before_gfs_due_window": true,
+    "o00_o23_goal": "REAL_UTC_RUNTIME_CONTINUITY_WITH_CAUSAL_INPUT_AVAILABILITY_NOT_PER_HOUR_PROVIDER_PERFECTION_REQUALIFICATION"
   }
 }
