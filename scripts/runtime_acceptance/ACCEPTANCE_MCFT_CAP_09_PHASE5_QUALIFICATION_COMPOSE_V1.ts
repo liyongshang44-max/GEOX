@@ -322,7 +322,7 @@ async function main(): Promise<void> {
 
   const rehearsalRendered = execFileSync(
     "docker",
-    ["compose", "-f", COMPOSE, "--profile", "qualification-runtime", "config", "--format", "json"],
+    ["compose", "-f", COMPOSE, "--profile", "qualification-runtime", "--profile", "qualification-orchestration", "config", "--format", "json"],
     {
       encoding: "utf8",
       env: {
