@@ -7,7 +7,8 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const fail = (x) => { throw new Error(x); };
 
 const vm = read('apps/web/src/viewmodels/mcftFieldIntelligenceVm.ts');
-const page = read('apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx');
+const page = read('apps/web/src/features/operator/pages/FieldIntelligenceDetailPage.tsx');
+const canonicalPage = read('apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx');
 const api = read('apps/web/src/api/mcftFieldTwinRuntime.ts');
 
 const requiredRuntimeKeys = [
@@ -27,28 +28,32 @@ for (const key of requiredRuntimeKeys) {
 }
 
 for (const token of [
-  'source_fact_ref',
-  'object_type',
-  'latest_item_hash',
-  'collection_endpoint',
-  'CanonicalDataDisclosure',
+  'readMcftRuntime',
+  'readMcftStates',
+  'readMcftForecasts',
+  'Full runtime response',
+  'Full state collection',
+  'Full forecast collection',
+  'ON-DEMAND CANONICAL DATASETS',
+  'canonical_source',
   'limitations',
   'validation_summary',
-  'canonical_source',
-]) {
-  if (!page.includes(token) && !vm.includes(token)) fail('FOUI_DATA_PRESERVATION_TOKEN_MISSING:' + token);
-}
+]) if (!page.includes(token) && !vm.includes(token)) fail('FOUI_DATA_PRESERVATION_TOKEN_MISSING:' + token);
 
-for (const forbidden of ['POST', 'PUT', 'PATCH', 'DELETE', 'createAoActTask', 'approve(', 'dispatch(']) {
-  if (vm.includes(forbidden)) fail('FOUI_VM_WRITE_BOUNDARY:' + forbidden);
+if (canonicalPage.includes('buildFieldIntelligenceOverviewVmV1') || canonicalPage.includes('fouiCanonicalDisclosure')) fail('MCFT_OWNED_CANONICAL_PAGE_WAS_PRODUCTIZED');
+
+for (const forbidden of ['createAoActTask', 'approve(', 'dispatch(', 'method: "POST"', 'method: "PUT"', 'method: "PATCH"', 'method: "DELETE"']) {
+  if (page.includes(forbidden) || vm.includes(forbidden)) fail('FOUI_FIELD_WRITE_BOUNDARY:' + forbidden);
 }
 
 console.log(JSON.stringify({
   status: 'PASS',
   gate: 'FOUI-FIELD-INTELLIGENCE-DATA-PRESERVATION-V1',
   canonical_runtime_keys_preserved: requiredRuntimeKeys.length,
-  source_fact_ref_preserved: true,
-  full_response_disclosure_required: true,
+  eager_reads: ['runtime','states','forecasts'],
+  deeper_datasets: 'ON_DEMAND',
+  full_response_disclosure: true,
+  mcft_owned_canonical_surface_changed: false,
   backend_change: 'NONE',
   mcft_semantic_change: 'NONE'
 }, null, 2));
