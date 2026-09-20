@@ -323,6 +323,7 @@ for(const rel of changed){
 const githubChanges=changed.filter((rel)=>rel.startsWith(".github/workflows/"));
 const allowedGithubQualificationChanges=new Set([
   ".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml",
+  ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
   ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
   ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
   ".github/workflows/mcft-cap-09-final-semantic-closure.yml",
