@@ -26,7 +26,6 @@ on:
       - 'scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts'
       - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts'
-      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts'
       - 'apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts'
       - 'apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v1.ts'
@@ -104,10 +103,7 @@ jobs:
       - name: Selftest H6 post-arm authority continuity verifier
         run: node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs --selftest
 
-      - name: Selftest post-arm Evidence runtime handoff builder
-        run: pnpm exec tsx scripts/runtime_acceptance/BUILD_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_V1.ts --selftest
-
-      - name: Prove post-arm Evidence runtime handoff boundaries
+      - name: Prove pre-arm Formal-v5 Evidence epoch candidate boundaries
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts
 
       - name: Typecheck H6 activation seam TypeScript
@@ -119,7 +115,6 @@ jobs:
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP_V1.ts
           scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts
-          scripts/runtime_acceptance/BUILD_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_V1.ts
           scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts
           apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts
           apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v1.ts
