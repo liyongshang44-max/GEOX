@@ -716,57 +716,91 @@ function main() {
         successorChainAdmissionActive &&
         isAncestor(SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_V1.merge_commit_sha, args.base || "")
       ) {
-        const evidence = validateExactRunAnchor(
-          decision,
-          args.head || "",
-          args.base || "",
-          SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_V1,
-          "SUCCESSOR_CHAIN_PHASE3",
-          { allowSuccessorBase: true },
-        );
-        result = {
-          ...common,
-          execution: "SUCCESSOR_CHAIN_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION",
-          status: evidence.status,
-          reason_code: evidence.reason_code,
-          evidence_id: evidence.evidence_id ?? null,
-          evidence_run_id: evidence.run_id ?? null,
-          evidence_subject_sha: evidence.subject_sha ?? null,
-          evidence_checks: evidence.checks ?? null,
-        };
-        if (evidence.status !== "PASS") blockers.push({
-          blocker_class: "INVALID_OR_MISSING_SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_EVIDENCE",
-          check_id: decision.check_id,
-          detail: evidence,
-        });
+        const fresh = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null);
+        if (fresh.status === "PASS") {
+          result = {
+            ...common,
+            execution: "DURABLE_REQUALIFICATION_EVIDENCE_SUCCESSOR_CHAIN_REFRESH",
+            status: "PASS",
+            reason_code: fresh.reason_code,
+            evidence_id: fresh.evidence_id ?? null,
+            evidence_run_id: fresh.run_id ?? null,
+            evidence_subject_sha: fresh.subject_sha ?? null,
+            evidence_adjudication: fresh.candidates,
+            historical_successor_chain_fallback_used: false,
+          };
+        } else {
+          const evidence = validateExactRunAnchor(
+            decision,
+            args.head || "",
+            args.base || "",
+            SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_V1,
+            "SUCCESSOR_CHAIN_PHASE3",
+            { allowSuccessorBase: true },
+          );
+          result = {
+            ...common,
+            execution: "SUCCESSOR_CHAIN_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION",
+            status: evidence.status,
+            reason_code: evidence.reason_code,
+            evidence_id: evidence.evidence_id ?? null,
+            evidence_run_id: evidence.run_id ?? null,
+            evidence_subject_sha: evidence.subject_sha ?? null,
+            evidence_checks: evidence.checks ?? null,
+            fresh_durable_evidence_adjudication: fresh.candidates,
+            historical_successor_chain_fallback_used: true,
+          };
+          if (evidence.status !== "PASS") blockers.push({
+            blocker_class: "INVALID_OR_MISSING_SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_EVIDENCE",
+            check_id: decision.check_id,
+            detail: { historical_anchor: evidence, fresh_durable_evidence: fresh },
+          });
+        }
       } else if (
         decision.check_id === SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.check_id &&
         successorChainAdmissionActive &&
         isAncestor(SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.merge_commit_sha, args.base || "")
       ) {
-        const evidence = validateExactRunAnchor(
-          decision,
-          args.head || "",
-          args.base || "",
-          SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1,
-          "SUCCESSOR_CHAIN_PHASE5",
-          { allowSuccessorBase: true },
-        );
-        result = {
-          ...common,
-          execution: "SUCCESSOR_CHAIN_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION",
-          status: evidence.status,
-          reason_code: evidence.reason_code,
-          evidence_id: evidence.evidence_id ?? null,
-          evidence_run_id: evidence.run_id ?? null,
-          evidence_subject_sha: evidence.subject_sha ?? null,
-          evidence_checks: evidence.checks ?? null,
-        };
-        if (evidence.status !== "PASS") blockers.push({
-          blocker_class: "INVALID_OR_MISSING_SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_EVIDENCE",
-          check_id: decision.check_id,
-          detail: evidence,
-        });
+        const fresh = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null);
+        if (fresh.status === "PASS") {
+          result = {
+            ...common,
+            execution: "DURABLE_REQUALIFICATION_EVIDENCE_SUCCESSOR_CHAIN_REFRESH",
+            status: "PASS",
+            reason_code: fresh.reason_code,
+            evidence_id: fresh.evidence_id ?? null,
+            evidence_run_id: fresh.run_id ?? null,
+            evidence_subject_sha: fresh.subject_sha ?? null,
+            evidence_adjudication: fresh.candidates,
+            historical_successor_chain_fallback_used: false,
+          };
+        } else {
+          const evidence = validateExactRunAnchor(
+            decision,
+            args.head || "",
+            args.base || "",
+            SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1,
+            "SUCCESSOR_CHAIN_PHASE5",
+            { allowSuccessorBase: true },
+          );
+          result = {
+            ...common,
+            execution: "SUCCESSOR_CHAIN_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION",
+            status: evidence.status,
+            reason_code: evidence.reason_code,
+            evidence_id: evidence.evidence_id ?? null,
+            evidence_run_id: evidence.run_id ?? null,
+            evidence_subject_sha: evidence.subject_sha ?? null,
+            evidence_checks: evidence.checks ?? null,
+            fresh_durable_evidence_adjudication: fresh.candidates,
+            historical_successor_chain_fallback_used: true,
+          };
+          if (evidence.status !== "PASS") blockers.push({
+            blocker_class: "INVALID_OR_MISSING_SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_EVIDENCE",
+            check_id: decision.check_id,
+            detail: { historical_anchor: evidence, fresh_durable_evidence: fresh },
+          });
+        }
       } else if (
         decision.check_id === RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1.check_id &&
         args.base === RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1.base_sha
