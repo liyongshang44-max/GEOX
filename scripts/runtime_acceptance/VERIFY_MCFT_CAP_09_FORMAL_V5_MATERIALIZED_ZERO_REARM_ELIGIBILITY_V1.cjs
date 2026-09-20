@@ -134,6 +134,9 @@ function selftest(){
     invalidated_prior_arm_required:true,
     exact_29_table_2_routine_zero_row_state_required:true,
     prior_a0_artifact_absence_required:true,
+    historical_schema_proof_required:false,
+    current_exact_store_readback_required:true,
+    post_rearm_schema_acl_idempotent_revalidation_required:true,
     database_write_count:0,
     production_owner_mutation:false,
     formal_v5_arm:false,
@@ -150,9 +153,11 @@ function main(){
   req(git("status","--porcelain")==="","FORMAL_V5_REARM_WORKTREE_MUST_BE_CLEAN");
 
   const priorArmPath=path.resolve(arg("--prior-arm")||DEFAULT_PRIOR_ARM);
-  const priorSchemaPath=path.resolve(arg("--prior-schema-proof")||DEFAULT_PRIOR_SCHEMA);
+  const priorSchemaArg=arg("--prior-schema-proof");
+  const priorSchemaPath=path.resolve(priorSchemaArg||DEFAULT_PRIOR_SCHEMA);
   req(fs.existsSync(priorArmPath),"FORMAL_V5_REARM_PRIOR_ARM_REQUIRED",priorArmPath);
-  req(fs.existsSync(priorSchemaPath),"FORMAL_V5_REARM_PRIOR_SCHEMA_PROOF_REQUIRED",priorSchemaPath);
+  if(priorSchemaArg)req(fs.existsSync(priorSchemaPath),"FORMAL_V5_REARM_EXPLICIT_PRIOR_SCHEMA_PROOF_NOT_FOUND",priorSchemaPath);
+  const priorSchemaProofPresent=fs.existsSync(priorSchemaPath);
   for(const artifact of A0_ARTIFACTS)req(!fs.existsSync(artifact),"FORMAL_V5_REARM_PRIOR_A0_ARTIFACT_PRESENT",artifact);
 
   const priorArm=readJson(priorArmPath);
@@ -165,13 +170,15 @@ function main(){
   req(priorArm.a0_bootstrap===false&&priorArm.o00_started===false&&priorArm.provider_request_count===0,"FORMAL_V5_REARM_PRIOR_ARM_ADVANCED_PAST_PRE_A0");
   try{cp.execFileSync("git",["merge-base","--is-ancestor",priorArm.subject_sha,head],{cwd:ROOT,stdio:"ignore"});}catch{fail("FORMAL_V5_REARM_PRIOR_ARM_NOT_ANCESTOR",priorArm.subject_sha+"->"+head);}
 
-  const priorSchema=readJson(priorSchemaPath);
-  req(priorSchema.schema_version==="geox_mcft_cap09_formal_v5_schema_acl_materialization_v1","FORMAL_V5_REARM_PRIOR_SCHEMA_PROOF_SCHEMA_INVALID");
-  req(["PASS","PASS_ALREADY_MATERIALIZED_IDEMPOTENT"].includes(priorSchema.status),"FORMAL_V5_REARM_PRIOR_SCHEMA_PROOF_NOT_PASS");
-  req(priorSchema.subject_sha===priorArm.subject_sha,"FORMAL_V5_REARM_PRIOR_SCHEMA_SUBJECT_MISMATCH");
-  req((priorSchema.database_name||priorSchema.formal_database_name)===FORMAL_DB,"FORMAL_V5_REARM_PRIOR_SCHEMA_DATABASE_MISMATCH");
-  req(priorSchema.public_table_count===29&&priorSchema.public_routine_count===2&&priorSchema.all_table_rows_zero===true,"FORMAL_V5_REARM_PRIOR_SCHEMA_NOT_MATERIALIZED_ZERO");
-  req(priorSchema.formal_v5_arm===true&&priorSchema.a0_bootstrap===false&&priorSchema.o00_started===false&&priorSchema.provider_request_count===0,"FORMAL_V5_REARM_PRIOR_SCHEMA_ADVANCED_PAST_PRE_A0");
+  if(priorSchemaProofPresent){
+    const priorSchema=readJson(priorSchemaPath);
+    req(priorSchema.schema_version==="geox_mcft_cap09_formal_v5_schema_acl_materialization_v1","FORMAL_V5_REARM_PRIOR_SCHEMA_PROOF_SCHEMA_INVALID");
+    req(["PASS","PASS_ALREADY_MATERIALIZED_IDEMPOTENT"].includes(priorSchema.status),"FORMAL_V5_REARM_PRIOR_SCHEMA_PROOF_NOT_PASS");
+    req(priorSchema.subject_sha===priorArm.subject_sha,"FORMAL_V5_REARM_PRIOR_SCHEMA_SUBJECT_MISMATCH");
+    req((priorSchema.database_name||priorSchema.formal_database_name)===FORMAL_DB,"FORMAL_V5_REARM_PRIOR_SCHEMA_DATABASE_MISMATCH");
+    req(priorSchema.public_table_count===29&&priorSchema.public_routine_count===2&&priorSchema.all_table_rows_zero===true,"FORMAL_V5_REARM_PRIOR_SCHEMA_NOT_MATERIALIZED_ZERO");
+    req(priorSchema.formal_v5_arm===true&&priorSchema.a0_bootstrap===false&&priorSchema.o00_started===false&&priorSchema.provider_request_count===0,"FORMAL_V5_REARM_PRIOR_SCHEMA_ADVANCED_PAST_PRE_A0");
+  }
 
   const invalidation=auditInvalidation(priorArm.subject_sha,head);
   const url=String(process.env.GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL||"").trim();
@@ -185,7 +192,11 @@ function main(){
     prior_arm_identity_hash:priorArm.arm_identity_hash,
     prior_arm_epoch_id:priorArm.epoch_id,
     prior_arm_artifact_path:priorArmPath,
-    prior_schema_proof_path:priorSchemaPath,
+    prior_schema_proof_present:priorSchemaProofPresent,
+    prior_schema_proof_path:priorSchemaProofPresent?priorSchemaPath:null,
+    prior_schema_proof_role:"OPTIONAL_CROSS_EVIDENCE_ONLY",
+    current_exact_store_readback_is_authoritative_for_rearm_eligibility:true,
+    post_rearm_schema_acl_idempotent_revalidation_required:true,
     prior_arm_invalidated_by_non_authority_change:true,
     first_parent_commit_count_since_prior_arm:invalidation.audited.length,
     invalidating_change_count:invalidation.invalidating.length,

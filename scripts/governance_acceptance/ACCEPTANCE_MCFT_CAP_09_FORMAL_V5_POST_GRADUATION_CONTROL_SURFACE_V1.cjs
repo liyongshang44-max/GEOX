@@ -40,6 +40,10 @@ function main() {
   assert.equal(rearm.database_reset_or_truncate_forbidden,true);
   assert.equal(rearm.formal_database_mutation_allowed_for_rearm,false);
   assert.equal(rearm.schema_acl_idempotent_revalidation_required_after_rearm,true);
+  assert.equal(rearm.historical_schema_materialization_proof_required,false);
+  assert.equal(rearm.historical_schema_materialization_proof_role,"OPTIONAL_CROSS_EVIDENCE_ONLY");
+  assert.equal(rearm.current_exact_29_table_2_routine_zero_row_readback_required,true);
+  assert.equal(rearm.post_rearm_schema_acl_idempotent_revalidation_required,true);
   assert.equal(authority.owner_prerequisite.exact_one_live_fenced_owner_per_runtime_role_required_at_arm_readiness, true);
   assert.equal(authority.owner_prerequisite.historical_owner_evidence_substitute_forbidden, true);
   assert.equal(authority.owner_prerequisite.github_runner_as_live_owner_authority_forbidden, true);
@@ -97,6 +101,9 @@ function main() {
   assert.match(rearmVerifier,/SCHEMA_ACL_MATERIALIZED_ZERO_ROWS_PRE_A0/);
   assert.match(rearmVerifier,/FORMAL_V5_REARM_PRIOR_ARM_NOT_INVALIDATED_BY_SEMANTIC_CHANGE/);
   assert.match(rearmVerifier,/FORMAL_V5_REARM_PRE_A0_ROWS_NONZERO/);
+  assert.match(rearmVerifier,/prior_schema_proof_role:"OPTIONAL_CROSS_EVIDENCE_ONLY"/);
+  assert.match(rearmVerifier,/current_exact_store_readback_is_authoritative_for_rearm_eligibility:true/);
+  assert.match(rearmVerifier,/post_rearm_schema_acl_idempotent_revalidation_required:true/);
   assert.match(rearmVerifier,/new_arm_output_must_be_distinct:true/);
   assert.doesNotMatch(rearmVerifier,/\b(?:DROP|TRUNCATE|DELETE|INSERT|UPDATE|ALTER|CREATE)\s+(?:DATABASE|TABLE|SCHEMA)\b/i);
 

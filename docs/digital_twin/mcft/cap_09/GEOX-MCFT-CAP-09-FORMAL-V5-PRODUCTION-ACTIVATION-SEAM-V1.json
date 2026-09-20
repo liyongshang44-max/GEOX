@@ -89,7 +89,11 @@
         "distinct_successor_arm_artifact_required": true,
         "database_reset_or_truncate_forbidden": true,
         "formal_database_mutation_allowed": false,
-        "schema_acl_revalidation_required_after_arm": true
+        "schema_acl_revalidation_required_after_arm": true,
+        "historical_schema_materialization_proof_required": false,
+        "historical_schema_materialization_proof_role": "OPTIONAL_CROSS_EVIDENCE_ONLY",
+        "current_exact_store_readback_required": true,
+        "post_rearm_schema_acl_idempotent_revalidation_required": true
       }
     }
   },

@@ -27,7 +27,11 @@
       "distinct_successor_arm_artifact_required": true,
       "database_reset_or_truncate_forbidden": true,
       "formal_database_mutation_allowed_for_rearm": false,
-      "schema_acl_idempotent_revalidation_required_after_rearm": true
+      "schema_acl_idempotent_revalidation_required_after_rearm": true,
+      "historical_schema_materialization_proof_required": false,
+      "historical_schema_materialization_proof_role": "OPTIONAL_CROSS_EVIDENCE_ONLY",
+      "current_exact_29_table_2_routine_zero_row_readback_required": true,
+      "post_rearm_schema_acl_idempotent_revalidation_required": true
     }
   },
   "owner_prerequisite": {
@@ -59,7 +63,8 @@
     "materialized_zero_rearm_with_nonzero_rows": "FAIL",
     "materialized_zero_rearm_with_prior_a0_artifact": "FAIL",
     "materialized_zero_rearm_reusing_prior_arm_artifact": "FAIL",
-    "materialized_zero_rearm_database_reset_or_truncate_attempt": "FAIL"
+    "materialized_zero_rearm_database_reset_or_truncate_attempt": "FAIL",
+    "materialized_zero_rearm_without_current_exact_store_readback": "FAIL"
   },
   "authorization_ceiling": {
     "formal_v5_arm_authorized": false,
