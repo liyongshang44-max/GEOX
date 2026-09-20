@@ -1,7 +1,6 @@
 import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
-  buildOperatorTwinScopeQuery,
   fetchOperatorTwinOverview,
   type OperatorTwinOverviewV1,
   type OperatorTwinRequestScope,
@@ -80,7 +79,6 @@ export default function FieldOperationsHomePage(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const t = React.useCallback((copy: LocalizedCopy) => localizedText(copy, locale), [locale]);
   const scope = React.useMemo(() => scopeFromSearchParams(searchParams), [searchParams]);
-  const scopeQuery = React.useMemo(() => buildOperatorTwinScopeQuery(scope), [scope]);
   const [state, setState] = React.useState<LoadState>("loading");
   const [overview, setOverview] = React.useState<OperatorTwinOverviewV1 | null>(null);
   const [workbench, setWorkbench] = React.useState<OperatorWorkbenchResponse | null>(null);
@@ -125,7 +123,7 @@ export default function FieldOperationsHomePage(): React.ReactElement {
           <p>{t(COPY.heroLead)}</p>
         </div>
         <div className="fouiHeroActions">
-          <Link className="fouiPrimaryLink" to={"/operator/fields" + scopeQuery}>{t(COPY.viewFields)}</Link>
+          <Link className="fouiPrimaryLink" to="/operator/field-intelligence">{t(COPY.viewFields)}</Link>
           <Link className="fouiSecondaryLink" to="/operator/operations">{locale === "zh-CN" ? "查看运营" : "Open operations"}</Link>
         </div>
       </section>
@@ -145,7 +143,7 @@ export default function FieldOperationsHomePage(): React.ReactElement {
         <section className="fouiPanel fouiPanel--wide">
           <header className="fouiPanelHeader">
             <div><span className="fouiEyebrow">MCFT / CURRENT WORLD</span><h3>{t(COPY.fieldOverview)}</h3></div>
-            <Link to={"/operator/fields" + scopeQuery}>{t(COPY.viewFields)}</Link>
+            <Link to="/operator/field-intelligence">{t(COPY.viewFields)}</Link>
           </header>
           {visibleFields.length ? (
             <div className="fouiFieldGrid">
@@ -157,7 +155,7 @@ export default function FieldOperationsHomePage(): React.ReactElement {
                     <div><dt>{t(COPY.currentRisk)}</dt><dd>{field.risk_text || "—"}</dd></div>
                     <div><dt>{t(COPY.coverage)}</dt><dd>{field.data_coverage_text || "—"}</dd></div>
                   </dl>
-                  <Link to={"/operator/fields" + scopeQuery}>{t(COPY.openField)} →</Link>
+                  <Link to={`/operator/field-intelligence?field_id=${encodeURIComponent(field.field_id)}`}>{t(COPY.openField)} →</Link>
                 </article>
               ))}
             </div>
@@ -180,7 +178,7 @@ export default function FieldOperationsHomePage(): React.ReactElement {
       </div>
 
       <section className="fouiDomainGrid" aria-label={locale === "zh-CN" ? "产品工作域" : "Product work areas"}>
-        <Link className="fouiDomainCard" to="/operator/fields"><span>01</span><strong>{locale === "zh-CN" ? "田间智能" : "Field Intelligence"}</strong><p>{locale === "zh-CN" ? "当前田块状态、预测、证据轨迹与已知限制。" : "Current field state, forecast, evidence trace, and known limitations."}</p></Link>
+        <Link className="fouiDomainCard" to="/operator/field-intelligence"><span>01</span><strong>{locale === "zh-CN" ? "田间智能" : "Field Intelligence"}</strong><p>{locale === "zh-CN" ? "当前田块状态、预测、证据轨迹与已知限制。" : "Current field state, forecast, evidence trace, and known limitations."}</p></Link>
         <Link className="fouiDomainCard" to="/operator/agronomy"><span>02</span><strong>{locale === "zh-CN" ? "农艺 / 规划" : "Agronomy / Planning"}</strong><p>{locale === "zh-CN" ? "种植规划、农艺建议与决策历史；缺失 projection 明确保持未开放。" : "Season planning, agronomic guidance, and decision history; missing projections remain explicitly unavailable."}</p></Link>
         <Link className="fouiDomainCard" to="/operator/operations"><span>03</span><strong>{locale === "zh-CN" ? "运营" : "Operations"}</strong><p>{locale === "zh-CN" ? "审批、派发、执行回执与证据复核，权威仍由 B-Line command boundary 拥有。" : "Approval, dispatch, execution receipts, and evidence review while B-Line retains command authority."}</p></Link>
       </section>
