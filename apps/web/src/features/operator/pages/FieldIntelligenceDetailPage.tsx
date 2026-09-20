@@ -148,6 +148,22 @@ export default function FieldIntelligenceDetailPage(): React.ReactElement {
       </section>
 
       <section className="fouiPanel">
+        <header className="fouiPanelHeader"><div><span className="fouiEyebrow">ON-DEMAND CANONICAL DATASETS</span><h3>{english ? "Load deeper data only when needed" : "更深层数据按需读取"}</h3></div></header>
+        <div className="fouiCapabilityLinks fouiCapabilityLinks--four">
+          {[
+            ["State", ""],
+            ["Forecast", "/forecast"],
+            ["Scenario", "/scenario"],
+            ["Action lifecycle", "/action-lifecycle"],
+            ["Residual", "/residual"],
+            ["Calibration", "/calibration"],
+            ["Evidence / Trace", "/evidence-trace"],
+            ["Health", "/health"],
+          ].map(([label,path]) => <Link key={label} to={`/operator/fields/${encodeURIComponent(fieldId)}${path}?${query}`}><strong>{label}</strong><small>{english ? "Canonical GET-only technical readback" : "Canonical GET-only 技术回查"}</small></Link>)}
+        </div>
+      </section>
+
+      <section className="fouiPanel">
         <header className="fouiPanelHeader"><div><span className="fouiEyebrow">CANONICAL DATA</span><h3>{english ? "Nothing is thrown away" : "后端数据不丢弃"}</h3></div></header>
         <div className="fouiContentIdentity">
           <div><span>root_graph_content_hash</span><strong>{vm.content_identity.root_graph_content_hash}</strong></div>
