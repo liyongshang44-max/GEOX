@@ -136,6 +136,8 @@ function materializeGeneratedGraph(root, resolverId, spec) {
     output_field: spec.output_field,
     generator_exit_code: result.status,
     graph_conformance: spec.conformance_field ? output[spec.conformance_field] ?? null : null,
+    generated_expected_digest: output.expected_dependency_graph_sha256 ?? null,
+    generated_carrier_digest: output.carrier_dependency_graph_sha256 ?? null,
   };
 }
 
@@ -731,6 +733,8 @@ function planApplicability({
       missing: value.missing,
       graph_conformance: value.graph_conformance ?? null,
       generator_exit_code: value.generator_exit_code ?? null,
+      generated_expected_digest: value.generated_expected_digest ?? null,
+      generated_carrier_digest: value.generated_carrier_digest ?? null,
       dependency_digest_current: digestCatalog[id]?.current?.digest ?? null,
       dependency_digest_historical: digestCatalog[id]?.historical?.digest ?? null,
       dependency_digest_match: Boolean(digestCatalog[id]?.current?.digest && digestCatalog[id]?.historical?.digest && digestCatalog[id].current.digest === digestCatalog[id].historical.digest),
