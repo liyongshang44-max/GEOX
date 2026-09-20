@@ -161,6 +161,7 @@ try{
   const runtimeAuthorityPath=path.join(runtimeRoot,"runtime-start-authority.json");
   const runtimeArmPath=path.join(runtimeRoot,"runtime-start-arm.json");
   const ownerAuthorityPath=path.join(runtimeRoot,"owner-cutover-authority.json");
+  const formalV5EvidenceHandoffPath=path.join(runtimeRoot,"formal-v5-evidence-runtime-handoff-authority.json");
   const artifactAttestationPath=path.join(ROOT,ARTIFACT_ATTEST_REL);
   fs.mkdirSync(runtimeRoot,{recursive:true});
 
@@ -185,6 +186,15 @@ try{
     formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false
   };
   write(ownerAuthorityPath,ownerAuthority);
+  write(formalV5EvidenceHandoffPath,{
+    schema_version:"geox_mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1",
+    authority_id:"GEOX-MCFT-CAP-09-FORMAL-V5-EVIDENCE-RUNTIME-HANDOFF-AUTHORITY-V1",
+    status:"UNARMED",armed:false,deployment_subject_sha:head,scope,
+    evidence_runtime_planning_handoff_authorized:false,
+    runtime_process_start_authorized:false,twin_runtime_start_authorized:false,
+    production_owner_activation_authorized:false,formal_v5_arm_authorized:false,
+    a0_authorized:false,o00_authorized:false
+  });
 
   const runtimeArm={
     schema_version:"geox_mcft_cap09_production_runtime_start_arm_v1",
@@ -210,6 +220,7 @@ try{
     GEOX_MCFT_CAP09_FIELD_ID:scope.field_id,GEOX_MCFT_CAP09_SEASON_ID:scope.season_id,GEOX_MCFT_CAP09_ZONE_ID:scope.zone_id,
     GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH:runtimeAuthorityPath,
     GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH:ownerAuthorityPath,
+    GEOX_MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_PATH:formalV5EvidenceHandoffPath,
     GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH:artifactAttestationPath,
     GEOX_MCFT_CAP09_LOCAL_HOST_ID_PATH:HOST_ID_FILE,
     GEOX_MCFT_CAP09_RUNTIME_IMAGE_TAG:`geox-mcft-cap09-runtime:${head}`,
