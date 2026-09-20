@@ -57,8 +57,12 @@ function main() {
   assert.match(workflow, /transaction_read_only/);
   assert.match(workflow, /information_schema\.tables/);
   assert.match(workflow, /pg_catalog\.pg_proc/);
-  assert.match(workflow, /FORMAL_V5_PUBLIC_BASE_TABLE_COUNT_NONZERO/);
-  assert.match(workflow, /FORMAL_V5_PUBLIC_ROUTINE_COUNT_NONZERO/);
+  assert.match(workflow, /FORMAL_V5_MATERIALIZED_TABLE_SET_MISMATCH/);
+  assert.match(workflow, /FORMAL_V5_MATERIALIZED_ROUTINE_SET_MISMATCH/);
+  assert.match(workflow, /FORMAL_V5_PRE_A0_ROWS_NONZERO/);
+  assert.match(workflow, /proof\.public_base_table_count!==29/);
+  assert.match(workflow, /proof\.public_routine_count!==2/);
+  assert.match(workflow, /proof\.all_table_rows_zero!==true/);
   assert.match(workflow, /owner\.status==='REQUALIFY'/, "FORMAL_V5_OWNER_REQUALIFY_PENDING_STATE_REQUIRED");
   assert.match(workflow, /owner\.reason_code!=='GOVERNED_DEPENDENCY_CHANGED'/, "FORMAL_V5_OWNER_REQUALIFY_REASON_REQUIRED");
   assert.match(workflow, /owner\.status==='REQUIRED'/, "FORMAL_V5_OWNER_REQUIRED_PENDING_STATE_REQUIRED");

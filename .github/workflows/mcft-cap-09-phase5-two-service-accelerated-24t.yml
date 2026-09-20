@@ -185,7 +185,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker compose -f "$COMPOSE_FILE" -f "$RUNNER_TEMP/mcft-qualification-minio.yml"             run --rm --no-deps database-platform-bootstrap             -ceu 'node_modules/.bin/tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_BASELINE_V1.ts'
+          docker compose -f "$COMPOSE_FILE" -f "$RUNNER_TEMP/mcft-qualification-minio.yml" \
+            run --rm --no-deps --entrypoint /bin/sh database-platform-bootstrap \
+            -ceu 'node_modules/.bin/tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_BASELINE_V1.ts'
 
       - name: Start isolated PostgreSQL and private raw store
         shell: bash
