@@ -718,6 +718,8 @@ jobs:
           set -euo pipefail
           test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/temporal-settlement-proof.json")" = "PASS"
           test "$(jq -r .protected_temporal_semantic_core_unchanged "$GEOX_PHASE5_CONTROL_ROOT/temporal-settlement-proof.json")" = "true"
+          test "$(jq -r .qualification_rehearsal_extension_seam_status "$GEOX_PHASE5_CONTROL_ROOT/temporal-settlement-proof.json")" = "EXACT_BLOB_PINNED_ACCELERATED_DEFAULT_PRESERVED"
+          test "$(jq -r '.qualification_rehearsal_extension_seam_changed_paths | length' "$GEOX_PHASE5_CONTROL_ROOT/temporal-settlement-proof.json")" = "2"
           test "$(jq -r .runtime_ownership_fencing_requalification_status "$GEOX_PHASE5_CONTROL_ROOT/temporal-settlement-proof.json")" = "REQUIRED_CURRENT_HEAD_FOCUSED_REAL_CONTAINER_PROOF" \
             || test "$(jq -r .runtime_ownership_fencing_requalification_status "$GEOX_PHASE5_CONTROL_ROOT/temporal-settlement-proof.json")" = "NOT_REQUIRED_NO_LAYER_CHANGE"
           test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/evidence-resilience-proof.json")" = "PASS"
@@ -730,7 +732,7 @@ jobs:
             --arg subject "$GEOX_DEPLOYMENT_SUBJECT_COMMIT" \
             '{status:"PASS",schema_version:"geox_mcft_cap09_phase5_temporal_settlement_workflow_v1",
               subject_sha:$subject,execution_mode:"TEMPORAL_SETTLEMENT_V1",
-              closure_basis:"IMMUTABLE_FULL_24T_PLUS_FRESH_HOSTING_RESILIENCE_AND_SEMANTIC_EQUIVALENCE",
+              closure_basis:"IMMUTABLE_FULL_24T_PLUS_FRESH_HOSTING_RESILIENCE_AND_PINNED_REHEARSAL_EXTENSION_EQUIVALENCE",
               current_head_full_live_24t_executed:false,current_head_full_live_24t_claimed:false,
               immutable_full_24t_head:"12473c491b354e49305f22bfa24c8701ce5e3ff9",
               immutable_full_24t_run_id:33101400822,immutable_full_24t_artifact_id:9659440229,
@@ -738,6 +740,7 @@ jobs:
               fresh_evidence_resilience_run_id:33110416779,fresh_evidence_resilience_artifact_id:9671930864,
               twin_duplicate_container_focused_proof_current_head:true,
               protected_temporal_semantic_core_unchanged:true,
+              qualification_rehearsal_extension_seam_exact:true,
               runtime_ownership_fencing_layer_requalified_current_head:true,
               evidence_restart_and_fencing_fresh:true,twin_fencing_fresh:true,
               raw_fixture_uploaded:false,production_owner_cutover:false,formal_v5_armed:false}' \
