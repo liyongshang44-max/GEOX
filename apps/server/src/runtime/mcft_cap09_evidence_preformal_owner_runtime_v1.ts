@@ -120,7 +120,7 @@ export async function runMcftCap09EvidencePreFormalOwnerRuntimeV1():Promise<void
    authority_ref:handoff.authority_ref,
    activation_fence_time:handoff.activation_fence_time,
    formal_a0_authority_ref:handoff.formal_a0_authority_ref,
-   formal_a0_authority_sha256:String(handoffRaw.formal_v5_arm_artifact_sha256??""),
+   formal_a0_authority_sha256:sha256FileV1(handoffPath),
    formal_a0_logical_time:handoff.formal_a0_logical_time,
   };
   await runMcftCap09ProductionEvidenceRuntimeV1({runtime_start_authority:handoffRuntimeStart});
