@@ -121,18 +121,18 @@ jobs:
             -p 9000:9000 \
             -e MINIO_ROOT_USER=phase7composition \
             -e MINIO_ROOT_PASSWORD=phase7-composition-secret-key-001 \
-            minio/minio:latest server /data
+            quay.io/minio/minio@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
           for attempt in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
             sleep 1
           done
           curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
-          docker run --rm --network host \
-            -e MC_HOST_phase7=http://phase7composition:phase7-composition-secret-key-001@127.0.0.1:9000 \
-            minio/mc:latest mb --ignore-existing phase7/geox-mcft-cap09-formal-raw-v1
-          docker run --rm --network host \
-            -e MC_HOST_phase7=http://phase7composition:phase7-composition-secret-key-001@127.0.0.1:9000 \
-            minio/mc:latest anonymous set private phase7/geox-mcft-cap09-formal-raw-v1
+          docker run --rm --network host --entrypoint /bin/sh \
+            quay.io/minio/mc@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112 -ceu '
+              mc alias set phase7 http://127.0.0.1:9000 phase7composition phase7-composition-secret-key-001
+              mc mb --ignore-existing phase7/geox-mcft-cap09-formal-raw-v1
+              mc anonymous set private phase7/geox-mcft-cap09-formal-raw-v1
+            '
 
       - name: Run real private candidate to PostgreSQL fenced promotion qualification
         env:
