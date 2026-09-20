@@ -11,8 +11,10 @@ const ROOT=path.resolve(__dirname,"../..");
 const COMPOSE=path.join(ROOT,"docker-compose.mcft-cap09-phase5-qualification.yml");
 const STATE_ROOT=path.join(os.homedir(),".geox","mcft-cap09","real-clock-rehearsal");
 const ACTIVE_POINTER=path.join(STATE_ROOT,"active.json");
+const REHEARSAL_CROP_AUTHORITY_SOURCE=path.join(ROOT,"docs","digital_twin","mcft","cap_09","GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json");
 const HOUR=3_600_000;
 const MINUTE=60_000;
+const DAY=24*HOUR;
 
 const MINIO_IMAGE="quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e";
 const MC_IMAGE="quay.io/minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727";
@@ -53,6 +55,53 @@ function stamp(ms){
 function randomHex(bytes=18){return crypto.randomBytes(bytes).toString("hex");}
 function strictNextUtcHour(nowMs){
   return Math.floor(nowMs/HOUR)*HOUR+HOUR;
+}
+function rehearsalPlantingWindow(a0Ms){
+  req(Number.isFinite(a0Ms),"REAL_CLOCK_REHEARSAL_A0_MS_INVALID");
+  const startMs=a0Ms-85*DAY;
+  const endMs=startMs+DAY;
+  const earliestGuardMs=a0Ms-5*HOUR;
+  const latestGuardMs=a0Ms+54*HOUR;
+  const minimumAgeDays=(earliestGuardMs-endMs)/DAY;
+  const maximumAgeDays=(latestGuardMs-startMs)/DAY;
+  req(minimumAgeDays>80&&maximumAgeDays<95,"REAL_CLOCK_REHEARSAL_SYNTHETIC_MID_WINDOW_INVALID",minimumAgeDays+":"+maximumAgeDays);
+  return {
+    start_inclusive:iso(startMs),
+    end_exclusive:iso(endMs),
+    minimum_age_days:minimumAgeDays,
+    maximum_age_days:maximumAgeDays,
+  };
+}
+function buildRehearsalCropAuthorityFixture(a0Ms,outPath){
+  req(fs.existsSync(REHEARSAL_CROP_AUTHORITY_SOURCE),"REAL_CLOCK_REHEARSAL_CROP_AUTHORITY_SOURCE_REQUIRED");
+  const base=readJson(REHEARSAL_CROP_AUTHORITY_SOURCE,"REAL_CLOCK_REHEARSAL_CROP_AUTHORITY_SOURCE_INVALID");
+  req(base.schema_version==="geox_mcft_cap09_s6_formal_crop_context_authority_v3","REAL_CLOCK_REHEARSAL_CROP_AUTHORITY_SCHEMA_INVALID");
+  const window=rehearsalPlantingWindow(a0Ms);
+  const fixture=JSON.parse(JSON.stringify(base));
+  fixture.planting_authority={
+    ...fixture.planting_authority,
+    possible_event_window_utc:{
+      start_inclusive:window.start_inclusive,
+      end_exclusive:window.end_exclusive,
+    },
+  };
+  fixture.qualification_rehearsal_overlay={
+    schema_version:"geox_mcft_cap09_real_clock_rehearsal_crop_authority_overlay_v1",
+    status:"CONTROLLED_ENGINEERING_FIXTURE",
+    synthetic_planting_window:true,
+    original_planting_event_not_claimed:true,
+    provider_observation_truth_claimed:false,
+    production_authority:false,
+    formal_evidence_claim:false,
+    stage_1b_closure_claim:false,
+    purpose:"KEEP_EXISTING_A18_V3_MATERIALIZER_INSIDE_STABLE_MID_TEST_ENVELOPE_WITHOUT_CHANGING_RUNTIME_KERNEL",
+    synthetic_window_start:window.start_inclusive,
+    synthetic_window_end_exclusive:window.end_exclusive,
+    minimum_guarded_age_days:window.minimum_age_days,
+    maximum_guarded_age_days:window.maximum_age_days,
+  };
+  writePrivateJson(outPath,fixture);
+  return fixture.qualification_rehearsal_overlay;
 }
 function composeArgs(state,args){
   return [
@@ -107,6 +156,22 @@ function writeOverride(file){
     `    image: ${MINIO_IMAGE}`,
     "  minio-init:",
     `    image: ${MC_IMAGE}`,
+    "  qualification-prepare:",
+    "    environment:",
+    "      GEOX_MCFT_CAP09_TWIN_RUNTIME_CROP_AUTHORITY_PATH: /qualification/rehearsal-crop-authority.json",
+    "    volumes:",
+    "      - type: bind",
+    "        source: ${GEOX_PHASE5_REHEARSAL_CROP_AUTHORITY_PATH}",
+    "        target: /qualification/rehearsal-crop-authority.json",
+    "        read_only: true",
+    "  twin-runtime:",
+    "    environment:",
+    "      GEOX_MCFT_CAP09_TWIN_RUNTIME_CROP_AUTHORITY_PATH: /qualification/rehearsal-crop-authority.json",
+    "    volumes:",
+    "      - type: bind",
+    "        source: ${GEOX_PHASE5_REHEARSAL_CROP_AUTHORITY_PATH}",
+    "        target: /qualification/rehearsal-crop-authority.json",
+    "        read_only: true",
     "",
   ].join("\n"),{mode:0o600});
 }
@@ -260,7 +325,9 @@ function start(){
   const statePath=path.join(runRoot,"state.json");
   const secretsPath=path.join(runRoot,"secrets.json");
   const faultProofPath=path.join(controlRoot,"rehearsal-fault-proof.json");
+  const cropAuthorityFixturePath=path.join(fixtureRoot,"rehearsal-crop-authority-v1.json");
   writeOverride(overridePath);
+  const cropAuthorityFixture=buildRehearsalCropAuthorityFixture(a0Ms,cropAuthorityFixturePath);
 
   const state={
     schema_version:"geox_mcft_cap09_real_clock_rehearsal_state_v1",
@@ -279,6 +346,8 @@ function start(){
     secrets_path:secretsPath,
     prepare_proof_path:path.join(controlRoot,"prepare-proof.json"),
     final_proof_path:path.join(controlRoot,"verify-proof.json"),
+    crop_authority_fixture_path:cropAuthorityFixturePath,
+    crop_authority_fixture:cropAuthorityFixture,
     fault_plan:{
       enabled:!flag("no-fault"),
       rehearsal_label:"R05",
@@ -316,6 +385,7 @@ function start(){
     GEOX_PHASE5_ZONE_ID:"zone_kbs_mcse_t4r1_crop_formal_v1",
     GEOX_PHASE5_FIXTURE_ROOT:fixtureRoot,
     GEOX_PHASE5_CONTROL_ROOT:controlRoot,
+    GEOX_PHASE5_REHEARSAL_CROP_AUTHORITY_PATH:cropAuthorityFixturePath,
     GEOX_PHASE5_RUN_CLASS:"REAL_CLOCK_REHEARSAL",
     GEOX_PHASE5_A0:state.a0,
     GEOX_PHASE5_CREATED_AT:state.started_at,
@@ -377,6 +447,7 @@ function start(){
       started_at:state.started_at,
       r00:state.r00,
       r23:state.r23,
+      rehearsal_crop_authority_fixture:state.crop_authority_fixture,
       twin_container_running:true,
       automatic_fault_plan:state.fault_plan.enabled?{
         label:"R05",
@@ -474,12 +545,15 @@ function selftest(){
   req(iso(a0+HOUR)==="2030-01-01T02:00:00.000Z","SELFTEST_R00");
   req(iso(a0+24*HOUR)==="2030-01-02T01:00:00.000Z","SELFTEST_R23");
   req(iso(a0+6*HOUR)==="2030-01-01T07:00:00.000Z","SELFTEST_R05");
+  const synthetic=rehearsalPlantingWindow(a0);
+  req(synthetic.minimum_age_days>80&&synthetic.maximum_age_days<95,"SELFTEST_SYNTHETIC_MID_WINDOW");
   console.log(JSON.stringify({
     schema_version:"geox_mcft_cap09_real_clock_rehearsal_launcher_selftest_v1",
     status:"PASS",
     run_class:"QUALIFICATION_REHEARSAL",
     formal_effect:false,
     production_effect:false,
+    synthetic_crop_authority_fixture_guarded_mid_window:true,
   },null,2));
 }
 
