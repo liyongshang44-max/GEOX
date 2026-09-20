@@ -15,6 +15,9 @@ export const MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_ID_V1 =
 export const MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_SCHEMA_V1 =
   "geox_mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1" as const;
 
+export const MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_EPOCH_SELECTION_MODE_V1 =
+  "CLOCK_ONLY_LIFECYCLE_AND_STAGE_AUTHORITY_CADENCE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY" as const;
+
 type ExpectedV1 = {
   deployment_subject_sha: string;
   scope: McftCap09ProductionRuntimeScopeV1;
@@ -89,9 +92,11 @@ export function parseMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1(
     || authority.status !== "AUTHORIZED"
     || authority.armed !== true
     || authority.evidence_runtime_planning_handoff_authorized !== true
+    || authority.formal_v5_arm_match_required !== true
   ) {
     throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_NOT_AUTHORIZED");
   }
+
   for (const [key, required] of Object.entries({
     runtime_process_start_authorized: false,
     twin_runtime_start_authorized: false,
@@ -133,19 +138,64 @@ export function parseMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1(
     throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_BASE_DIGEST_MISMATCH");
   }
 
-  digestV1(authority.formal_v5_arm_artifact_sha256, "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_ARM_DIGEST_INVALID");
-  digestV1(authority.formal_v5_arm_identity_hash, "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_ARM_IDENTITY_INVALID");
-  const armTime = isoV1(authority.formal_v5_arm_time, "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_ARM_TIME_INVALID");
   const activationFence = isoV1(
     authority.activation_fence_time,
     "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_ACTIVATION_FENCE_INVALID",
   );
   const a0 = hourV1(authority.formal_a0_logical_time, "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_A0_INVALID");
-  if (Date.parse(activationFence) < Date.parse(armTime)) {
-    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_BEFORE_ARM_FORBIDDEN");
+  const o00 = hourV1(authority.formal_o00_logical_time, "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_O00_INVALID");
+  const o23 = hourV1(authority.formal_o23_logical_time, "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_O23_INVALID");
+  const readiness = hourV1(authority.readiness_deadline, "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_READINESS_INVALID");
+  const horizon = isoV1(authority.lifecycle_horizon_end_utc, "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_LIFECYCLE_HORIZON_INVALID");
+
+  if (Date.parse(o00) !== Date.parse(a0) + 3_600_000) {
+    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_A0_O00_RELATION_INVALID");
   }
-  if (Date.parse(activationFence) >= Date.parse(a0)) {
-    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_FENCE_MUST_PRECEDE_A0");
+  if (Date.parse(o23) !== Date.parse(o00) + 23 * 3_600_000) {
+    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_O23_RELATION_INVALID");
+  }
+  if (Date.parse(readiness) !== Date.parse(o00) - 12 * 3_600_000) {
+    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_READINESS_RELATION_INVALID");
+  }
+  if (Date.parse(o00) < Date.parse(activationFence) + 36 * 3_600_000) {
+    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_36H_GOVERNANCE_LEAD_REQUIRED");
+  }
+  if (Date.parse(o23) > Date.parse(horizon)) {
+    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_LIFECYCLE_HORIZON_INSUFFICIENT");
+  }
+  if (authority.minimum_governance_lead_hours !== 36) {
+    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_36H_GOVERNANCE_LEAD_CONTRACT_DRIFT");
+  }
+  if (authority.epoch_selection_mode !== MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_EPOCH_SELECTION_MODE_V1) {
+    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_EPOCH_MODE_MISMATCH");
+  }
+
+  const cadence = recordV1(
+    authority.stage_authority_refresh_clock_eligibility,
+    "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_STAGE_CADENCE_REQUIRED",
+  );
+  if (
+    cadence.eligible !== true
+    || cadence.snapshot_boundary_strictly_before_a0 !== true
+    || cadence.snapshot_validity_covers_o23 !== true
+    || cadence.stage_value_consulted !== false
+    || cadence.authority_identity_frozen !== false
+  ) {
+    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_STAGE_CADENCE_INVALID");
+  }
+  const snapshotBoundary = isoV1(
+    cadence.snapshot_boundary_utc,
+    "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_STAGE_BOUNDARY_INVALID",
+  );
+  const snapshotValidUntil = isoV1(
+    cadence.snapshot_valid_until_utc,
+    "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_STAGE_VALID_UNTIL_INVALID",
+  );
+  if (
+    Date.parse(snapshotBoundary) >= Date.parse(a0)
+    || Date.parse(snapshotValidUntil) < Date.parse(o23)
+  ) {
+    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_STAGE_CADENCE_WINDOW_INVALID");
   }
 
   const admission = expected.admission_time_utc === undefined
@@ -154,15 +204,19 @@ export function parseMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1(
   if (Date.parse(admission) < Date.parse(activationFence)) {
     throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_FUTURE_AT_PROCESS_ADMISSION");
   }
+  if (Date.parse(admission) >= Date.parse(a0)) {
+    throw new Error("MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_STALE_AT_PROCESS_ADMISSION");
+  }
 
+  const authorityRef = textV1(
+    authority.authority_ref,
+    "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_AUTHORITY_REF_REQUIRED",
+  );
   return {
     authority_class: MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1,
-    authority_ref: textV1(authority.authority_ref, "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_AUTHORITY_REF_REQUIRED"),
+    authority_ref: authorityRef,
     activation_fence_time: activationFence,
-    formal_a0_authority_ref: textV1(
-      authority.formal_v5_arm_ref,
-      "MCFT_CAP09_FORMAL_V5_EVIDENCE_HANDOFF_ARM_REF_REQUIRED",
-    ),
+    formal_a0_authority_ref: authorityRef,
     formal_a0_logical_time: a0,
   };
 }
