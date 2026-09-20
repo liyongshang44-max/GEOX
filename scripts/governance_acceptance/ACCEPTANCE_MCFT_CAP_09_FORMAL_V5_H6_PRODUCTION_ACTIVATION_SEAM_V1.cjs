@@ -134,6 +134,11 @@ assert.equal(evidenceEpoch.actual_arm_exact_candidate_clock_match_required,true)
 assert.equal(evidenceEpoch.mismatch_policy,"FAIL_CLOSED_FRESH_OWNER_CUTOVER_H5_AND_ARM_REQUIRED");
 assert.equal(evidenceEpoch.evidence_acquisition_may_begin_before_actual_formal_v5_arm,true);
 assert.equal(evidenceEpoch.evidence_acquisition_stage_authority_required,false);
+assert.equal(evidenceEpoch.governance_lead_controls_epoch_selection_not_provider_fetch,true);
+assert.equal(evidenceEpoch.gfs_warm_start_due_window_start,"MAX(ACTIVATION_FENCE,A0_MINUS_PT70M)");
+assert.equal(evidenceEpoch.gfs_provider_request_before_warm_start_due_window_authorized,false);
+assert.equal(evidenceEpoch.evidence_owner_may_run_idle_before_gfs_due_window,true);
+assert.equal(evidenceEpoch.o00_o23_goal,"REAL_UTC_RUNTIME_CONTINUITY_WITH_CAUSAL_INPUT_AVAILABILITY_NOT_PER_HOUR_PROVIDER_PERFECTION_REQUALIFICATION");
 assert.equal(evidenceEpoch.future_stage_value_consulted,false);
 assert.equal(evidenceEpoch.future_stage_authority_identity_frozen,false);
 assert.equal(evidenceEpoch.evidence_owner_restart_candidate_valid_through,"O23_INCLUSIVE");
@@ -386,6 +391,7 @@ const proof={
   explicit_v5_physical_store_identity:true,
   pre_arm_evidence_epoch_candidate_required:true,
   evidence_acquisition_decoupled_from_future_stage_authority:true,
+  governance_lead_decoupled_from_provider_fetch_timing:true,
   actual_arm_exact_pre_arm_evidence_epoch_match_required:true,
   local_operator_arm_surface_present:true,
   local_operator_secret_binding_contract_frozen:true,
