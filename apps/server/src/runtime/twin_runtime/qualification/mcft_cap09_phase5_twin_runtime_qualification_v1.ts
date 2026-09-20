@@ -98,6 +98,7 @@ export function buildPhase5TwinQualificationRuntimeStartAuthorityV1(input: {
   formal_a0: string;
   run_class: McftCap09Phase5QualificationRunClassV1;
   qualification_ack?: string;
+  rehearsal_activation_fence_time?: string;
   deployment_subject_sha: string;
   scope: {
     tenant_id: string;
@@ -121,9 +122,20 @@ export function buildPhase5TwinQualificationRuntimeStartAuthorityV1(input: {
     throw new Error("PHASE5_TWIN_QUALIFICATION_RUN_CLASS_INVALID");
   }
   const formalA0 = canonicalHourV1(input.formal_a0);
-  const activationFence = new Date(
-    Date.parse(formalA0) - 30 * 60 * 1000,
-  ).toISOString();
+  const activationFence = input.run_class === MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1
+    ? (() => {
+        const raw = String(input.rehearsal_activation_fence_time ?? "").trim();
+        if (!raw) throw new Error("PHASE5_TWIN_REAL_CLOCK_REHEARSAL_ACTIVATION_FENCE_REQUIRED");
+        const parsed = Date.parse(raw);
+        if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== raw) {
+          throw new Error("PHASE5_TWIN_REAL_CLOCK_REHEARSAL_ACTIVATION_FENCE_INVALID");
+        }
+        if (parsed >= Date.parse(formalA0)) {
+          throw new Error("PHASE5_TWIN_REAL_CLOCK_REHEARSAL_FENCE_MUST_PRECEDE_A0");
+        }
+        return raw;
+      })()
+    : new Date(Date.parse(formalA0) - 30 * 60 * 1000).toISOString();
   return {
     schema_version:
       "geox_mcft_cap09_production_runtime_start_authority_instance_v1",
@@ -200,6 +212,10 @@ export async function runMcftCap09Phase5TwinRuntimeQualificationV1(input?: {
       ),
       run_class: runClass,
       qualification_ack: qualificationAck,
+      rehearsal_activation_fence_time:
+        runClass === MCFT_CAP09_PHASE5_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1
+          ? requiredEnvV1(env, "GEOX_MCFT_CAP09_PHASE5_REHEARSAL_ACTIVATION_FENCE")
+          : undefined,
       deployment_subject_sha: requiredEnvV1(
         env,
         "GEOX_DEPLOYMENT_SUBJECT_COMMIT",
