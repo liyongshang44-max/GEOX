@@ -149,6 +149,34 @@ async function main(): Promise<void> {
   prematureA0.a0_authorized = true;
   await assert.rejects(async () => parse(prematureA0), /SCOPE_DRIFT:a0_authorized/);
 
+  const formalDbPromotion = fixture();
+  formalDbPromotion.formal_database_mutation_authorized = true;
+  await assert.rejects(
+    async () => parse(formalDbPromotion),
+    /SCOPE_DRIFT:formal_database_mutation_authorized/,
+  );
+
+  const formalRawPromotion = fixture();
+  formalRawPromotion.formal_raw_write_authorized = true;
+  await assert.rejects(
+    async () => parse(formalRawPromotion),
+    /SCOPE_DRIFT:formal_raw_write_authorized/,
+  );
+
+  const runtimeConfigPromotion = fixture();
+  runtimeConfigPromotion.runtime_config_write_authorized = true;
+  await assert.rejects(
+    async () => parse(runtimeConfigPromotion),
+    /SCOPE_DRIFT:runtime_config_write_authorized/,
+  );
+
+  const schedulerPromotion = fixture();
+  schedulerPromotion.scheduler_write_authorized = true;
+  await assert.rejects(
+    async () => parse(schedulerPromotion),
+    /SCOPE_DRIFT:scheduler_write_authorized/,
+  );
+
   const missingArmMatch = fixture();
   missingArmMatch.formal_v5_arm_match_required = false;
   await assert.rejects(async () => parse(missingArmMatch), /NOT_AUTHORIZED/);
@@ -214,6 +242,10 @@ async function main(): Promise<void> {
     formal_v5_arm_authorized_by_candidate: false,
     a0_authorized_by_candidate: false,
     o00_authorized_by_candidate: false,
+    formal_database_mutation_authorized_by_candidate: false,
+    formal_raw_write_authorized_by_candidate: false,
+    runtime_config_write_authorized_by_candidate: false,
+    scheduler_write_authorized_by_candidate: false,
     formal_database_mutation: false,
     provider_request_count: 0,
   };
