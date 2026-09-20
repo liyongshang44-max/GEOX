@@ -99,10 +99,14 @@ export async function runMcftCap09EvidencePreFormalOwnerRuntimeV1():Promise<void
    return;
   }
   // Once a Formal-v5 handoff is armed, the base runtime-start current-crop window is lineage only.
-  // It must not prevent Evidence acquisition from following the arm-frozen actual A0 clock.
+  // Keep the frozen production runtime-start contract intact, but late-bind the Evidence planner clock
+  // to the actual Formal-v5 A0 that was frozen by the real arm.
   parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
    deployment_subject_sha:subject,scope:s
   });
+  if(raw?.runtime_mode!==OWNER_CUTOVER_MODE){
+   throw new Error("MCFT_CAP09_PREFORMAL_EVIDENCE_HANDOFF_BASE_OWNER_MODE_REQUIRED");
+  }
   const handoff=loadMcftCap09FormalV5EvidenceRuntimeHandoffAuthorityV1({
    authority_path:handoffPath,
    expected:{
@@ -111,7 +115,15 @@ export async function runMcftCap09EvidencePreFormalOwnerRuntimeV1():Promise<void
     base_runtime_start_authority_sha256:sha256FileV1(runtimePath),
    },
   });
-  await runMcftCap09ProductionEvidenceRuntimeV1({planner_runtime_start_authority:handoff});
+  const handoffRuntimeStart={
+   ...raw,
+   authority_ref:handoff.authority_ref,
+   activation_fence_time:handoff.activation_fence_time,
+   formal_a0_authority_ref:handoff.formal_a0_authority_ref,
+   formal_a0_authority_sha256:String(handoffRaw.formal_v5_arm_artifact_sha256??""),
+   formal_a0_logical_time:handoff.formal_a0_logical_time,
+  };
+  await runMcftCap09ProductionEvidenceRuntimeV1({runtime_start_authority:handoffRuntimeStart});
   return;
  }
  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
