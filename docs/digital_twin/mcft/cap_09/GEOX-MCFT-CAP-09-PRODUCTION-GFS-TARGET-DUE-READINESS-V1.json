@@ -27,15 +27,19 @@
   },
   "due_policy": {
     "warm_start": {
-      "due_window_start": "ACTIVE_RUNTIME_START_ACTIVATION_FENCE",
+      "due_window_start": "MAX(ACTIVE_RUNTIME_START_ACTIVATION_FENCE,FORMAL_A0_MINUS_PT70M)",
       "due_window_end_exclusive": "FORMAL_A0",
-      "target": "FORMAL_A0"
+      "target": "FORMAL_A0",
+      "governance_lead_is_provider_acquisition_lead": false,
+      "provider_request_before_due_window_authorized": false,
+      "purpose": "AVOID_EARLY_IMPOSSIBLE_OR_UNNECESSARY_GFS_ATTEMPTS_WHILE_PRESERVING_A0_CAUSAL_WARM_START"
     },
     "subsequent": {
       "earliest_start_lead_minutes": 70,
       "latest_start_lead_minutes_exclusive": 30,
       "earliest_70m_policy_origin": "EXPLICIT_GEOX_OPERATIONAL_POLICY_PROMOTED_FROM_PREVIOUS_QUALIFIED_COLLECTOR_IMPLEMENTATION",
-      "latest_30m_policy_origin": "FROZEN_PRE_RUNTIME_HARDENING_AUTHORITY"
+      "latest_30m_policy_origin": "FROZEN_PRE_RUNTIME_HARDENING_AUTHORITY",
+      "warm_start_and_subsequent_share_earliest_lead_minutes": 70
     },
     "retry": {
       "max_attempts_per_target_window": 3,
@@ -62,7 +66,8 @@
     "partial_rehydration_zero_provider_budget_consumption": true,
     "canonical_hourly_target_pair_history_reader_implemented": true,
     "source_planner_exact_target_dedup_uses_canonical_history": true,
-    "provider_attempt_fence_after_lease_exact_target_recheck": true
+    "provider_attempt_fence_after_lease_exact_target_recheck": true,
+    "a0_warm_start_provider_timing_decoupled_from_governance_lead": true
   },
   "blockers": [
     "ACTIVE_RUNTIME_START_AUTHORITY_NOT_BOUND"
@@ -73,7 +78,9 @@
     "PHASE5_FIXTURE_TARGET_AS_PRODUCTION_AUTHORITY",
     "DEPLOYMENT_ENV_FORMAL_EPOCH_AS_GFS_TARGET_AUTHORITY",
     "UNBOUNDED_RETRY",
-    "RETRY_POLICY_TREATED_AS_PROVIDER_CADENCE_TRUTH"
+    "RETRY_POLICY_TREATED_AS_PROVIDER_CADENCE_TRUTH",
+    "OWNER_CUTOVER_ACTIVATION_FENCE_AS_IMMEDIATE_GFS_WARM_START_FETCH_TRIGGER",
+    "GOVERNANCE_LEAD_TREATED_AS_PROVIDER_ACQUISITION_LEAD"
   ],
   "non_effects": {
     "database_connection_attempted": false,
