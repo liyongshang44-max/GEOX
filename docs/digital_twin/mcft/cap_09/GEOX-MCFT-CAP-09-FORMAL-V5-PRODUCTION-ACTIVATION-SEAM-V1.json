@@ -373,5 +373,63 @@
     "gfs_provider_request_before_warm_start_due_window_authorized": false,
     "evidence_owner_may_run_idle_before_gfs_due_window": true,
     "o00_o23_goal": "REAL_UTC_RUNTIME_CONTINUITY_WITH_CAUSAL_INPUT_AVAILABILITY_NOT_PER_HOUR_PROVIDER_PERFECTION_REQUALIFICATION"
+  },
+  "runtime_validation_lanes": {
+    "principle": "TEST_EARLY_QUALIFY_LATE",
+    "test_entry_must_not_require_conditions_the_test_itself_is_intended_to_prove": true,
+    "lanes": [
+      {
+        "run_class": "ACCELERATED_24T",
+        "purpose": "DETERMINISTIC_STATE_MACHINE_TRANSACTION_AND_PERSISTENCE_DEFECT_DETECTION",
+        "clock": "ACCELERATED_ENGINEERING_ONLY",
+        "isolated_store_required": true,
+        "production_equivalent_core_required": true,
+        "formal_closure_evidence": false
+      },
+      {
+        "run_class": "QUALIFICATION_REHEARSAL",
+        "slot_labels": "R00_THROUGH_R23",
+        "purpose": "REAL_CLOCK_RUNTIME_SURVIVAL_AND_OBSERVABILITY",
+        "clock": "SYSTEM_AND_POSTGRESQL_UTC_WALL_CLOCK",
+        "actual_utc_hourly_boundaries_required": 24,
+        "isolated_store_required": true,
+        "isolated_raw_namespace_required": true,
+        "same_production_binaries_required": true,
+        "same_scheduler_required": true,
+        "same_runtime_kernel_required": true,
+        "live_provider_plane_may_run": true,
+        "provider_perfection_is_test_entry_requirement": false,
+        "stale_evidence_may_be_observed": true,
+        "missing_data_may_be_observed": true,
+        "forecast_blocked_may_be_observed": true,
+        "restart_recovery_may_be_exercised": true,
+        "oldest_first_backfill_may_be_exercised": true,
+        "qualification_baseline_may_keep_runtime_observable_when_provider_plane_is_degraded": true,
+        "formal_authority_binding_required": false,
+        "fresh_biological_stage_authority_required_for_test_entry": false,
+        "formal_v5_arm_required": false,
+        "formal_closure_evidence": false,
+        "stage_1b_completion_claim": false
+      },
+      {
+        "run_class": "FORMAL_CLOSURE",
+        "slot_labels": "O00_THROUGH_O23",
+        "purpose": "FINAL_AUTHORITY_BEARING_STAGE_1B_CLOSURE_EVIDENCE",
+        "clock": "SYSTEM_AND_POSTGRESQL_UTC_WALL_CLOCK",
+        "actual_utc_hourly_boundaries_required": 24,
+        "exact_authority_binding_required": true,
+        "qualified_evidence_required": true,
+        "exact_sha_required": true,
+        "r2_evidence_required": true,
+        "zero_routine_manual_rescue_required": true,
+        "final_hard_acceptance_unchanged": true
+      }
+    ],
+    "rehearsal_nonclaims": [
+      "R00_R23_IS_NOT_O00_O23",
+      "NO_FORMAL_V5_EFFECT_FROM_REHEARSAL",
+      "NO_STAGE_1B_CLOSURE_FROM_REHEARSAL",
+      "NO_MCFT_CAP09_COMPLETION_FROM_REHEARSAL"
+    ]
   }
 }
