@@ -10,6 +10,8 @@ export type OperatorActionButtonStateV1 = {
 
 export type OperatorAcceptanceTechnicalRefsVm = {
   operationIdText: string;
+  operationPlanIdText: string;
+  fieldIdText: string;
   acceptanceIdText: string;
   operationStateText: string;
   sourceText: string;
@@ -199,6 +201,8 @@ function disabledReason(item: OperatorAcceptanceItem, writeReady: boolean): stri
 function buildTechnicalRefs(item: OperatorAcceptanceItem): OperatorAcceptanceTechnicalRefsVm {
   return {
     operationIdText: text(item.operationId, "作业 ID 待确认"),
+    operationPlanIdText: text(item.operationPlanId, "作业计划 ID 待确认"),
+    fieldIdText: text(item.fieldId, "田块 ID 待确认"),
     acceptanceIdText: text(item.acceptanceId, "验收记录 ID 待确认"),
     operationStateText: text(item.operationStateStatus, "作业状态未提供"),
     sourceText: sourceText(item.source),
