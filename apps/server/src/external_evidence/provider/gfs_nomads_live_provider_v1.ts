@@ -20,7 +20,8 @@ export const MCFT_CAP09_GFS_ACQUISITION_AUTHORITY_REF_V1 =
 export const MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1 = 10_000 as const;
 export const MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_RESPONSIBLE_SHARING_REF_V1 =
   "https://nomads.ncep.noaa.gov/info.php?page=gribfilter" as const;
-export const MCFT_CAP09_GFS_MEMBER_MAX_ATTEMPTS_V1 = 3 as const;
+export const MCFT_CAP09_GFS_MEMBER_MAX_ATTEMPTS_V1 = 2 as const;
+export const MCFT_CAP09_GFS_MEMBER_MAX_TOTAL_RETRIES_V1 = 1 as const;
 export const MCFT_CAP09_GFS_MEMBER_RETRY_BASE_MS_V1 = 1_000 as const;
 export const MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED_CODE_V1 =
   "MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED" as const;
@@ -89,6 +90,7 @@ export type GfsNomadsLiveProviderConfigV1 = {
   grib_filter_cadence?: GfsNomadsGribFilterCadencePortV1;
   member_retry?: {
     max_attempts?: number;
+    max_total_retries?: number;
     retry_base_ms?: number;
     wait_ms?: (milliseconds: number) => Promise<void>;
   };
@@ -367,8 +369,10 @@ export class GfsNomadsLiveProviderV1 {
   private readonly byteClient: ControlledHttpsByteClientV1;
   private readonly gribFilterCadence: GfsNomadsGribFilterCadencePortV1;
   private readonly memberRetryMaxAttempts: number;
+  private readonly memberRetryMaxTotalRetries: number;
   private readonly memberRetryBaseMs: number;
   private readonly memberRetryWaitMs: (milliseconds: number) => Promise<void>;
+  private memberRetryTotalRetries = 0;
   private lastGribFilterRequestStartedAtMs: number | null = null;
   private gribFilterCadenceGate: Promise<void> = Promise.resolve();
 
@@ -381,16 +385,22 @@ export class GfsNomadsLiveProviderV1 {
       },
     };
     const maxAttempts = config.member_retry?.max_attempts ?? MCFT_CAP09_GFS_MEMBER_MAX_ATTEMPTS_V1;
+    const maxTotalRetries = config.member_retry?.max_total_retries ?? MCFT_CAP09_GFS_MEMBER_MAX_TOTAL_RETRIES_V1;
     const retryBaseMs = config.member_retry?.retry_base_ms ?? MCFT_CAP09_GFS_MEMBER_RETRY_BASE_MS_V1;
     requireConditionV1(
-      Number.isInteger(maxAttempts) && maxAttempts >= 1 && maxAttempts <= 5,
+      Number.isInteger(maxAttempts) && maxAttempts >= 1 && maxAttempts <= 2,
       "MCFT_CAP09_GFS_MEMBER_RETRY_MAX_ATTEMPTS_INVALID",
+    );
+    requireConditionV1(
+      Number.isInteger(maxTotalRetries) && maxTotalRetries >= 0 && maxTotalRetries <= 1,
+      "MCFT_CAP09_GFS_MEMBER_RETRY_MAX_TOTAL_RETRIES_INVALID",
     );
     requireConditionV1(
       Number.isInteger(retryBaseMs) && retryBaseMs >= 100 && retryBaseMs <= 30_000,
       "MCFT_CAP09_GFS_MEMBER_RETRY_BASE_MS_INVALID",
     );
     this.memberRetryMaxAttempts = maxAttempts;
+    this.memberRetryMaxTotalRetries = maxTotalRetries;
     this.memberRetryBaseMs = retryBaseMs;
     this.memberRetryWaitMs = config.member_retry?.wait_ms ?? (async (milliseconds) => {
       await waitTimeoutV1(milliseconds);
@@ -408,9 +418,13 @@ export class GfsNomadsLiveProviderV1 {
         return await request();
       } catch (error) {
         if (!transientGfsMemberFailureV1(error)) throw error;
-        if (attempt >= this.memberRetryMaxAttempts) {
+        if (
+          attempt >= this.memberRetryMaxAttempts
+          || this.memberRetryTotalRetries >= this.memberRetryMaxTotalRetries
+        ) {
           throw memberRetryExhaustedV1(diagnosticToken, error);
         }
+        this.memberRetryTotalRetries += 1;
         await this.memberRetryWaitMs(
           Math.min(30_000, this.memberRetryBaseMs * 2 ** (attempt - 1)),
         );
