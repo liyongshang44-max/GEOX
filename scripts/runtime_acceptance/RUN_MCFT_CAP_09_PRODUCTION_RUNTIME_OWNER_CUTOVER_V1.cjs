@@ -6,6 +6,9 @@ const fs=require("node:fs");
 const os=require("node:os");
 const path=require("node:path");
 const cp=require("node:child_process");
+const {
+  selectFormalV5EpochClockV1,
+}=require("./MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs");
 
 const ROOT=path.resolve(__dirname,"../..");
 const POLICY_REL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json";
@@ -186,15 +189,6 @@ try{
     formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false
   };
   write(ownerAuthorityPath,ownerAuthority);
-  write(formalV5EvidenceHandoffPath,{
-    schema_version:"geox_mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1",
-    authority_id:"GEOX-MCFT-CAP-09-FORMAL-V5-EVIDENCE-RUNTIME-HANDOFF-AUTHORITY-V1",
-    status:"UNARMED",armed:false,deployment_subject_sha:head,scope,
-    evidence_runtime_planning_handoff_authorized:false,
-    runtime_process_start_authorized:false,twin_runtime_start_authorized:false,
-    production_owner_activation_authorized:false,formal_v5_arm_authorized:false,
-    a0_authorized:false,o00_authorized:false
-  });
 
   const runtimeArm={
     schema_version:"geox_mcft_cap09_production_runtime_start_arm_v1",
@@ -212,6 +206,44 @@ try{
   };
   write(runtimeArmPath,runtimeArm);
   exec(process.execPath,[BUILDER_REL,"--arm",runtimeArmPath,"--out",runtimeAuthorityPath]);
+
+  const evidenceEpoch=selectFormalV5EpochClockV1({
+    planning_time_utc:activationFence,
+    lifecycle_horizon_end_utc:exactIso(
+      crop.lifecycle?.horizon_end_utc,
+      "CUTOVER_EVIDENCE_EPOCH_LIFECYCLE_HORIZON_INVALID"
+    ),
+  });
+  const evidenceEpochAuthority={
+    schema_version:"geox_mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1",
+    authority_id:"GEOX-MCFT-CAP-09-FORMAL-V5-EVIDENCE-RUNTIME-HANDOFF-AUTHORITY-V1",
+    status:"AUTHORIZED",armed:true,
+    authority_ref:"local-operator://"+hostId+"/mcft-cap09/formal-v5/evidence-epoch-candidate/"+head+"/"+evidenceEpoch.o00,
+    deployment_subject_sha:head,scope,
+    activation_fence_time:activationFence,
+    formal_a0_logical_time:evidenceEpoch.a0,
+    formal_o00_logical_time:evidenceEpoch.o00,
+    formal_o23_logical_time:evidenceEpoch.o23,
+    readiness_deadline:evidenceEpoch.readiness_deadline,
+    lifecycle_horizon_end_utc:evidenceEpoch.lifecycle_horizon_end_utc,
+    minimum_governance_lead_hours:evidenceEpoch.minimum_governance_lead_hours,
+    epoch_selection_mode:evidenceEpoch.epoch_selection_mode,
+    stage_authority_refresh_clock_eligibility:evidenceEpoch.stage_authority_refresh_clock_eligibility,
+    base_runtime_start_authority_ref:JSON.parse(fs.readFileSync(runtimeAuthorityPath,"utf8")).authority_ref,
+    base_runtime_start_authority_sha256:digestFile(runtimeAuthorityPath),
+    lineage_current_crop_authority_ref:selectedCurrentCrop.ref,
+    lineage_current_crop_authority_sha256:selectedCurrentCrop.digest,
+    formal_v5_arm_match_required:true,
+    evidence_runtime_planning_handoff_authorized:true,
+    stage_authority_required_for_evidence_acquisition:false,
+    future_stage_pins_frozen:false,current_crop_authority_promoted:false,
+    runtime_process_start_authorized:false,twin_runtime_start_authorized:false,
+    production_owner_activation_authorized:false,formal_v5_arm_authorized:false,
+    a0_authorized:false,o00_authorized:false,
+    formal_database_mutation_authorized:false,formal_raw_write_authorized:false,
+    runtime_config_write_authorized:false,scheduler_write_authorized:false
+  };
+  write(formalV5EvidenceHandoffPath,evidenceEpochAuthority);
 
   const env={...process.env,
     GEOX_DEPLOYMENT_SUBJECT_COMMIT:head,
@@ -258,6 +290,11 @@ try{
       schema_version:"geox_mcft_cap09_production_runtime_owner_cutover_result_v1",
       status:"PASS",deployment_subject_sha:head,host_id:hostId,
       activation_fence_time:activationFence,formal_a0_planning_time:formalA0,
+      evidence_epoch_planning_a0:evidenceEpoch.a0,
+      evidence_epoch_planning_o00:evidenceEpoch.o00,
+      evidence_epoch_planning_o23:evidenceEpoch.o23,
+      evidence_epoch_planning_authority_path:formalV5EvidenceHandoffPath,
+      evidence_epoch_planning_authority_sha256:digestFile(formalV5EvidenceHandoffPath),
       selected_current_crop_authority_ref:selectedCurrentCrop.ref,
       selected_current_crop_authority_sha256:selectedCurrentCrop.digest,
       selected_current_crop_authority_as_of:selectedCurrentCrop.authorityAsOf,
