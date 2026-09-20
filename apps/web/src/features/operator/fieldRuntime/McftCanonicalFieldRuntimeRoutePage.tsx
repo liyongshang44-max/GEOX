@@ -18,6 +18,7 @@ import {
   type McftTabBundleV1,
 } from "../../../api/mcftFieldTwinRuntime";
 import { useLocale } from "../../../lib/locale";
+import { buildFieldIntelligenceOverviewVmV1 } from "../../../viewmodels/mcftFieldIntelligenceVm";
 import "../../../styles/operatorFieldRuntime.css";
 
 export type McftCanonicalFieldRuntimeRouteKey = McftCanonicalTabKey | "fields" | "evidence" | "audit";
@@ -99,6 +100,24 @@ function Panel({ title, subtitle, children }: { title: string; subtitle?: string
   );
 }
 
+function canonicalJson(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value ?? "—");
+  }
+}
+
+function CanonicalDataDisclosure({ title, value }: { title: string; value: unknown }): React.ReactElement {
+  return (
+    <details className="operatorFieldRuntime__canonicalData">
+      <summary>{title}</summary>
+      <p>Lossless readback of the canonical GET response. Product presentation above does not replace or mutate these source fields.</p>
+      <pre>{canonicalJson(value)}</pre>
+    </details>
+  );
+}
+
 function RefCard({ label, value }: { label: string; value: McftCanonicalRefV1 | null | undefined }): React.ReactElement {
   return (
     <article className="operatorFieldRuntime__metricCard">
@@ -119,7 +138,9 @@ function AttachmentCard({ label, attachment }: { label: string; attachment: Mcft
       <strong>{attachment?.attachment_status || "NOT_RETURNED"}</strong>
       <small>reason_code: {attachment?.reason_code || "—"}</small>
       <small>object_ref: {item?.object_ref || "—"}</small>
+      <small>object_type: {item?.object_type || "—"}</small>
       <small>object_hash: {item?.object_hash || "—"}</small>
+      <small>source_fact_ref: {item?.source_fact_ref || "—"}</small>
     </article>
   );
 }
@@ -133,6 +154,8 @@ function SummaryCard({ label, summary }: { label: string; summary: McftCollectio
       <small>count_status: {summary?.count_status || "—"}</small>
       <small>total_count: {summary?.total_count === null || summary?.total_count === undefined ? "NOT_COMPUTED" : summary.total_count}</small>
       <small>latest_item_ref: {summary?.latest_item_ref || "—"}</small>
+      <small>latest_item_hash: {summary?.latest_item_hash || "—"}</small>
+      <small>collection_endpoint: {summary?.collection_endpoint || "—"}</small>
     </article>
   );
 }
@@ -158,45 +181,77 @@ function CollectionPanel({ title, page }: { title: string; page: McftCollectionP
         ))}
       </div>
       {page.items.length === 0 ? <p className="operatorFieldRuntime__panelMeta">No visible canonical items in the exact scope.</p> : null}
+      <CanonicalDataDisclosure title="Full canonical collection response" value={page} />
     </Panel>
   );
 }
 
-function Overview({ runtime }: { runtime: McftRuntimeReadModelV1 }): React.ReactElement {
+function Overview({ runtime, english }: { runtime: McftRuntimeReadModelV1; english: boolean }): React.ReactElement {
+  const vm = buildFieldIntelligenceOverviewVmV1(runtime);
   return (
     <div className="operatorFieldRuntime__contentGrid">
-      <Panel title="Current Runtime Root" subtitle={`root_graph_status=${runtime.root_graph_status}`}>
+      <section className="operatorFieldRuntime__fieldIntelligence">
+        <div className="operatorFieldRuntime__fieldIntelligenceIntro">
+          <div>
+            <p className="operatorFieldRuntime__eyebrow">FIELD INTELLIGENCE / CURRENT WORLD</p>
+            <h2>{english ? "Current field state, without hiding the source chain." : "当前田块状态，同时保留完整来源链。"}</h2>
+            <p>{english ? "This product view summarizes the canonical MCFT read model. It does not replace exact refs, hashes, source facts, limitations, or validation evidence." : "这个产品视图只整理 MCFT 规范读模型；精确引用、哈希、来源事实、限制与验证证据全部继续保留。"}</p>
+          </div>
+          <div className="operatorFieldRuntime__fieldIdentity">
+            <span>{vm.field_id}</span>
+            <small>{vm.season_id} / {vm.zone_id}</small>
+          </div>
+        </div>
+
+        <div className="operatorFieldRuntime__fieldIntelligenceMetrics">
+          <article><span>{english ? "Root graph" : "根图状态"}</span><strong>{vm.root_graph_status}</strong><small>{vm.root_ref_count}/{vm.root_ref_expected} canonical refs present</small></article>
+          <article><span>{english ? "Posterior state" : "当前后验状态"}</span><strong>{runtime.posterior_state?.object_ref || "ABSENT"}</strong><small>{runtime.posterior_state?.object_type || "No canonical state attached"}</small></article>
+          <article><span>{english ? "Current forecast" : "当前预测"}</span><strong>{runtime.current_tick_forecast_result?.object_ref || "ABSENT"}</strong><small>{runtime.current_tick_forecast_result?.object_hash || "—"}</small></article>
+          <article><span>{english ? "Known limitations" : "已知限制"}</span><strong>{vm.limitation_count}</strong><small>{vm.validation_count} validation records</small></article>
+        </div>
+
+        <div className="operatorFieldRuntime__fieldIntelligenceFlow">
+          <article><span>01</span><strong>{english ? "Evidence window" : "证据窗口"}</strong><small>{runtime.evidence_window?.object_ref || "ABSENT"}</small></article>
+          <article><span>02</span><strong>{english ? "State transition" : "状态转移"}</strong><small>{runtime.state_transition?.object_ref || "ABSENT"}</small></article>
+          <article><span>03</span><strong>{english ? "Assimilation" : "同化更新"}</strong><small>{runtime.assimilation_update?.object_ref || "ABSENT"}</small></article>
+          <article><span>04</span><strong>{english ? "Posterior state" : "后验状态"}</strong><small>{runtime.posterior_state?.object_ref || "ABSENT"}</small></article>
+        </div>
+      </section>
+
+      <Panel title={english ? "Current canonical attachments" : "当前规范附件"} subtitle={english ? "Exact attachment status and reason codes; absent domains remain explicit." : "精确显示 attachment status 与 reason code；缺失域保持显式缺失。"}>
+        <div className="operatorFieldRuntime__summaryGrid">
+          <RefCard label="Current Tick Forecast Result" value={runtime.current_tick_forecast_result} />
+          {vm.current_attachments.map((slot) => <AttachmentCard key={slot.key} label={slot.label} attachment={slot.value} />)}
+        </div>
+      </Panel>
+
+      <Panel title={english ? "Canonical runtime chain" : "规范运行链"} subtitle={`root_graph_status=${runtime.root_graph_status}`}>
         <div className="operatorFieldRuntime__summaryGrid">
           {MANDATORY_ROOTS.map(([label, key]) => <RefCard key={String(key)} label={label} value={runtime[key] as McftCanonicalRefV1 | null | undefined} />)}
         </div>
       </Panel>
-      <Panel title="Current Attachments" subtitle="Exact attachment status and reason codes">
+
+      <Panel title={english ? "Bounded collection summaries" : "有界集合摘要"} subtitle={english ? "Counts remain source-declared; no unbounded total is inferred." : "数量保持来源声明；不推断无限集合总量。"}>
         <div className="operatorFieldRuntime__summaryGrid">
-          <RefCard label="Current Tick Forecast Result" value={runtime.current_tick_forecast_result} />
-          <AttachmentCard label="Latest Successful Forecast" attachment={runtime.latest_successful_forecast} />
-          <AttachmentCard label="Scenario Source Forecast" attachment={runtime.scenario_source_forecast} />
-          <AttachmentCard label="Current Scenario" attachment={runtime.current_scenario_attachment} />
-          <AttachmentCard label="Latest Scenario in Scope" attachment={runtime.latest_scenario_in_scope} />
-          <AttachmentCard label="Current Human Decision" attachment={runtime.current_human_decision} />
-          <AttachmentCard label="Current Approved Plan" attachment={runtime.current_approved_plan} />
+          {vm.collection_summaries.map((slot) => <SummaryCard key={slot.key} label={slot.label} summary={slot.value} />)}
         </div>
       </Panel>
-      <Panel title="Optional Collection Summaries" subtitle="No unbounded count is inferred">
-        <div className="operatorFieldRuntime__summaryGrid">
-          <SummaryCard label="Action Feedback" summary={runtime.action_feedback_summary} />
-          <SummaryCard label="Forecast Residual" summary={runtime.forecast_residual_summary} />
-          <SummaryCard label="Calibration Candidate" summary={runtime.calibration_candidate_summary} />
-          <SummaryCard label="Shadow Evaluation" summary={runtime.shadow_evaluation_summary} />
-          <SummaryCard label="Model Activation" summary={runtime.model_activation_summary} />
+
+      <Panel title={english ? "Limitations & validation" : "限制与验证"} subtitle={english ? "Source-provided records are displayed without product re-adjudication." : "只显示来源记录，不由产品层重新裁决。"}>
+        <div className="operatorFieldRuntime__recordGrid">
+          <article><span>{english ? "Limitations" : "限制"}</span>{vm.limitations.length ? vm.limitations.map((item, index) => <pre key={index}>{canonicalJson(item)}</pre>) : <small>NONE_RETURNED</small>}</article>
+          <article><span>{english ? "Validation summary" : "验证摘要"}</span>{vm.validation_summary.length ? vm.validation_summary.map((item, index) => <pre key={index}>{canonicalJson(item)}</pre>) : <small>NONE_RETURNED</small>}</article>
         </div>
       </Panel>
-      <Panel title="Content Identity">
+
+      <Panel title={english ? "Content identity" : "内容身份"}>
         <div className="operatorFieldRuntime__meta">
-          <div><strong>root_graph_content_hash</strong><span>{runtime.root_graph_content_hash}</span></div>
-          <div><strong>attachment_content_hash</strong><span>{runtime.attachment_content_hash}</span></div>
-          <div><strong>response_instance_hash</strong><span>{runtime.response_instance_hash}</span></div>
-          <div><strong>response_started_at</strong><span>{runtime.response_started_at}</span></div>
+          <div><strong>root_graph_content_hash</strong><span>{vm.content_identity.root_graph_content_hash}</span></div>
+          <div><strong>attachment_content_hash</strong><span>{vm.content_identity.attachment_content_hash}</span></div>
+          <div><strong>response_instance_hash</strong><span>{vm.content_identity.response_instance_hash}</span></div>
+          <div><strong>response_started_at</strong><span>{vm.response_started_at}</span></div>
         </div>
+        <CanonicalDataDisclosure title={english ? "Full canonical runtime response" : "完整规范 Runtime 数据"} value={vm.canonical_source} />
       </Panel>
     </div>
   );
@@ -276,6 +331,7 @@ function EvidenceTrace({ bundle }: { bundle: McftTabBundleV1 }): React.ReactElem
           ))}
         </div>
         <p className="operatorFieldRuntime__panelMeta">nodes={(trace?.nodes || []).length} / edges={(trace?.edges || []).length}</p>
+        {trace ? <CanonicalDataDisclosure title="Full canonical trace response" value={trace} /> : null}
       </Panel>
       <Panel title="Timeline" subtitle={`timeline_page_content_hash=${timeline?.timeline_page_content_hash || "—"}`}>
         <div className="operatorFieldRuntime__table">
@@ -290,6 +346,7 @@ function EvidenceTrace({ bundle }: { bundle: McftTabBundleV1 }): React.ReactElem
           ))}
         </div>
         <p className="operatorFieldRuntime__panelMeta">items={(timeline?.items || []).length} / has_more={String(timeline?.has_more || false)} / next_cursor={timeline?.next_cursor || "—"}</p>
+        {timeline ? <CanonicalDataDisclosure title="Full canonical timeline response" value={timeline} /> : null}
       </Panel>
     </div>
   );
@@ -319,6 +376,7 @@ function Health({ bundle }: { bundle: McftTabBundleV1 }): React.ReactElement {
             </div>
           ))}
         </div>
+        <CanonicalDataDisclosure title="Full canonical health response" value={health} />
       </Panel>
     </div>
   );
@@ -337,8 +395,8 @@ function ErrorPanel({ error, english }: { error: McftApiErrorV1; english: boolea
   );
 }
 
-function renderBundle(bundle: McftTabBundleV1): React.ReactElement {
-  if (bundle.tab === "overview" && bundle.runtime) return <Overview runtime={bundle.runtime} />;
+function renderBundle(bundle: McftTabBundleV1, english: boolean): React.ReactElement {
+  if (bundle.tab === "overview" && bundle.runtime) return <Overview runtime={bundle.runtime} english={english} />;
   if (bundle.tab === "state") return <CollectionPanel title="State Collection" page={bundle.collection} />;
   if (bundle.tab === "forecast" && bundle.runtime) return <Forecast runtime={bundle.runtime} collection={bundle.collection} />;
   if (bundle.tab === "scenario" && bundle.runtime) return <Scenario runtime={bundle.runtime} collection={bundle.collection} />;
@@ -436,7 +494,7 @@ export default function McftCanonicalFieldRuntimeRoutePage({ tab }: Props): Reac
 
       {scopeResolution.ok && loadState.status === "loading" ? <Panel title={english ? "Loading canonical read model" : "正在加载规范读模型"}><p>GET-only snapshot read in progress.</p></Panel> : null}
       {scopeResolution.ok && loadState.status === "error" ? <ErrorPanel error={loadState.error} english={english} /> : null}
-      {scopeResolution.ok && loadState.status === "ready" ? renderBundle(loadState.bundle) : null}
+      {scopeResolution.ok && loadState.status === "ready" ? renderBundle(loadState.bundle, english) : null}
     </main>
   );
 }
