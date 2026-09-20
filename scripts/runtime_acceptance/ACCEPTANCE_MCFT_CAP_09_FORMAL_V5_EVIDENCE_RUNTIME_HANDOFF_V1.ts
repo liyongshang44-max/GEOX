@@ -3,6 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  evaluateProductionGfsTargetDueV1,
+} from "../../apps/server/src/external_evidence/mcft_cap09_production_gfs_target_due_policy_v1.js";
+import {
   MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_AUTHORITY_ID_V1,
   MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_SCHEMA_V1,
   MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_EPOCH_SELECTION_MODE_V1,
@@ -93,6 +96,37 @@ async function main(): Promise<void> {
     "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
   );
 
+  const warmStart = evaluateProductionGfsTargetDueV1({
+    planning_time: "2026-09-19T12:56:00.000Z",
+    activation_fence_time: parsed.activation_fence_time,
+    formal_a0_logical_time: parsed.formal_a0_logical_time,
+    durable_paired_targets: [],
+  });
+  assert.equal(warmStart.status, "DUE");
+  assert.equal(warmStart.target_logical_time, "2026-09-21T05:00:00.000Z");
+  assert.equal(warmStart.due_window_start, "2026-09-19T12:56:00.000Z");
+  assert.equal(warmStart.due_window_end_exclusive, "2026-09-21T05:00:00.000Z");
+
+  const afterA0Pair = evaluateProductionGfsTargetDueV1({
+    planning_time: "2026-09-20T20:00:00.000Z",
+    activation_fence_time: parsed.activation_fence_time,
+    formal_a0_logical_time: parsed.formal_a0_logical_time,
+    durable_paired_targets: [{ paired_valid_from: "2026-09-21T05:00:00.000Z" }],
+  });
+  assert.equal(afterA0Pair.status, "NOT_DUE");
+  assert.equal(afterA0Pair.target_logical_time, "2026-09-21T06:00:00.000Z");
+  assert.equal(afterA0Pair.due_window_start, "2026-09-21T04:50:00.000Z");
+  assert.equal(afterA0Pair.due_window_end_exclusive, "2026-09-21T05:30:00.000Z");
+
+  const o00Due = evaluateProductionGfsTargetDueV1({
+    planning_time: "2026-09-21T04:50:00.000Z",
+    activation_fence_time: parsed.activation_fence_time,
+    formal_a0_logical_time: parsed.formal_a0_logical_time,
+    durable_paired_targets: [{ paired_valid_from: "2026-09-21T05:00:00.000Z" }],
+  });
+  assert.equal(o00Due.status, "DUE");
+  assert.equal(o00Due.target_logical_time, "2026-09-21T06:00:00.000Z");
+
   // Current-crop is lineage only after this planning candidate is created.
   const staleLineage = fixture();
   staleLineage.lineage_current_crop_authority_ref = "docs/stale-lineage-only.json";
@@ -163,6 +197,9 @@ async function main(): Promise<void> {
     schema_version: "geox_mcft_cap09_formal_v5_evidence_runtime_handoff_acceptance_v2",
     status: "PASS",
     evidence_epoch_candidate_created_pre_arm: true,
+    a0_gfs_warm_start_due_from_owner_cutover_activation_fence: true,
+    a0_pair_completion_does_not_pull_o00_before_t_minus_70m: true,
+    o00_gfs_due_window_start: "2026-09-21T04:50:00.000Z",
     candidate_uses_same_formal_v5_epoch_clock_selector: true,
     actual_arm_exact_candidate_match_required: true,
     stage_authority_required_for_evidence_acquisition: false,
