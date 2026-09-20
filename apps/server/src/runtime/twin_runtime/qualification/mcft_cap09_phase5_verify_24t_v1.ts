@@ -148,16 +148,24 @@ async function main():Promise<void> {
         ORDER BY fact_id ASC`,scope,
     )).rows;
     const evidenceCounts:Record<string,number>={};
+    let rehearsalBaselineFactCount=0;
     for(const row of evidence) {
       const type=String(row.type??"");
       evidenceCounts[type]=(evidenceCounts[type]??0)+1;
       const serialized=JSON.stringify(row.record_json);
+      if(serialized.includes("QUALIFICATION_REHEARSAL_ONLY")) rehearsalBaselineFactCount+=1;
       if(/ENGINEERING_(?:BOOTSTRAP_)?FIXTURE_ONLY|CONTROLLED_SYNTHETIC_REPLAY_PROXY/.test(serialized)) {
         throw new Error("PHASE5_VERIFY_ENGINEERING_CANONICAL_EVIDENCE_FORBIDDEN:"+type);
       }
     }
     for(const type of ["soil_moisture_observation_v1","future_weather_assumption_v1","future_et0_assumption_v1"]) {
       if((evidenceCounts[type]??0)<1) throw new Error("PHASE5_VERIFY_REQUIRED_CANONICAL_EVIDENCE_MISSING:"+type);
+    }
+    if(realClockRehearsal && rehearsalBaselineFactCount!==49) {
+      throw new Error("PHASE5_VERIFY_REHEARSAL_EXACT_49_BASELINE_FACTS_REQUIRED:"+rehearsalBaselineFactCount);
+    }
+    if(!realClockRehearsal && rehearsalBaselineFactCount!==0) {
+      throw new Error("PHASE5_VERIFY_ACCELERATED_REHEARSAL_BASELINE_FORBIDDEN:"+rehearsalBaselineFactCount);
     }
 
     const windows=(await pool.query(
@@ -231,6 +239,7 @@ async function main():Promise<void> {
       provider_wait_required_count:0,
       canonical_evidence_counts:evidenceCounts,
       engineering_runtime_evidence_fixture_count:0,
+      qualification_rehearsal_baseline_fact_count:rehearsalBaselineFactCount,
       forbidden_action_fact_count:0,
       db_layer_evidence_twin_bidirectional_isolation:true,
       twin_direct_fact_insert:false,
