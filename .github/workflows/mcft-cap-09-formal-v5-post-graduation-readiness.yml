@@ -229,64 +229,87 @@ jobs:
           console.log('::add-mask::'+target);
           fs.appendFileSync(process.env.GITHUB_ENV,'FORMAL_V5_URL='+target+'\n');
 
-      - name: Prove fresh Formal-v5 zero-state read-only
+      - name: Prove materialized pre-A0 Formal-v5 state read-only
         if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
-        id: zero-state
+        id: pre-a0-state
         shell: bash
         env:
           PGOPTIONS: '-c default_transaction_read_only=on'
         run: |
           set -euo pipefail
+          expected_tables='facts,twin_action_feedback_cycle_projection_v1,twin_action_feedback_evidence_index_v1,twin_action_feedback_projection_v1,twin_active_lineage_index_v1,twin_approved_plan_binding_projection_v1,twin_decision_record_projection_v1,twin_external_formal_forcing_base_cursor_v1,twin_external_formal_forcing_base_target_v1,twin_external_formal_forcing_controller_lease_v1,twin_forecast_point_projection_v1,twin_forecast_residual_projection_v1,twin_forecast_result_latest_index_v1,twin_forecast_run_projection_v1,twin_forecast_success_latest_index_v1,twin_object_idempotency_index_v1,twin_runtime_authority_snapshot_v1,twin_runtime_checkpoint_latest_index_v1,twin_runtime_health_latest_index_v1,twin_runtime_lease_v1,twin_scenario_latest_index_v1,twin_scenario_point_projection_v1,twin_scenario_set_projection_v1,twin_scenario_set_uniqueness_v1,twin_shadow_online_scheduler_cursor_v1,twin_shadow_online_scheduler_slot_v1,twin_state_history_projection_v1,twin_state_latest_index_v1,twin_terminal_tick_uniqueness_v1'
+          expected_routines='mcft_cap09_twin_runtime_append_fact_v1,mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1'
+
           row="$(psql "$FORMAL_V5_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
-            SELECT
-              current_setting('transaction_read_only'),
-              current_database(),
-              (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),
-              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
-          IFS='|' read -r read_only database_name table_count routine_count <<<"$row"
+            SELECT current_setting('transaction_read_only'),current_database()")"
+          IFS='|' read -r read_only database_name <<<"$row"
           test "$read_only" = "on" || { echo "FORMAL_V5_TRANSACTION_NOT_READ_ONLY:$read_only" >&2; exit 1; }
           test "$database_name" = "$FORMAL_V5_DB" || { echo "FORMAL_V5_DATABASE_IDENTITY_MISMATCH:$database_name" >&2; exit 1; }
-          test "$table_count" = "0" || { echo "FORMAL_V5_PUBLIC_BASE_TABLE_COUNT_NONZERO:$table_count" >&2; exit 1; }
-          test "$routine_count" = "0" || { echo "FORMAL_V5_PUBLIC_ROUTINE_COUNT_NONZERO:$routine_count" >&2; exit 1; }
-          echo "table_count=$table_count" >> "$GITHUB_OUTPUT"
-          echo "routine_count=$routine_count" >> "$GITHUB_OUTPUT"
 
-      - name: Emit exact-subject zero-state proof
+          actual_tables="$(psql "$FORMAL_V5_URL" -At -v ON_ERROR_STOP=1 -c "
+            SELECT COALESCE(string_agg(table_name,',' ORDER BY table_name),'')
+              FROM information_schema.tables
+             WHERE table_schema='public' AND table_type='BASE TABLE'")"
+          actual_routines="$(psql "$FORMAL_V5_URL" -At -v ON_ERROR_STOP=1 -c "
+            SELECT COALESCE(string_agg(p.proname,',' ORDER BY p.proname),'')
+              FROM pg_catalog.pg_proc p
+              JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+             WHERE n.nspname='public'")"
+          test "$actual_tables" = "$expected_tables" || { echo "FORMAL_V5_MATERIALIZED_TABLE_SET_MISMATCH:$actual_tables" >&2; exit 1; }
+          test "$actual_routines" = "$expected_routines" || { echo "FORMAL_V5_MATERIALIZED_ROUTINE_SET_MISMATCH:$actual_routines" >&2; exit 1; }
+
+          row_sql="$(psql "$FORMAL_V5_URL" -At -v ON_ERROR_STOP=1 -c "
+            SELECT string_agg(
+              format('SELECT %L AS table_name,count(*)::bigint AS row_count FROM %I.%I',table_name,table_schema,table_name),
+              ' UNION ALL ' ORDER BY table_name
+            )
+              FROM information_schema.tables
+             WHERE table_schema='public' AND table_type='BASE TABLE'")"
+          row_counts="$(psql "$FORMAL_V5_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "$row_sql")"
+          nonzero_rows="$(printf '%s\n' "$row_counts" | awk -F'|' '$2 != "0" {print $0}')"
+          test -z "$nonzero_rows" || { echo "FORMAL_V5_PRE_A0_ROWS_NONZERO:$nonzero_rows" >&2; exit 1; }
+
+          echo "table_count=29" >> "$GITHUB_OUTPUT"
+          echo "routine_count=2" >> "$GITHUB_OUTPUT"
+          echo "all_table_rows_zero=true" >> "$GITHUB_OUTPUT"
+
+      - name: Emit exact-subject materialized pre-A0 proof
         if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
         shell: node {0}
         env:
-          TABLE_COUNT: ${{ steps.zero-state.outputs.table_count }}
-          ROUTINE_COUNT: ${{ steps.zero-state.outputs.routine_count }}
+          TABLE_COUNT: ${{ steps.pre-a0-state.outputs.table_count }}
+          ROUTINE_COUNT: ${{ steps.pre-a0-state.outputs.routine_count }}
+          ALL_TABLE_ROWS_ZERO: ${{ steps.pre-a0-state.outputs.all_table_rows_zero }}
         run: |
           const fs=require('node:fs');
           fs.mkdirSync('acceptance-output',{recursive:true});
           const proof={
-            schema_version:'geox_mcft_cap09_formal_v5_post_graduation_zero_state_proof_v1',
+            schema_version:'geox_mcft_cap09_formal_v5_post_graduation_materialized_pre_a0_proof_v1',
             status:'PASS',
             subject_sha:process.env.SUBJECT_SHA,
             formal_database_name:process.env.FORMAL_V5_DB,
-            required_role:'FRESH_FORMAL_STORE_ONLY',
-            required_pre_arm_state:'ZERO_STATE_PRE_ARM',
+            observed_store_phase:'SCHEMA_ACL_MATERIALIZED_ZERO_ROWS_PRE_A0',
             transaction_read_only:true,
             public_base_table_count:Number(process.env.TABLE_COUNT),
             public_routine_count:Number(process.env.ROUTINE_COUNT),
+            all_table_rows_zero:process.env.ALL_TABLE_ROWS_ZERO==='true',
+            schema_acl_materialization_observed:true,
             failed_v4_reuse:false,
             failed_v4_clone:false,
-            production_owner_activation:false,
+            production_owner_activation_from_this_workflow:false,
             production_runtime_restart:false,
-            formal_database_mutation:false,
-            formal_v5_arm:false,
-            formal_v5_epoch_selected:false,
-            a0_bootstrap:false,
-            o00_started:false,
+            formal_database_mutation_from_this_workflow:false,
+            formal_v5_arm_claim_from_this_proof:false,
+            a0_data_effect_observed:false,
+            o00_data_effect_observed:false,
             provider_request_count:0,
-            mcft_cap09_completed:false,
+            mcft_cap09_completion_claim:false,
             observed_at:new Date().toISOString(),
             github_run_id:Number(process.env.GITHUB_RUN_ID),
             github_run_attempt:Number(process.env.GITHUB_RUN_ATTEMPT),
           };
-          if(proof.public_base_table_count!==0||proof.public_routine_count!==0)throw new Error('FORMAL_V5_ZERO_STATE_PROOF_INVALID');
-          fs.writeFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ZERO_STATE_PROOF_V1.json',JSON.stringify(proof,null,2)+'\n');
+          if(proof.public_base_table_count!==29||proof.public_routine_count!==2||proof.all_table_rows_zero!==true)throw new Error('FORMAL_V5_MATERIALIZED_PRE_A0_PROOF_INVALID');
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_MATERIALIZED_PRE_A0_PROOF_V1.json',JSON.stringify(proof,null,2)+'\n');
           console.log(JSON.stringify(proof,null,2));
 
       - name: Prove repository remained untouched
@@ -296,11 +319,11 @@ jobs:
           git diff --exit-code
           test -z "$(git status --porcelain --untracked-files=no)"
 
-      - name: Upload immutable zero-state readiness proof
+      - name: Upload immutable materialized pre-A0 readiness proof
         if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-formal-v5-post-graduation-zero-state-${{ env.SUBJECT_SHA }}
-          path: acceptance-output/MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ZERO_STATE_PROOF_V1.json
+          name: mcft-cap09-formal-v5-post-graduation-materialized-pre-a0-${{ env.SUBJECT_SHA }}
+          path: acceptance-output/MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_MATERIALIZED_PRE_A0_PROOF_V1.json
           if-no-files-found: error
           retention-days: 90
