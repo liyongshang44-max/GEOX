@@ -157,7 +157,7 @@ export default function FieldOperationsHomePage(): React.ReactElement {
                     <div><dt>{t(COPY.currentRisk)}</dt><dd>{field.risk_text || "—"}</dd></div>
                     <div><dt>{t(COPY.coverage)}</dt><dd>{field.data_coverage_text || "—"}</dd></div>
                   </dl>
-                  <Link to={field.twin_href + scopeQuery}>{t(COPY.openField)} →</Link>
+                  <Link to={"/operator/fields" + scopeQuery}>{t(COPY.openField)} →</Link>
                 </article>
               ))}
             </div>
