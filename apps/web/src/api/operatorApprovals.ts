@@ -38,6 +38,11 @@ export type OperatorActionResponseV1 = {
 
 export type OperatorApprovalItem = {
   approvalRequestId: string;
+  requestId?: string | null;
+  operationId?: string | null;
+  operationPlanId?: string | null;
+  requestedByActorId?: string | null;
+  approverId?: string | null;
   status: OperatorApprovalStatus;
   title: string;
   description: string;
@@ -137,6 +142,11 @@ function normalizeItems(payload: unknown, source: OperatorApprovalItem["source"]
     const selfApprovalRisk = normalizeSelfRisk(row);
     return {
       approvalRequestId: text(row.approval_request_id ?? row.request_id ?? row.id, `${source}-${index}`),
+      requestId: text(row.request_id ?? row.approval_request_id ?? row.id, ""),
+      operationId: text(row.operation_id ?? row.operationId, ""),
+      operationPlanId: text(row.operation_plan_id ?? row.operationPlanId, ""),
+      requestedByActorId: text(row.requested_by_actor_id ?? row.requester_id ?? row.created_by, ""),
+      approverId: text(row.approver_id ?? row.current_actor_id ?? row.actor_id, ""),
       status: normalizeStatus(row.status ?? row.approval_status),
       title: text(row.title ?? row.summary ?? row.operation_title, "审批事项"),
       description: text(row.description ?? row.reason ?? row.note, "建议或处方等待运营审批。"),
