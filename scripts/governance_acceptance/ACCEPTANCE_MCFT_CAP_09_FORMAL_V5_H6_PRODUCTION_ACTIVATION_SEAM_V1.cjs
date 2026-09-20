@@ -402,6 +402,8 @@ const allowedGithubQualificationChanges=new Set([
   ".github/workflows/mcft-cap-09-production-runtime-owner-cutover-v1.yml",
   ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
   ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+  ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
+  ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
   ".github/workflows/mcft-cap-09-final-semantic-closure.yml",
 ]);
 for(const rel of githubChanges){
