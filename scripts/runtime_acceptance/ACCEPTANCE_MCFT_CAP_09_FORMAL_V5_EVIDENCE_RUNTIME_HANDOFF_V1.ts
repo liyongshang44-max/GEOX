@@ -124,8 +124,10 @@ async function main(): Promise<void> {
   await assert.rejects(async () => parse(tooLate, "2026-09-20T20:01:00.000Z"), /36H_GOVERNANCE_LEAD_REQUIRED/);
 
   const postA0Admission = fixture();
+  parse(postA0Admission, "2026-09-21T05:00:00.000Z");
+  parse(postA0Admission, "2026-09-22T05:00:00.000Z");
   await assert.rejects(
-    async () => parse(postA0Admission, "2026-09-21T05:00:00.000Z"),
+    async () => parse(postA0Admission, "2026-09-22T05:00:00.001Z"),
     /STALE_AT_PROCESS_ADMISSION/,
   );
 
@@ -168,6 +170,8 @@ async function main(): Promise<void> {
     deployment_subject_binding_preserved: true,
     base_runtime_authority_digest_binding_preserved: true,
     minimum_governance_lead_hours: 36,
+    evidence_owner_restart_valid_through_o23: true,
+    evidence_owner_restart_after_o23_rejected: true,
     runtime_process_start_authorized_by_candidate: false,
     production_owner_activation_authorized_by_candidate: false,
     formal_v5_arm_authorized_by_candidate: false,
