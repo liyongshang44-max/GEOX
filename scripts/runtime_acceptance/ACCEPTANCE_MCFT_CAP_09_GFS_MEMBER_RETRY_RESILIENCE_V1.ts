@@ -161,6 +161,7 @@ async function main(): Promise<void> {
   assert.deepEqual(cadenceWaits, [9_900, 10_000]);
 
   let exhaustedCalls = 0;
+  let exhaustedNowMs = 0;
   const exhausted = new GfsNomadsLiveProviderV1({
     byte_client: new ControlledHttpsByteClientV1({
       fetch_impl: async () => {
@@ -172,14 +173,18 @@ async function main(): Promise<void> {
       timeout_ms: 10_000,
     }),
     grib_filter_cadence: {
-      now_ms: () => 0,
-      async wait_ms() {},
+      now_ms: () => exhaustedNowMs,
+      async wait_ms(milliseconds) {
+        exhaustedNowMs += milliseconds;
+      },
     },
     member_retry: {
       max_attempts: 2,
       max_total_retries: 1,
       retry_base_ms: 100,
-      async wait_ms() {},
+      async wait_ms(milliseconds) {
+        exhaustedNowMs += milliseconds;
+      },
     },
   });
 
@@ -259,6 +264,7 @@ async function main(): Promise<void> {
     deterministic_semantic_failure_not_retried: true,
     retry_exhaustion_has_sanitized_phase_token: true,
     retry_exhaustion_url_leak: false,
+    deterministic_test_clock_progresses_during_retry_waits: true,
     outer_attempt_budget_changed: false,
     database_access_count: 0,
     provider_external_network_request_count: 0,
