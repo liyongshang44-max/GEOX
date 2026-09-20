@@ -151,6 +151,43 @@ for(const key of [
 ])assert.equal(evidenceEpoch.candidate_authority_ceiling[key],false,"H6_EVIDENCE_EPOCH_CANDIDATE_CEILING:"+key);
 assert.equal(evidenceEpoch.effect_source_for_running_evidence_process,"EXISTING_OWNER_CUTOVER_AUTHORITY_NOT_EPOCH_CANDIDATE");
 assert.equal(evidenceEpoch.candidate_by_itself_provider_request_authorized,false);
+
+const lanes=auth.runtime_validation_lanes;
+assert.equal(lanes.principle,"TEST_EARLY_QUALIFY_LATE");
+assert.equal(lanes.test_entry_must_not_require_conditions_the_test_itself_is_intended_to_prove,true);
+assert.equal(lanes.lanes.length,3);
+const accelerated=lanes.lanes.find(x=>x.run_class==="ACCELERATED_24T");
+const rehearsal=lanes.lanes.find(x=>x.run_class==="QUALIFICATION_REHEARSAL");
+const formalLane=lanes.lanes.find(x=>x.run_class==="FORMAL_CLOSURE");
+assert.ok(accelerated&&rehearsal&&formalLane,"H6_RUNTIME_VALIDATION_LANES_REQUIRED");
+assert.equal(accelerated.clock,"ACCELERATED_ENGINEERING_ONLY");
+assert.equal(accelerated.formal_closure_evidence,false);
+assert.equal(rehearsal.slot_labels,"R00_THROUGH_R23");
+assert.equal(rehearsal.clock,"SYSTEM_AND_POSTGRESQL_UTC_WALL_CLOCK");
+assert.equal(rehearsal.actual_utc_hourly_boundaries_required,24);
+assert.equal(rehearsal.isolated_store_required,true);
+assert.equal(rehearsal.same_production_binaries_required,true);
+assert.equal(rehearsal.same_scheduler_required,true);
+assert.equal(rehearsal.same_runtime_kernel_required,true);
+assert.equal(rehearsal.provider_perfection_is_test_entry_requirement,false);
+assert.equal(rehearsal.fresh_biological_stage_authority_required_for_test_entry,false);
+assert.equal(rehearsal.formal_v5_arm_required,false);
+assert.equal(rehearsal.formal_closure_evidence,false);
+assert.equal(rehearsal.stage_1b_completion_claim,false);
+assert.equal(formalLane.slot_labels,"O00_THROUGH_O23");
+assert.equal(formalLane.exact_authority_binding_required,true);
+assert.equal(formalLane.qualified_evidence_required,true);
+assert.equal(formalLane.exact_sha_required,true);
+assert.equal(formalLane.r2_evidence_required,true);
+assert.equal(formalLane.zero_routine_manual_rescue_required,true);
+assert.equal(formalLane.final_hard_acceptance_unchanged,true);
+assert.deepEqual(lanes.rehearsal_nonclaims,[
+  "R00_R23_IS_NOT_O00_O23",
+  "NO_FORMAL_V5_EFFECT_FROM_REHEARSAL",
+  "NO_STAGE_1B_CLOSURE_FROM_REHEARSAL",
+  "NO_MCFT_CAP09_COMPLETION_FROM_REHEARSAL",
+]);
+
 assert.deepEqual(auth.execution_sequence.slice(0,3),[
   "FRESH_OWNER_CUTOVER_MATERIALIZES_PRE_ARM_EVIDENCE_EPOCH_CANDIDATE_AND_STARTS_EVIDENCE_OWNER",
   "REVERIFY_H5_EXACT_MAIN_AND_LIVE_OWNERS",
@@ -392,6 +429,9 @@ const proof={
   pre_arm_evidence_epoch_candidate_required:true,
   evidence_acquisition_decoupled_from_future_stage_authority:true,
   governance_lead_decoupled_from_provider_fetch_timing:true,
+  test_early_qualify_late_lanes_frozen:true,
+  real_clock_rehearsal_non_authority_bearing:true,
+  formal_o00_o23_hard_acceptance_unchanged:true,
   actual_arm_exact_pre_arm_evidence_epoch_match_required:true,
   local_operator_arm_surface_present:true,
   local_operator_secret_binding_contract_frozen:true,
