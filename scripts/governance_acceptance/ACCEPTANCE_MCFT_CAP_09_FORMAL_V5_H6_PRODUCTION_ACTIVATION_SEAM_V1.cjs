@@ -141,7 +141,8 @@ assert.equal(evidenceEpoch.evidence_owner_restart_after_o23_allowed,false);
 for(const key of [
   "runtime_process_start_authorized","production_owner_activation_authorized",
   "formal_v5_arm_authorized","a0_authorized","o00_authorized",
-  "formal_database_mutation_authorized","scheduler_write_authorized"
+  "formal_database_mutation_authorized","formal_raw_write_authorized",
+  "runtime_config_write_authorized","scheduler_write_authorized"
 ])assert.equal(evidenceEpoch.candidate_authority_ceiling[key],false,"H6_EVIDENCE_EPOCH_CANDIDATE_CEILING:"+key);
 assert.equal(evidenceEpoch.effect_source_for_running_evidence_process,"EXISTING_OWNER_CUTOVER_AUTHORITY_NOT_EPOCH_CANDIDATE");
 assert.equal(evidenceEpoch.candidate_by_itself_provider_request_authorized,false);
