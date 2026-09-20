@@ -10,8 +10,13 @@ export type OperatorActionButtonStateV1 = {
 
 export type OperatorApprovalTechnicalRefsVm = {
   approvalRequestIdText: string;
+  requestIdText: string;
+  operationIdText: string;
+  operationPlanIdText: string;
   prescriptionIdText: string;
   recommendationIdText: string;
+  requestedByActorIdText: string;
+  approverIdText: string;
   sourceText: string;
 };
 
@@ -169,8 +174,13 @@ function nextActionText(item: OperatorApprovalItem, actionButtonState: OperatorA
 function buildTechnicalRefs(item: OperatorApprovalItem): OperatorApprovalTechnicalRefsVm {
   return {
     approvalRequestIdText: text(item.approvalRequestId, "审批记录待确认"),
+    requestIdText: text(item.requestId, "请求 ID 待确认"),
+    operationIdText: text(item.operationId, "作业 ID 待确认"),
+    operationPlanIdText: text(item.operationPlanId, "作业计划 ID 待确认"),
     prescriptionIdText: text(item.prescriptionId, "未关联处方 ID"),
     recommendationIdText: text(item.recommendationId, "未关联建议 ID"),
+    requestedByActorIdText: text(item.requestedByActorId, "发起 actor ID 待确认"),
+    approverIdText: text(item.approverId, "审批 actor ID 待确认"),
     sourceText: sourceText(item.source),
   };
 }
