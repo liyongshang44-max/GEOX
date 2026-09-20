@@ -213,8 +213,9 @@
     "new_twin_fencing_token_required_after_cutover": true
   },
   "execution_sequence": [
+    "FRESH_OWNER_CUTOVER_MATERIALIZES_PRE_ARM_EVIDENCE_EPOCH_CANDIDATE_AND_STARTS_EVIDENCE_OWNER",
     "REVERIFY_H5_EXACT_MAIN_AND_LIVE_OWNERS",
-    "ARM_FRESH_V5_EPOCH",
+    "ARM_FRESH_V5_EPOCH_AND_REQUIRE_EXACT_PRE_ARM_EVIDENCE_EPOCH_MATCH",
     "MATERIALIZE_EXISTING_29_TABLE_V13_FORMAL_SCHEMA_AND_ACL",
     "PROVE_POST_ARM_CURRENT_CROP_ONLY_AUTHORITY_CONTINUITY",
     "PROMOTE_A0_PRODUCTION_EVIDENCE_TO_FORMAL_V5_WITH_VERIFIED_RAW_REPLAY",
@@ -326,5 +327,44 @@
       "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID",
       "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY"
     ]
+  },
+  "pre_arm_evidence_epoch_planning": {
+    "status": "REQUIRED_BEFORE_H5_AND_ACTUAL_FORMAL_V5_ARM",
+    "owner_cutover_runner_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs",
+    "epoch_selector_ref": "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs",
+    "candidate_contract_ref": "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts",
+    "evidence_owner_entrypoint_ref": "apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v1.ts",
+    "candidate_mount_filename": "formal-v5-evidence-runtime-handoff-authority.json",
+    "candidate_materialized_during_fresh_owner_cutover": true,
+    "candidate_must_exist_before_evidence_owner_process_start": true,
+    "same_clock_selector_as_actual_formal_v5_arm_required": true,
+    "planning_clock_source": "OWNER_CUTOVER_ACTIVATION_FENCE_UTC",
+    "minimum_governance_lead_hours": 36,
+    "candidate_clock_fields": [
+      "A0",
+      "O00",
+      "O23",
+      "READINESS_DEADLINE"
+    ],
+    "actual_arm_exact_candidate_clock_match_required": true,
+    "mismatch_policy": "FAIL_CLOSED_FRESH_OWNER_CUTOVER_H5_AND_ARM_REQUIRED",
+    "evidence_acquisition_may_begin_before_actual_formal_v5_arm": true,
+    "evidence_acquisition_stage_authority_required": false,
+    "future_stage_value_consulted": false,
+    "future_stage_authority_identity_frozen": false,
+    "current_crop_authority_role_after_candidate": "LINEAGE_AND_OWNER_ADMISSION_ONLY_NOT_FUTURE_FORMAL_V5_STAGE_TRUTH",
+    "evidence_owner_restart_candidate_valid_through": "O23_INCLUSIVE",
+    "evidence_owner_restart_after_o23_allowed": false,
+    "candidate_authority_ceiling": {
+      "runtime_process_start_authorized": false,
+      "production_owner_activation_authorized": false,
+      "formal_v5_arm_authorized": false,
+      "a0_authorized": false,
+      "o00_authorized": false,
+      "formal_database_mutation_authorized": false,
+      "scheduler_write_authorized": false
+    },
+    "effect_source_for_running_evidence_process": "EXISTING_OWNER_CUTOVER_AUTHORITY_NOT_EPOCH_CANDIDATE",
+    "candidate_by_itself_provider_request_authorized": false
   }
 }
