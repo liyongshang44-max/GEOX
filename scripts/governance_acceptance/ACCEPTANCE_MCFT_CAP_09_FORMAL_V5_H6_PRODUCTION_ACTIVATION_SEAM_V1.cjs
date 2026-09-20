@@ -119,6 +119,37 @@ assert.equal(auth.runtime_adoption.scheduler_semantics_rewrite,false);
 assert.equal(auth.runtime_adoption.github_production_wake_allowed,false);
 assert.equal(auth.runtime_adoption.github_production_tick_allowed,false);
 assert.equal(auth.owner_cutover.twin_double_owner_window_allowed,false);
+const evidenceEpoch=auth.pre_arm_evidence_epoch_planning;
+assert.equal(evidenceEpoch.status,"REQUIRED_BEFORE_H5_AND_ACTUAL_FORMAL_V5_ARM");
+assert.equal(evidenceEpoch.owner_cutover_runner_ref,"scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs");
+assert.equal(evidenceEpoch.epoch_selector_ref,"scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs");
+assert.equal(evidenceEpoch.candidate_contract_ref,"apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts");
+assert.equal(evidenceEpoch.evidence_owner_entrypoint_ref,"apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v1.ts");
+assert.equal(evidenceEpoch.candidate_materialized_during_fresh_owner_cutover,true);
+assert.equal(evidenceEpoch.candidate_must_exist_before_evidence_owner_process_start,true);
+assert.equal(evidenceEpoch.same_clock_selector_as_actual_formal_v5_arm_required,true);
+assert.equal(evidenceEpoch.minimum_governance_lead_hours,36);
+assert.deepEqual(evidenceEpoch.candidate_clock_fields,["A0","O00","O23","READINESS_DEADLINE"]);
+assert.equal(evidenceEpoch.actual_arm_exact_candidate_clock_match_required,true);
+assert.equal(evidenceEpoch.mismatch_policy,"FAIL_CLOSED_FRESH_OWNER_CUTOVER_H5_AND_ARM_REQUIRED");
+assert.equal(evidenceEpoch.evidence_acquisition_may_begin_before_actual_formal_v5_arm,true);
+assert.equal(evidenceEpoch.evidence_acquisition_stage_authority_required,false);
+assert.equal(evidenceEpoch.future_stage_value_consulted,false);
+assert.equal(evidenceEpoch.future_stage_authority_identity_frozen,false);
+assert.equal(evidenceEpoch.evidence_owner_restart_candidate_valid_through,"O23_INCLUSIVE");
+assert.equal(evidenceEpoch.evidence_owner_restart_after_o23_allowed,false);
+for(const key of [
+  "runtime_process_start_authorized","production_owner_activation_authorized",
+  "formal_v5_arm_authorized","a0_authorized","o00_authorized",
+  "formal_database_mutation_authorized","scheduler_write_authorized"
+])assert.equal(evidenceEpoch.candidate_authority_ceiling[key],false,"H6_EVIDENCE_EPOCH_CANDIDATE_CEILING:"+key);
+assert.equal(evidenceEpoch.effect_source_for_running_evidence_process,"EXISTING_OWNER_CUTOVER_AUTHORITY_NOT_EPOCH_CANDIDATE");
+assert.equal(evidenceEpoch.candidate_by_itself_provider_request_authorized,false);
+assert.deepEqual(auth.execution_sequence.slice(0,3),[
+  "FRESH_OWNER_CUTOVER_MATERIALIZES_PRE_ARM_EVIDENCE_EPOCH_CANDIDATE_AND_STARTS_EVIDENCE_OWNER",
+  "REVERIFY_H5_EXACT_MAIN_AND_LIVE_OWNERS",
+  "ARM_FRESH_V5_EPOCH_AND_REQUIRE_EXACT_PRE_ARM_EVIDENCE_EPOCH_MATCH",
+]);
 const expectedOperatorBindings=[
   "GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL",
   "GEOX_MCFT_CAP09_FORMAL_V5_ADMIN_DATABASE_URL",
@@ -352,6 +383,9 @@ const proof={
   new_database_schema_designed:false,
   github_production_execution_reintroduced:false,
   explicit_v5_physical_store_identity:true,
+  pre_arm_evidence_epoch_candidate_required:true,
+  evidence_acquisition_decoupled_from_future_stage_authority:true,
+  actual_arm_exact_pre_arm_evidence_epoch_match_required:true,
   local_operator_arm_surface_present:true,
   local_operator_secret_binding_contract_frozen:true,
   fresh_v5_schema_acl_surface_present:true,
