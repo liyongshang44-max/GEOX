@@ -1,10 +1,10 @@
 import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import type { FieldRuntimeScopeSeasonOption } from "../../../api/fields";
 import {
-  fetchFieldRuntimeScopeOptions,
-  fetchFields,
-  type FieldRuntimeScopeSeasonOption,
-} from "../../../api/fields";
+  fetchFouiFieldRuntimeScopeOptions,
+  fetchFouiFields,
+} from "../../../api/fouiFieldIntelligence";
 import { useLocale } from "../../../lib/locale";
 import "../../../styles/fouiFieldOperations.css";
 
@@ -45,7 +45,7 @@ export default function FieldIntelligenceFieldsPage(): React.ReactElement {
   React.useEffect(() => {
     let active = true;
     setLoadingFields(true);
-    fetchFields()
+    fetchFouiFields()
       .then((rows) => {
         if (!active) return;
         const next = normalizeFields(rows);
@@ -63,7 +63,7 @@ export default function FieldIntelligenceFieldsPage(): React.ReactElement {
     setSeasonId("");
     if (!fieldId) return () => { active = false; };
     setLoadingSeasons(true);
-    fetchFieldRuntimeScopeOptions(fieldId)
+    fetchFouiFieldRuntimeScopeOptions(fieldId)
       .then((result) => {
         if (!active) return;
         const next = Array.isArray(result.seasons) ? result.seasons : [];
@@ -97,7 +97,7 @@ export default function FieldIntelligenceFieldsPage(): React.ReactElement {
       <section className="fouiPanel">
         <header className="fouiPanelHeader">
           <div><span className="fouiEyebrow">EXACT SCOPE</span><h3>{english ? "Choose field context" : "选择田块上下文"}</h3></div>
-          <span className="fouiStatePill">GET ONLY</span>
+          <span className="fouiStatePill">{english ? "READ-ONLY · GET" : "只读 · GET"}</span>
         </header>
         <div className="fouiScopeForm">
           <label>
