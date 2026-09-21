@@ -9,7 +9,10 @@ import type {
   McftApiErrorV1,
   McftCollectionPageV1,
   McftFieldTwinScopeV1,
+  McftRuntimeHealthV1,
   McftRuntimeReadModelV1,
+  McftTimelinePageV1,
+  McftTraceGraphV1,
 } from "./mcftFieldTwinRuntime";
 const MCFT_ALLOWED_ERROR_STATUSES = [400, 403, 404, 409, 503];
 
@@ -89,3 +92,27 @@ export const readFouiMcftStates = (scope: McftFieldTwinScopeV1) =>
 
 export const readFouiMcftForecasts = (scope: McftFieldTwinScopeV1) =>
   getFouiMcft<McftCollectionPageV1>(scope, "/forecasts", { limit: 50 });
+
+
+export const readFouiMcftScenarios = (scope: McftFieldTwinScopeV1) =>
+  getFouiMcft<McftCollectionPageV1>(scope, "/scenarios", { limit: 50 });
+
+export const readFouiMcftActionLifecycle = (scope: McftFieldTwinScopeV1) =>
+  getFouiMcft<McftCollectionPageV1>(scope, "/action-lifecycle", { limit: 50 });
+
+export const readFouiMcftResiduals = (scope: McftFieldTwinScopeV1) =>
+  getFouiMcft<McftCollectionPageV1>(scope, "/residuals", { limit: 50 });
+
+export const readFouiMcftTimeline = (scope: McftFieldTwinScopeV1) =>
+  getFouiMcft<McftTimelinePageV1>(scope, "/timeline", { limit: 50 });
+
+export const readFouiMcftTrace = (scope: McftFieldTwinScopeV1) =>
+  getFouiMcft<McftTraceGraphV1>(scope, "/trace");
+
+export const readFouiMcftHealth = (scope: McftFieldTwinScopeV1) =>
+  getFouiMcft<McftRuntimeHealthV1>(scope, "/health");
+
+export const readFouiMcftModelGovernance = (
+  scope: McftFieldTwinScopeV1,
+  collectionKind: "CALIBRATION_CANDIDATE" | "SHADOW_EVALUATION" | "MODEL_ACTIVATION",
+) => getFouiMcft<McftCollectionPageV1>(scope, "/model-governance", { collection_kind: collectionKind, limit: 50 });

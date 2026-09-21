@@ -720,3 +720,337 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Field Experience V2 — FOUI-owned product view over canonical MCFT reads. */
+.fouiFieldScopeLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.fouiFieldScopeLine span {
+  padding: 5px 8px;
+  border: 1px solid var(--foui-line);
+  background: rgba(255,255,255,0.55);
+  color: var(--foui-muted);
+  font: 11px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.fouiFieldSignalStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--foui-line);
+  background: var(--foui-paper-strong);
+}
+
+.fouiFieldSignalStrip article {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  padding: 18px 20px;
+  border-right: 1px solid var(--foui-line);
+}
+
+.fouiFieldSignalStrip article:last-child {
+  border-right: 0;
+}
+
+.fouiFieldSignalStrip span,
+.fouiFieldSignalStrip small {
+  color: var(--foui-muted);
+  font-size: 11px;
+}
+
+.fouiFieldSignalStrip strong {
+  color: var(--foui-ink);
+  font: 500 16px/1.25 Georgia, "Times New Roman", serif;
+  overflow-wrap: anywhere;
+}
+
+.fouiFieldExperienceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fouiCurrentObject {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--foui-line);
+  margin-bottom: 14px;
+}
+
+.fouiCurrentObject > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border-bottom: 1px solid var(--foui-line);
+}
+
+.fouiCurrentObject > div:nth-child(odd) {
+  border-right: 1px solid var(--foui-line);
+}
+
+.fouiCurrentObject span,
+.fouiFactGrid dt,
+.fouiDatasetRow small,
+.fouiDatasetStatus small,
+.fouiDeepList small,
+.fouiEvidenceSummary span {
+  color: var(--foui-muted);
+  font-size: 11px;
+}
+
+.fouiCurrentObject strong,
+.fouiFactGrid dd {
+  color: var(--foui-ink);
+  overflow-wrap: anywhere;
+}
+
+.fouiFactGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--foui-line);
+}
+
+.fouiFactGrid > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--foui-line);
+}
+
+.fouiFactGrid > div:nth-child(odd) {
+  padding-right: 12px;
+}
+
+.fouiFactGrid > div:nth-child(even) {
+  padding-left: 12px;
+  border-left: 1px solid var(--foui-line);
+}
+
+.fouiFactGrid dd {
+  margin: 0;
+  font-size: 13px;
+}
+
+.fouiMuted {
+  color: var(--foui-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.fouiDatasetTable {
+  display: grid;
+  border-top: 1px solid var(--foui-line);
+}
+
+.fouiDatasetRow {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) auto minmax(190px, 0.8fr);
+  gap: 14px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--foui-line);
+}
+
+.fouiDatasetRow > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.fouiDatasetRow strong {
+  color: var(--foui-ink);
+  overflow-wrap: anywhere;
+}
+
+.fouiDatasetStatus {
+  text-align: right;
+}
+
+.fouiFieldExploreGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fouiExploreCard {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--foui-line);
+  background: var(--foui-paper-strong);
+}
+
+.fouiExploreCard h3,
+.fouiDeepDataCard h4 {
+  margin: 0;
+  color: var(--foui-ink);
+  font: 500 22px/1.12 Georgia, "Times New Roman", serif;
+}
+
+.fouiExploreCard p,
+.fouiDeepDataCard p {
+  margin: 0;
+  color: var(--foui-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.fouiExploreCard .fouiButton {
+  justify-self: start;
+}
+
+.fouiTimelineList,
+.fouiDeepList {
+  display: grid;
+  gap: 0;
+  margin-top: 4px;
+}
+
+.fouiTimelineList > div,
+.fouiDeepList > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 9px 0;
+  border-top: 1px solid var(--foui-line);
+}
+
+.fouiTimelineList span,
+.fouiTimelineList small {
+  color: var(--foui-muted);
+  font-size: 11px;
+}
+
+.fouiTimelineList strong,
+.fouiDeepList strong {
+  color: var(--foui-ink);
+  overflow-wrap: anywhere;
+}
+
+.fouiEvidenceSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fouiEvidenceSummary > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--foui-line);
+  background: #fbfaf6;
+}
+
+.fouiEvidenceSummary strong {
+  color: var(--foui-ink);
+  overflow-wrap: anywhere;
+}
+
+.fouiEvidenceSummary .fouiCanonicalDisclosure {
+  grid-column: 1 / -1;
+}
+
+.fouiAdvancedDataGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fouiDeepDataCard {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--foui-line);
+  background: var(--foui-paper-strong);
+}
+
+.fouiDeepDataCard__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: end;
+}
+
+.fouiDeepDataCard__head > div {
+  display: grid;
+  gap: 5px;
+}
+
+.fouiDeepDataCard__head > strong {
+  color: var(--foui-green);
+  font: 500 30px/1 Georgia, "Times New Roman", serif;
+}
+
+@media (max-width: 1080px) {
+  .fouiFieldSignalStrip,
+  .fouiFieldExploreGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fouiFieldSignalStrip article:nth-child(2) {
+    border-right: 0;
+  }
+
+  .fouiFieldSignalStrip article:nth-child(-n+2) {
+    border-bottom: 1px solid var(--foui-line);
+  }
+}
+
+@media (max-width: 760px) {
+  .fouiFieldSignalStrip,
+  .fouiFieldExperienceGrid,
+  .fouiFieldExploreGrid,
+  .fouiAdvancedDataGrid,
+  .fouiCurrentObject,
+  .fouiFactGrid,
+  .fouiEvidenceSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .fouiFieldSignalStrip article {
+    border-right: 0;
+    border-bottom: 1px solid var(--foui-line);
+  }
+
+  .fouiFieldSignalStrip article:last-child {
+    border-bottom: 0;
+  }
+
+  .fouiCurrentObject > div:nth-child(odd),
+  .fouiFactGrid > div:nth-child(even) {
+    border-right: 0;
+    border-left: 0;
+  }
+
+  .fouiFactGrid > div:nth-child(odd),
+  .fouiFactGrid > div:nth-child(even) {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .fouiDatasetRow {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .fouiDatasetStatus {
+    text-align: left;
+  }
+
+  .fouiEvidenceSummary .fouiCanonicalDisclosure {
+    grid-column: auto;
+  }
+}

@@ -35,7 +35,7 @@ for (const token of [
   'Full runtime response',
   'Full state collection',
   'Full forecast collection',
-  'ON-DEMAND CANONICAL DATASETS',
+  'DATA UTILIZATION',
   'canonical_source',
   'limitations',
   'validation_summary',

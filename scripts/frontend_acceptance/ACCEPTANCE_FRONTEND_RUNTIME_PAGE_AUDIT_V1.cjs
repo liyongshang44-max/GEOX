@@ -34,6 +34,7 @@ function runFouiStaticGates(){
     'scripts/frontend_acceptance/ACCEPTANCE_FOUI_FIELD_OPERATIONS_UI_V1.cjs',
     'scripts/frontend_acceptance/ACCEPTANCE_FOUI_FIELD_INTELLIGENCE_DATA_PRESERVATION_V1.cjs',
     'scripts/frontend_acceptance/ACCEPTANCE_FOUI_BLINE_PROVENANCE_PRESERVATION_V1.cjs',
+    'scripts/frontend_acceptance/ACCEPTANCE_FOUI_FIELD_EXPERIENCE_V2.cjs',
   ];
   for(const gate of gates){
     const ret=spawnSync(process.execPath,[gate],{cwd:ROOT,env:process.env,stdio:'inherit'});
