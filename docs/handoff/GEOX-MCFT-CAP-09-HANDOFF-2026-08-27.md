@@ -1,3 +1,1122 @@
+# AJ — 2026-09-21 Formal-v5 Armed / Real-Clock Rehearsal Recovery / R23 Time-Gated Frontier
+
+> 本 section 是 AI 之后的当前 continuation entry point。AI 的 d054 / #3611 regression frontier 已被后续 merge、fresh re-arm、fresh owner cutover、new Formal-v5 arm 与真实时钟 rehearsal 推进；不得把 AI 的三条旧红灯重新当作当前 blocker。
+>
+> 本 AJ 以 pure-prepend 加入；AI 及其以下全部历史字节原样保留。旧 section 的 SHA、权限范围、红灯与待办只对当时裁决有效，不覆盖 AJ。
+>
+> 这是 conversation-continuation handoff，不是新的 architecture authority、production authorization、Formal completion adjudication 或 Stage 1B closure。本次只更新 handoff 与当前 frontier。
+
+---
+
+## AJ0. 一句话接手结论
+
+MCFT-CAP-09 当前已经不是“修 #3611 / 等待 arm”的状态。
+
+当前精确状态：
+
+```text
+protected main
+= 0c71e55843c659cce402a1457d481e412cdc203c
+
+#3611
+= MERGED
+
+#3613
+= MERGED
+
+#3615
+= MERGED
+
+current Formal-v5
+= ARMED
+
+Formal A0
+= NOT STARTED
+
+Formal O00-O23
+= NOT STARTED
+
+active runtime qualification
+= REAL_CLOCK QUALIFICATION REHEARSAL
+
+rehearsal run status
+= RUNNING
+
+rehearsal fault proof
+= PASS_SUPPLEMENTAL
+
+current engineering blocker
+= NONE OBSERVED
+
+current immediate constraint
+= WALL-CLOCK TIME GATE TO R23
+```
+
+当前不要再扩大 architecture，不要重跑 rehearsal，不要 cleanup，不要 merge #3616，不要把 R00-R23 写成 Formal O00-O23。
+
+---
+
+## AJ1. Protected-main convergence：#3611 / #3613 / #3615 已完成
+
+### #3611
+
+```text
+title
+= fix(mcft-cap09): harden Formal-v5 evidence handoff and GFS acquisition
+
+merged
+= true
+
+merge commit
+= cf2f3370fa82dbac35ffeba7c351edfd840e3565
+
+merged_at
+= 2026-09-20T11:10:28Z
+```
+
+AI 中 #3611 `KEEP DRAFT / DO NOT MERGE` 是历史状态，已经失效。不要重新按 e8074df9 / d054 regression frontier 施工。
+
+### #3613
+
+```text
+title
+= fix(mcft-cap09): govern Formal-v5 materialized-zero rearm
+
+merged
+= true
+
+merge commit
+= 442d940e9fe457ae42589fbc953149fed49a6e6a
+
+merged_at
+= 2026-09-20T12:31:33Z
+```
+
+它解决 invalidated-arm 后已经 materialized、但仍 zero-row 的 Formal store 生命周期：允许受治理 materialized-zero re-arm，禁止手工 truncate / reset / 清库绕 gate。
+
+### #3615
+
+```text
+title
+= fix(mcft-cap09): make Formal-v5 rearm proof retention resilient
+
+merged
+= true
+
+merge commit
+= 0c71e55843c659cce402a1457d481e412cdc203c
+
+merged_at
+= 2026-09-20T14:53:14Z
+```
+
+它收口 live exact-store readback 与 historical/local proof retention：live Formal store readback 为权威；historical local schema proof 只作 optional cross-evidence；re-arm 后必须重新做 idempotent schema/ACL revalidation。
+
+当前 protected main 就是 #3615 merge commit `0c71e...`。
+
+---
+
+## AJ2. Formal store / fresh re-arm 已经完成
+
+Formal store：
+
+```text
+database
+= geox_mcft_cap09_s6_formal_t4r1_24h_v5
+
+public tables
+= 29
+
+runtime routines
+= 2
+
+rows at governed materialized-zero re-arm proof
+= 0
+
+manual clear / truncate / reset
+= FORBIDDEN / NOT USED
+```
+
+旧 arm identity：
+
+```text
+old arm subject
+= 574777ff...
+
+old arm identity
+= sha256:1a4ce6e3f21a9d2726c65ee16eff1a8c4a7e3727f3ab17ecd66c4d7f910925df
+```
+
+materialized-zero eligibility 已 PASS：旧 A0 未发生、29/2 store 保持 zero-row，允许 fresh re-arm。
+
+re-arm 后 schema / ACL idempotent revalidation：
+
+```text
+status
+= PASS_ALREADY_MATERIALIZED_IDEMPOTENT
+
+tables
+= 29
+
+routines
+= 2
+
+rows
+= 0
+```
+
+---
+
+## AJ3. Exact-main fresh owner cutover / H5 已完成
+
+exact owner cutover subject：
+
+```text
+0c71e55843c659cce402a1457d481e412cdc203c
+```
+
+已建立：
+
+```text
+host_id
+= fae5f756-ef25-40d5-9777-5b2c3d4837a1
+
+activation_fence
+= 2026-09-20T15:05:26.810Z
+
+Evidence owner
+= STARTED
+
+Twin owner
+= STARTED / PRE_FORMAL_OWNER_STANDBY at cutover
+```
+
+handoff authority local artifact：
+
+```text
+C:\Users\mylr1\.geox\mcft-cap09\runtime\0c71e55843c659cce402a1457d481e412cdc203c\formal-v5-evidence-runtime-handoff-authority.json
+
+sha256
+= sha256:09145b1329c79e0daf44ebff9d801479637a7c9499516af368879796d960d947
+```
+
+H5 已 PASS：exact-one live owner per role、same immutable image、retired GitHub production trigger zero、materialized-zero re-arm mode admitted。
+
+---
+
+## AJ4. Current Formal-v5 arm 已成功建立
+
+新的 Formal-v5 arm：
+
+```text
+subject
+= 0c71e55843c659cce402a1457d481e412cdc203c
+
+arm_time_database_utc
+= 2026-09-20T15:29:58.033Z
+
+epoch
+= mcft_cap09_external_formal_window_epoch_20260922t060000000z_v5
+
+A0
+= 2026-09-22T05:00:00.000Z
+
+O00
+= 2026-09-22T06:00:00.000Z
+
+O23
+= 2026-09-23T05:00:00.000Z
+
+readiness_deadline
+= 2026-09-21T18:00:00.000Z
+
+arm identity
+= sha256:bb2b3d674519e8c40696cd94d08bf9cc8e4542469f45449cf921f0ffb047d93a
+```
+
+arm artifact：
+
+```text
+C:\Users\mylr1\.geox\mcft-cap09\formal-v5\arm-materialized-zero-rearm-0c71e55843c6-v1.json
+```
+
+Amendment-21 语义必须继续锁住：
+
+```text
+formal_runtime_config_pins_frozen
+= false
+
+formal_stage_authority_pins_frozen
+= false
+
+arm_time_stage_snapshot_is_runtime_pin
+= false
+
+future_stage_pins_deferred_to_post_arm_dt02_a18
+= true
+```
+
+arm 只冻结 epoch clock，不在 arm-time 冻结 future biological stage truth。
+
+---
+
+## AJ5. Post-arm / pre-A0 biological-stage authority 仍是后续 Formal 必经 gate
+
+当前 arm-time authority 是：
+
+```text
+authority_as_of
+= 2026-09-20T04:00:00Z
+
+authority_valid_until
+= 2026-09-21T10:00:00Z
+
+stage
+= R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE
+
+lifecycle
+= ACTIVE / RESOLVED / VALID
+
+water-use stage
+= LATE
+```
+
+该 authority 可以证明 arm-time current authority，但不能覆盖 Formal A0→O23。
+
+下一 eligible stage snapshot boundary：
+
+```text
+2026-09-22T04:00:00Z
+```
+
+届时 fresh authority 必须覆盖：
+
+```text
+A0  = 2026-09-22T05:00:00Z
+through
+O23 = 2026-09-23T05:00:00Z
+```
+
+目标 30h authority validity 应至少延伸至 `2026-09-23T10:00:00Z`。
+
+已预建 branch：
+
+```text
+mcft-cap09/formal-v5-post-arm-stage-20260922t04z-v1
+```
+
+该 branch 基于 `0c71e...`，创建时 empty / no commits。
+
+允许的 post-arm main delta 仍必须极窄：新的 immutable effective current-crop authority artifact + registry 单次 append。不得把 #3616 或其他 runtime/QCP/workflow 改动混进去。
+
+已存在一次性 Step 7 automation，时间等价于 `2026-09-22T04:00:00Z`；不要重复创建。
+
+---
+
+## AJ6. Real-clock rehearsal 的目的与 authority ceiling
+
+这条 lane 只证明：
+
+```text
+REAL_CLOCK_RUNTIME_SURVIVAL_AND_OBSERVABILITY
+```
+
+它使用：
+
+```text
+24 actual UTC hourly boundaries
+isolated qualification PostgreSQL
+isolated raw namespace
+same production Twin process
+same scheduler / cursor / lease / fencing
+same canonical persistence
+controlled qualification baseline
+```
+
+它明确不需要：
+
+```text
+Formal-v5 arm binding
+fresh future biological-stage authority for test entry
+live provider availability
+Formal A0
+```
+
+并明确不能声称：
+
+```text
+R00_R23_IS_NOT_O00_O23
+NO_FORMAL_V5_EFFECT_FROM_REHEARSAL
+NO_STAGE_1B_CLOSURE_FROM_REHEARSAL
+NO_MCFT_CAP09_COMPLETION_FROM_REHEARSAL
+```
+
+`formal_v5_arm=false` 出现在 rehearsal status 中，只表示 rehearsal 不消费 / 不宣称 Formal arm；不能误读为 production Formal-v5 arm 不存在。
+
+---
+
+## AJ7. PR #3616 当前 exact 状态
+
+```text
+PR
+= #3616
+
+title / purpose
+= real-clock rehearsal harness fixes and recovery
+
+state
+= OPEN
+
+draft
+= true
+
+base
+= 0c71e55843c659cce402a1457d481e412cdc203c
+
+head
+= c80f4fc3de4680b50f4f22944e956eb9de904792
+
+mergeable
+= true
+
+mergeable_state
+= clean
+
+changed_files
+= 2
+
+commits
+= 9
+
+additions / deletions
+= +425 / -9
+```
+
+只改：
+
+```text
+scripts/runtime_acceptance/RUN_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_V1.cjs
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_LAUNCHER_V1.cjs
+```
+
+当前 exact-head `c80f4fc3...` GitHub workflows 全绿：
+
+```text
+mcft-candidate-declaration-selftest-v2
+run 35552858015
+= SUCCESS
+
+mcft-cap-09-ea5e2-runtime-dependency-graph
+run 35552857991
+= SUCCESS
+
+mcft-delivery-policy-v2
+run 35552857984
+= SUCCESS
+
+mcft-release-lane-v1
+run 35552857904
+= SUCCESS
+
+mcft-main-ruleset-readiness-v1
+run 35552857943
+= SUCCESS
+
+mcft-cap-09-phase5-two-service-accelerated-24t
+run 35552857880
+= SUCCESS
+
+ci
+run 35552857998
+= SUCCESS
+```
+
+#3616 当前不得 merge：protected main 在 active Formal-v5 arm 期间必须保持 exact continuity。#3616 继续 Draft。
+
+---
+
+## AJ8. Current rehearsal exact identity
+
+rehearsal runtime subject 不是 #3616 最新 control-script head，而是启动时 frozen subject：
+
+```text
+runtime subject
+= e1a54da2671e7752bc5357c651e023517e8347f2
+
+project
+= mcftcap09-rehearsal-e1a54da2671e-20260920t160641
+
+start
+= 2026-09-20T16:06:41.858Z
+
+A0 (REHEARSAL ONLY)
+= 2026-09-20T17:00:00Z
+
+R00
+= 2026-09-20T18:00:00Z
+
+R23
+= 2026-09-21T17:00:00Z
+```
+
+state path：
+
+```text
+C:\Users\mylr1\.geox\mcft-cap09\real-clock-rehearsal\e1a54da2671e7752bc5357c651e023517e8347f2\20260920t160641858z-e1a54da2671e\state.json
+```
+
+当前 launcher/control-script head 后续前移到 `c80f4fc3...`，但不得把 runtime subject 改写成 c80；runtime image / run provenance 仍绑定 e1a54。
+
+---
+
+## AJ9. Controlled baseline 已建立，真实 provider 不参与本轮 progress gate
+
+rehearsal seed：
+
+```text
+soil observations
+= 1
+
+future weather assumptions
+= 24
+
+future ET0 assumptions
+= 24
+
+total baseline facts
+= 49
+
+network_request_count
+= 0
+
+production_database_access
+= false
+
+formal_evidence_claim
+= false
+```
+
+weather / ET0 是 `CONTROLLED_ENGINEERING_FIXTURE` / `ASSUMED`，不是 KBS / NOAA live provider observation。
+
+为复用 existing A18 v3 materializer，又不改 runtime kernel，rehearsal 使用 qualification-only synthetic crop authority overlay，把 planting window 放在稳定 MID test envelope。该 overlay 明确：
+
+```text
+synthetic_planting_window
+= true
+
+original_planting_event_not_claimed
+= true
+
+provider_observation_truth_claimed
+= false
+
+production_authority
+= false
+
+formal_evidence_claim
+= false
+
+stage_1b_closure_claim
+= false
+```
+
+---
+
+## AJ10. 本轮已经踩过并修掉的 rehearsal harness 问题
+
+### AJ10.1 A18 MID consensus precondition
+
+最初 real-clock start first red：
+
+```text
+EXTERNAL_FORMAL_A18_V3_MID_CONSENSUS_REQUIRED
+```
+
+根因不是 runtime scheduler，而是 phase5 qualification prepare 仍使用 historical V3 crop authority；对应 rehearsal 时间落不到 MID intersection。
+
+修复：只增加 qualification-only synthetic crop authority fixture；不改 server runtime、scheduler、runner、A18 semantics、production compose 或 Formal authority。
+
+### AJ10.2 Fresh PostgreSQL init race
+
+第二个 first red：
+
+```text
+FATAL: database platform bootstrap failed: relation "facts" does not exist
+```
+
+根因：`pg_isready` 已 true，但 `/docker-entrypoint-initdb.d` 尚未完全结束。
+
+修复：launcher 增加 `waitForPostgresInitComplete`，同时要求 PostgreSQL 日志出现 init complete marker，并且 SQL `to_regclass('public.facts')` 非空后才进入 bootstrap。
+
+不要回退成单纯 `pg_isready`。
+
+### AJ10.3 原 R05 fault-controller 假红
+
+原自动计划：
+
+```text
+label
+= R05
+
+planned stop
+= 2026-09-20T22:55:00Z
+
+missed boundary
+= 2026-09-20T23:00:00Z
+
+planned restart
+= 2026-09-20T23:05:00Z
+```
+
+22:55Z controller 只做一次 rigid precondition read，得到：
+
+```text
+next_slot_index_before
+= 4
+
+error
+= REHEARSAL_FAULT_PRECONDITION_R04_NOT_TERMINAL
+```
+
+于是原 fault proof 写 FAIL 并退出，根本没有 stop runtime。随后 runtime 自己继续正常推进。
+
+这不是 runtime failure；是 controller 太早检查且不等待 R04 terminal。
+
+修复：在 missed boundary 前持续等待 `next_slot_index == 5`；只有到边界仍未满足才判真实 precondition failure。
+
+### AJ10.4 Supplemental fault restart gap
+
+为了不浪费已经真实运行的数小时，保留原 R05 FAIL，不篡改历史；增加 supplemental controlled fault。
+
+选择：
+
+```text
+target
+= R07 / internal O07
+
+stop
+= 2026-09-21T00:55:00Z
+
+miss
+= 2026-09-21T01:00:00Z
+
+planned restart
+= 2026-09-21T01:05:00Z
+```
+
+Twin Runtime 在 00:55:06Z 正常优雅退出：
+
+```text
+ExitCode
+= 0
+
+last runtime lifecycle
+= STOPPING / STOP_REQUESTED
+```
+
+但 supplemental controller 没有在 01:05Z 成功把 runtime 拉回，proof 停在 `RUNNING`，container 显示 ABSENT。
+
+这再次是 harness/orchestration defect，不是 Twin crash。
+
+### AJ10.5 Recovery path
+
+新增：
+
+```text
+recover-supplemental-fault
+```
+
+严格条件：active rehearsal 必须 RUNNING；supplemental proof 必须已 RUNNING；target slot 必须仍是 missed / pending；只恢复同一 exact run。
+
+恢复时优先 `docker compose start twin-runtime`；若 compose dependency graph 阻断，再使用 exact same compose config 的 `up -d --no-deps twin-runtime`。不重建 PostgreSQL、不清 cursor、不换 run。
+
+---
+
+## AJ11. Supplemental fault proof 已 PASS
+
+恢复执行结果：
+
+```text
+recovery_started_at
+= 2026-09-21T02:04:11.281Z
+
+recovery_observed_at
+= 2026-09-21T02:04:17.700Z
+
+target
+= R07 / O07
+
+fencing_token_before
+= 11
+
+fencing_token_after O07 backfill
+= 13
+
+O07 terminal_state
+= DEGRADED
+
+O07 scheduler_wall_clock_observed_at
+= 2026-09-21T02:04:12.477Z
+
+oldest_first_backfill_observed
+= true
+
+controlled_restart_recovery_observed
+= true
+
+recovered_after_controller_restart_gap
+= true
+```
+
+原 fault failure 继续保留：
+
+```text
+original_fault_status
+= FAIL
+
+original_fault_error
+= REHEARSAL_FAULT_PRECONDITION_R04_NOT_TERMINAL
+
+original_fault_failure_preserved
+= true
+
+supplemental_proof_substitutes_only_fault_mechanics_proof
+= true
+```
+
+绝不能把历史 R05 FAIL 改写成 PASS。
+
+---
+
+## AJ12. Last directly observed live rehearsal status
+
+最后一次直接 `status` 机器读回时间：
+
+```text
+2026-09-21T02:05:54.622Z
+```
+
+结果：
+
+```text
+status
+= RUNNING
+
+container.running
+= true
+
+slot_count
+= 9
+
+completed
+= 0
+
+degraded
+= 9
+
+failed
+= 0
+
+cursor_raw
+= 9|O09|O08|2026-09-21 02:00:00+00
+
+fault_proof_status
+= PASS_SUPPLEMENTAL
+
+original_fault_proof_status
+= FAIL
+
+supplemental_fault_proof_status
+= PASS
+```
+
+后续 DB readback 又证明：
+
+```text
+last_terminal_slot_id
+= O08
+
+last_terminal_logical_time
+= 2026-09-21T02:00:00Z
+
+next_slot_id
+= O09
+
+next_logical_time
+= 2026-09-21T03:00:00Z
+
+last_fencing_token
+= 14
+
+cursor updated_at
+= 2026-09-21T02:04:15.795309Z
+```
+
+因此恢复顺序已被实际 cursor 证明：
+
+```text
+O06 terminal
+→ process stop
+→ O07 missed
+→ restart/recovery
+→ oldest-first O07 backfill
+→ O08 catch-up
+→ cursor O09
+```
+
+本 handoff 写入时已经跨过 03:00Z 附近，但没有新的本地 `status` readback；不要凭时钟自动声称 O09 已完成。下一对话需要时先读 status。
+
+---
+
+## AJ13. 前 9 个小时不是空跑：canonical tick / state chain 已经存在
+
+DB readback R00-R08 共 9 个 terminal tick：
+
+```text
+2026-09-20T18:00Z through 2026-09-21T02:00Z
+
+operation_variant
+= A1_COMPLETED for all 9
+
+each hour
+= unique source_tick_object_id
+  + unique record_set_id
+  + unique aggregate_determinism_hash
+```
+
+即 scheduler state 为 `DEGRADED`，canonical tick 本身仍是：
+
+```text
+status
+= COMPLETED
+
+transition_kind
+= CONTINUATION
+
+transaction_family
+= A_STATE_TICK_COMMIT
+```
+
+原因：scheduler terminal state 反映 runtime health；rehearsal current-interval forcing 使用 controlled causal assumptions，不是 exact provider pair，因此 runtime health 按 contract 为 DEGRADED。
+
+当前 forcing contract：
+
+```text
+EXACT_PROVIDER_INTERVAL_PAIR
+→ runtime_health = HEALTHY
+
+PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR
+→ runtime_health = DEGRADED
+```
+
+所以这里的 DEGRADED 不是 Twin 计算失败。
+
+---
+
+## AJ14. State estimate 已连续传播，restart 没断 posterior chain
+
+A0 rehearsal bootstrap：
+
+```text
+root-zone VWC mean
+= 0.276942
+
+root-zone water storage mean
+= 83.082645 mm
+
+available water fraction
+= 0.871901
+
+depletion from field capacity
+= 6.917355 mm
+```
+
+R08：
+
+```text
+root-zone VWC mean
+= 0.274107
+
+root-zone water storage mean
+= 82.232100 mm
+
+available water fraction
+= 0.856150
+
+depletion from field capacity
+= 7.767900 mm
+```
+
+从 A0 到 R08：
+
+```text
+storage change
+≈ -0.850545 mm
+
+depletion change
+≈ +0.850545 mm
+```
+
+R07 的 `previous_state_ref` 指向 R06；R08 的 `previous_state_ref` 指向 R07。真实 restart + missed boundary + backfill 没有断 posterior chain。
+
+每小时 evidence pair 也在前移：R00 使用 17Z assumption pair，R01 使用 18Z pair，依次推进；R08 使用 01Z pair。
+
+---
+
+## AJ15. 现在到底卡在哪
+
+当前没有已观察到的 engineering first-red。
+
+当前是两个独立时间门：
+
+### Lane A — rehearsal R23
+
+```text
+R23
+= 2026-09-21T17:00:00Z
+```
+
+在 R23 前不得 finalize。现在只让 same run 继续真实 UTC hourly execution。
+
+### Lane B — Formal post-arm Stage 7
+
+```text
+next eligible stage authority boundary
+= 2026-09-22T04:00:00Z
+
+Formal A0
+= 2026-09-22T05:00:00Z
+
+Formal O00
+= 2026-09-22T06:00:00Z
+```
+
+Stage 7 必须等真实时间到 04Z，不能 fake `--now`，不能提前制造 future authority。
+
+---
+
+## AJ16. Rehearsal 下一步严格顺序
+
+1. 不做任何新的 fault / recovery / cleanup。
+2. 只用 `node scripts/runtime_acceptance/RUN_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_V1.cjs status` 观察；不要修改 run。
+3. 正常要求每小时 slot_count 前进，`completed + degraded + failed == slot_count`，`failed == 0`，cursor oldest-first 前进。
+4. Docker Desktop / Windows 主机保持运行；不要 sleep、reboot、stop Docker。
+5. 到实际 `2026-09-21T17:00:00Z` 之后才执行：
+
+```text
+node scripts/runtime_acceptance/RUN_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_V1.cjs finalize
+```
+
+6. final target：
+
+```text
+status
+= PASS
+
+scheduler_slot_count
+= 24
+
+terminal_tick_count
+= 24
+
+qualification_rehearsal_baseline_fact_count
+= 49
+
+controlled_restart_backfill
+= PASS
+
+fault proof source
+= SUPPLEMENTAL_CONTROLLED_BOUNDARY
+
+formal_closure_substituted
+= false
+```
+
+7. finalize 前如果又红，不要 cleanup。先保存 `status`、proof、container state、logs、scheduler slots、cursor、terminal ticks，再做 bounded recovery。
+8. finalize PASS 后也先保留所有 local proof；不要因为 rehearsal PASS 就 merge #3616 或声称 Stage 1B closure。
+
+---
+
+## AJ17. Formal Step 7 / A0 / O00-O23 下一步严格顺序
+
+到 `2026-09-22T04:00:00Z` 后：
+
+1. 再验证 protected main 仍 exact `0c71e558...`。
+2. 再验证 Formal arm identity 仍 `sha256:bb2b3d...`。
+3. 使用已预建 `mcft-cap09/formal-v5-post-arm-stage-20260922t04z-v1`。
+4. 手工 dispatch rolling current-crop candidate；必须 actual time，禁止 fake `--now`。
+5. 生成新的 effective current Biological Stage Authority。
+6. authority 必须 ACTIVE / RESOLVED / VALID，allowed epistemic class，覆盖 A0→O23 inclusive。
+7. architecture effectiveness 固定 artifact：
+
+```text
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
+
+sha256
+= sha256:acffd98b6e014db4d11a3374a50a2e576be3396aef33ed456f7ee104ee72a1c6
+```
+
+8. 预期 authority artifact 名形如 `...EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-22T04Z-V1.json`；实际以 builder 输出为准，不要预造内容。
+9. registry 只 append 一次。
+10. PR 只能包含 authority add + registry append；不得带 #3616/runtime/workflow/QCP 变化。
+11. exact qualification / merge。
+12. post-arm continuity verifier 必须 PASS。
+13. actual time >= `2026-09-22T05:00:00Z` 后才允许 Formal A0。
+14. O00 从 `2026-09-22T06:00:00Z` 开始，随后 O00-O23 走真正 authority-bearing Stage 1B closure。
+
+---
+
+## AJ18. 必须避免的坑
+
+- **落库方式**：#3298 handoff 使用 pure-prepend；新 section 放文件最顶部；旧历史全文原样保留。不要在 43k 行尾部继续追加造成 continuation 断层。
+- 不要把 AI 的 d054 / e8074 / #3611 三红重新当当前状态；那些已被后续 merge supersede。
+- 不要 merge #3616；active Formal arm 要求 protected main exact continuity。
+- 不要因为 rehearsal status 里 `formal_v5_arm=false` 就误判 production Formal arm 不存在。
+- 不要把 internal O00/O01... label 叫 Formal O00/O01。rehearsal 对外必须叫 R00-R23。
+- 不要把 scheduler `DEGRADED` 写成 tick failed。当前 9 个 canonical tick 都是 A1_COMPLETED；DEGRADED 来自 assumption forcing health。
+- 不要把 controlled weather/ET0 assumptions 冒充 KBS / NOAA live provider evidence。
+- 不要把 A0 rehearsal bootstrap `2026-09-20T17Z` 和 Formal A0 `2026-09-22T05Z` 混在一起。
+- 不要覆盖 / 删除原 R05 FAIL proof。它是 harness timing defect 的真实历史。
+- 不要再重复 arm supplemental fault；当前 supplemental 已 PASS。
+- `docker compose stop/start` 不一定增加 Docker `RestartCount`；不要以 RestartCount=0 推断没有受控 restart。
+- Compose `start twin-runtime` 可能被 profile/dependency graph 限制；恢复时只能用已收口 exact-run recovery path，禁止随意 `down/up` 整套 stack。
+- PostgreSQL `pg_isready` 不等于 init scripts 完成；保留 `facts` relation barrier。
+- Formal store materialized-zero re-arm 禁止手工 truncate/reset。
+- post-arm Step 7 不能 fake future clock。
+- current Sep20 authority 不覆盖 Formal A0→O23；必须 fresh Sep22 authority。
+- rehearsal PASS 只证明 runtime survival/observability，不是 Formal closure。
+- finalize 必须 actual >= R23；早调用应 fail-closed，不能绕。
+- runtime subject e1a54 与 control-script head c80 是两个不同 provenance；不要 silent rewrite。
+
+---
+
+## AJ19. Stop conditions
+
+以下任一情况立即 STOP 并先取证：
+
+```text
+protected main != 0c71e55843c659cce402a1457d481e412cdc203c
+
+Formal arm identity drift
+
+rehearsal container exits unexpectedly
+
+scheduler failed > 0
+
+cursor stops progressing across due boundaries
+
+terminal count diverges from persisted slots without bounded explanation
+
+fault proof regresses from PASS_SUPPLEMENTAL
+
+qualification store / Formal store namespace collision
+
+production DB or raw namespace mutation from rehearsal
+
+attempt to merge #3616 during active Formal arm
+
+attempt to start Formal A0 before fresh Sep22 authority
+
+attempt to call R00-R23 Stage 1B closure
+```
+
+---
+
+## AJ20. 下一对话第一组动作
+
+先不要改代码。
+
+第一步只读：
+
+```text
+git rev-parse HEAD
+git status --porcelain
+node scripts/runtime_acceptance/RUN_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_V1.cjs status
+```
+
+如果 rehearsal 仍 healthy，就继续让它跑，不要因为“想推进”而人为干预。
+
+如果已经 >= R23，再走 finalize。
+
+如果当前时间仍 < R23，下一对话的工作就是观察真实小时连续性，而不是新开 successor。
+
+与此同时保持 Formal lane 冻结到 Sep22 04Z Stage 7；不要把 rehearsal 和 Formal lane 合并。
+
+---
+
+## AJ21. Current status matrix
+
+```text
+protected main
+= 0c71e55843c659cce402a1457d481e412cdc203c
+
+#3611
+= MERGED
+
+#3613
+= MERGED
+
+#3615
+= MERGED
+
+#3616
+= OPEN / DRAFT / CLEAN / DO NOT MERGE
+
+#3616 head
+= c80f4fc3de4680b50f4f22944e956eb9de904792
+
+#3616 exact-head required workflows
+= ALL OBSERVED SUCCESS
+
+Formal-v5 arm
+= ARMED
+
+Formal A0
+= NOT STARTED
+
+Formal O00-O23
+= NOT STARTED
+
+rehearsal runtime subject
+= e1a54da2671e7752bc5357c651e023517e8347f2
+
+rehearsal last directly observed slots
+= 9
+
+rehearsal last directly observed failed
+= 0
+
+rehearsal last directly observed cursor
+= O09 next / O08 terminal
+
+rehearsal fault proof
+= PASS_SUPPLEMENTAL
+
+canonical R00-R08 terminal ticks
+= 9 x A1_COMPLETED
+
+current blocker
+= NONE OBSERVED
+
+current gate
+= REAL TIME TO R23
+```
+
+---
+
+## AJ22. Handoff bottom line
+
+当前已经完成了 fresh Formal store re-arm、exact-main owner cutover、H5、new Formal-v5 arm、schema/ACL idempotent revalidation，并把真实时钟 runtime qualification 真正跑起来。
+
+rehearsal 不但连续生成了 R00-R08 canonical ticks，还真实经历了一次进程停止、漏掉 R07、恢复、oldest-first backfill、fencing token 前进、O08 catch-up，而且 posterior chain 没断。
+
+当前没有必要再造新架构或重跑 24h。现在最重要的是保持同一 run 活着，直到 R23，再 finalize exact 24 terminal proof。
+
+Formal closure 仍是另一条独立 lane：Sep22 04Z fresh biological-stage authority → Sep22 05Z Formal A0 → Sep22 06Z O00 → Sep23 05Z O23。
+
+本 AJ 不授权 merge #3616、cleanup active rehearsal、production main drift、提前 Stage 7、提前 Formal A0、提前 Formal O00-O23，或把 rehearsal evidence promotion 为 Stage 1B closure。
+
+
 # AI — 2026-09-20 Real-Clock Qualification Rehearsal / Formal-v5 Successor Regression Closure Frontier
 
 ## AI0. 一句话接手结论
