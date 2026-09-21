@@ -41,13 +41,28 @@ export const CAP05_FORECAST_RESIDUAL_ROUNDING_RULE_VERSION_V1 = "1" as const;
 export const CAP05_FORECAST_ASSIMILATION_RELATION_POLICY_V1 = "DISTINCT_UNLESS_EXPLICIT_EQUIVALENCE_PROOF_V1" as const;
 
 export type Cap05ForecastObservationQualityV1 = "PASS" | "LIMITED";
+export const CAP05_FORECAST_OBSERVATION_OPERATOR_200MM_V1 =
+  "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1" as const;
+export const CAP05_FORECAST_OBSERVATION_OPERATOR_100MM_V1 =
+  "POINT_100MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1" as const;
+export type Cap05ForecastObservationOperatorIdV1 =
+  | typeof CAP05_FORECAST_OBSERVATION_OPERATOR_200MM_V1
+  | typeof CAP05_FORECAST_OBSERVATION_OPERATOR_100MM_V1;
+
+function forecastObservationOperatorV1(
+  value: unknown,
+): Cap05ForecastObservationOperatorIdV1 {
+  if (value === CAP05_FORECAST_OBSERVATION_OPERATOR_200MM_V1
+    || value === CAP05_FORECAST_OBSERVATION_OPERATOR_100MM_V1) return value;
+  throw new Error("CAP05_RESIDUAL_OBSERVATION_OPERATOR_UNSUPPORTED");
+}
 
 export type Cap05ForecastObservationProjectionV1 = {
   projection_method_id: typeof CAP05_FORECAST_OBSERVATION_PROJECTION_METHOD_ID_V1;
   projection_method_version: typeof CAP05_FORECAST_OBSERVATION_PROJECTION_METHOD_VERSION_V1;
   variance_projection_method_id: typeof CAP05_FORECAST_OBSERVATION_VARIANCE_METHOD_ID_V1;
   forecast_point_member_ref_policy_id: typeof CAP05_FORECAST_POINT_MEMBER_REF_POLICY_ID_V1;
-  observation_operator_id: "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1";
+  observation_operator_id: Cap05ForecastObservationOperatorIdV1;
   observation_operator_version: "1";
   observation_operator_h: "1.000000";
   direct_state_equivalence: false;
@@ -132,6 +147,7 @@ export type ProjectCap05ForecastObservationInputV1 = {
   actual_observation_value: string;
   actual_observation_variance: string;
   representativeness_variance: string;
+  observation_operator_id?: Cap05ForecastObservationOperatorIdV1;
 };
 
 export type BuildCap05ForecastResidualInputV1 = ProjectCap05ForecastObservationInputV1 & {
@@ -374,7 +390,9 @@ export function projectCap05ForecastPointToObservationV1(
     projection_method_version: CAP05_FORECAST_OBSERVATION_PROJECTION_METHOD_VERSION_V1,
     variance_projection_method_id: CAP05_FORECAST_OBSERVATION_VARIANCE_METHOD_ID_V1,
     forecast_point_member_ref_policy_id: CAP05_FORECAST_POINT_MEMBER_REF_POLICY_ID_V1,
-    observation_operator_id: "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
+    observation_operator_id: forecastObservationOperatorV1(
+      input.observation_operator_id ?? CAP05_FORECAST_OBSERVATION_OPERATOR_200MM_V1,
+    ),
     observation_operator_version: "1",
     observation_operator_h: "1.000000",
     direct_state_equivalence: false,
@@ -431,8 +449,8 @@ function validateProjectionV1(payload: Cap05ForecastObservationProjectionV1): vo
     || payload.forecast_point_member_ref_policy_id !== CAP05_FORECAST_POINT_MEMBER_REF_POLICY_ID_V1) {
     throw new Error("CAP05_RESIDUAL_PROJECTION_POLICY_MISMATCH");
   }
-  if (payload.observation_operator_id !== "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1"
-    || payload.observation_operator_version !== "1"
+  forecastObservationOperatorV1(payload.observation_operator_id);
+  if (payload.observation_operator_version !== "1"
     || payload.observation_operator_h !== "1.000000"
     || payload.direct_state_equivalence !== false) {
     throw new Error("CAP05_RESIDUAL_OBSERVATION_OPERATOR_MISMATCH");
