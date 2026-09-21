@@ -2,14 +2,16 @@ import React from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   isMcftApiError,
-  readMcftForecasts,
-  readMcftRuntime,
-  readMcftStates,
   resolveMcftRuntimeScope,
   type McftApiErrorV1,
   type McftCollectionPageV1,
   type McftRuntimeReadModelV1,
 } from "../../../api/mcftFieldTwinRuntime";
+import {
+  readFouiMcftForecasts,
+  readFouiMcftRuntime,
+  readFouiMcftStates,
+} from "../../../api/fouiFieldIntelligence";
 import { useLocale } from "../../../lib/locale";
 import { buildFieldIntelligenceOverviewVmV1 } from "../../../viewmodels/mcftFieldIntelligenceVm";
 import "../../../styles/fouiFieldOperations.css";
@@ -45,9 +47,9 @@ export default function FieldIntelligenceDetailPage(): React.ReactElement {
     if (!scopeResolution.ok) return () => { active = false; };
     setLoadState({ status: "loading" });
     Promise.all([
-      readMcftRuntime(scopeResolution.scope),
-      readMcftStates(scopeResolution.scope),
-      readMcftForecasts(scopeResolution.scope),
+      readFouiMcftRuntime(scopeResolution.scope),
+      readFouiMcftStates(scopeResolution.scope),
+      readFouiMcftForecasts(scopeResolution.scope),
     ]).then(([runtime, states, forecasts]) => {
       if (active) setLoadState({ status: "ready", runtime, states, forecasts });
     }).catch((reason: unknown) => {
