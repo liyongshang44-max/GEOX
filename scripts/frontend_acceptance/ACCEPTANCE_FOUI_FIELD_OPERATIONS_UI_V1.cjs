@@ -59,7 +59,7 @@ if (!hasAll(source.fieldDetail, ['readFouiMcftRuntime', 'readFouiMcftStates', 'r
 if (!lacksAll(source.canonicalField, ['buildFieldIntelligenceOverviewVmV1', 'fouiCanonicalDisclosure', 'data-foui-surface="field-intelligence-detail"'])) fail('FOUI_MUTATED_MCFT_PRODUCT_SURFACE');
 
 if (!lacksAll(source.home, ['priorityText', 'item.priority', 'risk_score', 'severityText'])) fail('FOUI_UI_HOME_LEGACY_PRIORITY_PROMOTION');
-if (!hasAll(source.agronomy, ['ADR DecisionResult', 'GovernedActionCaseProjection runtime', 'recommendation', 'approval'])) fail('FOUI_UI_AGRONOMY_BOUNDARY');
+if (!hasAll(source.agronomy, ['ADR DecisionResult', 'READ-ONLY · NO ADR PROMOTION', 'Candidate ≠ ADR DecisionResult', 'recommendation.read'])) fail('FOUI_UI_AGRONOMY_BOUNDARY');
 if (!hasAll(source.operations, ['FOUI does not own approve()', 'APPROVAL_PENDING', 'DISPATCH_PENDING', 'EXECUTION_EXCEPTION', 'EVIDENCE_INSUFFICIENT', 'AcceptanceResult ≠ Outcome'])) fail('FOUI_UI_OPERATIONS_BOUNDARY');
 if (!lacksAll(source.operations, ['priorityText', 'item.priority', 'risk_score'])) fail('FOUI_UI_OPERATIONS_LEGACY_PRIORITY_PROMOTION');
 
