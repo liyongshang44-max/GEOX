@@ -178,9 +178,22 @@ for(const wf of walk(".github/workflows",/\.ya?ml$/)){
     seeds,owner:inferOwner(t,wf),parse_status:seeds.length||cls==="GOVERNANCE_ONLY"||cls==="QUALIFICATION"||inferOwner(t,wf)?"PARSED_OR_OWNER_BOUND":"UNPARSED"
   });
 }
+function composeServices(text){
+  const out=[];
+  const lines=text.split(/\r?\n/);
+  let inServices=false;
+  for(const line of lines){
+    if(/^services:\s*$/.test(line)){inServices=true;continue;}
+    if(inServices&&/^\S/.test(line)) break;
+    if(!inServices) continue;
+    const m=/^  ([A-Za-z0-9_.-]+):\s*$/.exec(line);
+    if(m) out.push(m[1]);
+  }
+  return out;
+}
 for(const compose of fs.readdirSync(ROOT).filter(x=>/^docker-compose.*\.ya?ml$/.test(x)).sort()){
   const t=read(compose),cls=/qualification|neg_|negative|rehearsal|simulator/i.test(compose)?"QUALIFICATION":/production|commercial/i.test(compose)?"PRODUCTION_ONLINE":"OPERATOR_TRIGGERED";
-  const services=[...t.matchAll(/^  ([A-Za-z0-9_.-]+):\s*$/gm)].map(m=>m[1]);
+  const services=composeServices(t);
   for(const service of services){
     const seeds=extractSeeds(t,"");
     roots.push({
@@ -237,11 +250,23 @@ const productReach=new Set();
 for(const r of uniqueRoots) if(productClasses.has(r.class)) for(const f of rootReach.get(r.id)||[]) productReach.add(f);
 const anyReach=new Set();
 for(const r of uniqueRoots) for(const f of rootReach.get(r.id)||[]) anyReach.add(f);
+const rootOwnersByFile=new Map();
+const rootIdsByFile=new Map();
+for(const r of uniqueRoots){
+  const owner=r.owner||null;
+  for(const f of rootReach.get(r.id)||[]){
+    if(!rootOwnersByFile.has(f)) rootOwnersByFile.set(f,new Set());
+    if(!rootIdsByFile.has(f)) rootIdsByFile.set(f,new Set());
+    if(owner) rootOwnersByFile.get(f).add(owner);
+    rootIdsByFile.get(f).add(r.id);
+  }
+}
 
 const inv=json(BLINE);
 const blineByPath=new Map((inv.surfaces||[]).map(x=>[x.source_path,x]));
 const v2=exists("acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_AUDIT_V2.json")?JSON.parse(fs.readFileSync(V2_OUT,"utf8")):null;
 const mRows=new Map((v2?.mandatory_mcft_reconciliation||[]).map(x=>[x.id,x]));
+const v2BlineRows=new Map((v2?.bline_surface_reconciliation?.rows||[]).map(x=>[x.surface_id,x]));
 
 function explicitNonProductRoot(r){return ["QUALIFICATION","GOVERNANCE_ONLY","DATABASE_BOOTSTRAP","HISTORICAL_INACTIVE"].includes(r.class);}
 const rootOwnership=uniqueRoots.map(r=>{
@@ -292,19 +317,38 @@ function rootTextReferenceProof(file){
 }
 const sourceRows=candidates.map(file=>{
   const b=blineByPath.get(file);
+  const rootOwners=[...(rootOwnersByFile.get(file)||new Set())].sort();
+  const rootIds=[...(rootIdsByFile.get(file)||new Set())].sort();
+  const predecessor=b?v2BlineRows.get(b.surface_id):null;
   let capability=b?"BLINE:"+b.surface_id:null;
+  if(!capability && rootOwners.length) capability="ROOT_OWNED:"+rootOwners.join("|");
   if(!capability && (file.includes("/runtime/twin_runtime/")||file.includes("/external_evidence/"))) capability="MCFT_RUNTIME_FAMILY";
   if(!capability && file.startsWith("apps/judge/")) capability="BLINE-JUDGE";
   if(!capability && file.startsWith("apps/executor/")) capability="BLINE-EXECUTOR";
   if(!capability && file.startsWith("apps/telemetry-ingest/")) capability="BLINE-TELEMETRY-INGEST";
-  const explicit=explicitSourceClass(file);
+  let explicit=explicitSourceClass(file);
   const root_refs=rootTextReferenceProof(file);
-  const reachable=anyReach.has(file)||root_refs.length>0;
+  const predecessorWired=predecessor?.final_disposition==="WIRED_AND_PROVEN";
+  const predecessorIntentional=predecessor?.final_disposition==="INTENTIONALLY_DISCONNECTED";
+  if(!explicit&&predecessorIntentional) explicit="PREDECESSOR_INTENTIONALLY_DISCONNECTED";
+  const graphReachable=anyReach.has(file);
+  const reachable=graphReachable||root_refs.length>0||predecessorWired;
   const product_reachable=productReach.has(file);
-  return {source_path:file,registered_capability:capability,reachable,product_reachable,root_reference_proof:root_refs,explicit_non_product_class:explicit};
+  return {
+    source_path:file,
+    registered_capability:capability,
+    reachable,
+    product_reachable,
+    graph_reachable:graphReachable,
+    root_owners:rootOwners,
+    root_ids:rootIds,
+    root_reference_proof:root_refs,
+    predecessor_v2_disposition:predecessor?.final_disposition||null,
+    explicit_non_product_class:explicit
+  };
 });
 const orphanSources=sourceRows.filter(x=>!x.reachable&&!x.explicit_non_product_class);
-const unregisteredSources=sourceRows.filter(x=>!x.registered_capability&&!x.explicit_non_product_class);
+const unregisteredSources=sourceRows.filter(x=>!x.registered_capability&&!x.explicit_non_product_class&&!x.reachable);
 
 const activeUnresolved=allUnresolved.filter(x=>productReach.has(x.importer));
 
@@ -396,9 +440,15 @@ for(const x of blineSemanticUnchecked) failures.push("SEMANTIC_EDGE_UNCHECKED:"+
 for(const x of semanticConflictUnchecked) failures.push("SEMANTIC_EDGE_UNCHECKED:"+x.family);
 if(!freshBinding.exact_match) failures.push("STALE_AUDIT_EVIDENCE_SUBJECT");
 
+const scannerIntegrityFailures=[
+  ...activeUnresolved.map(x=>"UNRESOLVED_ACTIVE_IMPORT:"+x.importer+":"+x.specifier),
+  ...unparsedActiveRoots.map(x=>"UNPARSED_ACTIVE_ROOT_COMMAND:"+x.id),
+  ...(freshBinding.exact_match?[]:["STALE_AUDIT_EVIDENCE_SUBJECT"])
+];
 const result={
   schema_version:"geox_whole_repository_audit_completeness_v3",
   status:failures.length?"FAIL":"PASS",
+  scanner_integrity_status:scannerIntegrityFailures.length?"FAIL":"PASS",
   subject_sha:head,
   method_ref:METHOD,
   invariants:{
@@ -413,14 +463,15 @@ const result={
   all_complete_or_effective_capabilities:capRows,
   authority_capable_source_reverse_reachability:sourceRows,
   unowned_execution_roots:unownedRoots,
-  orphan_authority_capable_sources:orphanSources,
-  unregistered_authority_capable_sources:unregisteredSources,
+  orphan_authority_capable_sources:orphanSources.map(x=>({...x,final_disposition:"UNWIRED_DEFECT"})),
+  unregistered_authority_capable_sources:unregisteredSources.map(x=>({...x,final_disposition:"UNWIRED_DEFECT"})),
   capability_reachability_gaps:capGaps,
   unresolved_active_imports:activeUnresolved,
   unparsed_active_root_commands:unparsedActiveRoots,
   semantic_identity_family_conflicts:semanticFamilyConflicts,
   semantic_edge_unchecked:[...blineSemanticUnchecked,...semanticConflictUnchecked],
   fresh_exact_head_evidence_binding:freshBinding,
+  scanner_integrity_failures:scannerIntegrityFailures,
   failures,
   non_effects:{
     product_semantic_change:false,
