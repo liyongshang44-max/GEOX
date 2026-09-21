@@ -1,0 +1,135 @@
+name: GEOX Whole-Repository Authority Runtime Reachability Audit V2
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/architecture/semantic_convergence/GEOX-WHOLE-REPOSITORY-AUTHORITY-RUNTIME-REACHABILITY-*.md'
+      - 'docs/architecture/semantic_convergence/GEOX-WHOLE-REPOSITORY-AUTHORITY-RUNTIME-REACHABILITY-*.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_METHOD_V2.cjs'
+      - 'scripts/governance_acceptance/RUN_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_AUDIT_V2.cjs'
+      - '.github/workflows/geox-whole-repository-authority-runtime-reachability-audit-v2.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_audit_cap05_residual_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_audit_cap05_residual_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_audit_cap05_residual_acceptance
+      MCFT_CAP_05_S8_DESTRUCTIVE_ACCEPTANCE: '1'
+      GEOX_AUDIT_ISOLATED_CI: '1'
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Assert isolated audit boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GEOX_AUDIT_ISOLATED_CI}" = "1"
+          test -z "${GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT:-}"
+          test -z "${GEOX_MCFT_CAP09_PRODUCTION_FORMAL_WINDOW_MANIFEST_PATH:-}"
+          test -z "${GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH:-}"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Freeze method and safety contract
+        run: node scripts/governance_acceptance/ACCEPTANCE_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_METHOD_V2.cjs
+
+      - name: Execute fresh whole-repository audit
+        run: node scripts/governance_acceptance/RUN_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_AUDIT_V2.cjs
+
+      - name: Prove production V2 static routing
+        run: |
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+
+      - name: Build exact server package and verify dist root
+        run: |
+          pnpm --filter @geox/server run build
+          test -f apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js
+          grep -Fq 'runMcftCap09TwinRuntimeProcessV2' apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js
+
+      - name: Prove CAP-05 controlled residual path in disposable PostgreSQL
+        run: |
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FORECAST_RESIDUAL_OUTCOME_TICK_DB.ts | tee acceptance-output/GEOX_AUDIT_CAP05_RESIDUAL_POSTGRESQL.log
+          grep -q '0 FAIL' acceptance-output/GEOX_AUDIT_CAP05_RESIDUAL_POSTGRESQL.log
+
+      - name: Prove CAP-07 read route registration
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_07_S4_API.ts
+
+      - name: Assert audit produced no rehearsal or Formal effects
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p='acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_AUDIT_V2.json';
+          const r=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(r.product_semantic_delta!==0) throw new Error('AUDIT_PRODUCT_SEMANTIC_DELTA');
+          if(r.runtime_wiring_delta!==0) throw new Error('AUDIT_RUNTIME_WIRING_DELTA');
+          if(r.production_database_mutation!==false) throw new Error('AUDIT_PRODUCTION_DATABASE_MUTATION');
+          if(r.rehearsal_resource_use!==false) throw new Error('AUDIT_REHEARSAL_RESOURCE_USE');
+          if(r.formal_store_mutation!==false) throw new Error('AUDIT_FORMAL_STORE_MUTATION');
+          console.log(JSON.stringify({
+            audit_execution:'PASS',
+            audit_closure_status:r.status,
+            orphan_capability_list:r.orphan_capability_list,
+            qualification_production_divergence_list:r.qualification_production_divergence_list
+          }));
+
+      - name: Upload audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: geox-whole-repo-runtime-reachability-audit-v2
+          path: acceptance-output/
+          if-no-files-found: error
+
+      - name: Closure gate
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_AUDIT_V2.json','utf8'));
+          if(r.status!=='PASS') {
+            throw new Error('WHOLE_REPOSITORY_RUNTIME_REACHABILITY_CLOSURE_BLOCKED:'+JSON.stringify({
+              orphan_capability_list:r.orphan_capability_list,
+              qualification_production_divergence_list:r.qualification_production_divergence_list,
+              mandatory:r.mandatory_mcft_reconciliation.map(x=>({id:x.id,disposition:x.final_disposition}))
+            }));
+          }
