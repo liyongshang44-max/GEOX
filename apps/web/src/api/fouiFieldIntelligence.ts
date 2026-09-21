@@ -1,5 +1,5 @@
 // FOUI-owned same-origin read adapter.
-// Boundary: consume existing GET-only Field / MCFT endpoints through the web /api proxy.
+// Boundary: consume existing GET-only canonical MCFT endpoints through the web /api proxy.
 // It does not define authority, add backend routes, or alter the canonical MCFT client.
 
 import {
@@ -11,11 +11,6 @@ import type {
   McftFieldTwinScopeV1,
   McftRuntimeReadModelV1,
 } from "./mcftFieldTwinRuntime";
-import type {
-  FieldListItem,
-  FieldRuntimeScopeOptions,
-} from "./fields";
-
 const MCFT_ALLOWED_ERROR_STATUSES = [400, 403, 404, 409, 503];
 
 function sameOrigin(path: string): string {
@@ -57,27 +52,6 @@ function parseMcftError(status: number, bodyText: string, url: string): McftApiE
       url,
     };
   }
-}
-
-export async function fetchFouiFields(): Promise<FieldListItem[]> {
-  const result = await apiRequestWithPolicy<{ ok?: boolean; items?: FieldListItem[]; fields?: FieldListItem[] }>(
-    sameOrigin("/api/v1/fields"),
-    { method: "GET" },
-    { dedupe: true, silent: true, timeoutMs: 10000 },
-  );
-  if (!result.ok) return [];
-  if (Array.isArray(result.data.items)) return result.data.items;
-  return Array.isArray(result.data.fields) ? result.data.fields : [];
-}
-
-export async function fetchFouiFieldRuntimeScopeOptions(fieldId: string): Promise<FieldRuntimeScopeOptions> {
-  const result = await apiRequestWithPolicy<FieldRuntimeScopeOptions>(
-    sameOrigin(`/api/v1/fields/${encodeURIComponent(fieldId)}/runtime-scope-options`),
-    { method: "GET" },
-    { dedupe: true, silent: true, timeoutMs: 10000 },
-  );
-  if (!result.ok) throw new Error(`FIELD_RUNTIME_SCOPE_HTTP_${result.status}`);
-  return result.data;
 }
 
 function runtimePath(scope: McftFieldTwinScopeV1, suffix = ""): string {
