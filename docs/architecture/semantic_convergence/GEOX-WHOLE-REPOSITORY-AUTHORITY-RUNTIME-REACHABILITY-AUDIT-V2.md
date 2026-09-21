@@ -204,3 +204,70 @@ The audit and repair work must not depend on the current rehearsal container, it
 ## 17. Method exit
 
 Freeze scan roots, execution-root classes, lifecycle-authority resolution, reachability rules, runtime-proof requirements, semantic compatibility dimensions, qualification-production comparison, four terminal dispositions, mandatory MCFT items, and non-effects. Then run a fresh whole-repository audit on one exact protected-main SHA. Historical PASS counts are not current graph-completeness proof.
+
+
+## 18. Completeness invariants
+
+The audit itself is not complete merely because all previously known surfaces have a disposition. The following six invariants are mandatory and fail closed.
+
+### C-01 Every execution root is owned
+
+Every discovered execution root must map to at least one registered capability or to an explicit non-product execution class such as qualification, governance-only, database bootstrap, or historical inactive.
+
+Failure:
+
+    UNOWNED_EXECUTION_ROOT
+
+### C-02 Every effective capability is reachable
+
+Every COMPLETE/effective capability must identify an expected execution owner and expected execution root. Required static reachability and runtime proof must be present.
+
+Failures:
+
+    EXPECTED_OWNER_MISSING
+    EXPECTED_ROOT_MISSING
+    RUNTIME_PROOF_REQUIRED_BUT_MISSING
+
+### C-03 Every semantic edge is adjudicated
+
+Every declared or discovered active producer-consumer semantic edge must be checked. A producer/consumer pair may not be silently assumed compatible.
+
+Failure:
+
+    SEMANTIC_EDGE_UNCHECKED
+
+### C-04 Reverse orphan discovery
+
+Every authority-capable or execution-capable source must be reachable from a current execution root or explicitly classified historical, qualification-only, or intentionally disconnected.
+
+Failure:
+
+    ORPHAN_AUTHORITY_CAPABLE_SOURCE
+
+### C-05 Exact-head freshness
+
+Final audit evidence must bind to the exact current audit branch head. Historical audit evidence may be retained but may not stand in for the current head.
+
+Failure:
+
+    STALE_AUDIT_EVIDENCE_SUBJECT
+
+### C-06 Graph parse completeness
+
+Unresolved local imports and active execution-root commands that cannot be parsed into a current source/root boundary may not be ignored.
+
+Failures:
+
+    UNRESOLVED_ACTIVE_IMPORT
+    UNPARSED_ACTIVE_ROOT_COMMAND
+
+Required completeness outputs:
+
+    execution_root_ownership_matrix
+    authority_capable_source_reverse_reachability
+    unresolved_active_imports
+    unparsed_active_root_commands
+    semantic_identity_family_conflicts
+    fresh_exact_head_evidence_binding
+
+No "known findings only" closure claim is permitted until all six invariants close.
