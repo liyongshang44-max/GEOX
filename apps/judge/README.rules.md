@@ -1,6 +1,6 @@
 # Judge ruleset (SSOT)
 
-This repo uses **config/judge/ruleset_v1.json** as the **Single Source of Truth**.
+This repo uses **config/judge/default.json** as the **Single Source of Truth**. `config/judge/ruleset_v1.json` is retained only as a legacy compatibility snapshot and is not an active runtime or generator authority source.
 
 Generated artifacts:
 - `apps/judge/src/generated/ruleset.ts`
