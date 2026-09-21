@@ -64,7 +64,8 @@ function importsFor(file){
   try{t=read(file)}catch{return {resolved:[],unresolved:[]};}
   const specs=[];
   const patterns=[
-    /(?:import|export)\s+(?:[^"'\n;]+?\s+from\s+)?["']([^"']+)["']/g,
+    /(?:import|export)\s+[^;]*?\s+from\s+["']([^"']+)["']/g,
+    /import\s*["']([^"']+)["']/g,
     /import\(\s*["']([^"']+)["']\s*\)/g,
     /require\(\s*["']([^"']+)["']\s*\)/g
   ];
