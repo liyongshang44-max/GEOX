@@ -54,6 +54,9 @@ try{
     'original_fault_failure_preserved:true',
     'supplemental_proof_substitutes_only_fault_mechanics_proof:true',
     '"arm-supplemental-fault"',
+    '"recover-supplemental-fault"',
+    'recovered_after_controller_restart_gap:true',
+    '"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_TWIN_NOT_RUNNING_AFTER_START"',
     '"PASS_SUPPLEMENTAL"',
     'formal_closure_substituted:false',
     '"qualification-verify"',
@@ -103,6 +106,7 @@ try{
     canonical_facts_relation_readback_required:true,
     supplemental_fault_salvage_preserves_original_failure:true,
     supplemental_fault_salvage_does_not_change_runtime_subject:true,
+    supplemental_fault_recovery_is_idempotent_and_exact_run_bound:true,
     production_runtime_kernel_change_required:false,
     production_effect:false,
   });
