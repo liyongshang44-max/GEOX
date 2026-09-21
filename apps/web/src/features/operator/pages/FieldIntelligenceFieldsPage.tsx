@@ -1,30 +1,23 @@
 import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { FieldRuntimeScopeSeasonOption } from "../../../api/fields";
 import {
-  fetchFouiFieldRuntimeScopeOptions,
-  fetchFouiFields,
-} from "../../../api/fouiFieldIntelligence";
+  fetchOperatorTwinOverview,
+  type OperatorTwinOverviewField,
+  type OperatorTwinRequestScope,
+} from "../../../api/operatorTwin";
 import { useLocale } from "../../../lib/locale";
 import "../../../styles/fouiFieldOperations.css";
-
-type FieldOption = { field_id: string; name: string; status: string };
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : String(value ?? "").trim();
 }
 
-function normalizeFields(value: unknown): FieldOption[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => {
-    const row = item && typeof item === "object" ? item as Record<string, unknown> : {};
-    const fieldId = text(row.field_id);
-    return {
-      field_id: fieldId,
-      name: text(row.name ?? row.field_name) || fieldId,
-      status: text(row.status) || "UNKNOWN",
-    };
-  }).filter((item) => item.field_id);
+function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinRequestScope {
+  return {
+    tenant_id: searchParams.get("tenant_id"),
+    project_id: searchParams.get("project_id"),
+    group_id: searchParams.get("group_id"),
+  };
 }
 
 export default function FieldIntelligenceFieldsPage(): React.ReactElement {
@@ -33,54 +26,48 @@ export default function FieldIntelligenceFieldsPage(): React.ReactElement {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedFieldId = text(searchParams.get("field_id"));
-  const [fields, setFields] = React.useState<FieldOption[]>([]);
-  const [seasons, setSeasons] = React.useState<FieldRuntimeScopeSeasonOption[]>([]);
+  const scope = React.useMemo(() => scopeFromSearchParams(searchParams), [searchParams]);
+  const [fields, setFields] = React.useState<OperatorTwinOverviewField[]>([]);
   const [fieldId, setFieldId] = React.useState(requestedFieldId);
-  const [seasonId, setSeasonId] = React.useState("");
-  const [zoneId, setZoneId] = React.useState("");
+  const [seasonId, setSeasonId] = React.useState(text(searchParams.get("season_id")));
+  const [zoneId, setZoneId] = React.useState(text(searchParams.get("zone_id")));
   const [loadingFields, setLoadingFields] = React.useState(true);
-  const [loadingSeasons, setLoadingSeasons] = React.useState(false);
   const [error, setError] = React.useState("");
 
   React.useEffect(() => {
     let active = true;
     setLoadingFields(true);
-    fetchFouiFields()
-      .then((rows) => {
+    setError("");
+    fetchOperatorTwinOverview(scope)
+      .then((response) => {
         if (!active) return;
-        const next = normalizeFields(rows);
+        const next = Array.isArray(response.operator_twin_overview_v1?.fields)
+          ? response.operator_twin_overview_v1.fields
+          : [];
         setFields(next);
-        setFieldId((current) => current || next[0]?.field_id || "");
+        setFieldId((current) => {
+          if (current && next.some((field) => field.field_id === current)) return current;
+          return next[0]?.field_id || "";
+        });
       })
-      .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : String(reason)); })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        setFields([]);
+        setError(reason instanceof Error ? reason.message : String(reason));
+      })
       .finally(() => { if (active) setLoadingFields(false); });
     return () => { active = false; };
-  }, []);
+  }, [scope]);
 
-  React.useEffect(() => {
-    let active = true;
-    setSeasons([]);
-    setSeasonId("");
-    if (!fieldId) return () => { active = false; };
-    setLoadingSeasons(true);
-    fetchFouiFieldRuntimeScopeOptions(fieldId)
-      .then((result) => {
-        if (!active) return;
-        const next = Array.isArray(result.seasons) ? result.seasons : [];
-        setSeasons(next);
-        const activeSeason = next.find((item) => text(item.status).toUpperCase() === "ACTIVE");
-        setSeasonId(text(activeSeason?.season_id ?? next[0]?.season_id));
-      })
-      .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : String(reason)); })
-      .finally(() => { if (active) setLoadingSeasons(false); });
-    return () => { active = false; };
-  }, [fieldId]);
-
-  const ready = Boolean(fieldId && seasonId && zoneId.trim());
+  const selectedField = fields.find((field) => field.field_id === fieldId) ?? null;
+  const ready = Boolean(fieldId && seasonId.trim() && zoneId.trim());
 
   function openField(): void {
     if (!ready) return;
-    const query = new URLSearchParams({ season_id: seasonId, zone_id: zoneId.trim() });
+    const query = new URLSearchParams({
+      season_id: seasonId.trim(),
+      zone_id: zoneId.trim(),
+    });
     navigate(`/operator/field-intelligence/${encodeURIComponent(fieldId)}?${query.toString()}`);
   }
 
@@ -90,7 +77,7 @@ export default function FieldIntelligenceFieldsPage(): React.ReactElement {
         <div>
           <span className="fouiEyebrow">FIELD INTELLIGENCE / MCFT</span>
           <h2>{english ? "Open the exact field world." : "进入精确的田块世界。"}</h2>
-          <p>{english ? "Field Intelligence requires the same exact field, season, and zone scope as canonical MCFT. The product layer never degrades to field-only scope." : "Field Intelligence 与 canonical MCFT 使用同一套精确地块、季节、分区范围；产品层绝不降级为仅地块范围。"}</p>
+          <p>{english ? "Visible fields come from the existing Operator Twin overview. Canonical MCFT reads begin only after field, season, and zone are all explicit." : "可见田块来自现有 Operator Twin overview；只有 field、season、zone 三个范围轴都明确后，才开始读取 canonical MCFT。"}</p>
         </div>
       </section>
 
@@ -99,28 +86,42 @@ export default function FieldIntelligenceFieldsPage(): React.ReactElement {
           <div><span className="fouiEyebrow">EXACT SCOPE</span><h3>{english ? "Choose field context" : "选择田块上下文"}</h3></div>
           <span className="fouiStatePill">{english ? "READ-ONLY · GET" : "只读 · GET"}</span>
         </header>
+
         <div className="fouiScopeForm">
           <label>
             <span>{english ? "Field" : "田块"}</span>
             <select value={fieldId} onChange={(event) => setFieldId(event.target.value)} disabled={loadingFields}>
               <option value="">{loadingFields ? (english ? "Loading…" : "加载中…") : (english ? "Select field" : "选择田块")}</option>
-              {fields.map((field) => <option key={field.field_id} value={field.field_id}>{field.name} · {field.field_id} · {field.status}</option>)}
+              {fields.map((field) => (
+                <option key={field.field_id} value={field.field_id}>
+                  {field.field_name || field.field_id} · {field.field_id}
+                </option>
+              ))}
             </select>
           </label>
           <label>
-            <span>{english ? "Season" : "季节"}</span>
-            <select value={seasonId} onChange={(event) => setSeasonId(event.target.value)} disabled={!fieldId || loadingSeasons}>
-              <option value="">{loadingSeasons ? (english ? "Loading…" : "加载中…") : (english ? "Select season" : "选择季节")}</option>
-              {seasons.map((season) => <option key={text(season.season_id)} value={text(season.season_id)}>{text(season.name) || text(season.season_id)} · {text(season.status) || "UNKNOWN"}</option>)}
-            </select>
+            <span>season_id</span>
+            <input value={seasonId} onChange={(event) => setSeasonId(event.target.value)} placeholder={english ? "Exact season identifier" : "输入精确季节标识"} />
           </label>
           <label>
             <span>zone_id</span>
             <input value={zoneId} onChange={(event) => setZoneId(event.target.value)} placeholder={english ? "Exact zone identifier" : "输入精确分区标识"} />
           </label>
         </div>
+
+        {selectedField ? (
+          <div className="fouiFieldScopePreview">
+            <article><span>{english ? "Current state" : "当前状态"}</span><strong>{selectedField.current_state_text || "—"}</strong></article>
+            <article><span>{english ? "Risk / limitation" : "风险 / 限制"}</span><strong>{selectedField.risk_text || "—"}</strong></article>
+            <article><span>{english ? "Confidence" : "置信度"}</span><strong>{selectedField.confidence_text || "—"}</strong></article>
+            <article><span>{english ? "Data coverage" : "数据覆盖"}</span><strong>{selectedField.data_coverage_text || "—"}</strong></article>
+            <article><span>{english ? "Forecast window" : "预测窗口"}</span><strong>{selectedField.forecast_window_text || "—"}</strong></article>
+            <article><span>{english ? "Next step" : "下一步"}</span><strong>{selectedField.next_step_text || "—"}</strong></article>
+          </div>
+        ) : null}
+
         <div className="fouiScopeFooter">
-          <p>{english ? "Zone stays explicit because the current backend does not expose an authoritative zone-list API." : "当前后端没有权威分区列表接口，因此 zone_id 保持显式输入，不由前端猜测。"}</p>
+          <p>{english ? "Season and zone remain explicit because the current Operator overview does not establish those canonical MCFT scope axes. The product layer does not guess them." : "当前 Operator overview 不建立 canonical MCFT 的 season 与 zone 范围轴，因此两者保持显式输入；产品层不会猜测。"}</p>
           <button type="button" className="fouiButton" disabled={!ready} onClick={openField}>{english ? "Open Field Intelligence" : "打开 Field Intelligence"}</button>
         </div>
         {error ? <div className="fouiBoundaryNotice fouiBoundaryNotice--error">{error}</div> : null}
