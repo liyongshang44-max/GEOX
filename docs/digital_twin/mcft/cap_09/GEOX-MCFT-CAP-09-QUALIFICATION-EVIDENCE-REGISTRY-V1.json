@@ -2323,6 +2323,26 @@
         "artifact_absence_reason": "RUN_LEVEL_EXACT_SUBJECT_REAL_CLOCK_SUCCESSOR_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "817f16fddfa60684b55dbe4f33bdedbd9537749ecdd85223c707e44f61c6d8e1"
+      },
+      {
+        "evidence_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_6983D46F_TWIN_RESTART_V1",
+        "check_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "twin-restart-admission-exact-head-requalification",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "6983d46f13cb843829633515d67ce53ae5c88465",
+        "workflow_name": "mcft-cap-09-phase5-two-service-accelerated-24t",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+        "run_id": 35631389606,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "6983d46f13cb843829633515d67ce53ae5c88465",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:854ad94c7a45f6aa44b06848cd895a0f9163454d75f59715096e277fc9b065ea",
+        "artifact_absence_reason": "RUN_LEVEL_EXACT_SUBJECT_TWIN_RESTART_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "865adc6184269765f09a49eadda08b2099bb3ef305971c03ac969660644e9765"
       }
     ],
     "durable_anchors": {
@@ -3742,6 +3762,32 @@
             "created_at": "2026-09-20T10:46:10Z",
             "updated_at": "2026-09-20T10:47:32Z"
           }
+        },
+        {
+          "evidence_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_6983D46F_TWIN_RESTART_V1",
+          "run_id": 35631389606,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 589,
+            "head_sha": "6983d46f13cb843829633515d67ce53ae5c88465",
+            "base_sha": "0c71e55843c659cce402a1457d481e412cdc203c",
+            "created_at": "2026-09-21T17:20:31Z",
+            "updated_at": "2026-09-21T17:23:19Z",
+            "workflow_path": ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+            "workflow_name": "mcft-cap-09-phase5-two-service-accelerated-24t"
+          },
+          "base_lineage_proof": {
+            "acceptance_id": "MCFT_CAP09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1",
+            "mode": "STRUCTURAL_FIRST_PARENT_MERGE_TREE_EQUIVALENCE_WITH_CURRENT_QCP",
+            "anchor_base_sha": "b689938f6161d01dec06a1ce4ce6f24420c4b3a0",
+            "admitted_base_sha": "0c71e55843c659cce402a1457d481e412cdc203c",
+            "hop_count": 49,
+            "first_parent_chain_complete": true,
+            "merge_tree_equivalence_all": true,
+            "candidate_to_merge_zero_delta_all": true,
+            "bare_sha_allowlist_admission_authorized": false,
+            "acceptance_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs"
+          }
         }
       ],
       "rules": {
@@ -3786,7 +3832,8 @@
           "1444ad55e92b6c519fc61fde7119013be9881721",
           "f7d28aef3d2fe8e65ce0afff64e6f2673c2eb39b",
           "7a9482104e0bbced906f48df220657f39da23b51",
-          "d054b334b3e74f3356b5d02498da9ba845eccdfb"
+          "d054b334b3e74f3356b5d02498da9ba845eccdfb",
+          "0c71e55843c659cce402a1457d481e412cdc203c"
         ],
         "dependency_digest_must_match_current": true,
         "anchor_is_not_production_authority": true
