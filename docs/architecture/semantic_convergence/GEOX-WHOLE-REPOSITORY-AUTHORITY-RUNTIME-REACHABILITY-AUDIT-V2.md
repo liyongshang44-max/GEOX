@@ -157,6 +157,36 @@ SEMANTICALLY_INCOMPATIBLE and UNWIRED_DEFECT are valid audit classifications but
 
 This method does not authorize product semantic change, runtime wiring repair, observation-operator change, CAP-05 contract expansion, CAP-06 activation, model activation, production DB/raw mutation, Formal-v5 arm, A0, O00-O23, Stage 1B closure, MCFT-CAP-09 completion, B-Line reopening, or ADR change.
 
-## 16. Method exit
+## 16. Execution safety boundary
+
+This audit is authorized to continue only through repository/GitHub-isolated work.
+
+Allowed:
+
+    continue #3617 audit closure
+    create independent repair branch
+    create Draft repair PR
+    GitHub-hosted isolated CI
+    static/governance acceptance
+    isolated PostgreSQL acceptance
+    contract design and code implementation
+
+Forbidden:
+
+    merge #3617
+    merge any repair PR
+    advance protected main
+    git switch/reset/pull the current C:\Users\mylr1\GEOX worktree to a repair branch
+    rebuild the currently running rehearsal image
+    docker compose down/up/recreate the current rehearsal project
+    mutate the rehearsal PostgreSQL database
+    cleanup the rehearsal
+    restart the rehearsal unless the rehearsal itself fails
+    mutate Formal store
+    perform re-arm
+
+The audit and repair work must not depend on the current rehearsal container, its PostgreSQL instance, its image, its compose project, or the Formal store. GitHub-hosted PostgreSQL acceptance must use disposable isolated databases only.
+
+## 17. Method exit
 
 Freeze scan roots, execution-root classes, lifecycle-authority resolution, reachability rules, runtime-proof requirements, semantic compatibility dimensions, qualification-production comparison, four terminal dispositions, mandatory MCFT items, and non-effects. Then run a fresh whole-repository audit on one exact protected-main SHA. Historical PASS counts are not current graph-completeness proof.
