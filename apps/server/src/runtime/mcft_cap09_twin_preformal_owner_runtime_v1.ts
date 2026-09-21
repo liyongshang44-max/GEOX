@@ -72,7 +72,12 @@ export async function runMcftCap09TwinPreFormalOwnerRuntimeV1():Promise<void>{
  const ownerPath=req("GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH");
  const raw=JSON.parse(fs.readFileSync(runtimePath,"utf8"));
  const runtime=parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"TWIN_RUNTIME",{
-  deployment_subject_sha:subject,scope:s,runtime_mode:OWNER_CUTOVER_MODE
+  deployment_subject_sha:subject,
+  scope:s,
+  runtime_mode:OWNER_CUTOVER_MODE,
+  // Revalidate the immutable base at its original owner-cutover admission time.
+  // Current-crop freshness is not silently extended to a later process restart.
+  admission_time_utc:String(raw?.activation_fence_time??""),
  });
  readMcftCap09OwnerCutoverAuthorityV1({authority_path:ownerPath,expected_deployment_subject_sha:subject,expected_scope:s});
  loadMcftCap09ProductionStageAuthorityMountsV1({
