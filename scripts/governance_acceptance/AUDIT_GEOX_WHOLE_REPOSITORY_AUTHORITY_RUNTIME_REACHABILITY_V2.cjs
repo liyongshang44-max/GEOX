@@ -82,12 +82,20 @@ function blineDisposition(surface,mcftRows){
 
   if(rt==="INTENTIONAL_NONE")return intentional("INVENTORY_EXPLICITLY_DECLARES_NO_RUNTIME_ACTIVATION");
   if(["RES-063","RES-065","RES-099","RES-102","RES-162","RES-163"].includes(id)){
-    return /KEEP ISOLATED|DO NOT ACTIVATE|ORPHANED|no new runtime consumer|RETAIN ISOLATED/i.test(act+" "+rem)
+    const explicitIsland=/KEEP ISOLATED|DO NOT ACTIVATE|ORPHANED|no new runtime consumer|RETAIN ISOLATED|KEEP AS COMPARISON-ONLY CAPABILITY|NEVER PROMOTE/i.test(act+" "+rem);
+    return explicitIsland
       ?intentional("CAPABILITY_ISLAND_OR_ORPHAN_EXPLICITLY_HELD_OUT_OF_CURRENT_RUNTIME")
       :defect("NOT_PROVEN_CAPABILITY_WITHOUT_EXPLICIT_DISCONNECT_AUTHORITY");
   }
   if(id==="RES-110")return defect("ALTERNATE_JUDGE_RULESET_SOURCE_EXISTS_BUT_CURRENT_PIPELINE_USES_DIFFERENT_SSOT; DOUBLE_SSOT_RECONCILIATION_REQUIRED");
-  if(id==="RES-160")return defect("MIXED_DECISION_ENGINE_SURFACE_HAS_ACTIVE_HARD_RULE_PATH_BUT_ORPHANED_EVALUATE_IRRIGATION_DECISION_SUBCAPABILITY");
+  if(id==="RES-160"){
+    const hardRuleWired=has("apps/server/src/routes/decision_engine_v1.ts","evaluateHardRuleHintsV1(")&&has("apps/server/src/routes/decision_engine_v1.ts","getHardRuleRecommendationBlueprintV1(");
+    const legacyEvaluatorCalled=sourceInboundRefs(p).some(f=>{try{return rd(f).includes("evaluateIrrigationDecisionV1(")}catch{return false}});
+    if(hardRuleWired&&!legacyEvaluatorCalled&&/RETIRE ORPHANED LEGACY EVALUATOR AFTER PROOF/i.test(rem)){
+      return {...wired("ACTIVE_HARD_RULE_SUBCAPABILITY_IS_RUNTIME_REACHABLE; LEGACY_IRRIGATION_EVALUATOR_HAS_NO_CURRENT_CALLER","CURRENT_ROUTE_CALLSITE_PLUS_EXPLICIT_ORPHAN_RETIREMENT_PROOF"),intentional_disconnect_edges:[{capability:"evaluateIrrigationDecisionV1",reason:"ORPHANED_LEGACY_EVALUATOR_EXPLICITLY_TARGETED_FOR_RETIREMENT"}]};
+    }
+    return defect("MIXED_DECISION_ENGINE_SUBCAPABILITY_BOUNDARY_NOT_CLOSED");
+  }
 
   if(/CAPABILITY_PRESENT; NO COMPOSE SERVICE FOUND|EXPLICIT STANDALONE SERVER CAPABILITY; NO REPO COMPOSE ACTIVATION FOUND|EXPLICIT SERVER CAPABILITY; NO COMPOSE SERVICE FOUND|PACKAGE START SCRIPT EXISTS; NO COMPOSE SERVICE OR MAIN-SERVER ROUTING FOUND|PROVEN IF STANDALONE JUDGE STARTED/.test(rt)){
     const judgeRoot=ex("apps/judge/package.json")&&has("apps/judge/package.json","apps/judge/src/server.ts")&&has("apps/judge/src/server.ts","new JudgeRuntime")&&has("apps/judge/src/runtime.ts","JudgePipelineV1");
@@ -133,10 +141,11 @@ function mainV2(){
   const allDefects=[...br.unwired_defects.map(x=>({id:x.surface_id,subject:x.source_path,source:"BLINE_INVENTORY"})),...mDefect.map(x=>({id:x.id,subject:x.subject,source:"MCFT_MANDATORY"}))];
   const allBad=mBad.map(x=>({id:x.id,subject:x.subject,source:"MCFT_MANDATORY"}));
   const dead=[...br.intentional.map(x=>({id:x.surface_id,path:x.source_path,final_disposition:x.final_disposition,reason:x.reason})),...br.unwired_defects.map(x=>({id:x.surface_id,path:x.source_path,final_disposition:x.final_disposition,reason:x.reason}))];
-  const intentional=[...br.intentional.map(x=>({source_id:x.surface_id,edge:x.source_path,final_disposition:"INTENTIONALLY_DISCONNECTED",reason:x.reason})),...mIntentional];
+  const subIntentional=br.rows.flatMap(x=>(x.intentional_disconnect_edges||[]).map(e=>({source_id:x.surface_id,edge:x.source_path+"#"+e.capability,final_disposition:"INTENTIONALLY_DISCONNECTED",reason:e.reason})));
+  const intentional=[...br.intentional.map(x=>({source_id:x.surface_id,edge:x.source_path,final_disposition:"INTENTIONALLY_DISCONNECTED",reason:x.reason})),...subIntentional,...mIntentional];
   const combinedCounts={
     WIRED_AND_PROVEN:br.counts.WIRED_AND_PROVEN+mGood.length,
-    INTENTIONALLY_DISCONNECTED:br.counts.INTENTIONALLY_DISCONNECTED+mIntentional.length,
+    INTENTIONALLY_DISCONNECTED:br.counts.INTENTIONALLY_DISCONNECTED+subIntentional.length+mIntentional.length,
     SEMANTICALLY_INCOMPATIBLE:br.counts.SEMANTICALLY_INCOMPATIBLE+mBad.length,
     UNWIRED_DEFECT:br.counts.UNWIRED_DEFECT+mDefect.length
   };
