@@ -13,8 +13,10 @@ function exists(rel){return fs.existsSync(path.join(ROOT,rel));}
 function list(dir){
   const abs=path.join(ROOT,dir);
   if(!fs.existsSync(abs)) return [];
+  const skip=new Set([".git","node_modules","dist","acceptance-output",".pnpm-store"]);
   return fs.readdirSync(abs,{withFileTypes:true}).flatMap((e)=>{
-    const rel=path.posix.join(dir,e.name);
+    if(skip.has(e.name)) return [];
+    const rel=path.posix.join(dir,e.name).replace(/^\.\//,"");
     return e.isDirectory()?list(rel):[rel];
   });
 }
@@ -50,7 +52,7 @@ const workflowRoots=list(".github/workflows").filter((x)=>/\.ya?ml$/.test(x)).ma
 }));
 
 const composeRoots=[];
-for(const rel of list(".").filter((x)=>/^docker-compose[^/]*\.ya?ml$/.test(x))){
+for(const rel of fs.readdirSync(ROOT).filter((x)=>/^docker-compose[^/]*\.ya?ml$/.test(x))){
   const text=read(rel);
   const lines=text.split(/\r?\n/);
   let inServices=false,current=null;
