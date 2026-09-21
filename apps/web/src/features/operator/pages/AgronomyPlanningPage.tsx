@@ -20,6 +20,7 @@ export default function AgronomyPlanningPage(): React.ReactElement {
     <div className="fouiPage fouiAgronomy" data-foui-surface="agronomy">
       <section className="fouiHero">
         <div><span className="fouiEyebrow">{t(COPY.eyebrow)}</span><h2>{t(COPY.title)}</h2><p>{t(COPY.lead)}</p></div>
+        <span className="fouiStatePill">{locale === "zh-CN" ? "只读 · 能力边界明确" : "Read-only · capability boundary"}</span>
       </section>
 
       <section className="fouiAgronomyGrid">
