@@ -486,6 +486,95 @@ async function supplementalFaultController(){
   });
 }
 
+
+async function recoverSupplementalFault(){
+  const {state,secrets}=loadState();
+  req(state.status==="RUNNING","REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_REQUIRES_RUNNING_STATE",state.status);
+  const proofPath=supplementalFaultProofPath(state);
+  req(fs.existsSync(proofPath),"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_PROOF_REQUIRED");
+  const proof=readJson(proofPath,"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_PROOF_INVALID");
+  if(proof.status==="PASS"){
+    console.log(JSON.stringify(proof,null,2));
+    return;
+  }
+  req(proof.status==="RUNNING","REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_REQUIRES_RUNNING_PROOF",proof.status);
+  const targetIndex=Number(proof.target_slot_index);
+  req(Number.isInteger(targetIndex)&&targetIndex>=0&&targetIndex<=22,"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_TARGET_INVALID",targetIndex);
+  const slotId=slotIdV1(targetIndex);
+  req(proof.canonical_internal_slot_id===slotId,"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_SLOT_MISMATCH",proof.canonical_internal_slot_id);
+  const missedBoundary=Date.parse(proof.missed_boundary);
+  req(Number.isFinite(missedBoundary)&&Date.now()>missedBoundary,"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_BOUNDARY_NOT_MISSED",proof.missed_boundary);
+
+  const cursorBeforeRecovery=readSchedulerCursorV1(state,secrets);
+  req(
+    cursorBeforeRecovery.next_slot_index===targetIndex || cursorBeforeRecovery.next_slot_index>targetIndex,
+    "REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_CURSOR_INVALID",
+    cursorBeforeRecovery.raw
+  );
+
+  function targetRow(){
+    return query(state,secrets,
+      "SELECT slot_id||'|'||state||'|'||fencing_token::text||'|'||scheduler_wall_clock_observed_at::text||'|'||terminal_at::text FROM public.twin_shadow_online_scheduler_slot_v1 WHERE slot_id='"+slotId+"' LIMIT 1;"
+    );
+  }
+  let row=targetRow();
+  let recoveredStartAt=null;
+  if(!row || !["COMPLETED","DEGRADED"].includes(row.split("|")[1])){
+    const running=containerState(state,secrets);
+    if(!running.running){
+      try{
+        compose(state,secrets,["start","twin-runtime"],{capture:false});
+      }catch{}
+      await new Promise((resolve)=>setTimeout(resolve,3000));
+      if(!containerState(state,secrets).running){
+        compose(state,secrets,["--profile","qualification-runtime","up","-d","--no-deps","twin-runtime"],{capture:false});
+      }
+      recoveredStartAt=new Date().toISOString();
+    }
+    req(containerState(state,secrets).running===true,"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_TWIN_NOT_RUNNING_AFTER_START");
+
+    const deadline=Date.now()+10*MINUTE;
+    while(Date.now()<deadline){
+      row=targetRow();
+      if(row){
+        const parts=row.split("|");
+        if(["COMPLETED","DEGRADED","FAILED"].includes(parts[1]))break;
+      }
+      await new Promise((resolve)=>setTimeout(resolve,5000));
+    }
+  }
+
+  req(row,"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_BACKFILL_NOT_OBSERVED",slotId);
+  const [observedSlotId,slotState,fenceAfter,observedAt,terminalAt]=row.split("|");
+  req(observedSlotId===slotId,"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_SLOT_ID_MISMATCH",observedSlotId);
+  req(["COMPLETED","DEGRADED"].includes(slotState),"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_NOT_SUCCESSFUL_TERMINAL",slotState);
+  req(Date.parse(observedAt)>=missedBoundary,"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_NOT_BACKFILLED_AFTER_BOUNDARY",observedAt);
+  const fenceBefore=String(proof.fencing_token_before??"");
+  if(fenceBefore)req(BigInt(fenceAfter)>BigInt(fenceBefore),"REAL_CLOCK_REHEARSAL_SUPPLEMENTAL_RECOVERY_FENCING_TOKEN_DID_NOT_ADVANCE");
+
+  const finalProof={
+    ...proof,
+    status:"PASS",
+    recovered_after_controller_restart_gap:true,
+    recovery_command:"recover-supplemental-fault",
+    recovery_started_at:recoveredStartAt,
+    recovery_observed_at:new Date().toISOString(),
+    cursor_next_slot_index_before_recovery:cursorBeforeRecovery.next_slot_index,
+    fencing_token_after:fenceAfter,
+    terminal_state:slotState,
+    scheduler_wall_clock_observed_at:observedAt,
+    terminal_at:terminalAt,
+    oldest_first_backfill_observed:true,
+    controlled_restart_recovery_observed:true,
+    original_fault_failure_preserved:true,
+    supplemental_proof_substitutes_only_fault_mechanics_proof:true,
+    formal_evidence_claim:false,
+    stage_1b_closure_claim:false,
+  };
+  writePrivateJson(proofPath,finalProof);
+  console.log(JSON.stringify(finalProof,null,2));
+}
+
 function start(){
   req(fs.existsSync(COMPOSE),"REAL_CLOCK_REHEARSAL_COMPOSE_REQUIRED");
   req(git("status","--porcelain")==="","REAL_CLOCK_REHEARSAL_CLEAN_WORKTREE_REQUIRED");
@@ -792,9 +881,10 @@ function selftest(){
     else if(mode==="finalize")finalize();
     else if(mode==="cleanup")cleanup();
     else if(mode==="arm-supplemental-fault")armSupplementalFault();
+    else if(mode==="recover-supplemental-fault")await recoverSupplementalFault();
     else if(mode==="fault-controller")await faultController();
     else if(mode==="supplemental-fault-controller")await supplementalFaultController();
-    else fail("REAL_CLOCK_REHEARSAL_MODE_REQUIRED","start|status|finalize|cleanup|arm-supplemental-fault|selftest");
+    else fail("REAL_CLOCK_REHEARSAL_MODE_REQUIRED","start|status|finalize|cleanup|arm-supplemental-fault|recover-supplemental-fault|selftest");
   }catch(error){
     console.error(error instanceof Error?error.stack??error.message:String(error));
     process.exitCode=1;
