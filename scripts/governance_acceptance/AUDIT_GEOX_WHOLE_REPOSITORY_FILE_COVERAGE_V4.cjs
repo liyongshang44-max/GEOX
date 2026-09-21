@@ -91,16 +91,42 @@ const nonJsExec=tracked.filter(x=>/\.(?:sh|ps1|py)$/i.test(x)).map(file=>{
 });
 const unownedNonJs=nonJsExec.filter(x=>!x.owned);
 
+const textualTracked=tracked.filter(x=>/\.(?:ts|tsx|js|jsx|cjs|mjs|md|json|ya?ml|sh|ps1|py|sql)$/i.test(x));
 const configRows=tracked.filter(x=>/^config\/.*\.json$/i.test(x)).map(file=>{
   const base=path.posix.basename(file);
   const refs=[];
-  for(const src of tracked.filter(x=>/\.(?:ts|tsx|js|cjs|mjs)$/i.test(x))){
+  for(const src of textualTracked){
+    if(src===file) continue;
     const t=safeRead(src);
     if(t.includes(file)||t.includes(base)) refs.push(src);
   }
-  return {file,reference_count:refs.length,reference_sample:refs.slice(0,20),referenced:refs.length>0};
+  const example=/\.example\.json$/i.test(file);
+  const schema=/\.schema\.json$/i.test(file);
+  return {
+    file,
+    reference_count:refs.length,
+    reference_sample:refs.slice(0,30),
+    referenced:refs.length>0,
+    config_class:example?"EXAMPLE_ONLY":schema?"SCHEMA_SUPPORT":"RUNTIME_OR_GOVERNANCE_CONFIG",
+    final_disposition:example?"INTENTIONALLY_DISCONNECTED":null
+  };
 });
-const unreferencedRuntimeConfig=configRows.filter(x=>!x.referenced);
+const unreferencedRuntimeConfig=configRows.filter(x=>!x.referenced&&!["EXAMPLE_ONLY","SCHEMA_SUPPORT"].includes(x.config_class));
+
+const databaseObjects=[];
+for(const row of sqlRows){
+  if(!row.authority_capable) continue;
+  const t=safeRead(row.file);
+  for(const m of t.matchAll(/CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+([A-Za-z0-9_."]+)/gi)){
+    databaseObjects.push({source_file:row.file,object_kind:"FUNCTION",object_name:m[1],execution_owner:"POSTGRES_FUNCTION_CALL_OR_TRIGGER"});
+  }
+  for(const m of t.matchAll(/CREATE\s+TRIGGER\s+([A-Za-z0-9_"]+)[\s\S]{0,600}?\sON\s+([A-Za-z0-9_."]+)/gi)){
+    databaseObjects.push({source_file:row.file,object_kind:"TRIGGER",object_name:m[1],relation:m[2],execution_owner:"POSTGRES_TRIGGER_EVENT"});
+  }
+  for(const m of t.matchAll(/CREATE\s+POLICY\s+([A-Za-z0-9_"]+)[\s\S]{0,300}?\sON\s+([A-Za-z0-9_."]+)/gi)){
+    databaseObjects.push({source_file:row.file,object_kind:"POLICY",object_name:m[1],relation:m[2],execution_owner:"POSTGRES_RLS"});
+  }
+}
 
 const classificationCounts={};
 for(const file of tracked){
@@ -124,6 +150,8 @@ const knownGeneratedImportCovered=generated.has(knownGeneratedImport);
 const failures=[];
 for(const x of unownedSql) failures.push("UNOWNED_SQL_AUTHORITY_SOURCE:"+x.file);
 for(const x of unownedNonJs) failures.push("UNOWNED_NON_JS_EXECUTABLE:"+x.file);
+for(const x of databaseObjects.filter(x=>!x.execution_owner)) failures.push("UNOWNED_DATABASE_SEMANTIC_OBJECT:"+x.source_file+":"+x.object_name);
+for(const x of unreferencedRuntimeConfig) failures.push("UNREFERENCED_RUNTIME_CONFIG:"+x.file);
 for(const x of uncoveredExecutableLike) failures.push("UNCOVERED_EXECUTABLE_LIKE_FILE:"+x);
 if(!knownGeneratedImportCovered) failures.push("WORKFLOW_GENERATED_SOURCE_EDGE_MISSING:"+knownGeneratedImport);
 
@@ -140,6 +168,8 @@ const result={
   unowned_non_js_executables:unownedNonJs,
   declarative_runtime_config_inventory:configRows,
   unreferenced_runtime_configs:unreferencedRuntimeConfig,
+  database_semantic_object_inventory:databaseObjects,
+  unowned_database_semantic_objects:databaseObjects.filter(x=>!x.execution_owner),
   workflow_generated_sources:generatedSupport,
   workflow_generated_s5_support_edge_proven:knownGeneratedImportCovered,
   uncovered_executable_like_files:uncoveredExecutableLike,
@@ -165,6 +195,8 @@ console.log("WHOLE_REPOSITORY_FILE_COVERAGE_V4 "+JSON.stringify({
   unowned_non_js_executables:unownedNonJs.length,
   declarative_runtime_configs:configRows.length,
   unreferenced_runtime_configs:unreferencedRuntimeConfig.length,
+  database_semantic_objects:databaseObjects.length,
+  unowned_database_semantic_objects:databaseObjects.filter(x=>!x.execution_owner).length,
   workflow_generated_sources:generatedSupport.length,
   generated_s5_support_edge:knownGeneratedImportCovered,
   uncovered_executable_like_files:uncoveredExecutableLike.length
