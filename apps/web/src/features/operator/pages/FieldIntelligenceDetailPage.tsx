@@ -203,6 +203,9 @@ export default function FieldIntelligenceDetailPage(): React.ReactElement {
 
   const scope = scopeResolution.scope;
   const canonicalBase = `/operator/fields/${encodeURIComponent(fieldId)}?${query}`;
+  const agronomyParams = new URLSearchParams(query);
+  agronomyParams.set("field_id", fieldId);
+  const agronomyHref = `/operator/agronomy?${agronomyParams.toString()}`;
 
   async function loadHistory(): Promise<void> {
     if (history.status === "loading" || history.status === "ready") return;
@@ -265,7 +268,7 @@ export default function FieldIntelligenceDetailPage(): React.ReactElement {
         </div>
         <div className="fouiHeroActions">
           <Link className="fouiSecondaryLink" to={canonicalBase}>{english ? "Canonical technical view" : "规范技术视图"}</Link>
-          <Link className="fouiSecondaryLink" to="/operator/agronomy">{english ? "Agronomy" : "农艺"}</Link>
+          <Link className="fouiSecondaryLink" to={agronomyHref}>{english ? "Agronomy" : "农艺"}</Link>
           <Link className="fouiSecondaryLink" to="/operator/operations">{english ? "Operations" : "运营"}</Link>
         </div>
       </section>
