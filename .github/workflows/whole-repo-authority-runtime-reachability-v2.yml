@@ -7,7 +7,10 @@ on:
       - 'docs/architecture/semantic_convergence/GEOX-WHOLE-REPOSITORY-AUTHORITY-RUNTIME-REACHABILITY-METHOD-V2.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_METHOD_V2.cjs'
       - 'scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_V2.cjs'
-      - 'scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_COMPLETENESS_V3.cjs'\n      - 'scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_FILE_COVERAGE_V4.cjs'\n      - 'docs/architecture/semantic_convergence/GEOX-WHOLE-REPOSITORY-REVERSE-DISCOVERY-ADJUDICATION-V1.json'\n      - '.github/workflows/whole-repo-authority-runtime-reachability-v2.yml'
+      - 'scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_COMPLETENESS_V3.cjs'
+      - 'scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_FILE_COVERAGE_V4.cjs'
+      - 'docs/architecture/semantic_convergence/GEOX-WHOLE-REPOSITORY-REVERSE-DISCOVERY-ADJUDICATION-V1.json'
+      - '.github/workflows/whole-repo-authority-runtime-reachability-v2.yml'
   workflow_dispatch:
 
 permissions:
