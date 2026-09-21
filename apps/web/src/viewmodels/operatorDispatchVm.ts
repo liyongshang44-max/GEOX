@@ -10,6 +10,10 @@ export type OperatorActionButtonStateV1 = {
 
 export type OperatorDispatchTechnicalRefsVm = {
   taskIdText: string;
+  actTaskIdText: string;
+  operationIdText: string;
+  operationPlanIdText: string;
+  fieldIdText: string;
   receiptIdText: string;
   sourceText: string;
 };
@@ -206,6 +210,10 @@ function deviceText(item: OperatorDispatchItem): string {
 function buildTechnicalRefs(item: OperatorDispatchItem): OperatorDispatchTechnicalRefsVm {
   return {
     taskIdText: text(item.taskId, "执行任务 ID 待确认"),
+    actTaskIdText: text(item.actTaskId, "AO-ACT 任务 ID 待确认"),
+    operationIdText: text(item.operationId, "作业 ID 待确认"),
+    operationPlanIdText: text(item.operationPlanId, "作业计划 ID 待确认"),
+    fieldIdText: text(item.fieldId, "田块 ID 待确认"),
     receiptIdText: text(item.receiptId, "未收到执行回执 ID"),
     sourceText: sourceText(item.source),
   };

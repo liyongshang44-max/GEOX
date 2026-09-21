@@ -58,6 +58,11 @@ const FieldReportPage = React.lazy(() => import("../features/fields/pages/FieldR
 const FieldReportExportPage = React.lazy(() => import("../features/fields/pages/FieldReportExportPage"));
 const OperationReportPage = React.lazy(() => import("../features/operations/pages/OperationReportPage"));
 const CustomerReportExportPage = React.lazy(() => import("../features/customer/pages/CustomerReportExportPage"));
+const FieldOperationsHomePage = React.lazy(() => import("../features/operator/pages/FieldOperationsHomePage"));
+const AgronomyPlanningPage = React.lazy(() => import("../features/operator/pages/AgronomyPlanningPage"));
+const FieldOperationsPage = React.lazy(() => import("../features/operator/pages/FieldOperationsPage"));
+const FieldIntelligenceFieldsPage = React.lazy(() => import("../features/operator/pages/FieldIntelligenceFieldsPage"));
+const FieldIntelligenceDetailPage = React.lazy(() => import("../features/operator/pages/FieldIntelligenceDetailPage"));
 const OperatorTwinOverviewPage = React.lazy(() => import("../features/operator/pages/OperatorTwinOverviewPage"));
 const OperatorProductionWorkflowPage = React.lazy(() => import("../features/operator/pages/OperatorProductionWorkflowPage"));
 const OperatorGatewayDemoViewerPage = React.lazy(() => import("../features/operator/pages/OperatorGatewayDemoViewerPage"));
@@ -342,8 +347,13 @@ function CustomerShell(): React.ReactElement {
 function OperatorRoutes(): React.ReactElement {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="twin" replace />} />
+      <Route path="/" element={<Navigate to="home" replace />} />
+      <Route path="home" element={<FieldOperationsHomePage />} />
+      <Route path="field-intelligence" element={<FieldIntelligenceFieldsPage />} />
+      <Route path="field-intelligence/:fieldId" element={<FieldIntelligenceDetailPage />} />
       <Route path="fields/*" element={<OperatorFieldRuntimeRoutes />} />
+      <Route path="agronomy" element={<AgronomyPlanningPage />} />
+      <Route path="operations" element={<FieldOperationsPage />} />
       <Route path="twin" element={<OperatorTwinOverviewPage />} />
       <Route path="twin/production-workflow" element={<OperatorProductionWorkflowPage />} />
       <Route path="twin/gateway-demo" element={<OperatorGatewayDemoViewerPage />} />
@@ -354,7 +364,7 @@ function OperatorRoutes(): React.ReactElement {
       <Route path="twin/fields/:fieldId/calibration" element={<OperatorFieldTwinCalibrationPage />} />
       <Route path="twin/fields/:fieldId/post-irrigation" element={<OperatorFieldTwinPostIrrigationPage />} />
       <Route path="twin/traces/:decisionCycleId" element={<OperatorTwinTraceReadbackPage />} />
-      <Route path="*" element={<Navigate to="twin" replace />} />
+      <Route path="*" element={<Navigate to="home" replace />} />
     </Routes>
   );
 }

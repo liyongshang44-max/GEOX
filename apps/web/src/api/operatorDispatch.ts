@@ -36,8 +36,11 @@ export type OperatorActionResponseV1 = {
 
 export type OperatorDispatchItem = {
   taskId: string;
+  actTaskId?: string | null;
   receiptId?: string | null;
   operationId?: string | null;
+  operationPlanId?: string | null;
+  fieldId?: string | null;
   fieldName?: string | null;
   operationName?: string | null;
   status: OperatorDispatchStatus;
@@ -136,8 +139,11 @@ function normalizeOfficial(payload: unknown): OperatorDispatchItem[] {
     const permissions = normalizePermissions(row, false);
     return {
       taskId: text(row.task_id ?? row.act_task_id ?? row.id, `dispatch-${index}`),
+      actTaskId: text(row.act_task_id ?? row.task_id ?? row.id, ""),
       receiptId,
       operationId,
+      operationPlanId: text(row.operation_plan_id ?? row.operationPlanId, ""),
+      fieldId: text(row.field_id ?? row.fieldId, ""),
       fieldName: text(row.field_name ?? row.fieldName, ""),
       operationName: text(row.operation_title ?? row.operation_name ?? row.customer_title, ""),
       status: normalizeStatus(row),
@@ -167,8 +173,11 @@ function normalizeActionsFallback(payload: unknown): OperatorDispatchItem[] {
     const receiptId = text(row.receipt_id ?? row.receipt?.receipt_id);
     return {
       taskId: text(row.task_id ?? row.act_task_id ?? row.id, `task-${index}`),
+      actTaskId: text(row.act_task_id ?? row.task_id ?? row.id, ""),
       receiptId,
       operationId,
+      operationPlanId: text(row.operation_plan_id ?? row.operationPlanId, ""),
+      fieldId: text(row.field_id ?? row.fieldId, ""),
       fieldName: text(row.field_name, ""),
       operationName: text(row.operation_title ?? row.title, ""),
       status: normalizeStatus(row),
@@ -198,8 +207,11 @@ function normalizeReportFallback(payload: unknown): OperatorDispatchItem[] {
     const hasReceipt = Boolean(text(row.receipt_id ?? row.receipt?.receipt_id));
     return {
       taskId: text(row.act_task_id ?? row.task_id, `report-task-${index}`),
+      actTaskId: text(row.act_task_id ?? row.task_id, ""),
       receiptId: text(row.receipt_id, ""),
       operationId,
+      operationPlanId: text(row.operation_plan_id ?? row.operationPlanId, ""),
+      fieldId: text(row.field_id ?? row.fieldId, ""),
       fieldName: text(row.field_name ?? row.fieldName, ""),
       operationName: text(row.operation_title ?? row.customer_title ?? row.title, "作业待确认"),
       status: hasReceipt ? "RECEIPT_RECEIVED" : (finalStatus.includes("PENDING_ACCEPTANCE") ? "RECEIPT_PENDING" : status),
