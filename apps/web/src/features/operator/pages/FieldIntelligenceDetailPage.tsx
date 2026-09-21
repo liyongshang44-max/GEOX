@@ -105,7 +105,7 @@ function ScalarFacts({ item, english }: { item: McftCollectionItemV1 | null; eng
   );
 }
 
-function DatasetRow({ dataset, english }: { dataset: FieldExperienceDatasetV2; english: boolean }): React.ReactElement {
+function DatasetRow({ dataset }: { dataset: FieldExperienceDatasetV2 }): React.ReactElement {
   return (
     <article className="fouiDatasetRow">
       <div>
@@ -346,7 +346,7 @@ export default function FieldIntelligenceDetailPage(): React.ReactElement {
 
       <section className="fouiPanel">
         <header className="fouiPanelHeader"><div><span className="fouiEyebrow">DATA UTILIZATION</span><h3>{english ? "Every canonical dataset has a place" : "每一组 canonical 数据都有去向"}</h3><p>{english ? "Eager data supports the daily field view. Deeper datasets remain product-accessible on demand instead of being discarded or fetched on every visit." : "首屏数据服务日常田块判断；更深层数据按需进入产品，而不是被丢弃或每次打开都全量请求。"}</p></div></header>
-        <div className="fouiDatasetTable">{datasets.map((dataset) => <DatasetRow key={dataset.key} dataset={dataset} english={english} />)}</div>
+        <div className="fouiDatasetTable">{datasets.map((dataset) => <DatasetRow key={dataset.key} dataset={dataset} />)}</div>
       </section>
 
       <section className="fouiFieldExploreGrid">
