@@ -194,5 +194,31 @@
     "mcft_cap09_completion_authorized": false,
     "bline_reopen_authorized": false,
     "adr_change_authorized": false
+  },
+  "execution_safety_boundary": {
+    "allowed": [
+      "CONTINUE_PR_3617_AUDIT_CLOSURE",
+      "INDEPENDENT_REPAIR_BRANCH",
+      "DRAFT_REPAIR_PR",
+      "GITHUB_HOSTED_ISOLATED_CI",
+      "STATIC_GOVERNANCE_ACCEPTANCE",
+      "ISOLATED_POSTGRESQL_ACCEPTANCE",
+      "CONTRACT_DESIGN_AND_CODE_IMPLEMENTATION"
+    ],
+    "forbidden": [
+      "MERGE_PR_3617",
+      "MERGE_REPAIR_PR",
+      "ADVANCE_PROTECTED_MAIN",
+      "LOCAL_WORKTREE_SWITCH_RESET_PULL_TO_REPAIR_BRANCH",
+      "REBUILD_CURRENT_REHEARSAL_IMAGE",
+      "RECREATE_CURRENT_REHEARSAL_PROJECT",
+      "MUTATE_REHEARSAL_POSTGRESQL",
+      "CLEANUP_REHEARSAL",
+      "RESTART_REHEARSAL_UNLESS_SELF_FAILURE",
+      "MUTATE_FORMAL_STORE",
+      "REARM_FORMAL_STORE"
+    ],
+    "isolated_ci_must_not_use_rehearsal_resources": true,
+    "isolated_postgresql_must_be_disposable": true
   }
 }
