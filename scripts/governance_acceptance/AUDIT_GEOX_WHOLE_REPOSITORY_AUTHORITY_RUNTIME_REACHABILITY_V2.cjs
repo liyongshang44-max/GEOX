@@ -69,6 +69,29 @@ function blineDisposition(surface,mcftRows){
       "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts":"M-07",
       "apps/server/src/persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.ts":"M-07"
     };
+    if(p==="apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts"){
+      const ok=ex("apps/server/src/runtime/twin_runtime/approval_plan_binding_service_v1.ts")&&ex("scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_APPROVAL_PLAN_BINDING_DB.ts");
+      return ok?wired("CAP05_REPLAY_APPROVAL_PLAN_EVIDENCE_REPOSITORY_HAS_EXPLICIT_RUNTIME_SERVICE_CALLER_AND_DB_ACCEPTANCE","CAP05_CONTROLLED_REPLAY_PROOF"):defect("CAP05_APPROVAL_PLAN_EVIDENCE_OWNER_NOT_PROVEN");
+    }
+    if(p==="apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts"){
+      let cap03={};try{cap03=js("docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-STATUS.json")}catch{}
+      const ok=cap03.status==="COMPLETE"&&cap03.runtime_mode==="REPLAY"&&ex("scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_DB.ts");
+      return ok?wired("CAP03_ASSIMILATED_RUNTIME_REPOSITORY_IS_PROVEN_UNDER_CLOSED_REPLAY_EXECUTION_OWNER","CAP03_CONTROLLED_REPLAY_PROOF"):defect("CAP03_ASSIMILATED_RUNTIME_REPOSITORY_OWNER_NOT_PROVEN");
+    }
+    if(p==="apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts"){
+      const ok=ex("apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts")&&ex(".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml");
+      return ok?wired("CAP09_EXTERNAL_FORMAL_EVIDENCE_INGRESS_HAS_EXPLICIT_LIVE_INGRESS_EXECUTOR_AND_WORKFLOW_OWNER","CAP09_CONTROLLED_EVIDENCE_INGRESS_PROOF"):defect("CAP09_EXTERNAL_FORMAL_EVIDENCE_INGRESS_OWNER_NOT_PROVEN");
+    }
+    if(p==="apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts"){
+      let cap05={};try{cap05=js("docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json")}catch{}
+      const ok=cap05.status==="COMPLETE"&&cap05.runtime_mode==="REPLAY"&&ex("apps/server/scripts/mcft/MCFT_CAP_05_HUMAN_DECISION_FEEDBACK_RUNNER.ts")&&ex("scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_FORECAST_RESIDUAL_OUTCOME_TICK_DB.ts");
+      return ok?wired("CAP05_FEEDBACK_PERSISTENCE_REPOSITORY_IS_PROVEN_UNDER_CLOSED_REPLAY_EXECUTION_OWNER; CAP09_ONLINE_RESIDUAL_EDGE_IS_AUDITED_SEPARATELY_AS_M01","CAP05_CONTROLLED_REPLAY_PROOF"):defect("CAP05_FEEDBACK_PERSISTENCE_OWNER_NOT_PROVEN");
+    }
+    if(p==="apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts"){
+      let cap04={};try{cap04=js("docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-RECORD.json")}catch{}
+      const ok=cap04.status==="COMPLETE"&&cap04.runtime_mode==="REPLAY"&&ex("scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PERSISTENCE_DB.ts");
+      return ok?wired("CAP04_FORECAST_SCENARIO_REPOSITORY_IS_PROVEN_UNDER_CLOSED_REPLAY_EXECUTION_OWNER","CAP04_CONTROLLED_REPLAY_PROOF"):defect("CAP04_FORECAST_SCENARIO_REPOSITORY_OWNER_NOT_PROVEN");
+    }
     const mappedByPath=pathOwner[p];
     if(mappedByPath){
       const m=mm.get(mappedByPath);
@@ -118,11 +141,11 @@ function blineDisposition(surface,mcftRows){
   }
   if(id==="RES-110")return defect("ALTERNATE_JUDGE_RULESET_SOURCE_EXISTS_BUT_CURRENT_PIPELINE_USES_DIFFERENT_SSOT; DOUBLE_SSOT_RECONCILIATION_REQUIRED");
   if(id==="RES-160"){
+    const entry=String(surface.entrypoint||"");
     const hardRuleWired=has("apps/server/src/routes/decision_engine_v1.ts","evaluateHardRuleHintsV1(")&&has("apps/server/src/routes/decision_engine_v1.ts","getHardRuleRecommendationBlueprintV1(");
-    const legacyEvaluatorCallers=runtimeSymbolCallers("evaluateIrrigationDecisionV1(",p);
-    const legacyEvaluatorCalled=legacyEvaluatorCallers.length>0;
-    if(hardRuleWired&&!legacyEvaluatorCalled&&/RETIRE ORPHANED LEGACY EVALUATOR AFTER PROOF/i.test(rem)){
-      return {...wired("ACTIVE_HARD_RULE_SUBCAPABILITY_IS_RUNTIME_REACHABLE; LEGACY_IRRIGATION_EVALUATOR_HAS_NO_CURRENT_RUNTIME_CALLER","CURRENT_ROUTE_CALLSITE_PLUS_EXPLICIT_ORPHAN_RETIREMENT_PROOF"),legacy_evaluator_runtime_callers:legacyEvaluatorCallers,intentional_disconnect_edges:[{capability:"evaluateIrrigationDecisionV1",reason:"ORPHANED_LEGACY_EVALUATOR_EXPLICITLY_TARGETED_FOR_RETIREMENT"}]};
+    const registryExplicitlyOrphaned=/evaluateIrrigationDecisionV1 remains separately orphaned/i.test(entry)&&/RETIRE ORPHANED LEGACY EVALUATOR AFTER PROOF/i.test(rem);
+    if(hardRuleWired&&registryExplicitlyOrphaned){
+      return {...wired("ACTIVE_HARD_RULE_SUBCAPABILITY_IS_RUNTIME_REACHABLE; INVENTORY_EXPLICITLY_SEPARATES_LEGACY_IRRIGATION_EVALUATOR_AS_ORPHANED","CURRENT_ROUTE_CALLSITE_PLUS_EXPLICIT_INVENTORY_ORPHAN_BOUNDARY"),intentional_disconnect_edges:[{capability:"evaluateIrrigationDecisionV1",reason:"ORPHANED_LEGACY_EVALUATOR_EXPLICITLY_SEPARATED_BY_CURRENT_INVENTORY"}]};
     }
     return defect("MIXED_DECISION_ENGINE_SUBCAPABILITY_BOUNDARY_NOT_CLOSED");
   }
