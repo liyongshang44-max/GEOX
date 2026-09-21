@@ -702,3 +702,79 @@ jobs:
             exit 0
           fi
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" down -v
+
+
+  whole-repo-audit-completeness-v3:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Validate audit method and frozen safety boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_METHOD_V2.cjs
+
+      - name: Execute V2 authority/runtime audit
+        id: audit_v2
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_V2.cjs
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+
+      - name: Execute V3 audit-completeness scan
+        id: audit_v3
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_COMPLETENESS_V3.cjs
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+
+      - name: Upload exact-head audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: whole-repo-audit-completeness-v3-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_METHOD_V2.json
+            acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_AUDIT_V2.json
+            acceptance-output/GEOX_WHOLE_REPOSITORY_AUDIT_COMPLETENESS_V3.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce audit completeness before closure
+        if: always()
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const v3='acceptance-output/GEOX_WHOLE_REPOSITORY_AUDIT_COMPLETENESS_V3.json';
+          if(!fs.existsSync(v3)) throw new Error('AUDIT_COMPLETENESS_RESULT_MISSING');
+          const c=JSON.parse(fs.readFileSync(v3,'utf8'));
+          if(c.status!=='PASS') {
+            throw new Error('AUDIT_COMPLETENESS_BLOCKED:'+JSON.stringify({
+              subject_sha:c.subject_sha,
+              invariants:c.invariants,
+              failures:(c.failures||[]).slice(0,100)
+            }));
+          }
+          const v2='acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_AUDIT_V2.json';
+          if(!fs.existsSync(v2)) throw new Error('AUDIT_V2_RESULT_MISSING');
+          const a=JSON.parse(fs.readFileSync(v2,'utf8'));
+          if(a.status!=='PASS') {
+            throw new Error('CLASSIFIED_RUNTIME_REACHABILITY_BLOCKERS_REMAIN:'+JSON.stringify(a.closure_blockers||[]));
+          }
+          console.log(JSON.stringify({status:'PASS',subject_sha:c.subject_sha}));
