@@ -12,7 +12,7 @@ function req(cond,code){if(!cond)failures.push(code);}
 const m=readJson(METHOD);
 const d=read(DOC);
 req(m.schema_version==="geox_whole_repository_authority_runtime_reachability_audit_method_v2","METHOD_SCHEMA_INVALID");
-req(m.status==="METHOD_CANDIDATE_AUDIT_NOT_EXECUTED","METHOD_STATUS_INVALID");
+req(m.status==="METHOD_ACTIVE_AUDIT_EXECUTED_CLOSURE_PENDING","METHOD_STATUS_INVALID");
 req(m.scan_scope?.model==="WHOLE_REPOSITORY","WHOLE_REPOSITORY_SCOPE_REQUIRED");
 req(m.scan_scope?.mcft_mutation_allowed===false,"MCFT_MUTATION_MUST_REMAIN_FORBIDDEN");
 req(m.scan_scope?.mcft_audit_discovery_allowed===true,"MCFT_AUDIT_DISCOVERY_REQUIRED");
@@ -37,8 +37,16 @@ for(const id of ["M-01","M-02","M-03","M-04","M-05","M-06","M-07"]){
   req(mcft.has(id),`MANDATORY_MCFT_RECONCILIATION_MISSING:${id}`);
   req(mcft.get(id)?.repair_authorized===false,`MCFT_REPAIR_MUST_REMAIN_UNAUTHORIZED:${id}`);
 }
-for(const code of ["UNREGISTERED_EXECUTION_ROOT","UNREGISTERED_COMPLETE_CAPABILITY","CAPABILITY_STATUS_AUTHORITY_CONFLICT","EXPECTED_OWNER_MISSING","EXPECTED_ROOT_MISSING","SEMANTIC_EDGE_UNCHECKED","QUALIFICATION_PRODUCTION_EQUIVALENCE_UNCHECKED","RUNTIME_PROOF_REQUIRED_BUT_MISSING"]){
+for(const code of ["UNREGISTERED_EXECUTION_ROOT","UNREGISTERED_COMPLETE_CAPABILITY","CAPABILITY_STATUS_AUTHORITY_CONFLICT","EXPECTED_OWNER_MISSING","EXPECTED_ROOT_MISSING","SEMANTIC_EDGE_UNCHECKED","QUALIFICATION_PRODUCTION_EQUIVALENCE_UNCHECKED","RUNTIME_PROOF_REQUIRED_BUT_MISSING","UNOWNED_EXECUTION_ROOT","ORPHAN_AUTHORITY_CAPABLE_SOURCE","STALE_AUDIT_EVIDENCE_SUBJECT","UNRESOLVED_ACTIVE_IMPORT","UNPARSED_ACTIVE_ROOT_COMMAND"]){
   req(m.fail_closed_codes.includes(code),`FAIL_CLOSED_CODE_MISSING:${code}`);
+}
+
+const ci=m.completeness_invariants||{};
+for(const key of ["invariant_1_execution_root_ownership","invariant_2_effective_capability_reachability","invariant_3_semantic_edge_adjudication","invariant_4_reverse_orphan_discovery","invariant_5_exact_head_freshness","invariant_6_graph_parse_completeness"]){
+  req(Boolean(ci[key]),`COMPLETENESS_INVARIANT_MISSING:${key}`);
+}
+for(const output of ["execution_root_ownership_matrix","authority_capable_source_reverse_reachability","unresolved_active_imports","unparsed_active_root_commands","semantic_identity_family_conflicts","fresh_exact_head_evidence_binding"]){
+  req((m.required_outputs||[]).includes(output),`COMPLETENESS_OUTPUT_MISSING:${output}`);
 }
 for(const [k,v] of Object.entries(m.non_effects||{})) req(v===false,`NON_EFFECT_MUST_BE_FALSE:${k}`);
 for(const x of ["CONTINUE_PR_3617_AUDIT_CLOSURE","INDEPENDENT_REPAIR_BRANCH","DRAFT_REPAIR_PR","GITHUB_HOSTED_ISOLATED_CI","STATIC_GOVERNANCE_ACCEPTANCE","ISOLATED_POSTGRESQL_ACCEPTANCE","CONTRACT_DESIGN_AND_CODE_IMPLEMENTATION"]){
@@ -49,7 +57,7 @@ for(const x of ["MERGE_PR_3617","MERGE_REPAIR_PR","ADVANCE_PROTECTED_MAIN","LOCA
 }
 req(m.execution_safety_boundary?.isolated_ci_must_not_use_rehearsal_resources===true,"ISOLATED_CI_RESOURCE_BOUNDARY_REQUIRED");
 req(m.execution_safety_boundary?.isolated_postgresql_must_be_disposable===true,"ISOLATED_POSTGRES_DISPOSABLE_REQUIRED");
-for(const token of ["IMPLEMENTED != WIRED != RUNTIME_REACHABLE != EFFECTIVE != OBSERVED != PROVEN","WIRED_AND_PROVEN","INTENTIONALLY_DISCONNECTED","SEMANTICALLY_INCOMPATIBLE","UNWIRED_DEFECT","CAPABILITY_STATUS_AUTHORITY_CONFLICT","M-01","M-02","M-03","M-07","Execution safety boundary","MUTATE_FORMAL_STORE"]){
+for(const token of ["IMPLEMENTED != WIRED != RUNTIME_REACHABLE != EFFECTIVE != OBSERVED != PROVEN","WIRED_AND_PROVEN","INTENTIONALLY_DISCONNECTED","SEMANTICALLY_INCOMPATIBLE","UNWIRED_DEFECT","CAPABILITY_STATUS_AUTHORITY_CONFLICT","M-01","M-02","M-03","M-07","Execution safety boundary","MUTATE_FORMAL_STORE","UNOWNED_EXECUTION_ROOT","ORPHAN_AUTHORITY_CAPABLE_SOURCE","STALE_AUDIT_EVIDENCE_SUBJECT"]){
   req(d.includes(token),`METHOD_DOC_TOKEN_MISSING:${token}`);
 }
 const result={
