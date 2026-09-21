@@ -10,6 +10,7 @@ const vm = read('apps/web/src/viewmodels/mcftFieldIntelligenceVm.ts');
 const page = read('apps/web/src/features/operator/pages/FieldIntelligenceDetailPage.tsx');
 const canonicalPage = read('apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx');
 const api = read('apps/web/src/api/mcftFieldTwinRuntime.ts');
+const fouiRead = read('apps/web/src/api/fouiFieldIntelligence.ts');
 
 const requiredRuntimeKeys = [
   'active_lineage','checkpoint','runtime_tick','evidence_window','state_transition',
@@ -28,9 +29,9 @@ for (const key of requiredRuntimeKeys) {
 }
 
 for (const token of [
-  'readMcftRuntime',
-  'readMcftStates',
-  'readMcftForecasts',
+  'readFouiMcftRuntime',
+  'readFouiMcftStates',
+  'readFouiMcftForecasts',
   'Full runtime response',
   'Full state collection',
   'Full forecast collection',
@@ -39,6 +40,15 @@ for (const token of [
   'limitations',
   'validation_summary',
 ]) if (!page.includes(token) && !vm.includes(token)) fail('FOUI_DATA_PRESERVATION_TOKEN_MISSING:' + token);
+
+for (const token of [
+  'window.location.origin',
+  '/api/v1/fields',
+  '/runtime',
+  '/states',
+  '/forecasts',
+  'method: "GET"',
+]) if (!fouiRead.includes(token)) fail('FOUI_SAME_ORIGIN_READ_BOUNDARY_MISSING:' + token);
 
 if (canonicalPage.includes('buildFieldIntelligenceOverviewVmV1') || canonicalPage.includes('fouiCanonicalDisclosure')) fail('MCFT_OWNED_CANONICAL_PAGE_WAS_PRODUCTIZED');
 
@@ -51,6 +61,7 @@ console.log(JSON.stringify({
   gate: 'FOUI-FIELD-INTELLIGENCE-DATA-PRESERVATION-V1',
   canonical_runtime_keys_preserved: requiredRuntimeKeys.length,
   eager_reads: ['runtime','states','forecasts'],
+  transport: 'SAME_ORIGIN_WEB_API_PROXY',
   deeper_datasets: 'ON_DEMAND',
   full_response_disclosure: true,
   mcft_owned_canonical_surface_changed: false,
