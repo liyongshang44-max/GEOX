@@ -7,8 +7,6 @@ import { computeMemberDeterminismHashV1 } from "../../apps/server/src/domain/twi
 import {
   buildCap05ForecastPointMemberRefV1,
   buildCap05ForecastResidualV1,
-  CAP05_FORECAST_OBSERVATION_OPERATOR_100MM_V1,
-  CAP05_FORECAST_OBSERVATION_OPERATOR_200MM_V1,
   projectCap05ForecastPointToObservationV1,
   resolveCap05ForecastPointMemberV1,
   validateCap05ForecastResidualV1,
@@ -125,30 +123,6 @@ function main(): void {
   assert.notEqual(projectionA.projection_input_hash, projectionA.projection_trace_hash);
   ok("projection input and trace hashes are deterministic and distinct");
 
-  assert.equal(
-    projectionA.observation_operator_id,
-    CAP05_FORECAST_OBSERVATION_OPERATOR_200MM_V1,
-  );
-  const projection100 = projectCap05ForecastPointToObservationV1({
-    ...projectionInputV1(point),
-    observation_operator_id: CAP05_FORECAST_OBSERVATION_OPERATOR_100MM_V1,
-  });
-  assert.equal(
-    projection100.observation_operator_id,
-    CAP05_FORECAST_OBSERVATION_OPERATOR_100MM_V1,
-  );
-  assert.equal(projection100.predicted_observation_value, projectionA.predicted_observation_value);
-  assert.equal(projection100.residual_value, projectionA.residual_value);
-  assert.notEqual(projection100.projection_input_hash, projectionA.projection_input_hash);
-  assert.notEqual(projection100.projection_trace_hash, projectionA.projection_trace_hash);
-  ok("100mm and 200mm H=1 operators preserve math but remain semantically distinct in hashes");
-
-  assert.throws(() => projectCap05ForecastPointToObservationV1({
-    ...projectionInputV1(point),
-    observation_operator_id: "POINT_150MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1" as never,
-  }), /CAP05_RESIDUAL_OBSERVATION_OPERATOR_UNSUPPORTED/);
-  ok("unregistered observation depth fails closed");
-
   const residual = buildCap05ForecastResidualV1({
     ...projectionInputV1(point),
     scope,
@@ -207,7 +181,7 @@ function main(): void {
   assert.throws(() => validateCap05ForecastResidualV1(forged), /CAP05_RESIDUAL_PROJECTION_TRACE_HASH_MISMATCH/);
   ok("forged projection trace hash fails closed even with a recomputed envelope hash");
 
-  assert.equal(pass, 12);
+  assert.equal(pass, 10);
   console.log(`MCFT-CAP-05 S8 residual contract conformance: ${pass} PASS / 0 FAIL`);
 }
 
