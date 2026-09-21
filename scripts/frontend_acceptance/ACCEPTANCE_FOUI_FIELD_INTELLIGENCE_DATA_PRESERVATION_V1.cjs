@@ -43,12 +43,14 @@ for (const token of [
 
 for (const token of [
   'window.location.origin',
-  '/api/v1/fields',
+  '/api/v1/operator/twin/fields/',
   '/runtime',
   '/states',
   '/forecasts',
   'method: "GET"',
 ]) if (!fouiRead.includes(token)) fail('FOUI_SAME_ORIGIN_READ_BOUNDARY_MISSING:' + token);
+
+if (fouiRead.includes('/api/v1/fields')) fail('FOUI_GENERIC_FIELDS_PERMISSION_DEPENDENCY_FORBIDDEN');
 
 if (canonicalPage.includes('buildFieldIntelligenceOverviewVmV1') || canonicalPage.includes('fouiCanonicalDisclosure')) fail('MCFT_OWNED_CANONICAL_PAGE_WAS_PRODUCTIZED');
 
@@ -62,6 +64,7 @@ console.log(JSON.stringify({
   canonical_runtime_keys_preserved: requiredRuntimeKeys.length,
   eager_reads: ['runtime','states','forecasts'],
   transport: 'SAME_ORIGIN_WEB_API_PROXY',
+  field_discovery: 'OPERATOR_TWIN_OVERVIEW',
   deeper_datasets: 'ON_DEMAND',
   full_response_disclosure: true,
   mcft_owned_canonical_surface_changed: false,
