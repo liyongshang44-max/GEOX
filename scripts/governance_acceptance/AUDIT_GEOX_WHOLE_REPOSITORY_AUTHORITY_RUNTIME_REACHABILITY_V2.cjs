@@ -28,6 +28,16 @@ function sourceInboundRefs(sourcePath){
   }
   return[...new Set(refs)].sort();
 }
+function runtimeSymbolCallers(symbol,sourcePath){
+  const out=[];
+  for(const root of ["apps/server/src","apps/executor/src","apps/judge/src","apps/telemetry-ingest/src"]){
+    for(const f of walk(root,/\.(?:ts|tsx|js|cjs|mjs)$/)){
+      if(f===sourcePath||/\/(?:__tests__|test|tests)\//.test(f)||/\.(?:test|spec)\./.test(f))continue;
+      try{if(rd(f).includes(symbol))out.push(f)}catch{}
+    }
+  }
+  return[...new Set(out)].sort();
+}
 function blineDisposition(surface,mcftRows){
   const id=String(surface.surface_id||""),rt=String(surface.runtime_reachable||""),act=String(surface.activation_mode||""),rem=String(surface.removal_target||""),p=String(surface.source_path||"");
   const refs=sourceInboundRefs(p);
@@ -46,11 +56,30 @@ function blineDisposition(surface,mcftRows){
     return ok?wired("STALE_NOT_PROVEN_DIRECT_CALLER_RECONCILED_TO_ACTIVE_APPROVAL_ROUTE","CURRENT_ROUTE_REGISTRATION_PLUS_CALLSITE_PROOF"):defect("APPROVAL_DECISION_BUILDER_CURRENT_CALLER_NOT_PROVEN");
   }
 
-  if(/^MCFT_OWNED/.test(rt)){
+  if(/^MCFT_OWNED/.test(rt)||act==="MCFT_FROZEN"||act==="MCFT_OWNED_PERSISTENCE_ORCHESTRATION"){
+    const pathOwner={
+      "apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts":"M-04",
+      "apps/server/db/migrations/2026_07_17_mcft_cap_06_calibration_governance_persistence.sql":"M-04",
+      "apps/server/src/persistence/twin_runtime/postgres_cap08_s4_append_forward_repository_v1.ts":"M-06",
+      "apps/server/src/persistence/twin_runtime/postgres_cap08_t17_transition_repository_v1.ts":"M-06",
+      "apps/server/src/persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.ts":"M-06",
+      "apps/server/src/runtime/twin_runtime/cap08_s3_decision_action_provider_service_v1.ts":"M-06",
+      "apps/server/src/runtime/twin_runtime/cap08_s3_outcome_completion_evidence_service_v1.ts":"M-06",
+      "apps/server/db/migrations/2026_07_20_mcft_cap_07_fact_visibility_support.sql":"M-05",
+      "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts":"M-07",
+      "apps/server/src/persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.ts":"M-07"
+    };
+    const mappedByPath=pathOwner[p];
+    if(mappedByPath){
+      const m=mm.get(mappedByPath);
+      return m?.final_disposition==="WIRED_AND_PROVEN"
+        ?wired("MCFT_OWNED_SURFACE_RECONCILED_THROUGH_CURRENT_MCFT_OWNER_PROOF:"+mappedByPath,"CURRENT_MCFT_OWNER_RECONCILIATION")
+        :defect("MCFT_OWNER_PROOF_NOT_CLOSED:"+mappedByPath);
+    }
     const mapped={
       "RES-053":"M-04","RES-124":"M-04",
       "RES-056":"M-06","RES-057":"M-06","RES-061":"M-06","RES-074":"M-06","RES-075":"M-06",
-      "RES-125":"M-05","RES-062":"M-07"
+      "RES-125":"M-05","RES-062":"M-07","RES-275":"M-06","RES-276":"M-06","RES-305":"M-07"
     }[id];
     if(mapped){
       const m=mm.get(mapped);
@@ -90,9 +119,10 @@ function blineDisposition(surface,mcftRows){
   if(id==="RES-110")return defect("ALTERNATE_JUDGE_RULESET_SOURCE_EXISTS_BUT_CURRENT_PIPELINE_USES_DIFFERENT_SSOT; DOUBLE_SSOT_RECONCILIATION_REQUIRED");
   if(id==="RES-160"){
     const hardRuleWired=has("apps/server/src/routes/decision_engine_v1.ts","evaluateHardRuleHintsV1(")&&has("apps/server/src/routes/decision_engine_v1.ts","getHardRuleRecommendationBlueprintV1(");
-    const legacyEvaluatorCalled=sourceInboundRefs(p).some(f=>{try{return rd(f).includes("evaluateIrrigationDecisionV1(")}catch{return false}});
+    const legacyEvaluatorCallers=runtimeSymbolCallers("evaluateIrrigationDecisionV1(",p);
+    const legacyEvaluatorCalled=legacyEvaluatorCallers.length>0;
     if(hardRuleWired&&!legacyEvaluatorCalled&&/RETIRE ORPHANED LEGACY EVALUATOR AFTER PROOF/i.test(rem)){
-      return {...wired("ACTIVE_HARD_RULE_SUBCAPABILITY_IS_RUNTIME_REACHABLE; LEGACY_IRRIGATION_EVALUATOR_HAS_NO_CURRENT_CALLER","CURRENT_ROUTE_CALLSITE_PLUS_EXPLICIT_ORPHAN_RETIREMENT_PROOF"),intentional_disconnect_edges:[{capability:"evaluateIrrigationDecisionV1",reason:"ORPHANED_LEGACY_EVALUATOR_EXPLICITLY_TARGETED_FOR_RETIREMENT"}]};
+      return {...wired("ACTIVE_HARD_RULE_SUBCAPABILITY_IS_RUNTIME_REACHABLE; LEGACY_IRRIGATION_EVALUATOR_HAS_NO_CURRENT_RUNTIME_CALLER","CURRENT_ROUTE_CALLSITE_PLUS_EXPLICIT_ORPHAN_RETIREMENT_PROOF"),legacy_evaluator_runtime_callers:legacyEvaluatorCallers,intentional_disconnect_edges:[{capability:"evaluateIrrigationDecisionV1",reason:"ORPHANED_LEGACY_EVALUATOR_EXPLICITLY_TARGETED_FOR_RETIREMENT"}]};
     }
     return defect("MIXED_DECISION_ENGINE_SUBCAPABILITY_BOUNDARY_NOT_CLOSED");
   }
