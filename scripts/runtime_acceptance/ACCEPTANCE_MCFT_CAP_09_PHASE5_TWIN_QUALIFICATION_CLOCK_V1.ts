@@ -4,8 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
-  MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1,
-} from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.js";
+  MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2,
+} from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.js";
 import {
   buildPhase5TwinQualificationClockBoundaryV1,
   buildPhase5TwinQualificationRuntimeStartAuthorityV1,
@@ -149,11 +149,11 @@ async function main(): Promise<void> {
   );
 
   assert.equal(
-    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1.database_clock_for_tick_authority,
+    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2.database_clock_for_tick_authority,
     true,
   );
   assert.equal(
-    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1.qualification_clock_boundary,
+    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2.qualification_clock_boundary,
     "EXPLICIT_DATABASE_CLOCK_AND_SCHEDULER_AUTHORITY_INJECTION_WITH_PRODUCTION_DEFAULT",
   );
 
@@ -164,7 +164,7 @@ async function main(): Promise<void> {
     "utf8",
   );
   for (const required of [
-    "runMcftCap09TwinRuntimeProcessV1",
+    "runMcftCap09TwinRuntimeProcessV2",
     "ACCELERATED_ENGINEERING_ONLY",
     "MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1",
     "buildPhase5TwinQualificationRuntimeStartAuthorityV1",
@@ -197,21 +197,21 @@ async function main(): Promise<void> {
 
   const processSource = fs.readFileSync(
     path.resolve(
-      "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts",
+      "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts",
     ),
     "utf8",
   );
   for (const required of [
     "database_clock: input?.database_clock",
     "scheduler_clock_authority: input?.scheduler_clock_authority",
-    "composeMcftCap09TwinRuntimeV1",
+    "composeMcftCap09TwinRuntimeV2",
   ]) {
     assert.equal(processSource.includes(required), true);
   }
 
   const compositionSource = fs.readFileSync(
     path.resolve(
-      "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
+      "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts",
     ),
     "utf8",
   );
@@ -242,6 +242,10 @@ async function main(): Promise<void> {
     real_clock_rehearsal_activation_fence_is_physical_start_time: true,
     exact_hour_required: true,
     same_production_twin_process_reused: true,
+    production_process_version: "V2",
+    production_composition_version: "V2",
+    production_runner_version: "ExternalFormalV4Amendment19RunnerV2",
+    production_crop_context_version: "materializeExternalFormalA18CropContextV4",
     second_scheduler_or_runner_path: false,
     provider_fallback: false,
     formal_v5_armed: false,
