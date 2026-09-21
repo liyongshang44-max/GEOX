@@ -52,6 +52,17 @@ jobs:
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           exit $code
 
+      - name: Execute file/language coverage scan
+        id: file_coverage
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_FILE_COVERAGE_V4.cjs
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+
       - name: Upload audit result
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,6 +71,7 @@ jobs:
           path: |
             acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_AUDIT_V2.json
             acceptance-output/GEOX_WHOLE_REPOSITORY_AUDIT_COMPLETENESS_V3.json
+            acceptance-output/GEOX_WHOLE_REPOSITORY_FILE_COVERAGE_V4.json
             acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_METHOD_V2.json
           if-no-files-found: error
           retention-days: 30
@@ -75,6 +87,16 @@ jobs:
           if [ "$completeness" != "0" ]; then
             echo "WHOLE_REPOSITORY_AUDIT_COMPLETENESS_FAILED"
             exit "$completeness"
+          fi
+
+          coverage="${{ steps.file_coverage.outputs.exit_code }}"
+          if [ -z "$coverage" ]; then
+            echo "AUDIT_FILE_COVERAGE_RESULT_MISSING"
+            exit 1
+          fi
+          if [ "$coverage" != "0" ]; then
+            echo "WHOLE_REPOSITORY_FILE_COVERAGE_FAILED"
+            exit "$coverage"
           fi
 
           code="${{ steps.runtime_audit.outputs.exit_code }}"
