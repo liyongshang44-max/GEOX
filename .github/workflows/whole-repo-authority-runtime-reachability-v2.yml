@@ -41,25 +41,49 @@ jobs:
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           exit $code
 
+      - name: Execute audit-completeness scan
+        id: completeness_audit
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_COMPLETENESS_V3.cjs
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+
       - name: Upload audit result
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: whole-repo-authority-runtime-reachability-v2-${{ github.event.pull_request.head.sha || github.sha }}
-          path: acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_AUDIT_V2.json
+          path: |
+            acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_AUDIT_V2.json
+            acceptance-output/GEOX_WHOLE_REPOSITORY_AUDIT_COMPLETENESS_V3.json
+            acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_METHOD_V2.json
           if-no-files-found: error
           retention-days: 30
 
       - name: Enforce fail-closed audit result
         if: always()
         run: |
+          completeness="${{ steps.completeness_audit.outputs.exit_code }}"
+          if [ -z "$completeness" ]; then
+            echo "AUDIT_COMPLETENESS_RESULT_MISSING"
+            exit 1
+          fi
+          if [ "$completeness" != "0" ]; then
+            echo "WHOLE_REPOSITORY_AUDIT_COMPLETENESS_FAILED"
+            exit "$completeness"
+          fi
+
           code="${{ steps.runtime_audit.outputs.exit_code }}"
           if [ -z "$code" ]; then
             echo "AUDIT_EXECUTION_RESULT_MISSING"
             exit 1
           fi
           if [ "$code" != "0" ]; then
-            echo "WHOLE_REPOSITORY_RUNTIME_REACHABILITY_AUDIT_FAILED"
+            echo "WHOLE_REPOSITORY_RUNTIME_REACHABILITY_AUDIT_FOUND_CLASSIFIED_BLOCKERS"
             exit "$code"
           fi
-          echo "WHOLE_REPOSITORY_RUNTIME_REACHABILITY_AUDIT_PASS"
+          echo "WHOLE_REPOSITORY_RUNTIME_REACHABILITY_AND_COMPLETENESS_PASS"
