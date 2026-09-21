@@ -92,6 +92,20 @@ jobs:
             exit "$completeness"
           fi
 
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p='acceptance-output/GEOX_WHOLE_REPOSITORY_AUDIT_COMPLETENESS_V3.json';
+          if(!fs.existsSync(p)) throw new Error('AUDIT_COMPLETENESS_JSON_MISSING');
+          const r=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(r.scanner_integrity_status!=='PASS') throw new Error('AUDIT_SCANNER_INTEGRITY_NOT_PASS');
+          if(r.discovery_adjudication_status!=='PASS') throw new Error('AUDIT_DISCOVERY_ADJUDICATION_NOT_PASS');
+          if(r.repository_wiring_status!=='PASS') {
+            throw new Error('WHOLE_REPOSITORY_REVERSE_DISCOVERY_DEFECTS_REMAIN:'+JSON.stringify(
+              (r.reverse_discovery_known_defects||[]).map(x=>({source_path:x.source_path,final_disposition:x.final_disposition}))
+            ));
+          }
+          NODE
+
           coverage="${{ steps.file_coverage.outputs.exit_code }}"
           if [ -z "$coverage" ]; then
             echo "AUDIT_FILE_COVERAGE_RESULT_MISSING"
