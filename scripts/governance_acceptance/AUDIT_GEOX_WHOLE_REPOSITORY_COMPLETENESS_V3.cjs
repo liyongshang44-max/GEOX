@@ -11,6 +11,7 @@ const V2_OUT=path.join(ROOT,"acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_R
 const MATRIX="docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX-V2.json";
 const BLINE="docs/architecture/semantic_convergence/GEOX-BLINE-RESIDUAL-AUTHORITY-INVENTORY-V1.json";
 const METHOD="docs/architecture/semantic_convergence/GEOX-WHOLE-REPOSITORY-AUTHORITY-RUNTIME-REACHABILITY-METHOD-V2.json";
+const ADJUDICATION="docs/architecture/semantic_convergence/GEOX-WHOLE-REPOSITORY-REVERSE-DISCOVERY-ADJUDICATION-V1.json";
 
 const read=p=>fs.readFileSync(path.join(ROOT,p),"utf8");
 const json=p=>JSON.parse(read(p));
@@ -348,10 +349,46 @@ const sourceRows=candidates.map(file=>{
     explicit_non_product_class:explicit
   };
 });
-const orphanSources=sourceRows.filter(x=>!x.reachable&&!x.explicit_non_product_class);
-const unregisteredSources=sourceRows.filter(x=>!x.registered_capability&&!x.explicit_non_product_class&&!x.reachable);
+const reverseDiscoveryCandidates=sourceRows.filter(x=>!x.reachable&&!x.explicit_non_product_class);
+const adjudication=json(ADJUDICATION);
+const adjudicationByPath=new Map((adjudication.rows||[]).map(x=>[x.source_path,x]));
+const adjudicatedReverseDiscovery=reverseDiscoveryCandidates.map(x=>({
+  ...x,
+  adjudication:adjudicationByPath.get(x.source_path)||null,
+  final_disposition:adjudicationByPath.get(x.source_path)?.final_disposition||null,
+}));
+const unknownReverseDiscovery=adjudicatedReverseDiscovery.filter(x=>!x.adjudication);
+const staleAdjudications=(adjudication.rows||[]).filter(x=>!sourceRows.some(s=>s.source_path===x.source_path));
+const orphanSources=unknownReverseDiscovery;
+const unregisteredSources=sourceRows.filter(x=>!x.registered_capability&&!x.explicit_non_product_class&&!x.reachable&&!adjudicationByPath.has(x.source_path));
+const knownReverseDiscoveryDefects=adjudicatedReverseDiscovery.filter(x=>["UNWIRED_DEFECT","SEMANTICALLY_INCOMPATIBLE"].includes(x.final_disposition));
+const knownReverseDiscoveryIntentional=adjudicatedReverseDiscovery.filter(x=>x.final_disposition==="INTENTIONALLY_DISCONNECTED");
+const knownReverseDiscoveryWired=adjudicatedReverseDiscovery.filter(x=>x.final_disposition==="WIRED_AND_PROVEN");
 
-const activeUnresolved=allUnresolved.filter(x=>productReach.has(x.importer));
+const workflowGeneratedTargets=new Map();
+for(const wf of walk(".github/workflows",/\.ya?ml$/)){
+  const t=read(wf);
+  for(const m of t.matchAll(/Path\(['"]([^'"]+)['"]\)\.write_text/g)){
+    const target=m[1].replace(/\\/g,"/");
+    if(!workflowGeneratedTargets.has(target)) workflowGeneratedTargets.set(target,[]);
+    workflowGeneratedTargets.get(target).push(wf);
+  }
+}
+function unresolvedGeneratedTarget(x){
+  const base=path.posix.normalize(path.posix.join(path.posix.dirname(x.importer),x.specifier));
+  const variants=[base,base.replace(/\.js$/,".ts"),base.replace(/\.mjs$/,".ts"),base.replace(/\.cjs$/,".ts")];
+  for(const v of variants){
+    if(workflowGeneratedTargets.has(v)) return {target:v,workflows:workflowGeneratedTargets.get(v)};
+  }
+  return null;
+}
+const generatedActiveImports=[];
+const activeUnresolved=[];
+for(const x of allUnresolved.filter(x=>productReach.has(x.importer))){
+  const generated=unresolvedGeneratedTarget(x);
+  if(generated) generatedActiveImports.push({...x,...generated});
+  else activeUnresolved.push(x);
+}
 
 const matrix=json(MATRIX);
 const completeCaps=(matrix.capability_lines||[]).filter(x=>x.complete===true);
@@ -428,7 +465,7 @@ const freshBinding={current_head:head,v2_audit_head:v2?.audit_subject?.audit_hea
 
 const failures=[];
 for(const x of unownedRoots) failures.push("UNOWNED_EXECUTION_ROOT:"+x.id);
-for(const x of orphanSources) failures.push("ORPHAN_AUTHORITY_CAPABLE_SOURCE:"+x.source_path);
+for(const x of unknownReverseDiscovery) failures.push("UNADJUDICATED_DISCOVERY:"+x.source_path);
 for(const x of unregisteredSources) failures.push("UNREGISTERED_AUTHORITY_CAPABLE_PATH:"+x.source_path);
 for(const x of capGaps) {
   if(x.owner_missing) failures.push("EXPECTED_OWNER_MISSING:"+x.capability_id);
@@ -450,13 +487,15 @@ const result={
   schema_version:"geox_whole_repository_audit_completeness_v3",
   status:failures.length?"FAIL":"PASS",
   scanner_integrity_status:scannerIntegrityFailures.length?"FAIL":"PASS",
+  discovery_adjudication_status:unknownReverseDiscovery.length?"FAIL":"PASS",
+  repository_wiring_status:knownReverseDiscoveryDefects.length||v2?.status==="FAIL"?"FAIL":"PASS",
   subject_sha:head,
   method_ref:METHOD,
   invariants:{
     execution_root_ownership:{status:unownedRoots.length?"FAIL":"PASS",root_count:rootOwnership.length,unowned_count:unownedRoots.length},
     effective_capability_reachability:{status:capGaps.length?"FAIL":"PASS",complete_capability_count:capRows.length,gap_count:capGaps.length},
     semantic_edge_adjudication:{status:(blineSemanticUnchecked.length||semanticConflictUnchecked.length)?"FAIL":"PASS",unchecked_declared_edge_count:blineSemanticUnchecked.length,identity_family_conflict_count:semanticFamilyConflicts.length,unchecked_identity_family_conflict_count:semanticConflictUnchecked.length},
-    reverse_orphan_discovery:{status:orphanSources.length?"FAIL":"PASS",candidate_source_count:sourceRows.length,orphan_count:orphanSources.length,unregistered_source_count:unregisteredSources.length},
+    reverse_orphan_discovery:{status:unknownReverseDiscovery.length?"FAIL":"PASS",candidate_source_count:sourceRows.length,reverse_discovery_candidate_count:reverseDiscoveryCandidates.length,adjudicated_count:adjudicatedReverseDiscovery.length,unadjudicated_count:unknownReverseDiscovery.length,known_defect_count:knownReverseDiscoveryDefects.length,intentional_count:knownReverseDiscoveryIntentional.length,wired_count:knownReverseDiscoveryWired.length,unregistered_source_count:unregisteredSources.length},
     exact_head_freshness:{status:freshBinding.exact_match?"PASS":"FAIL",...freshBinding},
     graph_parse_completeness:{status:activeUnresolved.length||unparsedActiveRoots.length?"FAIL":"PASS",unresolved_active_import_count:activeUnresolved.length,unparsed_active_root_count:unparsedActiveRoots.length}
   },
@@ -464,10 +503,17 @@ const result={
   all_complete_or_effective_capabilities:capRows,
   authority_capable_source_reverse_reachability:sourceRows,
   unowned_execution_roots:unownedRoots,
-  orphan_authority_capable_sources:orphanSources.map(x=>({...x,final_disposition:"UNWIRED_DEFECT"})),
-  unregistered_authority_capable_sources:unregisteredSources.map(x=>({...x,final_disposition:"UNWIRED_DEFECT"})),
+  reverse_discovery_adjudication_ref:ADJUDICATION,
+  reverse_discovery_adjudicated:adjudicatedReverseDiscovery,
+  reverse_discovery_known_defects:knownReverseDiscoveryDefects,
+  reverse_discovery_intentionally_disconnected:knownReverseDiscoveryIntentional,
+  reverse_discovery_wired_and_proven:knownReverseDiscoveryWired,
+  orphan_authority_capable_sources:unknownReverseDiscovery,
+  unregistered_authority_capable_sources:unregisteredSources,
   capability_reachability_gaps:capGaps,
   unresolved_active_imports:activeUnresolved,
+  workflow_generated_active_imports:generatedActiveImports,
+  stale_adjudication_rows:staleAdjudications,
   unparsed_active_root_commands:unparsedActiveRoots,
   semantic_identity_family_conflicts:semanticFamilyConflicts,
   semantic_edge_unchecked:[...blineSemanticUnchecked,...semanticConflictUnchecked],
@@ -491,7 +537,10 @@ console.log("WHOLE_REPOSITORY_AUDIT_COMPLETENESS_V3 "+JSON.stringify({
   root_count:rootOwnership.length,
   unowned_execution_roots:unownedRoots.length,
   candidate_sources:sourceRows.length,
-  orphan_sources:orphanSources.length,
+  reverse_discovery_candidates:reverseDiscoveryCandidates.length,
+  reverse_discovery_adjudicated:adjudicatedReverseDiscovery.length,
+  known_reverse_discovery_defects:knownReverseDiscoveryDefects.length,
+  orphan_sources:unknownReverseDiscovery.length,
   unregistered_sources:unregisteredSources.length,
   complete_capabilities:capRows.length,
   capability_gaps:capGaps.length,
