@@ -764,9 +764,19 @@ jobs:
           const v3='acceptance-output/GEOX_WHOLE_REPOSITORY_AUDIT_COMPLETENESS_V3.json';
           if(!fs.existsSync(v3)) throw new Error('AUDIT_COMPLETENESS_RESULT_MISSING');
           const c=JSON.parse(fs.readFileSync(v3,'utf8'));
-          if(c.status!=='PASS') {
-            throw new Error('AUDIT_COMPLETENESS_BLOCKED:'+JSON.stringify({
+          if(c.status!=='PASS'
+            || c.scanner_integrity_status!=='PASS'
+            || c.discovery_adjudication_status!=='PASS'
+            || c.repository_wiring_status!=='PASS') {
+            throw new Error('AUDIT_COMPLETENESS_OR_WIRING_BLOCKED:'+JSON.stringify({
               subject_sha:c.subject_sha,
+              scanner_integrity_status:c.scanner_integrity_status,
+              discovery_adjudication_status:c.discovery_adjudication_status,
+              repository_wiring_status:c.repository_wiring_status,
+              reverse_discovery_known_defects:(c.reverse_discovery_known_defects||[]).map(x=>({
+                source_path:x.source_path,
+                final_disposition:x.final_disposition
+              })),
               invariants:c.invariants,
               failures:(c.failures||[]).slice(0,100)
             }));
