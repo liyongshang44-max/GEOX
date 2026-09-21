@@ -249,16 +249,28 @@ async function faultController(){
     writePrivateJson(proofPath,{...stateProofBase(state),status:"SKIPPED",reason:"REHEARSAL_NOT_RUNNING_AT_FAULT_TIME"});
     return;
   }
-  const cursorBefore=query(state,secrets,
-    "SELECT COALESCE(next_slot_index,0)::text||'|'||COALESCE(last_fencing_token::text,'') FROM public.twin_shadow_online_scheduler_cursor_v1 LIMIT 1;"
-  );
-  const [nextBeforeRaw,fenceBeforeRaw=""]=cursorBefore.split("|");
-  const nextBefore=Number(nextBeforeRaw||0);
+  const missedBoundary=Date.parse(state.fault_plan.missed_boundary);
+  req(Number.isFinite(missedBoundary),"REAL_CLOCK_REHEARSAL_FAULT_MISSED_BOUNDARY_INVALID");
+  let cursorBefore="";
+  let nextBefore=0;
+  let fenceBeforeRaw="";
+  while(Date.now()<missedBoundary){
+    cursorBefore=query(state,secrets,
+      "SELECT COALESCE(next_slot_index,0)::text||'|'||COALESCE(last_fencing_token::text,'') FROM public.twin_shadow_online_scheduler_cursor_v1 LIMIT 1;"
+    );
+    const parts=cursorBefore.split("|");
+    nextBefore=Number(parts[0]||0);
+    fenceBeforeRaw=parts[1]??"";
+    if(nextBefore===5)break;
+    await new Promise((resolve)=>setTimeout(resolve,1000));
+  }
   if(nextBefore!==5){
     writePrivateJson(proofPath,{
       ...stateProofBase(state),status:"FAIL",
-      error:"REHEARSAL_FAULT_PRECONDITION_R04_NOT_TERMINAL",
+      error:"REHEARSAL_FAULT_PRECONDITION_R04_NOT_TERMINAL_BY_R05_BOUNDARY",
       next_slot_index_before:nextBefore,
+      observed_at:new Date().toISOString(),
+      missed_boundary:state.fault_plan.missed_boundary,
     });
     return;
   }
