@@ -1,6 +1,6 @@
 {
   "schema_version": "geox_whole_repository_authority_runtime_reachability_audit_method_v2",
-  "status": "METHOD_CANDIDATE_AUDIT_NOT_EXECUTED",
+  "status": "METHOD_ACTIVE_AUDIT_EXECUTED_CLOSURE_PENDING",
   "baseline_protected_main": "0c71e55843c659cce402a1457d481e412cdc203c",
   "purpose": "Extend the existing whole-repository residual-authority audit with capability-level runtime reachability, producer-consumer semantic compatibility, and qualification-production equivalence without changing product semantics.",
   "predecessor_mechanisms": [
@@ -127,7 +127,13 @@
     "orphan_capability_list",
     "dead_wiring_list",
     "qualification_production_divergence_list",
-    "explicit_intentional_disconnected_list"
+    "explicit_intentional_disconnected_list",
+    "execution_root_ownership_matrix",
+    "authority_capable_source_reverse_reachability",
+    "unresolved_active_imports",
+    "unparsed_active_root_commands",
+    "semantic_identity_family_conflicts",
+    "fresh_exact_head_evidence_binding"
   ],
   "mandatory_mcft_reconciliation": [
     {
@@ -176,7 +182,12 @@
     "UNADJUDICATED_DISCOVERY",
     "SEMANTIC_EDGE_UNCHECKED",
     "QUALIFICATION_PRODUCTION_EQUIVALENCE_UNCHECKED",
-    "RUNTIME_PROOF_REQUIRED_BUT_MISSING"
+    "RUNTIME_PROOF_REQUIRED_BUT_MISSING",
+    "UNOWNED_EXECUTION_ROOT",
+    "ORPHAN_AUTHORITY_CAPABLE_SOURCE",
+    "STALE_AUDIT_EVIDENCE_SUBJECT",
+    "UNRESOLVED_ACTIVE_IMPORT",
+    "UNPARSED_ACTIVE_ROOT_COMMAND"
   ],
   "non_effects": {
     "product_semantics_changed": false,
@@ -220,5 +231,38 @@
     ],
     "isolated_ci_must_not_use_rehearsal_resources": true,
     "isolated_postgresql_must_be_disposable": true
+  },
+  "completeness_invariants": {
+    "invariant_1_execution_root_ownership": {
+      "rule": "EVERY_DISCOVERED_EXECUTION_ROOT_MUST_MAP_TO_AT_LEAST_ONE_REGISTERED_CAPABILITY_OR_EXPLICIT_NON_PRODUCT_EXECUTION_CLASS",
+      "failure_code": "UNOWNED_EXECUTION_ROOT"
+    },
+    "invariant_2_effective_capability_reachability": {
+      "rule": "EVERY_COMPLETE_OR_EFFECTIVE_CAPABILITY_MUST_HAVE_EXPECTED_OWNER_EXPECTED_ROOT_STATIC_REACHABILITY_AND_REQUIRED_RUNTIME_PROOF",
+      "failure_codes": [
+        "EXPECTED_OWNER_MISSING",
+        "EXPECTED_ROOT_MISSING",
+        "RUNTIME_PROOF_REQUIRED_BUT_MISSING"
+      ]
+    },
+    "invariant_3_semantic_edge_adjudication": {
+      "rule": "EVERY_DECLARED_OR_DISCOVERED_ACTIVE_PRODUCER_CONSUMER_SEMANTIC_EDGE_MUST_BE ADJUDICATED",
+      "failure_code": "SEMANTIC_EDGE_UNCHECKED"
+    },
+    "invariant_4_reverse_orphan_discovery": {
+      "rule": "EVERY_AUTHORITY_OR_EXECUTION_CAPABLE_SOURCE_MUST_BE_REACHABLE_FROM_A_CURRENT_EXECUTION_ROOT_OR_EXPLICITLY_HISTORICAL_QUALIFICATION_ONLY_OR_INTENTIONALLY_DISCONNECTED",
+      "failure_code": "ORPHAN_AUTHORITY_CAPABLE_SOURCE"
+    },
+    "invariant_5_exact_head_freshness": {
+      "rule": "FINAL_AUDIT_EVIDENCE_SUBJECT_SHA_MUST_EQUAL_CURRENT_AUDIT_BRANCH_HEAD",
+      "failure_code": "STALE_AUDIT_EVIDENCE_SUBJECT"
+    },
+    "invariant_6_graph_parse_completeness": {
+      "rule": "UNRESOLVED_LOCAL_IMPORT_OR_UNPARSED_ACTIVE_ROOT_COMMAND_MAY_NOT_BE_SILENTLY_IGNORED",
+      "failure_codes": [
+        "UNRESOLVED_ACTIVE_IMPORT",
+        "UNPARSED_ACTIVE_ROOT_COMMAND"
+      ]
+    }
   }
 }
