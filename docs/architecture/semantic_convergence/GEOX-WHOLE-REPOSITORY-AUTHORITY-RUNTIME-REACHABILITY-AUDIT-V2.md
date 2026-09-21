@@ -171,7 +171,21 @@ Allowed:
     isolated PostgreSQL acceptance
     contract design and code implementation
 
-Forbidden:
+Forbidden stable codes:
+
+    MERGE_PR_3617
+    MERGE_REPAIR_PR
+    ADVANCE_PROTECTED_MAIN
+    LOCAL_WORKTREE_SWITCH_RESET_PULL_TO_REPAIR_BRANCH
+    REBUILD_CURRENT_REHEARSAL_IMAGE
+    RECREATE_CURRENT_REHEARSAL_PROJECT
+    MUTATE_REHEARSAL_POSTGRESQL
+    CLEANUP_REHEARSAL
+    RESTART_REHEARSAL_UNLESS_SELF_FAILURE
+    MUTATE_FORMAL_STORE
+    REARM_FORMAL_STORE
+
+Human-readable forbidden operations:
 
     merge #3617
     merge any repair PR
