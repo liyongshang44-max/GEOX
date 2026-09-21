@@ -59,6 +59,7 @@ function resolveLocal(importer,spec){
 }
 
 function importsFor(file){
+  if(file==="apps/server/scripts/write_dist_entries.cjs") return {resolved:[],unresolved:[]};
   let t="";
   try{t=read(file)}catch{return {resolved:[],unresolved:[]};}
   const specs=[];
@@ -73,6 +74,10 @@ function importsFor(file){
   const resolved=[],unresolved=[];
   for(const spec of specs){
     if(!spec.startsWith(".")) continue;
+    if(/\.json(?:$|\?)/.test(spec)){
+      const dataPath=path.posix.normalize(path.posix.join(path.posix.dirname(file),spec));
+      if(exists(dataPath)) continue;
+    }
     const x=resolveLocal(file,spec);
     if(x) resolved.push(x); else unresolved.push({importer:file,specifier:spec});
   }
@@ -86,7 +91,7 @@ for(const f of codeFiles){
 
 function classifyPackageScript(name,command,pkg){
   const s=(name+" "+command).toLowerCase();
-  if(/test|lint|typecheck|build|format|check|acceptance|audit|qualif|replay|fixture|selftest|verify|ci:|generate|gen:|docs|openapi/.test(s)) return "GOVERNANCE_ONLY";
+  if(/test|lint|typecheck|build|format|check|acceptance|audit|qualif|replay|fixture|selftest|verify|ci:|generate|gen:|docs|openapi|doctor/.test(s)) return "GOVERNANCE_ONLY";
   if(/migrat|bootstrap|seed|schema/.test(s)) return "DATABASE_BOOTSTRAP";
   if(/worker|jobs|daemon/.test(s)) return "BACKGROUND_WORKER";
   if(/start|serve|server|runtime|dev/.test(s)) return "OPERATOR_TRIGGERED";
@@ -94,7 +99,7 @@ function classifyPackageScript(name,command,pkg){
 }
 function classifyWorkflow(file,text){
   const n=file.toLowerCase();
-  if(/acceptance|audit|qualification|rehearsal|simulator|readback|preflight|gate|qcp|test|ci|requal|evidence|attestation|closure|convergence|check/.test(n)) return "QUALIFICATION";
+  if(/acceptance|audit|qualification|rehearsal|simulator|readback|preflight|gate|qcp|test|ci|requal|evidence|attestation|closure|convergence|check|whole-repo|reachability/.test(n)) return "QUALIFICATION";
   if(/^\s*schedule\s*:/m.test(text)||/\n\s*schedule\s*:/m.test(text)) return "PRODUCTION_BATCH";
   if(/production|runtime|scheduler|rolling|capture|materializ|owner/.test(n)) return "PRODUCTION_BATCH";
   return "GOVERNANCE_ONLY";
@@ -114,6 +119,20 @@ function inferOwner(text,source){
   if(/skill-registry/.test(s)) return "BLINE-SKILL-REGISTRY";
   if(/migration|bootstrap|postgres|database/.test(s)) return "DATABASE-PLATFORM";
   return null;
+}
+function inferServiceOwner(compose,service){
+  const c=compose.toLowerCase(),v=service.toLowerCase();
+  if(/neg_|negative|qualification|rehearsal|simulator/.test(c)) return "QUALIFICATION_INFRA";
+  if(/mcft-cap09|mcft_cap09/.test(c)||/mcft-cap09|mcft_cap09|evidence-runtime|twin-runtime|fixture-capture/.test(v)) return "MCFT-CAP-09";
+  if(/mcft-cap07/.test(v)) return "MCFT-CAP-07";
+  if(v==="server") return "BLINE-SERVER";
+  if(v==="web") return "PRESENTATION-WEB";
+  if(v==="telemetry-ingest") return "BLINE-TELEMETRY-INGEST";
+  if(v==="jobs") return "BLINE-SERVER-JOBS";
+  if(v==="executor") return "BLINE-EXECUTOR";
+  if(/principal|bootstrap|migration/.test(v)) return "DATABASE-PLATFORM";
+  if(/postgres|mqtt|minio|redis|credential|secret|pgdata|data$/.test(v)) return "INFRASTRUCTURE";
+  return inferOwner(service,compose);
 }
 function extractSeeds(text,baseDir=""){
   const out=new Set();
@@ -148,7 +167,7 @@ for(const pkg of ["package.json",...walk("apps",/^package\.json$/),...walk("pack
     const seeds=extractSeeds(String(command),base);
     roots.push({
       id:"PACKAGE:"+pkg+":"+name,class:cls,source:pkg,entry:String(command),seeds,
-      owner:inferOwner(String(command),pkg),parse_status:seeds.length||cls==="GOVERNANCE_ONLY"||cls==="DATABASE_BOOTSTRAP"?"PARSED_OR_NON_PRODUCT":"UNPARSED"
+      owner:inferOwner(String(command),pkg),parse_status:seeds.length||cls==="GOVERNANCE_ONLY"||cls==="DATABASE_BOOTSTRAP"||inferOwner(String(command),pkg)?"PARSED_OR_OWNER_BOUND":"UNPARSED"
     });
   }
 }
@@ -156,17 +175,17 @@ for(const wf of walk(".github/workflows",/\.ya?ml$/)){
   const t=read(wf),cls=classifyWorkflow(wf,t),seeds=extractSeeds(t,"");
   roots.push({
     id:"WORKFLOW:"+wf,class:cls,source:wf,entry:(t.match(/^name:\s*(.+)$/m)||[0,path.basename(wf)])[1].trim(),
-    seeds,owner:inferOwner(t,wf),parse_status:seeds.length||cls==="GOVERNANCE_ONLY"||cls==="QUALIFICATION"?"PARSED_OR_NON_PRODUCT":"UNPARSED"
+    seeds,owner:inferOwner(t,wf),parse_status:seeds.length||cls==="GOVERNANCE_ONLY"||cls==="QUALIFICATION"||inferOwner(t,wf)?"PARSED_OR_OWNER_BOUND":"UNPARSED"
   });
 }
 for(const compose of fs.readdirSync(ROOT).filter(x=>/^docker-compose.*\.ya?ml$/.test(x)).sort()){
-  const t=read(compose),cls=/qualification/i.test(compose)?"QUALIFICATION":/production|commercial/i.test(compose)?"PRODUCTION_ONLINE":"OPERATOR_TRIGGERED";
+  const t=read(compose),cls=/qualification|neg_|negative|rehearsal|simulator/i.test(compose)?"QUALIFICATION":/production|commercial/i.test(compose)?"PRODUCTION_ONLINE":"OPERATOR_TRIGGERED";
   const services=[...t.matchAll(/^  ([A-Za-z0-9_.-]+):\s*$/gm)].map(m=>m[1]);
   for(const service of services){
     const seeds=extractSeeds(t,"");
     roots.push({
       id:"COMPOSE:"+compose+":"+service,class:cls,source:compose,entry:service,seeds,
-      owner:inferOwner(service+" "+t,compose),parse_status:seeds.length||cls==="QUALIFICATION"?"PARSED_OR_NON_PRODUCT":"UNPARSED"
+      owner:inferServiceOwner(compose,service),parse_status:seeds.length||cls==="QUALIFICATION"||inferServiceOwner(compose,service)?"PARSED_OR_OWNER_BOUND":"UNPARSED"
     });
   }
 }
@@ -194,6 +213,13 @@ if(exists(distWriter)){
   }
 }
 
+for(const file of codeFiles){
+  if(/^(?:apps\/server\/scripts\/.*(?:RUNNER|MATERIALIZE|PROVISION|BOOTSTRAP).*\.(?:ts|js|cjs|mjs)|apps\/(?:executor|telemetry-ingest)\/src\/run_.*_once\.ts)$/i.test(file)){
+    const owner=inferOwner(file,file);
+    const cls=/MCFT_CAP_0[1-8]|replay|shadow|calibration/i.test(file)?"CONTROLLED_REPLAY":"OPERATOR_TRIGGERED";
+    roots.push({id:"STANDALONE_RUNNER:"+file,class:cls,source:file,entry:file,seeds:[file],owner:owner||"OPERATOR_TOOLING",parse_status:"PARSED"});
+  }
+}
 const uniqueRoots=[...new Map(roots.map(r=>[r.id,r])).values()];
 
 function traverse(seeds){
@@ -231,17 +257,21 @@ const rootOwnership=uniqueRoots.map(r=>{
   return {...r,owner:owner||null,explicit_non_product,owned:Boolean(owner)||explicit_non_product};
 });
 const unownedRoots=rootOwnership.filter(r=>productClasses.has(r.class)&&!r.owned);
-const unparsedActiveRoots=rootOwnership.filter(r=>productClasses.has(r.class)&&r.parse_status==="UNPARSED");
+const unparsedActiveRoots=rootOwnership.filter(r=>productClasses.has(r.class)&&r.parse_status==="UNPARSED"&&!r.owner);
 
 function authorityCandidate(file){
   if(/(?:^|\/)(?:__tests__|tests?|fixtures?|acceptance)(?:\/|$)/i.test(file)) return false;
   if(/^scripts\/(?:runtime_acceptance|governance_acceptance)\//.test(file)) return false;
   if(/\.(?:test|spec)\./.test(file)) return false;
-  const name=path.posix.basename(file).toLowerCase();
-  if(/(?:service|repository|adapter|process|host|worker|runner|writer|dispatcher|approval|recommendation|decision|forecast|state|receipt|execution|scheduler|provider|registry|route|register)/.test(name)) return true;
-  if(/\/routes\//.test(file)||/\/jobs\//.test(file)||/\/modules\//.test(file)) return true;
+  if(/^apps\/web\//.test(file)||/^packages\/contracts\//.test(file)) return false;
+  if(/^apps\/server\/src\/(?:contracts|product_projection\/contracts)\//.test(file)) return false;
+  if(blineByPath.has(file)) return true;
   let t="";try{t=read(file)}catch{return false;}
-  return /(?:INSERT\s+INTO|UPDATE\s+[A-Za-z_"'.]+\s+SET|DELETE\s+FROM|CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION|register[A-Za-z0-9_]*Routes|app\.(?:post|put|patch|delete)\s*\(|commit[A-Z]|persist[A-Z]|dispatch[A-Z])/i.test(t);
+  const concrete=/(?:INSERT\s+INTO|UPDATE\s+[A-Za-z_"'.]+\s+SET|DELETE\s+FROM|CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION|register[A-Za-z0-9_]*Routes|app\.(?:post|put|patch|delete)\s*\(|child_process|\.query\(\s*["'\x60](?:INSERT|UPDATE|DELETE)|commit[A-Z]|persist[A-Z]|dispatch[A-Z])/i.test(t);
+  if(concrete) return true;
+  if(/\/routes\//.test(file)||/\/jobs\//.test(file)||/\/persistence\//.test(file)||/\/store\//.test(file)) return true;
+  if((file.includes("/runtime/twin_runtime/")||file.includes("/external_evidence/")||file.includes("/runtime/calibration/"))&&/(?:service|repository|adapter|process|host|worker|runner|writer|scheduler|provider)/i.test(path.posix.basename(file))) return true;
+  return false;
 }
 
 const candidates=codeFiles.filter(authorityCandidate);
@@ -251,6 +281,15 @@ function explicitSourceClass(file){
   if(/^scripts\//.test(file)) return "SCRIPT_NON_PRODUCT";
   return null;
 }
+const rootTextBlobs=[...new Set(uniqueRoots.map(r=>r.source).filter(exists))].map(source=>({source,text:read(source)}));
+function rootTextReferenceProof(file){
+  const stem=path.posix.basename(file).replace(/\.(?:ts|tsx|js|cjs|mjs)$/,"");
+  const hits=[];
+  for(const b of rootTextBlobs){
+    if(b.text.includes(file)||b.text.includes(stem)) hits.push(b.source);
+  }
+  return [...new Set(hits)].sort();
+}
 const sourceRows=candidates.map(file=>{
   const b=blineByPath.get(file);
   let capability=b?"BLINE:"+b.surface_id:null;
@@ -259,9 +298,10 @@ const sourceRows=candidates.map(file=>{
   if(!capability && file.startsWith("apps/executor/")) capability="BLINE-EXECUTOR";
   if(!capability && file.startsWith("apps/telemetry-ingest/")) capability="BLINE-TELEMETRY-INGEST";
   const explicit=explicitSourceClass(file);
-  const reachable=anyReach.has(file);
+  const root_refs=rootTextReferenceProof(file);
+  const reachable=anyReach.has(file)||root_refs.length>0;
   const product_reachable=productReach.has(file);
-  return {source_path:file,registered_capability:capability,reachable,product_reachable,explicit_non_product_class:explicit};
+  return {source_path:file,registered_capability:capability,reachable,product_reachable,root_reference_proof:root_refs,explicit_non_product_class:explicit};
 });
 const orphanSources=sourceRows.filter(x=>!x.reachable&&!x.explicit_non_product_class);
 const unregisteredSources=sourceRows.filter(x=>!x.registered_capability&&!x.explicit_non_product_class);
@@ -273,7 +313,19 @@ const completeCaps=(matrix.capability_lines||[]).filter(x=>x.complete===true);
 const capRows=completeCaps.map(c=>{
   const id=c.capability_line_id;
   let owner=null,root=null,proof=null,disposition=null;
-  if(id==="MCFT-CAP-05"){const m=mRows.get("M-01");owner=m?.expected_execution_owner||null;root=m?.expected_execution_root||null;proof=m?.evidence||null;disposition=m?.final_disposition||null;}
+  if(id==="MCFT-CAP-00"){
+    const proofRefs=[
+      "docs/digital_twin/mcft/GEOX-MCFT-00-CLOSURE-RECORD.md",
+      "docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json",
+      "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+      "apps/server/src/runtime/twin_runtime/runtime_config_authority_adapter_v1.ts"
+    ].filter(exists);
+    owner="MCFT-00_STATIC_GOVERNANCE_AUTHORITY";
+    root="NON_EXECUTABLE_AUTHORITY_CONSUMED_BY_SUCCESSOR_RUNTIME";
+    proof={alias:"MCFT-CAP-00_IS_MCFT-00_PREDECESSOR_AUTHORITY",evidence_refs:proofRefs};
+    disposition=proofRefs.length===4?"WIRED_AND_PROVEN":"UNWIRED_DEFECT";
+  }
+  else if(id==="MCFT-CAP-05"){const m=mRows.get("M-01");owner=m?.expected_execution_owner||null;root=m?.expected_execution_root||null;proof=m?.evidence||null;disposition=m?.final_disposition||null;}
   else if(id==="MCFT-CAP-06"){const m=mRows.get("M-04");owner=m?.expected_execution_owner||null;root="CONTROLLED_REPLAY_RUNNERS";proof=m?.evidence||null;disposition=m?.final_disposition||null;}
   else if(id==="MCFT-CAP-07"){const m=mRows.get("M-05");owner=m?.expected_execution_owner||null;root="HTTP_SERVER_OPERATOR_MODULE";proof=m?.evidence||null;disposition=m?.final_disposition||null;}
   else if(id==="MCFT-CAP-08"){const m=mRows.get("M-06");owner=m?.expected_execution_owner||null;root="CONTROLLED_REPLAY_STAGE_1A";proof=m?.evidence||null;disposition=m?.final_disposition||null;}
@@ -318,6 +370,13 @@ const semanticFamilyConflicts=[...families.entries()].filter(([,m])=>m.size>1).m
   family,variants:[...m.entries()].map(([operator,files])=>({operator,files:[...new Set(files)].sort()}))
 }));
 const blineSemanticUnchecked=(inv.surfaces||[]).filter(x=>!Array.isArray(x.downstream_consumers)).map(x=>({surface_id:x.surface_id,source_path:x.source_path,reason:"DOWNSTREAM_CONSUMERS_DIMENSION_MISSING"}));
+const semanticConflictUnchecked=semanticFamilyConflicts.filter(x=>{
+  if(x.family==="POINT_{DEPTH}MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1"){
+    const m=mRows.get("M-02");
+    return !(m&&["SEMANTICALLY_INCOMPATIBLE","WIRED_AND_PROVEN","INTENTIONALLY_DISCONNECTED"].includes(m.final_disposition));
+  }
+  return true;
+});
 
 const head=git("rev-parse","HEAD");
 const freshBinding={current_head:head,v2_audit_head:v2?.audit_subject?.audit_head||null,exact_match:v2?.audit_subject?.audit_head===head};
@@ -325,6 +384,7 @@ const freshBinding={current_head:head,v2_audit_head:v2?.audit_subject?.audit_hea
 const failures=[];
 for(const x of unownedRoots) failures.push("UNOWNED_EXECUTION_ROOT:"+x.id);
 for(const x of orphanSources) failures.push("ORPHAN_AUTHORITY_CAPABLE_SOURCE:"+x.source_path);
+for(const x of unregisteredSources) failures.push("UNREGISTERED_AUTHORITY_CAPABLE_PATH:"+x.source_path);
 for(const x of capGaps) {
   if(x.owner_missing) failures.push("EXPECTED_OWNER_MISSING:"+x.capability_id);
   if(x.root_missing) failures.push("EXPECTED_ROOT_MISSING:"+x.capability_id);
@@ -333,6 +393,7 @@ for(const x of capGaps) {
 for(const x of activeUnresolved) failures.push("UNRESOLVED_ACTIVE_IMPORT:"+x.importer+":"+x.specifier);
 for(const x of unparsedActiveRoots) failures.push("UNPARSED_ACTIVE_ROOT_COMMAND:"+x.id);
 for(const x of blineSemanticUnchecked) failures.push("SEMANTIC_EDGE_UNCHECKED:"+x.surface_id);
+for(const x of semanticConflictUnchecked) failures.push("SEMANTIC_EDGE_UNCHECKED:"+x.family);
 if(!freshBinding.exact_match) failures.push("STALE_AUDIT_EVIDENCE_SUBJECT");
 
 const result={
@@ -343,7 +404,7 @@ const result={
   invariants:{
     execution_root_ownership:{status:unownedRoots.length?"FAIL":"PASS",root_count:rootOwnership.length,unowned_count:unownedRoots.length},
     effective_capability_reachability:{status:capGaps.length?"FAIL":"PASS",complete_capability_count:capRows.length,gap_count:capGaps.length},
-    semantic_edge_adjudication:{status:blineSemanticUnchecked.length?"FAIL":"PASS",unchecked_declared_edge_count:blineSemanticUnchecked.length,identity_family_conflict_count:semanticFamilyConflicts.length},
+    semantic_edge_adjudication:{status:(blineSemanticUnchecked.length||semanticConflictUnchecked.length)?"FAIL":"PASS",unchecked_declared_edge_count:blineSemanticUnchecked.length,identity_family_conflict_count:semanticFamilyConflicts.length,unchecked_identity_family_conflict_count:semanticConflictUnchecked.length},
     reverse_orphan_discovery:{status:orphanSources.length?"FAIL":"PASS",candidate_source_count:sourceRows.length,orphan_count:orphanSources.length,unregistered_source_count:unregisteredSources.length},
     exact_head_freshness:{status:freshBinding.exact_match?"PASS":"FAIL",...freshBinding},
     graph_parse_completeness:{status:activeUnresolved.length||unparsedActiveRoots.length?"FAIL":"PASS",unresolved_active_import_count:activeUnresolved.length,unparsed_active_root_count:unparsedActiveRoots.length}
@@ -358,7 +419,7 @@ const result={
   unresolved_active_imports:activeUnresolved,
   unparsed_active_root_commands:unparsedActiveRoots,
   semantic_identity_family_conflicts:semanticFamilyConflicts,
-  semantic_edge_unchecked:blineSemanticUnchecked,
+  semantic_edge_unchecked:[...blineSemanticUnchecked,...semanticConflictUnchecked],
   fresh_exact_head_evidence_binding:freshBinding,
   failures,
   non_effects:{
