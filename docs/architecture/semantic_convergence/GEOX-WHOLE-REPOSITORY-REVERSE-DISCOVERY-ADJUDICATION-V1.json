@@ -1,0 +1,247 @@
+{
+  "schema_version": "geox_whole_repository_reverse_discovery_adjudication_v1",
+  "baseline_protected_main": "0c71e55843c659cce402a1457d481e412cdc203c",
+  "scope": "V3_REVERSE_DISCOVERY_20_CANDIDATES",
+  "terminal_dispositions": [
+    "WIRED_AND_PROVEN",
+    "INTENTIONALLY_DISCONNECTED",
+    "SEMANTICALLY_INCOMPATIBLE",
+    "UNWIRED_DEFECT"
+  ],
+  "rows": [
+    {
+      "source_path": "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.ts",
+      "final_disposition": "INTENTIONALLY_DISCONNECTED",
+      "execution_class": "REGISTERED_CAPABILITY_ISLAND",
+      "evidence_refs": [
+        "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json"
+      ],
+      "rationale": "Current semantic ownership register marks this producer current/manual with runtime_edge=INTENTIONAL_NONE and new runtime consumer creation FORBIDDEN; it is policy-selection-only and explicitly not connected to final Decision Eligibility Runtime."
+    },
+    {
+      "source_path": "apps/server/src/domain/twin_runtime/forecast_scenario_record_set_dispatch_v1.ts",
+      "final_disposition": "UNWIRED_DEFECT",
+      "execution_class": "DOMAIN_VALIDATION_DISPATCH",
+      "evidence_refs": [
+        "apps/server/src/domain/twin_runtime/forecast_scenario_record_set_dispatch_v1.ts",
+        "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md"
+      ],
+      "rationale": "The module declares current versioned CAP-02/CAP-03/CAP-04 record-set dispatch semantics but no repository caller imports validateCap04VersionedRecordSetV1 and no explicit intentional-disconnect authority was found."
+    },
+    {
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_projection_rebuilder_v1.ts",
+      "final_disposition": "UNWIRED_DEFECT",
+      "execution_class": "RECOVERY_HELPER",
+      "evidence_refs": [
+        "apps/server/src/persistence/twin_runtime/postgres_projection_rebuilder_v1.ts",
+        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-TASK.md",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_A0_RUNTIME_DB.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE_DB.ts"
+      ],
+      "rationale": "Projection rebuild is an established CAP-02 capability, but this product-source rebuilder has only qualification callers and is not reached by the operator-invoked CAP-02 runner or another current controlled recovery root. No explicit retirement/intentional-disconnect authority was found."
+    },
+    {
+      "source_path": "apps/server/src/projections/device_state_v1.ts",
+      "final_disposition": "WIRED_AND_PROVEN",
+      "execution_class": "HTTP_READ_MODEL",
+      "evidence_refs": [
+        "apps/server/src/routes/operation_state_v1.ts",
+        "apps/server/src/modules/reporting/registerReportingModule.ts"
+      ],
+      "rationale": "projectDeviceStateV1 is consumed by the mainline operation-state route; that route is registered by the reporting module."
+    },
+    {
+      "source_path": "apps/server/src/projections/root_zone_soil_water_forecast_v1.ts",
+      "final_disposition": "UNWIRED_DEFECT",
+      "execution_class": "READ_INDEX_PROJECTION_HELPER",
+      "evidence_refs": [
+        "docs/digital_twin/GEOX-DT-01-REUSE-DECISION-REGISTER.md",
+        "apps/server/src/projections/root_zone_soil_water_forecast_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_FORECAST_RUNTIME_V1.cjs",
+        "scripts/h53/DERIVE_H53_3_FORECAST_SCENARIO_V1.cjs"
+      ],
+      "rationale": "DT-01 marks forecast_latest_index REUSE_WITH_ADAPTER for MCFT-03/09, but the projection helper's ensure/upsert functions have only qualification callers. The later H53 derivation writes the same index with direct SQL instead of consuming this helper, leaving the helper as current dead wiring without explicit retirement."
+    },
+    {
+      "source_path": "apps/server/src/projections/root_zone_soil_water_state_v1.ts",
+      "final_disposition": "UNWIRED_DEFECT",
+      "execution_class": "READ_INDEX_PROJECTION_HELPER",
+      "evidence_refs": [
+        "docs/digital_twin/GEOX-DT-01-REUSE-DECISION-REGISTER.md",
+        "apps/server/src/projections/root_zone_soil_water_state_v1.ts",
+        "apps/server/src/routes/water_response_verification_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_STATE_RUNTIME_V1.cjs"
+      ],
+      "rationale": "DT-01 marks state_latest_index REUSE_WITH_ADAPTER for MCFT-03/08 and a current product route reads root_zone_soil_water_state_index_v1, but this projection helper has no current producer/root outside qualification. No explicit replacement/retirement authority for this helper was found."
+    },
+    {
+      "source_path": "apps/server/src/projections/soil_hydraulic_profile_v1.ts",
+      "final_disposition": "UNWIRED_DEFECT",
+      "execution_class": "SOIL_MODEL_FOUNDATION_PROJECTION",
+      "evidence_refs": [
+        "apps/server/src/projections/soil_hydraulic_profile_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_ESTIMATE_RUNTIME_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_CUSTOMER_BOUNDARY_V1.cjs"
+      ],
+      "rationale": "The module is product-source persistence/projection code and its write path is exercised only by isolated acceptance. Customer exposure is explicitly forbidden while unconfirmed, but no authority explicitly classifies the underlying internal projection writer as intentionally disconnected or retired."
+    },
+    {
+      "source_path": "apps/server/src/projections/soil_water_potential_estimate_v1.ts",
+      "final_disposition": "UNWIRED_DEFECT",
+      "execution_class": "SOIL_MODEL_FOUNDATION_PROJECTION",
+      "evidence_refs": [
+        "apps/server/src/projections/soil_water_potential_estimate_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_ESTIMATE_RUNTIME_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_STATE_RUNTIME_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_CUSTOMER_BOUNDARY_V1.cjs"
+      ],
+      "rationale": "The fact/index projection writer is proven only inside isolated acceptance. The customer boundary proves non-exposure, not an intentional internal-runtime disconnect; no current non-qualification execution owner or explicit retirement authority was found."
+    },
+    {
+      "source_path": "apps/server/src/routes/api_route_inventory_v1.ts",
+      "final_disposition": "WIRED_AND_PROVEN",
+      "execution_class": "GOVERNANCE_ONLY",
+      "evidence_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_API_INVENTORY_ENFORCEMENT_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_API_GOVERNANCE_BASELINE_V2.cjs",
+        "apps/server/scripts/p1_3_openapi_alignment_selfcheck.mjs"
+      ],
+      "rationale": "API_ROUTE_INVENTORY is a governance registry rather than an HTTP route implementation and is actively consumed by governance/selfcheck roots."
+    },
+    {
+      "source_path": "apps/server/src/routes/judge_config.ts",
+      "final_disposition": "INTENTIONALLY_DISCONNECTED",
+      "execution_class": "LEGACY_INTERNAL_EXPERIMENTAL_ROUTE",
+      "evidence_refs": [
+        "docs/SSOT.md",
+        "docs/audit/DELETION_CANDIDATES.md",
+        "apps/server/src/routes/judge_config.ts"
+      ],
+      "rationale": "Repository SSOT classifies the bare /api/judge/config family as internal/experimental; the file itself is deprecated in favor of /api/v1/* and no current registration caller exists."
+    },
+    {
+      "source_path": "apps/server/src/routes/operator_diagnostics_v1.ts",
+      "final_disposition": "INTENTIONALLY_DISCONNECTED",
+      "execution_class": "LEGACY_DIAGNOSTIC_ROUTE",
+      "evidence_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_LEGACY_DIAGNOSTICS_LEARNING_BOUNDARY_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_BACKEND_LEARNING_VALIDATION_V1.cjs"
+      ],
+      "rationale": "Governance explicitly preserves the old diagnostics semantics only as DIAGNOSTIC_ONLY_NOT_FORMAL and assigns the official learning route/projector elsewhere; no current registration caller exists."
+    },
+    {
+      "source_path": "apps/server/src/routes/simulator_runner_v1.ts",
+      "final_disposition": "INTENTIONALLY_DISCONNECTED",
+      "execution_class": "DEPRECATED_COMPATIBILITY_ROUTE",
+      "evidence_refs": [
+        "docs/DEVICE_OBSERVATION_AND_SIMULATION_V1.md",
+        "docs/audit/DELETION_CANDIDATES.md",
+        "apps/server/src/routes/simulator_runner_v1.ts"
+      ],
+      "rationale": "Current simulation documentation identifies device-scoped simulator routes as canonical and the /api/v1/simulator-runner/* family as deprecated compatibility to retire after usage reaches zero; no current registration caller exists."
+    },
+    {
+      "source_path": "apps/server/src/runtime/twin_runtime/assimilated_contiguous_range_service_v1.ts",
+      "final_disposition": "WIRED_AND_PROVEN",
+      "execution_class": "CONTROLLED_REPLAY_HISTORICAL_V1",
+      "evidence_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_DB.ts",
+        "scripts/runtime_acceptance/mcft_cap_03_twenty_four_observation_aware_tick_range_fixture_v1.ts",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json"
+      ],
+      "rationale": "Historical V1 remains immutable/valid and this service is reached from the controlled replay qualification path; active CAP-03 adds V2 rather than deleting historical V1."
+    },
+    {
+      "source_path": "apps/server/src/runtime/twin_runtime/assimilated_continuation_runtime_config_service_v1.ts",
+      "final_disposition": "WIRED_AND_PROVEN",
+      "execution_class": "CONTROLLED_REPLAY_HISTORICAL_V1",
+      "evidence_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_CONTRACTS_CONFIG_DB.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_CONTRACTS_CONFIG.ts",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json"
+      ],
+      "rationale": "Historical V1 is explicitly preserved and the V1 config service has direct controlled replay acceptance callers."
+    },
+    {
+      "source_path": "apps/server/src/runtime/twin_runtime/assimilated_continuation_runtime_config_service_v2.ts",
+      "final_disposition": "UNWIRED_DEFECT",
+      "execution_class": "CONTROLLED_REPLAY_ACTIVE_V2",
+      "evidence_refs": [
+        "apps/server/src/runtime/twin_runtime/assimilated_continuation_runtime_config_service_v2.ts",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
+        "scripts/runtime_acceptance/mcft_cap_03_r2_v2_revalidation_fixture_v1.ts"
+      ],
+      "rationale": "R2 V2 is MERGED_EFFECTIVE and its frozen implementation boundary explicitly includes this persistence/readback service, but the repository has no caller for AssimilatedContinuationRuntimeConfigServiceV2; the R2 fixture compiles/configures V2 without invoking this service."
+    },
+    {
+      "source_path": "apps/server/src/runtime/twin_runtime/assimilated_restart_resume_service_v1.ts",
+      "final_disposition": "WIRED_AND_PROVEN",
+      "execution_class": "CONTROLLED_REPLAY_HISTORICAL_V1",
+      "evidence_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_RESTART_BACKFILL_RECOVERY_DB.ts",
+        "scripts/runtime_acceptance/mcft_cap_03_restart_backfill_recovery_fixture_v1.ts",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json"
+      ],
+      "rationale": "Historical V1 remains valid and the service is directly reached by the controlled replay restart/backfill acceptance path."
+    },
+    {
+      "source_path": "apps/server/src/runtime/twin_runtime/cap08_t17_authority_bound_forecast_resolver_v1.ts",
+      "final_disposition": "WIRED_AND_PROVEN",
+      "execution_class": "CONTROLLED_REPLAY_CAP08",
+      "evidence_refs": [
+        "scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/final_evidence_source_v1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_T17_PRODUCT_IMPLEMENTATION_V1.cjs"
+      ],
+      "rationale": "The CAP-08 controlled replay final-evidence source instantiates this resolver when the product export is available; this is the intended bounded replay execution class."
+    },
+    {
+      "source_path": "apps/server/src/runtime/twin_runtime/continuation_runtime_config_service_v1.ts",
+      "final_disposition": "WIRED_AND_PROVEN",
+      "execution_class": "CONTROLLED_REPLAY_CAP02",
+      "evidence_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_DB.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.ts",
+        "apps/server/scripts/mcft/MCFT_CAP_02_HOURLY_DYNAMICS_RUNNER.ts"
+      ],
+      "rationale": "CAP-02 is a manual Replay capability. The service is directly qualified for config persistence/readback, while the operator runner intentionally consumes the persisted config rather than recreating it."
+    },
+    {
+      "source_path": "apps/server/src/runtime/twin_runtime/forecast_scenario_runtime_config_service_v1.ts",
+      "final_disposition": "WIRED_AND_PROVEN",
+      "execution_class": "CONTROLLED_REPLAY_CAP04",
+      "evidence_refs": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG_DB.ts",
+        "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md"
+      ],
+      "rationale": "CAP-04 is bounded Replay and this config persistence service is directly exercised by its dedicated controlled qualification root; no production-online ownership is required."
+    },
+    {
+      "source_path": "apps/server/src/runtime/twin_runtime/restart_late_receipt_rebuild_service_v1.ts",
+      "final_disposition": "WIRED_AND_PROVEN",
+      "execution_class": "CONTROLLED_REPLAY_CAP05_RECOVERY",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S9-RESTART-LATE-RECEIPT-REBUILD.md",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_S9_RESTART_LATE_RECEIPT_REBUILD_DB.ts",
+        "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json"
+      ],
+      "rationale": "S9 explicitly defines this as an internal controlled-Replay recovery service; the dedicated PostgreSQL acceptance is its intended root and CAP-05 does not claim a continuous scheduler."
+    }
+  ],
+  "additional_non_runtime_config_adjudication": [
+    {
+      "source_path": "config/environments/dev/ao_act_tokens_v0.example.json",
+      "final_disposition": "INTENTIONALLY_DISCONNECTED",
+      "rationale": "Example environment credential config; not an active runtime authority."
+    },
+    {
+      "source_path": "config/environments/prod/ao_act_tokens_v0.example.json",
+      "final_disposition": "INTENTIONALLY_DISCONNECTED",
+      "rationale": "Example environment credential config; not an active runtime authority."
+    },
+    {
+      "source_path": "config/environments/staging/ao_act_tokens_v0.example.json",
+      "final_disposition": "INTENTIONALLY_DISCONNECTED",
+      "rationale": "Example environment credential config; not an active runtime authority."
+    }
+  ]
+}
