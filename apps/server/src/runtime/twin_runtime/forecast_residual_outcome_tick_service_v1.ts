@@ -11,9 +11,6 @@ import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canoni
 import {
   buildCap05ForecastResidualV1,
   CAP05_FORECAST_ASSIMILATION_RELATION_POLICY_V1,
-  CAP05_FORECAST_OBSERVATION_OPERATOR_100MM_V1,
-  CAP05_FORECAST_OBSERVATION_OPERATOR_200MM_V1,
-  type Cap05ForecastObservationOperatorIdV1,
   CAP05_FORECAST_OBSERVATION_PROJECTION_METHOD_ID_V1,
   CAP05_FORECAST_OBSERVATION_PROJECTION_METHOD_VERSION_V1,
   CAP05_FORECAST_POINT_MEMBER_REF_POLICY_ID_V1,
@@ -63,7 +60,7 @@ export type Cap05ForecastAssimilationRelationTraceV1 = {
   observation_ref: string;
   observation_hash: string;
   observation_value: string;
-  observation_operator_id: Cap05ForecastObservationOperatorIdV1;
+  observation_operator_id: "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1";
   historical_forecast_prediction: string;
   historical_forecast_residual: string;
   current_tick_propagated_prior_prediction: string;
@@ -161,7 +158,7 @@ function currentObservationV1(input: {
   representativeness_variance: string;
   predicted_observation: string;
   innovation: string;
-  operator_id: Cap05ForecastObservationOperatorIdV1;
+  operator_id: "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1";
 } {
   const evidence = exactMemberV1(input.tick, "twin_evidence_window_v1");
   const assimilation = exactMemberV1(input.tick, "twin_assimilation_update_v1");
@@ -210,8 +207,7 @@ function currentObservationV1(input: {
     assimilationPayload.observation_operator,
     "CAP05_RESIDUAL_OUTCOME_OBSERVATION_OPERATOR_REQUIRED",
   );
-  if ((operator.id !== CAP05_FORECAST_OBSERVATION_OPERATOR_200MM_V1
-      && operator.id !== CAP05_FORECAST_OBSERVATION_OPERATOR_100MM_V1)
+  if (operator.id !== "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1"
     || operator.h !== 1
     || operator.direct_state_equivalence !== false) {
     throw new Error("CAP05_RESIDUAL_OUTCOME_OBSERVATION_OPERATOR_MISMATCH");
@@ -241,7 +237,7 @@ function currentObservationV1(input: {
     representativeness_variance: normalizeFixedDecimalV1(String(representativenessVariance), WATER_VARIANCE_SCALE_V1, "CAP05_RESIDUAL_OUTCOME_REPRESENTATIVENESS_VARIANCE_INVALID"),
     predicted_observation: normalizeFixedDecimalV1(String(requiredFiniteNumberV1(assimilationPayload.predicted_observation, "CAP05_RESIDUAL_OUTCOME_ASSIMILATION_PREDICTION_REQUIRED")), WATER_AMOUNT_SCALE_V1, "CAP05_RESIDUAL_OUTCOME_ASSIMILATION_PREDICTION_INVALID"),
     innovation: normalizeFixedDecimalV1(String(requiredFiniteNumberV1(assimilationPayload.innovation, "CAP05_RESIDUAL_OUTCOME_ASSIMILATION_INNOVATION_REQUIRED")), WATER_AMOUNT_SCALE_V1, "CAP05_RESIDUAL_OUTCOME_ASSIMILATION_INNOVATION_INVALID"),
-    operator_id: operator.id as Cap05ForecastObservationOperatorIdV1,
+    operator_id: "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
   };
 }
 
@@ -253,14 +249,13 @@ function relationTraceV1(input: {
   historical_residual: string;
   current_prediction: string;
   current_innovation: string;
-  observation_operator_id: Cap05ForecastObservationOperatorIdV1;
 }): Cap05ForecastAssimilationRelationTraceV1 {
   return {
     trace_id: CAP05_FORECAST_RESIDUAL_RELATION_TRACE_ID_V1,
     observation_ref: input.observation_ref,
     observation_hash: input.observation_hash,
     observation_value: input.observation_value,
-    observation_operator_id: input.observation_operator_id,
+    observation_operator_id: "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
     historical_forecast_prediction: input.historical_prediction,
     historical_forecast_residual: input.historical_residual,
     current_tick_propagated_prior_prediction: input.current_prediction,
@@ -344,7 +339,6 @@ export class Cap05ForecastResidualOutcomeTickServiceV1 {
       actual_observation_value: observation.value,
       actual_observation_variance: observation.observation_variance,
       representativeness_variance: observation.representativeness_variance,
-      observation_operator_id: observation.operator_id,
       runtime_config_ref: runtimeConfig.object_id,
       runtime_config_hash: runtimeConfig.determinism_hash,
       context_lineage_ref: requiredStringV1(observation.state.lineage_id, "CAP05_RESIDUAL_OUTCOME_CONTEXT_LINEAGE_REQUIRED"),
