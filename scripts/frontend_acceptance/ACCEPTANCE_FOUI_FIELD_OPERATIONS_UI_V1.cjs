@@ -55,7 +55,7 @@ if (!hasAll(source.home, [
 
 if (!hasAll(source.fields, ['fetchOperatorTwinOverview', 'current_state_text', 'data_coverage_text', 'season_id', 'zone_id', '只读 · GET'])) fail('FOUI_FIELD_SCOPE_SELECTOR');
 if (!lacksAll(source.fields, ['fetchFields', 'fetchFieldRuntimeScopeOptions', '/api/v1/fields'])) fail('FOUI_FIELD_SCOPE_REQUIRES_FORBIDDEN_GENERIC_FIELD_READ');
-if (!hasAll(source.fieldDetail, ['readFouiMcftRuntime', 'readFouiMcftStates', 'readFouiMcftForecasts', 'Full runtime response', 'ON-DEMAND CANONICAL DATASETS'])) fail('FOUI_FIELD_DATA_READS');
+if (!hasAll(source.fieldDetail, ['readFouiMcftRuntime', 'readFouiMcftStates', 'readFouiMcftForecasts', 'Full runtime response', 'DATA UTILIZATION', 'loadHistory', 'loadEvidence', 'loadAdvanced'])) fail('FOUI_FIELD_DATA_READS');
 if (!lacksAll(source.canonicalField, ['buildFieldIntelligenceOverviewVmV1', 'fouiCanonicalDisclosure', 'data-foui-surface="field-intelligence-detail"'])) fail('FOUI_MUTATED_MCFT_PRODUCT_SURFACE');
 
 if (!lacksAll(source.home, ['priorityText', 'item.priority', 'risk_score', 'severityText'])) fail('FOUI_UI_HOME_LEGACY_PRIORITY_PROMOTION');
