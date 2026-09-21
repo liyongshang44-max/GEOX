@@ -53,8 +53,8 @@ if (!hasAll(source.home, [
   '/operator/field-intelligence',
 ])) fail('FOUI_UI_HOME_READ_SOURCES');
 
-if (!hasAll(source.fields, ['fetchFields', 'fetchFieldRuntimeScopeOptions', 'zone_id', 'GET ONLY'])) fail('FOUI_FIELD_SCOPE_SELECTOR');
-if (!hasAll(source.fieldDetail, ['readMcftRuntime', 'readMcftStates', 'readMcftForecasts', 'Full runtime response', 'ON-DEMAND CANONICAL DATASETS'])) fail('FOUI_FIELD_DATA_READS');
+if (!hasAll(source.fields, ['fetchFouiFields', 'fetchFouiFieldRuntimeScopeOptions', 'zone_id', '只读 · GET'])) fail('FOUI_FIELD_SCOPE_SELECTOR');
+if (!hasAll(source.fieldDetail, ['readFouiMcftRuntime', 'readFouiMcftStates', 'readFouiMcftForecasts', 'Full runtime response', 'ON-DEMAND CANONICAL DATASETS'])) fail('FOUI_FIELD_DATA_READS');
 if (!lacksAll(source.canonicalField, ['buildFieldIntelligenceOverviewVmV1', 'fouiCanonicalDisclosure', 'data-foui-surface="field-intelligence-detail"'])) fail('FOUI_MUTATED_MCFT_PRODUCT_SURFACE');
 
 if (!lacksAll(source.home, ['priorityText', 'item.priority', 'risk_score', 'severityText'])) fail('FOUI_UI_HOME_LEGACY_PRIORITY_PROMOTION');
