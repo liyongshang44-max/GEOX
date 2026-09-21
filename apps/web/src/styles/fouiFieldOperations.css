@@ -1054,3 +1054,295 @@
     grid-column: auto;
   }
 }
+
+
+/* Agronomy Planning V1 — read-only product surface over Operator Twin context. */
+.fouiAgronomyFieldSelector {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  justify-content: space-between;
+}
+
+.fouiAgronomyFieldSelector label {
+  min-width: min(520px, 100%);
+  display: grid;
+  gap: 7px;
+}
+
+.fouiAgronomyFieldSelector label > span {
+  color: var(--foui-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fouiAgronomyFieldSelector select {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 1px solid var(--foui-line);
+  border-radius: 3px;
+  background: #fbfaf6;
+  color: var(--foui-ink);
+  font: inherit;
+}
+
+.fouiAgronomyContextGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 16px;
+  border: 1px solid var(--foui-line);
+}
+
+.fouiAgronomyContextGrid article {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  padding: 13px;
+  border-right: 1px solid var(--foui-line);
+  border-bottom: 1px solid var(--foui-line);
+}
+
+.fouiAgronomyContextGrid article:nth-child(3n) {
+  border-right: 0;
+}
+
+.fouiAgronomyContextGrid article span,
+.fouiAgronomyFacts dt,
+.fouiCandidateFlags span,
+.fouiScenarioSummary span,
+.fouiCapabilityUnavailable small,
+.fouiAgronomyCapabilityTable small {
+  color: var(--foui-muted);
+  font-size: 11px;
+}
+
+.fouiAgronomyContextGrid article strong {
+  color: var(--foui-ink);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.fouiAgronomyContextGrid__wide {
+  grid-column: 1 / -1;
+  border-right: 0 !important;
+}
+
+.fouiAgronomyWorkGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fouiAgronomyWorkGrid .fouiPanel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.fouiAgronomyWorkGrid .fouiButton {
+  justify-self: start;
+}
+
+.fouiAgronomyFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--foui-line);
+}
+
+.fouiAgronomyFacts > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--foui-line);
+}
+
+.fouiAgronomyFacts > div:nth-child(even) {
+  padding-left: 12px;
+  border-left: 1px solid var(--foui-line);
+}
+
+.fouiAgronomyFacts > div:nth-child(odd) {
+  padding-right: 12px;
+}
+
+.fouiAgronomyFacts dd {
+  margin: 0;
+  color: var(--foui-ink);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.fouiCandidateCard {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-left: 3px solid var(--foui-green);
+  background: var(--foui-green-soft);
+}
+
+.fouiCandidateCard h4 {
+  margin: 0;
+  color: var(--foui-ink);
+  font: 500 22px/1.1 Georgia, "Times New Roman", serif;
+}
+
+.fouiCandidateCard p {
+  margin: 0;
+}
+
+.fouiCandidateFlags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.fouiCandidateFlags span {
+  padding: 5px 7px;
+  border: 1px solid rgba(31,92,61,0.16);
+  background: rgba(255,255,255,0.5);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.fouiScenarioProductView {
+  display: grid;
+  gap: 12px;
+}
+
+.fouiScenarioSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  border: 1px solid var(--foui-line);
+}
+
+.fouiScenarioSummary article {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 11px;
+  border-right: 1px solid var(--foui-line);
+}
+
+.fouiScenarioSummary article:last-child {
+  border-right: 0;
+}
+
+.fouiScenarioSummary strong {
+  color: var(--foui-ink);
+  overflow-wrap: anywhere;
+}
+
+.fouiScenarioOption {
+  display: grid;
+  gap: 8px;
+  padding: 13px;
+  border: 1px solid var(--foui-line);
+  background: #fbfaf6;
+}
+
+.fouiScenarioOption > div {
+  display: grid;
+  gap: 4px;
+}
+
+.fouiScenarioOption small,
+.fouiScenarioOption p,
+.fouiScenarioOption li {
+  color: var(--foui-muted);
+  font-size: 12px;
+}
+
+.fouiScenarioOption p,
+.fouiScenarioOption ul {
+  margin: 0;
+}
+
+.fouiScenarioOption ul {
+  padding-left: 18px;
+}
+
+.fouiCapabilityUnavailable {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--foui-line);
+  background: #f2efe7;
+}
+
+.fouiCapabilityUnavailable strong {
+  color: var(--foui-ink);
+  font: 500 22px/1.1 Georgia, "Times New Roman", serif;
+}
+
+.fouiAgronomyCapabilityTable {
+  display: grid;
+  margin-bottom: 18px;
+  border-top: 1px solid var(--foui-line);
+}
+
+.fouiAgronomyCapabilityTable article {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--foui-line);
+}
+
+.fouiAgronomyCapabilityTable article > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.fouiAgronomyCapabilityTable strong {
+  color: var(--foui-ink);
+}
+
+@media (max-width: 900px) {
+  .fouiAgronomyContextGrid,
+  .fouiAgronomyWorkGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fouiAgronomyContextGrid article,
+  .fouiAgronomyContextGrid article:nth-child(3n) {
+    border-right: 0;
+  }
+
+  .fouiAgronomyContextGrid__wide {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .fouiAgronomyFieldSelector {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .fouiAgronomyFacts,
+  .fouiScenarioSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .fouiAgronomyFacts > div:nth-child(even),
+  .fouiAgronomyFacts > div:nth-child(odd) {
+    padding-left: 0;
+    padding-right: 0;
+    border-left: 0;
+  }
+
+  .fouiScenarioSummary article {
+    border-right: 0;
+    border-bottom: 1px solid var(--foui-line);
+  }
+
+  .fouiScenarioSummary article:last-child {
+    border-bottom: 0;
+  }
+}
