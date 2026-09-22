@@ -78,6 +78,12 @@ function fakePool(options?: { runtimeScopeCount?: number; includeField?: boolean
   return {
     query: async (sql: string, params: unknown[]) => {
       if (sql.includes("FROM public.field_index_v1")) {
+        assert.match(sql, /tenant_id = \$1/);
+        assert.match(sql, /project_id = \$2/);
+        assert.match(sql, /group_id = \$3/);
+        assert.equal(params[0], "tenant-a");
+        assert.equal(params[1], "project-a");
+        assert.equal(params[2], "group-a");
         if (!includeField) return { rows: [], rowCount: 0 };
         return {
           rows: [{
