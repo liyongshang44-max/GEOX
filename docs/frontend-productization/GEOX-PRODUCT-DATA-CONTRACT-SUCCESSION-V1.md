@@ -561,3 +561,40 @@ Wave-02 must explicitly define the concrete contract before any of these tokens,
 The planned customer-facing names such as `FieldSummaryProjectionV1` and `FieldWorkspaceProjectionV1` are design targets only until the next contract wave freezes their exact projection_type mapping and machine schema.
 
 Sites must not infer a payload shape from the reserved tokens.
+
+
+## 18. Wave-01 successor adoption
+
+The original Wave-01 governance document is preserved with its historical label:
+
+```text
+PRE-CONSTRUCTION FREEZE CANDIDATE
+```
+
+On protected-main adoption of this succession artifact, that historical candidate label is superseded only for the following narrow continuation:
+
+```text
+ACCEPTED_FOR_NARROW_READ_ONLY_PRODUCT_PROJECTION_SUCCESSOR_CONSTRUCTION
+```
+
+Authorized after adoption:
+
+- concrete read-only Product Projection contracts and validators;
+- read-only authority/basis readers;
+- Product Projection builders;
+- GET/HEAD routes under `/api/product/v1/*`;
+- fixtures, negative tests, acceptance gates;
+- mock-first Sites/UI construction against explicitly frozen Product Projection contracts.
+
+Not authorized by this succession:
+
+- POST/PUT/PATCH/DELETE under FOUI Product Projection;
+- domain authority mutation;
+- MCFT state calculation;
+- ADR decision/applicability calculation;
+- B-Line approval/authorization logic;
+- execution mutation;
+- Outcome/Attribution promotion;
+- automatic promotion of any HOLD/legacy route into canonical navigation.
+
+This closes the construction-status gap without broadening the FOUI authority ceiling.
