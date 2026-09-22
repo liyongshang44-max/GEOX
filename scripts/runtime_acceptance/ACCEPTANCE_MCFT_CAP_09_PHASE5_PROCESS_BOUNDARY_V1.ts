@@ -443,6 +443,23 @@ function main(): void {
       `PHASE5_TWIN_COORDINATION_CONTENTION_MUST_RETRY:${code}`,
     );
   }
+  const postgresRecoveryWithCode = Object.assign(
+    new Error("the database system is in recovery mode"),
+    { code: "57P03" },
+  );
+  assert.equal(
+    twinFailureClassifier.classify(postgresRecoveryWithCode),
+    "RETRYABLE",
+    "PHASE5_TWIN_POSTGRES_CANNOT_CONNECT_NOW_MUST_RETRY",
+  );
+  assert.equal(
+    twinFailureClassifier.classify(
+      new Error("the database system is in recovery mode"),
+    ),
+    "RETRYABLE",
+    "PHASE5_TWIN_POSTGRES_RECOVERY_MESSAGE_MUST_RETRY",
+  );
+
   for (const code of [
     "STALE_FENCING_TOKEN",
     "OLDER_MISSED_SLOT_REQUIRED",
@@ -561,6 +578,8 @@ function main(): void {
     evidence_inflight_lease_keepalive_interval_for_300s_ms: 60_000,
     evidence_inflight_health_keepalive_same_cadence: true,
     twin_duplicate_coordination_contention_retryable: true,
+    twin_postgres_cannot_connect_now_retryable: true,
+    twin_postgres_recovery_message_retryable: true,
     twin_stale_fence_corruption_fatal: true,
     twin_scheduler_lease_standby_waits_without_fatal: true,
     stable_compiled_evidence_entrypoint: true,
