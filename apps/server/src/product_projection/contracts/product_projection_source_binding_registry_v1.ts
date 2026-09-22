@@ -58,6 +58,9 @@ export const PRODUCT_PROJECTION_SOURCE_ROLES_V1 = [
   "CAPABILITY_AUTHORITY_MATURITY_BASIS",
   "CAPABILITY_OPERATIONAL_ELIGIBILITY_BASIS",
   "ATTENTION_AUTHORITY_SOURCE",
+  "FIELD_IDENTITY",
+  "FIELD_CURRENT_STATE",
+  "FIELD_CURRENT_RUNTIME_LINEAGE",
 ] as const;
 export type ProductProjectionSourceRoleV1 =
   (typeof PRODUCT_PROJECTION_SOURCE_ROLES_V1)[number];
@@ -65,7 +68,7 @@ export type ProductProjectionSourceRoleV1 =
 export type ProductProjectionSourceBindingRegistrationV1 = {
   binding_id: string;
   ref_namespace: ProductProjectionSourceRefNamespaceV1;
-  source_system: "MCFT" | "ADR" | "B_LINE" | "FOUI_GOVERNANCE" | "EXTERNAL_BASIS";
+  source_system: "MCFT" | "ADR" | "B_LINE" | "FOUI_GOVERNANCE" | "GEOX_PLATFORM" | "EXTERNAL_BASIS";
   authority_domain: ProductProjectionAuthorityDomainV1 | null;
   non_authority_ref_class: ProductProjectionNonAuthorityRefClassV1 | null;
   object_kind_mode: ProductProjectionSourceObjectKindModeV1;
@@ -107,6 +110,28 @@ function nonAuthorityRegistration(input: Omit<
 // Important: an entry says only that a source object may be *referenced* for a product role.
 // It never upgrades the source object's authority and never supplies missing authority.
 export const PRODUCT_PROJECTION_SOURCE_BINDINGS_V1 = Object.freeze([
+  nonAuthorityRegistration({
+    binding_id: "GEOX_FIELD_INDEX_V1",
+    source_system: "GEOX_PLATFORM",
+    non_authority_ref_class: "OTHER_NON_AUTHORITY",
+    object_kind_mode: "EXACT",
+    allowed_object_kinds: ["field_index_v1"],
+    source_contract: "public.field_index_v1 customer-safe identity subset",
+    source_contract_version: "v1",
+    allowed_source_paths: ["public.field_index_v1"],
+    allowed_product_roles: ["FIELD_IDENTITY"],
+  }),
+  authorityRegistration({
+    binding_id: "MCFT_RUNTIME_ACTIVE_LINEAGE_V1",
+    source_system: "MCFT",
+    authority_domain: "MCFT",
+    object_kind_mode: "EXACT",
+    allowed_object_kinds: ["twin_runtime_lineage_v1"],
+    source_contract: "MinimalFieldTwinRuntimeReadModelV1 / FieldTwinCanonicalObjectRefV1",
+    source_contract_version: "minimal_field_twin_runtime_read_model_v1",
+    allowed_source_paths: ["active_lineage"],
+    allowed_product_roles: ["FIELD_CURRENT_RUNTIME_LINEAGE"],
+  }),
   authorityRegistration({
     binding_id: "MCFT_RUNTIME_POSTERIOR_STATE_V1",
     source_system: "MCFT",
@@ -116,7 +141,7 @@ export const PRODUCT_PROJECTION_SOURCE_BINDINGS_V1 = Object.freeze([
     source_contract: "MinimalFieldTwinRuntimeReadModelV1 / FieldTwinCanonicalObjectRefV1",
     source_contract_version: "minimal_field_twin_runtime_read_model_v1",
     allowed_source_paths: ["posterior_state"],
-    allowed_product_roles: ["ACTION_CURRENT_FIELD_STATE", "ACTION_DECISION_TIME_FIELD_STATE"],
+    allowed_product_roles: ["ACTION_CURRENT_FIELD_STATE", "ACTION_DECISION_TIME_FIELD_STATE", "FIELD_CURRENT_STATE"],
   }),
   authorityRegistration({
     binding_id: "MCFT_RUNTIME_FORECAST_REF_V1",
