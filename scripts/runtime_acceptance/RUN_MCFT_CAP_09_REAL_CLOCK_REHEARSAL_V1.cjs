@@ -93,12 +93,69 @@ function query(state,secrets,sql){
     "-Atc",sql,
   ]).trim();
 }
-function containerState(state,secrets){
-  const id=compose(state,secrets,["ps","-q","twin-runtime"]).trim();
+function containerState(state,secrets,service="twin-runtime"){
+  const id=compose(state,secrets,["ps","-q",service]).trim();
   if(!id)return {id:"",running:false,status:"ABSENT"};
   const raw=exec("docker",["inspect","-f","{{json .State}}",id]);
   const parsed=JSON.parse(raw);
   return {id,running:parsed.Running===true,status:String(parsed.Status??""),restart_count:Number(parsed.RestartCount??0)};
+}
+function sanitizedEvidenceHealthEventV1(value){
+  if(!value||typeof value!=="object"||Array.isArray(value))return null;
+  if(value.runtime_role!=="EVIDENCE_RUNTIME")return null;
+  const allowed=[
+    "runtime_role","lifecycle_id","host_id","status","cycle_attempt",
+    "successful_cycle_count","standby_cycle_count","retryable_failure_count",
+    "consecutive_failure_count","detail","attempt_kind","failure_class",
+    "failure_stage","failure_token","error_name","error_code","member_kind",
+    "lead","local_retry_ordinal",
+  ];
+  const out={};
+  for(const key of allowed){
+    const item=value[key];
+    if(typeof item==="string"||typeof item==="number"||typeof item==="boolean"||item===null){
+      out[key]=item;
+    }
+  }
+  return out;
+}
+function evidenceRuntimeHealthProof(state,secrets){
+  const output=compose(state,secrets,["logs","--no-color","--no-log-prefix","evidence-runtime"]);
+  const events=[];
+  for(const rawLine of output.split(/\r?\n/)){
+    const start=rawLine.indexOf("{"),end=rawLine.lastIndexOf("}");
+    if(start<0||end<start)continue;
+    try{
+      const event=sanitizedEvidenceHealthEventV1(JSON.parse(rawLine.slice(start,end+1)));
+      if(event)events.push(event);
+    }catch{}
+  }
+  const detailCount=(detail)=>events.filter((event)=>event.detail===detail).length;
+  const starting=detailCount("HOST_START");
+  const completed=detailCount("ATTEMPT_COMPLETED");
+  const retryable=detailCount("RETRYABLE_ATTEMPT_FAILURE");
+  const fatal=detailCount("FATAL_ATTEMPT_FAILURE");
+  return {
+    schema_version:"geox_mcft_cap09_real_clock_rehearsal_evidence_health_proof_v1",
+    run_class:"QUALIFICATION_REHEARSAL",
+    subject_sha:state.subject_sha,
+    project_name:state.project_name,
+    status:starting>=1&&(completed+retryable)>=1&&fatal===0?"PASS":"FAIL",
+    live_production_evidence_runtime:true,
+    isolated_qualification_database:true,
+    isolated_raw_namespace:true,
+    health_event_count:events.length,
+    host_start_count:starting,
+    attempt_completed_count:completed,
+    retryable_attempt_failure_count:retryable,
+    fatal_attempt_failure_count:fatal,
+    provider_attempt_outcome_count:completed+retryable,
+    sanitized_health_events:events,
+    unsafe_raw_log_retained:false,
+    formal_v5_arm:false,
+    a0_execution:false,
+    o00_started:false,
+  };
 }
 function writeOverride(file){
   fs.writeFileSync(file,[
@@ -279,6 +336,7 @@ function start(){
     secrets_path:secretsPath,
     prepare_proof_path:path.join(controlRoot,"prepare-proof.json"),
     final_proof_path:path.join(controlRoot,"verify-proof.json"),
+    evidence_health_proof_path:path.join(controlRoot,"evidence-runtime-health-proof.json"),
     fault_plan:{
       enabled:!flag("no-fault"),
       rehearsal_label:"R05",
@@ -320,6 +378,11 @@ function start(){
     GEOX_PHASE5_A0:state.a0,
     GEOX_PHASE5_CREATED_AT:state.started_at,
     GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME:state.r23,
+    GEOX_PHASE5_EVIDENCE_LEASE_DURATION_SECONDS:"300",
+    GEOX_PHASE5_EVIDENCE_SUCCESS_CADENCE_MS:"60000",
+    GEOX_PHASE5_EVIDENCE_LEASE_STANDBY_MS:"5000",
+    GEOX_PHASE5_EVIDENCE_RETRY_BASE_MS:"1000",
+    GEOX_PHASE5_EVIDENCE_RETRY_MAXIMUM_MS:"60000",
     GEOX_PHASE5_TWIN_LEASE_DURATION_SECONDS:"300",
     GEOX_PHASE5_TWIN_IDLE_POLL_MS:"5000",
     GEOX_PHASE5_TWIN_NOT_READY_POLL_MS:"15000",
@@ -346,19 +409,24 @@ function start(){
     req(prepare.rehearsal_is_non_authority_bearing===true,"REAL_CLOCK_REHEARSAL_PREPARE_NONAUTHORITY_REQUIRED");
     req(prepare.formal_evidence_claim===false&&prepare.formal_v5_arm===false&&prepare.stage_1b_closure_claim===false,"REAL_CLOCK_REHEARSAL_PREPARE_CEILING_DRIFT");
 
-    compose(state,secrets,["--profile","qualification-runtime","up","-d","--no-deps","twin-runtime"],{capture:false});
+    compose(state,secrets,["--profile","qualification-runtime","up","-d","--no-deps","evidence-runtime","twin-runtime"],{capture:false});
     const deadline=Date.now()+120_000;
-    let current;
+    let twinCurrent;
+    let evidenceCurrent;
     do{
-      current=containerState(state,secrets);
-      if(current.running)break;
+      twinCurrent=containerState(state,secrets,"twin-runtime");
+      evidenceCurrent=containerState(state,secrets,"evidence-runtime");
+      if(twinCurrent.running&&evidenceCurrent.running)break;
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,2000);
     }while(Date.now()<deadline);
-    req(current?.running===true,"REAL_CLOCK_REHEARSAL_TWIN_START_FAILED");
+    req(twinCurrent?.running===true,"REAL_CLOCK_REHEARSAL_TWIN_START_FAILED");
+    req(evidenceCurrent?.running===true,"REAL_CLOCK_REHEARSAL_EVIDENCE_START_FAILED");
 
     state.status="RUNNING";
-    state.twin_container_id=current.id;
+    state.twin_container_id=twinCurrent.id;
+    state.evidence_container_id=evidenceCurrent.id;
     state.twin_started_readback_at=new Date().toISOString();
+    state.evidence_started_readback_at=state.twin_started_readback_at;
     if(state.fault_plan.enabled){
       const logFd=fs.openSync(path.join(controlRoot,"fault-controller.log"),"a");
       const child=cp.spawn(process.execPath,[__filename,"fault-controller","--state="+statePath],{
@@ -377,14 +445,18 @@ function start(){
       started_at:state.started_at,
       r00:state.r00,
       r23:state.r23,
+      evidence_container_running:true,
       twin_container_running:true,
+      live_production_evidence_runtime:true,
+      live_production_provider_path:true,
       automatic_fault_plan:state.fault_plan.enabled?{
         label:"R05",
         stop_at:state.fault_plan.stop_at,
         restart_at:state.fault_plan.restart_at,
         purpose:"CONTROLLED_RESTART_PLUS_ONE_MISSED_BOUNDARY_OLDEST_FIRST_BACKFILL",
       }:null,
-      live_provider_required_for_rehearsal_runtime_progress:false,
+      twin_progress_uses_controlled_baseline:true,
+      evidence_runtime_live_provider_burn_in:true,
       formal_closure_substituted:false,
     },null,2));
   }catch(error){
@@ -396,7 +468,8 @@ function start(){
 }
 function status(){
   const {state,secrets}=loadState();
-  const container=containerState(state,secrets);
+  const container=containerState(state,secrets,"twin-runtime");
+  const evidenceContainer=containerState(state,secrets,"evidence-runtime");
   let slots="0|0|0|0";
   let cursor="";
   try{
@@ -416,6 +489,7 @@ function status(){
     status:state.status,
     now:new Date().toISOString(),
     container,
+    evidence_container:evidenceContainer,
     scheduler:{slot_count:slotCount,completed,degraded,failed,cursor_raw:cursor||null},
     fault_proof_status:faultProof?.status??"PENDING",
     seconds_until_r23:Math.round((Date.parse(state.r23)-Date.now())/1000),
@@ -430,6 +504,17 @@ function finalize(){
     const fault=readJson(state.fault_plan.proof_path,"REAL_CLOCK_REHEARSAL_FAULT_PROOF_INVALID");
     req(fault.status==="PASS","REAL_CLOCK_REHEARSAL_FAULT_PROOF_NOT_PASS",fault.status);
   }
+  const twinContainer=containerState(state,secrets,"twin-runtime");
+  const evidenceContainer=containerState(state,secrets,"evidence-runtime");
+  req(twinContainer.running===true,"REAL_CLOCK_REHEARSAL_TWIN_NOT_RUNNING_AT_FINALIZE");
+  req(evidenceContainer.running===true,"REAL_CLOCK_REHEARSAL_EVIDENCE_NOT_RUNNING_AT_FINALIZE");
+  const evidenceProof=evidenceRuntimeHealthProof(state,secrets);
+  writePrivateJson(state.evidence_health_proof_path,evidenceProof);
+  req(evidenceProof.status==="PASS","REAL_CLOCK_REHEARSAL_EVIDENCE_HEALTH_PROOF_NOT_PASS",JSON.stringify({
+    host_start_count:evidenceProof.host_start_count,
+    provider_attempt_outcome_count:evidenceProof.provider_attempt_outcome_count,
+    fatal_attempt_failure_count:evidenceProof.fatal_attempt_failure_count,
+  }));
   compose(state,secrets,["--profile","qualification-orchestration","run","--rm","--no-deps","qualification-verify"],{capture:false});
   const proof=readJson(state.final_proof_path,"REAL_CLOCK_REHEARSAL_FINAL_PROOF_INVALID");
   req(proof.status==="PASS","REAL_CLOCK_REHEARSAL_FINAL_PROOF_NOT_PASS");
@@ -451,6 +536,11 @@ function finalize(){
     rehearsal_labels:"R00-R23",
     runtime_clock:"SYSTEM_AND_POSTGRESQL_UTC_WALL_CLOCK",
     controlled_restart_backfill:state.fault_plan?.enabled?"PASS":"NOT_REQUESTED",
+    live_production_evidence_runtime:"PASS",
+    evidence_provider_attempt_outcome_count:evidenceProof.provider_attempt_outcome_count,
+    evidence_retryable_attempt_failure_count:evidenceProof.retryable_attempt_failure_count,
+    evidence_fatal_attempt_failure_count:evidenceProof.fatal_attempt_failure_count,
+    evidence_health_proof_path:state.evidence_health_proof_path,
     formal_closure_substituted:false,
     next_action:"KEEP_PROOFS_THEN_RUN_FULL_EXACT_HEAD_QUALIFICATION_BEFORE_ANY_FORMAL_ARM",
   },null,2));
