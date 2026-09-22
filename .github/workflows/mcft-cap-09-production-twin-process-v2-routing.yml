@@ -63,6 +63,26 @@ jobs:
             test "$(git rev-parse origin/main)" = 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
 
             MODE=ROUTING_INSTALLATION_PR
+
+          elif [ '${{ github.base_ref }}' = 'main' ] && \
+               [ '${{ github.head_ref }}' = 'fix/mcft-cap09-v2-qualification-equivalence-v1' ]; then
+
+            test '${{ github.event.pull_request.base.sha }}' = '6ff48eca10c1d25365c39f9d1e4dbb14d6c1ad91'
+            test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
+
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = '6ff48eca10c1d25365c39f9d1e4dbb14d6c1ad91'
+
+            # This successor changes qualification packaging only. Production V2
+            # routing must remain current and test-seam-free.
+            test "$(git rev-parse HEAD:apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts)" = \
+                 "$(git rev-parse origin/main:apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts)"
+            test "$(git rev-parse HEAD:apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts)" = \
+                 "$(git rev-parse origin/main:apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts)"
+            test "$(git rev-parse HEAD:docker-compose.mcft-cap09-production.yml)" = \
+                 "$(git rev-parse origin/main:docker-compose.mcft-cap09-production.yml)"
+
+            MODE=QUALIFICATION_EQUIVALENCE_SUCCESSOR
           fi
 
           echo "MCFT_CAP09_REQUAL_MODE=$MODE" >> "$GITHUB_ENV"
