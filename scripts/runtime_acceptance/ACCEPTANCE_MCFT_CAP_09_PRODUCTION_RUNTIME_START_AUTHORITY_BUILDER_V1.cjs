@@ -333,6 +333,15 @@ try {
     assert.ok(source.includes("runtime_mode:NON_OWNER_STANDBY_MODE"), "RUNTIME_START_NON_OWNER_MODE_BINDING_REQUIRED");
     assert.ok(source.includes("runtime_mode:OWNER_CUTOVER_MODE"), "RUNTIME_START_OWNER_MODE_BINDING_REQUIRED");
   }
+  const restartAdmissionMarker = 'admission_time_utc:String(raw?.activation_fence_time??"")';
+  assert.ok(
+    evidence.includes(restartAdmissionMarker),
+    "RUNTIME_START_EVIDENCE_OWNER_RESTART_ORIGINAL_ADMISSION_REQUIRED",
+  );
+  assert.ok(
+    twin.includes(restartAdmissionMarker),
+    "RUNTIME_START_TWIN_OWNER_RESTART_ORIGINAL_ADMISSION_REQUIRED",
+  );
   assert.ok(
     evidence.includes("GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID"),
     "RUNTIME_START_EVIDENCE_ACCESS_KEY_ENV_REQUIRED",
@@ -355,6 +364,9 @@ try {
     current_crop_stage_fresh_at_formal_a0_required: true,
     current_crop_fresh_at_adjudication_required: true,
     current_crop_fresh_at_process_admission_required: true,
+    owner_cutover_restart_revalidates_original_admission_time: true,
+    evidence_owner_cutover_restart_boundary_locked: true,
+    twin_owner_cutover_restart_boundary_locked: true,
     current_crop_architecture_certificate_digest_required: true,
     candidate_only_current_crop_rejected: true,
     stale_stage_current_crop_rejected: true,
