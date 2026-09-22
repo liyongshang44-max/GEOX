@@ -39,6 +39,22 @@ try{
     'GEOX_PHASE5_TWIN_NOT_READY_POLL_MS:"15000"',
     'GEOX_PHASE5_TWIN_RETRY_BASE_MS:"1000"',
     'GEOX_PHASE5_TWIN_RETRY_MAXIMUM_MS:"60000"',
+    'GEOX_PHASE5_EVIDENCE_LEASE_DURATION_SECONDS:"300"',
+    'GEOX_PHASE5_EVIDENCE_SUCCESS_CADENCE_MS:"60000"',
+    'GEOX_PHASE5_EVIDENCE_LEASE_STANDBY_MS:"5000"',
+    'GEOX_PHASE5_EVIDENCE_RETRY_BASE_MS:"1000"',
+    'GEOX_PHASE5_EVIDENCE_RETRY_MAXIMUM_MS:"60000"',
+    'GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID:"zone_kbs_mcse_t4r1_evidence_burnin_v1"',
+    '"evidence-runtime","twin-runtime"',
+    '"REAL_CLOCK_REHEARSAL_EVIDENCE_START_FAILED"',
+    '"REAL_CLOCK_REHEARSAL_EVIDENCE_NOT_RUNNING_AT_FINALIZE"',
+    '"evidence-runtime-health-proof.json"',
+    'live_production_evidence_runtime:true',
+    'live_production_provider_path:true',
+    'unsafe_raw_log_retained:false',
+    'provider_attempt_outcome_count:completed+retryable',
+    '"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1.ts"',
+    '"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts"',
     '"CONTROLLED_PROCESS_RESTART_ACROSS_ONE_REAL_UTC_BOUNDARY"',
     'oldest_first_backfill_observed:true',
     'formal_closure_substituted:false',
@@ -71,6 +87,10 @@ try{
   assert.match(source,/qualification_rehearsal_baseline_fact_count===49/);
   assert.match(source,/rehearsal_is_non_authority_bearing===true/);
   assert.match(source,/formal_closure_substituted_by_rehearsal===false/);
+  assert.match(source,/evidence_container:evidenceContainer/);
+  assert.match(source,/fatal_attempt_failure_count:fatal/);
+  assert.match(source,/starting>=1&&\(completed\+retryable\)>=1&&fatal===0/);
+  assert.match(source,/GEOX_MCFT_CAP09_ZONE_ID: \$\{GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID/);
 
   write({
     schema_version:"geox_mcft_cap09_real_clock_rehearsal_launcher_acceptance_v1",
@@ -82,6 +102,13 @@ try{
     actual_database_clock_preserved:true,
     automatic_controlled_restart_and_backfill_probe:true,
     exact_24_terminal_readback_required:true,
+    live_production_evidence_runtime_burn_in:true,
+    live_provider_path_required:true,
+    evidence_and_twin_both_must_be_running:true,
+    evidence_burn_in_scope_isolated_from_twin_baseline:true,
+    retryable_provider_failure_is_observable_not_automatically_fatal:true,
+    fatal_provider_failure_forbids_rehearsal_pass:true,
+    sanitized_evidence_health_proof_retained:true,
     rehearsal_non_authority_claims_locked:true,
     formal_closure_substitution:false,
     production_effect:false,
