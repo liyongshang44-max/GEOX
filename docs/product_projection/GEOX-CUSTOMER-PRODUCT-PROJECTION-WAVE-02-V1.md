@@ -83,10 +83,13 @@ Field identity is read from `public.field_index_v1` and is explicitly non-author
 
 A unique `ACTIVE` row from `public.field_season_index_v1` may enrich display crop/season metadata.
 
-The season index never chooses one MCFT authority state from multiple Runtime scopes.
+A unique ACTIVE season is an explicit non-authority scope-selection basis. It may narrow historical
+MCFT Runtime scope rows to that season, but it does not alter or mint MCFT authority and it never
+resolves multiple zones by itself.
 
-If season metadata is missing, ambiguous, or disagrees with the exact Runtime scope, Product reporting
-is limited rather than repaired by inference.
+If season metadata is missing or ambiguous, the builder may use MCFT only when exactly one Runtime
+scope remains across the field; reporting is then LIMITED. If the ACTIVE season and Runtime scopes
+disagree, Product reporting fails closed rather than repairing the mismatch by inference.
 
 ## 4. Current Field Condition
 
@@ -114,7 +117,8 @@ limitation reason
 
 No current state is synthesized.
 
-No current Field condition is selected using the non-authoritative season index.
+The non-authoritative season index may constrain scope selection only when its ACTIVE season is unique.
+The selected Field condition remains the exact MCFT posterior state and retains its exact source ref/hash.
 
 ## 5. Customer-visible state payload
 
