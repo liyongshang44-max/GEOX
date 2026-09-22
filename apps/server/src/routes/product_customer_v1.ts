@@ -119,6 +119,8 @@ function filterFields(req: FastifyRequest, fields: Awaited<ReturnType<CustomerPr
   const crop = textQuery(req, "crop")?.toLowerCase() ?? null;
   const season = textQuery(req, "season")?.toLowerCase() ?? null;
   const reporting = textQuery(req, "reporting_state")?.toUpperCase() ?? null;
+  const farm = textQuery(req, "farm");
+  if (farm) throw new Error("PRODUCT_FARM_FILTER_UNAVAILABLE");
 
   if (reporting && !["CURRENT", "LIMITED", "UNAVAILABLE"].includes(reporting)) {
     throw new Error("PRODUCT_REPORTING_FILTER_INVALID");
@@ -177,6 +179,9 @@ export function registerProductCustomerV1Routes(app: FastifyInstance, pool: Pool
     } catch (error) {
       if (error instanceof Error && error.message === "PRODUCT_REPORTING_FILTER_INVALID") {
         return sendError(reply, 400, id, "PRODUCT_FILTER_INVALID", "The requested filter is invalid.", false);
+      }
+      if (error instanceof Error && error.message === "PRODUCT_FARM_FILTER_UNAVAILABLE") {
+        return sendError(reply, 400, id, "PRODUCT_FILTER_UNAVAILABLE", "The requested filter is not available in this Product Projection slice.", false);
       }
       if (error instanceof ProductProjectionReadErrorV1) {
         return sendError(reply, 503, id, "PRODUCT_PROJECTION_SOURCE_UNAVAILABLE", "Product data is temporarily unavailable.", true);
