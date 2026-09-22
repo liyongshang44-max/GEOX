@@ -1,0 +1,33 @@
+name: foui-product-api-succession
+
+on:
+  pull_request:
+    paths:
+      - "docs/frontend-productization/**"
+      - "docs/frontend/P2_CUSTOMER_API_CONTRACT.md"
+      - "docs/frontend/CUSTOMER_DATA_SOURCE_MAP_V1.md"
+      - "docs/frontend/FALLBACK_RETIREMENT_PLAN.md"
+      - "docs/frontend/CUSTOMER_FRONTEND_GAP_BASELINE_V1.md"
+      - "apps/server/src/routes/customer_v1.ts"
+      - "apps/server/src/routes/field_portfolio_v1.ts"
+      - "apps/web/src/api/customer.ts"
+      - "apps/web/src/api/customerFields.ts"
+      - "apps/web/src/api/customerOperations.ts"
+      - "apps/web/src/api/customerReportsCenter.ts"
+      - "scripts/governance_acceptance/ACCEPTANCE_FOUI_PRODUCT_API_SUCCESSION_V1.cjs"
+      - ".github/workflows/foui-product-api-succession.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Validate FOUI product API succession
+        run: node scripts/governance_acceptance/ACCEPTANCE_FOUI_PRODUCT_API_SUCCESSION_V1.cjs
