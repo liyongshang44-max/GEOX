@@ -145,8 +145,12 @@
       "GET /api/product/v1/fields",
       "GET /api/product/v1/fields/:fieldRef"
     ],
-    "overview_attention_semantics": "SERVER_COMPOSED_FROM_GOVERNED_ATTENTION_QUEUE_NOT_BROWSER_INFERENCE",
-    "database_schema_change_required_by_governance": false
+    "implementation_artifact": "docs/product_projection/GEOX-CUSTOMER-PRODUCT-PROJECTION-WAVE-02-V1.md",
+    "implementation_status": "IMPLEMENTATION_CANDIDATE",
+    "database": "EXISTING_POSTGRESQL",
+    "database_schema_change_required_by_governance": false,
+    "legacy_api_dependency": false,
+    "overview_attention_semantics": "SERVER_COMPOSED_FROM_GOVERNED_ATTENTION_QUEUE_NOT_BROWSER_INFERENCE"
   },
   "legacy_frontend_consumer_allowlist": {
     "policy": "EXISTING_COMPATIBILITY_CONSUMERS_ONLY_NO_NEW_FILES",

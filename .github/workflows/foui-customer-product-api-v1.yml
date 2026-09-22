@@ -1,0 +1,49 @@
+name: foui-customer-product-api-v1
+
+on:
+  pull_request:
+    paths:
+      - "apps/server/src/product_projection/**"
+      - "apps/server/src/routes/product_customer_v1.ts"
+      - "apps/server/src/modules/product/**"
+      - "apps/server/src/modules/domain/registerDomainModules.ts"
+      - "docs/product_projection/**"
+      - "docs/architecture/semantic_convergence/GEOX-BLINE-ACTIVE-RUNTIME-SURFACE-DISPOSITION-V1.json"
+      - "docs/frontend-productization/GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1.*"
+      - "scripts/governance_acceptance/ACCEPTANCE_FOUI_CUSTOMER_PRODUCT_API_V1.cjs"
+      - "scripts/governance_acceptance/FOUI_CUSTOMER_PRODUCT_API_NEGATIVE_V1.ts"
+      - ".github/workflows/foui-customer-product-api-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  customer-product-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Fetch PR base
+        if: github.event_name == 'pull_request'
+        run: git fetch origin "${{ github.base_ref }}"
+      - name: Static governance and MCFT-sensitive-path guard
+        if: github.event_name == 'pull_request'
+        run: node scripts/governance_acceptance/ACCEPTANCE_FOUI_CUSTOMER_PRODUCT_API_V1.cjs --base-ref "origin/${{ github.base_ref }}"
+      - name: Static governance (manual dispatch)
+        if: github.event_name != 'pull_request'
+        run: node scripts/governance_acceptance/ACCEPTANCE_FOUI_CUSTOMER_PRODUCT_API_V1.cjs
+      - name: Customer projection negative proofs
+        run: pnpm exec tsx scripts/governance_acceptance/FOUI_CUSTOMER_PRODUCT_API_NEGATIVE_V1.ts
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck

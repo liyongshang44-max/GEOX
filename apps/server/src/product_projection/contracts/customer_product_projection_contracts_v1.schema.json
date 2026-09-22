@@ -1,0 +1,534 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geox.local/contracts/customer_product_projection_contracts_v1.schema.json",
+  "title": "GEOX Customer Product Projection Successor Contracts V1",
+  "description": "Read-only non-authoritative Customer Product Projection contracts for the first real-data Product API slice.",
+  "$defs": {
+    "Envelope": {
+      "$ref": "product_projection_contracts_v1.schema.json#/$defs/ProductProjectionEnvelopeV1"
+    },
+    "Identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "display_name",
+        "farm_display_name",
+        "crop_display_name",
+        "crop_stage_display",
+        "season_display",
+        "area",
+        "area_unit"
+      ],
+      "properties": {
+        "display_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "farm_display_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "crop_display_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "crop_stage_display": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "season_display": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "area": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "area_unit": {
+          "enum": [
+            "ha",
+            "m2",
+            null
+          ]
+        }
+      }
+    },
+    "ConditionMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root_zone_storage_mm_mean",
+        "root_zone_vwc_fraction_mean",
+        "available_water_fraction",
+        "depletion_from_field_capacity_mm",
+        "confidence_status"
+      ],
+      "properties": {
+        "root_zone_storage_mm_mean": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "root_zone_vwc_fraction_mean": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "available_water_fraction": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "depletion_from_field_capacity_mm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "confidence_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "CurrentCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "summary",
+        "logical_time",
+        "support_state",
+        "source_ref_key",
+        "metrics"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "AVAILABLE",
+            "LIMITED",
+            "UNAVAILABLE"
+          ]
+        },
+        "summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "support_state": {
+          "enum": [
+            "SUPPORTED",
+            "LIMITED",
+            "UNAVAILABLE"
+          ]
+        },
+        "source_ref_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metrics": {
+          "$ref": "#/$defs/ConditionMetrics"
+        },
+        "logical_time": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "Reporting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reason_codes",
+        "source_logical_time"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "CURRENT",
+            "LIMITED",
+            "UNAVAILABLE"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "source_logical_time": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "FieldSummaryProjectionV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "envelope",
+        "field_ref",
+        "identity",
+        "current_condition",
+        "reporting_state",
+        "attention",
+        "recent_operation",
+        "geometry_availability",
+        "capability_refs"
+      ],
+      "properties": {
+        "envelope": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Envelope"
+            },
+            {
+              "properties": {
+                "projection_type": {
+                  "const": "FIELD_SUMMARY"
+                }
+              }
+            }
+          ]
+        },
+        "field_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identity": {
+          "$ref": "#/$defs/Identity"
+        },
+        "current_condition": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/CurrentCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reporting_state": {
+          "$ref": "#/$defs/Reporting"
+        },
+        "attention": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "has_attention",
+            "attention_item_refs"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "AVAILABLE",
+                "LIMITED",
+                "UNAVAILABLE"
+              ]
+            },
+            "has_attention": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "attention_item_refs": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "recent_operation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "operation"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "AVAILABLE",
+                "LIMITED",
+                "UNAVAILABLE"
+              ]
+            },
+            "operation": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "operation_ref",
+                    "display_title",
+                    "lifecycle_state",
+                    "event_at"
+                  ],
+                  "properties": {
+                    "operation_ref": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "display_title": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "lifecycle_state": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "event_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "geometry_availability": {
+          "enum": [
+            "AVAILABLE",
+            "PARTIAL",
+            "UNAVAILABLE"
+          ]
+        },
+        "capability_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "FieldWorkspaceProjectionV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "envelope",
+        "field_ref",
+        "identity",
+        "current_condition",
+        "reporting_state",
+        "recent_changes",
+        "open_action_cases",
+        "recent_operations",
+        "evidence_summary",
+        "observed_outcomes",
+        "capability_availability",
+        "history_summary",
+        "provenance_summary"
+      ],
+      "properties": {
+        "envelope": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Envelope"
+            },
+            {
+              "properties": {
+                "projection_type": {
+                  "const": "FIELD_WORKSPACE"
+                }
+              }
+            }
+          ]
+        },
+        "field_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identity": {
+          "$ref": "#/$defs/Identity"
+        },
+        "current_condition": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/CurrentCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reporting_state": {
+          "$ref": "#/$defs/Reporting"
+        },
+        "recent_changes": {
+          "$ref": "#/$defs/UnavailableOrItems"
+        },
+        "open_action_cases": {
+          "$ref": "#/$defs/UnavailableOrItems"
+        },
+        "recent_operations": {
+          "$ref": "#/$defs/UnavailableOrItems"
+        },
+        "evidence_summary": {
+          "type": "object"
+        },
+        "observed_outcomes": {
+          "$ref": "#/$defs/UnavailableOrItems"
+        },
+        "capability_availability": {
+          "type": "array"
+        },
+        "history_summary": {
+          "type": "object"
+        },
+        "provenance_summary": {
+          "type": "object",
+          "required": [
+            "source_authority_count",
+            "source_non_authority_count"
+          ],
+          "properties": {
+            "source_authority_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "source_non_authority_count": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "UnavailableOrItems": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "items"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "AVAILABLE",
+            "LIMITED",
+            "UNAVAILABLE"
+          ]
+        },
+        "items": {
+          "type": "array"
+        }
+      }
+    },
+    "CustomerOverviewProjectionV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "envelope",
+        "reporting_summary",
+        "attention",
+        "field_previews",
+        "recent_operations",
+        "latest_reports"
+      ],
+      "properties": {
+        "envelope": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Envelope"
+            },
+            {
+              "properties": {
+                "projection_type": {
+                  "const": "CUSTOMER_OVERVIEW"
+                }
+              }
+            }
+          ]
+        },
+        "reporting_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "total_fields",
+            "current_fields",
+            "limited_fields",
+            "unavailable_fields"
+          ],
+          "properties": {
+            "total_fields": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "current_fields": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limited_fields": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "unavailable_fields": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "attention": {
+          "$ref": "#/$defs/UnavailableOrItems"
+        },
+        "field_previews": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FieldSummaryProjectionV1"
+          }
+        },
+        "recent_operations": {
+          "$ref": "#/$defs/UnavailableOrItems"
+        },
+        "latest_reports": {
+          "$ref": "#/$defs/UnavailableOrItems"
+        }
+      }
+    }
+  }
+}
