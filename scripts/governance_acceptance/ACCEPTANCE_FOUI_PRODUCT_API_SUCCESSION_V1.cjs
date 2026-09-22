@@ -18,6 +18,19 @@ function assertContains(rel, needle, code) {
   assert(s.includes(needle), code || `MISSING_REQUIRED_MARKER:${rel}:${needle}`);
 }
 
+function walkFiles(relDir) {
+  const start = path.join(root, relDir);
+  const out = [];
+  if (!fs.existsSync(start)) return out;
+  for (const entry of fs.readdirSync(start, { withFileTypes: true })) {
+    const abs = path.join(start, entry.name);
+    const rel = path.relative(root, abs).replace(/\\/g, "/");
+    if (entry.isDirectory()) out.push(...walkFiles(rel));
+    else out.push(rel);
+  }
+  return out;
+}
+
 const manifestPath = "docs/frontend-productization/GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1.json";
 const manifest = JSON.parse(read(manifestPath));
 
@@ -36,6 +49,8 @@ const expectedLegacy = new Map([
   ["/api/v1/customer/operations", "LEGACY_ACTIVE_READ"],
   ["/api/v1/customer/reports", "LEGACY_ACTIVE_READ"],
   ["/api/v1/customer/fields/:field_id/confirmed-twin-summary", "LEGACY_DO_NOT_ADOPT"],
+  ["/api/v1/customer/fields/:fieldId/memory", "LEGACY_ACTIVE_READ"],
+  ["/api/v1/customer/fields/:fieldId/geometry", "LEGACY_COMPAT_READ_SOURCE"],
   ["/api/v1/fields/portfolio", "PRE_FOUI_LEGACY_PROJECTION"],
   ["/api/v1/reports/customer-dashboard/aggregate", "LEGACY_FALLBACK"],
   ["/api/v1/reports/field/:fieldId", "LEGACY_REPORT"],
@@ -87,6 +102,70 @@ assertContains(
   "CONFIRMED_TWIN_SUMMARY_DO_NOT_ADOPT_MARKER_MISSING",
 );
 
+for (const rel of [
+  "apps/web/src/api/customerFieldMemory.ts",
+  "apps/web/src/api/customerRoiLedger.ts",
+]) {
+  assertContains(rel, "GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_CONSUMER_ADAPTER", `LEGACY_ADAPTER_MARKER_MISSING:${rel}`);
+}
+assertContains(
+  "apps/web/src/api/customerPrescriptions.ts",
+  "GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_DIRECT_DOMAIN_ADAPTER",
+  "CUSTOMER_PRESCRIPTION_LEGACY_MARKER_MISSING",
+);
+assertContains(
+  "apps/web/src/api/fieldPortfolio.ts",
+  "GEOX_PRODUCT_CONTRACT_LIFECYCLE: PRE_FOUI_LEGACY_PROJECTION_ADAPTER",
+  "FIELD_PORTFOLIO_ADAPTER_LEGACY_MARKER_MISSING",
+);
+assertContains(
+  "apps/web/src/api/reports.ts",
+  "GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_REPORT_ADAPTER",
+  "REPORTS_ADAPTER_LEGACY_MARKER_MISSING",
+);
+
+const consumerPolicy = manifest.legacy_frontend_consumer_allowlist;
+assert(consumerPolicy?.policy === "EXISTING_COMPATIBILITY_CONSUMERS_ONLY_NO_NEW_FILES", "LEGACY_CONSUMER_ALLOWLIST_POLICY_MISSING");
+
+const allFrontendFiles = walkFiles("apps/web/src").filter((rel) => /\.(?:ts|tsx|js|jsx)$/.test(rel));
+function filesContaining(needle) {
+  return allFrontendFiles.filter((rel) => read(rel).includes(needle));
+}
+function assertOnlyAllowlisted(observed, allowlist, familyCode) {
+  const allowed = new Set(allowlist || []);
+  for (const rel of observed) {
+    assert(allowed.has(rel), `NEW_LEGACY_FRONTEND_CONSUMER_FORBIDDEN:${familyCode}:${rel}`);
+  }
+  for (const rel of allowed) {
+    assert(observed.includes(rel), `LEGACY_ALLOWLIST_DRIFT_MISSING_CONSUMER:${familyCode}:${rel}`);
+  }
+}
+
+assertOnlyAllowlisted(
+  filesContaining("/api/v1/customer/"),
+  consumerPolicy.customer_api_family_existing_files,
+  "CUSTOMER_API_FAMILY",
+);
+assertOnlyAllowlisted(
+  filesContaining("/api/v1/reports/"),
+  consumerPolicy.reports_api_family_existing_files,
+  "REPORTS_API_FAMILY",
+);
+assertOnlyAllowlisted(
+  filesContaining("/api/v1/fields/portfolio"),
+  consumerPolicy.field_portfolio_existing_files,
+  "FIELD_PORTFOLIO",
+);
+
+const customerApiFiles = allFrontendFiles.filter((rel) =>
+  /^apps\/web\/src\/api\/customer[^/]*\.ts$/.test(rel) && read(rel).includes("/api/v1/")
+);
+assertOnlyAllowlisted(
+  customerApiFiles,
+  consumerPolicy.customer_direct_v1_api_existing_files,
+  "CUSTOMER_DIRECT_V1_API",
+);
+
 assertContains(
   "docs/frontend-productization/GEOX-FRONTEND-CANONICAL-BLUEPRINT-V1.md",
   "## 18. Product data contract succession",
@@ -129,6 +208,8 @@ console.log(JSON.stringify({
   canonical_namespace: "/api/product/v1/*",
   legacy_routes_checked: expectedLegacy.size,
   historical_documents_checked: (manifest.historical_documents || []).length,
+  legacy_frontend_customer_family_consumers_checked: (manifest.legacy_frontend_consumer_allowlist?.customer_api_family_existing_files || []).length,
+  legacy_frontend_report_family_consumers_checked: (manifest.legacy_frontend_consumer_allowlist?.reports_api_family_existing_files || []).length,
   runtime_behavior_change: false,
   database_schema_change: false,
 }, null, 2));
