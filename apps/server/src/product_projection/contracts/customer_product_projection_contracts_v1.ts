@@ -50,7 +50,7 @@ export type FieldConditionMetricsV1 = {
 export type FieldCurrentConditionProjectionV1 = {
   status: CustomerAvailabilityStateV1;
   summary: string | null;
-  effective_at: string | null;
+  logical_time: string | null;
   support_state: "SUPPORTED" | "LIMITED" | "UNAVAILABLE";
   source_ref_key: string | null;
   metrics: FieldConditionMetricsV1;
@@ -59,7 +59,7 @@ export type FieldCurrentConditionProjectionV1 = {
 export type FieldReportingStateProjectionV1 = {
   state: CustomerReportingStateV1;
   reason_codes: readonly string[];
-  last_qualified_at: string | null;
+  source_logical_time: string | null;
 };
 
 export type FieldAttentionSummaryV1 = {
@@ -304,14 +304,14 @@ function assertReporting(value: unknown): asserts value is FieldReportingStatePr
   const object = rec(value, "FIELD_REPORTING_REQUIRED");
   enumVal(object.state, CUSTOMER_REPORTING_STATES_V1, "FIELD_REPORTING_STATE_INVALID");
   uniqueStrings(object.reason_codes, "FIELD_REPORTING_REASON_CODES_INVALID");
-  isoOrNull(object.last_qualified_at, "FIELD_REPORTING_LAST_QUALIFIED_AT_INVALID");
+  isoOrNull(object.source_logical_time, "FIELD_REPORTING_SOURCE_LOGICAL_TIME_INVALID");
 }
 
 function assertCurrentCondition(value: unknown): asserts value is FieldCurrentConditionProjectionV1 {
   const object = rec(value, "FIELD_CURRENT_CONDITION_REQUIRED");
   enumVal(object.status, CUSTOMER_AVAILABILITY_STATES_V1, "FIELD_CURRENT_CONDITION_STATUS_INVALID");
   nullableTxt(object.summary);
-  isoOrNull(object.effective_at, "FIELD_CURRENT_CONDITION_EFFECTIVE_AT_INVALID");
+  isoOrNull(object.logical_time, "FIELD_CURRENT_CONDITION_LOGICAL_TIME_INVALID");
   enumVal(object.support_state, ["SUPPORTED", "LIMITED", "UNAVAILABLE"] as const, "FIELD_CURRENT_CONDITION_SUPPORT_INVALID");
   nullableTxt(object.source_ref_key);
   const metrics = rec(object.metrics, "FIELD_CURRENT_CONDITION_METRICS_REQUIRED");
