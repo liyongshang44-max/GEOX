@@ -461,12 +461,16 @@ The next narrow implementation unit is Product Projection construction, not anot
 First useful vertical slice:
 
 ```text
+CustomerOverviewProjectionV1
 FieldSummaryProjectionV1
 FieldWorkspaceProjectionV1
 
+GET /api/product/v1/overview
 GET /api/product/v1/fields
 GET /api/product/v1/fields/:fieldRef
 ```
+
+The Overview projection must be composed server-side from governed Product Projection inputs, including Attention semantics where applicable. The browser must not derive customer attention, reporting health, or business status by inspecting field rows heuristically.
 
 Construction requirements:
 
@@ -598,3 +602,32 @@ Not authorized by this succession:
 - automatic promotion of any HOLD/legacy route into canonical navigation.
 
 This closes the construction-status gap without broadening the FOUI authority ceiling.
+
+
+## 19. Product API identity and scope boundary
+
+Every canonical `/api/product/v1/*` route requires authenticated caller context and server-side scope enforcement.
+
+Permanent rules:
+
+```text
+principal context
+= server-side
+
+browser database credential
+= FORBIDDEN
+
+browser service-wide Product API token
+= FORBIDDEN
+
+client-supplied tenant/project/group/field query
+!= access grant
+```
+
+A request may narrow an already-authorized scope, but untrusted route/query parameters must never broaden the caller's tenant, project, group, field, zone, season, or capability scope.
+
+Cross-scope resources must fail closed with a governed denial or non-enumerating not-found response.
+
+For a bounded Sites data-path qualification only, a scoped read-only non-production principal may be stored as a server-side Site secret. It must never be shipped to browser JavaScript and must not be a service-wide production credential.
+
+The final production identity provider/session mechanism remains separately governed; this artifact freezes the access-control boundary, not the identity vendor.
