@@ -134,6 +134,14 @@ assertContains(
   "REPORTS_ADAPTER_LEGACY_MARKER_MISSING",
 );
 
+for (const rel of manifest.legacy_customer_viewmodels || []) {
+  assertContains(rel, "GEOX_PRODUCT_CONTRACT_LIFECYCLE:", `LEGACY_CUSTOMER_VIEWMODEL_MARKER_MISSING:${rel}`);
+}
+assert(
+  manifest.legacy_viewmodel_policy === "PROVENANCE_AND_EXISTING_COMPATIBILITY_ONLY; NO_SEMANTIC_COPY_INTO_POST_FOUI_PRODUCT",
+  "LEGACY_CUSTOMER_VIEWMODEL_POLICY_MISSING",
+);
+
 const consumerPolicy = manifest.legacy_frontend_consumer_allowlist;
 assert(consumerPolicy?.policy === "EXISTING_COMPATIBILITY_CONSUMERS_ONLY_NO_NEW_FILES", "LEGACY_CONSUMER_ALLOWLIST_POLICY_MISSING");
 
@@ -235,6 +243,7 @@ console.log(JSON.stringify({
   historical_documents_checked: (manifest.historical_documents || []).length,
   legacy_frontend_customer_family_consumers_checked: (manifest.legacy_frontend_consumer_allowlist?.customer_api_family_existing_files || []).length,
   legacy_frontend_report_family_consumers_checked: (manifest.legacy_frontend_consumer_allowlist?.reports_api_family_existing_files || []).length,
+  legacy_customer_viewmodels_checked: (manifest.legacy_customer_viewmodels || []).length,
   runtime_behavior_change: false,
   database_schema_change: false,
 }, null, 2));
