@@ -102,6 +102,43 @@ async function main(): Promise<void> {
   };
   const ingress = new PostgresExternalFormalEvidenceIngressV1(pool, countingVerifier);
 
+  // Real-clock regression: repeated provider polls can return byte-identical raw content.
+  // The content-addressed object must keep its original retained_at identity, while the
+  // current retain call establishes a fresh post-retrieval verification barrier.
+  const repeatBytes = Buffer.from(`EA5C1_REPEAT_RAW_${crypto.randomUUID()}\n`, "utf8");
+  const repeatDigest = sha256(repeatBytes);
+  const repeatBaseInput = {
+    retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE" as const,
+    request_id: "ea5c1-repeat-first",
+    provider_id: "KBS_LTER",
+    source_family: "RAW_HOURLY_WEATHER",
+    source_locator: "https://source.example.invalid/repeat",
+    final_locator: "https://source.example.invalid/repeat",
+    content_type: "text/csv",
+    retrieved_at: iso(Date.now() - 1_000),
+    available_at: iso(Date.now() - 1_000),
+    use_policy_ref: "GEOX-MCFT-CAP-09-AMENDMENT-05",
+    raw_sha256: repeatDigest,
+    raw_bytes: repeatBytes.byteLength,
+    bytes: repeatBytes,
+  };
+  const repeatFirst = await retention.retainRawEvidence(repeatBaseInput);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const repeatRetrievedAt = new Date().toISOString();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const repeatSecond = await retention.retainRawEvidence({
+    ...repeatBaseInput,
+    request_id: "ea5c1-repeat-second",
+    retrieved_at: repeatRetrievedAt,
+    available_at: repeatRetrievedAt,
+  });
+  assert.equal(repeatSecond.retention_ref, repeatFirst.retention_ref);
+  assert.equal(repeatSecond.retained_at, repeatFirst.retained_at);
+  assert.ok(repeatSecond.retention_verified_at);
+  assert.ok(Date.parse(repeatSecond.retention_verified_at!) >= Date.parse(repeatRetrievedAt));
+  assert.ok(Date.parse(repeatSecond.retention_verified_at!) >= Date.parse(repeatSecond.retained_at));
+  ok("byte-identical later retrieval reuses immutable raw object identity with a fresh causal verification barrier");
+
   const started = Date.now();
   const boundaryMs = Math.ceil((started + 1) / 3_600_000) * 3_600_000;
   const windowStartMs = boundaryMs - 3_600_000;
@@ -310,7 +347,7 @@ async function main(): Promise<void> {
   assert.equal(Number(nonEvidence.rows[0].n), 0);
   ok("EA5C1 writes no Runtime Config, A0, State, Forecast, Scenario, Recommendation, Action, or scheduler facts");
 
-  assert.equal(pass, 11);
+  assert.equal(pass, 12);
   console.log(`MCFT-CAP-09 EA5C1 Durable Raw + Restricted Evidence Ingress: ${pass} PASS, 0 FAIL`);
   await pool.end();
 }
