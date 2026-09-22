@@ -114,7 +114,7 @@
       "required": [
         "status",
         "summary",
-        "effective_at",
+        "logical_time",
         "support_state",
         "source_ref_key",
         "metrics"
@@ -133,13 +133,6 @@
             "null"
           ]
         },
-        "effective_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
         "support_state": {
           "enum": [
             "SUPPORTED",
@@ -155,6 +148,13 @@
         },
         "metrics": {
           "$ref": "#/$defs/ConditionMetrics"
+        },
+        "logical_time": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
         }
       }
     },
@@ -164,7 +164,7 @@
       "required": [
         "state",
         "reason_codes",
-        "last_qualified_at"
+        "source_logical_time"
       ],
       "properties": {
         "state": {
@@ -182,7 +182,7 @@
             "minLength": 1
           }
         },
-        "last_qualified_at": {
+        "source_logical_time": {
           "type": [
             "string",
             "null"
