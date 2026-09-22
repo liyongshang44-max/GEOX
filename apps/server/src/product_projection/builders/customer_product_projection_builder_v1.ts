@@ -1,6 +1,6 @@
 // Canonical builders for the first real Customer Product Projection slice.
 // Boundary: non-authoritative composition only. The builder never writes, recalculates MCFT state,
-// invents risk/severity/recommendation, or upgrades missing data into business truth.
+// invents business authority semantics, or upgrades missing data into business truth.
 
 import { createHash } from "node:crypto";
 import type { Pool } from "pg";
