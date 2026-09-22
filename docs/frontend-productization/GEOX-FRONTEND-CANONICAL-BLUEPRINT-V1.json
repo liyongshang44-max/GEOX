@@ -1,0 +1,378 @@
+{
+  "schema_version": "geox_frontend_canonical_blueprint_v1",
+  "document_id": "GEOX-FRONTEND-CANONICAL-BLUEPRINT-V1",
+  "status": "CANONICAL_CONTINUATION_BASELINE_CANDIDATE",
+  "baseline_main_sha": "6ff48eca10c1d25365c39f9d1e4dbb14d6c1ad91",
+  "baseline_date": "2026-09-22",
+  "domain_authority": "NONE",
+  "default_policy": {
+    "full_historical_frontend_reaudit": false,
+    "continuation_method": "BLUEPRINT_PLUS_INCREMENTAL_DIFF",
+    "implementation_existence_is_authorization": false,
+    "route_existence_is_formal_surface": false
+  },
+  "source_precedence": [
+    "CURRENT_DOMAIN_AUTHORITY",
+    "NEWER_EXPLICIT_FRONTEND_SUPERSESSION",
+    "GEOX_FRONTEND_CANONICAL_BLUEPRINT_V1",
+    "PFE_14_V0_2_OPERATOR_SCOPE",
+    "PFE_13_FROZEN_PRODUCT_FRONTEND_V1",
+    "PFA_RETAINED_FINDINGS",
+    "PFE_0_TO_PFE_12_F0_F2_H58_H67_PROVENANCE",
+    "CURRENT_IMPLEMENTATION_FACT"
+  ],
+  "historical_consolidation": [
+    {
+      "family": "H58-H67",
+      "classification": "HISTORICAL_CLOSED"
+    },
+    {
+      "family": "F0-A/F0-B/F1/F2",
+      "classification": "HISTORICAL_CLOSED_BASELINE"
+    },
+    {
+      "family": "PFE-0",
+      "classification": "HISTORICAL_AUDIT_BASELINE"
+    },
+    {
+      "family": "PFE-1",
+      "classification": "HISTORICAL_PAGE_CONTRACT_BASELINE"
+    },
+    {
+      "family": "PFE-2",
+      "classification": "KEEP_DESIGN_SYSTEM_ANCESTRY"
+    },
+    {
+      "family": "PFE-3/PFE-4/PFE-5",
+      "classification": "KEEP_ROLE_BOUNDARIES_EVOLVE_UX"
+    },
+    {
+      "family": "PFE-6..PFE-12",
+      "classification": "KEEP_QUALITY_BASELINE"
+    },
+    {
+      "family": "PFE-13",
+      "classification": "FROZEN_PRODUCT_FRONTEND_V1_BASELINE"
+    },
+    {
+      "family": "PFA",
+      "classification": "QUALITY_AUDIT_PARTIAL_16_RETAINED_DEBTS"
+    },
+    {
+      "family": "PFE-14 v0.2",
+      "classification": "CURRENT_OPERATOR_DESIGN_AUTHORITY_STALE_MCFT_DEPENDENCY_SNAPSHOT"
+    },
+    {
+      "family": "CUSTOMER_FRONTEND_MVP_V1",
+      "classification": "HISTORICAL_CUSTOMER_NARRATIVE_KEEP_PRODUCT_INTENT"
+    },
+    {
+      "family": "FOUI_PRODUCT_PROJECTION_WAVE_01",
+      "classification": "LATEST_UNIFIED_PRODUCT_PROJECTION_SEMANTICS",
+      "machine_qualification": "PASS",
+      "qualification_commit": "b32a2432fe6b39b0c973c40567b386bebc57b9d7",
+      "workflow": "foui-projection-contract-wave01",
+      "document_status": "PRE-CONSTRUCTION FREEZE CANDIDATE",
+      "broad_high_fidelity_construction_authorized": false
+    }
+  ],
+  "role_boundaries": {
+    "customer": "CUSTOMER_SAFE_REPORTING_AND_PRODUCT_CONSUMPTION",
+    "operator": "READ_ONLY_RUNTIME_OBSERVATION_AND_TRACE",
+    "admin": "GOVERNANCE_AND_READBACK"
+  },
+  "canonical_navigation": {
+    "operator": [
+      "/operator/twin",
+      "/operator/fields"
+    ],
+    "customer_current": [
+      "/customer/dashboard",
+      "/customer/fields",
+      "/customer/operations",
+      "/customer/reports"
+    ],
+    "customer_secondary": [
+      "/customer/export",
+      "/customer/fields/:fieldId/export",
+      "/customer/operations/:operationId/export"
+    ],
+    "admin": [
+      "/admin/dashboard",
+      "/admin/fields",
+      "/admin/operations",
+      "/admin/devices",
+      "/admin/evidence",
+      "/admin/skills",
+      "/admin/healthz"
+    ]
+  },
+  "route_decisions": {
+    "customer": [
+      [
+        "/customer/dashboard",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/customer/fields",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/customer/fields/:fieldId",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/customer/operations",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/customer/operations/:operationId",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/customer/reports",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/customer/export",
+        "KEEP_SECONDARY_EVOLVE"
+      ],
+      [
+        "/customer/fields/:fieldId/export",
+        "KEEP_SECONDARY_EVOLVE"
+      ],
+      [
+        "/customer/operations/:operationId/export",
+        "KEEP_SECONDARY_EVOLVE"
+      ]
+    ],
+    "operator": [
+      [
+        "/operator/twin",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/operator/fields",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/operator/fields/:fieldId",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/operator/fields/:fieldId/state",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/operator/fields/:fieldId/forecast",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/operator/fields/:fieldId/scenario",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/operator/fields/:fieldId/action-lifecycle",
+        "KEEP_READ_ONLY_EVOLVE"
+      ],
+      [
+        "/operator/fields/:fieldId/residual",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/operator/fields/:fieldId/calibration",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/operator/fields/:fieldId/evidence-trace",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/operator/fields/:fieldId/health",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/operator/fields/:fieldId/evidence",
+        "KEEP_ALIAS"
+      ],
+      [
+        "/operator/fields/:fieldId/audit",
+        "KEEP_ALIAS"
+      ],
+      [
+        "/operator/pilot",
+        "HOLD"
+      ],
+      [
+        "/operator/twin/gateway-demo",
+        "LEGACY_DEMO_URL_ONLY"
+      ],
+      [
+        "/operator/twin/fields/*",
+        "LEGACY"
+      ],
+      [
+        "/operator/twin/production-workflow",
+        "LEGACY"
+      ],
+      [
+        "/operator/twin/traces/*",
+        "LEGACY_TRACE_BRIDGE"
+      ],
+      [
+        "/operator/workbench",
+        "LEGACY_NON_CANONICAL"
+      ],
+      [
+        "/operator/approvals",
+        "LEGACY_ROUTE_CAPABILITY_HOLD"
+      ],
+      [
+        "/operator/dispatch",
+        "LEGACY_ROUTE_CAPABILITY_HOLD"
+      ],
+      [
+        "/operator/acceptance",
+        "LEGACY_ROUTE_CAPABILITY_HOLD"
+      ],
+      [
+        "/operator/evidence",
+        "LEGACY_NON_CANONICAL"
+      ],
+      [
+        "/operator/devices-alerts",
+        "LEGACY_NON_CANONICAL"
+      ],
+      [
+        "/operator/roi-ledger",
+        "LEGACY_ROUTE_CAPABILITY_HOLD"
+      ],
+      [
+        "/operator/field-memory",
+        "LEGACY_ROUTE_CAPABILITY_HOLD"
+      ]
+    ],
+    "admin": [
+      [
+        "/admin/dashboard",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/admin/fields",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/admin/operations",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/admin/devices",
+        "KEEP_EVOLVE_CONTRACT_GAP"
+      ],
+      [
+        "/admin/evidence",
+        "KEEP_EVOLVE"
+      ],
+      [
+        "/admin/skills",
+        "KEEP_EVOLVE_ROUTE_NAMING_DEBT"
+      ],
+      [
+        "/admin/healthz",
+        "KEEP_EVOLVE"
+      ]
+    ],
+    "supporting": [
+      [
+        "/login",
+        "KEEP"
+      ],
+      [
+        "LocaleToggle",
+        "KEEP"
+      ],
+      [
+        "Product Design System",
+        "KEEP_EVOLVE"
+      ]
+    ]
+  },
+  "operator_field_runtime_tabs": {
+    "primary": [
+      "overview",
+      "evidence",
+      "state",
+      "forecast",
+      "runtime_health",
+      "audit"
+    ],
+    "more": [
+      "scenario",
+      "action_lifecycle_read_only",
+      "residual",
+      "calibration"
+    ]
+  },
+  "foui": {
+    "authority_ceiling": "NON_AUTHORITATIVE_PRODUCT_PROJECTION_ONLY",
+    "query_methods": [
+      "GET",
+      "HEAD"
+    ],
+    "forbidden_projection_methods": [
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE"
+    ],
+    "permanent_invariants": [
+      "CURRENT_BEST_KNOWN_WORLD_NE_DECISION_TIME_WORLD",
+      "CURRENT_STATE_SUBSTITUTION_FOR_HISTORICAL_BASIS_FORBIDDEN",
+      "PROJECTION_ID_IS_NOT_AUTHORITY_REF",
+      "BUTTON_VISIBLE_NE_AUTHORITY_GRANTED"
+    ],
+    "future_concepts_hold": [
+      "ATTENTION_QUEUE",
+      "GOVERNED_ACTION_CASE",
+      "CAPABILITY_AVAILABILITY",
+      "DECISION_TIME_HISTORY_CURRENT_VS_THEN",
+      "CROSS_DOMAIN_PROVENANCE"
+    ]
+  },
+  "retained_pfa_debt_count": 16,
+  "retained_pfa_mandates": [
+    "CUSTOMER_DASHBOARD_DEDUPLICATE_AND_REBALANCE",
+    "REPORTS_CENTER_DENSITY_REDUCTION",
+    "LONG_ID_SECONDARY_PRESENTATION",
+    "MOBILE_COMPACT_NAVIGATION",
+    "EXPORT_PRINT_MOBILE_STRATEGY",
+    "OPERATOR_HORIZONTAL_OVERFLOW_REMOVAL",
+    "SUMMARY_DETAIL_PROGRESSIVE_DISCLOSURE",
+    "ADMIN_DEVICE_STATUS_READBACK_CONTRACT"
+  ],
+  "watched_paths": [
+    "docs/frontend-productization/**",
+    "docs/frontend-acceptance/**",
+    "docs/frontend/**",
+    "docs/product_projection/**",
+    "apps/web/src/app/routes/**",
+    "apps/web/src/layouts/**",
+    "apps/web/src/design-system/**",
+    "apps/web/src/styles/**",
+    "apps/web/src/features/**",
+    "apps/web/src/api/**"
+  ],
+  "reaudit_triggers": [
+    "NEWER_EXPLICIT_SUPERSESSION",
+    "FORMAL_ROUTE_TOPOLOGY_CHANGE",
+    "ROLE_OWNERSHIP_CHANGE",
+    "NEW_FORMAL_NAV_ITEM",
+    "FOUI_SCHEMA_MATERIAL_CHANGE",
+    "CONSUMED_DOMAIN_AUTHORITY_SEMANTIC_CHANGE",
+    "COMMAND_OWNERSHIP_OR_AUTHORIZATION_CHANGE",
+    "LEGACY_OR_HOLD_PROMOTION",
+    "DESIGN_SYSTEM_REPLACEMENT",
+    "MANIFEST_NO_LONGER_DESCRIBES_GOVERNED_STATE"
+  ],
+  "update_rule": "ANY_FUTURE_CANONICAL_FRONTEND_DECISION_CHANGE_MUST_UPDATE_OR_EXPLICITLY_SUPERSEDE_THIS_BLUEPRINT"
+}
