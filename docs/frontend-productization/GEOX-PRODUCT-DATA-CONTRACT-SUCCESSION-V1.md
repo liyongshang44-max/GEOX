@@ -532,3 +532,32 @@ GET /api/product/v1/fields/:fieldRef
 ```
 
 No legacy API should be used merely to make the Sites demo dynamic sooner.
+
+
+## 17. Reserved Wave-01 type tokens are not contracts
+
+The current Wave-01 TypeScript enum contains these additional projection-type tokens:
+
+```text
+FIELD_PORTFOLIO
+DECISION_PRODUCT
+GOVERNED_ACTION_LIST
+EVIDENCE_CASE
+```
+
+Audit result: those tokens currently have no corresponding concrete `*ProjectionV1` TypeScript contract and are not listed among the four Wave-01 concrete contracts in the Wave-01 governance document.
+
+Therefore:
+
+```text
+reserved projection_type token
+!= implemented Product Projection contract
+!= route authorization
+!= Sites/frontend binding contract
+```
+
+Wave-02 must explicitly define the concrete contract before any of these tokens, or a successor token, is used by `/api/product/v1/*` or by a new frontend consumer.
+
+The planned customer-facing names such as `FieldSummaryProjectionV1` and `FieldWorkspaceProjectionV1` are design targets only until the next contract wave freezes their exact projection_type mapping and machine schema.
+
+Sites must not infer a payload shape from the reserved tokens.
