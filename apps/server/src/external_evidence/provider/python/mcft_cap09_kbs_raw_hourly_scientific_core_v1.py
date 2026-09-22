@@ -692,6 +692,33 @@ def selftest_v1() -> None:
         "MCFT_CAP09_KBS_COMPARE_SELFTEST_DRIFT_EVENT",
     )
 
+    original_parse = parse_kbs_raw_hourly_csv_v1
+    parse_call_count = [0]
+
+    def counting_parse(body_value: bytes) -> list[dict[str, str]]:
+        parse_call_count[0] += 1
+        return original_parse(body_value)
+
+    globals()["parse_kbs_raw_hourly_csv_v1"] = counting_parse
+    try:
+        counted_compare = compare_kbs_raw_hourly_publication_snapshots_v1(
+            previous_body=body,
+            previous_available_at=available,
+            current_body=next_body,
+            current_available_at=available,
+            baseline_latest_event_time=datetime(2026, 8, 13, 4, 0, tzinfo=timezone.utc),
+        )
+        require_v1(
+            counted_compare["status"] == "FORWARD_DELTA",
+            "MCFT_CAP09_KBS_COMPARE_SELFTEST_SINGLE_SCAN_STATUS",
+        )
+        require_v1(
+            parse_call_count[0] == 2,
+            "MCFT_CAP09_KBS_COMPARE_SELFTEST_EXACT_ONE_PARSE_PER_SNAPSHOT",
+        )
+    finally:
+        globals()["parse_kbs_raw_hourly_csv_v1"] = original_parse
+
     duplicate_body = (header + "\n".join(rows + [rows[1]]) + "\n").encode("utf-8")
     try:
         decode_exact_kbs_raw_hourly_interval_v1(
@@ -720,6 +747,7 @@ def selftest_v1() -> None:
         "forward_delta_discovery": True,
         "no_change_discovery": True,
         "historical_prefix_snapshot_comparison": True,
+        "comparison_exact_one_parse_per_snapshot": True,
         "historical_revision_backfill_fail_closed": True,
         "provider_request_count": 0,
         "database_write_count": 0,
