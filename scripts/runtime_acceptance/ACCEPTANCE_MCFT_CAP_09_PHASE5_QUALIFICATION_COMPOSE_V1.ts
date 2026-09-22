@@ -253,6 +253,29 @@ async function main(): Promise<void> {
     ),
     "utf8",
   );
+  const prepareV2Source = fs.readFileSync(
+    path.resolve(
+      "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v2.ts",
+    ),
+    "utf8",
+  );
+  for (const required of [
+    "Date.parse(a0)-30*60_000",
+    "rehearsal_baseline_chronology_is_distinct_from_physical_activation_fence",
+    "seeded_at:rehearsalBaselineChronology!",
+  ]) {
+    assert.equal(
+      prepareV2Source.includes(required),
+      true,
+      `PHASE5_REHEARSAL_BASELINE_CHRONOLOGY_DECOUPLING_REQUIRED:${required}`,
+    );
+  }
+  assert.equal(
+    prepareV2Source.includes("seeded_at:createdAt"),
+    false,
+    "PHASE5_REHEARSAL_BASELINE_MUST_NOT_REUSE_PHYSICAL_ACTIVATION_FENCE",
+  );
+
   for (const required of [
     "runMcftCap09ProductionEvidenceRuntimeV1",
     "buildPhase5EvidenceRealClockRuntimeStartAuthorityV1",
@@ -540,6 +563,7 @@ async function main(): Promise<void> {
     real_clock_rehearsal_compose_rendered: true,
     real_clock_rehearsal_uses_production_evidence_runtime: true,
     real_clock_rehearsal_uses_live_production_provider_factory: true,
+    rehearsal_baseline_chronology_decoupled_from_physical_activation_fence: true,
     scientific_runtime_image_pinned: true,
     live_raw_capture_has_no_database_or_s3_credentials: true,
     prepare_verify_have_no_provider_or_s3_credentials: true,
