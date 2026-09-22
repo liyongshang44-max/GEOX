@@ -23,6 +23,7 @@ import type {
 } from "../../external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.js";
 import {
   MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_INGRESS_ID_V1,
+  externalFormalEvidenceRevisionFactIdV1,
   prepareExternalFormalEvidenceIngressV1,
 } from "../twin_runtime/postgres_external_formal_evidence_ingress_v1.js";
 
@@ -201,9 +202,30 @@ export class PostgresEvidenceRuntimeGovernedIngressV1 implements ExternalFormalE
         [prepared.fact_id],
       );
       if (existing.rows.length > 1) throw new Error("PHASE3_EVIDENCE_DB_INGRESS_FACT_ID_NOT_UNIQUE");
-      const republication = existing.rows.length === 1
+
+      const baseRepublication = existing.rows.length === 1
         ? sameSemanticRepublicationV1(existing.rows[0], prepared)
         : null;
+
+      let targetFactId = prepared.fact_id;
+      let republication = baseRepublication;
+      let revisionFact = false;
+
+      if (existing.rows.length === 1 && !baseRepublication) {
+        targetFactId = externalFormalEvidenceRevisionFactIdV1(prepared.record);
+        const revisionExisting = await client.query<ExistingFactRowV1>(
+          "SELECT occurred_at,source,record_json FROM public.facts WHERE fact_id=$1 LIMIT 2",
+          [targetFactId],
+        );
+        if (revisionExisting.rows.length > 1) {
+          throw new Error("PHASE3_EVIDENCE_DB_INGRESS_REVISION_FACT_ID_NOT_UNIQUE");
+        }
+        republication = revisionExisting.rows.length === 1
+          ? sameSemanticRepublicationV1(revisionExisting.rows[0], prepared)
+          : null;
+        revisionFact = true;
+      }
+
       const dbOccurredAt = republication?.occurred_at ?? prepared.event_time;
       const dbRecordJson = republication?.record_json
         ?? { type: prepared.record.record_type, payload: prepared.record };
@@ -221,7 +243,7 @@ export class PostgresEvidenceRuntimeGovernedIngressV1 implements ExternalFormalE
           this.configuredScope.zone_id,
           this.producerClaim.lease_owner,
           this.producerClaim.fencing_token.toString(),
-          prepared.fact_id,
+          targetFactId,
           dbOccurredAt,
           JSON.stringify(dbRecordJson),
         ],
@@ -245,7 +267,7 @@ export class PostgresEvidenceRuntimeGovernedIngressV1 implements ExternalFormalE
       return {
         ingress_id: MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_INGRESS_ID_V1,
         status: row.status,
-        fact_id: prepared.fact_id,
+        fact_id: targetFactId,
         record_type: prepared.record.record_type,
         source_record_id: prepared.record.source_record_id,
         source_record_hash: prepared.record.source_record_hash,
@@ -256,6 +278,10 @@ export class PostgresEvidenceRuntimeGovernedIngressV1 implements ExternalFormalE
         ...(republication ? {
           republication_reused_immutable_fact: true,
           committed_record_semantic_sha256: republication.committed_record_semantic_sha256,
+        } : {}),
+        ...(revisionFact ? {
+          revision_fact_identity_used: true,
+          base_fact_id: prepared.fact_id,
         } : {}),
       };
     } catch (error) {
