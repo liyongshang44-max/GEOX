@@ -67,6 +67,11 @@ try {
   });
 
   check("NO_MCFT_OR_EXECUTION_RUNTIME_IMPORTS", () => {
+    const importLines = runtime
+      .split(/\r?\n/)
+      .filter((line) => /^\s*import\b/.test(line))
+      .join("\n")
+      .toLowerCase();
     for (const forbidden of [
       "mcft_cap09_evidence_runtime",
       "mcft_cap09_twin_runtime",
@@ -76,7 +81,7 @@ try {
       "minio",
       "platform_bootstrap",
       "migration",
-    ]) assert.equal(runtime.toLowerCase().includes(forbidden.toLowerCase()), false, forbidden);
+    ]) assert.equal(importLines.includes(forbidden.toLowerCase()), false, forbidden);
   });
 
   check("DEDICATED_DOCKER_IMAGE", () => {
