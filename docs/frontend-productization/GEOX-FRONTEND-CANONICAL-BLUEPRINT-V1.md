@@ -1076,3 +1076,56 @@ This statement does not claim:
 - PFE-14 is fully rebound to current MCFT;
 - FOUI broad construction is formally authorized;
 - production runtime or controlled action is enabled.
+
+## 18. Product data contract succession
+
+Canonical product data construction is governed by:
+
+```text
+GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1
+```
+
+After adoption of this blueprint and its succession artifact:
+
+```text
+CANONICAL BUSINESS PERSISTENCE
+= existing GEOX PostgreSQL architecture
+
+CANONICAL NEW PRODUCT READ CONTRACT
+= FOUI Product Projection
+
+CANONICAL NEW PRODUCT API NAMESPACE
+= /api/product/v1/*
+```
+
+Pre-FOUI customer/report/portfolio APIs remain compatibility-era interfaces only:
+
+```text
+/api/v1/customer/*
+/api/v1/reports/*
+/api/v1/fields/portfolio
+```
+
+Rules:
+
+1. Existing legacy consumers may remain until an explicit successor and migration gate are complete.
+2. New Customer, Operator, Admin, Sites, React, mobile, or alternate-host product consumers must not add new dependencies on those legacy API families.
+3. `/api/v1/customer/fields/:field_id/confirmed-twin-summary` is specifically `LEGACY_DO_NOT_ADOPT` for new product construction because historical fallback/default business semantics must not become FOUI truth.
+4. `/api/v1/fields/portfolio` is `PRE_FOUI_LEGACY_PROJECTION`; its historical risk-filter/sort model does not authorize product-owned risk or severity in the new product.
+5. A canonical Product API route must ultimately be backed by governed authority/basis readers and a Product Projection Builder. A permanent wrapper over a legacy presentation API is forbidden.
+6. The current Sites Customer Portal test remains a new product consumer. Its first real-data binding must target `/api/product/v1/*`, not the legacy Customer APIs.
+7. No second GEOX business database is introduced by frontend hosting. Host-local storage does not become GEOX authority or canonical product persistence merely because the host can store data.
+
+Legacy lifecycle:
+
+```text
+LEGACY_ACTIVE_READ
+  -> DEPRECATED
+  -> EMERGENCY_COMPAT_ONLY
+  -> REMOVED
+```
+
+A legacy surface may advance only after the canonical successor exists, canonical consumers have migrated, relevant acceptance is green, and no canonical consumer remains.
+
+The succession artifact is the governing source for exact legacy-route classifications, historical document disposition, canonical namespace, null/unknown discipline, and the first successor construction unit.
+
