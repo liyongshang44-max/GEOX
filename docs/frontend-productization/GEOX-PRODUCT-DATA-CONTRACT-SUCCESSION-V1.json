@@ -192,7 +192,11 @@
       "CUSTOMER_MEMORY_AND_GEOMETRY_ROUTE_CLASSIFICATION",
       "P1_API_READINESS_DOCUMENT_HISTORICAL_MARKER",
       "UNMARKED_CUSTOMER_COMPATIBILITY_ADAPTERS",
-      "NO_ENFORCEMENT_AGAINST_NEW_LEGACY_FRONTEND_CONSUMERS"
+      "NO_ENFORCEMENT_AGAINST_NEW_LEGACY_FRONTEND_CONSUMERS",
+      "HISTORICAL_CUSTOMER_VIEWMODEL_SEMANTIC_INFERENCE_NOT_MARKED",
+      "CUSTOMER_OVERVIEW_ROUTE_DRIFT",
+      "PRODUCT_PROJECTION_WATCHED_PATH_GAP",
+      "WAVE01_RESERVED_TYPE_TOKEN_AMBIGUITY"
     ],
     "remaining_blockers_for_sites_mock_frontend_handoff": [],
     "remaining_blockers_for_sites_real_data_binding": [
@@ -217,5 +221,17 @@
       "status": "RESERVED_TOKEN_NO_CONCRETE_PROJECTION_CONTRACT"
     }
   ],
-  "wave02_naming_rule": "DO_NOT_TREAT_RESERVED_TYPE_TOKEN_AS_IMPLEMENTED_CONTRACT; DEFINE_CONCRETE_CONTRACT_EXPLICITLY_BEFORE_ROUTE_OR_SITES_BINDING"
+  "wave02_naming_rule": "DO_NOT_TREAT_RESERVED_TYPE_TOKEN_AS_IMPLEMENTED_CONTRACT; DEFINE_CONCRETE_CONTRACT_EXPLICITLY_BEFORE_ROUTE_OR_SITES_BINDING",
+  "legacy_customer_viewmodels": [
+    "apps/web/src/viewmodels/customerC8FormalReportVm.ts",
+    "apps/web/src/viewmodels/customerDashboardViewModel.ts",
+    "apps/web/src/viewmodels/customerDashboardVm.ts",
+    "apps/web/src/viewmodels/customerFieldMemoryVm.ts",
+    "apps/web/src/viewmodels/customerFieldsIndexVm.ts",
+    "apps/web/src/viewmodels/customerOperationsIndexVm.ts",
+    "apps/web/src/viewmodels/customerReportMainVisualVm.ts",
+    "apps/web/src/viewmodels/customerReportsCenterVm.ts",
+    "apps/web/src/viewmodels/customerRoiLedgerVm.ts"
+  ],
+  "legacy_viewmodel_policy": "PROVENANCE_AND_EXISTING_COMPATIBILITY_ONLY; NO_SEMANTIC_COPY_INTO_POST_FOUI_PRODUCT"
 }
