@@ -1,3 +1,1062 @@
+# AK — 2026-09-22 Technical Closure / Production-Equivalent V2 Rehearsal / KBS Real-Scale Performance Frontier
+
+> 本 section 是 AJ 之后的当前 continuation entry point。AJ 中 protected main=0c71e558...、旧 Formal-v5 arm 与第一轮 V1 rehearsal frontier 已被 2026-09-22 的 protected-main advancement、Technical Closure Directive、Production-V2 qualification-equivalence successor 与多轮真实 provider burn-in 推进；不得把 AJ 的 exact-main arm / old rehearsal 当作当前可执行 Formal authority。
+>
+> 本 AK 继续使用 canonical pure-prepend 落库方法：只在 docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md 文件头部插入新 section；AJ 及其以下历史全文必须逐字节保留，不重排、不改写、不回填旧 section。
+>
+> 本文是 conversation-continuation handoff，不是新的 architecture authority、production authorization、Formal arm、A0 authorization、O00-O23 closure 或 MCFT completion claim。
+
+---
+
+## AK0. 一句话接手结论
+
+MCFT-CAP-09 当前任务已经冻结为 Technical Closure，不再继续扩大 MCFT。
+
+当前唯一目标：
+
+~~~text
+Production-equivalent V2 Runtime
+→ fresh Real-clock Qualification Rehearsal R00-R23
+→ repair only machine-proven P0
+→ CODE / CONTRACT FREEZE
+→ full exact-head qualification
+→ merge protected main
+→ exact-main owner refresh / H5 / fresh Formal-v5 arm
+→ post-arm Evidence handoff + true A0 forcing
+→ final Biological Stage Authority + continuity proof
+→ operator-authorized A0
+→ Formal O00-O23
+→ exact closure evidence
+→ MCFT CAP-09 CLOSED
+~~~
+
+当前精确仓库状态：
+
+~~~text
+protected main
+= 6ff48eca10c1d25365c39f9d1e4dbb14d6c1ad91
+
+protected-main advancement
+= PR #3621 merged
+= preserve Twin owner restart admission boundary
+
+active successor
+= PR #3623
+= fix(mcft-cap09): align Phase5 qualification with Production Twin V2
+
+#3623
+= OPEN / DRAFT / UNMERGED
+
+#3623 exact head
+= 22ffa7e2b12de7ef3eaff351aef42afc32aedc64
+
+#3623 base
+= 6ff48eca10c1d25365c39f9d1e4dbb14d6c1ad91
+
+Formal A0
+= NOT STARTED
+
+Formal O00-O23
+= NOT STARTED
+
+fresh Layer-2 rehearsal on 22ffa7e2
+= NOT YET STARTED
+
+latest failed preserved rehearsal
+= e00f587864cd8202a9b471ee3b0892df54aad9f6
+
+latest benchmark subject
+= 22ffa7e2b12de7ef3eaff351aef42afc32aedc64
+
+latest real-scale KBS benchmark
+= PASS
+~~~
+
+AJ 的 Formal-v5 arm 绑定旧 protected main 0c71e558...。protected main 已前移到 6ff48eca...，而 #3623 仍未合并；因此 AJ arm 只能作为历史证据，不能用于当前 exact-main A0/O00。当前 closure 仍要求 merge 后重新 exact-main owner refresh、fresh H5、fresh Formal-v5 arm。
+
+---
+
+## AK1. CEO / CTO 当前冻结原则
+
+当前工程目标不是全仓无债，而是：
+
+~~~text
+FINITE
+PROVABLE
+STOPPABLE
+
+no unresolved P0
++
+production-equivalent real-clock runtime proven
++
+Formal O00-O23 valid
++
+exact closure evidence retained
+~~~
+
+所有新问题必须先分类：
+
+~~~text
+P0
+= without repair, valid O00-O23 / Stage 1B evidence cannot be produced
+→ FIX NOW
+
+P1
+= blocks selected near-term commercial workflow
+→ AFTER MCFT closure
+
+P2
+= real debt, non-blocking current closure
+→ BACKLOG
+
+P3
+= cleanup / architectural neatness / speculative future need
+→ NO CURRENT ENGINEERING
+~~~
+
+Whole-Repository Audit 不再扩大。UNKNOWN / UNCLASSIFIED 已收敛；普通 repo debt 不得重新抢占 MCFT closure critical path。
+
+B-Line 保持 ENGINEERING CLOSED / FROZEN；ADR 保持 PARKED。
+
+---
+
+## AK2. 当前 closure-critical scope
+
+CTO Directive 当前 closure-critical runtime scope：
+
+~~~text
+PREFORMAL_TO_FORMAL_A0_EVIDENCE_RUNTIME_HANDOFF_GAP
+GFS_BUNDLE_RETRY_RESILIENCE_GAP
+RETRYABLE_FAILURE_OBSERVABILITY_GAP
+AUD-002 Production V2 / Rehearsal equivalence
+~~~
+
+前三项的 production behavior / acceptance 已在当前 successor 中继续保留并 requalify。
+
+#3623 的主要新增线是 AUD-002 / M-03：Layer-2 rehearsal 必须真正复用 Production Twin V2 与 Production Evidence Runtime/provider path，而不是旧 Twin V1 qualification path。
+
+不得借 #3623：
+
+~~~text
+reopen ADR
+reopen B-Line
+repair all whole-repo debt
+change Formal DB schema
+authorize A0
+authorize O00
+promote KBS 100mm directly into historical CAP-05 200mm residual contract
+add new scientific authority layer
+~~~
+
+HA-18 仍是 Formal acceptance obligation，不是当前 construction line。
+
+---
+
+## AK3. #3623 Production-equivalence frozen boundary
+
+Layer-2 REAL_CLOCK_REHEARSAL 必须复用：
+
+~~~text
+Production Twin Process V2
+Production Twin Composition V2
+ExternalFormalV4Amendment19RunnerV2
+materializeExternalFormalA18CropContextV4
+same persistent tick core
+Production Evidence Runtime V1
+production planner/provider/retry/retention/lease/health path
+~~~
+
+qualification isolation 只允许在：
+
+~~~text
+Docker project
+isolated PostgreSQL database/volume
+isolated MinIO bucket/prefix
+qualification-only clock / lease activation seams
+~~~
+
+不得通过改变 field/zone/crop authority scope 做 isolation。
+
+Twin rehearsal 保留 controlled 49-fact baseline 作为 deterministic burn-in input；Evidence Runtime 同时走 live production provider path。
+
+~~~text
+controlled baseline
+= deterministic Twin qualification input
+
+live Evidence Runtime
+= production provider/runtime burn-in
+
+both
+= NON-FORMAL
+~~~
+
+---
+
+## AK4. 当前 successor 已反复机器通过的关键 lanes
+
+~~~text
+Phase3 Evidence Runtime Persistence
+= SUCCESS
+
+GFS member-local bounded retry resilience
+= SUCCESS
+
+structured retry health observability
+= SUCCESS
+
+Production-equivalent Containers
+= SUCCESS
+
+Production Twin V2 Routing
+= SUCCESS
+
+Phase6 Runtime Independence
+= SUCCESS
+
+EA5E2 runtime dependency graph
+= SUCCESS
+
+EA5E2 transient-retention causal reuse
+= SUCCESS
+
+EA5C1 durable raw / exact successor governance
+= SUCCESS
+
+Accelerated 24T
+= SUCCESS
+
+CI build-test on 22ffa7e2
+= SUCCESS
+~~~
+
+当前仍有 qualification-control-plane / Formal-post-graduation / historical dependency 类 red lanes。按 TEST EARLY / QUALIFY LATE，它们必须在 fresh Layer-2 rehearsal 后做 full exact-head qualification；不得绕过，但也不得自动当成 Layer-2 runtime P0。
+
+---
+
+## AK5. Layer-2 实跑已发现并处理的 P0 链
+
+这些失败必须保留为 evidence；已关闭 P0 不得在下一对话重新从头施工。
+
+### AK5.1 P0-1 — baseline chronology 误绑 physical activation fence
+
+predecessor：
+
+~~~text
+e280505b2ea32a1bc960e798e50941adc39e4c1f
+~~~
+
+first red：
+
+~~~text
+REAL_CLOCK_REHEARSAL_BASELINE_SEEDED_AT_MUST_BE_INSIDE_A0_WINDOW
+~~~
+
+根因：为 live Evidence 预留 2–3 小时 pre-A0 warm-start 后，physical activation fence 被错误复用成 controlled baseline chronology。
+
+修复：
+
+~~~text
+physical Evidence activation
+= actual rehearsal start
+
+controlled baseline chronology
+= A0 - 30 minutes
+
+two clocks
+= explicitly distinct
+~~~
+
+### AK5.2 P0-2 — PostgreSQL / MinIO bootstrap health race
+
+predecessor：
+
+~~~text
+bf31451b84c7fec5622ea6c3495458a0151fac8b
+~~~
+
+first red：
+
+~~~text
+database-platform-bootstrap
+connect ECONNREFUSED postgres:5432
+~~~
+
+根因：launcher 的 compose run --no-deps 绕过 existing depends_on service_healthy readiness。
+
+修复：
+
+~~~text
+start postgres/minio
+→ wait Docker health=healthy
+→ raw init / DB bootstrap
+
+health timeout
+= 120 seconds fail-closed
+~~~
+
+### AK5.3 P0-3 — rehearsal authority scope divergence
+
+predecessor：
+
+~~~text
+07b650e6e3b760dad547f871deb25c3d8f77f5d2
+~~~
+
+first red：
+
+~~~text
+EA5C1_EXTERNAL_SCOPE_MISMATCH:zone_id
+~~~
+
+根因：qualification-only zone override 改变 frozen External Formal authority scope。
+
+修复：
+
+~~~text
+Evidence Runtime scope
+= exact Production/Twin External Formal scope
+
+isolation
+= project / database / volume / bucket-prefix
+NOT authority scope
+~~~
+
+### AK5.4 P0-4 — controlled baseline 污染 durable GFS target history
+
+predecessor：
+
+~~~text
+e755d9e3ad48611133635aedad99bb1aa95e9344
+~~~
+
+first red：
+
+~~~text
+GFS_TARGET_HISTORY_ISSUED_AT_INVALID
+~~~
+
+根因：durable GFS history 把 controlled baseline future-weather / ET0 也当 canonical GFS completion history；fixture issued_at=A0-30m，strict hourly parser正确拒绝。
+
+修复：
+
+~~~text
+GFS durable history canonical origins only:
+
+NOAA_NCEP_NOMADS_GFS
+NOAA_NCEP_NOMADS_GFS_DERIVED
+
+controlled rehearsal baseline
+= Twin fallback only
+= not GFS completion authority
+~~~
+
+### AK5.5 P0-5 — byte-identical raw re-fetch causal barrier
+
+predecessor：
+
+~~~text
+9e8432251d11e4ec66490ea4ef3e86a98fa7b390
+~~~
+
+表现：
+
+~~~text
+~17 minutes live
+5 successful Evidence cycles
+then KBS_RAW_HOURLY_PUBLICATION_CYCLE fatal
+~~~
+
+first red：
+
+~~~text
+EA3_RETAINED_BEFORE_RETRIEVAL
+~~~
+
+根因：content-addressed raw 已存在，immutable object 原 retained_at 早于后续 retrieval；当前 poll错误把原 retained_at 当本次 durable verification barrier。
+
+修复：
+
+~~~text
+immutable retained_at
+= preserved
+
+retention_ref
+= preserved
+
+per-call retention_verified_at
+= current HEAD / PUT+HEAD verification barrier
+
+EA3 causality
+= retrieval <= current verification barrier
+~~~
+
+### AK5.6 P0-6 — same-semantic KBS Soil republication
+
+predecessor：
+
+~~~text
+9fb86cd8fa0e8556d61ee06b677118d5a19c4993
+~~~
+
+first red：
+
+~~~text
+PHASE3_EVIDENCE_DB_INGRESS_FACT_IDENTITY_CONFLICT
+~~~
+
+根因：相同 observation 再 poll 时，retrieved_at / available_to_runtime_at / ingested_at 变化，使 immutable fact writer看到 same fact_id + changed record_json。
+
+修复：
+
+~~~text
+stable semantic identity equal
++ source_record_hash equal
++ raw identity equal
++ canonical payload equal
++ event time equal
+
+→ reuse first immutable fact
+→ advance supply publication ledger with current poll availability
+~~~
+
+### AK5.7 P0-7 — legitimate same-event-time revision 需要 distinct immutable fact
+
+predecessor：
+
+~~~text
+6c7cb9a8a05b128cebe9698ea94deccb07bf3709
+~~~
+
+表现：
+
+~~~text
+4 successful Evidence attempts
+then CANONICAL_WORK_ITEM_CYCLE
+PHASE3_EVIDENCE_DB_INGRESS_FACT_IDENTITY_CONFLICT
+~~~
+
+live DB 已出现连续 KBS Soil observations：
+
+~~~text
+11:10Z
+11:15Z
+11:25Z
+~~~
+
+根因：provider 对已知 event_time 发布新的 semantic revision；supply-event ledger 已支持 revision_count，但 legacy fact_id 没有 revision dimension。
+
+修复：
+
+~~~text
+first publication
+= preserve legacy fact_id
+
+same-semantic republication
+= reuse committed fact
+
+changed source semantics at same event_time
+= deterministic revision fact_id
+= legacy identity + source_record_hash
+
+repeat same revision
+= idempotent reuse
+
+same raw/source identity + divergent canonical payload
+= fail closed
+~~~
+
+e00f5878 已 machine-proven：
+
+~~~text
+same_semantic_republication_reuses_immutable_fact
+= true
+
+later_semantic_revision_gets_distinct_deterministic_fact_id
+= true
+
+revision_advances_same_event_time_ledger
+= true
+
+repeated_same_revision_is_idempotent_publication
+= true
+
+same_raw_identity_canonical_divergence_remains_fail_closed
+= true
+~~~
+
+### AK5.8 P0-8 — real-scale KBS complete-table comparison 超时
+
+predecessor：
+
+~~~text
+e00f587864cd8202a9b471ee3b0892df54aad9f6
+~~~
+
+表现：
+
+~~~text
+5 successful Production Evidence attempts
+
+6th attempt
+= KBS_RAW_HOURLY_PUBLICATION_CYCLE
+
+ATTEMPT_IN_PROGRESS
+= continued for about 3 minutes
+
+fatal
+= child-process Command failed
+
+host token
+= UNCLASSIFIED_ERROR
+~~~
+
+preserved real baseline：
+
+~~~text
+raw bytes
+= 19,617,109
+
+parsed rows
+= 295,304
+
+valid rows
+= 295,303
+
+unique event times
+= 295,263
+
+baseline latest event
+= 2026-09-22T04:00:00Z
+~~~
+
+初期曾怀疑 KBS semantic drift / non-canonical forward rows；只读 replay 后排除：
+
+~~~text
+same retained 19.6MB raw
+→ NO_CHANGE
+→ historical_drift_count=0
+→ forward_event_count=0
+~~~
+
+真正根因：
+
+~~~text
+comparison subprocess timeout
+= 120s
+
+observed failure
+≈ 123s
+
+old implementation
+= previous full-table scanned twice
++ current full-table scanned twice
+= four parse/group/hash scans
+~~~
+
+这是 real-scale performance / observability P0，不是 KBS semantic drift。
+
+---
+
+## AK6. 当前 patch — 22ffa7e2 single-scan comparison
+
+exact subject：
+
+~~~text
+22ffa7e2b12de7ef3eaff351aef42afc32aedc64
+~~~
+
+repair：
+
+~~~text
+inventory
+= build from already-grouped events
+
+comparison
+= parse each snapshot exactly once
+
+diff-forward
+= remove duplicate complete-table scan
+
+production timeout
+= keep 120 seconds
+
+timeout token
+= KBS_PUBLICATION_COMPARISON_TIMEOUT
+~~~
+
+原则：不允许仅通过扩大 timeout 掩盖重复扫描。
+
+selftest新增：
+
+~~~text
+comparison_exact_one_parse_per_snapshot
+= true
+~~~
+
+---
+
+## AK7. 对话结束前最新证据 — real 19.6MB benchmark PASS
+
+执行环境：
+
+~~~text
+current isolated worktree HEAD
+= e00f587864cd8202a9b471ee3b0892df54aad9f6
+
+benchmark subject
+= 22ffa7e2b12de7ef3eaff351aef42afc32aedc64
+
+method
+= fetch patched subject without moving worktree
+= extract patched scientific core only
+= copy patched core into preserved e00f Twin container /tmp
+= run patched selftest
+= run real 19.6MB same-raw compare
+~~~
+
+必须牢记：
+
+~~~text
+worktree HEAD
+!= benchmark subject
+
+benchmark
+= isolated read/compute proof
+= no DB mutation
+= no production mutation
+~~~
+
+patched selftest：
+
+~~~text
+status
+= PASS
+
+comparison_exact_one_parse_per_snapshot
+= true
+
+complete_table_snapshot_inventory
+= true
+
+historical_prefix_snapshot_comparison
+= true
+
+historical_revision_backfill_fail_closed
+= true
+
+duplicate_exact_t_fails_closed
+= true
+
+missing_exact_t_fails_closed
+= true
+
+stale_daily_batch_exact_t_remains_decodable
+= true
+
+provider_request_count
+= 0
+
+database_write_count
+= 0
+~~~
+
+real same-raw benchmark：
+
+~~~text
+real_raw_bytes
+= 19,617,109
+
+real_parsed_rows
+= 295,304
+
+expected
+= NO_CHANGE
+
+actual
+= NO_CHANGE
+
+compare_exit
+= 0
+
+elapsed_seconds
+= 50.354
+
+production_timeout_s
+= 120
+
+residual_margin_s
+= 69.646
+
+database_mutation
+= false
+
+production_mutation
+= false
+~~~
+
+final local adjudication：
+
+~~~text
+REAL-SCALE KBS COMPARISON
+= PASS
+~~~
+
+因此 P0-8 的 patch 已通过真实规模性能门槛；当前没有证据需要扩大 timeout。
+
+---
+
+## AK8. 当前卡点
+
+现在不是“还不知道怎么修”。
+
+当前 frontier：
+
+~~~text
+P0-8 implementation
+= DONE
+
+fixture/selftest
+= PASS
+
+real 19.6MB benchmark
+= PASS
+
+fresh exact-head 22ffa7e2 Layer-2 R00-R23
+= NOT YET RUN
+~~~
+
+因此当前剩余 blocker 是：
+
+~~~text
+fresh production-equivalent real-clock rehearsal
+on exact subject 22ffa7e2...
+~~~
+
+50.354s benchmark只能证明 KBS comparison repair在真实 19.6MB scale 下进入 frozen 120s budget；它不能替代完整 24h rehearsal，更不能替代 Formal O00-O23。
+
+---
+
+## AK9. 下一步严格顺序
+
+### Step 1 — 保留当前 evidence
+
+保留：
+
+~~~text
+e00f5878 failed rehearsal proof
+real KBS 19.6MB baseline manifest/raw identity
+22ffa7e2 patched-core selftest
+22ffa7e2 real-scale benchmark
+~~~
+
+### Step 2 — governed cleanup failed e00f run
+
+只用 existing rehearsal cleanup command。
+
+必须：
+
+~~~text
+preserve control proofs
+remove isolated containers/volumes/network
+not touch production
+not touch Formal store
+~~~
+
+### Step 3 — exact worktree binding
+
+fresh rehearsal worktree必须真正绑定：
+
+~~~text
+22ffa7e2b12de7ef3eaff351aef42afc32aedc64
+~~~
+
+不能把 e00f worktree + /tmp patched Python benchmark 当成 exact-head rehearsal。
+
+### Step 4 — exact-head pre-start gates
+
+执行：
+
+~~~text
+exact dependencies
+launcher selftest
+launcher governance acceptance
+focused P0 acceptances
+required exact-head accelerated qualification
+~~~
+
+只要没有 machine-proven new P0，不得扩大 scope。
+
+### Step 5 — fresh Production-equivalent R00-R23
+
+启动：
+
+~~~text
+run_class
+= QUALIFICATION_REHEARSAL
+
+subject
+= 22ffa7e2...
+
+Evidence Runtime
+= live Production path
+
+provider path
+= live
+
+Twin
+= Production V2
+
+storage
+= isolated
+
+Formal effect
+= false
+~~~
+
+必须保留：
+
+~~~text
+minimum observed live Evidence runtime before A0
+= 45 minutes
+
+launcher-to-A0 target margin
+≈ 2–3 hours
+~~~
+
+### Step 6 — healthy 就不要动
+
+一旦 healthy：
+
+~~~text
+do not merge #3623
+do not patch non-P0
+do not manually restart
+do not cleanup
+do not arm Formal
+~~~
+
+让 wall clock 走到 R23。
+
+自动 fault plan必须证明：
+
+~~~text
+controlled restart
+one missed boundary
+oldest-first backfill
+lease/fencing continuation
+cursor persistence
+~~~
+
+### Step 7 — R23 finalize
+
+必须保存：
+
+~~~text
+24 persisted scheduler slots
+24 terminal tick outcomes
+exact 24T readback
+controlled restart proof
+oldest-first backfill proof
+Evidence Runtime health proof
+live provider-attempt evidence
+no unresolved fatal Runtime failure
+exact subject SHA
+~~~
+
+### Step 8 — only P0 repair
+
+如果新发现问题，先回答：
+
+~~~text
+IF THIS IS NOT FIXED,
+CAN O00-O23 STILL PRODUCE VALID STAGE 1B EVIDENCE?
+~~~
+
+YES → REGISTER / DEFER。
+
+NO → P0 / narrow repair。
+
+### Step 9 — CODE / CONTRACT FREEZE
+
+fresh rehearsal完成且无 unresolved P0 后：
+
+~~~text
+CODE / CONTRACT FREEZE
+= YES
+~~~
+
+### Step 10 — full exact-head qualification
+
+freeze 后再处理：
+
+~~~text
+QCP
+H6 Production-V2 equivalence closure
+full exact-head qualification
+all required closure lanes
+~~~
+
+当前 dependency-digest / H6 diagnostic 不得绕过，但不应倒置 TEST EARLY / QUALIFY LATE。
+
+### Step 11 — merge #3623
+
+仅在：
+
+~~~text
+fresh R00-R23 COMPLETE
++
+no unresolved P0
++
+CODE / CONTRACT FREEZE
++
+required exact-head qualification acceptable
+~~~
+
+之后进入 merge。
+
+### Step 12 — post-merge Formal path
+
+~~~text
+protected-main convergence
+→ exact-main production owner refresh
+→ fresh H5
+→ fresh Formal-v5 arm
+→ post-arm Evidence acquisition handoff
+→ pre-acquire true A0 forcing
+→ final current Biological Stage Authority
+→ post-arm continuity proof
+→ separate operator authorization
+→ A0
+→ O00-O23
+→ final exact-SHA / R2 effectiveness
+→ MCFT CAP-09 CLOSED
+~~~
+
+A0 必须单独取得 operator authorization。
+
+---
+
+## AK10. 已踩过、必须避开的坑
+
+1. main 前移后不能继续使用旧 exact-main arm。AJ 的 0c71 arm是历史证据。
+
+2. R00-R23 不等于 O00-O23；QUALIFICATION_REHEARSAL 不等于 Stage 1B closure。
+
+3. qualification isolation必须用 project/database/volume/bucket-prefix，不能伪造 authority scope。
+
+4. controlled fixture不能进入 canonical GFS durable completion history。
+
+5. content-addressed raw 的 retained_at是 object历史；later identical retrieval必须用 current retention_verified_at作为 causal barrier。
+
+6. same-semantic republication与 semantic revision必须分开：前者 reuse immutable fact，后者用 deterministic revision fact；same raw identity + canonical divergence仍 fail-closed。
+
+7. KBS是 complete accumulated/batch table行为，不能假设每 poll只新增一个小时 row。继续记录 daily batch发布时间、observation-time覆盖、连续性、revision/backfill。
+
+8. 不要用加大 timeout掩盖 full-table重复扫描。当前 frozen 120s保留；22ffa7e2 real benchmark 50.354s，margin 69.646s。
+
+9. generic UNCLASSIFIED_ERROR 不可接受；comparison timeout必须结构化为 KBS_PUBLICATION_COMPARISON_TIMEOUT。
+
+10. MinIO object lastModified不能替代 provider retrieved_at / available_at；content-addressed object可能被 later poll复用。
+
+11. 本次 benchmark 的 worktree HEAD=e00f5878，但 benchmark subject=22ffa7e2。正式 fresh rehearsal必须整个 worktree exact-bind 22ffa7e2，不能只替换 /tmp 文件。
+
+12. unrelated workflow red不能自动扩大 MCFT closure。逐项按 P0规则裁决。
+
+13. e280 / bf314 / 07b / e755 / 9e843 / 9fb / 6c7 / e00 predecessor failures都要保留；已关闭 P0不得无证据重开。
+
+14. #3623保持 Draft / unmerged，直到 fresh exact-head R00-R23完成、无 unresolved P0、freeze后 required qualification完成。
+
+15. 不要手工清 Formal DB、不要绕 gate、不要 bare SHA admission、不要用 rehearsal evidence替代 Formal authority。
+
+---
+
+## AK11. 下一对话第一组状态检查
+
+只先回答：
+
+~~~text
+protected main
+= still 6ff48eca... ?
+
+#3623
+= OPEN / DRAFT ?
+= head still 22ffa7e2... ?
+
+e00f failed rehearsal
+= proof preserved ?
+= governed cleanup done ?
+
+22ffa7e2 exact worktree
+= bound ?
+
+fresh 22ffa7e2 rehearsal
+= NOT STARTED / RUNNING / COMPLETE ?
+
+Evidence Runtime
+= live ?
+
+Twin Runtime
+= live ?
+
+scheduler
+= slot_count / completed / degraded / failed / cursor
+
+fault proof
+= PENDING / PASS / FAIL
+
+new P0
+= YES / NO
+
+CODE / CONTRACT FREEZE
+= YES / NO
+~~~
+
+如果 fresh rehearsal 尚未开始，当前唯一直接动作就是 governed cleanup → exact binding → pre-start gates → start 22ffa7e2 Production-equivalent Real-clock Rehearsal。
+
+---
+
+## AK12. 当前停止点
+
+~~~text
+protected main
+= 6ff48eca10c1d25365c39f9d1e4dbb14d6c1ad91
+
+active successor
+= PR #3623 OPEN / DRAFT / UNMERGED
+
+exact successor head
+= 22ffa7e2b12de7ef3eaff351aef42afc32aedc64
+
+real 19.6MB KBS benchmark
+= PASS
+
+elapsed
+= 50.354s
+
+timeout
+= 120s
+
+margin
+= 69.646s
+
+fresh exact-head R00-R23
+= NOT STARTED
+
+current action
+= governed cleanup of failed e00f rehearsal
+→ exact-bind 22ffa7e2 worktree
+→ pre-start gates
+→ fresh Production-equivalent Layer-2 R00-R23
+
+do not merge
+do not arm
+do not A0
+do not O00
+do not expand debt scope
+~~~
+
+---
+
 # AJ — 2026-09-21 Formal-v5 Armed / Real-Clock Rehearsal Recovery / R23 Time-Gated Frontier
 
 > 本 section 是 AI 之后的当前 continuation entry point。AI 的 d054 / #3611 regression frontier 已被后续 merge、fresh re-arm、fresh owner cutover、new Formal-v5 arm 与真实时钟 rehearsal 推进；不得把 AI 的三条旧红灯重新当作当前 blocker。
