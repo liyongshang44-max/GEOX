@@ -126,6 +126,7 @@ if (baseArgIndex >= 0) {
     /^apps\/server\/src\/product_projection\//,
     /^apps\/server\/src\/routes\/product_customer_v1\.ts$/,
     /^docs\/product_projection\//,
+    /^docs\/architecture\/semantic_convergence\/GEOX-BLINE-ACTIVE-RUNTIME-SURFACE-DISPOSITION-V1\.json$/,
     /^docs\/frontend-productization\/GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1\.(?:md|json)$/,
     /^scripts\/governance_acceptance\/ACCEPTANCE_FOUI_CUSTOMER_PRODUCT_API_V1\.cjs$/,
     /^scripts\/governance_acceptance\/FOUI_CUSTOMER_PRODUCT_API_NEGATIVE_V1\.ts$/,
