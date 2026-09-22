@@ -58,6 +58,9 @@ export const PRODUCT_PROJECTION_SOURCE_ROLES_V1 = [
   "CAPABILITY_AUTHORITY_MATURITY_BASIS",
   "CAPABILITY_OPERATIONAL_ELIGIBILITY_BASIS",
   "ATTENTION_AUTHORITY_SOURCE",
+  "FIELD_IDENTITY_BASIS",
+  "FIELD_SEASON_BASIS",
+  "FIELD_CURRENT_STATE",
 ] as const;
 export type ProductProjectionSourceRoleV1 =
   (typeof PRODUCT_PROJECTION_SOURCE_ROLES_V1)[number];
@@ -65,7 +68,7 @@ export type ProductProjectionSourceRoleV1 =
 export type ProductProjectionSourceBindingRegistrationV1 = {
   binding_id: string;
   ref_namespace: ProductProjectionSourceRefNamespaceV1;
-  source_system: "MCFT" | "ADR" | "B_LINE" | "FOUI_GOVERNANCE" | "EXTERNAL_BASIS";
+  source_system: "MCFT" | "ADR" | "B_LINE" | "FOUI_GOVERNANCE" | "GEOX_INDEX" | "EXTERNAL_BASIS";
   authority_domain: ProductProjectionAuthorityDomainV1 | null;
   non_authority_ref_class: ProductProjectionNonAuthorityRefClassV1 | null;
   object_kind_mode: ProductProjectionSourceObjectKindModeV1;
@@ -116,7 +119,7 @@ export const PRODUCT_PROJECTION_SOURCE_BINDINGS_V1 = Object.freeze([
     source_contract: "MinimalFieldTwinRuntimeReadModelV1 / FieldTwinCanonicalObjectRefV1",
     source_contract_version: "minimal_field_twin_runtime_read_model_v1",
     allowed_source_paths: ["posterior_state"],
-    allowed_product_roles: ["ACTION_CURRENT_FIELD_STATE", "ACTION_DECISION_TIME_FIELD_STATE"],
+    allowed_product_roles: ["ACTION_CURRENT_FIELD_STATE", "ACTION_DECISION_TIME_FIELD_STATE", "FIELD_CURRENT_STATE"],
   }),
   authorityRegistration({
     binding_id: "MCFT_RUNTIME_FORECAST_REF_V1",
@@ -311,6 +314,29 @@ export const PRODUCT_PROJECTION_SOURCE_BINDINGS_V1 = Object.freeze([
     source_contract_version: "v1",
     allowed_source_paths: ["facts:acceptance_result_v1"],
     allowed_product_roles: ["ACTION_EXECUTION_EVIDENCE_ACCEPTANCE", "CAPABILITY_AUTHORITY_MATURITY_BASIS", "ATTENTION_AUTHORITY_SOURCE"],
+  }),
+
+  nonAuthorityRegistration({
+    binding_id: "GEOX_FIELD_INDEX_IDENTITY_V1",
+    source_system: "GEOX_INDEX",
+    non_authority_ref_class: "OTHER_NON_AUTHORITY",
+    object_kind_mode: "EXACT",
+    allowed_object_kinds: ["field_index_v1"],
+    source_contract: "public.field_index_v1",
+    source_contract_version: "existing-index",
+    allowed_source_paths: ["public.field_index_v1"],
+    allowed_product_roles: ["FIELD_IDENTITY_BASIS"],
+  }),
+  nonAuthorityRegistration({
+    binding_id: "GEOX_FIELD_SEASON_INDEX_V1",
+    source_system: "GEOX_INDEX",
+    non_authority_ref_class: "OTHER_NON_AUTHORITY",
+    object_kind_mode: "EXACT",
+    allowed_object_kinds: ["field_season_index_v1"],
+    source_contract: "public.field_season_index_v1",
+    source_contract_version: "existing-index",
+    allowed_source_paths: ["public.field_season_index_v1"],
+    allowed_product_roles: ["FIELD_SEASON_BASIS"],
   }),
 
   nonAuthorityRegistration({
@@ -614,4 +640,34 @@ export function assertGovernedActionCaseSourceBindingsV1(
 
 export function sourceBindingRegistrationV1(bindingId: string): ProductProjectionSourceBindingRegistrationV1 | null {
   return registryById.get(bindingId) ?? null;
+}
+
+export function assertCustomerFieldProjectionSourceBindingsV1(
+  envelope: ProductProjectionEnvelopeV1,
+  proofSet: ProductProjectionSourceBindingProofSetV1,
+  refs: {
+    field_identity_ref_key: string;
+    field_season_ref_key: string | null;
+    current_state_ref_key: string | null;
+  },
+): void {
+  assertProductProjectionSourceBindingsV1(envelope, proofSet);
+  assertRole(
+    refs.field_identity_ref_key,
+    "FIELD_IDENTITY_BASIS",
+    proofSet,
+    "FIELD_PRODUCT_SOURCE_IDENTITY_BINDING_FORBIDDEN",
+  );
+  assertRole(
+    refs.field_season_ref_key,
+    "FIELD_SEASON_BASIS",
+    proofSet,
+    "FIELD_PRODUCT_SOURCE_SEASON_BINDING_FORBIDDEN",
+  );
+  assertRole(
+    refs.current_state_ref_key,
+    "FIELD_CURRENT_STATE",
+    proofSet,
+    "FIELD_PRODUCT_SOURCE_CURRENT_STATE_BINDING_FORBIDDEN",
+  );
 }
