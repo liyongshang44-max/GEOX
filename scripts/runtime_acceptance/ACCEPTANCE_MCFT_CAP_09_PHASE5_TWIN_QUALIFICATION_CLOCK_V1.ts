@@ -4,8 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
-  MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2,
-} from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.js";
+  MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_CONTRACT_V2,
+} from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.js";
 import {
   buildPhase5TwinQualificationClockBoundaryV1,
   buildPhase5TwinQualificationRuntimeStartAuthorityV1,
@@ -149,12 +149,12 @@ async function main(): Promise<void> {
   );
 
   assert.equal(
-    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2.database_clock_for_tick_authority,
-    true,
+    MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_CONTRACT_V2.host_clock_mode,
+    "POSTGRES_TRANSACTION_TIMESTAMP_DEFAULT_WITH_EXPLICIT_QUALIFICATION_SEAM",
   );
   assert.equal(
-    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2.qualification_clock_boundary,
-    "EXPLICIT_DATABASE_CLOCK_AND_SCHEDULER_AUTHORITY_INJECTION_WITH_PRODUCTION_DEFAULT",
+    MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_CONTRACT_V2.scheduler_clock_mode,
+    "SYSTEM_DATABASE_UTC_DEFAULT_WITH_EXPLICIT_ACCELERATED_ENGINEERING_SEAM",
   );
 
   const qualificationSource = fs.readFileSync(
@@ -164,13 +164,13 @@ async function main(): Promise<void> {
     "utf8",
   );
   for (const required of [
-    "runMcftCap09TwinRuntimeProcessV2",
+    "composeMcftCap09TwinRuntimeV2",
     "ACCELERATED_ENGINEERING_ONLY",
     "MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1",
     "buildPhase5TwinQualificationRuntimeStartAuthorityV1",
-    "qualification_lease_owner",
+    "loadMcftCap09ProductionRuntimeStartAuthorityV1",
+    "loadMcftCap09ProductionStageAuthorityMountsV1",
     "REAL_CLOCK_REHEARSAL",
-    "qualification_run_class",
   ]) {
     assert.equal(
       qualificationSource.includes(required),
@@ -201,12 +201,18 @@ async function main(): Promise<void> {
     ),
     "utf8",
   );
-  for (const required of [
+  assert.equal(processSource.includes("composeMcftCap09TwinRuntimeV2"), true);
+  for (const forbidden of [
+    "qualification_lease_owner",
+    "qualification_run_class",
     "database_clock: input?.database_clock",
     "scheduler_clock_authority: input?.scheduler_clock_authority",
-    "composeMcftCap09TwinRuntimeV2",
   ]) {
-    assert.equal(processSource.includes(required), true);
+    assert.equal(
+      processSource.includes(forbidden),
+      false,
+      `PHASE5_PRODUCTION_PROCESS_QUALIFICATION_SEAM_FORBIDDEN:${forbidden}`,
+    );
   }
 
   const compositionSource = fs.readFileSync(
@@ -241,7 +247,8 @@ async function main(): Promise<void> {
     real_clock_rehearsal_uses_system_database_utc_clock: true,
     real_clock_rehearsal_activation_fence_is_physical_start_time: true,
     exact_hour_required: true,
-    same_production_twin_process_reused: true,
+    same_production_twin_composition_reused: true,
+    production_process_source_has_no_qualification_clock_seam: true,
     production_process_version: "V2",
     production_composition_version: "V2",
     production_runner_version: "ExternalFormalV4Amendment19RunnerV2",
