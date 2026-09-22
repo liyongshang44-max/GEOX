@@ -445,7 +445,8 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     fieldId: string,
   ): Promise<
     | { status: "EXACT"; scope: FieldTwinScopeV1 }
-    | { status: "NONE" | "AMBIGUOUS"; scope: null; reason_codes: readonly string[] }
+    | { status: "NONE"; scope: null; reason_codes: readonly string[] }
+    | { status: "AMBIGUOUS"; scope: null; reason_codes: readonly string[] }
   > {
     const result = await this.pool.query<RuntimeScopeRowV1>(
       `SELECT season_id, zone_id, active_lineage_ref, updated_at
