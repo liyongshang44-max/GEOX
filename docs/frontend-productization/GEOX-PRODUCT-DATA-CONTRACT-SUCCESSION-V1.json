@@ -97,6 +97,17 @@
       "route": "/api/v1/reports/operation/:operationId",
       "classification": "LEGACY_REPORT",
       "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/customer/fields/:fieldId/memory",
+      "classification": "LEGACY_ACTIVE_READ",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/customer/fields/:fieldId/geometry",
+      "classification": "LEGACY_COMPAT_READ_SOURCE",
+      "new_consumers": "FORBIDDEN",
+      "note": "May remain an implementation/source input during migration; it is not a canonical new UI contract."
     }
   ],
   "legacy_lifecycle": [
@@ -119,7 +130,8 @@
     "docs/frontend/P2_CUSTOMER_API_CONTRACT.md",
     "docs/frontend/CUSTOMER_DATA_SOURCE_MAP_V1.md",
     "docs/frontend/FALLBACK_RETIREMENT_PLAN.md",
-    "docs/frontend/CUSTOMER_FRONTEND_GAP_BASELINE_V1.md"
+    "docs/frontend/CUSTOMER_FRONTEND_GAP_BASELINE_V1.md",
+    "docs/frontend/P1_API_READINESS_MATRIX_V1.md"
   ],
   "first_successor_construction": {
     "contracts": [
@@ -131,5 +143,51 @@
       "GET /api/product/v1/fields/:fieldRef"
     ],
     "database_schema_change_required_by_governance": false
+  },
+  "legacy_frontend_consumer_allowlist": {
+    "policy": "EXISTING_COMPATIBILITY_CONSUMERS_ONLY_NO_NEW_FILES",
+    "forbidden_families_for_new_consumers": [
+      "/api/v1/customer/",
+      "/api/v1/reports/",
+      "/api/v1/fields/portfolio"
+    ],
+    "customer_api_family_existing_files": [
+      "apps/web/src/api/customer.ts",
+      "apps/web/src/api/customerFieldMemory.ts",
+      "apps/web/src/api/customerFields.ts",
+      "apps/web/src/api/customerOperations.ts",
+      "apps/web/src/api/customerReportsCenter.ts",
+      "apps/web/src/api/customerRoiLedger.ts",
+      "apps/web/src/api/operatorRoiLedger.ts"
+    ],
+    "reports_api_family_existing_files": [
+      "apps/web/src/api/reports.ts",
+      "apps/web/src/api/operatorDispatch.ts",
+      "apps/web/src/api/operatorAcceptance.ts",
+      "apps/web/src/api/operatorEvidence.ts",
+      "apps/web/src/api/operatorWorkbench.ts",
+      "apps/web/src/api/operatorDevicesAlerts.ts",
+      "apps/web/src/viewmodels/customerReportMainVisualVm.ts"
+    ],
+    "field_portfolio_existing_files": [
+      "apps/web/src/api/fieldPortfolio.ts"
+    ],
+    "customer_direct_domain_adapter_files": [
+      "apps/web/src/api/customerFieldMemory.ts",
+      "apps/web/src/api/customerPrescriptions.ts"
+    ]
+  },
+  "audit_closure": {
+    "performed_against_branch": "docs/frontend-canonical-blueprint-v1-20260922",
+    "findings_closed": [
+      "CUSTOMER_MEMORY_AND_GEOMETRY_ROUTE_CLASSIFICATION",
+      "P1_API_READINESS_DOCUMENT_HISTORICAL_MARKER",
+      "UNMARKED_CUSTOMER_COMPATIBILITY_ADAPTERS",
+      "NO_ENFORCEMENT_AGAINST_NEW_LEGACY_FRONTEND_CONSUMERS"
+    ],
+    "remaining_blockers_for_sites_mock_frontend_handoff": [],
+    "remaining_blockers_for_sites_real_data_binding": [
+      "MINIMAL_CANONICAL_PRODUCT_API_NOT_IMPLEMENTED_YET"
+    ]
   }
 }
