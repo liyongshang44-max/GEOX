@@ -209,3 +209,57 @@ test("field outside caller allowlist is not found", async () => {
     /PRODUCT_FIELD_NOT_FOUND/,
   );
 });
+
+
+test("validator rejects product-owned risk fields even on an otherwise valid summary", async () => {
+  const builder = new PostgresCustomerProductProjectionBuilderV1(fakePool(), {
+    readApi: new FakeReadApi(),
+    now: () => "2026-09-23T00:05:00.000Z",
+  });
+  const projection = await builder.buildFieldSummaryV1(scope, "field-a");
+  const invalid = { ...projection, risk_level: "HIGH" };
+  assert.throws(
+    () => assertFieldSummaryProjectionV1(invalid),
+    /FIELD_SUMMARY_PRODUCT_AUTHORITY_INFERENCE_FORBIDDEN/,
+  );
+});
+
+test("validator rejects claiming no attention when attention projection is unavailable", async () => {
+  const builder = new PostgresCustomerProductProjectionBuilderV1(fakePool(), {
+    readApi: new FakeReadApi(),
+    now: () => "2026-09-23T00:05:00.000Z",
+  });
+  const projection = await builder.buildFieldSummaryV1(scope, "field-a");
+  const invalid = {
+    ...projection,
+    attention: {
+      ...projection.attention,
+      status: "UNAVAILABLE",
+      has_attention: false,
+    },
+  };
+  assert.throws(
+    () => assertFieldSummaryProjectionV1(invalid),
+    /FIELD_ATTENTION_UNKNOWN_MUST_BE_NULL/,
+  );
+});
+
+test("validator rejects CURRENT reporting when current condition is unavailable", async () => {
+  const builder = new PostgresCustomerProductProjectionBuilderV1(fakePool({ runtimeScopeCount: 0 }), {
+    readApi: new FakeReadApi(),
+    now: () => "2026-09-23T00:05:00.000Z",
+  });
+  const projection = await builder.buildFieldSummaryV1(scope, "field-a");
+  const invalid = {
+    ...projection,
+    reporting_state: {
+      state: "CURRENT",
+      reason_codes: [],
+      last_qualified_at: "2026-09-23T00:00:00.000Z",
+    },
+  };
+  assert.throws(
+    () => assertFieldSummaryProjectionV1(invalid),
+    /FIELD_CURRENT_REPORTING_REQUIRES_AVAILABLE_CONDITION/,
+  );
+});
