@@ -87,7 +87,7 @@
       "/operator/fields"
     ],
     "customer_current": [
-      "/customer/dashboard",
+      "/customer/overview",
       "/customer/fields",
       "/customer/operations",
       "/customer/reports"
@@ -110,8 +110,16 @@
   "route_decisions": {
     "customer": [
       [
+        "/customer",
+        "REDIRECT_TO_OVERVIEW"
+      ],
+      [
+        "/customer/overview",
+        "CANONICAL_NEW_PRODUCT"
+      ],
+      [
         "/customer/dashboard",
-        "KEEP_EVOLVE"
+        "LEGACY_COMPAT_ALIAS"
       ],
       [
         "/customer/fields",
@@ -400,6 +408,16 @@
       "apps/server/src/modules/product/**",
       "scripts/governance_acceptance/*FOUI*",
       ".github/workflows/foui-*"
-    ]
+    ],
+    "sites_customer_portal_routes": {
+      "canonical_overview": "/customer/overview",
+      "legacy_dashboard": "/customer/dashboard",
+      "legacy_dashboard_classification": "LEGACY_COMPAT_ALIAS"
+    }
+  },
+  "customer_root_redirect": {
+    "from": "/customer",
+    "to": "/customer/overview",
+    "classification": "CANONICAL_NEW_PRODUCT_REDIRECT"
   }
 }
