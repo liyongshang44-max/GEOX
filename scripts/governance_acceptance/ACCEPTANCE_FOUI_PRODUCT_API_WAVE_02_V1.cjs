@@ -13,6 +13,7 @@ const check = (name, fn) => { fn(); checks.push({ name, status: "PASS" }); };
 
 try {
   const contract = read("apps/server/src/product_projection/customer/customer_product_projection_contracts_v1.ts");
+  const customerSchema = JSON.parse(read("apps/server/src/product_projection/customer/customer_product_projection_contracts_v1.schema.json"));
   const builder = read("apps/server/src/product_projection/customer/customer_product_projection_builder_v1.ts");
   const route = read("apps/server/src/routes/product_v1.ts");
   const moduleSource = read("apps/server/src/modules/product/registerProductModule.ts");
@@ -20,6 +21,15 @@ try {
   const sourceRegistry = read("apps/server/src/product_projection/contracts/product_projection_source_binding_registry_v1.ts");
   const productContract = read("apps/server/src/product_projection/contracts/product_projection_contracts_v1.ts");
   const doc = read("docs/product_projection/GEOX-FOUI-PRODUCT-API-WAVE-02-V1.md");
+
+  check("CUSTOMER_PROJECTION_JSON_SCHEMA_PRESENT", () => {
+    assert.equal(customerSchema["$schema"], "https://json-schema.org/draft/2020-12/schema");
+    for (const name of ["CustomerOverview", "FieldSummary", "FieldWorkspace"]) {
+      assert.ok(customerSchema["$defs"]?.[name], name);
+    }
+    assert.equal(customerSchema["$defs"]?.["RootZoneWater"]?.properties?.water_stress_state?.properties?.status?.const, "NOT_ESTABLISHED");
+    assert.equal(customerSchema["$defs"]?.["RootZoneWater"]?.properties?.confidence?.properties?.status?.const, "NOT_ESTABLISHED");
+  });
 
   check("THREE_CONCRETE_CUSTOMER_PROJECTION_CONTRACTS", () => {
     for (const name of [
