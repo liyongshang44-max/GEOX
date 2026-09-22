@@ -3,7 +3,6 @@
 
 import { semanticHashV1 } from "./canonical_identity_v1.js";
 import type { ExternalFormalPrewindowAuthorityBundleV3 } from "./external_formal_prewindow_authority_bundle_v3.js";
-import type { ExternalFormalPrewindowAuthorityBundleV4 } from "./external_formal_prewindow_authority_bundle_v4.js";
 
 export const MCFT_CAP09_AM19_SHARED_WINDOW_MANIFEST_PROFILE_V1 =
   "MCFT_CAP09_AM19_SHARED_WINDOW_MANIFEST_V1" as const;
@@ -46,7 +45,7 @@ export type BuildExternalFormalAmendment19WindowManifestInputV1 = {
   subject_sha: string;
   database_name: string;
   manifest_ref: string;
-  bundle: ExternalFormalPrewindowAuthorityBundleV3 | ExternalFormalPrewindowAuthorityBundleV4;
+  bundle: ExternalFormalPrewindowAuthorityBundleV3;
   crop_context_materialization_pins: readonly ExternalFormalAmendment19MaterializationPinV1[];
 };
 
