@@ -23,6 +23,7 @@ const authorityPath = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURA
 const rawAdapterPath = "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts";
 const collectorPath = "apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts";
 const ingressPath = "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts";
+const governedIngressPath = "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts";
 const acceptancePath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts";
 const successorAcceptancePath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts";
 const gatePath = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs";
@@ -49,6 +50,8 @@ const candidatePins = {
 const realClockP0RetentionReusePins = {
   [rawAdapterPath]: "4a730990d962b8d8095541117993a1e42b415589",
   [collectorPath]: "0bdf416f17f7d72f1089ff962a93d1b8f4d655d9",
+  [ingressPath]: "98348646008c6a1f3c5dc3e4b3569755d05a10fc",
+  [governedIngressPath]: "1f665212e82e3c4ef413152e64612438881fd94d",
   [acceptancePath]: "bb6d8be445c0425c88eccac54d867b7d7935bd04",
   [workflowPath]: "49b35383434a560343f0964cc2414e354612922b"
 };
@@ -84,10 +87,10 @@ if (base === HISTORICAL_BASE) {
     for (const [file, expected] of Object.entries(realClockP0RetentionReusePins)) {
       eq(blob("HEAD", file), expected, `EA5C1_REAL_CLOCK_P0_EXACT_BLOB_MISMATCH:${file}`);
     }
-    eq(blob("HEAD", ingressPath), blob(base, ingressPath), "EA5C1_REAL_CLOCK_P0_INGRESS_DRIFT");
     const expectedProtectedChanged = [
       rawAdapterPath,
       collectorPath,
+      ingressPath,
       acceptancePath,
       gatePath,
       workflowPath,
@@ -231,6 +234,12 @@ const result = {
   real_clock_p0_exact_protected_boundary_proved:
     validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
   real_clock_p0_qualification_images_pinned:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
+  real_clock_p0_revision_fact_identity_requalification:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
+  real_clock_p0_revision_ingress_helper_exact_pinned:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
+  real_clock_p0_governed_runtime_ingress_exact_pinned:
     validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
   predecessor_contracts_unchanged_from_current_base: true,
   durable_raw_before_decode_and_before_facts_proved: true,
