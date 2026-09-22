@@ -12,10 +12,14 @@ import {
   buildExternalFormalAmendment19WindowManifestV1,
   validateExternalFormalAmendment19WindowManifestV1,
 } from "../../../domain/twin_runtime/external_formal_amendment19_window_manifest_v1.js";
+import type {
+  ExternalFormalPrewindowAuthorityBundleV3,
+} from "../../../domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.js";
 import {
   buildExternalFormalPrewindowAuthorityBundleV4,
   MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4,
   MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4,
+  type ExternalFormalPrewindowAuthorityBundleV4,
 } from "../../../domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.js";
 import {
   PostgresNextTickRepositoryV1,
@@ -181,6 +185,23 @@ function buildQualificationStageAuthoritiesV2(input:{
   };
 }
 
+function projectManifestCompatibleBundleV3(
+  input: ExternalFormalPrewindowAuthorityBundleV4,
+): ExternalFormalPrewindowAuthorityBundleV3 {
+  return {
+    epoch_id: input.epoch_id,
+    o00_logical_time: input.o00_logical_time,
+    o23_logical_time: input.o23_logical_time,
+    hourly_crop_pins: input.hourly_crop_pins.map((pin) => ({
+      slot_id: pin.slot_id,
+      logical_time: pin.logical_time,
+      crop_stage_code: pin.crop_stage_code,
+      crop_stage_context_hash: pin.crop_stage_context_hash,
+    })),
+    persistence_bundle: input.persistence_bundle,
+  };
+}
+
 class CanonicalA0EvidenceSourceV2 implements ReplayEvidenceSourcePortV1 {
   constructor(private readonly source:PostgresExternalFormalAmendment19EvidenceSourceV1) {}
   async loadCandidateRecords(input:Parameters<ReplayEvidenceSourcePortV1["loadCandidateRecords"]>[0]) {
@@ -276,7 +297,7 @@ async function main():Promise<void> {
       subject_sha:subject,
       database_name:databaseName,
       manifest_ref:"qualification://mcft-cap09/phase5/v2/"+epoch,
-      bundle,
+      bundle: projectManifestCompatibleBundleV3(bundle),
       crop_context_materialization_pins:pins,
     });
     validateExternalFormalAmendment19WindowManifestV1(manifest,subject);
