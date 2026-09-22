@@ -195,9 +195,6 @@ function writeOverride(file){
     `    image: ${MINIO_IMAGE}`,
     "  minio-init:",
     `    image: ${MC_IMAGE}`,
-    "  evidence-runtime:",
-    "    environment:",
-    "      GEOX_MCFT_CAP09_ZONE_ID: ${GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID:?GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID is required}",
     "",
   ].join("\n"),{mode:0o600});
 }
@@ -416,7 +413,6 @@ function start(){
     GEOX_PHASE5_FIELD_ID:"field_kbs_mcse_t4r1",
     GEOX_PHASE5_SEASON_ID:"season_2026_corn",
     GEOX_PHASE5_ZONE_ID:"zone_kbs_mcse_t4r1_crop_formal_v1",
-    GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID:"zone_kbs_mcse_t4r1_evidence_burnin_v1",
     GEOX_PHASE5_FIXTURE_ROOT:fixtureRoot,
     GEOX_PHASE5_CONTROL_ROOT:controlRoot,
     GEOX_PHASE5_RUN_CLASS:"REAL_CLOCK_REHEARSAL",
@@ -529,6 +525,7 @@ function start(){
       }:null,
       twin_progress_uses_controlled_baseline:true,
       evidence_runtime_live_provider_burn_in:true,
+      evidence_runtime_uses_exact_external_formal_scope:true,
       formal_closure_substituted:false,
     },null,2));
   }catch(error){
