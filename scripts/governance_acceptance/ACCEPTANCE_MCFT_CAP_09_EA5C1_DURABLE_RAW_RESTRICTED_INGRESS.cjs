@@ -49,7 +49,8 @@ const candidatePins = {
 const realClockP0RetentionReusePins = {
   [rawAdapterPath]: "4a730990d962b8d8095541117993a1e42b415589",
   [collectorPath]: "0bdf416f17f7d72f1089ff962a93d1b8f4d655d9",
-  [acceptancePath]: "bb6d8be445c0425c88eccac54d867b7d7935bd04"
+  [acceptancePath]: "bb6d8be445c0425c88eccac54d867b7d7935bd04",
+  [workflowPath]: "6445e89bbe503971733a57e92e71d48494e6a80e"
 };
 
 let validationMode;
@@ -84,12 +85,12 @@ if (base === HISTORICAL_BASE) {
       eq(blob("HEAD", file), expected, `EA5C1_REAL_CLOCK_P0_EXACT_BLOB_MISMATCH:${file}`);
     }
     eq(blob("HEAD", ingressPath), blob(base, ingressPath), "EA5C1_REAL_CLOCK_P0_INGRESS_DRIFT");
-    eq(blob("HEAD", workflowPath), blob(base, workflowPath), "EA5C1_REAL_CLOCK_P0_WORKFLOW_DRIFT");
     const expectedProtectedChanged = [
       rawAdapterPath,
       collectorPath,
       acceptancePath,
       gatePath,
+      workflowPath,
     ].sort();
     eq(
       JSON.stringify(protectedChanged),
@@ -228,6 +229,8 @@ const result = {
   real_clock_p0_historical_authority_rewritten: false,
   real_clock_p0_raw_object_retained_at_mutation: false,
   real_clock_p0_exact_protected_boundary_proved:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
+  real_clock_p0_qualification_images_pinned:
     validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
   predecessor_contracts_unchanged_from_current_base: true,
   durable_raw_before_decode_and_before_facts_proved: true,
