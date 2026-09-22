@@ -139,11 +139,13 @@ def publication_event_summary_v1(event_time: str, row_hashes: list[str]) -> dict
     }
 
 
-def build_kbs_raw_hourly_publication_snapshot_inventory_v1(*, body: bytes, available_at: datetime) -> dict:
-    parsed_row_count, valid_row_count, grouped = publication_event_groups_v1(
-        body=body,
-        available_at=available_at,
-    )
+def publication_snapshot_inventory_from_groups_v1(
+    *,
+    parsed_row_count: int,
+    valid_row_count: int,
+    grouped: dict[str, list[str]],
+) -> dict:
+    require_v1(bool(grouped), "MCFT_CAP09_KBS_PUBLICATION_EVENT_INDEX_REQUIRED")
     event_times = sorted(grouped)
     latest = parse_iso_v1(event_times[-1], "MCFT_CAP09_KBS_PUBLICATION_LATEST_INVALID")
     require_v1(
@@ -172,6 +174,18 @@ def build_kbs_raw_hourly_publication_snapshot_inventory_v1(*, body: bytes, avail
     }
 
 
+def build_kbs_raw_hourly_publication_snapshot_inventory_v1(*, body: bytes, available_at: datetime) -> dict:
+    parsed_row_count, valid_row_count, grouped = publication_event_groups_v1(
+        body=body,
+        available_at=available_at,
+    )
+    return publication_snapshot_inventory_from_groups_v1(
+        parsed_row_count=parsed_row_count,
+        valid_row_count=valid_row_count,
+        grouped=grouped,
+    )
+
+
 def diff_kbs_raw_hourly_publication_forward_v1(
     *,
     body: bytes,
@@ -184,14 +198,17 @@ def diff_kbs_raw_hourly_publication_forward_v1(
         after.minute == 0 and after.second == 0 and after.microsecond == 0,
         "MCFT_CAP09_KBS_PUBLICATION_AFTER_CANONICAL_HOUR_REQUIRED",
     )
-    inventory = build_kbs_raw_hourly_publication_snapshot_inventory_v1(
+    parsed_row_count, valid_row_count, grouped = publication_event_groups_v1(
         body=body,
         available_at=available_at,
     )
+    inventory = publication_snapshot_inventory_from_groups_v1(
+        parsed_row_count=parsed_row_count,
+        valid_row_count=valid_row_count,
+        grouped=grouped,
+    )
     current_latest = parse_iso_v1(inventory["latest_event_time"], "MCFT_CAP09_KBS_PUBLICATION_CURRENT_LATEST_INVALID")
     require_v1(current_latest >= after, "MCFT_CAP09_KBS_PUBLICATION_LATEST_REGRESSION")
-
-    _, _, grouped = publication_event_groups_v1(body=body, available_at=available_at)
     forward: list[dict] = []
     for event_time in sorted(grouped):
         parsed = parse_iso_v1(event_time, "MCFT_CAP09_KBS_PUBLICATION_FORWARD_EVENT_INVALID")
@@ -238,13 +255,23 @@ def compare_kbs_raw_hourly_publication_snapshots_v1(
         "MCFT_CAP09_KBS_PUBLICATION_COMPARE_BASELINE_CANONICAL_HOUR_REQUIRED",
     )
 
-    previous_inventory = build_kbs_raw_hourly_publication_snapshot_inventory_v1(
+    previous_parsed_row_count, previous_valid_row_count, previous_grouped = publication_event_groups_v1(
         body=previous_body,
         available_at=previous_available_at,
     )
-    current_inventory = build_kbs_raw_hourly_publication_snapshot_inventory_v1(
+    current_parsed_row_count, current_valid_row_count, current_grouped = publication_event_groups_v1(
         body=current_body,
         available_at=current_available_at,
+    )
+    previous_inventory = publication_snapshot_inventory_from_groups_v1(
+        parsed_row_count=previous_parsed_row_count,
+        valid_row_count=previous_valid_row_count,
+        grouped=previous_grouped,
+    )
+    current_inventory = publication_snapshot_inventory_from_groups_v1(
+        parsed_row_count=current_parsed_row_count,
+        valid_row_count=current_valid_row_count,
+        grouped=current_grouped,
     )
     previous_latest = parse_iso_v1(
         previous_inventory["latest_event_time"],
@@ -261,15 +288,6 @@ def compare_kbs_raw_hourly_publication_snapshots_v1(
     require_v1(
         current_latest >= baseline,
         "MCFT_CAP09_KBS_PUBLICATION_COMPARE_CURRENT_LATEST_REGRESSION",
-    )
-
-    _, _, previous_grouped = publication_event_groups_v1(
-        body=previous_body,
-        available_at=previous_available_at,
-    )
-    _, _, current_grouped = publication_event_groups_v1(
-        body=current_body,
-        available_at=current_available_at,
     )
 
     historical_times = sorted({
