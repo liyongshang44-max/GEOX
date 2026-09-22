@@ -248,8 +248,24 @@ async function main():Promise<void> {
   const pool=new Pool({connectionString:requiredEnvV2("DATABASE_URL"),max:4});
 
   try {
+    const rehearsalBaselineChronology=realClockRehearsal
+      ?new Date(Date.parse(a0)-30*60_000).toISOString()
+      :null;
+    if(
+      realClockRehearsal
+      && !(
+        Date.parse(rehearsalBaselineChronology!)>Date.parse(a0)-3_600_000
+        && Date.parse(rehearsalBaselineChronology!)<Date.parse(a0)
+      )
+    ) {
+      throw new Error("PHASE5_PREPARE_V2_REHEARSAL_BASELINE_CHRONOLOGY_INVALID");
+    }
     const baseline=realClockRehearsal
-      ?await seedMcftCap09RealClockRehearsalBaselineV1({pool,a0,seeded_at:createdAt})
+      ?await seedMcftCap09RealClockRehearsalBaselineV1({
+          pool,
+          a0,
+          seeded_at:rehearsalBaselineChronology!,
+        })
       :null;
     const databaseName=String((await pool.query("SELECT current_database() AS n")).rows[0]?.n??"");
     if(!databaseName) throw new Error("PHASE5_PREPARE_V2_DATABASE_NAME_REQUIRED");
@@ -348,6 +364,9 @@ async function main():Promise<void> {
         ?"CONTROLLED_ISOLATED_REHEARSAL_BASELINE"
         :"CANONICAL_EVIDENCE_DB_ONLY",
       engineering_bootstrap_fixture_count:baseline?.fact_count??0,
+      rehearsal_baseline_chronology:rehearsalBaselineChronology,
+      rehearsal_baseline_chronology_is_distinct_from_physical_activation_fence:
+        realClockRehearsal,
       rehearsal_baseline:baseline,
       hourly_runtime_config_count:result.hourly_runtime_config_count,
       scheduler_slot_write_count:result.scheduler_slot_write_count,
