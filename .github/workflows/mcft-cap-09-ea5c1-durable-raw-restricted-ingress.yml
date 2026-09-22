@@ -158,6 +158,13 @@ jobs:
       - name: Re-prove EA5B5C persistence-free production orchestration
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts
 
+      - name: Verify raw bucket stays private
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -sS -o /tmp/ea5c1-anon-body -w '%{http_code}' http://127.0.0.1:9000/geox-mcft-cap09-formal-raw-v1/ || true)"
+          test "$status" = "403"
+
       - name: Stop private S3-compatible raw store
         if: always()
         shell: bash
@@ -165,13 +172,6 @@ jobs:
           if [ -f "$RUNNER_TEMP/ea5c1-minio.pid" ]; then
             kill "$(cat "$RUNNER_TEMP/ea5c1-minio.pid")" || true
           fi
-
-      - name: Verify raw bucket stays private
-        shell: bash
-        run: |
-          set -euo pipefail
-          status="$(curl -sS -o /tmp/ea5c1-anon-body -w '%{http_code}' http://127.0.0.1:9000/geox-mcft-cap09-formal-raw-v1/ || true)"
-          test "$status" = "403"
 
       - name: Verify EA5C1 remains implementation qualification only
         shell: node {0}
