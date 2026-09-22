@@ -228,7 +228,11 @@ async function main(): Promise<void> {
     "utf8",
   );
   const twinProcessSource = fs.readFileSync(
-    path.resolve("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts"),
+    path.resolve("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts"),
+    "utf8",
+  );
+  const twinQualificationSource = fs.readFileSync(
+    path.resolve("apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.ts"),
     "utf8",
   );
   assert.equal(
@@ -237,9 +241,19 @@ async function main(): Promise<void> {
     "PHASE5_EVIDENCE_CONTAINER_HOSTNAME_LEASE_OWNER_REQUIRED",
   );
   assert.equal(
-    twinProcessSource.includes("twin-runtime:\${env.HOSTNAME ?? os.hostname()}"),
+    twinQualificationSource.includes("qualification_lease_owner: \`twin-runtime:\${hostname}\`"),
     true,
-    "PHASE5_TWIN_CONTAINER_HOSTNAME_LEASE_OWNER_REQUIRED",
+    "PHASE5_TWIN_QUALIFICATION_CONTAINER_HOSTNAME_LEASE_OWNER_REQUIRED",
+  );
+  assert.equal(
+    twinQualificationSource.includes("runMcftCap09TwinRuntimeProcessV2"),
+    true,
+    "PHASE5_TWIN_QUALIFICATION_MUST_REUSE_PRODUCTION_V2_PROCESS",
+  );
+  assert.equal(
+    twinProcessSource.includes("composeMcftCap09TwinRuntimeV2"),
+    true,
+    "PHASE5_TWIN_PRODUCTION_V2_COMPOSITION_REQUIRED",
   );
 
   assert.equal(
@@ -249,6 +263,24 @@ async function main(): Promise<void> {
   assert.equal(
     twinEnv.GEOX_MCFT_CAP09_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME,
     env.GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME,
+  );
+  assert.equal(
+    twinEnv.GEOX_MCFT_CAP09_TWIN_RUNTIME_CURRENT_CROP_AUTHORITY_PATH,
+    "/qualification/control/current-crop-authority.json",
+    "PHASE5_TWIN_V2_CURRENT_CROP_AUTHORITY_MOUNT_REQUIRED",
+  );
+  assert.equal(
+    twinEnv.GEOX_MCFT_CAP09_TWIN_RUNTIME_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH,
+    "/qualification/control/biological-stage-architecture-effectiveness.json",
+    "PHASE5_TWIN_V2_STAGE_ARCHITECTURE_MOUNT_REQUIRED",
+  );
+  assert.equal(
+    prepareEnv.GEOX_MCFT_CAP09_PHASE5_CURRENT_CROP_AUTHORITY_OUTPUT,
+    "/qualification/control/current-crop-authority.json",
+  );
+  assert.equal(
+    prepareEnv.GEOX_MCFT_CAP09_PHASE5_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_OUTPUT,
+    "/qualification/control/biological-stage-architecture-effectiveness.json",
   );
 
   assert.equal(evidence.image, twin.image);
@@ -372,6 +404,8 @@ async function main(): Promise<void> {
     evidence_only_s3_and_fixture_credentials: true,
     compiled_qualification_entrypoints: true,
     accelerated_and_real_clock_run_classes_share_same_twin_entrypoint: true,
+    qualification_reuses_production_v2_process: true,
+    qualification_uses_v4_stage_authority_mounts: true,
     real_clock_rehearsal_compose_rendered: true,
     scientific_runtime_image_pinned: true,
     live_raw_capture_has_no_database_or_s3_credentials: true,
