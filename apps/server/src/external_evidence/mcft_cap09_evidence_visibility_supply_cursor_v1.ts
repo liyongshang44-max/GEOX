@@ -131,9 +131,25 @@ export function committedExternalEvidenceIdentityV1(
     throw new Error("PHASE2_VISIBLE_INGRESS_RAW_PROVENANCE_MISMATCH");
   }
 
-  const semanticHash = semanticHashV1(result.record);
-  if (semanticHash !== result.record_semantic_sha256) {
+  const incomingSemanticHash = semanticHashV1(result.record);
+  if (incomingSemanticHash !== result.record_semantic_sha256) {
     throw new Error("PHASE2_VISIBLE_INGRESS_RECORD_SEMANTIC_HASH_MISMATCH");
+  }
+
+  const committedOverride = receipt.committed_record_semantic_sha256;
+  let committedSemanticHash = incomingSemanticHash;
+  if (committedOverride !== undefined) {
+    const status = receipt.status;
+    if (status !== "EXISTING_IDEMPOTENT_SUCCESS" || receipt.canonical_fact_write_count !== 0) {
+      throw new Error("PHASE2_VISIBLE_INGRESS_COMMITTED_SEMANTIC_OVERRIDE_REQUIRES_IDEMPOTENT_REUSE");
+    }
+    committedSemanticHash = requiredTextV1(
+      committedOverride,
+      "PHASE2_VISIBLE_INGRESS_COMMITTED_SEMANTIC_HASH_REQUIRED",
+    );
+    if (!/^sha256:[0-9a-f]{64}$/.test(committedSemanticHash)) {
+      throw new Error("PHASE2_VISIBLE_INGRESS_COMMITTED_SEMANTIC_HASH_INVALID");
+    }
   }
 
   return {
@@ -141,7 +157,7 @@ export function committedExternalEvidenceIdentityV1(
     record_type: result.record.record_type,
     source_record_id: result.record.source_record_id,
     source_record_hash: result.record.source_record_hash,
-    record_semantic_sha256: semanticHash,
+    record_semantic_sha256: committedSemanticHash,
     retention_ref: retentionRef,
     raw_sha256: rawSha256,
     raw_bytes: rawBytes,
