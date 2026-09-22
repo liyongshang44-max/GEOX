@@ -61,15 +61,15 @@ const statePayload = {
 
 class FakeReadApi implements McftFieldTwinReadApiV1 {
   readRuntime(_request: McftFieldTwinReadRequestV1) { return Promise.resolve(exactRuntime); }
-  readTimeline() { throw new Error("UNUSED"); }
-  readTrace() { throw new Error("UNUSED"); }
-  readStates() { throw new Error("UNUSED"); }
-  readForecasts() { throw new Error("UNUSED"); }
-  readScenarios() { throw new Error("UNUSED"); }
-  readResiduals() { throw new Error("UNUSED"); }
-  readActionLifecycle() { throw new Error("UNUSED"); }
-  readModelGovernance() { throw new Error("UNUSED"); }
-  readHealth() { throw new Error("UNUSED"); }
+  async readTimeline(_request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> { throw new Error("UNUSED"); }
+  async readTrace(_request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> { throw new Error("UNUSED"); }
+  async readStates(_request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> { throw new Error("UNUSED"); }
+  async readForecasts(_request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> { throw new Error("UNUSED"); }
+  async readScenarios(_request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> { throw new Error("UNUSED"); }
+  async readResiduals(_request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> { throw new Error("UNUSED"); }
+  async readActionLifecycle(_request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> { throw new Error("UNUSED"); }
+  async readModelGovernance(_request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> { throw new Error("UNUSED"); }
+  async readHealth(_request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> { throw new Error("UNUSED"); }
 }
 
 function fakePool(options?: { runtimeScopeCount?: number; includeField?: boolean }): Pool {
