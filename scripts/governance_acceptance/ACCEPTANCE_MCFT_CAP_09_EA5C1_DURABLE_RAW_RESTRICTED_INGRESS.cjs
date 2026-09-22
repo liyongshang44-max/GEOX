@@ -46,6 +46,11 @@ const candidatePins = {
   [ingressPath]: "6f7b6450d4f671c75affc2c7aba45ed71cb518c5",
   [acceptancePath]: "1916143d1339d2d7e6bd3174d637f64d71ce9091"
 };
+const realClockP0RetentionReusePins = {
+  [rawAdapterPath]: "4a730990d962b8d8095541117993a1e42b415589",
+  [collectorPath]: "0bdf416f17f7d72f1089ff962a93d1b8f4d655d9",
+  [acceptancePath]: "bb6d8be445c0425c88eccac54d867b7d7935bd04"
+};
 
 let validationMode;
 if (base === HISTORICAL_BASE) {
@@ -57,26 +62,52 @@ if (base === HISTORICAL_BASE) {
   for (const [file, expected] of Object.entries(candidatePins)) eq(blob("HEAD", file), expected, `EA5C1_CANDIDATE_BLOB_PIN_MISMATCH:${file}`);
   validationMode = "EXACT_HISTORICAL_CANDIDATE";
 } else {
-  // Successor maintenance must not rewrite the historical qualification record or silently
-  // mutate its raw-store/acceptance surfaces. The restricted ingress itself may evolve,
-  // but this PR must preserve the current predecessor contracts and re-run the real I/O proof.
+  // Successor maintenance must not rewrite the historical qualification record.
+  // A raw-store / focused-acceptance mutation is permitted only under the exact
+  // real-clock P0 successor pins below; this does not rewrite the historical pins.
   eq(blob(base, authorityPath), candidatePins[authorityPath], "EA5C1_SUCCESSOR_BASE_HISTORICAL_AUTHORITY_DRIFT");
   eq(blob("HEAD", authorityPath), candidatePins[authorityPath], "EA5C1_SUCCESSOR_HISTORICAL_AUTHORITY_MUTATED");
   eq(blob(base, rawAdapterPath), candidatePins[rawAdapterPath], "EA5C1_SUCCESSOR_BASE_RAW_ADAPTER_DRIFT");
-  eq(blob("HEAD", rawAdapterPath), candidatePins[rawAdapterPath], "EA5C1_SUCCESSOR_RAW_ADAPTER_MUTATED");
   eq(blob(base, acceptancePath), candidatePins[acceptancePath], "EA5C1_SUCCESSOR_BASE_FOCUSED_ACCEPTANCE_DRIFT");
-  eq(blob("HEAD", acceptancePath), candidatePins[acceptancePath], "EA5C1_SUCCESSOR_FOCUSED_ACCEPTANCE_MUTATED");
+
+  const realClockP0RetentionReuse =
+    blob("HEAD", rawAdapterPath) !== candidatePins[rawAdapterPath]
+    || blob("HEAD", acceptancePath) !== candidatePins[acceptancePath];
+
   for (const file of Object.keys(predecessorPins)) {
     if (file === collectorPath) continue;
     eq(blob("HEAD", file), blob(base, file), `EA5C1_SUCCESSOR_PREDECESSOR_MUTATED:${file}`);
   }
-  const allowedMaintenance = new Set([ingressPath, collectorPath, gatePath, workflowPath]);
-  const forbiddenProtected = protectedChanged.filter((file) => !allowedMaintenance.has(file));
-  eq(JSON.stringify(forbiddenProtected), JSON.stringify([]), "EA5C1_SUCCESSOR_PROTECTED_SURFACE_CHANGE_REQUIRES_NEW_EXACT_GATE");
-  if (!protectedChanged.includes(ingressPath) && !protectedChanged.includes(collectorPath)) {
-    fail("EA5C1_SUCCESSOR_INGRESS_OR_COLLECTOR_CHANGE_REQUIRED_FOR_MAINTENANCE_REVALIDATION");
+
+  if (realClockP0RetentionReuse) {
+    for (const [file, expected] of Object.entries(realClockP0RetentionReusePins)) {
+      eq(blob("HEAD", file), expected, `EA5C1_REAL_CLOCK_P0_EXACT_BLOB_MISMATCH:${file}`);
+    }
+    eq(blob("HEAD", ingressPath), blob(base, ingressPath), "EA5C1_REAL_CLOCK_P0_INGRESS_DRIFT");
+    eq(blob("HEAD", workflowPath), blob(base, workflowPath), "EA5C1_REAL_CLOCK_P0_WORKFLOW_DRIFT");
+    const expectedProtectedChanged = [
+      rawAdapterPath,
+      collectorPath,
+      acceptancePath,
+      gatePath,
+    ].sort();
+    eq(
+      JSON.stringify(protectedChanged),
+      JSON.stringify(expectedProtectedChanged),
+      "EA5C1_REAL_CLOCK_P0_EXACT_PROTECTED_BOUNDARY_REQUIRED",
+    );
+    validationMode = "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR";
+  } else {
+    eq(blob("HEAD", rawAdapterPath), candidatePins[rawAdapterPath], "EA5C1_SUCCESSOR_RAW_ADAPTER_MUTATED");
+    eq(blob("HEAD", acceptancePath), candidatePins[acceptancePath], "EA5C1_SUCCESSOR_FOCUSED_ACCEPTANCE_MUTATED");
+    const allowedMaintenance = new Set([ingressPath, collectorPath, gatePath, workflowPath]);
+    const forbiddenProtected = protectedChanged.filter((file) => !allowedMaintenance.has(file));
+    eq(JSON.stringify(forbiddenProtected), JSON.stringify([]), "EA5C1_SUCCESSOR_PROTECTED_SURFACE_CHANGE_REQUIRES_NEW_EXACT_GATE");
+    if (!protectedChanged.includes(ingressPath) && !protectedChanged.includes(collectorPath)) {
+      fail("EA5C1_SUCCESSOR_INGRESS_OR_COLLECTOR_CHANGE_REQUIRED_FOR_MAINTENANCE_REVALIDATION");
+    }
+    validationMode = "SUCCESSOR_MAINTENANCE_REVALIDATION";
   }
-  validationMode = "SUCCESSOR_MAINTENANCE_REVALIDATION";
 }
 
 const amendment = fs.readFileSync("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-05-EXTERNAL-FORMAL-RUNTIME-AUTHORITY-PROFILE.md", "utf8");
@@ -164,7 +195,7 @@ for (const marker of [
   successorAcceptancePath
 ]) if (!workflow.includes(marker)) fail(`EA5C1_WORKFLOW_PROOF_MARKER_MISSING:${marker}`);
 
-if (validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION") {
+if (validationMode !== "EXACT_HISTORICAL_CANDIDATE") {
   const successorAcceptance = fs.readFileSync(successorAcceptancePath, "utf8");
   for (const marker of [
     "const rawProvenance = {",
@@ -192,6 +223,12 @@ const result = {
   successor_ingress_maintenance_revalidation: validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION",
   successor_collector_maintenance_revalidation:
     validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION" && protectedChanged.includes(collectorPath),
+  real_clock_p0_retention_reuse_requalification:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
+  real_clock_p0_historical_authority_rewritten: false,
+  real_clock_p0_raw_object_retained_at_mutation: false,
+  real_clock_p0_exact_protected_boundary_proved:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
   predecessor_contracts_unchanged_from_current_base: true,
   durable_raw_before_decode_and_before_facts_proved: true,
   exact_external_five_source_ingress_profile_proved: true,
