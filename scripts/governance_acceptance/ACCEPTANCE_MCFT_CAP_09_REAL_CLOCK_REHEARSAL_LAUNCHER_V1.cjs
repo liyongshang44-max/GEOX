@@ -44,7 +44,6 @@ try{
     'GEOX_PHASE5_EVIDENCE_LEASE_STANDBY_MS:"5000"',
     'GEOX_PHASE5_EVIDENCE_RETRY_BASE_MS:"1000"',
     'GEOX_PHASE5_EVIDENCE_RETRY_MAXIMUM_MS:"60000"',
-    'GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID:"zone_kbs_mcse_t4r1_evidence_burnin_v1"',
     '"evidence-runtime","twin-runtime"',
     '"REAL_CLOCK_REHEARSAL_EVIDENCE_START_FAILED"',
     '"REAL_CLOCK_REHEARSAL_EVIDENCE_NOT_RUNNING_AT_FINALIZE"',
@@ -99,7 +98,8 @@ try{
   assert.match(source,/evidence_container:evidenceContainer/);
   assert.match(source,/fatal_attempt_failure_count:fatal/);
   assert.match(source,/starting>=1&&\(completed\+retryable\)>=1&&fatal===0/);
-  assert.match(source,/GEOX_MCFT_CAP09_ZONE_ID: \$\{GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID/);
+  assert.doesNotMatch(source,/GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID/);
+  assert.match(source,/GEOX_PHASE5_ZONE_ID:"zone_kbs_mcse_t4r1_crop_formal_v1"/);
   assert.match(source,/strictNextUtcHour\(nowMs\+LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD\)/);
   assert.match(source,/evidenceRuntimePreA0Ms>=LIVE_EVIDENCE_MINIMUM_RUNTIME_BEFORE_A0/);
   assert.match(
@@ -120,7 +120,8 @@ try{
     live_production_evidence_runtime_burn_in:true,
     live_provider_path_required:true,
     evidence_and_twin_both_must_be_running:true,
-    evidence_burn_in_scope_isolated_from_twin_baseline:true,
+    evidence_and_twin_share_exact_external_formal_scope:true,
+    rehearsal_project_storage_remains_isolated_from_production:true,
     retryable_provider_failure_is_observable_not_automatically_fatal:true,
     fatal_provider_failure_forbids_rehearsal_pass:true,
     sanitized_evidence_health_proof_retained:true,
