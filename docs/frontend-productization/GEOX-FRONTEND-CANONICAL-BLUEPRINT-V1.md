@@ -372,7 +372,7 @@ The document itself still says:
 PRE-CONSTRUCTION FREEZE CANDIDATE
 ```
 
-Therefore this blueprint adopts FOUI Wave-01 as the latest product-projection semantic direction, but does not claim broad high-fidelity FOUI construction is formally authorized until a later governance artifact explicitly closes that status gap.
+Therefore this blueprint adopts FOUI Wave-01 as the latest product-projection semantic direction. The successor governance artifact `GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1`, when adopted on protected main with this blueprint, closes the construction-status gap only for narrow read-only Product Projection successor construction. It does not broadly authorize every future high-fidelity route, command surface, or authority-bearing capability.
 
 ## 4. Canonical product model
 
@@ -927,11 +927,13 @@ Decision-time History / Current-vs-Then
 Cross-domain provenance
 ```
 
-Current classification:
+Current route/productization classification:
 
 ```text
 HOLD
 ```
+
+HOLD here applies to route/productization promotion, not to the validity of the already machine-qualified Wave-01 contracts. Narrow read-only Product Projection successor construction is authorized by the Product Data Contract Succession artifact after protected-main adoption.
 
 They are not authorized new route names in this document.
 
