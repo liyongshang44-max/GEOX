@@ -69,7 +69,7 @@ function summary(): FieldSummaryProjectionV1 {
     reporting_state: {
       state: "UNAVAILABLE",
       reason_codes: ["MCFT_RUNTIME_SCOPE_NOT_ESTABLISHED"],
-      last_qualified_at: null,
+      source_logical_time: null,
     },
     attention: {
       status: "UNAVAILABLE",
