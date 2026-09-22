@@ -57,6 +57,65 @@ async function main():Promise<void>{
   assert.deepEqual(waits,["RETRY_BACKOFF","LEASE_STANDBY","SUCCESS_CADENCE"]);
   assert.deepEqual(health.map(e=>[e.status,e.detail]),[["STARTING","HOST_START"],["DEGRADED","RETRYABLE_ATTEMPT_FAILURE"],["STANDBY","LEASE_HELD_BY_OTHER_OWNER"],["HEALTHY","ATTEMPT_COMPLETED"],["STOPPING","PLANNER_EXHAUSTED"]]);
 
+  const structuredHealth:EvidenceRuntimeHostHealthEventV1[]=[];
+  const structuredRetryError=Object.assign(
+    new Error("MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED:MCFT_CAP09_GFS_PGRB2_F041"),
+    {
+      name:"GfsMemberRetryExhaustedError",
+      code:"MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED",
+      diagnostic_token:"MCFT_CAP09_GFS_PGRB2_F041",
+      failure_stage:"MEMBER_FETCH",
+      failure_token:"MCFT_CAP09_GFS_PGRB2_F041",
+      member_kind:"GFS_PGRB2_FILTER_RESPONSE",
+      lead:41,
+      local_retry_ordinal:1,
+      url:"https://secret.example.invalid/path?credential=forbidden",
+      authorization:"Bearer forbidden",
+      response_body:"forbidden",
+      cause:new Error("unsafe raw cause"),
+    },
+  );
+  const structuredHost=new EvidenceRuntimeHostV1({
+    lease:leaseV1(),
+    planner:{async nextAttemptPlan(input){
+      if(input.cycle_attempt>=1)return null;
+      return planV1("structured-retry","GFS_PARTIAL_PAIR_REHYDRATION",async()=>{throw structuredRetryError;});
+    }},
+    wait:{
+      waitForLeaseRenewal:waitForCancelledLeaseRenewalV1,
+      async waitAfterAttempt(input){assert.equal(input.reason,"RETRY_BACKOFF");},
+    },
+    health:{async recordHealth(event){structuredHealth.push(structuredClone(event));}},
+    stop:{stopRequested:()=>false},
+    failure_classifier:{classify:()=> "RETRYABLE"},
+  });
+  const structuredRun=await structuredHost.run({
+    scope:SCOPE,
+    lease_owner:"host-structured",
+    lease_duration_seconds:300,
+  });
+  assert.equal(structuredRun.stop_reason,"PLANNER_EXHAUSTED");
+  const structuredFailure=structuredHealth.find(
+    (event)=>event.detail==="RETRYABLE_ATTEMPT_FAILURE",
+  );
+  assert(structuredFailure,"PHASE3_HOST_STRUCTURED_RETRY_HEALTH_REQUIRED");
+  assert.equal(structuredFailure.attempt_kind,"GFS_PARTIAL_PAIR_REHYDRATION");
+  assert.equal(structuredFailure.failure_class,"RETRYABLE");
+  assert.equal(structuredFailure.failure_stage,"MEMBER_FETCH");
+  assert.equal(structuredFailure.failure_token,"MCFT_CAP09_GFS_PGRB2_F041");
+  assert.equal(structuredFailure.error_name,"GfsMemberRetryExhaustedError");
+  assert.equal(structuredFailure.error_code,"MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED");
+  assert.equal(structuredFailure.member_kind,"GFS_PGRB2_FILTER_RESPONSE");
+  assert.equal(structuredFailure.lead,41);
+  assert.equal(structuredFailure.local_retry_ordinal,1);
+  for(const forbidden of ["url","authorization","response_body","cause","headers","request_headers"]){
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(structuredFailure,forbidden),
+      false,
+      `PHASE3_HOST_STRUCTURED_RETRY_SECRET_FIELD_FORBIDDEN:${forbidden}`,
+    );
+  }
+
   const kinds:EvidenceRuntimeHostAttemptKindV1[]=["KBS_RAW_HOURLY_PUBLICATION_CYCLE","GFS_PARTIAL_PAIR_REHYDRATION","CANONICAL_WORK_ITEM_CYCLE"],executed:EvidenceRuntimeHostAttemptKindV1[]=[];let stop=false;
   const heterogeneousHost=new EvidenceRuntimeHostV1({
     lease:leaseV1(),
