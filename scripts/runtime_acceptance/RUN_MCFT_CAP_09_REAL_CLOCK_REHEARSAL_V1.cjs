@@ -13,6 +13,8 @@ const STATE_ROOT=path.join(os.homedir(),".geox","mcft-cap09","real-clock-rehears
 const ACTIVE_POINTER=path.join(STATE_ROOT,"active.json");
 const HOUR=3_600_000;
 const MINUTE=60_000;
+const LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD=2*HOUR;
+const LIVE_EVIDENCE_MINIMUM_RUNTIME_BEFORE_A0=45*MINUTE;
 
 const MINIO_IMAGE="quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e";
 const MC_IMAGE="quay.io/minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727";
@@ -301,10 +303,15 @@ function start(){
 
   const nowMs=Date.now();
   const startedAt=iso(nowMs);
-  const a0Ms=strictNextUtcHour(nowMs);
+  const a0Ms=strictNextUtcHour(nowMs+LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD);
   const r00Ms=a0Ms+HOUR;
   const r23Ms=a0Ms+24*HOUR;
-  req(a0Ms-nowMs>0&&a0Ms-nowMs<=HOUR,"REAL_CLOCK_REHEARSAL_A0_SELECTION_INVALID");
+  const selectedPreA0LeadMs=a0Ms-nowMs;
+  req(
+    selectedPreA0LeadMs>LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD
+      && selectedPreA0LeadMs<=LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD+HOUR,
+    "REAL_CLOCK_REHEARSAL_A0_SELECTION_INVALID",
+  );
   const runId=stamp(nowMs)+"-"+sha12(subject);
   const runRoot=path.join(STATE_ROOT,subject,runId);
   const controlRoot=path.join(runRoot,"control");
@@ -333,6 +340,9 @@ function start(){
     project_name:projectName,
     started_at:startedAt,
     a0:iso(a0Ms),
+    selected_pre_a0_lead_seconds:Math.round(selectedPreA0LeadMs/1000),
+    minimum_live_evidence_runtime_before_a0_seconds:
+      Math.round(LIVE_EVIDENCE_MINIMUM_RUNTIME_BEFORE_A0/1000),
     r00:iso(r00Ms),
     r23:iso(r23Ms),
     control_root:controlRoot,
@@ -433,6 +443,19 @@ function start(){
     state.evidence_container_id=evidenceCurrent.id;
     state.twin_started_readback_at=new Date().toISOString();
     state.evidence_started_readback_at=state.twin_started_readback_at;
+    const evidenceRuntimePreA0Ms=
+      Date.parse(state.a0)-Date.parse(state.evidence_started_readback_at);
+    req(
+      evidenceRuntimePreA0Ms>=LIVE_EVIDENCE_MINIMUM_RUNTIME_BEFORE_A0,
+      "REAL_CLOCK_REHEARSAL_EVIDENCE_RUNTIME_PRE_A0_WINDOW_TOO_SHORT",
+      JSON.stringify({
+        evidence_started_readback_at:state.evidence_started_readback_at,
+        a0:state.a0,
+        available_seconds:Math.floor(evidenceRuntimePreA0Ms/1000),
+        required_seconds:Math.floor(LIVE_EVIDENCE_MINIMUM_RUNTIME_BEFORE_A0/1000),
+      }),
+    );
+    state.evidence_runtime_pre_a0_seconds=Math.floor(evidenceRuntimePreA0Ms/1000);
     if(state.fault_plan.enabled){
       const logFd=fs.openSync(path.join(controlRoot,"fault-controller.log"),"a");
       const child=cp.spawn(process.execPath,[__filename,"fault-controller","--state="+statePath],{
@@ -455,6 +478,7 @@ function start(){
       twin_container_running:true,
       live_production_evidence_runtime:true,
       live_production_provider_path:true,
+      evidence_runtime_pre_a0_seconds:state.evidence_runtime_pre_a0_seconds,
       automatic_fault_plan:state.fault_plan.enabled?{
         label:"R05",
         stop_at:state.fault_plan.stop_at,
@@ -565,11 +589,20 @@ function cleanup(){
 }
 function selftest(){
   const now=Date.parse("2030-01-01T00:29:30.000Z");
-  const a0=strictNextUtcHour(now);
-  req(iso(a0)==="2030-01-01T01:00:00.000Z","SELFTEST_A0");
-  req(iso(a0+HOUR)==="2030-01-01T02:00:00.000Z","SELFTEST_R00");
-  req(iso(a0+24*HOUR)==="2030-01-02T01:00:00.000Z","SELFTEST_R23");
-  req(iso(a0+6*HOUR)==="2030-01-01T07:00:00.000Z","SELFTEST_R05");
+  const a0=strictNextUtcHour(now+LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD);
+  req(iso(a0)==="2030-01-01T03:00:00.000Z","SELFTEST_A0");
+  req(iso(a0+HOUR)==="2030-01-01T04:00:00.000Z","SELFTEST_R00");
+  req(iso(a0+24*HOUR)==="2030-01-02T03:00:00.000Z","SELFTEST_R23");
+  req(iso(a0+6*HOUR)==="2030-01-01T09:00:00.000Z","SELFTEST_R05");
+  req(
+    a0-now>LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD
+      && a0-now<=LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD+HOUR,
+    "SELFTEST_PRE_A0_SELECTION_LEAD",
+  );
+  req(
+    LIVE_EVIDENCE_MINIMUM_RUNTIME_BEFORE_A0===45*MINUTE,
+    "SELFTEST_MINIMUM_LIVE_EVIDENCE_PRE_A0_RUNTIME",
+  );
   console.log(JSON.stringify({
     schema_version:"geox_mcft_cap09_real_clock_rehearsal_launcher_selftest_v1",
     status:"PASS",
