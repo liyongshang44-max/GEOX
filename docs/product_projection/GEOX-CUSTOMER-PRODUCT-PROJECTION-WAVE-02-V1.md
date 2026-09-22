@@ -147,6 +147,8 @@ successful
 
 `summary` is intentionally null until a governed customer-safe condition summarization contract exists.
 
+MCFT `logical_time` is preserved as `logical_time` / `source_logical_time`. It is not renamed to an effective time, qualification time, or validity horizon. The Product Projection effective interval remains `NOT_ESTABLISHED` until a source-backed effective interval exists.
+
 ## 6. Deliberately unavailable domains
 
 Wave 02 V1 does not pretend that all Customer product objects already exist.
