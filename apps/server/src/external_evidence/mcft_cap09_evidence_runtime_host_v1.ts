@@ -36,9 +36,17 @@ export type EvidenceRuntimeHostHealthEventV1 = {
   consecutive_failure_count: number;
   attempt_kind?: EvidenceRuntimeHostAttemptResultV1["attempt_kind"];
   failure_class?: EvidenceRuntimeHostFailureClassV1;
+  failure_stage?: "MEMBER_FETCH";
+  failure_token?: string;
   error_name?: string;
   error_code?: string;
-  error_token?: string;
+  member_kind?:
+    | "GFS_DIRECTORY_LISTING"
+    | "GFS_PGRB2_FILTER_RESPONSE"
+    | "GFS_SFLUX_IDX"
+    | "GFS_SFLUX_EXACT_GRIB_MESSAGE";
+  lead?: number;
+  local_retry_ordinal?: number;
   detail:
     | "HOST_START"
     | "ATTEMPT_IN_PROGRESS"
@@ -122,29 +130,82 @@ function sanitizedFailureEvidenceV1(
   attemptKind: EvidenceRuntimeHostAttemptResultV1["attempt_kind"],
 ): Pick<
   EvidenceRuntimeHostHealthEventV1,
-  "attempt_kind" | "failure_class" | "error_name" | "error_code" | "error_token"
+  | "attempt_kind"
+  | "failure_class"
+  | "failure_stage"
+  | "failure_token"
+  | "error_name"
+  | "error_code"
+  | "member_kind"
+  | "lead"
+  | "local_retry_ordinal"
 > {
   const record = typeof error === "object" && error !== null
-    ? error as { name?: unknown; code?: unknown; diagnostic_token?: unknown; message?: unknown }
+    ? error as {
+        name?: unknown;
+        code?: unknown;
+        diagnostic_token?: unknown;
+        failure_stage?: unknown;
+        failure_token?: unknown;
+        member_kind?: unknown;
+        lead?: unknown;
+        local_retry_ordinal?: unknown;
+        message?: unknown;
+      }
     : {};
   const name = typeof record.name === "string" && /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(record.name)
     ? record.name
     : "Error";
   const codeRaw = typeof record.code === "string" ? record.code : "";
   const code = /^[A-Z0-9_.-]{1,96}$/.test(codeRaw) ? codeRaw : undefined;
-  const diagnosticRaw = typeof record.diagnostic_token === "string" ? record.diagnostic_token : "";
+  const failureTokenRaw =
+    typeof record.failure_token === "string" ? record.failure_token : "";
+  const diagnosticRaw =
+    typeof record.diagnostic_token === "string" ? record.diagnostic_token : "";
   const message = typeof record.message === "string" ? record.message : "";
   const prefix = message.split(":", 1)[0] ?? "";
-  const tokenCandidate = diagnosticRaw || prefix;
+  const tokenCandidate = failureTokenRaw || diagnosticRaw || prefix;
   const token = /^[A-Z0-9_][A-Z0-9_.-]{0,127}$/.test(tokenCandidate)
     ? tokenCandidate
     : "UNCLASSIFIED_ERROR";
+  const failureStage =
+    record.failure_stage === "MEMBER_FETCH" ? "MEMBER_FETCH" : undefined;
+  const memberKinds = new Set([
+    "GFS_DIRECTORY_LISTING",
+    "GFS_PGRB2_FILTER_RESPONSE",
+    "GFS_SFLUX_IDX",
+    "GFS_SFLUX_EXACT_GRIB_MESSAGE",
+  ]);
+  const memberKind =
+    typeof record.member_kind === "string" && memberKinds.has(record.member_kind)
+      ? record.member_kind as EvidenceRuntimeHostHealthEventV1["member_kind"]
+      : undefined;
+  const lead =
+    typeof record.lead === "number"
+    && Number.isInteger(record.lead)
+    && record.lead >= 0
+    && record.lead <= 120
+      ? record.lead
+      : undefined;
+  const localRetryOrdinal =
+    typeof record.local_retry_ordinal === "number"
+    && Number.isInteger(record.local_retry_ordinal)
+    && record.local_retry_ordinal >= 0
+    && record.local_retry_ordinal <= 1
+      ? record.local_retry_ordinal
+      : undefined;
   return {
     attempt_kind: attemptKind,
     failure_class: classification,
+    ...(failureStage ? { failure_stage: failureStage } : {}),
+    failure_token: token,
     error_name: name,
     ...(code ? { error_code: code } : {}),
-    error_token: token,
+    ...(memberKind ? { member_kind: memberKind } : {}),
+    ...(lead !== undefined ? { lead } : {}),
+    ...(localRetryOrdinal !== undefined
+      ? { local_retry_ordinal: localRetryOrdinal }
+      : {}),
   };
 }
 
