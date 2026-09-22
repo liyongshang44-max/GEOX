@@ -42,6 +42,16 @@ assert(manifest.canonical_persistence?.sites_d1_is_canonical_business_store === 
 assert(manifest.canonical_product_contract?.family === "FOUI_PRODUCT_PROJECTION", "FOUI_NOT_CANONICAL_PRODUCT_CONTRACT");
 assert(manifest.canonical_product_contract?.namespace === "/api/product/v1/*", "BAD_CANONICAL_PRODUCT_NAMESPACE");
 assert(JSON.stringify(manifest.canonical_product_contract?.allowed_methods) === JSON.stringify(["GET","HEAD"]), "BAD_PRODUCT_READ_METHODS");
+
+const reservedTokens = new Map((manifest.wave01_reserved_projection_type_tokens || []).map((x) => [x.token, x.status]));
+for (const token of ["FIELD_PORTFOLIO", "DECISION_PRODUCT", "GOVERNED_ACTION_LIST", "EVIDENCE_CASE"]) {
+  assert(reservedTokens.has(token), `RESERVED_PROJECTION_TYPE_TOKEN_MISSING:${token}`);
+  assert(reservedTokens.get(token) === "RESERVED_TOKEN_NO_CONCRETE_PROJECTION_CONTRACT", `RESERVED_PROJECTION_TOKEN_STATUS_DRIFT:${token}`);
+}
+assert(
+  manifest.wave02_naming_rule === "DO_NOT_TREAT_RESERVED_TYPE_TOKEN_AS_IMPLEMENTED_CONTRACT; DEFINE_CONCRETE_CONTRACT_EXPLICITLY_BEFORE_ROUTE_OR_SITES_BINDING",
+  "WAVE02_NAMING_RULE_MISSING",
+);
 assert(JSON.stringify(manifest.canonical_product_contract?.forbidden_projection_methods) === JSON.stringify(["POST","PUT","PATCH","DELETE"]), "BAD_FORBIDDEN_PRODUCT_METHODS");
 
 const expectedLegacy = new Map([
@@ -177,6 +187,21 @@ assert(blueprintJson.product_data_contract_succession?.governing_artifact === "G
 assert(blueprintJson.product_data_contract_succession?.canonical_persistence === "POSTGRESQL", "BLUEPRINT_DATABASE_DRIFT");
 assert(blueprintJson.product_data_contract_succession?.canonical_new_product_api_namespace === "/api/product/v1/*", "BLUEPRINT_NAMESPACE_DRIFT");
 assert(blueprintJson.product_data_contract_succession?.new_consumer_legacy_api_dependency === "FORBIDDEN", "BLUEPRINT_LEGACY_CONSUMER_POLICY_DRIFT");
+assert(blueprintJson.customer_root_redirect?.to === "/customer/overview", "CUSTOMER_ROOT_REDIRECT_DRIFT");
+assert(blueprintJson.canonical_navigation?.customer_current?.[0] === "/customer/overview", "CUSTOMER_OVERVIEW_ROUTE_DRIFT");
+const customerRouteMap = new Map(blueprintJson.route_decisions?.customer || []);
+assert(customerRouteMap.get("/customer/overview") === "CANONICAL_NEW_PRODUCT", "CUSTOMER_OVERVIEW_NOT_CANONICAL");
+assert(customerRouteMap.get("/customer/dashboard") === "LEGACY_COMPAT_ALIAS", "CUSTOMER_DASHBOARD_NOT_LEGACY_ALIAS");
+
+for (const watched of [
+  "apps/server/src/product_projection/**",
+  "apps/server/src/routes/product*",
+  "apps/server/src/modules/product/**",
+  "scripts/governance_acceptance/*FOUI*",
+  ".github/workflows/foui-*",
+]) {
+  assert((blueprintJson.watched_paths || []).includes(watched), `BLUEPRINT_WATCHED_PATH_MISSING:${watched}`);
+}
 
 const successionMd = read("docs/frontend-productization/GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1.md");
 for (const invariant of [
