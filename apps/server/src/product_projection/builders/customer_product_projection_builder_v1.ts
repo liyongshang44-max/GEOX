@@ -187,19 +187,12 @@ function envelopeV1(input: {
     source_authority_refs: [...input.authority_refs],
     source_non_authority_refs: [...input.non_authority_refs],
     source_content_digests: [...input.digests],
-    source_effective_interval: input.current_state_ref_key && input.current_state_time
-      ? {
-          mode: "SINGLE_EXACT",
-          effective_from: input.current_state_time,
-          effective_until: input.current_state_time,
-          basis_ref_keys: [input.current_state_ref_key],
-        }
-      : {
-          mode: "NOT_ESTABLISHED",
-          effective_from: null,
-          effective_until: null,
-          basis_ref_keys: [],
-        },
+    source_effective_interval: {
+      mode: "NOT_ESTABLISHED",
+      effective_from: null,
+      effective_until: null,
+      basis_ref_keys: input.current_state_ref_key ? [input.current_state_ref_key] : [],
+    },
     source_evidence_cutoff: null,
     authority_ceiling: PRODUCT_PROJECTION_AUTHORITY_CEILING_V1,
     limitations: [...input.limitations],
@@ -306,7 +299,7 @@ export class CustomerProductProjectionBuilderV1 {
 
       if (runtimeScopeRead.relation_status === "UNAVAILABLE") {
         limitations.push(limitation("MCFT_RUNTIME_SCOPE_SOURCE_UNAVAILABLE"));
-        reporting = { state: "UNAVAILABLE", reason_codes: ["MCFT_RUNTIME_SCOPE_SOURCE_UNAVAILABLE"], last_qualified_at: null };
+        reporting = { state: "UNAVAILABLE", reason_codes: ["MCFT_RUNTIME_SCOPE_SOURCE_UNAVAILABLE"], source_logical_time: null };
       } else {
         const allFieldRuntimeScopes = runtimeScopeRead.rows.filter((row) => row.field_id === field.field_id);
         let runtimeCandidates = allFieldRuntimeScopes;
@@ -335,14 +328,14 @@ export class CustomerProductProjectionBuilderV1 {
           reporting = {
             state: allFieldRuntimeScopes.length > 0 ? "LIMITED" : "UNAVAILABLE",
             reason_codes: [reason],
-            last_qualified_at: null,
+            source_logical_time: null,
           };
         } else if (runtimeCandidates.length !== 1) {
           limitations.push(limitation("MULTIPLE_RUNTIME_SCOPES_NO_FIELD_AGGREGATION"));
           reporting = {
             state: "LIMITED",
             reason_codes: ["MULTIPLE_RUNTIME_SCOPES_NO_FIELD_AGGREGATION"],
-            last_qualified_at: null,
+            source_logical_time: null,
           };
         } else {
           const runtimeScope = runtimeCandidates[0];
@@ -371,11 +364,11 @@ export class CustomerProductProjectionBuilderV1 {
             reporting = {
               state: seasonBasisReason ? "LIMITED" : "CURRENT",
               reason_codes: [seasonBasisReason ?? "EXACT_CURRENT_MCFT_RUNTIME_ESTABLISHED"],
-              last_qualified_at: state.logical_time,
+              source_logical_time: state.logical_time,
             };
           } else {
             limitations.push(limitation(state.reason_code));
-            reporting = { state: "UNAVAILABLE", reason_codes: [state.reason_code], last_qualified_at: null };
+            reporting = { state: "UNAVAILABLE", reason_codes: [state.reason_code], source_logical_time: null };
           }
         }
       }
@@ -384,7 +377,7 @@ export class CustomerProductProjectionBuilderV1 {
         ? {
             status: "AVAILABLE",
             summary: null,
-            effective_at: state.logical_time,
+            logical_time: state.logical_time,
             support_state: "SUPPORTED",
             source_ref_key: currentStateRefKey,
             metrics: currentStateMetrics(state),
@@ -518,7 +511,7 @@ export class CustomerProductProjectionBuilderV1 {
       digests: summary.envelope.source_content_digests,
       limitations,
       current_state_ref_key: internal.refs.current_state_ref_key,
-      current_state_time: summary.current_condition?.effective_at ?? null,
+      current_state_time: summary.current_condition?.logical_time ?? null,
     });
 
     const workspace: FieldWorkspaceProjectionV1 = {
@@ -550,10 +543,10 @@ export class CustomerProductProjectionBuilderV1 {
       },
       observed_outcomes: { status: "UNAVAILABLE", items: [] },
       capability_availability: [],
-      history_summary: summary.current_condition?.effective_at
+      history_summary: summary.current_condition?.logical_time
         ? {
             status: "LIMITED",
-            latest_event_at: summary.current_condition.effective_at,
+            latest_event_at: summary.current_condition.logical_time,
             reason_codes: ["ONLY_CURRENT_STATE_EVENT_AVAILABLE_IN_FIRST_SLICE"],
           }
         : {
