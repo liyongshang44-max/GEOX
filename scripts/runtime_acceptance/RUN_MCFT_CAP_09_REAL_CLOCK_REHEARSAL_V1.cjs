@@ -102,6 +102,35 @@ function containerState(state,secrets,service="twin-runtime"){
   const parsed=JSON.parse(raw);
   return {id,running:parsed.Running===true,status:String(parsed.Status??""),restart_count:Number(parsed.RestartCount??0)};
 }
+function waitForComposeServiceHealthyV1(state,secrets,service,timeoutMs=120_000){
+  const deadline=Date.now()+timeoutMs;
+  let last={id:"",running:false,status:"ABSENT",health:""};
+  do{
+    const id=compose(state,secrets,["ps","-q",service]).trim();
+    if(id){
+      const raw=exec("docker",["inspect","-f","{{json .State}}",id]);
+      const parsed=JSON.parse(raw);
+      last={
+        id,
+        running:parsed.Running===true,
+        status:String(parsed.Status??""),
+        health:String(parsed.Health?.Status??""),
+      };
+      if(last.running&&last.health==="healthy")return last;
+      if(last.status==="exited"||last.status==="dead"){
+        fail(
+          "REAL_CLOCK_REHEARSAL_SERVICE_EXITED_BEFORE_HEALTHY",
+          JSON.stringify({service,...last}),
+        );
+      }
+    }
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,1000);
+  }while(Date.now()<deadline);
+  fail(
+    "REAL_CLOCK_REHEARSAL_SERVICE_HEALTH_TIMEOUT",
+    JSON.stringify({service,...last,timeout_ms:timeoutMs}),
+  );
+}
 function sanitizedEvidenceHealthEventV1(value){
   if(!value||typeof value!=="object"||Array.isArray(value))return null;
   if(value.runtime_role!=="EVIDENCE_RUNTIME")return null;
@@ -413,6 +442,18 @@ function start(){
   try{
     compose(state,secrets,["build","database-platform-bootstrap"],{capture:false});
     compose(state,secrets,["up","-d","postgres","minio"],{capture:false});
+    const postgresHealthy=waitForComposeServiceHealthyV1(
+      state,secrets,"postgres",120_000,
+    );
+    const minioHealthy=waitForComposeServiceHealthyV1(
+      state,secrets,"minio",120_000,
+    );
+    state.bootstrap_dependency_health={
+      postgres:postgresHealthy.health,
+      minio:minioHealthy.health,
+      observed_at:new Date().toISOString(),
+    };
+    writePrivateJson(statePath,state);
     compose(state,secrets,["run","--rm","--no-deps","minio-init"],{capture:false});
     compose(state,secrets,["run","--rm","--no-deps","database-platform-bootstrap"],{capture:false});
     compose(state,secrets,["run","--rm","--no-deps","service-principal-bootstrap"],{capture:false});
@@ -476,6 +517,7 @@ function start(){
       r23:state.r23,
       evidence_container_running:true,
       twin_container_running:true,
+      bootstrap_dependency_health:state.bootstrap_dependency_health,
       live_production_evidence_runtime:true,
       live_production_provider_path:true,
       evidence_runtime_pre_a0_seconds:state.evidence_runtime_pre_a0_seconds,
