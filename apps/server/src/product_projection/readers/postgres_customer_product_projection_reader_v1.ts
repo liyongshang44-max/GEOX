@@ -207,9 +207,7 @@ export class PostgresCustomerProductProjectionReaderV1 {
           WHERE s.tenant_id = $1
             AND s.field_id = ANY($2::text[])
             AND UPPER(COALESCE(to_jsonb(s)->>'status', '')) = 'ACTIVE'
-          ORDER BY s.field_id ASC,
-                   COALESCE((to_jsonb(s)->>'updated_ts_ms')::bigint, 0) DESC,
-                   s.season_id ASC`,
+          ORDER BY s.field_id ASC, s.season_id ASC`,
         [scope.tenant_id, [...scope.allowed_field_ids]],
       )
       .catch(() => null);
