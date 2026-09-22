@@ -393,6 +393,7 @@ export class CustomerProductProjectionBuilderV1 {
       };
 
       const exactSeason = season.status === "EXACT" ? season.value : null;
+      const envelopeSeasonId = state.status === "AVAILABLE" ? state.scope.season_id : exactSeason?.season_id ?? null;
       const exactZone = state.status === "AVAILABLE" ? state.scope.zone_id : null;
       const envelope = envelopeV1({
         projection_type: "FIELD_SUMMARY",
@@ -400,7 +401,7 @@ export class CustomerProductProjectionBuilderV1 {
         generated_at: generatedAt,
         scope,
         field_id: field.field_id,
-        season_id: exactSeason?.season_id ?? null,
+        season_id: envelopeSeasonId,
         zone_id: exactZone,
         authority_refs: authorityRefs,
         non_authority_refs: nonAuthorityRefs,
