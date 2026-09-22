@@ -226,7 +226,21 @@ not
 -> plausible business default
 ```
 
-### 5.3 Field portfolio
+### 5.3 Customer field memory and geometry
+
+```text
+/api/v1/customer/fields/:fieldId/memory
+= LEGACY_ACTIVE_READ
+
+/api/v1/customer/fields/:fieldId/geometry
+= LEGACY_COMPAT_READ_SOURCE
+```
+
+Existing compatibility consumers may continue to use these reads during migration. They are not canonical contracts for new product UI.
+
+The geometry route may remain a source/input behind a future Product Projection Builder if needed. That does not authorize a new UI to bind directly to the legacy route.
+
+### 5.4 Field portfolio
 
 ```text
 /api/v1/fields/portfolio
@@ -235,7 +249,7 @@ not
 
 The historical route includes product-owned risk filtering/sorting vocabulary. New FOUI product construction must not use this route as the source for canonical Customer Fields, Attention, or Field Workspace semantics.
 
-### 5.4 Historical report APIs
+### 5.5 Historical report APIs
 
 ```text
 /api/v1/reports/customer-dashboard/aggregate
@@ -402,6 +416,7 @@ No direct `ACTIVE -> REMOVED` transition is allowed.
 The following documents remain repository provenance but are superseded for new product construction:
 
 ```text
+docs/frontend/P1_API_READINESS_MATRIX_V1.md
 docs/frontend/P2_CUSTOMER_API_CONTRACT.md
 docs/frontend/CUSTOMER_DATA_SOURCE_MAP_V1.md
 docs/frontend/FALLBACK_RETIREMENT_PLAN.md
@@ -479,3 +494,41 @@ must not acquire new product consumers.
 ```
 
 This artifact does not claim that the target Product API routes already exist, that broad FOUI construction is production-qualified, or that any domain authority has changed.
+
+
+## 16. Audit closure and consumer guard
+
+A post-adjudication audit found two governance gaps and closes them here.
+
+First, the historical Customer route family also includes field-memory and geometry reads that had not been explicitly classified in the initial succession manifest. They are now classified as compatibility reads and are forbidden as direct dependencies for new product consumers.
+
+Second, documentation alone is insufficient to enforce the rule that new frontend code must not bind to legacy API families. The governance acceptance gate therefore maintains an explicit allowlist of existing compatibility consumers and fails if a new file under `apps/web/src` introduces a direct dependency on:
+
+```text
+/api/v1/customer/
+/api/v1/reports/
+/api/v1/fields/portfolio
+```
+
+The allowlist is historical compatibility inventory, not authorization to extend those adapters.
+
+Existing customer adapters that read direct domain APIs, including historical prescription and field-memory adapters, are also lifecycle-marked so they are not copied into new Product UI work.
+
+After this closure:
+
+```text
+Sites mock/product-structure handoff
+= NOT BLOCKED
+
+Sites real-data binding
+= BLOCKED UNTIL MINIMAL /api/product/v1/* SUCCESSOR EXISTS
+```
+
+The first real-data binding remains:
+
+```text
+GET /api/product/v1/fields
+GET /api/product/v1/fields/:fieldRef
+```
+
+No legacy API should be used merely to make the Sites demo dynamic sooner.
