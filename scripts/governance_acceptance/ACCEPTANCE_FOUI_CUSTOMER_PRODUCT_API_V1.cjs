@@ -77,7 +77,7 @@ mustContain(route, 'cache-control", "no-store"', 'current projection cache bound
 
 // Product fail-closed semantics.
 mustContain(builder, 'MULTIPLE_RUNTIME_SCOPES_NO_FIELD_AGGREGATION', 'no field aggregation inference');
-mustContain(builder, 'A non-authoritative', 'non-authority season selection guard');
+mustContain(builder, 'explicit non-authority scope-selection basis', 'non-authority season selection guard');
 mustContain(builder, 'summary: null', 'no invented condition label');
 mustContain(builder, 'FIELD_ATTENTION_NOT_PROJECTED_IN_FIRST_SLICE', 'attention unavailable boundary');
 mustContain(builder, 'ACTION_CASE_PRODUCT_VIEW_NOT_PROJECTED_IN_FIRST_SLICE', 'action case unavailable boundary');
