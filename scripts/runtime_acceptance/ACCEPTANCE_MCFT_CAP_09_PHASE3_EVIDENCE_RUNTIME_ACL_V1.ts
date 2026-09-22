@@ -451,23 +451,113 @@ async function main(): Promise<void> {
     assert.equal(Number(publication.rows[0].revision_count), 0);
     assert.equal(rawVerificationCount, 2);
 
+    const revisionAvailableAt = "2026-09-22T09:54:40.000Z";
+    const revisionRawSha = "sha256:" + "9".repeat(64);
+    const revisionRetentionRef =
+      "s3-private://phase3-republication/mcft-cap09-formal-raw-v1/sha256/" + "9".repeat(64);
     const trueRevision = soilRepublicationResultV1({
       observed_at: observedAt,
-      retrieved_at: "2026-09-22T09:54:40.000Z",
+      retrieved_at: revisionAvailableAt,
       retained_at: "2026-09-22T09:54:41.000Z",
-      raw_sha256: "sha256:" + "9".repeat(64),
-      retention_ref: "s3-private://phase3-republication/mcft-cap09-formal-raw-v1/sha256/" + "9".repeat(64),
+      raw_sha256: revisionRawSha,
+      retention_ref: revisionRetentionRef,
       value: 0.299,
     });
+    const trueRevisionReceipt = await visibleIngress.appendCanonicalizedExternalEvidence(trueRevision);
+    assert.equal(trueRevisionReceipt.status, "INSERTED");
+    assert.equal(trueRevisionReceipt.canonical_fact_write_count, 1);
+    assert.equal(trueRevisionReceipt.revision_fact_identity_used, true);
+    assert.equal(trueRevisionReceipt.base_fact_id, firstPublicationReceipt.fact_id);
+    assert.notEqual(trueRevisionReceipt.fact_id, firstPublicationReceipt.fact_id);
+
+    const afterRevision = await pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n
+         FROM public.facts
+        WHERE record_json#>>'{payload,source_record_id}'=$1`,
+      [firstPublication.record.source_record_id],
+    );
+    assert.equal(afterRevision.rows[0].n, 2);
+
+    const revisedPublication = await pool.query<{
+      fact_id: string;
+      last_publication_available_at: string | Date;
+      publication_count: number;
+      revision_count: number;
+    }>(
+      `SELECT fact_id,last_publication_available_at,publication_count,revision_count
+         FROM public.external_evidence_supply_event_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+          AND binding_id=$7 AND origin_source_id=$8 AND event_time=$9::timestamptz`,
+      [
+        ...Object.values(productionScope),
+        MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+        "KBS_LTER_CURRENT_WEATHER_VARIATE_25",
+        observedAt,
+      ],
+    );
+    assert.equal(revisedPublication.rows.length, 1);
+    assert.equal(revisedPublication.rows[0].fact_id, trueRevisionReceipt.fact_id);
+    assert.equal(
+      new Date(revisedPublication.rows[0].last_publication_available_at).toISOString(),
+      revisionAvailableAt,
+    );
+    assert.equal(Number(revisedPublication.rows[0].publication_count), 3);
+    assert.equal(Number(revisedPublication.rows[0].revision_count), 1);
+
+    const revisionRepublicationAt = "2026-09-22T09:55:40.000Z";
+    const revisionRepublication = soilRepublicationResultV1({
+      observed_at: observedAt,
+      retrieved_at: revisionRepublicationAt,
+      retained_at: "2026-09-22T09:54:41.000Z",
+      raw_sha256: revisionRawSha,
+      retention_ref: revisionRetentionRef,
+      value: 0.299,
+    });
+    const revisionRepublicationReceipt =
+      await visibleIngress.appendCanonicalizedExternalEvidence(revisionRepublication);
+    assert.equal(revisionRepublicationReceipt.status, "EXISTING_IDEMPOTENT_SUCCESS");
+    assert.equal(revisionRepublicationReceipt.canonical_fact_write_count, 0);
+    assert.equal(revisionRepublicationReceipt.revision_fact_identity_used, true);
+    assert.equal(revisionRepublicationReceipt.republication_reused_immutable_fact, true);
+    assert.equal(revisionRepublicationReceipt.fact_id, trueRevisionReceipt.fact_id);
+
+    const republishedRevision = await pool.query<{
+      publication_count: number;
+      revision_count: number;
+      last_publication_available_at: string | Date;
+    }>(
+      `SELECT publication_count,revision_count,last_publication_available_at
+         FROM public.external_evidence_supply_event_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+          AND binding_id=$7 AND origin_source_id=$8 AND event_time=$9::timestamptz`,
+      [
+        ...Object.values(productionScope),
+        MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+        "KBS_LTER_CURRENT_WEATHER_VARIATE_25",
+        observedAt,
+      ],
+    );
+    assert.equal(Number(republishedRevision.rows[0].publication_count), 4);
+    assert.equal(Number(republishedRevision.rows[0].revision_count), 1);
+    assert.equal(
+      new Date(republishedRevision.rows[0].last_publication_available_at).toISOString(),
+      revisionRepublicationAt,
+    );
+
+    // Same raw/source identity cannot silently produce a different canonical observation.
+    // That remains an exact fact-identity conflict and must fail closed.
+    const impossibleSameRawRevision = soilRepublicationResultV1({
+      observed_at: observedAt,
+      retrieved_at: "2026-09-22T09:56:40.000Z",
+      retained_at: "2026-09-22T09:54:41.000Z",
+      raw_sha256: revisionRawSha,
+      retention_ref: revisionRetentionRef,
+      value: 0.333,
+    });
     await assert.rejects(
-      () => visibleIngress.appendCanonicalizedExternalEvidence(trueRevision),
+      () => visibleIngress.appendCanonicalizedExternalEvidence(impossibleSameRawRevision),
       /PHASE3_EVIDENCE_DB_INGRESS_FACT_IDENTITY_CONFLICT/,
     );
-    const afterRevision = await pool.query<{ n: number }>(
-      "SELECT count(*)::int AS n FROM public.facts WHERE fact_id=$1",
-      [firstPublicationReceipt.fact_id],
-    );
-    assert.equal(afterRevision.rows[0].n, 1);
 
     await productionLeaseRepo.releaseLease({ claim: productionClaim });
 
@@ -688,7 +778,10 @@ async function main(): Promise<void> {
       current_owner_external_evidence_insert_allowed: true,
       same_semantic_republication_reuses_immutable_fact: true,
       republication_advances_supply_publication_ledger: true,
-      true_revision_same_fact_identity_remains_fail_closed: true,
+      later_semantic_revision_gets_distinct_deterministic_fact_id: true,
+      revision_advances_same_event_time_ledger: true,
+      repeated_same_revision_is_idempotent_publication: true,
+      same_raw_identity_canonical_divergence_remains_fail_closed: true,
       security_definer_owner_no_login: true,
       security_definer_fixed_search_path: true,
       exact_table_grants: actual,
