@@ -8,6 +8,7 @@ on:
       - "apps/server/src/modules/product/**"
       - "apps/server/src/modules/domain/registerDomainModules.ts"
       - "docs/product_projection/**"
+      - "docs/architecture/semantic_convergence/GEOX-BLINE-ACTIVE-RUNTIME-SURFACE-DISPOSITION-V1.json"
       - "docs/frontend-productization/GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1.*"
       - "scripts/governance_acceptance/ACCEPTANCE_FOUI_CUSTOMER_PRODUCT_API_V1.cjs"
       - "scripts/governance_acceptance/FOUI_CUSTOMER_PRODUCT_API_NEGATIVE_V1.ts"
