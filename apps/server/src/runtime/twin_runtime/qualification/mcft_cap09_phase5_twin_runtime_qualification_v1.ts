@@ -12,9 +12,29 @@ import {
   MCFT_CAP09_POSTGRES_TWIN_RUNTIME_DATABASE_CLOCK_ID_V1,
   type TwinRuntimeDatabaseClockPortV1,
 } from "../mcft_cap09_twin_runtime_host_v1.js";
+import { createDatabasePool } from "../../../infra/database.js";
 import {
-  runMcftCap09TwinRuntimeProcessV2,
-} from "../mcft_cap09_twin_runtime_process_v2.js";
+  assertMcftCap09ServicePrincipalV1,
+} from "../../../infra/mcft_cap09_phase5_service_principal_v1.js";
+import {
+  composeMcftCap09TwinRuntimeV2,
+} from "../mcft_cap09_twin_runtime_composition_v2.js";
+import type {
+  ExternalFormalV4Am19WindowManifestV2,
+} from "../external_formal_v4_amendment19_runner_v2.js";
+import {
+  createMcftCap09ProcessStopV1,
+  McftCap09ConsoleTwinHealthV1,
+  McftCap09ProductionTwinFailureClassifierV1,
+  McftCap09ProductionTwinWaitV1,
+} from "../../mcft_cap09_production_process_lifecycle_v1.js";
+import {
+  loadMcftCap09ProductionRuntimeStartAuthorityV1,
+} from "../../mcft_cap09_production_runtime_start_authority_v1.js";
+import {
+  loadMcftCap09ProductionStageAuthorityMountsV1,
+  readMcftCap09TwinRuntimeProcessConfigV1,
+} from "../mcft_cap09_twin_runtime_process_v1.js";
 import {
   MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1,
   type PersistentSequentialSchedulerClockAuthorityV1,
@@ -43,6 +63,14 @@ function requiredEnvV1(env: EnvironmentV1, name: string): string {
   const value = String(env[name] ?? "").trim();
   if (!value) throw new Error(`PHASE5_TWIN_QUALIFICATION_ENV_REQUIRED:${name}`);
   return value;
+}
+
+function readJsonObjectV1(filePath: string, code: string): Record<string, unknown> {
+  const value = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(code);
+  }
+  return value as Record<string, unknown>;
 }
 
 function canonicalHourV1(value: string): string {
@@ -251,11 +279,69 @@ export async function runMcftCap09Phase5TwinRuntimeQualificationV1(input?: {
       },
     });
   const hostname = requiredEnvV1(env, "HOSTNAME");
-  await runMcftCap09TwinRuntimeProcessV2({
-    env,
-    ...(boundary ?? {}),
-    runtime_start_authority: runtimeStartAuthority,
-    qualification_lease_owner: `twin-runtime:${hostname}`,
-    qualification_run_class: runClass,
+  const leaseOwner = `twin-runtime:${hostname}`;
+  const runtimeEnv: EnvironmentV1 = {
+    ...env,
+    GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_OWNER: leaseOwner,
+  };
+  const config = readMcftCap09TwinRuntimeProcessConfigV1(runtimeEnv);
+  const manifest = readJsonObjectV1(
+    config.manifest_path,
+    "PHASE5_TWIN_V2_MANIFEST_INVALID",
+  ) as unknown as ExternalFormalV4Am19WindowManifestV2;
+  const validatedRuntimeStartAuthority =
+    loadMcftCap09ProductionRuntimeStartAuthorityV1({
+      plane: "TWIN_RUNTIME",
+      expected: {
+        deployment_subject_sha: requiredEnvV1(env, "GEOX_DEPLOYMENT_SUBJECT_COMMIT"),
+        scope: manifest.scope,
+      },
+      explicit_authority: runtimeStartAuthority,
+    });
+  const stageAuthorities = loadMcftCap09ProductionStageAuthorityMountsV1({
+    runtime_start_authority: validatedRuntimeStartAuthority,
+    current_crop_authority_path: config.current_crop_authority_path,
+    biological_stage_architecture_effectiveness_path:
+      config.biological_stage_architecture_effectiveness_path,
   });
+  const cropAuthority = readJsonObjectV1(
+    config.crop_authority_path,
+    "PHASE5_TWIN_V2_CROP_AUTHORITY_INVALID",
+  );
+  const configurationMatrix = readJsonObjectV1(
+    config.configuration_matrix_path,
+    "PHASE5_TWIN_V2_CONFIGURATION_MATRIX_INVALID",
+  );
+  const pool = createDatabasePool(config.database_url);
+  const stop = createMcftCap09ProcessStopV1();
+  try {
+    await assertMcftCap09ServicePrincipalV1(pool, "TWIN_RUNTIME");
+    const composition = composeMcftCap09TwinRuntimeV2({
+      pool,
+      manifest,
+      crop_authority: cropAuthority,
+      configuration_matrix: configurationMatrix,
+      current_crop_authority: stageAuthorities.current_crop_authority,
+      biological_stage_architecture_effectiveness:
+        stageAuthorities.biological_stage_architecture_effectiveness,
+      wait: new McftCap09ProductionTwinWaitV1({
+        idle_poll_ms: config.idle_poll_ms,
+        not_ready_poll_ms: config.not_ready_poll_ms,
+        terminal_poll_ms: config.terminal_poll_ms,
+        retry_base_ms: config.retry_base_ms,
+        retry_maximum_ms: config.retry_maximum_ms,
+      }),
+      health: new McftCap09ConsoleTwinHealthV1(),
+      stop,
+      failure_classifier: new McftCap09ProductionTwinFailureClassifierV1(),
+      ...(boundary ?? {}),
+    });
+    await composition.host.run({
+      lease_owner: leaseOwner,
+      lease_duration_seconds: config.lease_duration_seconds,
+    });
+  } finally {
+    stop.dispose();
+    await pool.end();
+  }
 }
