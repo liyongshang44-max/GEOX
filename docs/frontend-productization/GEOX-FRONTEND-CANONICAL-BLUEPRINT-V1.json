@@ -73,7 +73,9 @@
       "qualification_commit": "b32a2432fe6b39b0c973c40567b386bebc57b9d7",
       "workflow": "foui-projection-contract-wave01",
       "document_status": "PRE-CONSTRUCTION FREEZE CANDIDATE",
-      "broad_high_fidelity_construction_authorized": false
+      "broad_high_fidelity_construction_authorized": false,
+      "successor_governance": "GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1",
+      "read_only_successor_construction_authorized_on_adoption": true
     }
   ],
   "role_boundaries": {
@@ -345,7 +347,9 @@
       "CAPABILITY_AVAILABILITY",
       "DECISION_TIME_HISTORY_CURRENT_VS_THEN",
       "CROSS_DOMAIN_PROVENANCE"
-    ]
+    ],
+    "read_only_successor_construction_authorized_on_adoption": true,
+    "future_concepts_hold_scope": "ROUTE_PRODUCTIZATION_ONLY_NOT_CONTRACT_VALIDITY"
   },
   "retained_pfa_debt_count": 16,
   "retained_pfa_mandates": [
