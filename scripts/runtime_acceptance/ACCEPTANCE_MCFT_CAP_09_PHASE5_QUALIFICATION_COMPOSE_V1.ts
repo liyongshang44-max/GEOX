@@ -241,14 +241,14 @@ async function main(): Promise<void> {
     "PHASE5_EVIDENCE_CONTAINER_HOSTNAME_LEASE_OWNER_REQUIRED",
   );
   assert.equal(
-    twinQualificationSource.includes("qualification_lease_owner: \`twin-runtime:\${hostname}\`"),
+    twinQualificationSource.includes("const leaseOwner = \`twin-runtime:\${hostname}\`;"),
     true,
     "PHASE5_TWIN_QUALIFICATION_CONTAINER_HOSTNAME_LEASE_OWNER_REQUIRED",
   );
   assert.equal(
-    twinQualificationSource.includes("runMcftCap09TwinRuntimeProcessV2"),
+    twinQualificationSource.includes("composeMcftCap09TwinRuntimeV2"),
     true,
-    "PHASE5_TWIN_QUALIFICATION_MUST_REUSE_PRODUCTION_V2_PROCESS",
+    "PHASE5_TWIN_QUALIFICATION_MUST_REUSE_PRODUCTION_V2_COMPOSITION",
   );
   assert.equal(
     twinProcessSource.includes("composeMcftCap09TwinRuntimeV2"),
@@ -404,7 +404,8 @@ async function main(): Promise<void> {
     evidence_only_s3_and_fixture_credentials: true,
     compiled_qualification_entrypoints: true,
     accelerated_and_real_clock_run_classes_share_same_twin_entrypoint: true,
-    qualification_reuses_production_v2_process: true,
+    qualification_reuses_production_v2_composition: true,
+    production_v2_process_remains_free_of_qualification_clock_seams: true,
     qualification_uses_v4_stage_authority_mounts: true,
     real_clock_rehearsal_compose_rendered: true,
     scientific_runtime_image_pinned: true,
