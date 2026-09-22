@@ -1013,9 +1013,12 @@ apps/web/src/design-system/**
 apps/web/src/styles/**
 apps/web/src/features/**
 apps/web/src/api/**
+apps/server/src/product_projection/**
 ```
 
 A change outside these paths does not by itself require frontend re-audit, unless it changes a domain contract consumed by the frontend.
+
+Product Projection implementation paths are watched explicitly because the Canonical Product UI contract now spans both frontend consumers and the read-only server projection layer. A server-side Product Projection change is therefore a frontend/product-contract re-audit trigger even when no React file changes.
 
 ## 15. Re-audit triggers
 
