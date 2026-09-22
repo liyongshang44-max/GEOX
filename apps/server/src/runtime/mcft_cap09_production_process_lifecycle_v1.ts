@@ -307,6 +307,7 @@ function transientInfrastructureFailureV1(error: unknown): boolean {
     "40001", // PostgreSQL serialization failure
     "40P01", // PostgreSQL deadlock
     "57P01", // admin shutdown / reconnect
+    "57P03", // cannot connect now / startup or recovery
     "08000",
     "08001",
     "08003",
@@ -322,7 +323,7 @@ function transientInfrastructureFailureV1(error: unknown): boolean {
   ].includes(code)) return true;
 
   const message = error instanceof Error ? error.message : String(error ?? "");
-  return /socket hang up|connection terminated|fetch failed|network|temporar|timeout/i.test(message);
+  return /socket hang up|connection terminated|fetch failed|network|temporar|timeout|database system is in recovery mode|cannot connect now/i.test(message);
 }
 
 export class McftCap09ProductionEvidenceFailureClassifierV1
