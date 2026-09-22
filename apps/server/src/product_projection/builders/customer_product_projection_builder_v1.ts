@@ -38,8 +38,7 @@ import {
   type CurrentMcftStateReadV1,
   type ProductCustomerReadScopeV1,
   type ProductFieldIdentitySourceV1,
-  type ProductFieldSeasonSourceV1,
-  type ProductRuntimeScopeSourceV1,
+  type ProductFieldSeasonSourceV1
 } from "../readers/postgres_customer_product_projection_reader_v1.js";
 
 type FieldBuildInternalV1 = {
@@ -115,16 +114,6 @@ function exactActiveSeason(
   seasons: readonly ProductFieldSeasonSourceV1[],
 ): { status: "EXACT"; value: ProductFieldSeasonSourceV1 } | { status: "NONE" | "MULTIPLE"; value: null } {
   const matches = seasons.filter((row) => row.field_id === fieldId);
-  if (matches.length === 1) return { status: "EXACT", value: matches[0] };
-  return { status: matches.length === 0 ? "NONE" : "MULTIPLE", value: null };
-}
-
-function exactRuntimeScope(
-  fieldId: string,
-  seasonId: string,
-  scopes: readonly ProductRuntimeScopeSourceV1[],
-): { status: "EXACT"; value: ProductRuntimeScopeSourceV1 } | { status: "NONE" | "MULTIPLE"; value: null } {
-  const matches = scopes.filter((row) => row.field_id === fieldId && row.season_id === seasonId);
   if (matches.length === 1) return { status: "EXACT", value: matches[0] };
   return { status: matches.length === 0 ? "NONE" : "MULTIPLE", value: null };
 }
@@ -318,22 +307,20 @@ export class CustomerProductProjectionBuilderV1 {
       if (runtimeScopeRead.relation_status === "UNAVAILABLE") {
         limitations.push(limitation("MCFT_RUNTIME_SCOPE_SOURCE_UNAVAILABLE"));
         reporting = { state: "UNAVAILABLE", reason_codes: ["MCFT_RUNTIME_SCOPE_SOURCE_UNAVAILABLE"], last_qualified_at: null };
-      } else if (season.status !== "EXACT") {
-        reporting = {
-          state: season.status === "MULTIPLE" ? "LIMITED" : "UNAVAILABLE",
-          reason_codes: [season.status === "MULTIPLE" ? "MULTIPLE_ACTIVE_FIELD_SEASONS" : "ACTIVE_FIELD_SEASON_NOT_ESTABLISHED"],
-          last_qualified_at: null,
-        };
       } else {
-        const runtimeScope = exactRuntimeScope(field.field_id, season.value.season_id, runtimeScopeRead.rows);
-        if (runtimeScope.status === "NONE") {
+        // A field-level current condition may use MCFT only when the authenticated field maps to
+        // exactly one current Runtime scope across the whole project/group. A non-authoritative
+        // season index is never allowed to select one MCFT authority object out of multiple scopes.
+        const runtimeCandidates = runtimeScopeRead.rows.filter((row) => row.field_id === field.field_id);
+        if (runtimeCandidates.length === 0) {
           limitations.push(limitation("MCFT_RUNTIME_SCOPE_NOT_ESTABLISHED"));
           reporting = { state: "UNAVAILABLE", reason_codes: ["MCFT_RUNTIME_SCOPE_NOT_ESTABLISHED"], last_qualified_at: null };
-        } else if (runtimeScope.status === "MULTIPLE") {
+        } else if (runtimeCandidates.length !== 1) {
           limitations.push(limitation("MULTIPLE_RUNTIME_SCOPES_NO_FIELD_AGGREGATION"));
           reporting = { state: "LIMITED", reason_codes: ["MULTIPLE_RUNTIME_SCOPES_NO_FIELD_AGGREGATION"], last_qualified_at: null };
         } else {
-          state = await this.reader.readExactCurrentMcftState(runtimeScope.value);
+          const runtimeScope = runtimeCandidates[0];
+          state = await this.reader.readExactCurrentMcftState(runtimeScope);
           if (state.status === "AVAILABLE") {
             currentStateRefKey = sourceRefKey("mcft_state", field.field_id);
             authorityRefs.push({
@@ -354,9 +341,27 @@ export class CustomerProductProjectionBuilderV1 {
               observed_object_kind: state.object_type,
               source_path: "posterior_state",
             });
+
+            let reportingReason = "EXACT_CURRENT_MCFT_RUNTIME_ESTABLISHED";
+            let reportingState: FieldReportingStateProjectionV1["state"] = "CURRENT";
+            if (seasonRead.relation_status === "UNAVAILABLE") {
+              reportingState = "LIMITED";
+              reportingReason = "FIELD_SEASON_SOURCE_UNAVAILABLE";
+            } else if (season.status === "NONE") {
+              reportingState = "LIMITED";
+              reportingReason = "ACTIVE_FIELD_SEASON_NOT_ESTABLISHED";
+            } else if (season.status === "MULTIPLE") {
+              reportingState = "LIMITED";
+              reportingReason = "MULTIPLE_ACTIVE_FIELD_SEASONS";
+            } else if (season.value.season_id !== runtimeScope.season_id) {
+              reportingState = "LIMITED";
+              reportingReason = "ACTIVE_SEASON_RUNTIME_SCOPE_MISMATCH";
+              limitations.push(limitation("ACTIVE_SEASON_RUNTIME_SCOPE_MISMATCH", seasonRefKey));
+            }
+
             reporting = {
-              state: "CURRENT",
-              reason_codes: ["EXACT_CURRENT_MCFT_RUNTIME_ESTABLISHED"],
+              state: reportingState,
+              reason_codes: [reportingReason],
               last_qualified_at: state.logical_time,
             };
           } else {
