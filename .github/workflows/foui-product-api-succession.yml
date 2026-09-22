@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "docs/frontend-productization/**"
+      - "docs/product_projection/**"
       - "docs/frontend/P1_API_READINESS_MATRIX_V1.md"
       - "docs/frontend/P2_CUSTOMER_API_CONTRACT.md"
       - "docs/frontend/CUSTOMER_DATA_SOURCE_MAP_V1.md"
