@@ -360,7 +360,12 @@
     "apps/web/src/design-system/**",
     "apps/web/src/styles/**",
     "apps/web/src/features/**",
-    "apps/web/src/api/**"
+    "apps/web/src/api/**",
+    "apps/server/src/product_projection/**",
+    "apps/server/src/routes/product*",
+    "apps/server/src/modules/product/**",
+    "scripts/governance_acceptance/*FOUI*",
+    ".github/workflows/foui-*"
   ],
   "reaudit_triggers": [
     "NEWER_EXPLICIT_SUPERSESSION",
@@ -388,6 +393,13 @@
     ],
     "sites_customer_portal_real_data_target": "/api/product/v1/*",
     "second_business_database_created": false,
-    "permanent_legacy_wrapper_architecture": "FORBIDDEN"
+    "permanent_legacy_wrapper_architecture": "FORBIDDEN",
+    "audit_closure_required_paths": [
+      "apps/server/src/product_projection/**",
+      "apps/server/src/routes/product*",
+      "apps/server/src/modules/product/**",
+      "scripts/governance_acceptance/*FOUI*",
+      ".github/workflows/foui-*"
+    ]
   }
 }
