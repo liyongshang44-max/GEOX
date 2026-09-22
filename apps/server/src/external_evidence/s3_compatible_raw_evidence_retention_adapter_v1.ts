@@ -263,12 +263,18 @@ export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
     const probe = await this.requestV1({ method: "HEAD", key, allowed_statuses: [200, 404] });
     if (probe.status === 200) {
       const retainedAt = this.verifyHeadV1({ retention_ref: ref, retained_sha256: actualHash, retained_bytes: raw.byteLength }, key, probe);
+      const retentionVerifiedAt = this.clock().toISOString();
+      canonicalIsoV1(retentionVerifiedAt, "EA5C1_RETENTION_VERIFIED_AT_INVALID");
+      if (Date.parse(retentionVerifiedAt) < Date.parse(input.retrieved_at)) {
+        throw new Error("EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL");
+      }
       return {
         retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
         retention_ref: ref,
         retained_sha256: actualHash,
         retained_bytes: raw.byteLength,
         retained_at: retainedAt,
+        retention_verified_at: retentionVerifiedAt,
         externally_publishable: false,
       };
     }
@@ -289,12 +295,18 @@ export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
     });
     const head = await this.requestV1({ method: "HEAD", key, allowed_statuses: [200] });
     const verifiedRetainedAt = this.verifyHeadV1({ retention_ref: ref, retained_sha256: actualHash, retained_bytes: raw.byteLength }, key, head);
+    const retentionVerifiedAt = this.clock().toISOString();
+    canonicalIsoV1(retentionVerifiedAt, "EA5C1_RETENTION_VERIFIED_AT_INVALID");
+    if (Date.parse(retentionVerifiedAt) < Date.parse(input.retrieved_at)) {
+      throw new Error("EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL");
+    }
     return {
       retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
       retention_ref: ref,
       retained_sha256: actualHash,
       retained_bytes: raw.byteLength,
       retained_at: verifiedRetainedAt,
+      retention_verified_at: retentionVerifiedAt,
       externally_publishable: false,
     };
   }
