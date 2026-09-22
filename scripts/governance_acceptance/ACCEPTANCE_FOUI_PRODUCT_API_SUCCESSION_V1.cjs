@@ -58,6 +58,18 @@ assert(
 );
 assert(manifest.wave01_adoption?.command_construction_authorized === false, "WAVE01_COMMAND_BOUNDARY_WIDENED");
 assert(manifest.wave01_adoption?.authority_mutation_authorized === false, "WAVE01_AUTHORITY_MUTATION_WIDENED");
+
+assert((manifest.first_successor_construction?.contracts || []).includes("CustomerOverviewProjectionV1"), "FIRST_SUCCESSOR_OVERVIEW_MISSING");
+assert((manifest.first_successor_construction?.contracts || []).includes("FieldSummaryProjectionV1"), "FIRST_SUCCESSOR_FIELD_SUMMARY_MISSING");
+assert((manifest.first_successor_construction?.contracts || []).includes("FieldWorkspaceProjectionV1"), "FIRST_SUCCESSOR_FIELD_WORKSPACE_MISSING");
+assert((manifest.first_successor_construction?.routes || []).includes("GET /api/product/v1/overview"), "FIRST_SUCCESSOR_OVERVIEW_ROUTE_MISSING");
+assert(manifest.first_successor_construction?.overview_attention_semantics === "SERVER_COMPOSED_FROM_GOVERNED_ATTENTION_QUEUE_NOT_BROWSER_INFERENCE", "OVERVIEW_ATTENTION_COMPOSITION_BOUNDARY_MISSING");
+
+assert(manifest.product_api_identity_scope_boundary?.authentication_required === true, "PRODUCT_API_AUTH_REQUIRED");
+assert(manifest.product_api_identity_scope_boundary?.principal_context === "SERVER_SIDE", "PRODUCT_API_PRINCIPAL_NOT_SERVER_SIDE");
+assert(manifest.product_api_identity_scope_boundary?.client_supplied_scope_may_broaden_access === false, "PRODUCT_API_SCOPE_ESCALATION_ALLOWED");
+assert(manifest.product_api_identity_scope_boundary?.browser_database_credentials === "FORBIDDEN", "BROWSER_DATABASE_CREDENTIALS_NOT_FORBIDDEN");
+assert(manifest.product_api_identity_scope_boundary?.browser_service_wide_api_token === "FORBIDDEN", "BROWSER_SERVICE_TOKEN_NOT_FORBIDDEN");
 assert(JSON.stringify(manifest.canonical_product_contract?.forbidden_projection_methods) === JSON.stringify(["POST","PUT","PATCH","DELETE"]), "BAD_FORBIDDEN_PRODUCT_METHODS");
 
 const expectedLegacy = new Map([
