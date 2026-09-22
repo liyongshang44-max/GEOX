@@ -157,14 +157,16 @@ function fieldRefKeyV1(fieldId: string, suffix: string): string {
   return `field:${fieldId}:${suffix}`;
 }
 
-function identityExactRefV1(row: FieldIdentityRowV1, tenantId: string): string {
-  return `field_index_v1:${tenantId}:${row.field_id}:updated:${row.updated_ts_ms ?? "UNVERSIONED"}`;
+function identityExactRefV1(row: FieldIdentityRowV1, scope: CustomerProductReadScopeV1): string {
+  return `field_index_v1:${scope.tenant_id}:${scope.project_id}:${scope.group_id}:${row.field_id}:updated:${row.updated_ts_ms ?? "UNVERSIONED"}`;
 }
 
-function identityDigestV1(row: FieldIdentityRowV1, tenantId: string): SemanticHashTextV1 {
+function identityDigestV1(row: FieldIdentityRowV1, scope: CustomerProductReadScopeV1): SemanticHashTextV1 {
   return semanticHashV1({
     source: "public.field_index_v1",
-    tenant_id: tenantId,
+    tenant_id: scope.tenant_id,
+    project_id: scope.project_id,
+    group_id: scope.group_id,
     field_id: row.field_id,
     field_name: row.field_name,
     area_ha: row.area_ha,
@@ -379,11 +381,11 @@ export class PostgresCustomerProductProjectionBuilderV1 {
 
   private async listFieldRowsV1(scope: CustomerProductReadScopeV1): Promise<FieldIdentityRowV1[]> {
     if (!scope.can_preview_all_fields && scope.allowed_field_ids.length === 0) return [];
-    const params: unknown[] = [scope.tenant_id];
+    const params: unknown[] = [scope.tenant_id, scope.project_id, scope.group_id];
     let fieldPredicate = "";
     if (!scope.can_preview_all_fields) {
       params.push([...scope.allowed_field_ids]);
-      fieldPredicate = " AND field_id = ANY($2::text[])";
+      fieldPredicate = " AND field_id = ANY($4::text[])";
     }
     const result = await this.pool.query(
       `SELECT field_id,
@@ -391,7 +393,9 @@ export class PostgresCustomerProductProjectionBuilderV1 {
               area_ha,
               updated_ts_ms
          FROM public.field_index_v1
-        WHERE tenant_id = $1${fieldPredicate}
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND group_id = $3${fieldPredicate}
         ORDER BY field_id ASC
         LIMIT ${CUSTOMER_PRODUCT_PROJECTION_MAX_FIELDS_V1 + 1}`,
       params,
@@ -423,9 +427,11 @@ export class PostgresCustomerProductProjectionBuilderV1 {
               updated_ts_ms
          FROM public.field_index_v1
         WHERE tenant_id = $1
-          AND field_id = $2
+          AND project_id = $2
+          AND group_id = $3
+          AND field_id = $4
         LIMIT 2`,
-      [scope.tenant_id, fieldId],
+      [scope.tenant_id, scope.project_id, scope.group_id, fieldId],
     );
     if (result.rows.length > 1) {
       throw new CustomerProductProjectionReadErrorV1("FIELD_IDENTITY_CARDINALITY_INVALID", 409, fieldId);
@@ -599,13 +605,13 @@ export class PostgresCustomerProductProjectionBuilderV1 {
       ref_key: identityRefKey,
       ref_class: "OTHER_NON_AUTHORITY",
       object_kind: "field_index_v1",
-      exact_ref: identityExactRefV1(input.row, input.scope.tenant_id),
+      exact_ref: identityExactRefV1(input.row, input.scope),
       source_fact_ref: null,
     }];
     const authorityRefs: ProductProjectionAuthorityRefV1[] = [];
     const digests: ProductProjectionSourceDigestV1[] = [{
       source_ref_key: identityRefKey,
-      digest: identityDigestV1(input.row, input.scope.tenant_id),
+      digest: identityDigestV1(input.row, input.scope),
       digest_kind: "PRODUCT_SOURCE_ROW_DIGEST",
     }];
     const proofs: ProductProjectionSourceBindingProofSetV1["proofs"][number][] = [{
