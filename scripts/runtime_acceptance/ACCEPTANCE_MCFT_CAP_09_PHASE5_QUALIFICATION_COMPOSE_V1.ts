@@ -117,6 +117,26 @@ async function main(): Promise<void> {
   const evidenceEnv = environmentMap(evidence.environment);
   const twinEnv = environmentMap(twin.environment);
   assert.equal(
+    evidenceEnv.GEOX_DEPLOYMENT_SUBJECT_COMMIT,
+    env.GEOX_DEPLOYMENT_SUBJECT_COMMIT,
+    "PHASE5_EVIDENCE_QUALIFICATION_EXACT_SUBJECT_REQUIRED",
+  );
+  assert.equal(
+    evidenceEnv.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS,
+    "ACCELERATED_24T",
+    "PHASE5_EVIDENCE_DEFAULT_ACCELERATED_RUN_CLASS_REQUIRED",
+  );
+  assert.equal(
+    evidenceEnv.GEOX_MCFT_CAP09_PHASE5_A0,
+    env.GEOX_PHASE5_A0,
+    "PHASE5_EVIDENCE_A0_CLOCK_BINDING_REQUIRED",
+  );
+  assert.equal(
+    evidenceEnv.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_SERVICE_ID,
+    "local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-evidence-runtime-v1",
+    "PHASE5_EVIDENCE_PRODUCTION_SERVICE_IDENTITY_REQUIRED",
+  );
+  assert.equal(
     twinEnv.GEOX_MCFT_CAP09_PHASE5_A0,
     env.GEOX_PHASE5_A0,
     "PHASE5_TWIN_QUALIFICATION_A0_REQUIRED_FOR_CONTROLLED_RUNTIME_START_AUTHORITY",
@@ -227,6 +247,27 @@ async function main(): Promise<void> {
     path.resolve("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts"),
     "utf8",
   );
+  const evidenceQualificationSource = fs.readFileSync(
+    path.resolve(
+      "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts",
+    ),
+    "utf8",
+  );
+  for (const required of [
+    "runMcftCap09ProductionEvidenceRuntimeV1",
+    "buildPhase5EvidenceRealClockRuntimeStartAuthorityV1",
+    "evidence_runtime_start_authorized: true",
+    "production_owner_activation_authorized: false",
+    "formal_v5_arm_authorized: false",
+    "a0_authorized: false",
+    "o00_authorized: false",
+  ]) {
+    assert.equal(
+      evidenceQualificationSource.includes(required),
+      true,
+      `PHASE5_EVIDENCE_REAL_CLOCK_PRODUCTION_PATH_REQUIRED:${required}`,
+    );
+  }
   const twinProcessSource = fs.readFileSync(
     path.resolve("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts"),
     "utf8",
@@ -366,6 +407,9 @@ async function main(): Promise<void> {
   const rehearsalConfig = JSON.parse(rehearsalRendered) as {
     services?: Record<string, Record<string, unknown>>;
   };
+  const rehearsalEvidenceEnv = environmentMap(
+    rehearsalConfig.services?.["evidence-runtime"]?.environment,
+  );
   const rehearsalTwinEnv = environmentMap(
     rehearsalConfig.services?.["twin-runtime"]?.environment,
   );
@@ -374,6 +418,16 @@ async function main(): Promise<void> {
   );
   const rehearsalVerifyEnv = environmentMap(
     rehearsalConfig.services?.["qualification-verify"]?.environment,
+  );
+  assert.equal(
+    rehearsalEvidenceEnv.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS,
+    "REAL_CLOCK_REHEARSAL",
+    "PHASE5_EVIDENCE_REAL_CLOCK_REHEARSAL_RUN_CLASS_REQUIRED",
+  );
+  assert.equal(
+    rehearsalEvidenceEnv.GEOX_MCFT_CAP09_PHASE5_REHEARSAL_ACTIVATION_FENCE,
+    env.GEOX_PHASE5_CREATED_AT,
+    "PHASE5_EVIDENCE_REAL_CLOCK_REHEARSAL_PHYSICAL_ACTIVATION_FENCE_REQUIRED",
   );
   assert.equal(
     rehearsalTwinEnv.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS,
@@ -484,6 +538,8 @@ async function main(): Promise<void> {
     ha18_direct_100mm_to_historical_cap05_200mm_edge_authorized: false,
     ha18_final_status: "PENDING_FORMAL_DATABASE_EVIDENCE",
     real_clock_rehearsal_compose_rendered: true,
+    real_clock_rehearsal_uses_production_evidence_runtime: true,
+    real_clock_rehearsal_uses_live_production_provider_factory: true,
     scientific_runtime_image_pinned: true,
     live_raw_capture_has_no_database_or_s3_credentials: true,
     prepare_verify_have_no_provider_or_s3_credentials: true,
