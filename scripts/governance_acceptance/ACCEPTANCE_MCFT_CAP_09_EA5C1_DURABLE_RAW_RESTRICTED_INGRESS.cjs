@@ -50,7 +50,7 @@ const realClockP0RetentionReusePins = {
   [rawAdapterPath]: "4a730990d962b8d8095541117993a1e42b415589",
   [collectorPath]: "0bdf416f17f7d72f1089ff962a93d1b8f4d655d9",
   [acceptancePath]: "bb6d8be445c0425c88eccac54d867b7d7935bd04",
-  [workflowPath]: "ec10d3aae8e86e031b5023bf936cf6a9c35c5702"
+  [workflowPath]: "49b35383434a560343f0964cc2414e354612922b"
 };
 
 let validationMode;
