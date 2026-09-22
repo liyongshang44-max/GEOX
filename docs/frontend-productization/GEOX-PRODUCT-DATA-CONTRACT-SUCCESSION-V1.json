@@ -1,0 +1,135 @@
+{
+  "schema_version": "geox_product_data_contract_succession_v1",
+  "document_id": "GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1",
+  "status": "READY_FOR_PROTECTED_MAIN_ADOPTION",
+  "baseline_main_sha": "6ff48eca10c1d25365c39f9d1e4dbb14d6c1ad91",
+  "date": "2026-09-22",
+  "scope": "FRONTEND_PRODUCT_DATA_CONTRACT_GOVERNANCE",
+  "domain_authority": "NONE",
+  "runtime_behavior_change": false,
+  "database_schema_change": false,
+  "production_database_mutation": false,
+  "canonical_persistence": {
+    "engine_family": "POSTGRESQL",
+    "existing_server_access": "PG_POOL_DATABASE_URL",
+    "create_second_business_database": false,
+    "sites_d1_is_canonical_business_store": false
+  },
+  "canonical_product_contract": {
+    "family": "FOUI_PRODUCT_PROJECTION",
+    "namespace": "/api/product/v1/*",
+    "authority_ceiling": "NON_AUTHORITATIVE_PRODUCT_PROJECTION_ONLY",
+    "allowed_methods": [
+      "GET",
+      "HEAD"
+    ],
+    "forbidden_projection_methods": [
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE"
+    ]
+  },
+  "existing_wave01_contracts": [
+    "ProductProjectionEnvelopeV1",
+    "GovernedActionCaseProjectionV1",
+    "CapabilityAvailabilityProjectionV1",
+    "AttentionQueueProjectionV1"
+  ],
+  "planned_successor_contracts": [
+    "FieldSummaryProjectionV1",
+    "FieldWorkspaceProjectionV1",
+    "OperationSummaryProjectionV1",
+    "OperationWorkspaceProjectionV1",
+    "EvidenceWorkspaceProjectionV1",
+    "DecisionTimeRecordProjectionV1",
+    "OutcomeProjectionV1"
+  ],
+  "target_read_routes": [
+    "GET /api/product/v1/overview",
+    "GET /api/product/v1/fields",
+    "GET /api/product/v1/fields/:fieldRef",
+    "GET /api/product/v1/attention",
+    "GET /api/product/v1/operations",
+    "GET /api/product/v1/operations/:operationRef",
+    "GET /api/product/v1/action-cases/:caseRef",
+    "GET /api/product/v1/evidence/:subjectType/:subjectRef",
+    "GET /api/product/v1/decision-time/:decisionRef",
+    "GET /api/product/v1/capabilities"
+  ],
+  "legacy_routes": [
+    {
+      "route": "/api/v1/customer/fields",
+      "classification": "LEGACY_ACTIVE_READ",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/customer/operations",
+      "classification": "LEGACY_ACTIVE_READ",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/customer/reports",
+      "classification": "LEGACY_ACTIVE_READ",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/customer/fields/:field_id/confirmed-twin-summary",
+      "classification": "LEGACY_DO_NOT_ADOPT",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/fields/portfolio",
+      "classification": "PRE_FOUI_LEGACY_PROJECTION",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/reports/customer-dashboard/aggregate",
+      "classification": "LEGACY_FALLBACK",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/reports/field/:fieldId",
+      "classification": "LEGACY_REPORT",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/reports/operation/:operationId",
+      "classification": "LEGACY_REPORT",
+      "new_consumers": "FORBIDDEN"
+    }
+  ],
+  "legacy_lifecycle": [
+    "LEGACY_ACTIVE_READ",
+    "DEPRECATED",
+    "EMERGENCY_COMPAT_ONLY",
+    "REMOVED"
+  ],
+  "permanent_invariants": [
+    "DOMAIN_AUTHORITY_GT_PRODUCT_PROJECTION_GT_PRODUCT_UI",
+    "PRODUCT_PROJECTION_IS_NON_AUTHORITATIVE",
+    "CURRENT_PROJECTION_NE_HISTORICAL_REPLAY",
+    "CURRENT_PROJECTION_NE_DECISION_TIME_SNAPSHOT",
+    "CURRENT_STATE_SUBSTITUTION_FOR_DECISION_TIME_BASIS_FORBIDDEN",
+    "MISSING_AUTHORITY_VALUE_MUST_NOT_BECOME_PLAUSIBLE_BUSINESS_DEFAULT",
+    "NO_NEW_PRODUCT_CONSUMERS_OF_PRE_FOUI_CUSTOMER_REPORT_PORTFOLIO_APIS",
+    "NO_PERMANENT_PRODUCT_API_WRAPPER_OVER_LEGACY_PRESENTATION_API"
+  ],
+  "historical_documents": [
+    "docs/frontend/P2_CUSTOMER_API_CONTRACT.md",
+    "docs/frontend/CUSTOMER_DATA_SOURCE_MAP_V1.md",
+    "docs/frontend/FALLBACK_RETIREMENT_PLAN.md",
+    "docs/frontend/CUSTOMER_FRONTEND_GAP_BASELINE_V1.md"
+  ],
+  "first_successor_construction": {
+    "contracts": [
+      "FieldSummaryProjectionV1",
+      "FieldWorkspaceProjectionV1"
+    ],
+    "routes": [
+      "GET /api/product/v1/fields",
+      "GET /api/product/v1/fields/:fieldRef"
+    ],
+    "database_schema_change_required_by_governance": false
+  }
+}
