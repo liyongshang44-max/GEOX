@@ -500,7 +500,9 @@ NEW
 
 | Route / surface | Decision | Canonical meaning |
 |---|---|---|
-| `/customer/dashboard` | KEEP + EVOLVE | Customer executive/operating summary |
+| `/customer` | REDIRECT | Redirect to canonical Customer Overview |
+| `/customer/overview` | CANONICAL NEW PRODUCT | Customer executive/operating overview |
+| `/customer/dashboard` | LEGACY COMPAT ALIAS | Historical P1/P2 dashboard route; existing consumers may remain during migration |
 | `/customer/fields` | KEEP + EVOLVE | Authorized field list |
 | `/customer/fields/:fieldId` | KEEP + EVOLVE | Customer-readable field report / field record |
 | `/customer/operations` | KEEP + EVOLVE | Customer-visible operation reporting list |
@@ -510,6 +512,8 @@ NEW
 | field/operation export routes | KEEP SECONDARY + EVOLVE | Delivery/print surfaces |
 
 Customer navigation placement may evolve. In particular, export is a secondary delivery function even if the historical shell exposes it as a top-level item.
+
+The post-FOUI Customer Overview route is `/customer/overview`. The historical `/customer/dashboard` route remains a compatibility alias for existing P1/P2 consumers and must not be used as the canonical route in new Sites or other new product implementations. `/customer` redirects to `/customer/overview`.
 
 ### 6.2 Operator Runtime Console
 
@@ -1014,6 +1018,10 @@ apps/web/src/styles/**
 apps/web/src/features/**
 apps/web/src/api/**
 apps/server/src/product_projection/**
+apps/server/src/routes/product*
+apps/server/src/modules/product/**
+scripts/governance_acceptance/*FOUI*
+.github/workflows/foui-*
 ```
 
 A change outside these paths does not by itself require frontend re-audit, unless it changes a domain contract consumed by the frontend.
