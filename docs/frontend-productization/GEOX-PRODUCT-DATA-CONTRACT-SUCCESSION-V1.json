@@ -198,5 +198,24 @@
     "remaining_blockers_for_sites_real_data_binding": [
       "MINIMAL_CANONICAL_PRODUCT_API_NOT_IMPLEMENTED_YET"
     ]
-  }
+  },
+  "wave01_reserved_projection_type_tokens": [
+    {
+      "token": "FIELD_PORTFOLIO",
+      "status": "RESERVED_TOKEN_NO_CONCRETE_PROJECTION_CONTRACT"
+    },
+    {
+      "token": "DECISION_PRODUCT",
+      "status": "RESERVED_TOKEN_NO_CONCRETE_PROJECTION_CONTRACT"
+    },
+    {
+      "token": "GOVERNED_ACTION_LIST",
+      "status": "RESERVED_TOKEN_NO_CONCRETE_PROJECTION_CONTRACT"
+    },
+    {
+      "token": "EVIDENCE_CASE",
+      "status": "RESERVED_TOKEN_NO_CONCRETE_PROJECTION_CONTRACT"
+    }
+  ],
+  "wave02_naming_rule": "DO_NOT_TREAT_RESERVED_TYPE_TOKEN_AS_IMPLEMENTED_CONTRACT; DEFINE_CONCRETE_CONTRACT_EXPLICITLY_BEFORE_ROUTE_OR_SITES_BINDING"
 }
