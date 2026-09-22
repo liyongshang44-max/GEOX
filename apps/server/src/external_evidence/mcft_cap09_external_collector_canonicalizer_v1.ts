@@ -97,6 +97,7 @@ export type RawEvidenceRetentionReceiptV1 = {
   retained_sha256: string;
   retained_bytes: number;
   retained_at: string;
+  retention_verified_at?: string;
   externally_publishable: false;
 };
 
@@ -414,7 +415,15 @@ export async function collectAndRetainRawEvidenceV1(
   requireCondition(receipt.retained_sha256 === digest, "EA3_RETENTION_DIGEST_MISMATCH");
   requireCondition(receipt.retained_bytes === response.bytes.byteLength, "EA3_RETENTION_BYTE_COUNT_MISMATCH");
   requireCondition(receipt.externally_publishable === false, "EA3_RAW_RETENTION_PUBLICATION_FORBIDDEN");
-  const retainedAt = canonicalIso(receipt.retained_at, "EA3_RETAINED_AT_INVALID");
+  const objectRetainedAt = canonicalIso(receipt.retained_at, "EA3_RETAINED_AT_INVALID");
+  const retainedAt = canonicalIso(
+    receipt.retention_verified_at ?? receipt.retained_at,
+    "EA3_RETENTION_VERIFIED_AT_INVALID",
+  );
+  requireCondition(
+    Date.parse(objectRetainedAt) <= Date.parse(retainedAt),
+    "EA3_RETENTION_VERIFICATION_BEFORE_OBJECT_RETENTION",
+  );
   requireCondition(Date.parse(retrievedAt) <= Date.parse(retainedAt), "EA3_RETAINED_BEFORE_RETRIEVAL");
 
   const provenance: VerifiedRawEvidenceProvenanceV1 = {
@@ -431,7 +440,7 @@ export async function collectAndRetainRawEvidenceV1(
     raw_sha256: digest,
     raw_bytes: response.bytes.byteLength,
     retention_ref: receipt.retention_ref,
-    retained_at: retainedAt,
+    retained_at: objectRetainedAt,
     use_policy_ref: input.request.use_policy_ref,
   };
   return { provenance, raw_bytes: new Uint8Array(response.bytes) };
