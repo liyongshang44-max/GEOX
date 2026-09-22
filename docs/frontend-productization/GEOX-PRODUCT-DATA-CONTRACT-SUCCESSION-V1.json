@@ -196,7 +196,8 @@
       "HISTORICAL_CUSTOMER_VIEWMODEL_SEMANTIC_INFERENCE_NOT_MARKED",
       "CUSTOMER_OVERVIEW_ROUTE_DRIFT",
       "PRODUCT_PROJECTION_WATCHED_PATH_GAP",
-      "WAVE01_RESERVED_TYPE_TOKEN_AMBIGUITY"
+      "WAVE01_RESERVED_TYPE_TOKEN_AMBIGUITY",
+      "WAVE01_PRE_CONSTRUCTION_STATUS_GAP"
     ],
     "remaining_blockers_for_sites_mock_frontend_handoff": [],
     "remaining_blockers_for_sites_real_data_binding": [
@@ -233,5 +234,13 @@
     "apps/web/src/viewmodels/customerReportsCenterVm.ts",
     "apps/web/src/viewmodels/customerRoiLedgerVm.ts"
   ],
-  "legacy_viewmodel_policy": "PROVENANCE_AND_EXISTING_COMPATIBILITY_ONLY; NO_SEMANTIC_COPY_INTO_POST_FOUI_PRODUCT"
+  "legacy_viewmodel_policy": "PROVENANCE_AND_EXISTING_COMPATIBILITY_ONLY; NO_SEMANTIC_COPY_INTO_POST_FOUI_PRODUCT",
+  "wave01_adoption": {
+    "historical_document_status": "PRE-CONSTRUCTION FREEZE CANDIDATE",
+    "successor_governance": "GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1",
+    "effective_on_protected_main_adoption": "ACCEPTED_FOR_NARROW_READ_ONLY_PRODUCT_PROJECTION_SUCCESSOR_CONSTRUCTION",
+    "command_construction_authorized": false,
+    "authority_mutation_authorized": false,
+    "unscoped_future_route_promotion_authorized": false
+  }
 }
