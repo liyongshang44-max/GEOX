@@ -374,5 +374,20 @@
     "DESIGN_SYSTEM_REPLACEMENT",
     "MANIFEST_NO_LONGER_DESCRIBES_GOVERNED_STATE"
   ],
-  "update_rule": "ANY_FUTURE_CANONICAL_FRONTEND_DECISION_CHANGE_MUST_UPDATE_OR_EXPLICITLY_SUPERSEDE_THIS_BLUEPRINT"
+  "update_rule": "ANY_FUTURE_CANONICAL_FRONTEND_DECISION_CHANGE_MUST_UPDATE_OR_EXPLICITLY_SUPERSEDE_THIS_BLUEPRINT",
+  "product_data_contract_succession": {
+    "governing_artifact": "GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1",
+    "canonical_persistence": "POSTGRESQL",
+    "canonical_new_product_contract": "FOUI_PRODUCT_PROJECTION",
+    "canonical_new_product_api_namespace": "/api/product/v1/*",
+    "new_consumer_legacy_api_dependency": "FORBIDDEN",
+    "legacy_api_families": [
+      "/api/v1/customer/*",
+      "/api/v1/reports/*",
+      "/api/v1/fields/portfolio"
+    ],
+    "sites_customer_portal_real_data_target": "/api/product/v1/*",
+    "second_business_database_created": false,
+    "permanent_legacy_wrapper_architecture": "FORBIDDEN"
+  }
 }
