@@ -11,6 +11,8 @@ on:
       - "docs/frontend/CUSTOMER_FRONTEND_GAP_BASELINE_V1.md"
       - "apps/server/src/routes/customer_v1.ts"
       - "apps/server/src/routes/field_portfolio_v1.ts"
+      - "apps/web/src/api/customer*.ts"
+      - "apps/web/src/viewmodels/customer*.ts"
       - "apps/web/src/api/customer.ts"
       - "apps/web/src/api/customerFieldMemory.ts"
       - "apps/web/src/api/customerPrescriptions.ts"
