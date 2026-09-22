@@ -1,0 +1,134 @@
+#!/usr/bin/env node
+"use strict";
+
+const fs = require("node:fs");
+const path = require("node:path");
+
+const root = process.cwd();
+function read(rel) {
+  const p = path.join(root, rel);
+  if (!fs.existsSync(p)) throw new Error(`MISSING_REQUIRED_FILE:${rel}`);
+  return fs.readFileSync(p, "utf8");
+}
+function assert(cond, code) {
+  if (!cond) throw new Error(code);
+}
+function assertContains(rel, needle, code) {
+  const s = read(rel);
+  assert(s.includes(needle), code || `MISSING_REQUIRED_MARKER:${rel}:${needle}`);
+}
+
+const manifestPath = "docs/frontend-productization/GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1.json";
+const manifest = JSON.parse(read(manifestPath));
+
+assert(manifest.schema_version === "geox_product_data_contract_succession_v1", "BAD_SCHEMA_VERSION");
+assert(manifest.status === "READY_FOR_PROTECTED_MAIN_ADOPTION", "BAD_ADOPTION_STATUS");
+assert(manifest.canonical_persistence?.engine_family === "POSTGRESQL", "POSTGRESQL_NOT_CANONICAL");
+assert(manifest.canonical_persistence?.create_second_business_database === false, "SECOND_BUSINESS_DATABASE_FORBIDDEN");
+assert(manifest.canonical_persistence?.sites_d1_is_canonical_business_store === false, "SITES_D1_MUST_NOT_BE_CANONICAL_BUSINESS_STORE");
+assert(manifest.canonical_product_contract?.family === "FOUI_PRODUCT_PROJECTION", "FOUI_NOT_CANONICAL_PRODUCT_CONTRACT");
+assert(manifest.canonical_product_contract?.namespace === "/api/product/v1/*", "BAD_CANONICAL_PRODUCT_NAMESPACE");
+assert(JSON.stringify(manifest.canonical_product_contract?.allowed_methods) === JSON.stringify(["GET","HEAD"]), "BAD_PRODUCT_READ_METHODS");
+assert(JSON.stringify(manifest.canonical_product_contract?.forbidden_projection_methods) === JSON.stringify(["POST","PUT","PATCH","DELETE"]), "BAD_FORBIDDEN_PRODUCT_METHODS");
+
+const expectedLegacy = new Map([
+  ["/api/v1/customer/fields", "LEGACY_ACTIVE_READ"],
+  ["/api/v1/customer/operations", "LEGACY_ACTIVE_READ"],
+  ["/api/v1/customer/reports", "LEGACY_ACTIVE_READ"],
+  ["/api/v1/customer/fields/:field_id/confirmed-twin-summary", "LEGACY_DO_NOT_ADOPT"],
+  ["/api/v1/fields/portfolio", "PRE_FOUI_LEGACY_PROJECTION"],
+  ["/api/v1/reports/customer-dashboard/aggregate", "LEGACY_FALLBACK"],
+  ["/api/v1/reports/field/:fieldId", "LEGACY_REPORT"],
+  ["/api/v1/reports/operation/:operationId", "LEGACY_REPORT"],
+]);
+
+const observedLegacy = new Map((manifest.legacy_routes || []).map((x) => [x.route, x]));
+for (const [route, classification] of expectedLegacy) {
+  const item = observedLegacy.get(route);
+  assert(Boolean(item), `MISSING_LEGACY_ROUTE:${route}`);
+  assert(item.classification === classification, `BAD_LEGACY_CLASSIFICATION:${route}:${item.classification}`);
+  assert(item.new_consumers === "FORBIDDEN", `NEW_CONSUMER_NOT_FORBIDDEN:${route}`);
+}
+
+assert(JSON.stringify(manifest.legacy_lifecycle) === JSON.stringify([
+  "LEGACY_ACTIVE_READ",
+  "DEPRECATED",
+  "EMERGENCY_COMPAT_ONLY",
+  "REMOVED",
+]), "BAD_LEGACY_LIFECYCLE");
+
+for (const rel of manifest.historical_documents || []) {
+  assertContains(rel, "lifecycle: HISTORICAL_PRODUCT_CONTRACT", `HISTORICAL_DOC_NOT_MARKED:${rel}`);
+  assertContains(rel, "new_product_construction: SUPERSEDED", `HISTORICAL_DOC_NOT_SUPERSEDED:${rel}`);
+  assertContains(rel, "compatibility: MAINTENANCE_ONLY", `HISTORICAL_DOC_NOT_MAINTENANCE_ONLY:${rel}`);
+}
+
+assertContains(
+  "apps/server/src/routes/customer_v1.ts",
+  "GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_P1_P2_CUSTOMER_API",
+  "CUSTOMER_ROUTE_LEGACY_MARKER_MISSING",
+);
+assertContains(
+  "apps/server/src/routes/field_portfolio_v1.ts",
+  "GEOX_PRODUCT_CONTRACT_LIFECYCLE: PRE_FOUI_LEGACY_PROJECTION",
+  "FIELD_PORTFOLIO_LEGACY_MARKER_MISSING",
+);
+
+for (const rel of [
+  "apps/web/src/api/customerFields.ts",
+  "apps/web/src/api/customerOperations.ts",
+  "apps/web/src/api/customerReportsCenter.ts",
+]) {
+  assertContains(rel, "GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_CONSUMER_ADAPTER", `LEGACY_ADAPTER_MARKER_MISSING:${rel}`);
+}
+assertContains(
+  "apps/web/src/api/customer.ts",
+  "GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_DO_NOT_ADOPT_CONFIRMED_TWIN_SUMMARY",
+  "CONFIRMED_TWIN_SUMMARY_DO_NOT_ADOPT_MARKER_MISSING",
+);
+
+assertContains(
+  "docs/frontend-productization/GEOX-FRONTEND-CANONICAL-BLUEPRINT-V1.md",
+  "## 18. Product data contract succession",
+  "BLUEPRINT_SUCCESSION_SECTION_MISSING",
+);
+
+const blueprintJson = JSON.parse(read("docs/frontend-productization/GEOX-FRONTEND-CANONICAL-BLUEPRINT-V1.json"));
+assert(blueprintJson.product_data_contract_succession?.governing_artifact === "GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1", "BLUEPRINT_SUCCESSION_BINDING_MISSING");
+assert(blueprintJson.product_data_contract_succession?.canonical_persistence === "POSTGRESQL", "BLUEPRINT_DATABASE_DRIFT");
+assert(blueprintJson.product_data_contract_succession?.canonical_new_product_api_namespace === "/api/product/v1/*", "BLUEPRINT_NAMESPACE_DRIFT");
+assert(blueprintJson.product_data_contract_succession?.new_consumer_legacy_api_dependency === "FORBIDDEN", "BLUEPRINT_LEGACY_CONSUMER_POLICY_DRIFT");
+
+const successionMd = read("docs/frontend-productization/GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1.md");
+for (const invariant of [
+  "missing authority-backed value",
+  "current_state_substitution_forbidden = true",
+  "NO second GEOX business database",
+].filter(Boolean)) {
+  if (invariant === "NO second GEOX business database") {
+    assert(successionMd.includes("No second GEOX business database"), "SECOND_DATABASE_TEXT_BOUNDARY_MISSING");
+  } else {
+    assert(successionMd.includes(invariant), `SUCCESSION_INVARIANT_MISSING:${invariant}`);
+  }
+}
+
+const forbiddenCanonicalLegacyBindings = [
+  "Sites -> /api/v1/customer/",
+  "Sites -> /api/v1/reports/",
+  "Sites -> /api/v1/fields/portfolio",
+];
+for (const bad of forbiddenCanonicalLegacyBindings) {
+  assert(!successionMd.includes(bad), `CANONICAL_DOC_CONTAINS_FORBIDDEN_BINDING:${bad}`);
+}
+
+console.log(JSON.stringify({
+  schema_version: "geox_foui_product_api_succession_acceptance_v1",
+  status: "PASS",
+  canonical_persistence: "POSTGRESQL",
+  canonical_product_contract: "FOUI_PRODUCT_PROJECTION",
+  canonical_namespace: "/api/product/v1/*",
+  legacy_routes_checked: expectedLegacy.size,
+  historical_documents_checked: (manifest.historical_documents || []).length,
+  runtime_behavior_change: false,
+  database_schema_change: false,
+}, null, 2));
