@@ -264,6 +264,7 @@ export class CustomerProductProjectionBuilderV1 {
       limitations.push(limitation("FIELD_GEOMETRY_NOT_PROJECTED_IN_FIRST_SLICE"));
 
       const season = exactActiveSeason(field.field_id, seasonRead.rows);
+      const exactSeasonSource = season.status === "EXACT" ? season.value : null;
       let seasonRefKey: string | null = null;
       if (seasonRead.relation_status === "UNAVAILABLE") {
         limitations.push(limitation("FIELD_SEASON_SOURCE_UNAVAILABLE"));
@@ -272,17 +273,17 @@ export class CustomerProductProjectionBuilderV1 {
       } else if (season.status === "MULTIPLE") {
         limitations.push(limitation("MULTIPLE_ACTIVE_FIELD_SEASONS"));
       } else {
-        seasonRefKey = sourceRefKey("field_season", field.field_id, season.value.season_id);
+        seasonRefKey = sourceRefKey("field_season", field.field_id, exactSeasonSource!.season_id);
         nonAuthorityRefs.push({
           ref_key: seasonRefKey,
           ref_class: "OTHER_NON_AUTHORITY",
           object_kind: "field_season_index_v1",
-          exact_ref: `field_season_index_v1:${scope.tenant_id}:${field.field_id}:${season.value.season_id}`,
+          exact_ref: `field_season_index_v1:${scope.tenant_id}:${field.field_id}:${exactSeasonSource!.season_id}`,
           source_fact_ref: null,
         });
         digests.push({
           source_ref_key: seasonRefKey,
-          digest: sha256(season.value.source_row),
+          digest: sha256(exactSeasonSource!.source_row),
           digest_kind: "SHA256_STABLE_JSON",
         });
         proofs.push({
@@ -309,7 +310,7 @@ export class CustomerProductProjectionBuilderV1 {
         // historical MCFT scope rows to the current season, but it never changes the selected
         // MCFT object's authority and never resolves multiple zones by itself.
         if (seasonRead.relation_status === "AVAILABLE" && season.status === "EXACT") {
-          runtimeCandidates = allFieldRuntimeScopes.filter((row) => row.season_id === season.value.season_id);
+          runtimeCandidates = allFieldRuntimeScopes.filter((row) => row.season_id === exactSeasonSource!.season_id);
           if (runtimeCandidates.length === 0 && allFieldRuntimeScopes.length > 0) {
             seasonBasisReason = "ACTIVE_SEASON_RUNTIME_SCOPE_MISMATCH";
             limitations.push(limitation("ACTIVE_SEASON_RUNTIME_SCOPE_MISMATCH", seasonRefKey));
@@ -387,14 +388,14 @@ export class CustomerProductProjectionBuilderV1 {
       const projectionSeed = {
         field_id: field.field_id,
         identity_digest: digests.find((row) => row.source_ref_key === identityRefKey)?.digest,
-        season_ref: season.status === "EXACT" ? season.value.season_id : null,
+        season_ref: season.status === "EXACT" ? exactSeasonSource!.season_id : null,
         state_ref: state.status === "AVAILABLE" ? state.object_ref : null,
         state_hash: state.status === "AVAILABLE" ? state.object_hash : null,
         reporting,
         limitation_codes: limitations.map((row) => row.reason_code),
       };
 
-      const exactSeason = season.status === "EXACT" ? season.value : null;
+      const exactSeason = exactSeasonSource;
       const envelopeSeasonId = state.status === "AVAILABLE" ? state.scope.season_id : exactSeason?.season_id ?? null;
       const exactZone = state.status === "AVAILABLE" ? state.scope.zone_id : null;
       const envelope = envelopeV1({
