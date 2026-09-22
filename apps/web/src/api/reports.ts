@@ -1,3 +1,8 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_REPORT_ADAPTER
+ * Historical P1/P2 report API adapter retained for existing consumers and migration provenance.
+ * New post-FOUI product consumers must not bind directly to /api/v1/reports/*.
+ */
 import { apiRequest, apiRequestWithPolicy, ApiError, withQuery } from "./client";
 import type {
   OperationReportSingleResponseV1,
