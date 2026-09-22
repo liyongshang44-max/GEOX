@@ -150,6 +150,22 @@ async function main(): Promise<void> {
     (secondFailure as Error & { diagnostic_token?: string }).diagnostic_token,
     "MCFT_CAP09_GFS_PGRB2_F006",
   );
+  const secondStructured = secondFailure as Error & {
+    failure_stage?: string;
+    failure_token?: string;
+    member_kind?: string;
+    lead?: number;
+    local_retry_ordinal?: number;
+  };
+  assert.equal(secondStructured.failure_stage, "MEMBER_FETCH");
+  assert.equal(secondStructured.failure_token, "MCFT_CAP09_GFS_PGRB2_F006");
+  assert.equal(secondStructured.member_kind, "GFS_PGRB2_FILTER_RESPONSE");
+  assert.equal(secondStructured.lead, 6);
+  assert.equal(
+    secondStructured.local_retry_ordinal,
+    0,
+    "GFS_MEMBER_RETRY_ORDINAL_ZERO_WHEN_BUNDLE_LOCAL_RETRY_BUDGET_ALREADY_CONSUMED",
+  );
   assert.deepEqual(
     requestStarts,
     [
@@ -200,10 +216,23 @@ async function main(): Promise<void> {
     (exhaustedError as Error & { code?: string }).code,
     MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED_CODE_V1,
   );
+  const exhaustedStructured = exhaustedError as Error & {
+    diagnostic_token?: string;
+    failure_stage?: string;
+    failure_token?: string;
+    member_kind?: string;
+    lead?: number;
+    local_retry_ordinal?: number;
+  };
   assert.equal(
-    (exhaustedError as Error & { diagnostic_token?: string }).diagnostic_token,
+    exhaustedStructured.diagnostic_token,
     "MCFT_CAP09_GFS_PGRB2_F005",
   );
+  assert.equal(exhaustedStructured.failure_stage, "MEMBER_FETCH");
+  assert.equal(exhaustedStructured.failure_token, "MCFT_CAP09_GFS_PGRB2_F005");
+  assert.equal(exhaustedStructured.member_kind, "GFS_PGRB2_FILTER_RESPONSE");
+  assert.equal(exhaustedStructured.lead, 5);
+  assert.equal(exhaustedStructured.local_retry_ordinal, 1);
   assert.equal(
     exhaustedError.message.includes("https://"),
     false,
@@ -263,6 +292,10 @@ async function main(): Promise<void> {
     grib_filter_10s_responsible_sharing_preserved: true,
     deterministic_semantic_failure_not_retried: true,
     retry_exhaustion_has_sanitized_phase_token: true,
+    retry_exhaustion_has_structured_failure_stage: true,
+    retry_exhaustion_has_structured_member_kind: true,
+    retry_exhaustion_has_structured_lead: true,
+    retry_exhaustion_has_local_retry_ordinal: true,
     retry_exhaustion_url_leak: false,
     deterministic_test_clock_progresses_during_retry_waits: true,
     outer_attempt_budget_changed: false,
