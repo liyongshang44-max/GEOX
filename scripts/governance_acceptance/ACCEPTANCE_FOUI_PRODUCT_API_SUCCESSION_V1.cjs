@@ -52,6 +52,12 @@ assert(
   manifest.wave02_naming_rule === "DO_NOT_TREAT_RESERVED_TYPE_TOKEN_AS_IMPLEMENTED_CONTRACT; DEFINE_CONCRETE_CONTRACT_EXPLICITLY_BEFORE_ROUTE_OR_SITES_BINDING",
   "WAVE02_NAMING_RULE_MISSING",
 );
+assert(
+  manifest.wave01_adoption?.effective_on_protected_main_adoption === "ACCEPTED_FOR_NARROW_READ_ONLY_PRODUCT_PROJECTION_SUCCESSOR_CONSTRUCTION",
+  "WAVE01_SUCCESSOR_ADOPTION_MISSING",
+);
+assert(manifest.wave01_adoption?.command_construction_authorized === false, "WAVE01_COMMAND_BOUNDARY_WIDENED");
+assert(manifest.wave01_adoption?.authority_mutation_authorized === false, "WAVE01_AUTHORITY_MUTATION_WIDENED");
 assert(JSON.stringify(manifest.canonical_product_contract?.forbidden_projection_methods) === JSON.stringify(["POST","PUT","PATCH","DELETE"]), "BAD_FORBIDDEN_PRODUCT_METHODS");
 
 const expectedLegacy = new Map([
@@ -210,6 +216,15 @@ for (const watched of [
 ]) {
   assert((blueprintJson.watched_paths || []).includes(watched), `BLUEPRINT_WATCHED_PATH_MISSING:${watched}`);
 }
+assert(
+  blueprintJson.foui?.read_only_successor_construction_authorized_on_adoption === true,
+  "BLUEPRINT_READ_ONLY_SUCCESSOR_AUTHORIZATION_MISSING",
+);
+assertContains(
+  "docs/product_projection/GEOX-FOUI-PROJECTION-CONTRACT-WAVE-01-V1.md",
+  "Successor governance: upon protected-main adoption",
+  "WAVE01_SUCCESSOR_GOVERNANCE_NOTE_MISSING",
+);
 
 const successionMd = read("docs/frontend-productization/GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1.md");
 for (const invariant of [
