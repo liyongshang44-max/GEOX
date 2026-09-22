@@ -37,6 +37,7 @@
     "AttentionQueueProjectionV1"
   ],
   "planned_successor_contracts": [
+    "CustomerOverviewProjectionV1",
     "FieldSummaryProjectionV1",
     "FieldWorkspaceProjectionV1",
     "OperationSummaryProjectionV1",
@@ -135,13 +136,16 @@
   ],
   "first_successor_construction": {
     "contracts": [
+      "CustomerOverviewProjectionV1",
       "FieldSummaryProjectionV1",
       "FieldWorkspaceProjectionV1"
     ],
     "routes": [
+      "GET /api/product/v1/overview",
       "GET /api/product/v1/fields",
       "GET /api/product/v1/fields/:fieldRef"
     ],
+    "overview_attention_semantics": "SERVER_COMPOSED_FROM_GOVERNED_ATTENTION_QUEUE_NOT_BROWSER_INFERENCE",
     "database_schema_change_required_by_governance": false
   },
   "legacy_frontend_consumer_allowlist": {
@@ -197,11 +201,14 @@
       "CUSTOMER_OVERVIEW_ROUTE_DRIFT",
       "PRODUCT_PROJECTION_WATCHED_PATH_GAP",
       "WAVE01_RESERVED_TYPE_TOKEN_AMBIGUITY",
-      "WAVE01_PRE_CONSTRUCTION_STATUS_GAP"
+      "WAVE01_PRE_CONSTRUCTION_STATUS_GAP",
+      "FIRST_SUCCESSOR_MISSING_OVERVIEW",
+      "PRODUCT_API_CALLER_SCOPE_BOUNDARY_NOT_FROZEN"
     ],
     "remaining_blockers_for_sites_mock_frontend_handoff": [],
     "remaining_blockers_for_sites_real_data_binding": [
-      "MINIMAL_CANONICAL_PRODUCT_API_NOT_IMPLEMENTED_YET"
+      "MINIMAL_CANONICAL_PRODUCT_API_NOT_IMPLEMENTED_YET",
+      "SCOPED_READ_ONLY_TEST_PRINCIPAL_OR_EQUIVALENT_SERVER_SIDE_SESSION_NOT_CONFIGURED"
     ]
   },
   "wave01_reserved_projection_type_tokens": [
@@ -242,5 +249,16 @@
     "command_construction_authorized": false,
     "authority_mutation_authorized": false,
     "unscoped_future_route_promotion_authorized": false
+  },
+  "product_api_identity_scope_boundary": {
+    "authentication_required": true,
+    "principal_context": "SERVER_SIDE",
+    "client_supplied_scope_may_broaden_access": false,
+    "tenant_project_group_from_untrusted_query_may_grant_access": false,
+    "cross_scope_resource_response": "NOT_FOUND_OR_GOVERNED_DENIAL",
+    "browser_database_credentials": "FORBIDDEN",
+    "browser_service_wide_api_token": "FORBIDDEN",
+    "sites_test_principal": "SCOPED_READ_ONLY_NON_PRODUCTION_SERVER_SIDE_SECRET_ALLOWED_FOR_DATA_PATH_QUALIFICATION_ONLY",
+    "production_identity_provider": "SEPARATELY_GOVERNED"
   }
 }
