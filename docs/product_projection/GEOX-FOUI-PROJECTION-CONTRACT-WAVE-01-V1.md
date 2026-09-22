@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> Successor governance: upon protected-main adoption of `GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1`, this Wave-01 contract is accepted for narrow read-only Product Projection successor construction. The original `PRE-CONSTRUCTION FREEZE CANDIDATE` label below is retained as historical provenance and does not authorize command or authority mutation.
+
 # GEOX FOUI — Product Projection Contract Wave-01 V1
 
 Status: **PRE-CONSTRUCTION FREEZE CANDIDATE**
