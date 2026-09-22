@@ -164,6 +164,9 @@ function writeOverride(file){
     `    image: ${MINIO_IMAGE}`,
     "  minio-init:",
     `    image: ${MC_IMAGE}`,
+    "  evidence-runtime:",
+    "    environment:",
+    "      GEOX_MCFT_CAP09_ZONE_ID: ${GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID:?GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID is required}",
     "",
   ].join("\n"),{mode:0o600});
 }
@@ -171,6 +174,8 @@ function focusedSafety(){
   const pnpm=process.platform==="win32"?"pnpm.cmd":"pnpm";
   for(const script of [
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_BASELINE_V1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts",
   ]){
@@ -372,6 +377,7 @@ function start(){
     GEOX_PHASE5_FIELD_ID:"field_kbs_mcse_t4r1",
     GEOX_PHASE5_SEASON_ID:"season_2026_corn",
     GEOX_PHASE5_ZONE_ID:"zone_kbs_mcse_t4r1_crop_formal_v1",
+    GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID:"zone_kbs_mcse_t4r1_evidence_burnin_v1",
     GEOX_PHASE5_FIXTURE_ROOT:fixtureRoot,
     GEOX_PHASE5_CONTROL_ROOT:controlRoot,
     GEOX_PHASE5_RUN_CLASS:"REAL_CLOCK_REHEARSAL",
