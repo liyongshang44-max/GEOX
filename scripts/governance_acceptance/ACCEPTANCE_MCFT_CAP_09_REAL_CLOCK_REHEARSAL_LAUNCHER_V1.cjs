@@ -53,6 +53,10 @@ try{
     'live_production_provider_path:true',
     'unsafe_raw_log_retained:false',
     'provider_attempt_outcome_count:completed+retryable',
+    'LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD=2*HOUR',
+    'LIVE_EVIDENCE_MINIMUM_RUNTIME_BEFORE_A0=45*MINUTE',
+    '"REAL_CLOCK_REHEARSAL_EVIDENCE_RUNTIME_PRE_A0_WINDOW_TOO_SHORT"',
+    'selected_pre_a0_lead_seconds',
     '"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1.ts"',
     '"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts"',
     '"CONTROLLED_PROCESS_RESTART_ACROSS_ONE_REAL_UTC_BOUNDARY"',
@@ -91,6 +95,8 @@ try{
   assert.match(source,/fatal_attempt_failure_count:fatal/);
   assert.match(source,/starting>=1&&\(completed\+retryable\)>=1&&fatal===0/);
   assert.match(source,/GEOX_MCFT_CAP09_ZONE_ID: \$\{GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID/);
+  assert.match(source,/strictNextUtcHour\(nowMs\+LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD\)/);
+  assert.match(source,/evidenceRuntimePreA0Ms>=LIVE_EVIDENCE_MINIMUM_RUNTIME_BEFORE_A0/);
 
   write({
     schema_version:"geox_mcft_cap09_real_clock_rehearsal_launcher_acceptance_v1",
@@ -109,6 +115,8 @@ try{
     retryable_provider_failure_is_observable_not_automatically_fatal:true,
     fatal_provider_failure_forbids_rehearsal_pass:true,
     sanitized_evidence_health_proof_retained:true,
+    live_evidence_pre_a0_selection_lead_reserved:true,
+    minimum_live_evidence_runtime_before_a0_seconds:2700,
     rehearsal_non_authority_claims_locked:true,
     formal_closure_substitution:false,
     production_effect:false,
