@@ -1,3 +1,11 @@
+> [!IMPORTANT]
+> lifecycle: HISTORICAL_PRODUCT_CONTRACT  
+> new_product_construction: SUPERSEDED  
+> compatibility: MAINTENANCE_ONLY  
+> canonical_successor: `GEOX Frontend Canonical Blueprint V1` + `GEOX Product Data Contract Succession V1` + FOUI Product Projection contracts  
+>
+> This readiness matrix remains valid as P1/P2 implementation provenance. Its historical readiness labels do **not** authorize new post-FOUI product consumers. New product construction uses `/api/product/v1/*`.
+
 # P1_API_READINESS_MATRIX_V1
 
 状态：P1-A0 API readiness baseline.

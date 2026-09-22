@@ -126,7 +126,7 @@
       ],
       "properties": {
         "projection_id": { "type": "string", "minLength": 1 },
-        "projection_type": { "enum": ["GOVERNED_ACTION_CASE", "CAPABILITY_AVAILABILITY", "ATTENTION_QUEUE", "FIELD_PORTFOLIO", "DECISION_PRODUCT", "GOVERNED_ACTION_LIST", "EVIDENCE_CASE"] },
+        "projection_type": { "enum": ["GOVERNED_ACTION_CASE", "CAPABILITY_AVAILABILITY", "ATTENTION_QUEUE", "CUSTOMER_OVERVIEW", "FIELD_SUMMARY", "FIELD_WORKSPACE", "FIELD_PORTFOLIO", "DECISION_PRODUCT", "GOVERNED_ACTION_LIST", "EVIDENCE_CASE"] },
         "projection_schema_version": { "const": "geox.product-projection.v1" },
         "generated_at": { "type": "string", "format": "date-time" },
         "derivation_version": { "type": "string", "minLength": 1 },

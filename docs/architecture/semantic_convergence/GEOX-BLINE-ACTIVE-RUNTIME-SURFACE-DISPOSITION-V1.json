@@ -61,7 +61,8 @@
         "apps/server/src/modules/roi/registerRoiLedgerModule.ts",
         "apps/server/src/modules/operator/registerOperatorModule.ts",
         "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts",
-        "apps/server/src/modules/runtime_health/registerRuntimeHealthModule.ts"
+        "apps/server/src/modules/runtime_health/registerRuntimeHealthModule.ts",
+        "apps/server/src/modules/product/registerProductModule.ts"
       ],
       "replacement_path": [
         "SELF"
@@ -2623,6 +2624,44 @@
       ],
       "runtime_reachable": "PROVEN_BY_BACKGROUND_WORKER_GRAPH",
       "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-131",
+      "source_path": "apps/server/src/modules/product/registerProductModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/product_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "KEEP_WHILE_CANONICAL_PRODUCT_API_IS_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "PRODUCT"
+    },
+    {
+      "surface_id": "ARS-132",
+      "source_path": "apps/server/src/routes/product_v1.ts",
+      "activation_parent": [
+        "apps/server/src/modules/product/registerProductModule.ts"
+      ],
+      "surface_role": "READ_ONLY",
+      "delegates_to": [],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "KEEP_CANONICAL_FOUI_PRODUCT_PROJECTION_READ_ONLY",
+      "semantic_family": [
+        "presentation.read_model"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "PRODUCT"
     }
   ],
   "background_runtime_roots": [

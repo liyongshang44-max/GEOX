@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-v2-qualification-equivalence-v1' && github.event.pull_request.base.sha == '6ff48eca10c1d25365c39f9d1e4dbb14d6c1ad91')) && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-v2-qualification-equivalence-v1' && github.event.pull_request.base.sha == '362bff47d73eb1997338f68332ea80f584632a63')) && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -67,11 +67,11 @@ jobs:
           elif [ '${{ github.base_ref }}' = 'main' ] && \
                [ '${{ github.head_ref }}' = 'fix/mcft-cap09-v2-qualification-equivalence-v1' ]; then
 
-            test '${{ github.event.pull_request.base.sha }}' = '6ff48eca10c1d25365c39f9d1e4dbb14d6c1ad91'
+            test '${{ github.event.pull_request.base.sha }}' = '362bff47d73eb1997338f68332ea80f584632a63'
             test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
 
             git fetch --no-tags origin main
-            test "$(git rev-parse origin/main)" = '6ff48eca10c1d25365c39f9d1e4dbb14d6c1ad91'
+            test "$(git rev-parse origin/main)" = '362bff47d73eb1997338f68332ea80f584632a63'
 
             # This successor changes qualification packaging only. Production V2
             # routing must remain current and test-seam-free.
