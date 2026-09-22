@@ -396,6 +396,76 @@ async function main(): Promise<void> {
     "PHASE5_VERIFY_REAL_CLOCK_REHEARSAL_RUN_CLASS_REQUIRED",
   );
 
+  const taskbook = fs.readFileSync(
+    path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md"),
+    "utf8",
+  );
+  const stage1bScope = fs.readFileSync(
+    path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-STAGE-1B-SCOPE-CONTRACT-V1.json"),
+    "utf8",
+  );
+  const externalFormalConfig = fs.readFileSync(
+    path.resolve("apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts"),
+    "utf8",
+  );
+  const s5CanonicalAdapter = fs.readFileSync(
+    path.resolve("apps/server/src/runtime/twin_runtime/postgres_cap04_shadow_online_canonical_tick_adapter_v1.ts"),
+    "utf8",
+  );
+  const historicalResidual = fs.readFileSync(
+    path.resolve("apps/server/src/runtime/twin_runtime/forecast_residual_outcome_tick_service_v1.ts"),
+    "utf8",
+  );
+  const externalEvidenceBinding = fs.readFileSync(
+    path.resolve("apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts"),
+    "utf8",
+  );
+  assert.equal(
+    taskbook.includes("HA-18  Residual eligibility preserved")
+      && taskbook.includes("Residual creation only when verification Evidence becomes eligible"),
+    true,
+    "PHASE5_HA18_TASKBOOK_CONDITIONAL_ELIGIBILITY_REQUIRED",
+  );
+  assert.equal(
+    stage1bScope.includes("CONTROLLED_ACTION_FEEDBACK_CLOSURE"),
+    true,
+    "PHASE5_HA18_CONTROLLED_ACTION_FEEDBACK_SEPARATE_QUALIFICATION_REQUIRED",
+  );
+  assert.equal(
+    externalFormalConfig.includes(
+      '"MCFT_CAP09_EXTERNAL_FORMAL_RUNTIME_AUTHORITY_V1" as const',
+    ),
+    true,
+    "PHASE5_HA18_EXTERNAL_FORMAL_CONFIG_PURPOSE_REQUIRED",
+  );
+  assert.equal(
+    s5CanonicalAdapter.includes(
+      "config.payload.config_purpose===CAP05_RUNTIME_CONFIG_PURPOSE_V1",
+    )
+      && s5CanonicalAdapter.includes('disposition="RUNTIME_CONFIG_NOT_CAP05"'),
+    true,
+    "PHASE5_HA18_S5_CAP05_CONDITIONAL_GATE_REQUIRED",
+  );
+  assert.equal(
+    historicalResidual.includes(
+      "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
+    ),
+    true,
+    "PHASE5_HA18_HISTORICAL_CAP05_200MM_OPERATOR_REQUIRED",
+  );
+  assert.equal(
+    externalEvidenceBinding.includes(
+      "POINT_100MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
+    ),
+    true,
+    "PHASE5_HA18_EXTERNAL_FORMAL_100MM_OPERATOR_REQUIRED",
+  );
+  assert.equal(
+    twinProcessSource.includes("Cap05ForecastResidualOutcomeTickServiceV1"),
+    false,
+    "PHASE5_HA18_CAP05_RESIDUAL_PRODUCTION_WIRING_FORBIDDEN",
+  );
+
   const proof = {
     status: "PASS",
     acceptance_id: "MCFT_CAP09_PHASE5_QUALIFICATION_COMPOSE_V1",
@@ -407,6 +477,12 @@ async function main(): Promise<void> {
     qualification_reuses_production_v2_composition: true,
     production_v2_process_remains_free_of_qualification_clock_seams: true,
     qualification_uses_v4_stage_authority_mounts: true,
+    ha18_preformal_adjudication: "CONDITIONAL_ZERO_CURRENT_EXTERNAL_FORMAL_SCOPE",
+    ha18_external_formal_runtime_config_is_cap05: false,
+    ha18_controlled_action_feedback_closure_established: false,
+    ha18_historical_s5_positive_c_semantics_preserved: true,
+    ha18_direct_100mm_to_historical_cap05_200mm_edge_authorized: false,
+    ha18_final_status: "PENDING_FORMAL_DATABASE_EVIDENCE",
     real_clock_rehearsal_compose_rendered: true,
     scientific_runtime_image_pinned: true,
     live_raw_capture_has_no_database_or_s3_credentials: true,
