@@ -22,7 +22,7 @@ The routes are read-only and non-authoritative.
 
 ## 1. Data path
 
-PostgreSQL -> public.field_index_v1 -> public.twin_active_lineage_index_v1 -> canonical MCFT CAP-07 S4 read model -> exact current posterior state -> public.twin_state_history_projection_v1 -> PostgresCustomerProductProjectionBuilderV1 -> /api/product/v1/* -> Sites / Product UI.
+PostgreSQL -> exact-scoped public.facts / public.twin_active_lineage_index_v1 -> optional public.field_index_v1 identity enrichment -> canonical MCFT CAP-07 S4 read model -> exact current posterior state -> public.twin_state_history_projection_v1 -> PostgresCustomerProductProjectionBuilderV1 -> /api/product/v1/* -> Sites / Product UI.
 
 No legacy Customer presentation API is used as a source.
 
@@ -44,15 +44,31 @@ Wave-02 does not calculate or mint MCFT state, risk, severity, recommendation, a
 
 The Product Projection reads an already-canonical MCFT posterior state and exposes only source-backed state values.
 
-## 3. Field identity source
+## 3. Field discovery and identity source
 
-Customer-safe field identity uses the bounded subset of public.field_index_v1.
+The production MCFT database currently has a tenant-scoped `public.field_index_v1` whose physical key is `(tenant_id, field_id)`; it does not carry `project_id` or `group_id`.
 
-Current Wave-02 fields are field identifier, display name when present, area in hectares when present, and source update timestamp for non-authority row versioning.
+Therefore Wave-02 does not use Field Index itself to establish project/group membership.
 
-The Field Index reference is explicitly a non-authority Product Projection source.
+Field discovery is first constrained by exact caller scope from governed database records:
 
-Missing display metadata remains null/unavailable. The API does not expose a raw identifier as a fabricated customer display name.
+- `public.facts.record_json.payload.tenant_id/project_id/group_id/field_id`; and/or
+- `public.twin_active_lineage_index_v1` exact tenant/project/group/field scope.
+
+Only after a Field is established inside the caller's exact scope may `public.field_index_v1` enrich customer-safe display identity by `tenant_id + field_id`.
+
+For client callers, the existing `allowed_field_ids` scope remains an additional authorization intersection.
+
+The exact scoped fact used as field-discovery basis is retained as a non-authoritative source reference. It proves only that the Field scope occurs in governed data; it does not turn an Evidence fact into Field authority.
+
+Current Wave-02 identity enrichment fields are display name when present, area in hectares when present, and source update timestamp for non-authority row versioning.
+
+If no Field Index row exists, the Field may still be returned when exact scoped governed data establishes its existence, but:
+
+- display name remains null / UNAVAILABLE;
+- area remains null;
+- `FIELD_IDENTITY_NOT_ESTABLISHED` is emitted;
+- the raw field identifier is not fabricated into a customer display name.
 
 Farm, crop, crop stage, season display metadata and geometry are not projected in this wave. Their absence is explicit in limitation reason codes.
 
