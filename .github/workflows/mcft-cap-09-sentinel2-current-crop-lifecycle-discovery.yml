@@ -1,0 +1,182 @@
+name: mcft-cap-09-sentinel2-current-crop-lifecycle-discovery
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-sentinel2-current-crop-discovery
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-SENTINEL2-CURRENT-CROP-LIFECYCLE-DISCOVERY-DESIGN.md'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY.mjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY.cjs'
+      - '.github/workflows/mcft-cap-09-sentinel2-current-crop-lifecycle-discovery.yml'
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-SENTINEL2-CURRENT-CROP-LIFECYCLE-DISCOVERY-DESIGN.md'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY.mjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY.cjs'
+      - '.github/workflows/mcft-cap-09-sentinel2-current-crop-lifecycle-discovery.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+    inputs:
+      run_live:
+        description: 'Run the credentialed Sentinel-2 discovery probe'
+        required: true
+        default: false
+        type: boolean
+      discovery_end_utc:
+        description: 'Optional exact UTC discovery end (ISO-8601); blank uses runtime now'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-sentinel2-discovery-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  static-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=23f224c701dbe0b8bd56eceff3741cb1c3dc1f78" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Syntax-check discovery code
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY.mjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY.cjs
+
+      - name: Execute exact-boundary discovery gate
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY.cjs
+
+      - name: Verify fail-closed discovery boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = 'acceptance-output/MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY_BOUNDARY.json';
+          const x = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (x.status !== 'PASS') throw new Error('SENTINEL2_DISCOVERY_BOUNDARY_PASS_REQUIRED');
+          if (x.exact_four_file_boundary !== true) throw new Error('SENTINEL2_DISCOVERY_EXACT_FOUR_FILE_BOUNDARY_REQUIRED');
+          if (x.restricted_kbs_geometry_committed !== false) throw new Error('RESTRICTED_KBS_GEOMETRY_COMMIT_FORBIDDEN');
+          if (x.copernicus_secret_values_committed !== false) throw new Error('COPERNICUS_SECRET_COMMIT_FORBIDDEN');
+          if (x.current_season_lifecycle_authority_established !== false) throw new Error('SATELLITE_LIFECYCLE_AUTHORITY_MUST_REMAIN_FALSE');
+          if (x.current_phenology_authority_established !== false) throw new Error('SATELLITE_PHENOLOGY_AUTHORITY_MUST_REMAIN_FALSE');
+          if (x.current_crop_model_parameter_authority_established !== false) throw new Error('SATELLITE_MODEL_PARAMETER_AUTHORITY_MUST_REMAIN_FALSE');
+          if (x.ea5e2_operational_activation_qualified !== false || x.formal_execution_count !== '0/24') throw new Error('SATELLITE_DISCOVERY_ACTIVATION_EFFECT_FORBIDDEN');
+          if (x.runtime_write_count !== 0 || x.database_write_count !== 0 || x.scheduler_write_count !== 0 || x.formal_evidence_write_count !== 0) throw new Error('SATELLITE_DISCOVERY_WRITES_FORBIDDEN');
+          if (x.authority_effect !== 'NONE') throw new Error('SATELLITE_DISCOVERY_AUTHORITY_EFFECT_MUST_BE_NONE');
+          console.log(JSON.stringify({status:x.status, authority_effect:x.authority_effect, formal:x.formal_execution_count}));
+          NODE
+
+      - name: Upload static discovery boundary artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-sentinel2-discovery-boundary-${{ steps.authority.outputs.subject_sha }}
+          path: acceptance-output/MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY_BOUNDARY.json
+          if-no-files-found: error
+          retention-days: 90
+
+  live-sentinel2-discovery:
+    needs: static-boundary
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Verify exact protected-main ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 23f224c701dbe0b8bd56eceff3741cb1c3dc1f78 HEAD
+
+      - name: Verify ephemeral credential binding is present without printing its value
+        shell: bash
+        env:
+          CDSE_SENTINEL_HUB_ACCESS_TOKEN: ${{ secrets.CDSE_SENTINEL_HUB_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$CDSE_SENTINEL_HUB_ACCESS_TOKEN"
+
+      - name: Execute live Sentinel-2 current-crop lifecycle discovery
+        shell: bash
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_SENTINEL2_DISCOVERY_END_UTC: ${{ inputs.discovery_end_utc }}
+          CDSE_SENTINEL_HUB_ACCESS_TOKEN: ${{ secrets.CDSE_SENTINEL_HUB_ACCESS_TOKEN }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY.mjs
+
+      - name: Verify sanitized discovery result and zero authority effect
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = 'acceptance-output/MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY.json';
+          const raw = fs.readFileSync(p, 'utf8');
+          const x = JSON.parse(raw);
+          if (x.status !== 'PASS') throw new Error('SENTINEL2_LIVE_DISCOVERY_PASS_REQUIRED');
+          if (x.represented_formal_site_id !== 'KBS_MCSE_T1R1') throw new Error('SENTINEL2_LIVE_EXACT_SITE_REQUIRED');
+          if (!(x.catalog?.scene_count > 0)) throw new Error('SENTINEL2_LIVE_SCENE_REQUIRED');
+          if (x.restricted_kbs_geometry_binding?.raw_geometry_emitted !== false || x.restricted_kbs_geometry_binding?.geometry_coordinates_emitted !== false) throw new Error('SENTINEL2_RESTRICTED_GEOMETRY_EMISSION_FORBIDDEN');
+          if (x.copernicus_auth?.long_lived_client_credentials_consumed_by_probe !== false || x.copernicus_auth?.access_token_emitted !== false) throw new Error('SENTINEL2_CREDENTIAL_EMISSION_FORBIDDEN');
+          if (x.interpretation?.current_season_lifecycle_authority_established !== false) throw new Error('SENTINEL2_LIFECYCLE_AUTHORITY_MUST_REMAIN_FALSE');
+          if (x.interpretation?.current_phenology_authority_established !== false) throw new Error('SENTINEL2_PHENOLOGY_AUTHORITY_MUST_REMAIN_FALSE');
+          if (x.interpretation?.current_crop_model_parameter_authority_established !== false) throw new Error('SENTINEL2_MODEL_PARAMETER_AUTHORITY_MUST_REMAIN_FALSE');
+          if (x.authority_effect !== 'NONE') throw new Error('SENTINEL2_LIVE_AUTHORITY_EFFECT_MUST_BE_NONE');
+          if (x.runtime_write_count !== 0 || x.database_write_count !== 0 || x.scheduler_write_count !== 0 || x.formal_evidence_write_count !== 0) throw new Error('SENTINEL2_LIVE_WRITES_FORBIDDEN');
+          if (x.ea5e2_operational_activation_qualified !== false || x.formal_execution_count !== '0/24') throw new Error('SENTINEL2_LIVE_ACTIVATION_EFFECT_FORBIDDEN');
+          if (/POLYGON\s*\(\(/i.test(raw)) throw new Error('SENTINEL2_RAW_POLYGON_ARTIFACT_FORBIDDEN');
+          console.log(JSON.stringify({status:x.status, scenes:x.catalog.scene_count, authority_effect:x.authority_effect, formal:x.formal_execution_count}));
+          NODE
+
+      - name: Upload sanitized live discovery artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-sentinel2-live-discovery-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_SENTINEL2_CURRENT_CROP_LIFECYCLE_DISCOVERY.json
+          if-no-files-found: error
+          retention-days: 90
