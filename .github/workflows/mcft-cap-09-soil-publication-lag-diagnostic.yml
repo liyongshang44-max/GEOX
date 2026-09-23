@@ -1,0 +1,138 @@
+name: mcft-cap-09-soil-publication-lag-diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-soil-publication-lag-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  observe-endpoint25:
+    runs-on: ubuntu-latest
+    timeout-minutes: 85
+    steps:
+      - name: Observe endpoint 25 exact-row first-seen publication for 75 minutes
+        shell: node {0}
+        run: |
+          const crypto=require('node:crypto');
+          const fs=require('node:fs');
+          const endpoint='https://lter.kbs.msu.edu/weather/variates/25';
+          const SAMPLE_INTERVAL_MS=60_000;
+          const SAMPLE_COUNT=76;
+          const PHASE_MINUTES=new Set([45,50,55]);
+          const PHASE_BUDGETS={45:10,50:5,55:0};
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          function nearestRank(values,p){
+            if(!values.length)return null;
+            const sorted=[...values].sort((a,b)=>a-b);
+            return sorted[Math.max(0,Math.ceil(p*sorted.length)-1)];
+          }
+          async function sample(index){
+            const requestedAt=new Date();
+            const response=await fetch(endpoint,{method:'GET',redirect:'follow',headers:{Accept:'application/json,*/*;q=0.5','User-Agent':'GEOX-MCFT-CAP09-EA5E2-SOIL-EXACT-ROW-FIRST-SEEN/1','Cache-Control':'no-cache',Pragma:'no-cache'},signal:AbortSignal.timeout(30000)});
+            const bytes=Buffer.from(await response.arrayBuffer());
+            const retrievedAt=new Date();
+            if(!response.ok)throw new Error(`KBS_SOIL_DIAGNOSTIC_HTTP:${response.status}`);
+            const final=new URL(response.url||endpoint);
+            if(final.protocol!=='https:'||final.hostname!=='lter.kbs.msu.edu'||final.pathname!=='/weather/variates/25')throw new Error('KBS_SOIL_DIAGNOSTIC_IDENTITY_DRIFT');
+            const parsed=JSON.parse(bytes.toString('utf8'));
+            if(!Array.isArray(parsed))throw new Error('KBS_SOIL_DIAGNOSTIC_ARRAY_REQUIRED');
+            const timestamps=[...new Set(parsed.map(v=>v&&typeof v==='object'&&typeof v.time==='string'&&Number.isFinite(Date.parse(v.time))?new Date(Date.parse(v.time)).toISOString():null).filter(Boolean))].sort();
+            if(timestamps.length<8)throw new Error('KBS_SOIL_DIAGNOSTIC_TIMESTAMP_HISTORY_REQUIRED');
+            const tail=timestamps.slice(-8);
+            const gaps=tail.slice(1).map((v,i)=>(Date.parse(v)-Date.parse(tail[i]))/60000);
+            return {sample_index:index,requested_at:requestedAt.toISOString(),retrieved_at:retrievedAt.toISOString(),latest_timestamp:tail.at(-1),latest_age_minutes:Number(((retrievedAt-Date.parse(tail.at(-1)))/60000).toFixed(3)),timestamp_tail:tail,timestamp_tail_gaps_minutes:gaps,response_sha256:`sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`,response_bytes:bytes.length,raw_values_emitted:false,_timestamps:timestamps};
+          }
+          (async()=>{
+            const samples=[];
+            const latestTransitions=[];
+            const exactRowFirstSeen=[];
+            const knownTimestamps=new Set();
+            let baselineLatestMs=null;
+            let previous=null;
+            for(let index=0;index<SAMPLE_COUNT;index+=1){
+              const current=await sample(index);
+              if(index===0){
+                baselineLatestMs=Date.parse(current.latest_timestamp);
+                for(const ts of current._timestamps)knownTimestamps.add(ts);
+              }else{
+                const newlyVisible=current._timestamps.filter(ts=>!knownTimestamps.has(ts)).sort();
+                for(const ts of newlyVisible){
+                  knownTimestamps.add(ts);
+                  const sourceMs=Date.parse(ts);
+                  if(sourceMs<=baselineLatestMs)continue;
+                  const minute=new Date(sourceMs).getUTCMinutes();
+                  const lag=Number(((Date.parse(current.retrieved_at)-sourceMs)/60000).toFixed(3));
+                  const row={source_timestamp:ts,source_minute_utc:minute,last_not_seen_at:previous.retrieved_at,first_seen_at:current.retrieved_at,first_seen_lag_minutes:lag,sampling_interval_seconds:SAMPLE_INTERVAL_MS/1000,first_seen_is_upper_bound:true,exact_hour_phase_member:PHASE_MINUTES.has(minute),derived_ingress_budget_minutes:PHASE_MINUTES.has(minute)?PHASE_BUDGETS[minute]:null,visible_by_derived_ingress_deadline:PHASE_MINUTES.has(minute)?lag<=PHASE_BUDGETS[minute]:null,response_sha256_at_first_seen:current.response_sha256,response_bytes_at_first_seen:current.response_bytes};
+                  exactRowFirstSeen.push(row);
+                }
+              }
+              if(previous&&current.latest_timestamp!==previous.latest_timestamp){
+                const sourceAdvanceMinutes=(Date.parse(current.latest_timestamp)-Date.parse(previous.latest_timestamp))/60000;
+                if(sourceAdvanceMinutes<=0)throw new Error(`KBS_SOIL_DIAGNOSTIC_NON_FORWARD_LATEST:${previous.latest_timestamp}:${current.latest_timestamp}`);
+                latestTransitions.push({from_latest_timestamp:previous.latest_timestamp,to_latest_timestamp:current.latest_timestamp,source_advance_minutes:sourceAdvanceMinutes,last_not_seen_at:previous.retrieved_at,first_seen_at:current.retrieved_at,first_seen_lag_minutes:Number(((Date.parse(current.retrieved_at)-Date.parse(current.latest_timestamp))/60000).toFixed(3)),sampling_interval_seconds:SAMPLE_INTERVAL_MS/1000,first_seen_is_upper_bound:true,response_sha256_at_first_seen:current.response_sha256,response_bytes_at_first_seen:current.response_bytes});
+              }
+              const publicSample={...current};
+              delete publicSample._timestamps;
+              samples.push(publicSample);
+              previous=current;
+              console.log(JSON.stringify({sample_index:index,retrieved_at:current.retrieved_at,latest_timestamp:current.latest_timestamp,latest_age_minutes:current.latest_age_minutes,latest_transition_count:latestTransitions.length,exact_row_first_seen_count:exactRowFirstSeen.length,phase_row_count:exactRowFirstSeen.filter(r=>r.exact_hour_phase_member).length,raw_values_emitted:false}));
+              if(index<SAMPLE_COUNT-1)await sleep(SAMPLE_INTERVAL_MS);
+            }
+            const latestLags=latestTransitions.map(t=>t.first_seen_lag_minutes);
+            const rowLags=exactRowFirstSeen.map(t=>t.first_seen_lag_minutes);
+            const cadenceGaps=samples.flatMap(s=>s.timestamp_tail_gaps_minutes);
+            const phaseProfiles=[45,50,55].map(minute=>{
+              const rows=exactRowFirstSeen.filter(r=>r.source_minute_utc===minute);
+              return {source_minute_utc:minute,derived_ingress_budget_minutes:PHASE_BUDGETS[minute],sample_count:rows.length,first_seen_lag_upper_bounds_minutes:rows.map(r=>r.first_seen_lag_minutes),all_samples_visible_by_derived_ingress_deadline:rows.length>0&&rows.every(r=>r.visible_by_derived_ingress_deadline===true)};
+            });
+            const proof={
+              schema_version:'geox_mcft_cap09_soil_exact_row_first_seen_diagnostic_v3',
+              status:'PASS',
+              endpoint_id:25,
+              endpoint_identity:'KBS_CURRENT_WEATHER_VARIATE_25',
+              observation_duration_minutes:(SAMPLE_COUNT-1)*SAMPLE_INTERVAL_MS/60000,
+              sampling_interval_seconds:SAMPLE_INTERVAL_MS/1000,
+              sample_count:samples.length,
+              baseline_latest_timestamp:samples[0].latest_timestamp,
+              latest_transition_count:latestTransitions.length,
+              exact_row_first_seen_count:exactRowFirstSeen.length,
+              observed_source_cadence_minutes:cadenceGaps.length&&cadenceGaps.every(v=>v===5)?5:null,
+              latest_transition_lag_p50_minutes:nearestRank(latestLags,0.5),
+              latest_transition_lag_p95_minutes:nearestRank(latestLags,0.95),
+              latest_transition_lag_max_minutes:latestLags.length?Math.max(...latestLags):null,
+              exact_row_first_seen_lag_p50_minutes:nearestRank(rowLags,0.5),
+              exact_row_first_seen_lag_p95_minutes:nearestRank(rowLags,0.95),
+              exact_row_first_seen_lag_max_minutes:rowLags.length?Math.max(...rowLags):null,
+              exact_hour_phase_profiles:phaseProfiles,
+              latest_transitions:latestTransitions,
+              exact_row_first_seen:exactRowFirstSeen,
+              samples,
+              scheduler_viability_only:true,
+              authority_effect:false,
+              provider_request_count:samples.length,
+              formal_database_access_count:0,
+              formal_database_write_count:0,
+              raw_retention_count:0,
+              canonical_write_count:0,
+              scheduler_write_count:0,
+              live_activation_started:false,
+              public_value_artifact_count:0,
+              raw_values_emitted:false
+            };
+            fs.mkdirSync('acceptance-output',{recursive:true});
+            fs.writeFileSync('acceptance-output/MCFT_CAP_09_SOIL_PUBLICATION_LAG_DIAGNOSTIC.json',JSON.stringify(proof,null,2)+'\n');
+            console.log(JSON.stringify({status:proof.status,latest_transition_count:proof.latest_transition_count,exact_row_first_seen_count:proof.exact_row_first_seen_count,exact_hour_phase_profiles:proof.exact_hour_phase_profiles,observed_source_cadence_minutes:proof.observed_source_cadence_minutes,raw_values_emitted:false}));
+          })().catch(e=>{console.error(e instanceof Error?`${e.name}:${e.message}`:String(e));process.exitCode=1});
+
+      - name: Upload metadata-only exact-row first-seen diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-soil-publication-lag-diagnostic
+          path: acceptance-output/MCFT_CAP_09_SOIL_PUBLICATION_LAG_DIAGNOSTIC.json
+          if-no-files-found: warn
+          retention-days: 1
