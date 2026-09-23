@@ -370,6 +370,7 @@ export class Phase5ControlledProviderWorkItemFactoryV1 implements EvidenceRuntim
     const gfs: EvidenceRuntimeCycleWorkItemV1 = {
       work_item_id: `${prefix}:gfs-bundle`,
       dataset_id: "noaa_ncep_gfs_same_cycle_72h_bundle_v1",
+      file_backed: true,
       request: gfsRequest,
       transport: new GfsNomadsBundleTransportV1(gfsComposer, target, `${prefix}:gfs-members`),
       decoder: new GfsRawBundleEvidenceDecoderV1(target, {

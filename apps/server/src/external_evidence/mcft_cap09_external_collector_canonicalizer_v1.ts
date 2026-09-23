@@ -73,6 +73,17 @@ export interface ExternalEvidenceTransportPortV1 {
   fetchRawEvidence(request: ExternalEvidenceFetchRequestV1): Promise<ExternalEvidenceFetchResponseV1>;
 }
 
+export type FileBackedExternalEvidenceFetchResponseV1 = Omit<ExternalEvidenceFetchResponseV1, "bytes"> & {
+  file_path: string;
+  raw_sha256: string;
+  raw_bytes: number;
+  cleanup: () => void | Promise<void>;
+};
+
+export interface ExternalEvidenceFileBackedTransportPortV1 {
+  fetchRawEvidenceFile(request: ExternalEvidenceFetchRequestV1): Promise<FileBackedExternalEvidenceFetchResponseV1>;
+}
+
 export type RawEvidenceRetentionInputV1 = {
   retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE";
   request_id: string;
@@ -103,6 +114,14 @@ export type RawEvidenceRetentionReceiptV1 = {
 
 export interface RawEvidenceRetentionPortV1 {
   retainRawEvidence(input: RawEvidenceRetentionInputV1): Promise<RawEvidenceRetentionReceiptV1>;
+}
+
+export type RawEvidenceFileRetentionInputV1 = Omit<RawEvidenceRetentionInputV1, "bytes"> & {
+  file_path: string;
+};
+
+export interface RawEvidenceFileRetentionPortV1 {
+  retainRawEvidenceFile(input: RawEvidenceFileRetentionInputV1): Promise<RawEvidenceRetentionReceiptV1>;
 }
 
 export type VerifiedRawEvidenceProvenanceV1 = {
@@ -156,6 +175,15 @@ export interface ExternalEvidenceDecoderPortV1 {
   readonly decoder_id: string;
   readonly decoder_version: string;
   decodeRetainedEvidence(input: ExternalEvidenceDecoderInputV1): Promise<readonly GovernedDecodedEvidenceDraftV1[]>;
+}
+
+export type ExternalEvidenceFileDecoderInputV1 = {
+  raw_file_path: string;
+  provenance: VerifiedRawEvidenceProvenanceV1;
+};
+
+export interface ExternalEvidenceFileDecoderPortV1 {
+  decodeRetainedEvidenceFile(input: ExternalEvidenceFileDecoderInputV1): Promise<readonly GovernedDecodedEvidenceDraftV1[]>;
 }
 
 export type ExternalEvidencePipelineInputV1 = {
@@ -444,6 +472,118 @@ export async function collectAndRetainRawEvidenceV1(
     use_policy_ref: input.request.use_policy_ref,
   };
   return { provenance, raw_bytes: new Uint8Array(response.bytes) };
+}
+
+export async function collectRetainDecodeCanonicalizeFileBackedExternalEvidenceWithCompletionClockV1(
+  input: ExternalEvidenceLivePipelineInputV1,
+  ports: {
+    transport: ExternalEvidenceFileBackedTransportPortV1;
+    retention: RawEvidenceRetentionPortV1;
+    decoder: ExternalEvidenceDecoderPortV1;
+  },
+  completionClock: ExternalEvidenceCompletionClockV1 = () => new Date().toISOString(),
+): Promise<readonly CanonicalizedExternalEvidenceResultV1[]> {
+  validatePipelineRequestV1(input);
+  const response = await ports.transport.fetchRawEvidenceFile(input.request);
+  try {
+    requireCondition(
+      Number.isInteger(response.status) && response.status >= 200 && response.status < 300,
+      `EA3_SOURCE_HTTP_STATUS_NOT_SUCCESS:${response.status}`,
+    );
+    assertHttpsAllowedHost(response.final_locator, input.request.allowed_final_hosts, "EA3_FINAL_LOCATOR");
+    requireCondition(
+      input.request.expected_content_type_prefixes.some((prefix) =>
+        response.content_type.toLowerCase().startsWith(prefix.toLowerCase())
+      ),
+      `EA3_CONTENT_TYPE_NOT_ALLOWED:${response.content_type}`,
+    );
+    const retrievedAt = canonicalIso(response.retrieved_at, "EA3_RETRIEVED_AT_INVALID");
+    const availableAt = canonicalIso(response.available_at, "EA3_SOURCE_AVAILABLE_AT_INVALID");
+    requireCondition(Date.parse(availableAt) <= Date.parse(retrievedAt), "EA3_SOURCE_AVAILABLE_AFTER_RETRIEVAL");
+    requireCondition(text(response.file_path), "EA3_FILE_BACKED_PATH_REQUIRED");
+    requireCondition(/^sha256:[0-9a-f]{64}$/.test(response.raw_sha256), "EA3_FILE_BACKED_SHA256_INVALID");
+    requireCondition(Number.isSafeInteger(response.raw_bytes) && response.raw_bytes > 0, "EA3_FILE_BACKED_BYTES_INVALID");
+
+    const fileRetention = ports.retention as RawEvidenceRetentionPortV1 & Partial<RawEvidenceFileRetentionPortV1>;
+    requireCondition(typeof fileRetention.retainRawEvidenceFile === "function", "EA3_FILE_BACKED_RETENTION_PORT_REQUIRED");
+    const receipt = await fileRetention.retainRawEvidenceFile({
+      retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+      request_id: input.request.request_id,
+      provider_id: input.request.provider_id,
+      source_family: input.request.source_family,
+      source_locator: input.request.locator,
+      final_locator: response.final_locator,
+      content_type: response.content_type,
+      retrieved_at: retrievedAt,
+      available_at: availableAt,
+      source_issue_time: input.request.source_issue_time,
+      source_event_time: input.request.source_event_time,
+      use_policy_ref: input.request.use_policy_ref,
+      raw_sha256: response.raw_sha256,
+      raw_bytes: response.raw_bytes,
+      file_path: response.file_path,
+    });
+    requireCondition(receipt.retention_class === "PRIVATE_RESTRICTED_RAW_EVIDENCE", "EA3_RETENTION_CLASS_DRIFT");
+    requireCondition(text(receipt.retention_ref), "EA3_RETENTION_REF_REQUIRED");
+    requireCondition(receipt.retained_sha256 === response.raw_sha256, "EA3_RETENTION_DIGEST_MISMATCH");
+    requireCondition(receipt.retained_bytes === response.raw_bytes, "EA3_RETENTION_BYTE_COUNT_MISMATCH");
+    requireCondition(receipt.externally_publishable === false, "EA3_RAW_RETENTION_PUBLICATION_FORBIDDEN");
+    const objectRetainedAt = canonicalIso(receipt.retained_at, "EA3_RETAINED_AT_INVALID");
+    const retentionVerifiedAt = canonicalIso(
+      receipt.retention_verified_at ?? receipt.retained_at,
+      "EA3_RETENTION_VERIFIED_AT_INVALID",
+    );
+    requireCondition(
+      Date.parse(objectRetainedAt) <= Date.parse(retentionVerifiedAt),
+      "EA3_RETENTION_VERIFICATION_BEFORE_OBJECT_RETENTION",
+    );
+    requireCondition(Date.parse(retrievedAt) <= Date.parse(retentionVerifiedAt), "EA3_RETAINED_BEFORE_RETRIEVAL");
+
+    const provenance: VerifiedRawEvidenceProvenanceV1 = {
+      request_id: input.request.request_id,
+      provider_id: input.request.provider_id,
+      source_family: input.request.source_family,
+      source_locator: input.request.locator,
+      final_locator: response.final_locator,
+      content_type: response.content_type,
+      source_issue_time: input.request.source_issue_time,
+      source_event_time: input.request.source_event_time,
+      retrieved_at: retrievedAt,
+      available_at: availableAt,
+      raw_sha256: response.raw_sha256,
+      raw_bytes: response.raw_bytes,
+      retention_ref: receipt.retention_ref,
+      retained_at: objectRetainedAt,
+      use_policy_ref: input.request.use_policy_ref,
+    };
+
+    requireCondition(
+      text(ports.decoder.decoder_id) && text(ports.decoder.decoder_version),
+      "EA3_DECODER_IDENTITY_REQUIRED",
+    );
+    const fileDecoder = ports.decoder as ExternalEvidenceDecoderPortV1 & Partial<ExternalEvidenceFileDecoderPortV1>;
+    requireCondition(typeof fileDecoder.decodeRetainedEvidenceFile === "function", "EA3_FILE_BACKED_DECODER_PORT_REQUIRED");
+    const decoded = await fileDecoder.decodeRetainedEvidenceFile({
+      raw_file_path: response.file_path,
+      provenance,
+    });
+    requireCondition(decoded.length > 0, "EA3_DECODER_EMPTY_RESULT_FORBIDDEN");
+
+    const canonicalizedAt = canonicalIso(completionClock(), "EA3_COMPLETION_CLOCK_INVALID");
+    requireCondition(
+      Date.parse(provenance.retained_at) <= Date.parse(canonicalizedAt),
+      "EA3_CANONICALIZED_BEFORE_RAW_RETENTION",
+    );
+    return canonicalizeDecodedV1({
+      pipeline: input,
+      canonicalized_at: canonicalizedAt,
+      provenance,
+      decoded,
+      decoder: ports.decoder,
+    });
+  } finally {
+    await response.cleanup();
+  }
 }
 
 async function collectRetainDecodeV1(

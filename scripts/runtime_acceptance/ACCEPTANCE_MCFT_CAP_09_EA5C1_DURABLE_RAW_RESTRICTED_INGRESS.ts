@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { Pool } from "pg";
 
 import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
@@ -138,6 +141,40 @@ async function main(): Promise<void> {
   assert.ok(Date.parse(repeatSecond.retention_verified_at!) >= Date.parse(repeatRetrievedAt));
   assert.ok(Date.parse(repeatSecond.retention_verified_at!) >= Date.parse(repeatSecond.retained_at));
   ok("byte-identical later retrieval reuses immutable raw object identity with a fresh causal verification barrier");
+
+  const fileRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-ea5c1-file-retention-"));
+  try {
+    const fileBytes = Buffer.from(`EA5C1_FILE_STREAM_${crypto.randomUUID()}\n`, "utf8");
+    const filePath = path.join(fileRoot, "raw.bin");
+    fs.writeFileSync(filePath, fileBytes, { mode: 0o600 });
+    const fileDigest = sha256(fileBytes);
+    const fileRetrievedAt = iso(Date.now() - 1_000);
+    const fileReceipt = await retention.retainRawEvidenceFile({
+      retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+      request_id: "ea5c1-file-stream",
+      provider_id: "NOAA_NCEP_GFS",
+      source_family: "GFS_RAW_BUNDLE_72H_V1",
+      source_locator: "https://source.example.invalid/gfs-file",
+      final_locator: "https://source.example.invalid/gfs-file",
+      content_type: "application/x-tar",
+      retrieved_at: fileRetrievedAt,
+      available_at: fileRetrievedAt,
+      use_policy_ref: "GEOX-MCFT-CAP-09-AMENDMENT-05",
+      raw_sha256: fileDigest,
+      raw_bytes: fileBytes.byteLength,
+      file_path: filePath,
+    });
+    assert.equal(fileReceipt.retained_sha256, fileDigest);
+    assert.equal(fileReceipt.retained_bytes, fileBytes.byteLength);
+    await retention.verifyRetainedRawEvidence({
+      retention_ref: fileReceipt.retention_ref,
+      retained_sha256: fileDigest,
+      retained_bytes: fileBytes.byteLength,
+    });
+    ok("file-backed raw retention streams a SHA-bound private object and passes durable HEAD verification");
+  } finally {
+    fs.rmSync(fileRoot, { recursive: true, force: true });
+  }
 
   const started = Date.now();
   const boundaryMs = Math.ceil((started + 1) / 3_600_000) * 3_600_000;
@@ -347,7 +384,7 @@ async function main(): Promise<void> {
   assert.equal(Number(nonEvidence.rows[0].n), 0);
   ok("EA5C1 writes no Runtime Config, A0, State, Forecast, Scenario, Recommendation, Action, or scheduler facts");
 
-  assert.equal(pass, 12);
+  assert.equal(pass, 13);
   console.log(`MCFT-CAP-09 EA5C1 Durable Raw + Restricted Evidence Ingress: ${pass} PASS, 0 FAIL`);
   await pool.end();
 }

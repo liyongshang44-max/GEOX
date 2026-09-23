@@ -150,9 +150,13 @@ async function main(): Promise<void> {
   assert.equal(result.retention_before_scientific_decode, true);
   assert.equal(result.manifest.member_count, expectedRawObjects);
   assert.equal(result.manifest.product_bundle_composer_used, true);
-  assert.equal(result.bundle_bytes.byteLength, result.raw_bundle_bytes);
-  assert.equal(sha256(result.bundle_bytes), result.raw_bundle_sha256);
-  assert.equal(Buffer.from(result.bundle_bytes.slice(257, 263)).toString("ascii"), "ustar\0");
+  assert.equal(result.manifest.file_backed_bundle_composition, true);
+  const bundleStat = fs.statSync(result.bundle_file_path);
+  assert.equal(bundleStat.isFile(), true);
+  assert.equal(bundleStat.size, result.raw_bundle_bytes);
+  const bundleBytesForFocusedProof = fs.readFileSync(result.bundle_file_path);
+  assert.equal(sha256(bundleBytesForFocusedProof), result.raw_bundle_sha256);
+  assert.equal(bundleBytesForFocusedProof.subarray(257, 263).toString("ascii"), "ustar\0");
 
   let virtualNowMs = 1_000;
   const cadenceWaits: number[] = [];
@@ -203,21 +207,42 @@ async function main(): Promise<void> {
     "INSERT INTO",
     "UPDATE twin_",
     "DELETE FROM twin_",
-    "Buffer.from(entry.body)",
+    "Map<string, Uint8Array>",
+    "bundle_bytes: Uint8Array",
+    "Buffer.concat(chunks)",
     "new Uint8Array(Buffer.concat(chunks))",
   ]) {
     assert.equal(source.includes(forbidden), false, `PHASE3_GFS_COMPOSER_FORBIDDEN_DEPENDENCY:${forbidden}`);
   }
   assert.equal(
-    source.includes("entry.body.buffer") && source.includes("entry.body.byteOffset"),
+    source.includes("stageMemberFileV1") && source.includes("tarArchiveToFileV1"),
     true,
-    "PHASE3_GFS_COMPOSER_ZERO_COPY_MEMBER_VIEW_REQUIRED",
+    "PHASE3_GFS_COMPOSER_FILE_BACKED_STREAMING_REQUIRED",
   );
   assert.equal(
-    source.includes("return Buffer.concat(chunks);"),
+    source.includes("fs.createReadStream(entry.file_path") && source.includes("highWaterMark: 256 * 1024"),
     true,
-    "PHASE3_GFS_COMPOSER_FINAL_TAR_SINGLE_COPY_REQUIRED",
+    "PHASE3_GFS_COMPOSER_BOUNDED_MEMBER_STREAM_REQUIRED",
   );
+
+  const pythonDecoder = fs.readFileSync(
+    path.resolve("apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py"),
+    "utf8",
+  );
+  assert.equal(
+    pythonDecoder.includes("members: dict[str, bytes]"),
+    false,
+    "PHASE3_GFS_PRODUCT_DECODER_WHOLE_TAR_BYTE_MAP_FORBIDDEN",
+  );
+  assert.equal(
+    pythonDecoder.includes("read_tar_member_v1") && pythonDecoder.includes('with tarfile.open(input_path, "r") as tar:'),
+    true,
+    "PHASE3_GFS_PRODUCT_DECODER_MEMBER_AT_A_TIME_REQUIRED",
+  );
+
+  const stagedBundlePath = result.bundle_file_path;
+  result.cleanup();
+  assert.equal(fs.existsSync(stagedBundlePath), false, "PHASE3_GFS_COMPOSER_CLEANUP_REQUIRED");
 
   const proof = {
     schema_version: "geox_mcft_cap09_phase3_gfs_raw_bundle_composer_qualification_v1",
@@ -237,8 +262,11 @@ async function main(): Promise<void> {
     nomads_grib_filter_minimum_interval_ms:
       MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1,
     nomads_responsible_sharing_cadence_proven: true,
-    zero_copy_member_view_proven: true,
-    final_tar_single_copy_proven: true,
+    file_backed_member_staging_proven: true,
+    streamed_tar_composition_proven: true,
+    no_full_bundle_uint8array_result: true,
+    python_member_at_a_time_decode_proven: true,
+    staged_bundle_cleanup_proven: true,
     database_write_count: 0,
     runtime_tick_cursor_mutation: false,
     twin_state_mutation: false,

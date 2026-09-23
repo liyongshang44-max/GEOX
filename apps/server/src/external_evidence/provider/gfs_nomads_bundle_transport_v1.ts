@@ -4,9 +4,11 @@
 // deterministic tar is then retained by the generic Evidence pipeline before product decode.
 
 import type {
+  ExternalEvidenceFileBackedTransportPortV1,
   ExternalEvidenceFetchRequestV1,
   ExternalEvidenceFetchResponseV1,
   ExternalEvidenceTransportPortV1,
+  FileBackedExternalEvidenceFetchResponseV1,
 } from "../mcft_cap09_external_collector_canonicalizer_v1.js";
 import {
   GfsNomadsRawBundleComposerV1,
@@ -57,7 +59,8 @@ export function buildGfsNomadsBundleFetchRequestV1(input: {
   };
 }
 
-export class GfsNomadsBundleTransportV1 implements ExternalEvidenceTransportPortV1 {
+export class GfsNomadsBundleTransportV1
+  implements ExternalEvidenceTransportPortV1, ExternalEvidenceFileBackedTransportPortV1 {
   readonly transport_id = "MCFT_CAP09_GFS_NOMADS_BUNDLE_TRANSPORT_V1" as const;
   provider_request_count = 0;
 
@@ -70,7 +73,13 @@ export class GfsNomadsBundleTransportV1 implements ExternalEvidenceTransportPort
     if (!requestIdPrefix.trim()) throw new Error("PHASE3_GFS_BUNDLE_TRANSPORT_REQUEST_PREFIX_REQUIRED");
   }
 
-  async fetchRawEvidence(request: ExternalEvidenceFetchRequestV1): Promise<ExternalEvidenceFetchResponseV1> {
+  async fetchRawEvidence(_request: ExternalEvidenceFetchRequestV1): Promise<ExternalEvidenceFetchResponseV1> {
+    throw new Error("PHASE3_GFS_BUNDLE_FILE_BACKED_TRANSPORT_REQUIRED");
+  }
+
+  async fetchRawEvidenceFile(
+    request: ExternalEvidenceFetchRequestV1,
+  ): Promise<FileBackedExternalEvidenceFetchResponseV1> {
     if (request.provider_id !== MCFT_CAP09_GFS_BUNDLE_PROVIDER_ID_V1) {
       throw new Error("PHASE3_GFS_BUNDLE_PROVIDER_ID_MISMATCH");
     }
@@ -83,6 +92,7 @@ export class GfsNomadsBundleTransportV1 implements ExternalEvidenceTransportPort
     if (request.source_event_time !== this.targetLogicalTime) {
       throw new Error("PHASE3_GFS_BUNDLE_TARGET_MISMATCH");
     }
+
     const result = await this.composer.compose({
       target_logical_time: this.targetLogicalTime,
       request_id_prefix: this.requestIdPrefix,
@@ -94,7 +104,10 @@ export class GfsNomadsBundleTransportV1 implements ExternalEvidenceTransportPort
       content_type: "application/x-tar",
       retrieved_at: result.retrieved_at,
       available_at: result.retrieved_at,
-      bytes: result.bundle_bytes,
+      file_path: result.bundle_file_path,
+      raw_sha256: result.raw_bundle_sha256,
+      raw_bytes: result.raw_bundle_bytes,
+      cleanup: result.cleanup,
     };
   }
 }

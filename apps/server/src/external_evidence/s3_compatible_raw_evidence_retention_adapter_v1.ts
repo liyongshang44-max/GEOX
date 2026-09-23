@@ -3,10 +3,13 @@
 // never writes canonical facts, never decodes provider bytes, and never exposes presigned/public URLs.
 
 import crypto from "node:crypto";
+import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
 
 import type {
+  RawEvidenceFileRetentionInputV1,
+  RawEvidenceFileRetentionPortV1,
   RawEvidenceRetentionInputV1,
   RawEvidenceRetentionPortV1,
   RawEvidenceRetentionReceiptV1,
@@ -118,7 +121,7 @@ function keyFromRetentionRefV1(ref: string, bucket: string): string {
 }
 
 export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
-  implements RawEvidenceRetentionPortV1, RawEvidenceRetentionVerificationPortV1 {
+  implements RawEvidenceRetentionPortV1, RawEvidenceFileRetentionPortV1, RawEvidenceRetentionVerificationPortV1 {
   private readonly endpoint: URL;
   private readonly bucket: string;
   private readonly region: string;
@@ -223,6 +226,79 @@ export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
     return response;
   }
 
+  private async sha256FileHexV1(filePath: string): Promise<string> {
+    const hash = crypto.createHash("sha256");
+    const stream = fs.createReadStream(filePath, { highWaterMark: 256 * 1024 });
+    for await (const chunk of stream) hash.update(chunk as Buffer);
+    return hash.digest("hex");
+  }
+
+  private async putFileV1(input: {
+    key: string;
+    file_path: string;
+    raw_sha256: string;
+    raw_bytes: number;
+    content_type: string;
+    metadata: Record<string, string>;
+  }): Promise<SignedResponseV1> {
+    const payloadHash = rawDigestHexV1(input.raw_sha256);
+    const now = this.clock();
+    const { amz_date: amzDate, short_date: shortDate } = amzTimestampV1(now);
+    const objectPath = encodedPathV1(this.bucket, input.key);
+    const basePath = this.endpoint.pathname.replace(/\/$/, "");
+    const requestPath = `${basePath}${objectPath}` || "/";
+    const host = this.endpoint.host;
+    const headers: Record<string, string> = {
+      host,
+      "x-amz-content-sha256": payloadHash,
+      "x-amz-date": amzDate,
+      "content-length": String(input.raw_bytes),
+      "content-type": requiredTextV1(input.content_type, "EA5C1_S3_CONTENT_TYPE_REQUIRED"),
+    };
+    for (const [key, value] of Object.entries(input.metadata)) {
+      const normalized = key.toLowerCase();
+      if (!/^x-amz-meta-[a-z0-9-]+$/.test(normalized)) throw new Error("EA5C1_S3_METADATA_KEY_INVALID");
+      headers[normalized] = requiredTextV1(value, "EA5C1_S3_METADATA_VALUE_REQUIRED");
+    }
+
+    const headerNames = Object.keys(headers).sort();
+    const canonicalHeaders = headerNames.map((name) => `${name}:${headers[name].trim()}\n`).join("");
+    const signedHeaders = headerNames.join(";");
+    const canonicalRequest = ["PUT", requestPath, "", canonicalHeaders, signedHeaders, payloadHash].join("\n");
+    const scope = `${shortDate}/${this.region}/s3/aws4_request`;
+    const stringToSign = ["AWS4-HMAC-SHA256", amzDate, scope, sha256HexV1(canonicalRequest)].join("\n");
+    const signature = crypto.createHmac("sha256", signingKeyV1(this.secretAccessKey, shortDate, this.region))
+      .update(stringToSign, "utf8")
+      .digest("hex");
+    headers.authorization = `AWS4-HMAC-SHA256 Credential=${this.accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+    const client = this.endpoint.protocol === "https:" ? https : http;
+    const response = await new Promise<SignedResponseV1>((resolve, reject) => {
+      const req = client.request({
+        protocol: this.endpoint.protocol,
+        hostname: this.endpoint.hostname,
+        port: this.endpoint.port || undefined,
+        method: "PUT",
+        path: requestPath,
+        headers,
+      }, (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+        res.on("end", () => resolve({ status: res.statusCode ?? 0, headers: res.headers, body: Buffer.concat(chunks) }));
+      });
+      req.on("error", reject);
+      req.setTimeout(20 * 60_000, () => req.destroy(new Error("EA5C1_S3_FILE_REQUEST_TIMEOUT")));
+      const stream = fs.createReadStream(input.file_path, { highWaterMark: 256 * 1024 });
+      stream.on("error", (error) => req.destroy(error));
+      stream.pipe(req);
+    });
+    if (response.status !== 200) {
+      const safeBody = response.body.toString("utf8").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+      throw new Error(`EA5C1_S3_PUT_STATUS_${response.status}${safeBody ? `:${safeBody}` : ""}`);
+    }
+    return response;
+  }
+
   private verifyHeadV1(input: VerifyRetainedRawEvidenceInputV1, key: string, head: SignedResponseV1): string {
     if (head.status !== 200) throw new Error("EA5C1_RAW_OBJECT_NOT_FOUND");
     const length = Number(head.headers["content-length"]);
@@ -242,6 +318,84 @@ export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
     const key = keyFromRetentionRefV1(input.retention_ref, this.bucket);
     const head = await this.requestV1({ method: "HEAD", key, allowed_statuses: [200, 404] });
     this.verifyHeadV1(input, key, head);
+  }
+
+  async retainRawEvidenceFile(input: RawEvidenceFileRetentionInputV1): Promise<RawEvidenceRetentionReceiptV1> {
+    if (input.retention_class !== "PRIVATE_RESTRICTED_RAW_EVIDENCE") throw new Error("EA5C1_RETENTION_CLASS_REQUIRED");
+    const filePath = requiredTextV1(input.file_path, "EA5C1_FILE_PATH_REQUIRED");
+    const stat = fs.statSync(filePath);
+    if (!stat.isFile() || !Number.isSafeInteger(stat.size) || stat.size <= 0 || stat.size !== input.raw_bytes) {
+      throw new Error("EA5C1_FILE_BYTE_COUNT_MISMATCH");
+    }
+    const actualHash = `sha256:${await this.sha256FileHexV1(filePath)}`;
+    if (actualHash !== input.raw_sha256) throw new Error("EA5C1_FILE_DIGEST_MISMATCH");
+    canonicalIsoV1(input.retrieved_at, "EA5C1_RETRIEVED_AT_INVALID");
+    canonicalIsoV1(input.available_at, "EA5C1_AVAILABLE_AT_INVALID");
+    requiredTextV1(input.request_id, "EA5C1_REQUEST_ID_REQUIRED");
+    requiredTextV1(input.provider_id, "EA5C1_PROVIDER_ID_REQUIRED");
+    requiredTextV1(input.source_family, "EA5C1_SOURCE_FAMILY_REQUIRED");
+    requiredTextV1(input.final_locator, "EA5C1_FINAL_LOCATOR_REQUIRED");
+    requiredTextV1(input.use_policy_ref, "EA5C1_USE_POLICY_REQUIRED");
+
+    const key = retentionKeyV1(actualHash);
+    const ref = retentionRefV1(this.bucket, key);
+    const probe = await this.requestV1({ method: "HEAD", key, allowed_statuses: [200, 404] });
+    if (probe.status === 200) {
+      const retainedAt = this.verifyHeadV1(
+        { retention_ref: ref, retained_sha256: actualHash, retained_bytes: stat.size },
+        key,
+        probe,
+      );
+      const retentionVerifiedAt = this.clock().toISOString();
+      canonicalIsoV1(retentionVerifiedAt, "EA5C1_RETENTION_VERIFIED_AT_INVALID");
+      if (Date.parse(retentionVerifiedAt) < Date.parse(input.retrieved_at)) {
+        throw new Error("EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL");
+      }
+      return {
+        retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+        retention_ref: ref,
+        retained_sha256: actualHash,
+        retained_bytes: stat.size,
+        retained_at: retainedAt,
+        retention_verified_at: retentionVerifiedAt,
+        externally_publishable: false,
+      };
+    }
+
+    const retainedAt = this.clock().toISOString();
+    canonicalIsoV1(retainedAt, "EA5C1_RETAINED_AT_INVALID");
+    await this.putFileV1({
+      key,
+      file_path: filePath,
+      raw_sha256: actualHash,
+      raw_bytes: stat.size,
+      content_type: input.content_type || "application/octet-stream",
+      metadata: {
+        "x-amz-meta-geox-sha256": actualHash,
+        "x-amz-meta-geox-retention-class": "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+        "x-amz-meta-geox-retained-at": retainedAt,
+      },
+    });
+    const head = await this.requestV1({ method: "HEAD", key, allowed_statuses: [200] });
+    const verifiedRetainedAt = this.verifyHeadV1(
+      { retention_ref: ref, retained_sha256: actualHash, retained_bytes: stat.size },
+      key,
+      head,
+    );
+    const retentionVerifiedAt = this.clock().toISOString();
+    canonicalIsoV1(retentionVerifiedAt, "EA5C1_RETENTION_VERIFIED_AT_INVALID");
+    if (Date.parse(retentionVerifiedAt) < Date.parse(input.retrieved_at)) {
+      throw new Error("EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL");
+    }
+    return {
+      retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+      retention_ref: ref,
+      retained_sha256: actualHash,
+      retained_bytes: stat.size,
+      retained_at: verifiedRetainedAt,
+      retention_verified_at: retentionVerifiedAt,
+      externally_publishable: false,
+    };
   }
 
   async retainRawEvidence(input: RawEvidenceRetentionInputV1): Promise<RawEvidenceRetentionReceiptV1> {

@@ -67,20 +67,22 @@ def iso(value: datetime) -> str:
     return value.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
-def load_tar_v1(path: Path) -> tuple[dict, dict[str, bytes]]:
-    members: dict[str, bytes] = {}
-    with tarfile.open(path, "r") as tar:
-        for member in tar.getmembers():
-            if not member.isfile():
-                continue
-            extracted = tar.extractfile(member)
-            require(extracted is not None, f"MCFT_CAP09_GFS_BUNDLE_MEMBER_READ:{member.name}")
-            members[member.name] = extracted.read()
-    require("manifest.json" in members, "MCFT_CAP09_GFS_BUNDLE_MANIFEST_REQUIRED")
-    manifest = json.loads(members.pop("manifest.json").decode("utf-8"))
-    require(isinstance(manifest, dict), "MCFT_CAP09_GFS_BUNDLE_MANIFEST_OBJECT_REQUIRED")
-    return manifest, members
+def read_tar_member_v1(tar: tarfile.TarFile, name: str) -> bytes:
+    try:
+        member = tar.getmember(name)
+    except KeyError as exc:
+        raise RuntimeError(f"MCFT_CAP09_GFS_BUNDLE_MEMBER_REQUIRED:{name}") from exc
+    require(member.isfile(), f"MCFT_CAP09_GFS_BUNDLE_MEMBER_FILE_REQUIRED:{name}")
+    extracted = tar.extractfile(member)
+    require(extracted is not None, f"MCFT_CAP09_GFS_BUNDLE_MEMBER_READ:{name}")
+    return extracted.read()
 
+
+def load_manifest_v1(tar: tarfile.TarFile) -> dict:
+    raw = read_tar_member_v1(tar, "manifest.json")
+    manifest = json.loads(raw.decode("utf-8"))
+    require(isinstance(manifest, dict), "MCFT_CAP09_GFS_BUNDLE_MANIFEST_OBJECT_REQUIRED")
+    return manifest
 
 def build_drafts_v1(
     *,
@@ -251,26 +253,27 @@ def decode_bundle_v1(
 ) -> list[dict]:
     target = canonical_hour(target_text, "MCFT_CAP09_GFS_DECODE_TARGET_INVALID")
     available_at = parse_iso(available_at_text, "MCFT_CAP09_GFS_AVAILABLE_AT_INVALID")
-    manifest, members = load_tar_v1(input_path)
-    require(manifest.get("target_logical_time") == iso(target).replace(".000Z", "Z"), "MCFT_CAP09_GFS_BUNDLE_TARGET_MISMATCH")
-    cycle = parse_iso(str(manifest["selected_cycle"]), "MCFT_CAP09_GFS_CYCLE_INVALID")
-    support = int(manifest["support_lead"])
-    lead_start = int(manifest["lead_start"])
-    lead_end = int(manifest["lead_end"])
-    leads = list(range(support, lead_end + 1))
-    targets = list(range(lead_start, lead_end + 1))
-    require(len(targets) == 72 and len(leads) == 73, "MCFT_CAP09_GFS_LEAD_CARDINALITY")
+    with tarfile.open(input_path, "r") as tar:
+        manifest = load_manifest_v1(tar)
+        require(manifest.get("target_logical_time") == iso(target).replace(".000Z", "Z"), "MCFT_CAP09_GFS_BUNDLE_TARGET_MISMATCH")
+        cycle = parse_iso(str(manifest["selected_cycle"]), "MCFT_CAP09_GFS_CYCLE_INVALID")
+        support = int(manifest["support_lead"])
+        lead_start = int(manifest["lead_start"])
+        lead_end = int(manifest["lead_end"])
+        leads = list(range(support, lead_end + 1))
+        targets = list(range(lead_start, lead_end + 1))
+        require(len(targets) == 72 and len(leads) == 73, "MCFT_CAP09_GFS_LEAD_CARDINALITY")
 
-    by_lead: dict[int, list[dict]] = {}
-    sflux: dict[int, dict] = {}
-    for lead in leads:
-        key = f"pgrb2/f{lead:03d}.grib2"
-        require(key in members, f"MCFT_CAP09_GFS_PGRB2_MEMBER_REQUIRED:{key}")
-        by_lead[lead] = core.decode_pgrb2_v1(members[key], cycle, lead, AUTHORITY)
-    for lead in leads:
-        key = f"sflux/f{lead:03d}.grib2"
-        require(key in members, f"MCFT_CAP09_GFS_SFLUX_MEMBER_REQUIRED:{key}")
-        sflux[lead] = core.decode_sflux_v1(members[key], cycle, lead, AUTHORITY)
+        by_lead: dict[int, list[dict]] = {}
+        sflux: dict[int, dict] = {}
+        for lead in leads:
+            key = f"pgrb2/f{lead:03d}.grib2"
+            raw = read_tar_member_v1(tar, key)
+            by_lead[lead] = core.decode_pgrb2_v1(raw, cycle, lead, AUTHORITY)
+        for lead in leads:
+            key = f"sflux/f{lead:03d}.grib2"
+            raw = read_tar_member_v1(tar, key)
+            sflux[lead] = core.decode_sflux_v1(raw, cycle, lead, AUTHORITY)
 
     scientific = core.assemble_72h_scientific_series_v1(
         by_lead=by_lead,
