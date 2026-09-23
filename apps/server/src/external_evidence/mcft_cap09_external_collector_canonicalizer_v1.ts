@@ -481,7 +481,7 @@ export async function collectRetainDecodeCanonicalizeFileBackedExternalEvidenceW
     retention: RawEvidenceRetentionPortV1;
     decoder: ExternalEvidenceDecoderPortV1;
   },
-  completionClock: ExternalEvidenceCompletionClockV1 = () => new Date().toISOString(),
+  completionClock: ExternalEvidenceCompletionClockV1,
 ): Promise<readonly CanonicalizedExternalEvidenceResultV1[]> {
   validatePipelineRequestV1(input);
   const response = await ports.transport.fetchRawEvidenceFile(input.request);
