@@ -13,6 +13,16 @@ import {
 import {
   PostgresPersistentSequentialSchedulerAdapterV1,
 } from "../../apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.js";
+import {
+  PostgresExternalFormalAmendment19EvidenceSourceV1,
+} from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.js";
+import {
+  MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
+  MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
+  MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+} from "../../apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.js";
+import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
+import type { CanonicalReplayEvidenceRecordV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
 import type {
   ShadowOnlineBoundaryV1,
   ShadowOnlineSlotClaimV1,
@@ -74,6 +84,159 @@ function terminal(
   };
 }
 
+function phase4HashV1(char: string): string {
+  return "sha256:" + char.repeat(64);
+}
+
+function am19RecordV1(input: {
+  record_type:
+    | "soil_moisture_observation_v1"
+    | "future_weather_assumption_v1"
+    | "future_et0_assumption_v1";
+  binding_id: string;
+  source_record_id: string;
+  source_record_hash: string;
+  event_time: string;
+  available_at: string;
+}): CanonicalReplayEvidenceRecordV1 {
+  const roleTime = input.record_type === "soil_moisture_observation_v1"
+    ? { observed_at: input.event_time, ingested_at: input.available_at }
+    : { issued_at: input.event_time, ingested_at: input.available_at };
+  return {
+    ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
+    dataset_id: "mcft_cap09_phase4_am19_causal_revision_acceptance_v1",
+    source_record_id: input.source_record_id,
+    source_record_hash: input.source_record_hash,
+    record_type: input.record_type,
+    binding_id: input.binding_id,
+    origin_source_kind: "CONTROLLED_ENGINEERING_FIXTURE",
+    origin_source_id: "PHASE4_AM19_CAUSAL_REVISION_ACCEPTANCE",
+    epistemic_class: input.record_type === "soil_moisture_observation_v1" ? "OBSERVED" : "ASSUMED",
+    available_to_runtime_at: input.available_at,
+    role_time: roleTime,
+    quality: { status: "PASS" },
+    source_payload: { acceptance: true },
+    canonical_payload: { acceptance: true },
+    source_unit: "unitless",
+    canonical_unit: "unitless",
+    conversion_rule: { rule_id: "IDENTITY_ACCEPTANCE_V1" },
+    limitations: ["QUALIFICATION_ONLY"],
+  } as CanonicalReplayEvidenceRecordV1;
+}
+
+async function proveAm19CausalRevisionSelectionV1(): Promise<void> {
+  const eventTime = "2026-09-23T04:00:00.000Z";
+  const baseAvailable = "2026-09-23T04:15:00.000Z";
+  const revisionAvailable = "2026-09-23T05:30:00.000Z";
+
+  const soilBase = am19RecordV1({
+    record_type: "soil_moisture_observation_v1",
+    binding_id: MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+    source_record_id: "kbs_lter_variate25_vwc_100mm_v1:2026-09-23T04:00:00.000Z",
+    source_record_hash: phase4HashV1("a"),
+    event_time: eventTime,
+    available_at: baseAvailable,
+  });
+  const soilRevision = am19RecordV1({
+    record_type: "soil_moisture_observation_v1",
+    binding_id: MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+    source_record_id: soilBase.source_record_id,
+    source_record_hash: phase4HashV1("b"),
+    event_time: eventTime,
+    available_at: revisionAvailable,
+  });
+  const futureWeather = am19RecordV1({
+    record_type: "future_weather_assumption_v1",
+    binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
+    source_record_id: "phase4-am19-weather",
+    source_record_hash: phase4HashV1("c"),
+    event_time: eventTime,
+    available_at: baseAvailable,
+  });
+  const futureEt0 = am19RecordV1({
+    record_type: "future_et0_assumption_v1",
+    binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
+    source_record_id: "phase4-am19-et0",
+    source_record_hash: phase4HashV1("d"),
+    event_time: eventTime,
+    available_at: baseAvailable,
+  });
+
+  const row = (factId: string, value: CanonicalReplayEvidenceRecordV1) => ({
+    fact_id: factId,
+    occurred_at: eventTime,
+    record_json: { type: value.record_type, payload: value },
+  });
+  const load = async (
+    rows: ReturnType<typeof row>[],
+    logicalTime: string,
+  ) => {
+    const client = {
+      async query(sql: string) {
+        if (sql.includes("FROM facts")) return { rows };
+        return { rows: [] };
+      },
+      release() {},
+    };
+    const fakePool = {
+      async connect() { return client; },
+    };
+    return new PostgresExternalFormalAmendment19EvidenceSourceV1(fakePool as never)
+      .loadCandidateRecords({
+        scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
+        logical_time: logicalTime,
+        evidence_snapshot_time: logicalTime,
+      });
+  };
+
+  const allRows = [
+    row("soil-base", soilBase),
+    row("soil-revision", soilRevision),
+    row("weather", futureWeather),
+    row("et0", futureEt0),
+  ];
+
+  const beforeRevision = await load(allRows, "2026-09-23T05:00:00.000Z");
+  assert.equal(
+    beforeRevision.records.find((item) => item.record_type === "soil_moisture_observation_v1")
+      ?.source_record_hash,
+    phase4HashV1("a"),
+    "PHASE4_AM19_FUTURE_REVISION_MUST_NOT_LEAK_BACKWARD",
+  );
+  assert.equal(beforeRevision.excluded_after_causal_cutoff_count, 1);
+
+  const afterRevision = await load(allRows, "2026-09-23T06:00:00.000Z");
+  assert.equal(
+    afterRevision.records.find((item) => item.record_type === "soil_moisture_observation_v1")
+      ?.source_record_hash,
+    phase4HashV1("b"),
+    "PHASE4_AM19_CAUSAL_LATEST_REVISION_REQUIRED",
+  );
+  assert.equal(afterRevision.family_cardinality.soil, 1);
+
+  const simultaneousConflict = structuredClone(soilBase);
+  simultaneousConflict.source_record_hash = phase4HashV1("e");
+  await assert.rejects(
+    () => load([
+      row("soil-base", soilBase),
+      row("soil-conflict", simultaneousConflict),
+      row("weather", futureWeather),
+      row("et0", futureEt0),
+    ], "2026-09-23T05:00:00.000Z"),
+    /AM19_EXTERNAL_DB_SOURCE_IDENTITY_CONFLICT:/,
+  );
+
+  await assert.rejects(
+    () => load([
+      row("soil-base", soilBase),
+      row("soil-duplicate", structuredClone(soilBase)),
+      row("weather", futureWeather),
+      row("et0", futureEt0),
+    ], "2026-09-23T05:00:00.000Z"),
+    /AM19_EXTERNAL_DB_DUPLICATE_SOURCE_RECORD_ID:/,
+  );
+}
+
 async function cleanup(pool: Pool): Promise<void> {
   await pool.query(
     `DELETE FROM public.twin_shadow_online_scheduler_slot_v1
@@ -98,6 +261,8 @@ async function cleanup(pool: Pool): Promise<void> {
 async function main(): Promise<void> {
   const databaseUrl = String(process.env.DATABASE_URL || "").trim();
   assert(databaseUrl, "PHASE4_POSTGRES_DATABASE_URL_REQUIRED");
+
+  await proveAm19CausalRevisionSelectionV1();
 
   const pool = new Pool({ connectionString: databaseUrl, max: 8 });
   try {
@@ -375,6 +540,10 @@ async function main(): Promise<void> {
       recovery_preserved_idempotency_key: true,
       recovery_advanced_fence: true,
       stale_fence_rejected: true,
+      amendment19_causal_revision_selection: true,
+      amendment19_future_revision_no_leakage: true,
+      amendment19_simultaneous_identity_conflict_fail_closed: true,
+      amendment19_exact_duplicate_fail_closed: true,
       process_restart_cursor_readback: true,
       bounded_catch_up_slots: ["O00", "O01", "O02", "O03"],
       final_next_slot_id: cursor.next_slot_id,
