@@ -702,25 +702,11 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     generated_at: string;
   }): FieldSummaryProjectionV1 {
     const identityRefKey = fieldRefKeyV1(input.row.field_id, "identity");
-    const nonAuthorityRefs: ProductProjectionNonAuthorityRefV1[] = [{
-      ref_key: identityRefKey,
-      ref_class: "OTHER_NON_AUTHORITY",
-      object_kind: "field_index_v1",
-      exact_ref: identityExactRefV1(input.row, input.scope),
-      source_fact_ref: null,
-    }];
+    const scopeBasisRefKey = fieldRefKeyV1(input.row.field_id, "scope-basis");
+    const nonAuthorityRefs: ProductProjectionNonAuthorityRefV1[] = [];
     const authorityRefs: ProductProjectionAuthorityRefV1[] = [];
-    const digests: ProductProjectionSourceDigestV1[] = [{
-      source_ref_key: identityRefKey,
-      digest: identityDigestV1(input.row, input.scope),
-      digest_kind: "PRODUCT_SOURCE_ROW_DIGEST",
-    }];
-    const proofs: ProductProjectionSourceBindingProofSetV1["proofs"][number][] = [{
-      ref_key: identityRefKey,
-      binding_id: "GEOX_FIELD_INDEX_V1",
-      observed_object_kind: "field_index_v1",
-      source_path: "public.field_index_v1",
-    }];
+    const digests: ProductProjectionSourceDigestV1[] = [];
+    const proofs: ProductProjectionSourceBindingProofSetV1["proofs"][number][] = [];
     const limitationCodes = new Set<string>([
       "FIELD_FARM_DISPLAY_NOT_PROJECTED_WAVE02",
       "FIELD_CROP_DISPLAY_NOT_PROJECTED_WAVE02",
@@ -730,6 +716,54 @@ export class PostgresCustomerProductProjectionBuilderV1 {
       "ATTENTION_QUEUE_BUILDER_NOT_IMPLEMENTED",
       "OPERATION_PROJECTION_NOT_IMPLEMENTED",
     ]);
+
+    const scopeBasisExactRef = scopeBasisExactRefV1(input.row);
+    const scopeBasisDigest = scopeBasisDigestV1(input.row);
+    if (scopeBasisExactRef && scopeBasisDigest) {
+      nonAuthorityRefs.push({
+        ref_key: scopeBasisRefKey,
+        ref_class: "OTHER_NON_AUTHORITY",
+        object_kind: "fact_v1",
+        exact_ref: scopeBasisExactRef,
+        source_fact_ref: input.row.scope_basis_fact_id,
+      });
+      digests.push({
+        source_ref_key: scopeBasisRefKey,
+        digest: scopeBasisDigest,
+        digest_kind: "PRODUCT_SOURCE_ROW_DIGEST",
+      });
+      proofs.push({
+        ref_key: scopeBasisRefKey,
+        binding_id: "GEOX_SCOPED_FACT_FIELD_BASIS_V1",
+        observed_object_kind: "fact_v1",
+        source_path: "public.facts",
+      });
+      limitationCodes.add("FIELD_SCOPE_OBSERVED_IN_GOVERNED_FACTS");
+    }
+
+    if (input.row.identity_present) {
+      nonAuthorityRefs.push({
+        ref_key: identityRefKey,
+        ref_class: "OTHER_NON_AUTHORITY",
+        object_kind: "field_index_v1",
+        exact_ref: identityExactRefV1(input.row, input.scope),
+        source_fact_ref: null,
+      });
+      digests.push({
+        source_ref_key: identityRefKey,
+        digest: identityDigestV1(input.row, input.scope),
+        digest_kind: "PRODUCT_SOURCE_ROW_DIGEST",
+      });
+      proofs.push({
+        ref_key: identityRefKey,
+        binding_id: "GEOX_FIELD_INDEX_V1",
+        observed_object_kind: "field_index_v1",
+        source_path: "public.field_index_v1",
+      });
+    } else {
+      limitationCodes.add("FIELD_IDENTITY_NOT_ESTABLISHED");
+    }
+
     if (!input.row.field_name) limitationCodes.add("FIELD_DISPLAY_NAME_UNAVAILABLE");
 
     let currentCondition: FieldCurrentConditionProjectionV1;
@@ -828,7 +862,8 @@ export class PostgresCustomerProductProjectionBuilderV1 {
       non_authoritative: true,
     };
     assertProductProjectionSourceBindingsV1(envelope, proofSet);
-    assertSourceRoleV1(proofSet, identityRefKey, "FIELD_IDENTITY");
+    if (scopeBasisExactRef) assertSourceRoleV1(proofSet, scopeBasisRefKey, "FIELD_SCOPE_BASIS");
+    if (input.row.identity_present) assertSourceRoleV1(proofSet, identityRefKey, "FIELD_IDENTITY");
     if (exactStateRefKey) {
       assertSourceRoleV1(proofSet, exactStateRefKey, "FIELD_CURRENT_STATE");
       assertSourceRoleV1(
