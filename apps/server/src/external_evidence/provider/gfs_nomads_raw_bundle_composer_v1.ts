@@ -122,13 +122,20 @@ function tarHeaderV1(name: string, size: number): Buffer {
 function tarArchiveV1(entries: readonly { name: string; body: Uint8Array }[]): Uint8Array {
   const chunks: Buffer[] = [];
   for (const entry of entries) {
-    const body = Buffer.from(entry.body);
+    // Zero-copy view over the already-retained provider bytes. The prior Buffer.from(Uint8Array)
+    // copied every retained member before Buffer.concat copied the complete tar again.
+    const body = Buffer.from(
+      entry.body.buffer,
+      entry.body.byteOffset,
+      entry.body.byteLength,
+    );
     chunks.push(tarHeaderV1(entry.name, body.length), body);
     const remainder = body.length % 512;
     if (remainder !== 0) chunks.push(Buffer.alloc(512 - remainder, 0));
   }
   chunks.push(Buffer.alloc(1024, 0));
-  return new Uint8Array(Buffer.concat(chunks));
+  // Buffer is already a Uint8Array. Returning it directly avoids another full-bundle copy.
+  return Buffer.concat(chunks);
 }
 
 async function retainRawObjectV1(input: {
