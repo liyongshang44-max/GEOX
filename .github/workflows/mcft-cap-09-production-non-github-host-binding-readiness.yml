@@ -1,0 +1,111 @@
+name: mcft-cap-09-production-non-github-host-binding-readiness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-non-github-host-binding-readiness.yml'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_V1.cjs'
+      - '.github/workflows/mcft-cap-09-production-owner-provisioning-readiness.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  non-github-host-binding-readiness:
+    if: >-
+      github.head_ref == 'work/host-secret-proof-canonical-d1db-v1' &&
+      github.event.pull_request.base.sha == 'd1db5463d1363eb5f9efacc13425b75a7c8b7ee8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout exact host-proof canonicalization subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Syntax-check production-host readiness verifier
+        run: node --check scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1.cjs
+
+      - name: Preserve GitHub non-production execution boundary
+        run: node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1.cjs
+
+      - name: Canonicalize committed local-host machine proof without reading secrets
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const crypto=require('node:crypto');
+          const staticProof=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1_RESULT.json','utf8'));
+          const armPath='scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json';
+          const armRaw=fs.readFileSync(armPath);
+          const arm=JSON.parse(armRaw.toString('utf8'));
+          const p=arm.local_machine_proof_evidence||{};
+          const req=(v,c)=>{if(!v)throw new Error(c)};
+          req(staticProof.status==='PASS','HOST_PROOF_STATIC_PASS_REQUIRED');
+          req(staticProof.production_host_secret_binding_observed===false,'HOST_PROOF_GITHUB_MUST_NOT_REEXECUTE_LOCAL_PROOF');
+          req(staticProof.provider_request_count===0&&staticProof.database_connection_attempted===false&&staticProof.compose_render_attempted===false,'HOST_PROOF_GITHUB_ZERO_LIVE_EFFECT_REQUIRED');
+          req(p.schema_version==='geox_mcft_cap09_production_host_secret_binding_pre_owner_readiness_v1','HOST_PROOF_SCHEMA_REQUIRED');
+          req(p.status==='PASS'&&p.stage==='PRODUCTION_HOST_SECRET_BINDING_PROVEN_PRE_OWNER_CUTOVER_READY','HOST_PROOF_PASS_STAGE_REQUIRED');
+          req(p.observed_subject_sha==='d1db5463d1363eb5f9efacc13425b75a7c8b7ee8','HOST_PROOF_EXACT_OBSERVED_SUBJECT_REQUIRED');
+          req(p.local_host_id==='fae5f756-ef25-40d5-9777-5b2c3d4837a1','HOST_PROOF_EXACT_HOST_REQUIRED');
+          req(p.runtime_secret_binding_count===7&&p.exact_two_runtime_service_identities_bound===true,'HOST_PROOF_BINDING_CARDINALITY_REQUIRED');
+          req(p.evidence_database_connectivity_proven===true&&p.twin_database_connectivity_proven===true,'HOST_PROOF_DB_CONNECTIVITY_REQUIRED');
+          req(p.exact_one_privilege_membership_each_proven_by_current_credentials===true&&p.cross_plane_privilege_forbidden_proven===true,'HOST_PROOF_PRIVILEGE_ISOLATION_REQUIRED');
+          req(p.r2_bucket==='geox-mcft-cap09-evidence-runtime-v1'&&p.r2_formal_bucket_reused===false,'HOST_PROOF_R2_SEPARATION_REQUIRED');
+          req(p.r2_put_status===200&&p.r2_head_status===200&&p.r2_delete_status===204&&p.r2_post_delete_head_status===404,'HOST_PROOF_R2_CAPABILITY_REQUIRED');
+          req(p.compose_render_only_pass===true&&p.production_container_count_before===0&&p.production_container_count_after===0,'HOST_PROOF_ZERO_RUNTIME_COMPOSE_REQUIRED');
+          req(p.pre_owner_cutover_ready===true,'HOST_PROOF_PRE_OWNER_READY_REQUIRED');
+          req(Array.isArray(p.remaining_blockers)&&p.remaining_blockers.length===1&&p.remaining_blockers[0]==='PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED','HOST_PROOF_EXACT_NEXT_BLOCKER_REQUIRED');
+          for(const k of ['repository_secret_materialized','github_secret_materialized','database_write','compose_build','compose_create','compose_up','runtime_process_start','production_owner_activation','formal_v5_arm','a0_bootstrap','o00_started','secret_values_recorded'])req(p[k]===false,'HOST_PROOF_HARD_NON_EFFECT:'+k);
+          const out={
+            schema_version:'geox_mcft_cap09_production_host_secret_binding_canonical_v1',
+            status:'PASS',
+            stage:'PRODUCTION_HOST_SECRET_BINDING_CANONICAL_PRE_OWNER_CUTOVER_READY',
+            canonicalization_subject_sha:process.env.SUBJECT_SHA,
+            observed_subject_sha:p.observed_subject_sha,
+            local_host_id:p.local_host_id,
+            host_arm_sha256:'sha256:'+crypto.createHash('sha256').update(armRaw).digest('hex'),
+            runtime_secret_binding_count:p.runtime_secret_binding_count,
+            evidence_database_connectivity_proven:true,
+            twin_database_connectivity_proven:true,
+            exact_one_privilege_membership_each_proven_by_current_credentials:true,
+            cross_plane_privilege_forbidden_proven:true,
+            r2_bucket:p.r2_bucket,
+            r2_formal_bucket_reused:false,
+            r2_put_status:p.r2_put_status,
+            r2_head_status:p.r2_head_status,
+            r2_delete_status:p.r2_delete_status,
+            r2_post_delete_head_status:p.r2_post_delete_head_status,
+            compose_render_only_pass:true,
+            production_container_count_before:0,
+            production_container_count_after:0,
+            pre_owner_cutover_ready:true,
+            remaining_blockers:['PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED'],
+            repository_secret_materialized:false,
+            github_secret_materialized:false,
+            github_live_database_readback:false,
+            github_live_provider_request:false,
+            runtime_process_start:false,
+            production_owner_activation:false,
+            formal_v5_arm:false,
+            a0_bootstrap:false,
+            o00_started:false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_HOST_SECRET_BINDING_CANONICAL_V1_RESULT.json',JSON.stringify(out,null,2)+'\n');
+          console.log(JSON.stringify(out,null,2));
+
+      - name: Upload canonical host-secret-binding proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-production-host-secret-binding-canonical-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_HOST_SECRET_BINDING_CANONICAL_V1_RESULT.json
+            scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json
+          if-no-files-found: error
+          retention-days: 90

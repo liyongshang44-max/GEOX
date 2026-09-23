@@ -53,6 +53,9 @@ function assertRegex(text, patterns, label) {
     'MISSING',
     'customer_visible_eligible',
     'blocking_reasons',
+    'AMBIGUOUS_FERTILIZATION_ACCEPTANCE_BINDING',
+    'FERTILIZATION_ACCEPTANCE_PROVENANCE_REQUIRED',
+    'hasExactAcceptanceProvenance',
   ];
 
   assertAll(projection, [
@@ -89,6 +92,8 @@ function assertRegex(text, patterns, label) {
     /evidence_tier:\s*"FORMAL"\s*\|\s*"WARNING"\s*\|\s*"MANUAL_REVIEW"\s*\|\s*null/,
     /zone_rates:\s*FertilizationReportZoneRateV1\[\]/,
     /customer_visible_eligible:\s*Boolean\(/,
+    /acceptanceRows\.length\s*>\s*1/,
+    /hasExactAcceptanceProvenance\(acceptance\)/,
   ], 'fertilization projection schema and logic');
 
   // report_v1 remains the base projection contract; route-level enrichment is allowed as extension.

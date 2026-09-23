@@ -1,0 +1,323 @@
+{
+  "version": "GEOX_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1",
+  "status": "FROZEN_BOUNDED_WORKSTREAM_INVENTORY",
+  "authority_base": "9ffa7d8ea383f759a5dbe23ab919328193a06dd3",
+  "source_authority": "GEOX-BLINE-PRODUCTION-CALLER-AUTHORITY-INVENTORY-V1.json",
+  "closure_domain": "CD-04",
+  "closure_domain_invariant": "Execution, device sensing and receipt provenance are bound to authenticated executor/operator/device principals; caller-declared actor/device/scope fields cannot create authority.",
+  "discovery_policy": "NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY; DIRECT_CAPABILITY_FANOUT_CORRECTION_ONLY",
+  "bounded_predecessor_row_count": 20,
+  "bounded_predecessor_rows": [
+    {
+      "surface_id": "BSEC-004",
+      "source_path": "apps/server/src/routes/device_heartbeat_v1.ts",
+      "entry_symbol": "POST /api/v1/devices/:device_id/heartbeat",
+      "exact_route_or_trigger": "/api/v1/devices/:device_id/heartbeat",
+      "predecessor_authz_capability": [],
+      "predecessor_caller_authority_status": "CONTRACT_TRANSITIONAL_PRODUCTION_INCOMPLETE",
+      "predecessor_principal_type": "DEVICE_PRINCIPAL_NOT_YET_ENFORCED",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "BIND_DEVICE_SECRET_TO_ACTIVE_CREDENTIAL_REGISTERED_DEVICE_FIELD_AND_TENANT_SCOPE; BODY_IS_NON_AUTHORITY"
+    },
+    {
+      "surface_id": "BSEC-018",
+      "source_path": "apps/server/src/routes/control_ao_sense.ts",
+      "entry_symbol": "POST /api/v1/sense/task",
+      "exact_route_or_trigger": "/api/v1/sense/task",
+      "predecessor_authz_capability": [],
+      "predecessor_caller_authority_status": "UNAUTHENTICATED_PRODUCTION_WRITER",
+      "predecessor_principal_type": "UNVERIFIED_CALLER",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "REQUIRE_EXISTING_TELEMETRY_WRITE_PRINCIPAL; BIND_TASK_SCOPE_TO_AUTH_CONTEXT"
+    },
+    {
+      "surface_id": "BSEC-019",
+      "source_path": "apps/server/src/routes/control_ao_sense.ts",
+      "entry_symbol": "POST /api/control/ao_sense/task",
+      "exact_route_or_trigger": "/api/control/ao_sense/task",
+      "predecessor_authz_capability": [],
+      "predecessor_caller_authority_status": "UNAUTHENTICATED_PRODUCTION_WRITER",
+      "predecessor_principal_type": "UNVERIFIED_CALLER",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "LEGACY_ALIAS_SAME_TELEMETRY_WRITE_AUTHORITY; NO_NEW_AUTHORITY"
+    },
+    {
+      "surface_id": "BSEC-020",
+      "source_path": "apps/server/src/routes/control_ao_sense.ts",
+      "entry_symbol": "POST /api/v1/sense/receipt",
+      "exact_route_or_trigger": "/api/v1/sense/receipt",
+      "predecessor_authz_capability": [],
+      "predecessor_caller_authority_status": "UNAUTHENTICATED_PRODUCTION_WRITER",
+      "predecessor_principal_type": "UNVERIFIED_CALLER",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "REQUIRE_EXISTING_TELEMETRY_WRITE_PRINCIPAL; RECEIPT_MUST_BIND_AUTH_SCOPE_TO_SOURCE_TASK"
+    },
+    {
+      "surface_id": "BSEC-021",
+      "source_path": "apps/server/src/routes/control_ao_sense.ts",
+      "entry_symbol": "POST /api/control/ao_sense/receipt",
+      "exact_route_or_trigger": "/api/control/ao_sense/receipt",
+      "predecessor_authz_capability": [],
+      "predecessor_caller_authority_status": "UNAUTHENTICATED_PRODUCTION_WRITER",
+      "predecessor_principal_type": "UNVERIFIED_CALLER",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "LEGACY_ALIAS_SAME_TELEMETRY_WRITE_AUTHORITY; NO_NEW_AUTHORITY"
+    },
+    {
+      "surface_id": "BSEC-050",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entry_symbol": "POST /api/v1/actions/receipt/from-task",
+      "exact_route_or_trigger": "/api/v1/actions/receipt/from-task",
+      "predecessor_authz_capability": [
+        "action.receipt.submit"
+      ],
+      "predecessor_caller_authority_status": "GOVERNED_EXISTING",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_RECEIPT_SEMANTICS; REMOVE_ADMIN_AND_CALLER_DECLARED_EXECUTOR_AUTHORITY"
+    },
+    {
+      "surface_id": "BSEC-053",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entry_symbol": "POST /api/v1/simulators/irrigation/execute",
+      "exact_route_or_trigger": "/api/v1/simulators/irrigation/execute",
+      "predecessor_authz_capability": [
+        "action.receipt.submit",
+        "ao_act.receipt.write"
+      ],
+      "predecessor_caller_authority_status": "GOVERNED_EXISTING",
+      "predecessor_principal_type": "EXECUTOR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_EXECUTOR_ONLY_SIMULATOR; REQUIRE_EXACT_EXECUTOR_ROLE_AND_EXISTING_DISPATCH_PLUS_RECEIPT_CAPABILITIES"
+    },
+    {
+      "surface_id": "BSEC-076",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entry_symbol": "POST /api/v1/actions/receipt",
+      "exact_route_or_trigger": "/api/v1/actions/receipt",
+      "predecessor_authz_capability": [
+        "action.receipt.submit",
+        "ao_act.receipt.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_RECEIPT_SEMANTICS; OPERATOR_OR_EXECUTOR_ONLY; EXECUTOR_ID_FROM_AUTH_CONTEXT"
+    },
+    {
+      "surface_id": "BSEC-077",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entry_symbol": "POST /api/v1/actions/execute",
+      "exact_route_or_trigger": "/api/v1/actions/execute",
+      "predecessor_authz_capability": [
+        "action.task.dispatch",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_PRE_W4_EFFECTIVE_PRINCIPALS_ADMIN_OR_OPERATOR_ONLY; EXECUTOR_DETERMINISTIC_DENY; NO_EXECUTION_SEMANTIC_CHANGE"
+    },
+    {
+      "surface_id": "BSEC-078",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entry_symbol": "POST /api/v1/operations/manual",
+      "exact_route_or_trigger": "/api/v1/operations/manual",
+      "predecessor_authz_capability": [
+        "action.task.dispatch",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_PRE_W4_EFFECTIVE_PRINCIPALS_ADMIN_OR_OPERATOR_ONLY; EXECUTOR_DETERMINISTIC_DENY; NO_MANUAL_OPERATION_SEMANTIC_CHANGE"
+    },
+    {
+      "surface_id": "BSEC-080",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entry_symbol": "registerAoActLegacyRoutes#/api/control/ao_act/receipt",
+      "exact_route_or_trigger": "/api/control/ao_act/receipt",
+      "predecessor_authz_capability": [
+        "action.receipt.submit",
+        "ao_act.receipt.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "LEGACY_ALIAS_INHERITS_BSEC_076_AUTH_DERIVED_EXECUTOR; NO_NEW_AUTHORITY"
+    },
+    {
+      "surface_id": "BSEC-102",
+      "source_path": "apps/server/src/routes/sensing_fact_envelope_v1.ts",
+      "entry_symbol": "POST /api/v1/sensing/raw-samples",
+      "exact_route_or_trigger": "/api/v1/sensing/raw-samples",
+      "predecessor_authz_capability": [
+        "telemetry.write"
+      ],
+      "predecessor_caller_authority_status": "GOVERNED_EXISTING",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "DEVICE_OR_GATEWAY_SOURCE_REQUIRES_DEVICE_SECRET_AND_EXACT_CREDENTIAL_DEVICE_FIELD_SCOPE; NON_DEVICE_SERVICE_SOURCE_RETAINS_TELEMETRY_WRITE"
+    },
+    {
+      "surface_id": "BSEC-161",
+      "source_path": "apps/server/src/routes/fail_safe_v1.ts",
+      "entry_symbol": "POST /api/v1/manual-takeovers/:takeover_id/ack",
+      "exact_route_or_trigger": "/api/v1/manual-takeovers/:takeover_id/ack",
+      "predecessor_authz_capability": [
+        "security.admin",
+        "action.task.dispatch"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_SECURITY_ADMIN_OR_DISPATCH_ALTERNATE",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_PRE_W4_EFFECTIVE_PRINCIPALS_ADMIN_OR_OPERATOR_ONLY; EXECUTOR_DETERMINISTIC_DENY; NO_FAIL_SAFE_SEMANTIC_CHANGE"
+    },
+    {
+      "surface_id": "BSEC-162",
+      "source_path": "apps/server/src/routes/fail_safe_v1.ts",
+      "entry_symbol": "POST /api/v1/manual-takeovers/:takeover_id/complete",
+      "exact_route_or_trigger": "/api/v1/manual-takeovers/:takeover_id/complete",
+      "predecessor_authz_capability": [
+        "security.admin",
+        "action.task.dispatch"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_SECURITY_ADMIN_OR_DISPATCH_ALTERNATE",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_PRE_W4_EFFECTIVE_PRINCIPALS_ADMIN_OR_OPERATOR_ONLY; EXECUTOR_DETERMINISTIC_DENY; NO_FAIL_SAFE_SEMANTIC_CHANGE"
+    },
+    {
+      "surface_id": "BSEC-163",
+      "source_path": "apps/server/src/routes/fail_safe_v1.ts",
+      "entry_symbol": "POST /api/v1/fail-safe/events/:fail_safe_event_id/resolve",
+      "exact_route_or_trigger": "/api/v1/fail-safe/events/:fail_safe_event_id/resolve",
+      "predecessor_authz_capability": [
+        "security.admin",
+        "action.task.dispatch"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_SECURITY_ADMIN_OR_DISPATCH_ALTERNATE",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_PRE_W4_EFFECTIVE_PRINCIPALS_ADMIN_OR_OPERATOR_ONLY; EXECUTOR_DETERMINISTIC_DENY; NO_FAIL_SAFE_SEMANTIC_CHANGE"
+    },
+    {
+      "surface_id": "BSEC-185",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/dispatches/claim",
+      "exact_route_or_trigger": "/api/v1/ao-act/dispatches/claim",
+      "predecessor_authz_capability": [
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "predecessor_principal_type": "EXECUTOR_OR_ADMIN_BEARER_NOT_EXACTLY_NARROWED",
+      "predecessor_declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "w4_disposition": "REQUIRE_EXECUTOR_ROLE_PLUS_EXISTING_ACTION_TASK_DISPATCH; CLAIMED_EXECUTOR_MUST_MATCH_AUTH_ACTOR"
+    },
+    {
+      "surface_id": "BSEC-186",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/dispatches/state",
+      "exact_route_or_trigger": "/api/v1/ao-act/dispatches/state",
+      "predecessor_authz_capability": [
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "predecessor_principal_type": "EXECUTOR_OR_ADMIN_BEARER_NOT_EXACTLY_NARROWED",
+      "predecessor_declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "w4_disposition": "REQUIRE_EXECUTOR_ROLE_PLUS_EXISTING_ACTION_TASK_DISPATCH"
+    },
+    {
+      "surface_id": "BSEC-187",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/downlinks/published",
+      "exact_route_or_trigger": "/api/v1/ao-act/downlinks/published",
+      "predecessor_authz_capability": [
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "predecessor_principal_type": "EXECUTOR_SERVICE_EXPECTED_BUT_NOT_ROUTE_ENFORCED",
+      "predecessor_declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "w4_disposition": "REQUIRE_EXECUTOR_ROLE_PLUS_EXISTING_ACTION_TASK_DISPATCH; LEASED_BY_FROM_AUTH_ACTOR"
+    },
+    {
+      "surface_id": "BSEC-188",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/receipts/uplink",
+      "exact_route_or_trigger": "/api/v1/ao-act/receipts/uplink",
+      "predecessor_authz_capability": [
+        "ao_act.receipt.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_SERVICE_PRINCIPAL_NOT_EXACTLY_NARROWED",
+      "predecessor_principal_type": "EXECUTOR_OR_DEVICE_GATEWAY_SERVICE_EXPECTED",
+      "predecessor_declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "w4_disposition": "REQUIRE_EXECUTOR_RECEIPT_PRINCIPAL; RECEIPT_EXECUTOR_FROM_AUTH; RETAIN_DEVICE_DISPATCH_AND_ACCEPTANCE_SEMANTICS"
+    },
+    {
+      "surface_id": "BSEC-192",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/receipts",
+      "exact_route_or_trigger": "/api/v1/ao-act/receipts",
+      "predecessor_authz_capability": [
+        "ao_act.receipt.write"
+      ],
+      "predecessor_caller_authority_status": "GOVERNED_EXISTING_WITH_PRINCIPAL_REVIEW",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "w4_disposition": "REQUIRE_OPERATOR_OR_EXECUTOR_RECEIPT_PRINCIPAL; RECEIPT_EXECUTOR_FROM_AUTH; RETAIN_ACCEPTANCE_AND_OPERATION_PLAN_TRANSITIONS"
+    }
+  ],
+  "capability_fanout_correction": {
+    "trigger": "CENTRAL_ROLE_MATRIX_DELTA: action.task.dispatch added to executor",
+    "added_exact_repair_rows": [
+      "BSEC-077",
+      "BSEC-078",
+      "BSEC-161",
+      "BSEC-162",
+      "BSEC-163"
+    ],
+    "required_effective_principals": "PRE_W4_ADMIN_OR_OPERATOR_ONLY",
+    "executor_disposition": "DETERMINISTIC_DENY"
+  },
+  "governed_regression_baselines": [
+    {
+      "surface_id": "BSEC-067",
+      "rule": "Operator Dispatch dispatch remains admin/operator-only; executor must not obtain Operator Dispatch authority"
+    },
+    {
+      "surface_id": "BSEC-068",
+      "rule": "Operator Dispatch retry remains admin/operator-only; executor must not obtain Operator Dispatch authority"
+    },
+    {
+      "surface_id": "BSEC-169",
+      "rule": "MQTT application-layer device credential validation remains unchanged"
+    },
+    {
+      "surface_id": "BSEC-170",
+      "rule": "MQTT device credential rotation/revocation enforcement remains unchanged"
+    }
+  ],
+  "commercial_runtime_identity": {
+    "executor_credential_fixture": "executor_token",
+    "executor_role": "executor",
+    "executor_actor_id": "tok_executor_actor",
+    "required_existing_capabilities": [
+      "action.task.dispatch",
+      "action.receipt.submit",
+      "ao_act.receipt.write"
+    ],
+    "admin_masking": "FORBIDDEN"
+  },
+  "explicit_exclusions": [
+    "Approval / Recommendation reopening",
+    "OperationPlan semantic redesign",
+    "legacy Twin/Monitoring retirement",
+    "Planner/Crop latest-wins",
+    "DB/MQTT/service isolation modernization",
+    "MCFT",
+    "Action Qualification",
+    "new device architecture",
+    "whole-repository discovery",
+    "Acceptance semantic redesign"
+  ]
+}

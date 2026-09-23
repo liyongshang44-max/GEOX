@@ -1,3 +1,8 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_CONSUMER_ADAPTER
+ * Historical Customer Field Memory compatibility adapter. Existing consumers may remain during migration.
+ * New post-FOUI product code must use governed /api/product/v1/* projections instead of copying these direct legacy/domain reads.
+ */
 import { apiRequestWithPolicy, withQuery } from "./client";
 
 export type CustomerFieldMemoryDataScope = "OFFICIAL_CUSTOMER_API" | "COMPAT_MEMORY_API" | "FALLBACK_EMBEDDED_REPORT" | "NO_MEMORY" | "ERROR_EMPTY";

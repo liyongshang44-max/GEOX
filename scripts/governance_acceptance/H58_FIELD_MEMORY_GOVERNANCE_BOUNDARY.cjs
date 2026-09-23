@@ -99,14 +99,15 @@ requireIncludes('field_memory_service', fieldMemoryService, [
 ]);
 
 requireIncludes('field_memory_acceptance', fieldMemoryAcceptance, [
-  'ACCEPTANCE_FIELD_MEMORY_V1',
   'FIELD_RESPONSE_MEMORY',
   'DEVICE_RELIABILITY_MEMORY',
   'SKILL_PERFORMANCE_MEMORY',
   'memory_linked_to_current_chain',
-  'field_response_has_before_value',
-  'field_response_has_after_value',
-  'field_response_has_delta_value',
+  'formal_field_memory_not_auto_promoted',
+  'formal_memory_lane_not_auto_promoted',
+  'technical_memory_not_customer_visible',
+  'technical_memory_not_learning_eligible',
+  'formal_promotion_route_present',
   'openapi_matches_routes',
 ]);
 

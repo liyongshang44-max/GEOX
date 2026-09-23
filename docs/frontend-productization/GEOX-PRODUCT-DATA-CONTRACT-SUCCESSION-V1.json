@@ -1,0 +1,264 @@
+{
+  "schema_version": "geox_product_data_contract_succession_v1",
+  "document_id": "GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1",
+  "status": "READY_FOR_PROTECTED_MAIN_ADOPTION",
+  "baseline_main_sha": "6ff48eca10c1d25365c39f9d1e4dbb14d6c1ad91",
+  "date": "2026-09-22",
+  "scope": "FRONTEND_PRODUCT_DATA_CONTRACT_GOVERNANCE",
+  "domain_authority": "NONE",
+  "runtime_behavior_change": false,
+  "database_schema_change": false,
+  "production_database_mutation": false,
+  "canonical_persistence": {
+    "engine_family": "POSTGRESQL",
+    "existing_server_access": "PG_POOL_DATABASE_URL",
+    "create_second_business_database": false,
+    "sites_d1_is_canonical_business_store": false
+  },
+  "canonical_product_contract": {
+    "family": "FOUI_PRODUCT_PROJECTION",
+    "namespace": "/api/product/v1/*",
+    "authority_ceiling": "NON_AUTHORITATIVE_PRODUCT_PROJECTION_ONLY",
+    "allowed_methods": [
+      "GET",
+      "HEAD"
+    ],
+    "forbidden_projection_methods": [
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE"
+    ]
+  },
+  "existing_wave01_contracts": [
+    "ProductProjectionEnvelopeV1",
+    "GovernedActionCaseProjectionV1",
+    "CapabilityAvailabilityProjectionV1",
+    "AttentionQueueProjectionV1"
+  ],
+  "planned_successor_contracts": [
+    "CustomerOverviewProjectionV1",
+    "FieldSummaryProjectionV1",
+    "FieldWorkspaceProjectionV1",
+    "OperationSummaryProjectionV1",
+    "OperationWorkspaceProjectionV1",
+    "EvidenceWorkspaceProjectionV1",
+    "DecisionTimeRecordProjectionV1",
+    "OutcomeProjectionV1"
+  ],
+  "target_read_routes": [
+    "GET /api/product/v1/overview",
+    "GET /api/product/v1/fields",
+    "GET /api/product/v1/fields/:fieldRef",
+    "GET /api/product/v1/attention",
+    "GET /api/product/v1/operations",
+    "GET /api/product/v1/operations/:operationRef",
+    "GET /api/product/v1/action-cases/:caseRef",
+    "GET /api/product/v1/evidence/:subjectType/:subjectRef",
+    "GET /api/product/v1/decision-time/:decisionRef",
+    "GET /api/product/v1/capabilities"
+  ],
+  "legacy_routes": [
+    {
+      "route": "/api/v1/customer/fields",
+      "classification": "LEGACY_ACTIVE_READ",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/customer/operations",
+      "classification": "LEGACY_ACTIVE_READ",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/customer/reports",
+      "classification": "LEGACY_ACTIVE_READ",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/customer/fields/:field_id/confirmed-twin-summary",
+      "classification": "LEGACY_DO_NOT_ADOPT",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/fields/portfolio",
+      "classification": "PRE_FOUI_LEGACY_PROJECTION",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/reports/customer-dashboard/aggregate",
+      "classification": "LEGACY_FALLBACK",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/reports/field/:fieldId",
+      "classification": "LEGACY_REPORT",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/reports/operation/:operationId",
+      "classification": "LEGACY_REPORT",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/customer/fields/:fieldId/memory",
+      "classification": "LEGACY_ACTIVE_READ",
+      "new_consumers": "FORBIDDEN"
+    },
+    {
+      "route": "/api/v1/customer/fields/:fieldId/geometry",
+      "classification": "LEGACY_COMPAT_READ_SOURCE",
+      "new_consumers": "FORBIDDEN",
+      "note": "May remain an implementation/source input during migration; it is not a canonical new UI contract."
+    }
+  ],
+  "legacy_lifecycle": [
+    "LEGACY_ACTIVE_READ",
+    "DEPRECATED",
+    "EMERGENCY_COMPAT_ONLY",
+    "REMOVED"
+  ],
+  "permanent_invariants": [
+    "DOMAIN_AUTHORITY_GT_PRODUCT_PROJECTION_GT_PRODUCT_UI",
+    "PRODUCT_PROJECTION_IS_NON_AUTHORITATIVE",
+    "CURRENT_PROJECTION_NE_HISTORICAL_REPLAY",
+    "CURRENT_PROJECTION_NE_DECISION_TIME_SNAPSHOT",
+    "CURRENT_STATE_SUBSTITUTION_FOR_DECISION_TIME_BASIS_FORBIDDEN",
+    "MISSING_AUTHORITY_VALUE_MUST_NOT_BECOME_PLAUSIBLE_BUSINESS_DEFAULT",
+    "NO_NEW_PRODUCT_CONSUMERS_OF_PRE_FOUI_CUSTOMER_REPORT_PORTFOLIO_APIS",
+    "NO_PERMANENT_PRODUCT_API_WRAPPER_OVER_LEGACY_PRESENTATION_API"
+  ],
+  "historical_documents": [
+    "docs/frontend/P2_CUSTOMER_API_CONTRACT.md",
+    "docs/frontend/CUSTOMER_DATA_SOURCE_MAP_V1.md",
+    "docs/frontend/FALLBACK_RETIREMENT_PLAN.md",
+    "docs/frontend/CUSTOMER_FRONTEND_GAP_BASELINE_V1.md",
+    "docs/frontend/P1_API_READINESS_MATRIX_V1.md"
+  ],
+  "first_successor_construction": {
+    "contracts": [
+      "CustomerOverviewProjectionV1",
+      "FieldSummaryProjectionV1",
+      "FieldWorkspaceProjectionV1"
+    ],
+    "routes": [
+      "GET /api/product/v1/overview",
+      "GET /api/product/v1/fields",
+      "GET /api/product/v1/fields/:fieldRef"
+    ],
+    "overview_attention_semantics": "SERVER_COMPOSED_FROM_GOVERNED_ATTENTION_QUEUE_NOT_BROWSER_INFERENCE",
+    "database_schema_change_required_by_governance": false
+  },
+  "legacy_frontend_consumer_allowlist": {
+    "policy": "EXISTING_COMPATIBILITY_CONSUMERS_ONLY_NO_NEW_FILES",
+    "forbidden_families_for_new_consumers": [
+      "/api/v1/customer/",
+      "/api/v1/reports/",
+      "/api/v1/fields/portfolio"
+    ],
+    "customer_api_family_existing_files": [
+      "apps/web/src/api/customer.ts",
+      "apps/web/src/api/customerFieldMemory.ts",
+      "apps/web/src/api/customerFields.ts",
+      "apps/web/src/api/customerOperations.ts",
+      "apps/web/src/api/customerReportsCenter.ts",
+      "apps/web/src/api/customerRoiLedger.ts",
+      "apps/web/src/api/operatorRoiLedger.ts"
+    ],
+    "reports_api_family_existing_files": [
+      "apps/web/src/api/reports.ts",
+      "apps/web/src/api/operatorDispatch.ts",
+      "apps/web/src/api/operatorAcceptance.ts",
+      "apps/web/src/api/operatorEvidence.ts",
+      "apps/web/src/api/operatorWorkbench.ts",
+      "apps/web/src/api/operatorDevicesAlerts.ts",
+      "apps/web/src/viewmodels/customerReportMainVisualVm.ts"
+    ],
+    "field_portfolio_existing_files": [
+      "apps/web/src/api/fieldPortfolio.ts"
+    ],
+    "customer_direct_domain_adapter_files": [
+      "apps/web/src/api/customerFieldMemory.ts",
+      "apps/web/src/api/customerPrescriptions.ts"
+    ],
+    "customer_direct_v1_api_existing_files": [
+      "apps/web/src/api/customer.ts",
+      "apps/web/src/api/customerFieldMemory.ts",
+      "apps/web/src/api/customerFields.ts",
+      "apps/web/src/api/customerOperations.ts",
+      "apps/web/src/api/customerPrescriptions.ts",
+      "apps/web/src/api/customerReportsCenter.ts",
+      "apps/web/src/api/customerRoiLedger.ts"
+    ]
+  },
+  "audit_closure": {
+    "performed_against_branch": "docs/frontend-canonical-blueprint-v1-20260922",
+    "findings_closed": [
+      "CUSTOMER_MEMORY_AND_GEOMETRY_ROUTE_CLASSIFICATION",
+      "P1_API_READINESS_DOCUMENT_HISTORICAL_MARKER",
+      "UNMARKED_CUSTOMER_COMPATIBILITY_ADAPTERS",
+      "NO_ENFORCEMENT_AGAINST_NEW_LEGACY_FRONTEND_CONSUMERS",
+      "HISTORICAL_CUSTOMER_VIEWMODEL_SEMANTIC_INFERENCE_NOT_MARKED",
+      "CUSTOMER_OVERVIEW_ROUTE_DRIFT",
+      "PRODUCT_PROJECTION_WATCHED_PATH_GAP",
+      "WAVE01_RESERVED_TYPE_TOKEN_AMBIGUITY",
+      "WAVE01_PRE_CONSTRUCTION_STATUS_GAP",
+      "FIRST_SUCCESSOR_MISSING_OVERVIEW",
+      "PRODUCT_API_CALLER_SCOPE_BOUNDARY_NOT_FROZEN"
+    ],
+    "remaining_blockers_for_sites_mock_frontend_handoff": [],
+    "remaining_blockers_for_sites_real_data_binding": [
+      "MINIMAL_CANONICAL_PRODUCT_API_NOT_IMPLEMENTED_YET",
+      "SCOPED_READ_ONLY_TEST_PRINCIPAL_OR_EQUIVALENT_SERVER_SIDE_SESSION_NOT_CONFIGURED"
+    ]
+  },
+  "wave01_reserved_projection_type_tokens": [
+    {
+      "token": "FIELD_PORTFOLIO",
+      "status": "RESERVED_TOKEN_NO_CONCRETE_PROJECTION_CONTRACT"
+    },
+    {
+      "token": "DECISION_PRODUCT",
+      "status": "RESERVED_TOKEN_NO_CONCRETE_PROJECTION_CONTRACT"
+    },
+    {
+      "token": "GOVERNED_ACTION_LIST",
+      "status": "RESERVED_TOKEN_NO_CONCRETE_PROJECTION_CONTRACT"
+    },
+    {
+      "token": "EVIDENCE_CASE",
+      "status": "RESERVED_TOKEN_NO_CONCRETE_PROJECTION_CONTRACT"
+    }
+  ],
+  "wave02_naming_rule": "DO_NOT_TREAT_RESERVED_TYPE_TOKEN_AS_IMPLEMENTED_CONTRACT; DEFINE_CONCRETE_CONTRACT_EXPLICITLY_BEFORE_ROUTE_OR_SITES_BINDING",
+  "legacy_customer_viewmodels": [
+    "apps/web/src/viewmodels/customerC8FormalReportVm.ts",
+    "apps/web/src/viewmodels/customerDashboardViewModel.ts",
+    "apps/web/src/viewmodels/customerDashboardVm.ts",
+    "apps/web/src/viewmodels/customerFieldMemoryVm.ts",
+    "apps/web/src/viewmodels/customerFieldsIndexVm.ts",
+    "apps/web/src/viewmodels/customerOperationsIndexVm.ts",
+    "apps/web/src/viewmodels/customerReportMainVisualVm.ts",
+    "apps/web/src/viewmodels/customerReportsCenterVm.ts",
+    "apps/web/src/viewmodels/customerRoiLedgerVm.ts"
+  ],
+  "legacy_viewmodel_policy": "PROVENANCE_AND_EXISTING_COMPATIBILITY_ONLY; NO_SEMANTIC_COPY_INTO_POST_FOUI_PRODUCT",
+  "wave01_adoption": {
+    "historical_document_status": "PRE-CONSTRUCTION FREEZE CANDIDATE",
+    "successor_governance": "GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1",
+    "effective_on_protected_main_adoption": "ACCEPTED_FOR_NARROW_READ_ONLY_PRODUCT_PROJECTION_SUCCESSOR_CONSTRUCTION",
+    "command_construction_authorized": false,
+    "authority_mutation_authorized": false,
+    "unscoped_future_route_promotion_authorized": false
+  },
+  "product_api_identity_scope_boundary": {
+    "authentication_required": true,
+    "principal_context": "SERVER_SIDE",
+    "client_supplied_scope_may_broaden_access": false,
+    "tenant_project_group_from_untrusted_query_may_grant_access": false,
+    "cross_scope_resource_response": "NOT_FOUND_OR_GOVERNED_DENIAL",
+    "browser_database_credentials": "FORBIDDEN",
+    "browser_service_wide_api_token": "FORBIDDEN",
+    "sites_test_principal": "SCOPED_READ_ONLY_NON_PRODUCTION_SERVER_SIDE_SECRET_ALLOWED_FOR_DATA_PATH_QUALIFICATION_ONLY",
+    "production_identity_provider": "SEPARATELY_GOVERNED"
+  }
+}

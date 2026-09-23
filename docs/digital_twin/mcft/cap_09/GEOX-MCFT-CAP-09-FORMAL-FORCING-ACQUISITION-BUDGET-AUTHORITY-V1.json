@@ -1,0 +1,85 @@
+{
+  "schema_version": "geox_mcft_cap09_formal_forcing_acquisition_budget_authority_v1",
+  "authority_id": "FORMAL_FORCING_ACQUISITION_BUDGET_V1",
+  "status": "QUALIFIED_AND_FROZEN_FROM_EXACT_HEAD_REAL_TIMING_AND_CONTROLLED_DELAY",
+  "supersedes_timing_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json#/timing_authority",
+  "step4_closure": {
+    "subject_sha": "ae3f82fea3ad4dc131376db3768b268f3c3d5025",
+    "workflow_name": "mcft-cap-09-v13-producer-driven-live-qualification",
+    "run_id": 33326960144,
+    "artifact_id": 9737109358,
+    "artifact_digest": "sha256:0fd1e6a4683b3c35873b674f6b32b299c0283d6ad5076a569b5afc96baa36f29",
+    "status": "PASS"
+  },
+  "measurement_authority": {
+    "workflow_name": "mcft-cap-09-v13-exact-head-timing-measurement",
+    "workflow_path": ".github/workflows/mcft-cap-09-v13-exact-head-timing-measurement.yml",
+    "measurement_subject_sha": "c12e40b9a2c1d48abf4861331d7301c362f58bfc",
+    "run_id": 33357328641,
+    "run_conclusion": "success",
+    "artifact_id": 9746348001,
+    "artifact_name": "mcft-cap09-v13-exact-head-timing-measurement-c12e40b9a2c1d48abf4861331d7301c362f58bfc",
+    "artifact_digest": "sha256:35e7ced1a9b5edc6a454c90b38575ab3f5aa4cebed81be75b1d5d4aa2445aab3"
+  },
+  "controlled_delay_authority": {
+    "workflow_name": "mcft-cap-09-v13-controlled-timing-delay-matrix",
+    "workflow_path": ".github/workflows/mcft-cap-09-v13-controlled-timing-delay-matrix.yml",
+    "controlled_subject_sha": "f8e56cde400889fba160e1091204e1e313901680",
+    "run_id": 33361390478,
+    "run_conclusion": "success",
+    "artifact_id": 9746806463,
+    "artifact_name": "mcft-cap09-v13-controlled-timing-delay-matrix-f8e56cde400889fba160e1091204e1e313901680",
+    "artifact_digest": "sha256:c89389274921dc6ac69ffeb7a4ffc589cff914c98e44f67ed830982a68ae882e",
+    "execution_mode": "CONTROLLED_ENGINEERING_FIXTURE_SCALED_DELAY_INJECTION_V1",
+    "controlled_delay_matrix_executed": true,
+    "controlled_delay_case_count": 6
+  },
+  "evidence_interpretation": {
+    "real_measurement_artifact_role": "AUTHORITATIVE_REAL_3_SAMPLE_PHASE_TIMING_AND_FULL_SCALE_ENVELOPE_INPUT",
+    "measurement_controlled_case_arrays_role": "FULL_SCALE_DELAY_ENVELOPE_CONSTRUCTION_ONLY_NOT_EXECUTION_PROOF",
+    "controlled_delay_artifact_role": "AUTHORITATIVE_CONTROLLED_DELAY_AND_CROSS_WAKE_EXECUTION_PROOF",
+    "controller_postgres_fixture_role": "HEARTBEAT_FENCING_COMPETITION_AND_FAIL_CLOSED_PROOF"
+  },
+  "budget_must_cover": [
+    "GITHUB_WAKE_DELAY",
+    "JOB_START_AND_SETUP",
+    "PROVIDER_CAPTURE",
+    "RETAINED_RAW_AND_CANDIDATE",
+    "PROMOTION_QUEUE_AND_SETUP",
+    "REHYDRATION_PROMOTION_NEON_COMMIT_POST_COMMIT_READBACK",
+    "CONTROLLED_CROSS_WAKE_CAPTURE_OVERLAP",
+    "EXPLICIT_SAFETY_MARGIN"
+  ],
+  "minimum_real_timing_sample_count": 3,
+  "controlled_delay_matrix_required": true,
+  "controlled_delay_policy_id": "OBSERVED_COMPONENT_MAX_PLUS_ONE_EXTRA_OBSERVED_TARGET_PHASE_V1",
+  "cross_wake_capture_overlap_model": "ONE_ADDITIONAL_FULL_CAPTURE_WORKLOAD_SERIALIZED_ON_COMPONENTWISE_REAL_MAXIMA",
+  "safety_margin_policy_id": "MAX_REAL_END_TO_END_SPREAD_OR_COMPONENTWISE_WAKE_PLUS_SETUP_V1",
+  "acquisition_start_deadline": "BASE_MINUS_QUALIFIED_END_TO_END_BUDGET",
+  "physical_formal_visibility_deadline": "BASE",
+  "fixed_35_minute_lead_authorized_for_v5": false,
+  "hardcoded_replacement_budget_minutes": null,
+  "qualified_budget": {
+    "authority_id": "FORMAL_FORCING_ACQUISITION_BUDGET_V1",
+    "status": "PASS",
+    "real_sample_count": 3,
+    "controlled_delay_case_count": 6,
+    "maximum_real_end_to_end_ms": 991554,
+    "maximum_controlled_end_to_end_ms": 1940630,
+    "measured_envelope_ms": 1940630,
+    "selected_budget_ms": 2081804,
+    "safety_margin_ms": 141174,
+    "hardcoded_default_budget_minutes": null,
+    "selection_basis": "MEASURED_ENVELOPE_PLUS_EXPLICIT_MARGIN"
+  },
+  "timing_budget_qualified": true,
+  "timing_budget_frozen": true,
+  "non_effects": {
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "formal_v5_mutation": false,
+    "a0_bootstrap": false,
+    "o00_started": false,
+    "mcft_cap09_completed": false
+  }
+}

@@ -1,0 +1,420 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geox.local/contracts/product_projection_contracts_v1.schema.json",
+  "title": "GEOX FOUI Product Projection Contract Wave-01",
+  "description": "Non-authoritative read-model contracts. Authority refs and non-authority basis refs are deliberately separate.",
+  "$defs": {
+    "SubjectScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tenant_id", "project_id", "group_id", "field_id", "zone_id", "season_id"],
+      "properties": {
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "project_id": { "type": "string", "minLength": 1 },
+        "group_id": { "type": "string", "minLength": 1 },
+        "field_id": { "type": ["string", "null"] },
+        "zone_id": { "type": ["string", "null"] },
+        "season_id": { "type": ["string", "null"] }
+      }
+    },
+    "AuthorityRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref_key", "authority_domain", "authority_object_kind", "exact_ref", "source_fact_ref"],
+      "properties": {
+        "ref_key": { "type": "string", "minLength": 1 },
+        "authority_domain": { "enum": ["MCFT", "ADR", "B_LINE", "OUTCOME", "EXTERNAL"] },
+        "authority_object_kind": { "type": "string", "minLength": 1 },
+        "exact_ref": { "type": "string", "minLength": 1 },
+        "source_fact_ref": { "type": ["string", "null"] }
+      }
+    },
+    "NonAuthorityRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref_key", "ref_class", "object_kind", "exact_ref", "source_fact_ref"],
+      "properties": {
+        "ref_key": { "type": "string", "minLength": 1 },
+        "ref_class": {
+          "enum": [
+            "COMPOSITION_MANIFEST",
+            "PRODUCT_GOVERNANCE",
+            "OPERATIONAL_QUALIFICATION",
+            "PROVIDER",
+            "MEASUREMENT",
+            "VERIFICATION_STATE",
+            "EVIDENCE",
+            "OTHER_NON_AUTHORITY"
+          ]
+        },
+        "object_kind": { "type": "string", "minLength": 1 },
+        "exact_ref": { "type": "string", "minLength": 1 },
+        "source_fact_ref": { "type": ["string", "null"] }
+      }
+    },
+    "SourceDigest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_ref_key", "digest", "digest_kind"],
+      "properties": {
+        "source_ref_key": { "type": "string", "minLength": 1 },
+        "digest": { "type": "string", "minLength": 1 },
+        "digest_kind": { "type": "string", "minLength": 1 }
+      }
+    },
+    "EffectiveInterval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "effective_from", "effective_until", "basis_ref_keys"],
+      "properties": {
+        "mode": { "enum": ["SINGLE_EXACT", "COMMON_INTERSECTION", "MIXED", "NOT_ESTABLISHED", "NOT_APPLICABLE"] },
+        "effective_from": { "type": ["string", "null"], "format": "date-time" },
+        "effective_until": { "type": ["string", "null"], "format": "date-time" },
+        "basis_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "EvidenceCutoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cutoff", "basis_ref_keys"],
+      "properties": {
+        "cutoff": { "type": "string", "format": "date-time" },
+        "basis_ref_keys": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "Limitation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason_code", "source_ref_key", "detail"],
+      "properties": {
+        "reason_code": { "type": "string", "minLength": 1 },
+        "source_ref_key": { "type": ["string", "null"] },
+        "detail": { "type": ["string", "null"] }
+      }
+    },
+    "Freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evaluated_at", "basis", "reason_codes"],
+      "properties": {
+        "status": { "enum": ["CURRENT", "STALE", "EXPIRED", "UNKNOWN"] },
+        "evaluated_at": { "type": "string", "format": "date-time" },
+        "basis": { "enum": ["SOURCE_DECLARED_VALIDITY", "PRODUCT_CACHE_FRESHNESS", "MIXED", "UNESTABLISHED"] },
+        "reason_codes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "ProductProjectionEnvelopeV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projection_id",
+        "projection_type",
+        "projection_schema_version",
+        "generated_at",
+        "derivation_version",
+        "subject_scope",
+        "source_authority_refs",
+        "source_non_authority_refs",
+        "source_content_digests",
+        "source_effective_interval",
+        "source_evidence_cutoff",
+        "authority_ceiling",
+        "limitations",
+        "freshness",
+        "projection_semantics",
+        "non_authoritative"
+      ],
+      "properties": {
+        "projection_id": { "type": "string", "minLength": 1 },
+        "projection_type": { "enum": ["GOVERNED_ACTION_CASE", "CAPABILITY_AVAILABILITY", "ATTENTION_QUEUE", "CUSTOMER_OVERVIEW", "FIELD_SUMMARY", "FIELD_WORKSPACE", "FIELD_PORTFOLIO", "DECISION_PRODUCT", "GOVERNED_ACTION_LIST", "EVIDENCE_CASE"] },
+        "projection_schema_version": { "const": "geox.product-projection.v1" },
+        "generated_at": { "type": "string", "format": "date-time" },
+        "derivation_version": { "type": "string", "minLength": 1 },
+        "subject_scope": { "$ref": "#/$defs/SubjectScope" },
+        "source_authority_refs": { "type": "array", "items": { "$ref": "#/$defs/AuthorityRef" } },
+        "source_non_authority_refs": { "type": "array", "items": { "$ref": "#/$defs/NonAuthorityRef" } },
+        "source_content_digests": { "type": "array", "items": { "$ref": "#/$defs/SourceDigest" } },
+        "source_effective_interval": { "$ref": "#/$defs/EffectiveInterval" },
+        "source_evidence_cutoff": { "oneOf": [{ "$ref": "#/$defs/EvidenceCutoff" }, { "type": "null" }] },
+        "authority_ceiling": { "const": "NON_AUTHORITATIVE_PRODUCT_PROJECTION_ONLY" },
+        "limitations": { "type": "array", "items": { "$ref": "#/$defs/Limitation" } },
+        "freshness": { "$ref": "#/$defs/Freshness" },
+        "projection_semantics": { "enum": ["CURRENT_PROJECTION", "DECISION_TIME_SNAPSHOT", "HISTORICAL_REPLAY"] },
+        "non_authoritative": { "const": true }
+      }
+    },
+    "InteractionIntentHint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent", "command_owner", "required_capabilities", "target_authority_ref_keys", "display_reason_code", "requires_command_reauthorization"],
+      "properties": {
+        "intent": { "type": "string", "minLength": 1 },
+        "command_owner": { "enum": ["B_LINE", "MCFT", "ADR", "OUTCOME", "EXTERNAL"] },
+        "required_capabilities": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "target_authority_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "display_reason_code": { "type": "string", "minLength": 1 },
+        "requires_command_reauthorization": { "const": true }
+      }
+    },
+    "InteractionHints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caller_context_id", "allowed_intents"],
+      "properties": {
+        "caller_context_id": { "type": "string", "minLength": 1 },
+        "allowed_intents": { "type": "array", "items": { "$ref": "#/$defs/InteractionIntentHint" } }
+      }
+    },
+    "AuthoritySlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref_key", "source_status"],
+      "properties": {
+        "ref_key": { "type": ["string", "null"] },
+        "source_status": { "type": ["string", "null"] }
+      }
+    },
+    "GovernedActionCaseProjectionV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["envelope", "case_anchor", "action_type", "composition_status", "linkage_proofs", "current_context", "decision_time_basis", "later_changes", "authority_chain", "derived_display_phase"],
+      "properties": {
+        "envelope": {
+          "allOf": [
+            { "$ref": "#/$defs/ProductProjectionEnvelopeV1" },
+            { "properties": { "projection_type": { "const": "GOVERNED_ACTION_CASE" } } }
+          ]
+        },
+        "case_anchor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_ref_key", "anchor_kind"],
+          "properties": {
+            "source_ref_key": { "type": "string", "minLength": 1 },
+            "anchor_kind": { "enum": ["DECISION_RESULT", "RECOMMENDATION_CANDIDATE", "APPROVAL_REQUEST", "OPERATION_PLAN", "AO_ACT_TASK"] }
+          }
+        },
+        "action_type": { "type": "string", "minLength": 1 },
+        "composition_status": { "enum": ["EXACT_REF_LINKED", "PARTIAL_REF_LINKED", "UNRESOLVED"] },
+        "linkage_proofs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from_source_ref_key", "to_source_ref_key", "linkage_kind", "evidence_ref_key"],
+            "properties": {
+              "from_source_ref_key": { "type": "string", "minLength": 1 },
+              "to_source_ref_key": { "type": "string", "minLength": 1 },
+              "linkage_kind": { "enum": ["EXACT_PREDECESSOR_REF", "EXACT_SOURCE_FACT_REF", "EXACT_DIGEST_BOUND_REF"] },
+              "evidence_ref_key": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "current_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["current_projection_time", "current_field_state_ref_key", "current_state_effective_interval", "current_forecast_ref_keys", "current_limitation_reason_codes", "current_context_status"],
+          "properties": {
+            "current_projection_time": { "type": "string", "format": "date-time" },
+            "current_field_state_ref_key": { "type": ["string", "null"] },
+            "current_state_effective_interval": { "oneOf": [{ "$ref": "#/$defs/EffectiveInterval" }, { "type": "null" }] },
+            "current_forecast_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "current_limitation_reason_codes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "current_context_status": { "enum": ["AVAILABLE", "AVAILABLE_WITH_LIMITATIONS", "UNAVAILABLE"] }
+          }
+        },
+        "decision_time_basis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "basis_integrity",
+            "historical_basis_source",
+            "current_state_substitution_forbidden",
+            "decision_ref_key",
+            "decision_time",
+            "evidence_cutoff",
+            "decision_time_manifest_ref_key",
+            "field_state_ref_at_decision_key",
+            "applicability_ref_key",
+            "runtime_eligibility_ref_key",
+            "runtime_binding_ref_keys",
+            "decision_basis_ref_keys",
+            "provider_ref_keys",
+            "measurement_ref_keys",
+            "verification_state_ref_keys",
+            "decision_basis_digest",
+            "capture_integrity"
+          ],
+          "properties": {
+            "basis_integrity": { "enum": ["EXACT_MANIFEST", "EXACT_DOMAIN_LOCAL_REFS", "PARTIAL_RECONSTRUCTION", "UNAVAILABLE"] },
+            "historical_basis_source": { "enum": ["DECISION_TIME_CAPTURE", "HISTORICAL_REPLAY", "LATER_RECONSTRUCTION", "UNAVAILABLE"] },
+            "current_state_substitution_forbidden": { "const": true },
+            "decision_ref_key": { "type": ["string", "null"] },
+            "decision_time": { "type": ["string", "null"], "format": "date-time" },
+            "evidence_cutoff": { "type": ["string", "null"], "format": "date-time" },
+            "decision_time_manifest_ref_key": { "type": ["string", "null"] },
+            "field_state_ref_at_decision_key": { "type": ["string", "null"] },
+            "applicability_ref_key": { "type": ["string", "null"] },
+            "runtime_eligibility_ref_key": { "type": ["string", "null"] },
+            "runtime_binding_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "decision_basis_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "provider_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "measurement_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "verification_state_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "decision_basis_digest": { "type": ["string", "null"] },
+            "capture_integrity": { "enum": ["CONTEMPORANEOUS_INGEST", "PROVIDER_NATIVE_VERSION_CONFIRMED", "EXTERNALLY_ATTESTED", "LATER_RECONSTRUCTED", "MIXED", "UNKNOWN"] }
+          }
+        },
+        "later_changes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["current_state_differs", "later_evidence_available", "later_arriving_or_revised_ref_keys", "comparison_basis_ref_keys", "comparison_limitation_reason_codes"],
+          "properties": {
+            "current_state_differs": { "enum": ["YES", "NO", "UNKNOWN"] },
+            "later_evidence_available": { "enum": ["YES", "NO", "UNKNOWN"] },
+            "later_arriving_or_revised_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "comparison_basis_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "comparison_limitation_reason_codes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+          }
+        },
+        "authority_chain": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["agronomic_decision", "recommendation_candidate", "approval_request", "approval_decision", "operation_plan", "execution_authorization", "task", "dispatch", "executor", "device", "execution_receipt", "as_executed", "evidence_artifact_ref_keys", "execution_evidence_acceptance", "outcome_ref_keys", "attribution"],
+          "properties": {
+            "agronomic_decision": { "$ref": "#/$defs/AuthoritySlot" },
+            "recommendation_candidate": { "$ref": "#/$defs/AuthoritySlot" },
+            "approval_request": { "$ref": "#/$defs/AuthoritySlot" },
+            "approval_decision": { "$ref": "#/$defs/AuthoritySlot" },
+            "operation_plan": { "$ref": "#/$defs/AuthoritySlot" },
+            "execution_authorization": { "$ref": "#/$defs/AuthoritySlot" },
+            "task": { "$ref": "#/$defs/AuthoritySlot" },
+            "dispatch": { "$ref": "#/$defs/AuthoritySlot" },
+            "executor": { "$ref": "#/$defs/AuthoritySlot" },
+            "device": { "$ref": "#/$defs/AuthoritySlot" },
+            "execution_receipt": { "$ref": "#/$defs/AuthoritySlot" },
+            "as_executed": { "$ref": "#/$defs/AuthoritySlot" },
+            "evidence_artifact_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "execution_evidence_acceptance": { "$ref": "#/$defs/AuthoritySlot" },
+            "outcome_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "attribution": { "$ref": "#/$defs/AuthoritySlot" }
+          }
+        },
+        "derived_display_phase": { "enum": ["LINKAGE_INCOMPLETE", "DECISION_ONLY", "NO_ACTION_CURRENTLY_AUTHORIZED", "AWAITING_APPROVAL", "APPROVAL_REJECTED", "APPROVED", "PLAN_PREPARING", "PLAN_READY", "READY_FOR_DISPATCH", "DISPATCHED", "ACKNOWLEDGED", "EXECUTION_REPORTED", "EVIDENCE_REVIEW", "EXECUTION_EVIDENCE_ACCEPTED", "EXCEPTION"] }
+      }
+    },
+    "CapabilityAvailabilityProjectionV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["envelope", "capability_id", "availability_scope", "product_implementation", "authority_maturity", "operational_eligibility", "customer_state", "default_release_surface_state", "reason_codes", "product_release_basis_ref_keys", "authority_maturity_basis_ref_keys", "operational_eligibility_basis_ref_keys", "evaluated_at"],
+      "properties": {
+        "envelope": {
+          "allOf": [
+            { "$ref": "#/$defs/ProductProjectionEnvelopeV1" },
+            { "properties": { "projection_type": { "const": "CAPABILITY_AVAILABILITY" } } }
+          ]
+        },
+        "capability_id": { "type": "string", "minLength": 1 },
+        "availability_scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scope_kind", "field_id", "zone_id", "action_type"],
+          "properties": {
+            "scope_kind": { "enum": ["PRODUCT_GLOBAL", "TENANT", "FIELD", "FIELD_ACTION_TYPE"] },
+            "field_id": { "type": ["string", "null"] },
+            "zone_id": { "type": ["string", "null"] },
+            "action_type": { "type": ["string", "null"] }
+          }
+        },
+        "product_implementation": { "enum": ["BUILT", "PARTIAL", "NOT_BUILT"] },
+        "authority_maturity": { "enum": ["AUTHORIZED", "PREVIEW", "NOT_AUTHORIZED"] },
+        "operational_eligibility": { "enum": ["CURRENT", "DEGRADED", "EXPIRED", "UNAVAILABLE"] },
+        "customer_state": { "enum": ["AVAILABLE", "LIMITED", "PREVIEW", "NOT_YET_AVAILABLE"] },
+        "default_release_surface_state": { "enum": ["ACTIVE", "LIMITED", "PREVIEW", "DISABLED"] },
+        "reason_codes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "product_release_basis_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "authority_maturity_basis_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "operational_eligibility_basis_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "evaluated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "AttentionQueueProjectionV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["envelope", "items"],
+      "properties": {
+        "envelope": {
+          "allOf": [
+            { "$ref": "#/$defs/ProductProjectionEnvelopeV1" },
+            { "properties": { "projection_type": { "const": "ATTENTION_QUEUE" } } }
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["attention_id", "subject_scope", "action_case_projection_id", "attention_kind", "triage_bucket", "attention_reason_code", "source_authority_ref_keys", "blocking_state", "source_effective_time", "source_evidence_cutoff", "due", "presentation_rank", "sort_reason_code", "source_declared_severity"],
+            "properties": {
+              "attention_id": { "type": "string", "minLength": 1 },
+              "subject_scope": { "$ref": "#/$defs/SubjectScope" },
+              "action_case_projection_id": { "type": ["string", "null"] },
+              "attention_kind": { "type": "string", "minLength": 1 },
+              "triage_bucket": { "enum": ["HUMAN_AUTHORITY_REQUIRED", "INFORMATION_REQUIRED", "EXECUTION_INTERVENTION", "EVIDENCE_REVIEW", "CAPABILITY_LIMITATION", "TIME_BOUND_REVIEW"] },
+              "attention_reason_code": { "type": "string", "minLength": 1 },
+              "source_authority_ref_keys": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+              "blocking_state": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["source_ref_key", "source_state"],
+                    "properties": {
+                      "source_ref_key": { "type": "string", "minLength": 1 },
+                      "source_state": { "type": "string", "minLength": 1 }
+                    }
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "source_effective_time": { "type": ["string", "null"], "format": "date-time" },
+              "source_evidence_cutoff": { "type": ["string", "null"], "format": "date-time" },
+              "due": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["due_at", "due_basis", "basis_ref_key"],
+                "properties": {
+                  "due_at": { "type": ["string", "null"], "format": "date-time" },
+                  "due_basis": { "enum": ["DOMAIN_SOURCE", "PRODUCT_SLA", "NONE"] },
+                  "basis_ref_key": { "type": ["string", "null"] }
+                }
+              },
+              "presentation_rank": { "type": "integer", "minimum": 0 },
+              "sort_reason_code": { "type": "string", "minLength": 1 },
+              "source_declared_severity": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["value", "source_ref_key"],
+                    "properties": {
+                      "value": { "type": "string", "minLength": 1 },
+                      "source_ref_key": { "type": "string", "minLength": 1 }
+                    }
+                  },
+                  { "type": "null" }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/ProductProjectionEnvelopeV1" },
+    { "$ref": "#/$defs/GovernedActionCaseProjectionV1" },
+    { "$ref": "#/$defs/CapabilityAvailabilityProjectionV1" },
+    { "$ref": "#/$defs/AttentionQueueProjectionV1" }
+  ]
+}

@@ -238,8 +238,9 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
   project_id?: string | null;
   group_id?: string | null;
   now_ms?: number;
+  persist?: boolean;
 }): Promise<FieldSensingOverviewV1> {
-  await ensureFieldSensingOverviewProjectionV1(db);
+  if (params.persist !== false) await ensureFieldSensingOverviewProjectionV1(db);
   const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();
 
   const rows = await db.query(
@@ -460,6 +461,8 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
     source_observation_ids_json: sourceObservationIds,
     updated_ts_ms: nowMs,
   };
+
+  if (params.persist === false) return overview;
 
   const upsert = await db.query(
     `INSERT INTO field_sensing_overview_v1

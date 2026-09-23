@@ -1,12 +1,14 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
+import { buildIngressPhysicalQcSnapshotV1 } from "../../evidence/ingress_physical_qc_snapshot_v1.js";
 
-export type RawSampleSourceV1 = "device" | "gateway" | "system" | "human" | "import" | "sim";
+export type RawSampleSourceV1 = "device" | "gateway" | "system" | "human" | "import" | "sim" | "unknown";
 export type RawSampleQualityV1 = "unknown" | "ok" | "suspect" | "bad";
 export type SeriesOverlayKindV1 = "marker" | "candidate" | "annotation";
 export type SeriesGapReasonV1 = "no_data" | "device_offline" | "unknown";
 
 export const OFFICIAL_SERIES_OVERLAY_KIND_ALLOWLIST_V1 = ["marker", "candidate", "annotation"] as const;
+export const RAW_SAMPLE_RUNTIME_AVAILABILITY_MARKER_KIND_V1 = "raw_sample_runtime_available_v1" as const;
 const OFFICIAL_SERIES_OVERLAY_KIND_SET_V1 = new Set<string>(OFFICIAL_SERIES_OVERLAY_KIND_ALLOWLIST_V1);
 const FORBIDDEN_OVERLAY_TERMS_V1 = ["recommendation", "prescription", "acceptance", "conclusion"] as const;
 const EC_METRIC_ALIASES_REQUIRING_DS_M_V1 = new Set<string>([
@@ -149,10 +151,10 @@ function parseJsonObject(v: unknown): Record<string, any> {
   return { ...(v as Record<string, any>) };
 }
 
-function normalizeSource(v: unknown): RawSampleSourceV1 {
-  const s = String(v ?? "device").trim();
-  if (s === "gateway" || s === "system" || s === "human" || s === "import" || s === "sim") return s;
-  return "device";
+export function normalizeRawSampleSourceV1(v: unknown): RawSampleSourceV1 {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (s === "device" || s === "gateway" || s === "system" || s === "human" || s === "import" || s === "sim") return s;
+  return "unknown";
 }
 
 function normalizeQuality(v: unknown): RawSampleQualityV1 {
@@ -223,10 +225,17 @@ function normalizeRawSampleWriteInputV1(input: RawSampleWriteInputV1, tenant: Ra
   const group_id = asTrimmedString(input.group_id) ?? asTrimmedString(input.groupId) ?? asTrimmedString(payload.group_id) ?? tenant.group_id;
   const project_id = asTrimmedString(input.project_id) ?? asTrimmedString(input.projectId) ?? asTrimmedString(payload.project_id) ?? tenant.project_id;
   const field_id = asTrimmedString(input.field_id) ?? asTrimmedString(input.fieldId) ?? asTrimmedString(payload.field_id);
-  const source = normalizeSource(input.source ?? payload.source);
+  const source = normalizeRawSampleSourceV1(input.source ?? payload.source);
   const qc_quality = normalizeQuality(input.qc_quality ?? input.quality ?? payload.qc_quality ?? payload.quality);
   const sample_id = asTrimmedString(input.sample_id) ?? asTrimmedString(input.sampleId) ?? makeSampleId({ sensor_id, ts_ms, metric, value, unit });
   const fact_id = `raw_sample:${sample_id}`;
+
+  const ingress_physical_qc = buildIngressPhysicalQcSnapshotV1({
+    source_fact_id: fact_id,
+    metric,
+    value,
+    unit,
+  });
 
   const payload_json = {
     ...payload,
@@ -240,6 +249,8 @@ function normalizeRawSampleWriteInputV1(input: RawSampleWriteInputV1, tenant: Ra
     value,
     unit,
     qc_quality,
+    source,
+    ingress_physical_qc,
     sample_kind: "raw",
     interpolated: false,
     synthetic: false,
@@ -296,12 +307,49 @@ function rowToRawSampleEnvelopeV1(row: any): RawSampleEnvelopeV1 {
     value: Number(row.value),
     unit,
     qc_quality: normalizeQuality(row.qc_quality ?? payload.qc_quality),
-    source: normalizeSource(row.source ?? payload.source),
+    source: normalizeRawSampleSourceV1(row.source ?? payload.source),
     payload_json: payload,
     fact_id: `raw_sample:${sample_id}`,
     created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
     interpolated: false,
     synthetic: false,
+  };
+}
+
+export function rawSampleRuntimeAvailabilityMarkerIdV1(sampleId: string): string {
+  return `${RAW_SAMPLE_RUNTIME_AVAILABILITY_MARKER_KIND_V1}:${sampleId}`;
+}
+
+export async function writeRawSampleRuntimeAvailabilityMarkerV1(
+  db: Pool | PoolClient,
+  sample: RawSampleEnvelopeV1,
+  tenant: RawSampleFactEnvelopeTenantV1,
+): Promise<{ marker_id: string; available_to_runtime_at: string } | null> {
+  const markerId = rawSampleRuntimeAvailabilityMarkerIdV1(sample.sample_id);
+  const payload = {
+    schema_version: RAW_SAMPLE_RUNTIME_AVAILABILITY_MARKER_KIND_V1,
+    sample_id: sample.sample_id,
+    fact_id: sample.fact_id,
+    tenant_id: tenant.tenant_id,
+    project_id: sample.project_id,
+    group_id: sample.group_id,
+    field_id: sample.field_id,
+    sensor_id: sample.sensor_id,
+    semantics: "RAW_SAMPLE_PROVEN_COMMITTED_BEFORE_MARKER_TIME",
+  };
+
+  const got = await db.query(
+    `INSERT INTO markers (marker_id, sensor_id, group_id, kind, source, payload_json, occurred_at)
+     VALUES ($1, $2, $3, $4, 'system', $5::jsonb, clock_timestamp())
+     ON CONFLICT (marker_id) DO NOTHING
+     RETURNING marker_id, occurred_at`,
+    [markerId, sample.sensor_id, sample.group_id, RAW_SAMPLE_RUNTIME_AVAILABILITY_MARKER_KIND_V1, JSON.stringify(payload)],
+  );
+  const row = got.rows?.[0];
+  if (!row?.occurred_at) return null;
+  return {
+    marker_id: String(row.marker_id ?? markerId),
+    available_to_runtime_at: new Date(row.occurred_at).toISOString(),
   };
 }
 
@@ -348,6 +396,7 @@ export async function appendRawSampleV1(pool: Pool, input: RawSampleWriteInputV1
         metric: normalized.metric,
         value: normalized.value,
         unit: normalized.unit,
+        ingress_physical_qc: normalized.payload_json.ingress_physical_qc,
       },
       qc: { quality: normalized.qc_quality },
       integrity: {
@@ -362,6 +411,18 @@ export async function appendRawSampleV1(pool: Pool, input: RawSampleWriteInputV1
       [normalized.fact_id, normalized.ts_ms, normalized.source, JSON.stringify(factRecord)],
     );
     await client.query("COMMIT");
+
+    // B-04d4: this is deliberately outside the raw-sample transaction. The
+    // marker's DB clock is sampled only after the raw fact COMMIT has returned,
+    // so it is a conservative proof that the raw sample was committed before
+    // marker time. Marker failure must not roll back or reinterpret the raw fact;
+    // absence of the marker simply leaves temporal authority UNKNOWN.
+    try {
+      await writeRawSampleRuntimeAvailabilityMarkerV1(client, normalized, tenant);
+    } catch {
+      // Fail closed on temporal authority, not on durable raw ingestion.
+    }
+
     return normalized;
   } catch (error: any) {
     await client.query("ROLLBACK").catch(() => undefined);
@@ -491,6 +552,7 @@ function normalizeOverlayKindV1(kind: unknown, payload: Record<string, any>): Se
   const candidates = [kind, payload.kind, payload.type, payload.overlay_kind]
     .map((x) => String(x ?? "").trim().toLowerCase())
     .filter(Boolean);
+  if (candidates.includes(RAW_SAMPLE_RUNTIME_AVAILABILITY_MARKER_KIND_V1)) return null;
   if (containsForbiddenOverlayConclusionV1(candidates)) return null;
   for (const candidate of candidates) {
     if (OFFICIAL_SERIES_OVERLAY_KIND_SET_V1.has(candidate)) return candidate as SeriesOverlayKindV1;

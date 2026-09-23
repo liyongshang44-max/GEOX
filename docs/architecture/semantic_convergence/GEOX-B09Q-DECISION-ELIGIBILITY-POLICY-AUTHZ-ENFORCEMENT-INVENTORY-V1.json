@@ -1,0 +1,158 @@
+{
+  "schema_version": "b09q_decision_eligibility_policy_authz_enforcement_inventory_v1",
+  "phase": "B-09q",
+  "status": "ANALYSIS_ONLY_AUTHZ_ENFORCEMENT_TOPOLOGY_RECOMMENDED_NOT_AUTHORIZED",
+  "authority_mode": "GOVERNANCE_ANALYSIS_ONLY",
+  "stacked_base_product_head": "731fe7ef62392e46d984ceafcb1bd62b17815230",
+  "current_authz_fact": {
+    "auth_path": "apps/server/src/auth/ao_act_authz_v0.ts",
+    "role_path": "apps/server/src/domain/auth/roles.ts",
+    "example_token_path": "config/auth/example_tokens.json",
+    "scope_check_semantics": "TOKEN_EXPLICIT_SCOPE_AND_ROLE_MATRIX_PERMISSION",
+    "token_scope_required": true,
+    "role_scope_required": true,
+    "admin_role_row_is_wildcard": true,
+    "admin_wildcard_mints_missing_token_scope": false,
+    "admin_with_explicit_future_scope_would_pass_role_layer": true
+  },
+  "corrected_interpretation": {
+    "rejected_overstatement": "ADMIN_WILDCARD_AUTOMATICALLY_GRANTS_ANY_NEW_SCOPE",
+    "repository_true_statement": "ADMIN_WILDCARD_ONLY_SATISFIES_ROLE_PERMISSION; TOKEN_MUST_STILL_EXPLICITLY_CARRY_THE_REQUESTED_SCOPE",
+    "remaining_governance_risk": "ROLE_LAYER_CANNOT_DISTINGUISH_TECHNICAL_ADMIN_FROM_PRODUCT_POLICY_AUTHOR_ONCE_ADMIN_TOKEN_EXPLICITLY_CARRIES_THE_SCOPE"
+  },
+  "enforcement_options": [
+    {
+      "option": "DEDICATED_SCOPE_ONLY",
+      "mechanism": "ADD_NEW_SCOPE_AND_USE_EXISTING_REQUIRE_AO_ACT_SCOPE_V0",
+      "strengths": [
+        "EXPLICIT_TOKEN_GRANT_REQUIRED",
+        "EXISTING_TENANT_PROJECT_GROUP_AUTH_CONTEXT"
+      ],
+      "risks": [
+        "ADMIN_ROLE_WILDCARD_STILL_PERMITS_ADMIN_TOKENS_THAT_RECEIVE_SCOPE",
+        "DOES_NOT_ENCODE_PRODUCT_AUTHOR_PRINCIPAL_POLICY"
+      ],
+      "adjudication": "INSUFFICIENT_IF_PRODUCT_GOVERNANCE_WANTS_ADMIN_NOT_TO_IMPLY_AUTHORSHIP"
+    },
+    {
+      "option": "ROUTE_LOCAL_ROLE_CHECK_AFTER_SCOPE",
+      "mechanism": "REQUIRE_SCOPE_THEN_INLINE_AUTH_ROLE_ALLOWLIST",
+      "strengths": [
+        "CAN_DENY_UNAUTHORIZED_ROLES"
+      ],
+      "risks": [
+        "DISTRIBUTED_POLICY_SEMANTICS",
+        "MULTIPLE_WRITER_PATHS_CAN_DRIFT_OR_BYPASS",
+        "ROLE_POLICY_HIDDEN_IN_ROUTE"
+      ],
+      "adjudication": "NOT_RECOMMENDED"
+    },
+    {
+      "option": "CENTRALIZED_SCOPE_PLUS_PRODUCT_AUTHOR_ALLOWLIST",
+      "mechanism": "DEDICATED_SCOPE_PLUS_CENTRAL_HELPER_OR_POLICY_TABLE_FOR_EXPLICIT_ALLOWED_PRINCIPALS",
+      "strengths": [
+        "TWO_LAYER_SCOPE_PRESERVED",
+        "PRODUCT_AUTHORSHIP_EXPLICIT",
+        "CENTRALIZED_FAIL_CLOSED",
+        "MULTIPLE_WRITER_PATHS_SHARE_ONE_RULE"
+      ],
+      "risks": [
+        "REQUIRES_AUTHZ_IMPLEMENTATION_CHANGE",
+        "NEEDS_PRODUCT_GOVERNANCE_TO_SELECT_ALLOWED_PRINCIPALS"
+      ],
+      "adjudication": "RECOMMENDED_NOT_AUTHORIZED"
+    },
+    {
+      "option": "REMOVE_ADMIN_WILDCARD_GLOBALLY",
+      "mechanism": "EXPAND_ADMIN_ROLE_TO_EXPLICIT_SCOPE_LIST",
+      "strengths": [
+        "ROLE_LEVEL_LEAST_PRIVILEGE_CAN_BE_EXPLICIT"
+      ],
+      "risks": [
+        "LARGE_UNRELATED_AUTHZ_BLAST_RADIUS",
+        "NOT_BOUNDED_TO_BLINE",
+        "CAN_BREAK_EXISTING_ADMIN_OPERATIONS"
+      ],
+      "adjudication": "OUT_OF_SCOPE_NOT_RECOMMENDED_FOR_BLINE"
+    },
+    {
+      "option": "SPECIAL_CASE_POLICY_SCOPE_IN_ROLE_MATRIX_FUNCTION",
+      "mechanism": "HARD_CODE_ADMIN_DENY_OR_SPECIAL_BEHAVIOR_IN_IS_SCOPE_ALLOWED_FOR_ROLE_V1",
+      "strengths": [
+        "CENTRAL_FUNCTION"
+      ],
+      "risks": [
+        "HIDDEN_EXCEPTION",
+        "SEMANTIC_RULE_COUPLED_TO_GENERIC_ROLE_HELPER",
+        "HARD_TO_AUDIT_AS_PRODUCT_GOVERNANCE"
+      ],
+      "adjudication": "NOT_RECOMMENDED"
+    },
+    {
+      "option": "NEW_TOKEN_RECORD_POLICY_AUTHORITY_CLAIM",
+      "mechanism": "ADD_EXPLICIT_POLICY_AUTHORITY_ATTRIBUTE_TO_TOKEN_RECORD",
+      "strengths": [
+        "CAN_DISTINGUISH_TECHNICAL_SCOPE_FROM_PRODUCT_AUTHORITY"
+      ],
+      "risks": [
+        "TOKEN_SCHEMA_EXPANSION",
+        "DUPLICATES_ROLE_CAPABILITY_MODEL",
+        "BROADER_MIGRATION_COST"
+      ],
+      "adjudication": "POSSIBLE_FUTURE_MODEL_NOT_NEEDED_FOR_FIRST_BOUNDED_IMPLEMENTATION"
+    }
+  ],
+  "recommended_topology": {
+    "state": "RECOMMENDED_NOT_AUTHORIZED",
+    "layers": [
+      "VALID_BEARER_TOKEN",
+      "EXPLICIT_DEDICATED_POLICY_DECLARATION_SCOPE_ON_TOKEN",
+      "ROLE_MATRIX_PERMISSION",
+      "CENTRALIZED_PRODUCT_AUTHOR_PRINCIPAL_ALLOWLIST",
+      "TENANT_PROJECT_GROUP_SCOPE_MATCH",
+      "FIELD_PROGRAM_SCOPE_MATCH_WHEN_NARROWER",
+      "AUDIT_IDENTITY_AND_CHANGE_REASON"
+    ],
+    "exact_scope_token": null,
+    "exact_allowed_principals": null,
+    "helper_name": null,
+    "route_path": null,
+    "writer_path": null
+  },
+  "fail_closed_requirements": [
+    "MISSING_DEDICATED_SCOPE_DENY",
+    "ROLE_SCOPE_DENY",
+    "PRINCIPAL_NOT_IN_PRODUCT_AUTHOR_ALLOWLIST_DENY",
+    "TENANT_PROJECT_GROUP_MISMATCH_DENY",
+    "FIELD_PROGRAM_SCOPE_MISMATCH_DENY",
+    "MISSING_ACTOR_OR_TOKEN_ID_DENY",
+    "EMPTY_CHANGE_REASON_DENY",
+    "POLICY_REF_CONFLICT_DENY",
+    "MULTIPLE_APPLICABLE_POLICY_AMBIGUITY_DENY"
+  ],
+  "explicitly_undecided": {
+    "dedicated_scope_token": null,
+    "allowed_roles_or_principals": null,
+    "admin_allowed_as_policy_author": null,
+    "helper_or_policy_table_shape": null,
+    "route_path": null,
+    "writer_path": null,
+    "policy_content": null,
+    "state": "INTENTIONALLY_UNDECIDED"
+  },
+  "repository_effects": {
+    "auth_scope_added": false,
+    "role_matrix_changed": false,
+    "token_schema_changed": false,
+    "token_examples_changed": false,
+    "helper_added": false,
+    "writer_added": false,
+    "route_added": false,
+    "policy_instance_added": false,
+    "g_b02_32_registered_paths_changed": false,
+    "runtime_schema_workflow_mcft_changed": false,
+    "consumer_migration_performed": false,
+    "authority_removal_performed": false
+  },
+  "next_permitted_step": "PRODUCT_GOVERNANCE_MUST_AUTHORIZE_THE_DEDICATED_SCOPE_AND_EXPLICIT_POLICY_AUTHOR_PRINCIPAL_SET_BEFORE_CENTRALIZED_AUTHZ_ENFORCEMENT_OR_WRITER_IMPLEMENTATION"
+}

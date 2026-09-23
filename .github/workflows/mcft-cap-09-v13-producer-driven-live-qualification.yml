@@ -1,0 +1,437 @@
+name: mcft-cap-09-v13-producer-driven-live-qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json'
+      - 'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts'
+      - 'apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-v13-producer-driven-live-qualification
+  cancel-in-progress: false
+
+env:
+  IMPLEMENTATION_BASE_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+  PROTECTED_MAIN_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+  V13_DB: geox_mcft_cap09_s6_accel24t_am19_v13
+  BLOCKED_V13_DB: geox_mcft_cap09_s6_accel24t_am19_blocked_v13
+  FORMAL_V5_DB: geox_mcft_cap09_s6_formal_t4r1_24h_v5
+  EVIDENCE_ROLE: geox_mcft_cap09_evidence_runtime_v1
+  EVIDENCE_LOGIN_ROLE: geox_mcft_cap09_evidence_runtime_login_v1
+  TWIN_ROLE: geox_mcft_cap09_twin_runtime_v1
+  TWIN_LOGIN_ROLE: geox_mcft_cap09_twin_runtime_login_v1
+  SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+  EVIDENCE_RUNTIME_DATABASE_URL_SECRET: ${{ secrets.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL }}
+  S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+
+jobs:
+  live-qualification:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact qualification subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve governed producer live applicability
+        id: applicability
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="acceptance-output/MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1_RESULT.json"
+          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs \
+            --base '${{ github.event.pull_request.base.sha }}' \
+            --head '${{ github.event.pull_request.head.sha }}' \
+            --generation v13 \
+            --stage POST_MERGE_V13_QUALIFICATION \
+            --out "$out"
+          node - "$out" "$GITHUB_OUTPUT" <<'NODE'
+          const fs=require('node:fs');
+          const [outPath,githubOutput]=process.argv.slice(2);
+          const p=JSON.parse(fs.readFileSync(outPath,'utf8'));
+          if(p.status!=='PASS') throw new Error('V13_PRODUCER_LIVE_APPLICABILITY_NOT_PASS');
+          fs.appendFileSync(githubOutput,`live_required=${p.live_required?'true':'false'}\n`);
+          if(p.evidence_id) fs.appendFileSync(githubOutput,`evidence_id=${p.evidence_id}\n`);
+          console.log(JSON.stringify(p,null,2));
+          NODE
+
+      - name: Accept durable producer evidence without live rerun
+        if: steps.applicability.outputs.live_required == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ steps.applicability.outputs.evidence_id }}"
+          echo "V13_PRODUCER_LIVE_REQUALIFICATION_SKIPPED_DURABLE_EVIDENCE:${{ steps.applicability.outputs.evidence_id }}"
+
+      - name: Resolve explicit live arm
+        id: arm
+        if: steps.applicability.outputs.live_required == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p='scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json';
+          if(!fs.existsSync(p)){
+            console.log('LIVE_QUALIFICATION_NOT_ARMED');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed=false\n');
+            process.exit(0);
+          }
+          const a=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(a.armed!==true){
+            console.log('LIVE_QUALIFICATION_ARM_FILE_PRESENT_BUT_DISABLED');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed=false\n');
+            process.exit(0);
+          }
+          if(a.activation_step!=='RUN_PRODUCER_DRIVEN_V13_QUALIFICATION')throw new Error('V13_LIVE_ARM_STEP_MISMATCH');
+          if(a.implementation_base_sha!==process.env.IMPLEMENTATION_BASE_SHA)throw new Error('V13_LIVE_ARM_BASE_MISMATCH');
+          if(a.exact_branch!=='feat/mcft-cap09-v13-producer-driven-qualification-v1')throw new Error('V13_LIVE_ARM_BRANCH_MISMATCH');
+          if(a.formal_v5_arm_authorized!==false||a.production_owner_activation_authorized!==false||a.a0_authorized!==false||a.o00_authorized!==false)throw new Error('V13_LIVE_ARM_LATER_STAGE_EFFECT_FORBIDDEN');
+          if(typeof a.qualification_first_base!=='string'||!/:00:00\.000Z$/.test(a.qualification_first_base)||new Date(a.qualification_first_base).toISOString()!==a.qualification_first_base)throw new Error('V13_LIVE_ARM_FIRST_BASE_CANONICAL_HOUR_REQUIRED');
+          if(Date.parse(a.qualification_first_base)<=Date.now()+6*60*60*1000)throw new Error('V13_LIVE_ARM_FIRST_BASE_MUST_LEAD_BY_MORE_THAN_6H');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed=true\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'qualification_first_base='+a.qualification_first_base+'\n');
+
+      - name: Require live arm when live requalification is required
+        if: steps.applicability.outputs.live_required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.arm.outputs.armed }}" = "true"
+
+      - name: Require exact frozen subject and authority
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$IMPLEMENTATION_BASE_SHA"
+          git fetch origin main --quiet
+          test "$(git rev-parse origin/main)" = "$PROTECTED_MAIN_SHA"
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const a=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json','utf8'));
+          if(a.activation_sequence?.[3]!=='RUN_PRODUCER_DRIVEN_V13_QUALIFICATION')throw new Error('V13_LIVE_SEQUENCE_MISMATCH');
+          if(a.qualification_generation?.qualification_database!==process.env.V13_DB)throw new Error('V13_LIVE_V13_DB_MISMATCH');
+          if(a.qualification_generation?.blocked_database!==process.env.BLOCKED_V13_DB)throw new Error('V13_LIVE_BLOCKED_DB_MISMATCH');
+          if(a.database_identity?.database_name!==process.env.FORMAL_V5_DB)throw new Error('V13_LIVE_FORMAL_V5_DB_MISMATCH');
+          if(a.qualification_generation?.producer_supply_graph_must_be_exercised!==true)throw new Error('V13_LIVE_PRODUCER_GRAPH_REQUIRED');
+          if(a.qualification_generation?.preinsert_all_24_hourly_forcing_pairs_forbidden!==true)throw new Error('V13_LIVE_PREINSERT_FORBIDDEN');
+          if(a.qualification_generation?.production_canonical_core_must_be_identical!==true)throw new Error('V13_LIVE_PRODUCTION_CORE_IDENTITY_REQUIRED');
+          if(a.timing_authority?.status!=='UNQUALIFIED_UNTIL_EXACT_HEAD_TIMING_QUALIFICATION')throw new Error('V13_LIVE_TIMING_MUST_REMAIN_UNQUALIFIED');
+          NODE
+
+      - uses: pnpm/action-setup@v4
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Install exact repository and scientific dependencies
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            'eccodes==2.47.0' 'eccodeslib==2.47.3.23' 'numpy==1.26.4' 'refet==0.4.2'
+          python -m eccodes selfcheck
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py selftest
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py selftest
+
+      - name: Normalize governed database URLs
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const raw=String(process.env.SEED_DATABASE_URL||'').trim();
+          const evidenceRaw=String(process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET||'').trim();
+          if(!raw)throw new Error('V13_LIVE_DATABASE_SECRET_REQUIRED');
+          if(!evidenceRaw)throw new Error('V13_LIVE_EVIDENCE_RUNTIME_DATABASE_URL_SECRET_REQUIRED');
+          const seed=new URL(raw);
+          const evidenceSeed=new URL(evidenceRaw);
+          if(!['postgres:','postgresql:'].includes(seed.protocol)||!['postgres:','postgresql:'].includes(evidenceSeed.protocol))throw new Error('V13_LIVE_POSTGRES_URL_REQUIRED');
+          if(decodeURIComponent(evidenceSeed.username)!==process.env.EVIDENCE_LOGIN_ROLE)throw new Error('V13_LIVE_EVIDENCE_LOGIN_URL_PRINCIPAL_REQUIRED');
+          if(evidenceSeed.hostname!==seed.hostname||(evidenceSeed.port||'5432')!==(seed.port||'5432'))throw new Error('V13_LIVE_EVIDENCE_LOGIN_ENDPOINT_MISMATCH');
+          function target(name,source){
+            const u=new URL(source);
+            u.pathname='/'+name;
+            const v=u.toString();
+            console.log('::add-mask::'+v);
+            return v;
+          }
+          const lines=[
+            'V13_ADMIN_URL='+target(process.env.V13_DB,raw),
+            'BLOCKED_ADMIN_URL='+target(process.env.BLOCKED_V13_DB,raw),
+            'FORMAL_V5_URL='+target(process.env.FORMAL_V5_DB,raw),
+            'V13_EVIDENCE_URL='+target(process.env.V13_DB,evidenceRaw),
+            'BLOCKED_EVIDENCE_URL='+target(process.env.BLOCKED_V13_DB,evidenceRaw),
+          ];
+          fs.appendFileSync(process.env.GITHUB_ENV,lines.join('\n')+'\n');
+
+      - name: Require Formal-v5 untouched and qualification stores uninitialized-or-exact-v13
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          formal_counts="$(psql "$FORMAL_V5_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT
+              (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),
+              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
+          test "$formal_counts" = "0|0" || { echo "V13_LIVE_FORMAL_V5_NOT_ZERO_STATE:$formal_counts" >&2; exit 1; }
+          for url in "$V13_ADMIN_URL" "$BLOCKED_ADMIN_URL"; do
+            n="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")"
+            test "$n" = "0" || test "$n" = "29" || { echo "V13_LIVE_STORE_SCHEMA_CARDINALITY_UNSAFE:$n" >&2; exit 1; }
+          done
+
+      - name: Establish qualification-only NOLOGIN Evidence privilege role
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $role$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='geox_mcft_cap09_evidence_runtime_v1') THEN
+              CREATE ROLE geox_mcft_cap09_evidence_runtime_v1
+                NOLOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='geox_mcft_cap09_forcing_writer_owner_v1') THEN
+              CREATE ROLE geox_mcft_cap09_forcing_writer_owner_v1
+                NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+            END IF;
+          END
+          $role$;
+          SQL
+
+          evidence_state="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT rolcanlogin::text,rolinherit::text,rolsuper::text,rolcreatedb::text,rolcreaterole::text,rolreplication::text,rolbypassrls::text
+              FROM pg_catalog.pg_roles WHERE rolname='$EVIDENCE_ROLE'")"
+          test "$evidence_state" = "false|true|false|false|false|false|false" || {
+            echo "V13_LIVE_EVIDENCE_PRIVILEGE_ROLE_UNSAFE:$evidence_state" >&2; exit 1;
+          }
+          writer_state="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT rolcanlogin::text,rolinherit::text,rolsuper::text,rolcreatedb::text,rolcreaterole::text,rolreplication::text,rolbypassrls::text
+              FROM pg_catalog.pg_roles WHERE rolname='geox_mcft_cap09_forcing_writer_owner_v1'")"
+          test "$writer_state" = "false|false|false|false|false|false|false" || {
+            echo "V13_LIVE_FORCING_WRITER_OWNER_ROLE_UNSAFE:$writer_state" >&2; exit 1;
+          }
+
+          production_login_state="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT rolname,rolcanlogin::text,rolinherit::text,rolsuper::text,rolcreatedb::text,rolcreaterole::text,rolreplication::text,rolbypassrls::text
+              FROM pg_catalog.pg_roles
+             WHERE rolname IN ('$EVIDENCE_LOGIN_ROLE','$TWIN_LOGIN_ROLE')
+             ORDER BY rolname")"
+          expected_login_state="$(printf '%s\n%s' \
+            "$EVIDENCE_LOGIN_ROLE|true|true|false|false|false|false|false" \
+            "$TWIN_LOGIN_ROLE|true|true|false|false|false|false|false")"
+          test "$production_login_state" = "$expected_login_state" || {
+            echo "V13_LIVE_PRODUCTION_LOGIN_EXACT_STATE_REQUIRED:$production_login_state" >&2; exit 1;
+          }
+
+          production_login_memberships="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT member.rolname,granted.rolname,m.admin_option::text,m.inherit_option::text,m.set_option::text
+              FROM pg_catalog.pg_auth_members m
+              JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+              JOIN pg_catalog.pg_roles member ON member.oid=m.member
+             WHERE member.rolname IN ('$EVIDENCE_LOGIN_ROLE','$TWIN_LOGIN_ROLE')
+             ORDER BY member.rolname,granted.rolname")"
+          expected_login_memberships="$(printf '%s\n%s' \
+            "$EVIDENCE_LOGIN_ROLE|$EVIDENCE_ROLE|false|true|false" \
+            "$TWIN_LOGIN_ROLE|$TWIN_ROLE|false|true|false")"
+          test "$production_login_memberships" = "$expected_login_memberships" || {
+            echo "V13_LIVE_PRODUCTION_LOGIN_EXACT_MEMBERSHIP_REQUIRED:$production_login_memberships" >&2; exit 1;
+          }
+
+          for url in "$V13_EVIDENCE_URL" "$BLOCKED_EVIDENCE_URL"; do
+            evidence_login_state="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+              SELECT current_user::text,
+                     pg_catalog.pg_has_role(current_user,'$EVIDENCE_ROLE','USAGE')::text,
+                     pg_catalog.pg_has_role(current_user,'$TWIN_ROLE','USAGE')::text")"
+            test "$evidence_login_state" = "$EVIDENCE_LOGIN_ROLE|true|false" || {
+              echo "V13_LIVE_EVIDENCE_LOGIN_EFFECTIVE_ROLE_BOUNDARY_REQUIRED:$evidence_login_state" >&2; exit 1;
+            }
+          done
+
+      - name: Reconcile exact 29-table v13 qualification ACL without writer-owner SET
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          reconcile_store() {
+            url="$1"
+            n="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")"
+            test "$n" = "29" || {
+              echo "V13_LIVE_EXISTING_29_TABLE_QUALIFICATION_STORE_REQUIRED:$n" >&2
+              exit 1
+            }
+            function_sig="public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)"
+            function_present="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT (to_regprocedure('$function_sig') IS NOT NULL)::text")"
+            test "$function_present" = "true" || {
+              echo "V13_LIVE_EXISTING_FENCED_WRITER_REQUIRED" >&2
+              exit 1
+            }
+            owner_state="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+              SELECT owner_role.rolname,p.prosecdef::text
+                FROM pg_catalog.pg_proc p
+                JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=p.proowner
+               WHERE p.oid=to_regprocedure('$function_sig')")"
+            test "$owner_state" = "geox_mcft_cap09_forcing_writer_owner_v1|true" || {
+              echo "V13_LIVE_FENCED_WRITER_OWNER_OR_SECURITY_DEFINER_MISMATCH:$owner_state" >&2
+              exit 1
+            }
+
+            # Writer-owner SET/self-membership was permanently cleaned. Requalification
+            # only reconciles ACL on the already-materialized qualification function.
+            psql "$url" -v ON_ERROR_STOP=1 -c "
+              REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
+              REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+                text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+              ) FROM PUBLIC;
+              REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+                text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+              ) FROM geox_mcft_cap09_forcing_writer_owner_v1;
+              GRANT EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+                text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+              ) TO geox_mcft_cap09_evidence_runtime_v1;
+              REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+                text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+              ) FROM geox_mcft_cap09_twin_runtime_v1;
+            "
+
+            # This qualification store is the exact V13 29-table successor store.
+            # Phase3 Evidence persistence is not materialized here and its carry-forward
+            # migration belongs to the 41-table production operational schema path.
+            # Requalification therefore reconciles only the V13 fenced-writer ACL.
+            writer_schema_create="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public','CREATE')::text")"
+            test "$writer_schema_create" = "false" || { echo "V13_LIVE_WRITER_OWNER_SCHEMA_CREATE_FORBIDDEN:$writer_schema_create" >&2; exit 1; }
+            writer_execute="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_function_privilege('geox_mcft_cap09_forcing_writer_owner_v1','$function_sig','EXECUTE')::text")"
+            test "$writer_execute" = "false" || { echo "V13_LIVE_WRITER_OWNER_EXECUTE_FORBIDDEN:$writer_execute" >&2; exit 1; }
+            writer_facts="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+              SELECT
+                has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.facts','SELECT')::text,
+                has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.facts','INSERT')::text,
+                has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.facts','UPDATE')::text,
+                has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.facts','DELETE')::text")"
+            test "$writer_facts" = "true|true|false|false" || { echo "V13_LIVE_WRITER_OWNER_FACTS_ACL_MISMATCH:$writer_facts" >&2; exit 1; }
+            for table in twin_external_formal_forcing_controller_lease_v1 twin_external_formal_forcing_base_target_v1; do
+              writer_coord="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+                SELECT
+                  has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.$table','SELECT')::text,
+                  has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.$table','INSERT')::text,
+                  has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.$table','UPDATE')::text,
+                  has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.$table','DELETE')::text")"
+              test "$writer_coord" = "true|false|true|false" || { echo "V13_LIVE_WRITER_OWNER_COORDINATION_ACL_MISMATCH:$table:$writer_coord" >&2; exit 1; }
+            done
+            delta="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "
+              SELECT string_agg(table_name,',' ORDER BY table_name)
+                FROM information_schema.tables
+               WHERE table_schema='public'
+                 AND table_name LIKE 'twin_external_formal_forcing_%_v1'")"
+            test "$delta" = "twin_external_formal_forcing_base_cursor_v1,twin_external_formal_forcing_base_target_v1,twin_external_formal_forcing_controller_lease_v1" || {
+              echo "V13_LIVE_FORCING_RELATION_SET_MISMATCH:$delta" >&2; exit 1;
+            }
+          }
+          reconcile_store "$V13_ADMIN_URL"
+          reconcile_store "$BLOCKED_ADMIN_URL"
+
+      - name: Prove Evidence ACL before provider execution
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in "$V13_EVIDENCE_URL" "$BLOCKED_EVIDENCE_URL"; do
+            role="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT current_user")"
+            test "$role" = "$EVIDENCE_LOGIN_ROLE"
+            evidence_membership="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT pg_catalog.pg_has_role(current_user,'$EVIDENCE_ROLE','USAGE')::text")"
+            test "$evidence_membership" = "true"
+            schema_usage="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege(current_user,'public','USAGE')::text")"
+            test "$schema_usage" = "true"
+            schema_create="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege(current_user,'public','CREATE')::text")"
+            test "$schema_create" = "false"
+            insert_fact="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_table_privilege(current_user,'public.facts','INSERT')::text")"
+            test "$insert_fact" = "false"
+            execute_writer="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_function_privilege(current_user,'public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)','EXECUTE')::text")"
+            test "$execute_writer" = "true"
+          done
+          for url in "$V13_ADMIN_URL" "$BLOCKED_ADMIN_URL"; do
+            writer_schema_create="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public','CREATE')::text")"
+            test "$writer_schema_create" = "false" || { echo "V13_LIVE_WRITER_OWNER_SCHEMA_CREATE_LEAK:$writer_schema_create" >&2; exit 1; }
+            writer_execute="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_function_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)','EXECUTE')::text")"
+            test "$writer_execute" = "false" || { echo "V13_LIVE_WRITER_OWNER_EXECUTE_LEAK:$writer_execute" >&2; exit 1; }
+          done
+
+      - name: Run producer-driven live v13 qualification
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        env:
+          MCFT_CAP09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION: '1'
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+          MCFT_QUALIFICATION_FIRST_BASE: ${{ steps.arm.outputs.qualification_first_base }}
+          DATABASE_URL: ${{ env.V13_EVIDENCE_URL }}
+          BLOCKED_DATABASE_URL: ${{ env.BLOCKED_EVIDENCE_URL }}
+          MCFT_CAP09_FORMAL_RAW_ENDPOINT: ${{ env.S3_ENDPOINT }}
+          MCFT_CAP09_FORMAL_RAW_BUCKET: ${{ env.S3_BUCKET }}
+          MCFT_CAP09_FORMAL_RAW_REGION: ${{ env.S3_REGION }}
+          MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID: ${{ env.S3_ACCESS_KEY_ID }}
+          MCFT_CAP09_FORMAL_RAW_SECRET_ACCESS_KEY: ${{ env.S3_SECRET_ACCESS_KEY }}
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts
+
+      - name: Validate machine proof and frozen non-effects
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1_RESULT.json','utf8'));
+          if(p.status!=='PASS'||p.activation_step!=='RUN_PRODUCER_DRIVEN_V13_QUALIFICATION')throw new Error('V13_LIVE_QUALIFICATION_PASS_REQUIRED');
+          if(p.subject_sha!=='${{ github.event.pull_request.head.sha }}')throw new Error('V13_LIVE_EXACT_HEAD_REQUIRED');
+          if(p.processed_base_count!==3||p.real_producer_graph_timing_observation_count!==3)throw new Error('V13_LIVE_EXACT_THREE_REAL_SAMPLES_REQUIRED');
+          for(const k of ['production_canonical_core_identical','provider_supply_graph_exercised','private_raw_retention_exercised','private_candidate_manifest_exercised','candidate_rehydration_exercised','fenced_evidence_writer_exercised','post_commit_physical_readback_exercised','controller_fencing_exercised','producer_fencing_exercised'])if(p[k]!==true)throw new Error('V13_LIVE_PRODUCER_GRAPH_PROOF_MISSING:'+k);
+          if(p.preinsert_all_24_hourly_forcing_pairs!==false||p.direct_facts_insert_privilege!==false)throw new Error('V13_LIVE_FORBIDDEN_SHORTCUT');
+          if(p.production_admission_exercised!==false||p.qualification_only_prebudget_admission_boundary!==true)throw new Error('V13_LIVE_PREBUDGET_BOUNDARY_REQUIRED');
+          if(p.timing_budget_qualified!==false||p.timing_budget_frozen!==false||p.controlled_delay_matrix_executed!==false)throw new Error('V13_LIVE_STEP5_MUST_REMAIN_UNEXECUTED');
+          if(p.blocked_negative?.status!=='PASS'||p.blocked_negative?.provider_request_count!==0||p.blocked_negative?.fail_closed_before_provider!==true)throw new Error('V13_LIVE_BLOCKED_NEGATIVE_REQUIRED');
+          for(const k of ['production_owner_activation','formal_v5_arm','a0_bootstrap','o00_started','mcft_cap09_completed'])if(p[k]!==false)throw new Error('V13_LIVE_LATER_STAGE_EFFECT:'+k);
+
+      - name: Reprove Formal-v5 untouched
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          counts="$(psql "$FORMAL_V5_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT
+              (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),
+              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
+          test "$counts" = "0|0" || { echo "V13_LIVE_FORMAL_V5_MUTATION_FORBIDDEN:$counts" >&2; exit 1; }
+
+      - name: Upload immutable producer qualification proof
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-producer-driven-live-qualification-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

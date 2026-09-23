@@ -1,0 +1,80 @@
+name: bline-w1-identity-foundation
+
+on:
+  push:
+    branches:
+      - 'feat/bline-w1-identity-foundation-v1'
+  pull_request:
+    paths:
+      - 'apps/server/src/auth/ao_act_authz_v0.ts'
+      - 'apps/server/src/routes/device_status_v1.ts'
+      - 'apps/server/src/runtime/runtime_security_v1.ts'
+      - 'docker-compose.commercial_v1.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.ts'
+      - '.github/workflows/bline-w1-identity-foundation.yml'
+      - '.github/workflows/ci.yml'
+
+jobs:
+  identity-foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: W1 identity foundation machine gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs
+
+      - name: W1 focused identity runtime proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.ts
+
+      - name: Render Commercial runtime with isolated structured credentials
+        run: |
+          set -euo pipefail
+          TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); process.stdout.write(JSON.stringify(f))")"
+          cat > .env.w1 <<EOF
+          GEOX_RUNTIME_ENV=pilot
+          GEOX_TOKENS_JSON='$TOKENS_JSON'
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=w1-postgres-strong-2026
+          POSTGRES_DB=landos
+          GEOX_MCFT_MIGRATOR_PASSWORD=w1-mcft-migrator-strong-2026
+          GEOX_RUNTIME_DATABASE_PASSWORD=w1-runtime-database-strong-2026
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=${GITHUB_SHA}
+          GEOX_AO_ACT_TOKEN=admin_token
+          GEOX_EXECUTOR_TOKEN=tenant_a_admin_token
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=w1-minio-strong-2026
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=w1-mqtt-strong-2026
+          CORS_ORIGINS=https://w1.geox.invalid
+          APP_SECRET=w1-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://w1.geox.invalid
+          EOF
+          docker compose --env-file .env.w1 -f docker-compose.commercial_v1.yml config > /tmp/w1-commercial.yml
+          ! grep -q '/app/config/auth/security_acceptance_tokens.json' /tmp/w1-commercial.yml
+          grep -q 'GEOX_TOKENS_JSON:' /tmp/w1-commercial.yml
+
+      - name: Frozen PR-SEC-1 caller inventory regression
+        run: pnpm run ci:governance:bline-production-caller-authority-inventory
+
+      - name: B-Line residual authority audit
+        run: pnpm run ci:governance:bline-residual-authority-audit
+
+      - name: B-Line active runtime surface closure
+        run: pnpm run ci:governance:bline-active-runtime-surface-closure
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Build
+        run: pnpm -r build

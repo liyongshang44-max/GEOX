@@ -1,0 +1,159 @@
+{
+  "schema_version": "b09w_irrigate_eligibility_policy_content_decision_package_v1",
+  "phase": "B-09w",
+  "status": "RECOMMENDED_NOT_AUTHORIZED",
+  "authority_mode": "PRODUCT_GOVERNANCE_DECISION_PACKAGE_ONLY",
+  "stacked_base_product_head": "cce900dfd4e9f412506c3988b3d63ff531ee56bb",
+  "decision_id": "DEC-BLINE-IRRIGATE-ELIGIBILITY-POLICY-CONTENT-001",
+  "bounded_path": {
+    "source_endpoint": "POST /api/v1/recommendations/generate",
+    "candidate_family": "decision_recommendation_v1 -> CandidateDecisionV1 shadow binding",
+    "action_type": "IRRIGATE",
+    "scope_limit": "BOUNDED_FORMAL_PRODUCT_DECISION_ENGINE_IRRIGATE_PATH_ONLY"
+  },
+  "proposed_policy_profile": {
+    "profile_name": "IRRIGATE_BASELINE_ELIGIBILITY_V1",
+    "concrete_policy_id": null,
+    "policy_id_rule": "REAL_DECLARATION_MUST_USE_ONE_STABLE_SAFE_TOKEN_UNIQUE_TO_ONE_PROGRAM_POLICY_LINEAGE",
+    "proposed_policy_version": "v1",
+    "concrete_policy_ref": null,
+    "scope_anchor": {
+      "type": "PROGRAM",
+      "source": "CandidateDecision.basis.context_snapshot_ref -> ContextSnapshotV1 -> exactly one DECLARED_FIELD_PROGRAM -> value.program_id",
+      "exact_anchor_required": true,
+      "legacy_recommendation_program_id_authority": false
+    },
+    "decision_scope": {
+      "semantics": "EXACT_NULLABLE_STRUCTURAL_EQUALITY_V1",
+      "fields": [
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id"
+      ],
+      "null_is_wildcard": false,
+      "specificity_ranking": false
+    },
+    "applicable_action_types": [
+      "IRRIGATE"
+    ],
+    "required_criteria": [
+      "QUALIFIED_EVIDENCE",
+      "CONTEXT",
+      "STATE",
+      "FORECAST",
+      "ACTION_WINDOW"
+    ],
+    "lifecycle_semantics": "B07D_LIFECYCLE_STATE_V1",
+    "effective_window": "MUST_BE_EXPLICIT_ON_REAL_DECLARATION_AND_MUST_NOT_PRECEDE_SERVER_DECLARED_AT"
+  },
+  "criterion_rationale": [
+    {
+      "criterion": "QUALIFIED_EVIDENCE",
+      "product_reason": "IRRIGATION_MUST_NOT_PROCEED_TOWARD_APPROVAL_ON_UNQUALIFIED_OR_DECISION_TIME_INELIGIBLE_OBSERVATIONS",
+      "repository_basis": "B09G_B09H_B09J canonical EvidenceQualification ref continuity",
+      "readiness": "READY_SHADOW_BOUND"
+    },
+    {
+      "criterion": "CONTEXT",
+      "product_reason": "IRRIGATION_AMOUNT_AND_POLICY_APPLICABILITY_REQUIRE_CANONICAL_FIELD_SEASON_PROGRAM_CONTEXT",
+      "repository_basis": "B05B ContextSnapshot capability plus B09V exact PROGRAM anchor semantics",
+      "readiness": "NOT_BOUND_ON_B09J_CANDIDATE"
+    },
+    {
+      "criterion": "STATE",
+      "product_reason": "IRRIGATION_REQUIRES_CANONICAL_SUPPORT_THAT_A_WATER_DEFICIT_OR_REQUIREMENT_EXISTS; LEGACY_JUDGE_VERDICT_IS_NOT_FINAL_AUTHORITY",
+      "repository_basis": "B07C requires canonical CalculationResult refs for WATER_DEFICIT/PASS state projection",
+      "readiness": "CANONICAL_CALCULATION_RESULT_NOT_BOUND"
+    },
+    {
+      "criterion": "FORECAST",
+      "product_reason": "THE_BOUNDED_IRRIGATE_GENERATOR_DIRECTLY_USES_RAINFALL_FORECAST_AND_ET0_IN_DEFICIT_REQUIREMENT_REASONING; MISSING_OR_DEGRADED_FORECAST_MUST_REMAIN_VISIBLE_TO_ELIGIBILITY",
+      "repository_basis": "decision_engine_v1 reads weather_forecast_v1 and passes rainfall/ET0 into irrigation deficit/requirement logic",
+      "readiness": "CANONICAL_FORECAST_PRODUCT_BINDING_NOT_ESTABLISHED"
+    },
+    {
+      "criterion": "ACTION_WINDOW",
+      "product_reason": "IRRIGATION_IS_TIME_SENSITIVE; AN_ELIGIBLE_CANDIDATE_MUST_HAVE_AN_EXPLICIT_ACTIONABILITY_WINDOW_AND_MUST_FAIL_CLOSED_WHEN_NOT_YET_ACTIVE_EXPIRED_OR_UNKNOWN",
+      "repository_basis": "B07D lifecycle consistency requires ACTION_WINDOW for non-ACTIVE lifecycle",
+      "readiness": "ACTION_WINDOW_PROVENANCE_NOT_ESTABLISHED"
+    }
+  ],
+  "explicitly_not_required_in_baseline_v1": [
+    {
+      "criterion": "SCENARIO",
+      "reason": "CURRENT_BOUNDED_IRRIGATE_PATH_HAS_NO_SEPARATE_CANONICAL_SCENARIO_DEPENDENCY_PROVEN_BEYOND_STATE_PLUS_FORECAST"
+    },
+    {
+      "criterion": "KNOWLEDGE_POLICY",
+      "reason": "NO_CANONICAL_PRODUCT_KNOWLEDGE_POLICY_BINDING_IS_ESTABLISHED_ON_THE_BOUNDED_PATH"
+    },
+    {
+      "criterion": "PERMISSION",
+      "reason": "APPROVAL_AND_FIELD_PROGRAM_EXECUTION_AUTHORITY_ARE_DOWNSTREAM_AND_MUST_NOT_BE_RELABELED_AS_PRE_DECISION_PERMISSION"
+    },
+    {
+      "criterion": "CONSEQUENCE",
+      "reason": "NO_CANONICAL_CONSEQUENCE_ASSESSMENT_BINDING_IS_ESTABLISHED_FOR_THIS_BASELINE_PATH"
+    },
+    {
+      "criterion": "REVERSIBILITY",
+      "reason": "NO_CANONICAL_REVERSIBILITY_ASSESSMENT_BINDING_IS_ESTABLISHED_FOR_THIS_BASELINE_PATH"
+    },
+    {
+      "criterion": "REMAINING_UNCERTAINTY",
+      "reason": "B07D_ALREADY_DERIVES_REMAINING_UNCERTAINTY_FROM_NON_SATISFIED_CRITERIA; REQUIRING_IT_AS_INPUT_WOULD_BE_CIRCULAR"
+    },
+    {
+      "criterion": "INDEPENDENT_EVIDENCE_SUPPORT",
+      "reason": "HIGH_ASSURANCE_EXTENSION_CANDIDATE_NOT_JUSTIFIED_AS_UNIVERSAL_BASELINE_FOR_ALL_IRRIGATE_PROGRAMS"
+    }
+  ],
+  "current_readiness_after_policy_authorization": {
+    "real_policy_instance": "NONE",
+    "candidate_context_snapshot_ref": "NULL_ON_CURRENT_B09J_PATH",
+    "candidate_decision_time": "NULL_ON_CURRENT_B09J_PATH",
+    "qualified_evidence": "READY_SHADOW_BOUND",
+    "context": "NOT_BOUND",
+    "state": "NOT_BOUND",
+    "forecast": "NOT_PRODUCT_CONNECTED",
+    "action_window": "NOT_ESTABLISHED",
+    "b07e_runtime_connection": "DISCONNECTED",
+    "consumer_migration": "NOT_STARTED",
+    "authority_removal": "NONE"
+  },
+  "authorization_effect_if_accepted": {
+    "authorizes": "IRRIGATE_BASELINE_POLICY_CONTENT_PROFILE_ONLY",
+    "does_not_authorize": [
+      "REAL_POLICY_DECLARATION_FACT_WITHOUT_CONCRETE_PROGRAM_SCOPE_AND_POLICY_IDENTITY",
+      "B07E_RUNTIME_CONNECTION",
+      "CANONICAL_CANDIDATE_CONTEXT_OR_TIME_BINDING_IMPLEMENTATION",
+      "MCFT_OR_TWIN_FORECAST_INTEGRATION",
+      "APPROVAL_OR_EXECUTION_AUTHORITY_CHANGE",
+      "CONSUMER_MIGRATION",
+      "HISTORICAL_AUTHORITY_REMOVAL"
+    ]
+  },
+  "next_gates": [
+    "CHOOSE_CONCRETE_PROGRAM_SCOPE_POLICY_IDENTITY_AND_EXPLICIT_EFFECTIVE_WINDOW",
+    "PERSIST_ONE_GOVERNED_POLICY_DECLARATION_THROUGH_EXISTING_B09S_AUTHORIZED_WRITER",
+    "ESTABLISH_CANONICAL_CANDIDATE_CONTEXT_AND_DECISION_TIME_BINDING",
+    "ESTABLISH_REQUIRED_CRITERION_SUPPORT_PROVENANCE_WITHOUT_TOUCHING_MCFT_UNLESS_SEPARATELY_AUTHORIZED",
+    "PROVE_B09V_POLICY_SELECTION_ON_REAL_DECLARATION",
+    "SEPARATELY_AUTHORIZE_B07E_RUNTIME_CONNECTION"
+  ],
+  "repository_effects": {
+    "runtime_implementation_added": false,
+    "route_added": false,
+    "policy_instance_added": false,
+    "policy_declaration_fact_written": false,
+    "b07e_connected": false,
+    "graph_edge_added": false,
+    "mcft_changed": false,
+    "adr_llm_changed": false,
+    "consumer_migration_performed": false,
+    "authority_removal_performed": false
+  }
+}

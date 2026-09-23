@@ -1,0 +1,111 @@
+name: mcft-cap-09-v13-controller-fenced-mutations-postgres
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-v13-controller-fenced-mutations-postgres.yml'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql'
+      - 'apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_CONTROLLER_FENCED_MUTATIONS_POSTGRES.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_v13_controller_fenced_mutations_acceptance
+  EXACT_PREDECESSOR_SHA: '26c1383f7f45abb76c99e28ec3d06714e85d1b2c'
+
+concurrency:
+  group: mcft-cap09-v13-controller-fenced-mutations-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  controller-fenced-mutations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_v13_controller_fenced_mutations_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_v13_controller_fenced_mutations_acceptance"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Require exact predecessor and isolated database
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_SHA"
+          fi
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+          test -z "${FORMAL_RAW_S3_ACCESS_KEY_ID:-}"
+
+      - name: Typecheck controller-fenced mutation surface
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node
+          apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts
+          apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts
+          apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts
+          apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_CONTROLLER_FENCED_MUTATIONS_POSTGRES.ts
+
+      - name: Run real PostgreSQL controller-fenced mutation acceptance
+        env:
+          MCFT_CAP09_V13_FENCED_MUTATION_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_CONTROLLER_FENCED_MUTATIONS_POSTGRES.ts
+
+      - name: Typecheck full server Runtime surface
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Validate controller-fenced mutation machine proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_CONTROLLER_FENCED_MUTATIONS_POSTGRES_RESULT.json','utf8'));
+          for(const key of ['controller_takeover_token_incremented','stale_controller_heartbeat_rejected_without_mutation','stale_controller_phase_advance_rejected_without_mutation','stale_controller_retryable_failure_rejected_without_mutation','stale_controller_attestation_rejected_in_writer_transaction','stale_controller_cannot_advance_forcing_cursor','current_controller_can_supervise_existing_live_producer_claim','producer_fencing_token_preserved_across_controller_takeover','current_controller_can_complete_physical_attestation'])if(p[key]!==true)throw new Error(`V13_CONTROLLER_FENCED_MUTATION_PROOF_MISSING:${key}`);
+          if(p.status!=='PASS'||p.production_workflow_effect!==false||p.formal_v4_mutation_performed!==false||p.mcft_cap09_completed!==false)throw new Error('V13_CONTROLLER_FENCED_MUTATION_NONCLAIM_REGRESSION');
+
+      - name: Upload immutable controller-fenced mutation proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-controller-fenced-mutations-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_CONTROLLER_FENCED_MUTATIONS_POSTGRES_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

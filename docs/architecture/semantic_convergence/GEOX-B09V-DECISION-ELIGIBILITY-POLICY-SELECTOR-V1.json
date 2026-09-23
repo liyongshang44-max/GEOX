@@ -1,0 +1,105 @@
+{
+  "schema_version": "b09v_decision_eligibility_policy_selector_v1",
+  "phase": "B-09v",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "stacked_base_product_head": "1deeea2bd72c70d7eaa9305112f9352b14b8ac91",
+  "authorized_governance_decision_id": "DEC-BLINE-ELIGIBILITY-POLICY-SELECTOR-001",
+  "authorization_state": "AUTHORIZED_BY_USER_2026-08-31",
+  "purpose": "Implement the authorized fail-closed as-of DecisionEligibility policy selector/read-model without inventing real policy contents or connecting B-07e.",
+  "implemented_semantics": {
+    "canonical_anchor": {
+      "source": "CandidateDecisionV1.basis.context_snapshot_ref -> ContextSnapshotV1",
+      "assertion_kind": "DECLARED_FIELD_PROGRAM",
+      "cardinality": "EXACTLY_ONE_MATCHING_ASSERTION",
+      "anchor_type": "PROGRAM",
+      "anchor_ref": "assertion.value.program_id",
+      "legacy_program_id_authority": false
+    },
+    "scope": {
+      "rule": "EXACT_NULLABLE_STRUCTURAL_EQUALITY_V1",
+      "fields": [
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id"
+      ],
+      "null_is_wildcard": false,
+      "specificity_ranking": false,
+      "parent_scope_inheritance": false
+    },
+    "time": {
+      "boundary": "CandidateDecisionV1.decision_time",
+      "required_non_null": true,
+      "fallback": null,
+      "causal_cutoffs": [
+        "declaration.declared_at <= decision_time",
+        "fact.occurred_at <= decision_time"
+      ]
+    },
+    "effective_window": "[effective_from,effective_until)",
+    "action_applicability": "EXACT_STRING_MEMBERSHIP",
+    "cardinality": {
+      "zero": "POLICY_NOT_FOUND",
+      "one": "POLICY_SELECTED",
+      "more_than_one": "POLICY_SCOPE_AMBIGUOUS",
+      "latest_wins": false,
+      "version_precedence": false,
+      "composition": false
+    },
+    "supersession": {
+      "same_policy_id_required": true,
+      "same_exact_scope_required": true,
+      "same_exact_anchor_required": true,
+      "predecessor_must_exist": true,
+      "predecessor_must_be_known_before_successor": true,
+      "acyclic_chain_required": true,
+      "multiple_successors": "POLICY_SUPERSESSION_AMBIGUOUS",
+      "predecessor_non_selectable_at_or_after_successor_effective_from": true
+    }
+  },
+  "implementation": {
+    "selector_path": "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.ts",
+    "contract_test_path": "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.contract.test.ts",
+    "storage": "existing facts table",
+    "read_shape": "exact scope + PROGRAM anchor + occurred_at as-of bounded read",
+    "external_route_created": false,
+    "b07e_consumer_created": false
+  },
+  "fail_closed_states": [
+    "POLICY_NOT_FOUND",
+    "POLICY_CONTEXT_MISSING",
+    "POLICY_SCOPE_ANCHOR_MISSING",
+    "POLICY_SCOPE_AMBIGUOUS",
+    "POLICY_TIME_BOUNDARY_MISSING",
+    "POLICY_SUPERSESSION_AMBIGUOUS",
+    "POLICY_DECLARATION_INVALID",
+    "POLICY_READ_ERROR"
+  ],
+  "preserved_gaps": {
+    "current_b09j_context_snapshot_ref": "NULL",
+    "current_b09j_decision_time": "NULL",
+    "real_policy_instance": "NONE",
+    "policy_id_version_ref": "UNDECIDED",
+    "applicable_action_types": "UNDECIDED",
+    "required_criteria": "UNDECIDED",
+    "b07e_runtime_connection": "DISCONNECTED",
+    "consumer_migration": "NOT_STARTED",
+    "authority_removal": "NONE"
+  },
+  "non_effects": {
+    "candidate_producer_changed": false,
+    "context_producer_changed": false,
+    "real_policy_created": false,
+    "policy_content_defaulted": false,
+    "b07e_connected": false,
+    "approval_changed": false,
+    "execution_changed": false,
+    "mcft_changed": false,
+    "adr_connected": false,
+    "llm_connected": false,
+    "consumer_migration_performed": false,
+    "authority_removal_performed": false
+  }
+}

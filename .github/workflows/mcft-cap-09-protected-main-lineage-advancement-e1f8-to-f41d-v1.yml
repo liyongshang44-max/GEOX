@@ -1,0 +1,49 @@
+name: MCFT CAP-09 Protected-Main Lineage Advancement E1F8 to F41D
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PROTECTED-MAIN-LINEAGE-ADVANCEMENT-E1F8-TO-F41D-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROTECTED_MAIN_LINEAGE_ADVANCEMENT_E1F8_TO_F41D_V1.cjs'
+      - '.github/workflows/mcft-cap-09-protected-main-lineage-advancement-e1f8-to-f41d-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-protected-main-lineage-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Fetch exact protected main
+        run: git fetch --no-tags origin main
+
+      - name: Verify protected-main lineage advancement adjudication
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROTECTED_MAIN_LINEAGE_ADVANCEMENT_E1F8_TO_F41D_V1.cjs
+
+      - name: Upload immutable lineage adjudication
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-protected-main-lineage-${{ github.event.pull_request.head.sha }}
+          path: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PROTECTED-MAIN-LINEAGE-ADVANCEMENT-E1F8-TO-F41D-V1.json
+          if-no-files-found: error
+          retention-days: 90

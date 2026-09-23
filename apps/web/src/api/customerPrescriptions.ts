@@ -1,3 +1,8 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_DIRECT_DOMAIN_ADAPTER
+ * Historical Customer prescription read adapter. Existing consumers may remain during migration.
+ * New post-FOUI Customer product surfaces must consume governed Product Projection rather than bind directly to prescription domain APIs.
+ */
 import { apiRequestWithPolicy, withQuery } from "./client";
 
 export type CustomerPrescriptionDataScope = "OFFICIAL_PRESCRIPTION_API" | "NO_FORMAL_PRESCRIPTION" | "ERROR_EMPTY";

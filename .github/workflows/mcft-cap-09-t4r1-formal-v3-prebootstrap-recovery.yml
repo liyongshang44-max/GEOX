@@ -1,223 +1,40 @@
+# Phase 6 retirement sentinel.
+# Complete pre-cutover implementation remains immutable at:
+# 75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml
+# historical blob: 2cf1583395d6657aeafd1dd7ecf27c652fc13015
+# No production schedule, dispatch, workflow-run, push, or callable trigger remains.
 name: mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery
 
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml'
-      - '.github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json'
-  workflow_dispatch:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml'
 
 permissions:
   contents: read
 
-concurrency:
-  group: mcft-cap09-t4r1-formal-v3-prebootstrap-recovery-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
-  cancel-in-progress: false
-
-env:
-  NODE_VERSION: '20.11.1'
-  PNPM_VERSION: '9.15.4'
-  SOURCE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h
-  ACTIVE_FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3
-  FAILED_ATTEMPT_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_32646669506
-  FAILED_A0_RUN_ID: '32646669506'
-  FAILED_A0_ARTIFACT_ID: '9495063273'
-  FAILED_A0_ARTIFACT_DIGEST: sha256:af6dd063753c9b558cd014358753b9653853b26fe3b4776e864fd59052002f9d
-
 jobs:
-  static-proof:
-    if: github.event_name == 'pull_request'
+  phase6-retirement-sentinel:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Validate exact failed-attempt recovery authority
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');
-          const p=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V1.json','utf8'));
-          const r=p.epoch_contract?.failed_formal_v3_prebootstrap_attempt;
-          if(!r||r.workflow_run_id!==32646669506||r.artifact_id!==9495063273||r.artifact_digest!==process.env.FAILED_A0_ARTIFACT_DIGEST)throw new Error('T4_FORMAL_V3_RECOVERY_FAILED_ATTEMPT_IDENTITY_REQUIRED');
-          if(r.archive_database_name!==process.env.FAILED_ATTEMPT_DATABASE_NAME||r.archive_before_active_v3_reprovision_required!==true||r.archive_mutation_after_rename_forbidden!==true)throw new Error('T4_FORMAL_V3_RECOVERY_IMMUTABLE_ARCHIVE_REQUIRED');
-          if(r.canonical_bootstrap_mutation_started!==false||r.formal_fact_count!==3||r.runtime_mutation_count!==0||r.active_v3_logical_database_name_reprovision_authorized!==true)throw new Error('T4_FORMAL_V3_RECOVERY_BOUNDARY_REQUIRED');
-          if(r.reprovision_mode!=='CREATE_DATABASE_TEMPLATE0_THEN_SCHEMA_ONLY_RESTORE'||r.qualification_generation_change_required!==false||r.failure_class!=='CONTROL_PLANE_ONLY')throw new Error('T4_FORMAL_V3_RECOVERY_CONTROL_PLANE_CLASS_REQUIRED');
-      - name: Require archive-first no-destructive-rewrite contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          f=.github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml
-          grep -Fq 'ALTER DATABASE \"$ACTIVE_FORMAL_DATABASE_NAME\" RENAME TO \"$FAILED_ATTEMPT_DATABASE_NAME\"' "$f"
-          grep -Fq 'CREATE DATABASE \"$ACTIVE_FORMAL_DATABASE_NAME\" TEMPLATE template0' "$f"
-          grep -Fq 'pg_dump --schema-only --no-owner --no-privileges' "$f"
-          ! grep -Eq 'DROP DATABASE|TRUNCATE|DELETE FROM facts|UPDATE facts' "$f"
-          ! grep -Eq '^COPY |^INSERT INTO ' "$f"
-      - name: Require A0 wait implementation is CommonJS parse-safe
-        shell: bash
-        run: |
-          set -euo pipefail
-          f=.github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml
-          grep -Fq '(async()=>{' "$f"
-          grep -Fq 'await new Promise' "$f"
-          grep -Fq '})().catch' "$f"
-
-  recover-active-v3:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    env:
-      SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Require exact protected main and private T4 seed
+      - name: Prove immutable historical binding and retired trigger surface
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = 'refs/heads/main' || { echo 'T4_FORMAL_V3_RECOVERY_MAIN_REQUIRED' >&2; exit 1; }
-          git fetch --no-tags origin main
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo 'T4_FORMAL_V3_RECOVERY_MAIN_DRIFT' >&2; exit 1; }
-          test -n "$SOURCE_DATABASE_URL" || { echo 'T4_FORMAL_V3_RECOVERY_SOURCE_SECRET_REQUIRED' >&2; exit 1; }
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - name: Install PostgreSQL client and exact repository dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client
-          pnpm install --frozen-lockfile
-
-      - name: Derive masked admin/source/active/archive URLs
-        shell: node {0}
-        run: |
+          test "$(git rev-parse '75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml')" = '2cf1583395d6657aeafd1dd7ecf27c652fc13015'
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs selftest
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce >/tmp/mcft-cap09-phase6-owner-audit.json
+          node - <<'NODE'
           const fs=require('node:fs');
-          const source=new URL(process.env.SOURCE_DATABASE_URL);
-          if(!['postgres:','postgresql:'].includes(source.protocol)||['localhost','127.0.0.1','::1'].includes(source.hostname))throw new Error('T4_FORMAL_V3_RECOVERY_REMOTE_POSTGRES_REQUIRED');
-          const sourceName=decodeURIComponent(source.pathname.replace(/^\//,''));
-          if(sourceName!==process.env.SOURCE_DATABASE_NAME)throw new Error(`T4_FORMAL_V3_RECOVERY_SOURCE_IDENTITY_DRIFT:${sourceName}`);
-          const admin=new URL(source);admin.pathname='/postgres';
-          const active=new URL(source);active.pathname='/'+process.env.ACTIVE_FORMAL_DATABASE_NAME;
-          const archive=new URL(source);archive.pathname='/'+process.env.FAILED_ATTEMPT_DATABASE_NAME;
-          for(const u of [source,admin,active,archive])console.log(`::add-mask::${u.toString()}`);
-          fs.appendFileSync(process.env.GITHUB_ENV,`ADMIN_DATABASE_URL=${admin.toString()}\nACTIVE_DATABASE_URL=${active.toString()}\nARCHIVE_DATABASE_URL=${archive.toString()}\n`);
-
-      - name: Classify exact prebootstrap failed state without mutation
-        id: classify
-        shell: bash
-        run: |
-          set -euo pipefail
-          active_exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT count(*) FROM pg_database WHERE datname='$ACTIVE_FORMAL_DATABASE_NAME'")
-          archive_exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT count(*) FROM pg_database WHERE datname='$FAILED_ATTEMPT_DATABASE_NAME'")
-          echo "active_exists=$active_exists" >> "$GITHUB_OUTPUT"
-          echo "archive_exists=$archive_exists" >> "$GITHUB_OUTPUT"
-          if [ "$archive_exists" = '0' ]; then
-            test "$active_exists" = '1' || { echo 'T4_FORMAL_V3_RECOVERY_ACTIVE_PARTIAL_REQUIRED' >&2; exit 1; }
-            tables=$(psql "$ACTIVE_DATABASE_URL" -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
-            facts=$(psql "$ACTIVE_DATABASE_URL" -Atqc 'SELECT count(*) FROM facts')
-            test "$tables" = '26' || { echo "T4_FORMAL_V3_RECOVERY_ACTIVE_TABLE_COUNT:$tables" >&2; exit 1; }
-            test "$facts" = '3' || { echo "T4_FORMAL_V3_RECOVERY_EXACT_THREE_FACTS_REQUIRED:$facts" >&2; exit 1; }
-            for t in $(psql "$ACTIVE_DATABASE_URL" -Atqc "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name<>'facts' ORDER BY table_name"); do
-              n=$(psql "$ACTIVE_DATABASE_URL" -Atqc "SELECT count(*) FROM \"$t\"")
-              test "$n" = '0' || { echo "T4_FORMAL_V3_RECOVERY_RUNTIME_MUTATION_FORBIDDEN:$t:$n" >&2; exit 1; }
-            done
-            for typ in future_et0_assumption_v1 future_weather_assumption_v1 soil_moisture_observation_v1; do
-              n=$(psql "$ACTIVE_DATABASE_URL" -Atqc "SELECT count(*) FROM facts WHERE record_json->>'type'='$typ' AND record_json#>>'{payload,field_id}'='field_kbs_mcse_t4r1' AND record_json#>>'{payload,zone_id}'='zone_kbs_mcse_t4r1_crop_formal_v1'")
-              test "$n" = '1' || { echo "T4_FORMAL_V3_RECOVERY_FACT_SET_DRIFT:$typ:$n" >&2; exit 1; }
-            done
-          fi
-
-      - name: Archive failed v3 attempt before any active-name reprovision
-        if: steps.classify.outputs.archive_exists == '0'
-        shell: bash
-        run: |
-          set -euo pipefail
-          active_sessions=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT count(*) FROM pg_stat_activity WHERE datname='$ACTIVE_FORMAL_DATABASE_NAME' AND pid<>pg_backend_pid()")
-          test "$active_sessions" = '0' || { echo "T4_FORMAL_V3_RECOVERY_ACTIVE_SESSIONS_FORBIDDEN:$active_sessions" >&2; exit 1; }
-          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c "ALTER DATABASE \"$ACTIVE_FORMAL_DATABASE_NAME\" RENAME TO \"$FAILED_ATTEMPT_DATABASE_NAME\""
-
-      - name: Revalidate immutable archived failure boundary
-        shell: bash
-        run: |
-          set -euo pipefail
-          archive_exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT count(*) FROM pg_database WHERE datname='$FAILED_ATTEMPT_DATABASE_NAME'")
-          test "$archive_exists" = '1' || { echo 'T4_FORMAL_V3_RECOVERY_ARCHIVE_REQUIRED' >&2; exit 1; }
-          facts=$(psql "$ARCHIVE_DATABASE_URL" -Atqc 'SELECT count(*) FROM facts')
-          test "$facts" = '3' || { echo "T4_FORMAL_V3_RECOVERY_ARCHIVE_FACT_COUNT_DRIFT:$facts" >&2; exit 1; }
-          for t in $(psql "$ARCHIVE_DATABASE_URL" -Atqc "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name<>'facts' ORDER BY table_name"); do
-            n=$(psql "$ARCHIVE_DATABASE_URL" -Atqc "SELECT count(*) FROM \"$t\"")
-            test "$n" = '0' || { echo "T4_FORMAL_V3_RECOVERY_ARCHIVE_RUNTIME_DRIFT:$t:$n" >&2; exit 1; }
-          done
-
-      - name: Create fresh active v3 logical store only when absent
-        shell: bash
-        run: |
-          set -euo pipefail
-          active_exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT count(*) FROM pg_database WHERE datname='$ACTIVE_FORMAL_DATABASE_NAME'")
-          if [ "$active_exists" = '0' ]; then
-            psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$ACTIVE_FORMAL_DATABASE_NAME\" TEMPLATE template0"
-          fi
-
-      - name: Dump schema only from immutable T4 reference with PostgreSQL 18 client
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker run --rm -e SOURCE_DATABASE_URL="$SOURCE_DATABASE_URL" postgres:18-alpine \
-            sh -c 'pg_dump --schema-only --no-owner --no-privileges "$SOURCE_DATABASE_URL"' > /tmp/t4-schema.sql
-          test -s /tmp/t4-schema.sql
-          ! grep -Eq '^COPY |^INSERT INTO ' /tmp/t4-schema.sql
-
-      - name: Restore exact schema only into fresh active v3
-        shell: bash
-        run: |
-          set -euo pipefail
-          count=$(psql "$ACTIVE_DATABASE_URL" -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
-          if [ "$count" = '0' ]; then
-            psql "$ACTIVE_DATABASE_URL" -v ON_ERROR_STOP=1 -f /tmp/t4-schema.sql >/dev/null
-          elif [ "$count" != '26' ]; then
-            echo "T4_FORMAL_V3_RECOVERY_PARTIAL_SCHEMA_FORBIDDEN:$count" >&2; exit 1
-          fi
-
-      - name: Prove fresh active v3 exact schema and zero-state
-        env:
-          DATABASE_URL: ${{ env.ACTIVE_DATABASE_URL }}
-        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts zero-state
-
-      - name: Require exact fingerprints and write immutable recovery proof
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');
-          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_RUNTIME_ENVIRONMENT_PREFLIGHT_RESULT.json','utf8'));
-          const expected={column_fingerprint:'873a8e86f55d75a04a5f671627e98ae1',constraint_fingerprint:'7803f7e7706e52eca3ca2aa4290ff5dd',index_fingerprint:'ea5b3ba0392fd52fb471bc754e94ed35'};
-          if(p.status!=='PASS'||p.mode!=='zero-state'||p.database_identity.database_name!==process.env.ACTIVE_FORMAL_DATABASE_NAME||p.required_table_count!==26||p.schema_complete!==true||p.zero_state_qualified!==true)throw new Error('T4_FORMAL_V3_RECOVERY_PREFLIGHT_REQUIRED');
-          for(const [k,v] of Object.entries(expected))if(p.schema_fingerprints?.[k]!==v)throw new Error(`T4_FORMAL_V3_RECOVERY_FINGERPRINT_DRIFT:${k}`);
-          for(const [rel,count] of Object.entries(p.zero_state_counts||{}))if(count!==0)throw new Error(`T4_FORMAL_V3_RECOVERY_NOT_ZERO:${rel}:${count}`);
-          const proof={schema_version:'geox_mcft_cap09_t4r1_formal_v3_prebootstrap_recovery_v1',status:'PASS',deployment_subject_sha:process.env.GITHUB_SHA,failed_workflow_run_id:Number(process.env.FAILED_A0_RUN_ID),failed_artifact_id:Number(process.env.FAILED_A0_ARTIFACT_ID),failed_artifact_digest:process.env.FAILED_A0_ARTIFACT_DIGEST,archived_failed_database:process.env.FAILED_ATTEMPT_DATABASE_NAME,active_formal_database:process.env.ACTIVE_FORMAL_DATABASE_NAME,archive_fact_count:3,archive_runtime_mutation_count:0,active_zero_state:true,active_table_count:26,schema_fingerprints:expected,qualification_generation_changed:false,governed_semantic_change:false};
-          fs.writeFileSync('acceptance-output/MCFT_CAP_09_T4R1_FORMAL_V3_PREBOOTSTRAP_RECOVERY_V1.json',JSON.stringify(proof,null,2)+'\n');
-
-      - name: Upload immutable recovery proof
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-t4r1-formal-v3-recovery-${{ github.sha }}-${{ github.run_id }}
-          path: |
-            acceptance-output/MCFT_CAP_09_RUNTIME_ENVIRONMENT_PREFLIGHT_RESULT.json
-            acceptance-output/MCFT_CAP_09_T4R1_FORMAL_V3_PREBOOTSTRAP_RECOVERY_V1.json
-          if-no-files-found: error
-          retention-days: 90
+          const p=JSON.parse(fs.readFileSync('/tmp/mcft-cap09-phase6-owner-audit.json','utf8'));
+          if(p.status!=='PASS'||p.active_retired_owner_or_trigger_count!==0||p.retired_actions_write_count!==0||p.historical_phase5_workflow_blobs_all_match!==true)throw new Error('PHASE6_RETIREMENT_SENTINEL_REQUIRED');
+          NODE

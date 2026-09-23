@@ -39,6 +39,7 @@
     "ci:web:views-boundary": "pnpm --filter @geox/web lint:views-boundary",
     "ci:web:operation-detail-hooks": "pnpm --filter @geox/web lint:operation-detail-hooks",
     "ci:governance:contract-alignment": "node scripts/governance_acceptance/ACCEPTANCE_CONTRACT_ALIGNMENT_V1.cjs",
+    "ci:governance:bline-residual-authority-audit": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_RESIDUAL_AUTHORITY_AUDIT_V1.cjs",
     "ci:governance:fact-envelope": "node scripts/governance_acceptance/ACCEPTANCE_FACT_ENVELOPE_V1.cjs",
     "ci:governance:appleii-time-coverage": "node scripts/governance_acceptance/ACCEPTANCE_APPLEII_TIME_COVERAGE_V1.cjs",
     "ci:governance:problem-state-uncertainty": "node scripts/governance_acceptance/ACCEPTANCE_PROBLEM_STATE_UNCERTAINTY_V1.cjs",
@@ -247,7 +248,22 @@
     "ci:acceptance-result-from-evidence-artifacts": "pnpm run ci:governance:acceptance-result-from-evidence-artifacts-boundary && pnpm run ci:runtime:acceptance-result-from-evidence-artifacts",
     "ci:governance:water-response-verification-from-acceptance-boundary": "node scripts/governance_acceptance/ACCEPTANCE_WATER_RESPONSE_VERIFICATION_FROM_ACCEPTANCE_V1_BOUNDARY.cjs",
     "ci:runtime:water-response-verification-from-acceptance": "node scripts/runtime_acceptance/ACCEPTANCE_WATER_RESPONSE_VERIFICATION_FROM_ACCEPTANCE_V1_RUNTIME.cjs",
-    "ci:water-response-verification-from-acceptance": "pnpm run ci:governance:water-response-verification-from-acceptance-boundary && pnpm run ci:runtime:water-response-verification-from-acceptance"
+    "ci:water-response-verification-from-acceptance": "pnpm run ci:governance:water-response-verification-from-acceptance-boundary && pnpm run ci:runtime:water-response-verification-from-acceptance",
+    "ci:governance:bline-p0-res007-evidence-export-boundary": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_P0_RES007_EVIDENCE_EXPORT_NO_ACCEPTANCE_AUTHORITY_V1.cjs",
+    "ci:governance:bline-active-runtime-surface-closure": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs",
+    "ci:governance:bline-operation-state-read-only": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_OPERATION_STATE_READ_ONLY_V1.cjs",
+    "ci:governance:bline-execution-plan-task-lifecycle": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_EXECUTION_PLAN_TASK_LIFECYCLE_V1.cjs",
+    "ci:governance:bline-operator-dispatch-intent": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_OPERATOR_DISPATCH_INTENT_V1.cjs",
+    "ci:runtime:bline-operator-dispatch-intent": "node scripts/runtime_acceptance/ACCEPTANCE_BLINE_OPERATOR_DISPATCH_INTENT_RUNTIME_V1.cjs",
+    "ci:governance:bline-acceptance-no-formal-memory-side-effect": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_ACCEPTANCE_NO_FORMAL_MEMORY_SIDE_EFFECT_V1.cjs",
+    "ci:governance:bline-formal-memory-reviewed-promotion-proof": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_FORMAL_MEMORY_REVIEWED_PROMOTION_PROOF_V1.cjs",
+    "ci:governance:bline-legacy-twin-no-direct-formal-memory": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_LEGACY_TWIN_NO_DIRECT_FORMAL_MEMORY_V1.cjs",
+    "ci:governance:bline-formal-memory-scope-provenance": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_FORMAL_MEMORY_SCOPE_PROVENANCE_V1.cjs",
+    "ci:governance:bline-sampling-exact-source-binding": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_SAMPLING_EXACT_SOURCE_BINDING_V1.cjs",
+    "ci:governance:bline-fertilization-execution-provenance": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_FERTILIZATION_EXECUTION_PROVENANCE_V1.cjs",
+    "ci:governance:bline-agronomy-agent-fail-closed": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_AGRONOMY_AGENT_FAIL_CLOSED_AUTHORITY_V1.cjs",
+    "ci:runtime:bline-agronomy-agent-fail-closed": "pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_AGRONOMY_AGENT_FAIL_CLOSED_RUNTIME_V1.ts",
+    "ci:governance:bline-production-caller-authority-inventory": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"

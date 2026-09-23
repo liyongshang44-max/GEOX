@@ -1,0 +1,256 @@
+{
+  "schema_version": "geox_mcft_cap09_production_evidence_acl_carryforward_remediation_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1",
+  "status": "LIVE_EXACT_NINE_REMEDIATION_APPLIED",
+  "root_cause": {
+    "code": "V13_DENY_BY_DEFAULT_RESET_DROPPED_PHASE3_EVIDENCE_TABLE_PRIVILEGES",
+    "predecessor_acl": "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql",
+    "destructive_successor_acl": "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
+    "forward_remediation_migration": "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
+    "isolated_phase3_success_run_id": 33466354508,
+    "isolated_v13_success_run_id": 33466354564,
+    "isolated_phase5_success_run_id": 33466354473,
+    "live_detection_run_id": 33466558457,
+    "live_detection_error": "SCHEMA_ACL_EVIDENCE_PHASE3_CARRYFORWARD_MISMATCH:external_evidence_producer_lease_v1",
+    "full_diagnostic_run_id": 33467260874,
+    "full_diagnostic_artifact_id": 9785301007,
+    "full_diagnostic_artifact_digest": "sha256:e2af67d1d17ee458d0948879a80f53ac205ccbf036fd80f4c5d9bb60574a7f01",
+    "corrected_parser_finding": "ONLY_PHASE3_LEASE_SUPPLY_TABLE_PRIVILEGES_MISSING",
+    "false_diagnostic_cause": "psql_boolean_text_true_false_was_parsed_as_t_f"
+  },
+  "target": {
+    "database_name": "geox_mcft_cap09_production_runtime_v1",
+    "expected_table_count": 41,
+    "expected_routine_count": 3,
+    "all_rows_must_remain_zero": true,
+    "evidence_privilege_role": "geox_mcft_cap09_evidence_runtime_v1",
+    "evidence_login_role": "geox_mcft_cap09_evidence_runtime_login_v1"
+  },
+  "authorized_mutation_scope": {
+    "tables": [
+      "external_evidence_producer_lease_v1",
+      "external_evidence_supply_event_v1",
+      "external_evidence_supply_cursor_v1"
+    ],
+    "grant_privileges": [
+      "SELECT",
+      "INSERT",
+      "UPDATE"
+    ],
+    "revoke_privileges": [
+      "DELETE"
+    ],
+    "facts_write_reassertion": [
+      "REVOKE INSERT",
+      "REVOKE UPDATE",
+      "REVOKE DELETE"
+    ],
+    "role_or_membership_mutation_allowed": false,
+    "function_acl_mutation_allowed": false,
+    "schema_ddl_allowed": false,
+    "row_dml_allowed": false,
+    "exact_missing_privileges": [
+      "external_evidence_producer_lease_v1:SELECT",
+      "external_evidence_producer_lease_v1:INSERT",
+      "external_evidence_producer_lease_v1:UPDATE",
+      "external_evidence_supply_event_v1:SELECT",
+      "external_evidence_supply_event_v1:INSERT",
+      "external_evidence_supply_event_v1:UPDATE",
+      "external_evidence_supply_cursor_v1:SELECT",
+      "external_evidence_supply_cursor_v1:INSERT",
+      "external_evidence_supply_cursor_v1:UPDATE"
+    ],
+    "target_tables_owned_by": "neondb_owner",
+    "required_current_user": "neondb_owner",
+    "temporary_set_role_required": false
+  },
+  "required_preexisting_unchanged_surface": {
+    "facts_acl": {
+      "SELECT": true,
+      "INSERT": false,
+      "UPDATE": false,
+      "DELETE": false
+    },
+    "phase3_append_function_execute": true,
+    "v13_coordination_tables": [
+      "twin_external_formal_forcing_base_cursor_v1",
+      "twin_external_formal_forcing_base_target_v1",
+      "twin_external_formal_forcing_controller_lease_v1"
+    ],
+    "v13_coordination_acl": {
+      "SELECT": true,
+      "INSERT": true,
+      "UPDATE": true,
+      "DELETE": false
+    },
+    "exact_two_production_logins": true,
+    "exact_one_privilege_membership_each": true,
+    "live_diagnostic_proven": {
+      "facts_acl_exact": true,
+      "phase3_append_function_execute_exact": true,
+      "v13_coordination_acl_exact": true,
+      "v13_append_function_execute_exact": true,
+      "twin_append_function_execute_exact": true,
+      "exact_two_login_memberships": true,
+      "target_table_owner_neondb_owner": true,
+      "all_application_rows_zero": true
+    },
+    "writer_owner_effective_set_authority_zero": true,
+    "writer_owner_self_grant_residual_count_zero": true,
+    "exact_two_production_login_roles_restricted": true,
+    "production_login_direct_public_acl_zero": true,
+    "production_login_object_ownership_zero": true
+  },
+  "arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json",
+  "workflow_ref": ".github/workflows/mcft-cap-09-production-evidence-acl-carryforward-remediation.yml",
+  "authorization": {
+    "production_evidence_acl_carryforward_remediation_authorized": false,
+    "runtime_process_start_authorized": false,
+    "production_owner_activation_authorized": false,
+    "formal_v5_arm_authorized": false,
+    "a0_authorized": false,
+    "o00_authorized": false
+  },
+  "non_effects": {
+    "production_database_mutation": false,
+    "row_mutation": false,
+    "schema_mutation": false,
+    "role_mutation": false,
+    "credential_mutation": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "provider_request": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  },
+  "preflight_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "workflow": "mcft-cap-09-production-evidence-acl-carryforward-remediation",
+    "run_id": 33467789345,
+    "artifact_id": 9785476347,
+    "artifact_digest": "sha256:3bb9c1bc35f1099b44e6c7e57f2c822540d39297ad71deb49cfa1e87614dd9f5",
+    "subject_sha": "eba9774ec8b7415044f59cf9e41e97be47c74c29",
+    "result_status": "PASS_REMEDIATION_REQUIRED",
+    "exact_missing_privilege_count": 9,
+    "exact_target_table_count": 3,
+    "exact_missing_privileges": [
+      "external_evidence_producer_lease_v1:SELECT",
+      "external_evidence_producer_lease_v1:INSERT",
+      "external_evidence_producer_lease_v1:UPDATE",
+      "external_evidence_supply_event_v1:SELECT",
+      "external_evidence_supply_event_v1:INSERT",
+      "external_evidence_supply_event_v1:UPDATE",
+      "external_evidence_supply_cursor_v1:SELECT",
+      "external_evidence_supply_cursor_v1:INSERT",
+      "external_evidence_supply_cursor_v1:UPDATE"
+    ],
+    "all_application_rows_zero": true,
+    "table_count": 41,
+    "routine_count": 3,
+    "target_tables_owned_by_current_user": true,
+    "current_user": "neondb_owner",
+    "facts_acl_exact": true,
+    "v13_coordination_acl_exact": true,
+    "phase3_append_function_execute_exact": true,
+    "v13_append_function_execute_exact": true,
+    "twin_append_function_execute_exact": true,
+    "exact_two_login_memberships": true,
+    "arm_observed": false,
+    "runner_status": "SKIPPED_NOT_ARMED",
+    "database_mutation": false,
+    "row_mutation": false,
+    "schema_mutation": false,
+    "role_mutation": false,
+    "credential_mutation": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false,
+    "stale_for_current_live_prestate": true,
+    "stale_reason": "LIVE_WRITER_OWNER_SELF_GRANT_RESIDUAL_DISCOVERED_AFTER_IMMUTABLE_PREFLIGHT"
+  },
+  "next_stage": {
+    "stage": "POST_REMEDIATION_SCHEMA_READINESS",
+    "status": "EXACT_NINE_APPLIED_PENDING_POSTSTATE_READBACK",
+    "exact_missing_privilege_count": 0,
+    "exact_nine_acl_mutation_authorized": false,
+    "runtime_start": false,
+    "production_owner_activation": false,
+    "formal_v5": false,
+    "a0": false,
+    "o00": false
+  },
+  "blocking_live_prestate": {
+    "code": "RESOLVED_BY_EXACT_SELF_GRANT_CLEANUP",
+    "resolved": true,
+    "resolution_run_id": 33481272545,
+    "resolution_subject_sha": "9480a52b35c598e80c426a37fa9c2db352568771",
+    "writer_owner_self_grant_residual_count_zero": true,
+    "writer_owner_effective_set_authority_zero": true
+  },
+  "authorization_binding": {
+    "model": "SAME_WORKFLOW_FRESH_PREFLIGHT_CURRENT_SUBJECT_V1",
+    "commit_sha_self_reference_forbidden": true,
+    "preflight_must_run_before_mutation_in_same_workflow_job": true,
+    "preflight_subject_must_equal_workflow_subject_sha": true,
+    "runner_must_revalidate_live_prestate_before_mutation": true,
+    "later_stage_authorities_must_remain_false": true,
+    "authority_and_arm_authorization_must_match": true,
+    "partial_acl_prestate_forbidden": true,
+    "post_remediation_armed_rerun_forbidden": true
+  },
+  "authorization_state_model": {
+    "blocked_pre_cleanup": "BLOCKED_ON_WRITER_OWNER_SELF_GRANT_CLEANUP_NOT_AUTHORIZED",
+    "ready_unarmed": "LIVE_EXACT_NINE_REMEDIATION_READY_NOT_AUTHORIZED",
+    "ready_armed": "LIVE_EXACT_NINE_REMEDIATION_AUTHORIZED",
+    "post_remediation_unarmed": "LIVE_EXACT_NINE_REMEDIATION_APPLIED"
+  },
+  "preflight_state_model": {
+    "exact_nine_missing": "PASS_REMEDIATION_REQUIRED",
+    "exact_nine_materialized": "PASS_ALREADY_MATERIALIZED",
+    "partial_acl_state": "FAIL_CLOSED"
+  },
+  "cleanup_resolution": {
+    "status": "APPLIED_AND_VERIFIED",
+    "subject_sha": "9480a52b35c598e80c426a37fa9c2db352568771",
+    "run_id": 33481272545,
+    "artifact_id": 9790060543,
+    "artifact_digest": "sha256:9607dee6f3e0f957aad3318d415a4fa8c46d1c27b23ec990e7d4a782856b7886",
+    "writer_owner_self_grant_residual_count_zero": true,
+    "writer_owner_effective_set_authority_zero": true,
+    "exact_nine_privileges_still_missing": true
+  },
+  "user_authorization": {
+    "explicit": true,
+    "scope": "PRODUCTION_EXACT_NINE_EVIDENCE_ACL_REMEDIATION_ONLY",
+    "observed_date": "2026-09-01",
+    "consumed_by_run_id": 33483019771
+  },
+  "execution_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "subject_sha": "39c87dd7cbdca7d86561dc66f2c93f9e37cd4916",
+    "workflow": "mcft-cap-09-production-evidence-acl-carryforward-remediation",
+    "run_id": 33483019771,
+    "artifact_id": 9790736650,
+    "artifact_digest": "sha256:1f87228c7e177f19f6b23b96bec1afc8478b30f3c421f5ec0cf6ed4745dae78d",
+    "result_status": "PASS_REMEDIATION_APPLIED",
+    "before_target_acl": "SELECT=false INSERT=false UPDATE=false DELETE=false",
+    "after_target_acl": "SELECT=true INSERT=true UPDATE=true DELETE=false",
+    "exact_nine_privileges_applied": true,
+    "total_application_rows_after": 0,
+    "phase3_append_function_execute": true,
+    "login_count_unchanged": true,
+    "login_memberships_unchanged": true,
+    "login_role_attributes_unchanged": true,
+    "service_login_direct_public_acl_count": 0,
+    "service_login_owned_object_count": 0,
+    "non_target_table_acl_unchanged": true,
+    "function_acl_unchanged": true,
+    "public_schema_acl_unchanged": true,
+    "role_memberships_unchanged": true,
+    "writer_owner_effective_set_zero": true,
+    "writer_owner_self_grant_count_zero": true
+  }
+}

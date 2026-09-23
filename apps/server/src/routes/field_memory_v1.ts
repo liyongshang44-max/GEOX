@@ -89,11 +89,13 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
 
     const operation_plan_id = String(body?.operation_plan_id ?? "").trim();
     const acceptance_id = String(body?.acceptance_id ?? "").trim();
+    const field_memory_record_ref = String(body?.field_memory_record_ref ?? body?.field_memory_record_id ?? "").trim();
     if (!operation_plan_id) return reply.status(400).send({ ok: false, error: "MISSING_OPERATION_PLAN_ID" });
     if (!acceptance_id) return reply.status(400).send({ ok: false, error: "MISSING_ACCEPTANCE_ID" });
+    if (!field_memory_record_ref) return reply.status(400).send({ ok: false, error: "MISSING_FIELD_MEMORY_RECORD_REF" });
 
     try {
-      const result = await createFormalFieldMemoryFromAcceptanceV1(pool, tenant, { operation_plan_id, acceptance_id });
+      const result = await createFormalFieldMemoryFromAcceptanceV1(pool, tenant, { operation_plan_id, acceptance_id, field_memory_record_ref });
       return reply.send({
         ok: true,
         idempotent: result.idempotent,
@@ -110,8 +112,35 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
       });
     } catch (error) {
       const code = String((error as Error)?.message ?? "");
-      if (code === "ACCEPTANCE_NOT_FOUND") return reply.status(404).send({ ok: false, error: code });
-      if (["ACCEPTANCE_VERDICT_NOT_PASS", "ACCEPTANCE_NOT_FORMAL", "FORMAL_EVIDENCE_NOT_PASSED", "CHAIN_VALIDATION_NOT_PASSED", "ACCEPTANCE_FIELD_ID_MISSING", "OBSERVATION_PAIR_NOT_FOUND"].includes(code)) {
+      if (["ACCEPTANCE_NOT_FOUND", "FIELD_MEMORY_RECORD_NOT_FOUND", "FIELD_MEMORY_CANDIDATE_NOT_FOUND"].includes(code)) {
+        return reply.status(404).send({ ok: false, error: code });
+      }
+      if (code === "FIELD_MEMORY_RECORD_AMBIGUOUS" || code.includes("_REF_AMBIGUOUS:")) {
+        return reply.status(409).send({ ok: false, error: code });
+      }
+      if (code.startsWith("FIELD_MEMORY_")) {
+        return reply.status(422).send({ ok: false, error: code });
+      }
+      if ([
+        "ACCEPTANCE_VERDICT_NOT_PASS",
+        "ACCEPTANCE_NOT_FORMAL",
+        "FORMAL_EVIDENCE_NOT_PASSED",
+        "CHAIN_VALIDATION_NOT_PASSED",
+        "ACCEPTANCE_FIELD_ID_MISSING",
+        "OBSERVATION_PAIR_NOT_FOUND",
+        "FIELD_MEMORY_RECORD_REF_REQUIRED",
+        "FIELD_MEMORY_RECORD_NOT_COMMITTED",
+        "FIELD_MEMORY_RECORD_OPERATION_MISMATCH",
+        "FIELD_MEMORY_RECORD_ACCEPTANCE_MISMATCH",
+        "FIELD_MEMORY_RECORD_POLICY_REF_MISSING",
+        "FIELD_MEMORY_CANDIDATE_REF_MISSING",
+        "FIELD_MEMORY_CANDIDATE_ID_MISMATCH",
+        "FIELD_MEMORY_CANDIDATE_NOT_RECORDED",
+        "FIELD_MEMORY_CANDIDATE_OPERATION_MISMATCH",
+        "FIELD_MEMORY_CANDIDATE_ACCEPTANCE_MISMATCH",
+        "FIELD_MEMORY_CANDIDATE_POLICY_REF_MISSING",
+        "FIELD_MEMORY_PROMOTION_BASIS_MUST_BE_DISTINCT_FROM_CANDIDATE_BASIS",
+      ].includes(code) || code.includes("_REF_MISSING:") || code.includes("_FACT_NOT_FOUND:") || code.includes("_NOT_FORMAL_ELIGIBLE:") || code.includes("_CLASSIFICATION_MISMATCH:") || code.includes("_REF_REUSE_FORBIDDEN")) {
         return reply.status(422).send({ ok: false, error: code });
       }
       req.log.error({ err: error }, "create formal field memory from acceptance failed");

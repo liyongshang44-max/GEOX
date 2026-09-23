@@ -45,7 +45,7 @@ export type FieldMemoryV1 = {
   baseline_value?: number;
   delta_value?: number;
   target_range?: unknown;
-  confidence: number;
+  confidence?: number | null;
   source_type: string;
   source_id: string;
   operation_id?: string;

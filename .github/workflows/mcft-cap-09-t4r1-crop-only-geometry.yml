@@ -4,13 +4,9 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-t4r1-crop-only-geometry.yml'
-      - '.github/workflows/mcft-cap-09-t4r1-persistent-lifecycle-qualification.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CROP-ONLY-GEOMETRY-AUTHORITY-V1.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.cjs'
       - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.mjs'
-      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs'
   merge_group:
     types: [checks_requested]
 
@@ -32,16 +28,44 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Classify geometry semantic scope
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base_sha='${{ github.event.pull_request.base.sha }}'
+          else
+            base_sha='${{ github.event.merge_group.base_sha }}'
+          fi
+          changed="$(git diff --name-only "${base_sha}...HEAD")"
+          geometry_semantic_changed=false
+          for path in \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CROP-ONLY-GEOMETRY-AUTHORITY-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.cjs' \
+            'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.mjs'
+          do
+            if printf '%s\n' "$changed" | grep -Fxq "$path"; then
+              geometry_semantic_changed=true
+            fi
+          done
+          echo "geometry_semantic_changed=$geometry_semantic_changed" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$changed"
+          echo "T4R1_GEOMETRY_SEMANTIC_CHANGED=$geometry_semantic_changed"
+
       - uses: pnpm/action-setup@v4
+        if: steps.scope.outputs.geometry_semantic_changed == 'true'
         with:
           version: 9.15.4
 
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.geometry_semantic_changed == 'true'
         with:
           node-version: 20.11.1
           cache: pnpm
 
       - name: Resolve exact geometry base and subject
+        if: steps.scope.outputs.geometry_semantic_changed == 'true'
         id: authority
         shell: bash
         run: |
@@ -55,28 +79,34 @@ jobs:
           fi
 
       - name: Install exact repository dependencies
+        if: steps.scope.outputs.geometry_semantic_changed == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Install Chromium for provider geometry proof
+        if: steps.scope.outputs.geometry_semantic_changed == 'true'
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Syntax-check geometry proof code
+        if: steps.scope.outputs.geometry_semantic_changed == 'true'
         run: |
           node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.cjs
           node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.mjs
 
       - name: Validate exact geometry governance boundary
+        if: steps.scope.outputs.geometry_semantic_changed == 'true'
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.cjs
 
       - name: Execute live T4R1 crop-only geometry proof
+        if: steps.scope.outputs.geometry_semantic_changed == 'true'
         env:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.mjs
 
       - name: Verify fail-closed geometry result contract
+        if: steps.scope.outputs.geometry_semantic_changed == 'true'
         shell: node {0}
         run: |
           const fs = require('fs');
@@ -116,7 +146,7 @@ jobs:
           }));
 
       - name: Upload immutable geometry proof
-        if: always()
+        if: steps.scope.outputs.geometry_semantic_changed == 'true' && always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-t4r1-crop-only-geometry-${{ steps.authority.outputs.subject_sha }}

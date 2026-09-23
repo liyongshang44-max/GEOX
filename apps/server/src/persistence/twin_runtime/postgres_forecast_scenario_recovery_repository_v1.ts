@@ -36,6 +36,7 @@ import {
   readCap04TickRecoveryAuthorityV1,
 } from "../../domain/twin_runtime/forecast_record_set_recovery_authority_v1.js";
 import { PostgresForecastScenarioRepositoryV1 } from "./postgres_forecast_scenario_repository_v1.js";
+import type { TwinCanonicalFactWriterV1 } from "./postgres_mcft_cap09_twin_canonical_fact_writer_v1.js";
 import type { TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
 
 function factIdV1(objectId: string): string {
@@ -74,8 +75,8 @@ function stringFieldV1(value: unknown, code: string): string {
 }
 
 export class PostgresForecastScenarioRecoveryRepositoryV1 extends PostgresForecastScenarioRepositoryV1 {
-  constructor(private readonly recoveryPool: Pool) {
-    super(recoveryPool);
+  constructor(private readonly recoveryPool: Pool, factWriter?: TwinCanonicalFactWriterV1) {
+    super(recoveryPool, factWriter);
   }
 
   private async readCanonicalObjectForRecoveryWithClientV1(
