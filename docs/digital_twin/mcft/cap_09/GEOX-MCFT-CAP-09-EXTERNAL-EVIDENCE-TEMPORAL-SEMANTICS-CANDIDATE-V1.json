@@ -1,0 +1,182 @@
+{
+  "schema_version": "geox_mcft_cap09_external_evidence_temporal_semantics_candidate_v1",
+  "record_status": "NON_EFFECTIVE_ARCHITECTURE_CANDIDATE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "candidate_id": "S6-EXTERNAL-EVIDENCE-TEMPORAL-SEMANTICS-CANDIDATE-V1",
+  "base_protected_main_sha": "0da26233e8787f6e014e21f701e3837506ba6c15",
+  "authority_predecessors": {
+    "taskbook": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+      "blob_sha": "39f6a09273c30088a7ea264cfa94ff930ea5518e"
+    },
+    "amendment_07": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-07-EXTERNAL-FORMAL-FIXED-LAG-CAUSALITY-AUTHORITY.md",
+      "blob_sha": "c5a98ca789027e1bf051ec56bf1b7e76b98a0891"
+    },
+    "amendment_08": {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-08-IMPLEMENTATION-ACTIVATION-QUALIFICATION-SEPARATION-AUTHORITY.md",
+      "blob_sha": "ef1e4344e5915e2c591cf7cfc9b6c2bf27f8bc3b"
+    },
+    "dt02_revision_lifecycle": {
+      "path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md",
+      "blob_sha": "c3e3a33d744dc3a2087136003a53d336efd870a0"
+    },
+    "runtime_ports": {
+      "path": "apps/server/src/runtime/twin_runtime/ports.ts",
+      "blob_sha": "9f62818498a645d554925dcf8569cdd19c0f1c34"
+    },
+    "database_evidence_ingress": {
+      "path": "apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts",
+      "blob_sha": "45cca8e03cf0641f2fbf45f3b3aca044f322989c"
+    }
+  },
+  "purpose": "MODEL_EXTERNAL_PROVIDER_PUBLICATION_LATENCY_WITHOUT_RELABELING_EVENT_TIME_OR_RETROACTIVELY_RESCUING_FORMAL_SLOTS",
+  "clock_model": {
+    "E_event_time": {
+      "meaning": "ROLE_SPECIFIC_REAL_WORLD_EVENT_OR_INTERVAL_TIME",
+      "existing_field_authority": "role_time role-specific event field",
+      "must_not_be_relabelled": true
+    },
+    "A_source_availability_time": {
+      "meaning": "TIME_THE_PROVIDER_FIRST_MADE_THE_SPECIFIC_VERSION_PUBLICLY_RETRIEVABLE",
+      "existing_runtime_field_reused": false,
+      "exactness_modes": [
+        "EXACT_PROVIDER_TIMESTAMP",
+        "OBSERVED_BRACKET"
+      ],
+      "observed_bracket": {
+        "lower_bound_field": "last_not_seen_at",
+        "lower_bound_inclusive": false,
+        "upper_bound_field": "first_seen_at",
+        "upper_bound_inclusive": true,
+        "rule": "A_IN_LAST_NOT_SEEN_FIRST_SEEN_INTERVAL"
+      },
+      "exact_time_may_be_claimed_without_provider_timestamp_or_observed_bracket": false
+    },
+    "I_ingested_at": {
+      "meaning": "ACTUAL_CANONICAL_INGRESS_TIME",
+      "existing_field_authority": "role_time.ingested_at",
+      "backdating_authorized": false
+    },
+    "K_runtime_knowledge_time": {
+      "meaning": "EARLIEST_TIME_THE_RUNTIME_IS_AUTHORIZED_TO_TREAT_THE_CANONICAL_RECORD_AS_KNOWN",
+      "existing_field_authority": "available_to_runtime_at",
+      "must_be_gte_ingested_at": true,
+      "may_include_post_ingress_governance_hold": true
+    }
+  },
+  "temporal_invariants": [
+    "E_MUST_NOT_BE_AFTER_A_UPPER_BOUND",
+    "LAST_NOT_SEEN_MUST_BE_BEFORE_FIRST_SEEN",
+    "WHEN_PROVIDER_PUBLISHED_AT_EXISTS_E_LE_A_AND_LAST_NOT_SEEN_LT_A_LE_FIRST_SEEN",
+    "FIRST_SEEN_LE_I",
+    "I_LE_K",
+    "NO_EXACT_A_CLAIM_FROM_FIRST_SEEN_ALONE",
+    "NO_BACKDATED_I",
+    "NO_BACKDATED_K",
+    "NO_FUTURE_EVENT_LEAKAGE"
+  ],
+  "causality_policy": {
+    "generic_historical_default": "K_MUST_BE_LE_LOGICAL_TICK_CAUSAL_CUTOFF",
+    "amendment_07_external_exact_interval_exception": {
+      "record_types": [
+        "observed_rainfall_v1",
+        "historical_et0_estimate_v1"
+      ],
+      "logical_event_time_preserved": true,
+      "authorized_cutoff": "T_PLUS_07H12M",
+      "runtime_observer_nominal": "T_PLUS_07H17M"
+    },
+    "late_after_authorized_cutoff": "DOES_NOT_RETROACTIVELY_SATISFY_OR_RESCUE_THE_ORIGINAL_FORMAL_SLOT"
+  },
+  "late_evidence_detection": {
+    "delayed_record_rule": "K_GT_CAUSAL_CUTOFF_FOR_FIRST_AFFECTED_LOGICAL_TICK",
+    "out_of_order_arrival_supported": true,
+    "missing_interval_backfill_supported": true,
+    "batch_arrival_supported": true,
+    "provider_revision_supported_only_with_explicit_revision_proof": true
+  },
+  "duplicate_and_revision_policy": {
+    "same_source_record_ref_same_hash": "IDEMPOTENT_DUPLICATE_NO_REPLAY",
+    "same_semantic_identity_same_payload_hash": "SEMANTIC_DUPLICATE_NO_REPLAY",
+    "same_semantic_identity_different_payload_without_revision_proof": "FAIL_CLOSED_CONFLICT",
+    "same_semantic_identity_different_payload_with_explicit_supersedes_ref_and_provider_revision_id": "APPEND_NEW_EVIDENCE_VERSION_AND_TRIGGER_REVISION_CANDIDATE",
+    "existing_record_rewrite_authorized": false
+  },
+  "delayed_assimilation_candidate": {
+    "effectiveness": "NOT_AUTHORIZED_BY_THIS_CANDIDATE",
+    "trigger": "MATERIALLY_NEW_OR_PROVEN_REVISED_EVIDENCE_BECOMES_KNOWN_AFTER_ITS_AUTHORIZED_CAUSAL_CUTOFF",
+    "batch_coalescing": "ONE_REVISION_CANDIDATE_MAY_FREEZE_MULTIPLE_NEW_RECORDS_OBSERVED_IN_ONE_INGRESS_BATCH",
+    "first_affected_tick": "ROLE_SPECIFIC_EVIDENCE_WINDOW_MAPPING_NOT_RAW_CEIL_EVENT_TIME",
+    "replay_base": "LATEST_IMMUTABLE_CHECKPOINT_STRICTLY_BEFORE_EARLIEST_AFFECTED_TICK",
+    "replay_end": "CURRENT_COMMITTED_HEAD_OF_SOURCE_LINEAGE_AT_REVISION_DECLARATION",
+    "boundedness": "FAIL_CLOSED_IF_REQUIRED_PREDECESSOR_CHECKPOINT_OR_SEPARATELY_AUTHORIZED_REPLAY_BOUND_IS_NOT_AVAILABLE",
+    "historical_lineage_mutation_authorized": false,
+    "historical_fact_delete_authorized": false
+  },
+  "revision_lifecycle_reuse": {
+    "transaction_family": "E_REVISION_LINEAGE_STEP_COMMIT",
+    "declare": "E1_DECLARE_REVISION",
+    "status": "E2_APPEND_REVISION_STATUS",
+    "promote": "E3_PROMOTE_LINEAGE",
+    "sequence": [
+      "LATE_OR_REVISED_EVIDENCE_DETECTED",
+      "FREEZE_REVISION_INPUT_SET_AND_KNOWLEDGE_TIME",
+      "DECLARE_REVISION_RUN_AND_CANDIDATE_LINEAGE",
+      "RECOMPUTE_FROM_REPLAY_BASE",
+      "VALIDATE_CANDIDATE_LINEAGE",
+      "PROMOTE_ONLY_AFTER_SEPARATE_AUTHORITY_AND_VALIDATION"
+    ],
+    "new_revision_transaction_family_required": false
+  },
+  "bitemporal_read_semantics_candidate": {
+    "event_axis": "WHAT_THE_WORLD_RECORD_SAYS_HAPPENED_WHEN",
+    "knowledge_axis": "WHAT_GEOX_COULD_LEGITIMATELY_HAVE_KNOWN_BY_TIME_K",
+    "historical_as_known_query_must_remain_possible": true,
+    "corrected_historical_state_may_exist_on_new_lineage": true,
+    "old_lineage_remains_addressable": true
+  },
+  "publication_cadence_candidate_classes": [
+    "HOURLY_LOW_LATENCY",
+    "HOURLY_FIXED_LATENCY",
+    "HOURLY_DELAYED_HIGH_LATENCY",
+    "HOURLY_EVENTS_VARIABLE_PUBLICATION",
+    "BATCHED_PUBLICATION",
+    "IRREGULAR_EVENT_CADENCE",
+    "INSUFFICIENT_SAMPLES"
+  ],
+  "kbs_current_claim": {
+    "publication_pattern_adjudicated_by_this_candidate": false,
+    "daily_batch_claimed": false,
+    "reason": "REAL_KBS_CADENCE_WATCH_REMAINS_EXTERNAL_TIME_GATED"
+  },
+  "required_deterministic_fixture_ids": [
+    "hourly_low_latency",
+    "hourly_fixed_latency_within_authorized_cutoff",
+    "delayed_hourly_beyond_cutoff",
+    "daily_batch",
+    "out_of_order_arrival",
+    "provider_revision",
+    "duplicate_delivery",
+    "missing_interval_backfill"
+  ],
+  "authority_effect": {
+    "amendment_effective": false,
+    "production_runtime_change_authorized": false,
+    "database_schema_change_authorized": false,
+    "formal_db_write_authorized": false,
+    "formal_raw_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "canonical_runtime_write_authorized": false,
+    "revision_declaration_write_authorized": false,
+    "lineage_promotion_authorized": false,
+    "kbs_freshness_threshold_change_authorized": false,
+    "amendment_07_cutoff_change_authorized": false,
+    "ea5e2_operational_activation_qualified": false,
+    "ea5e3_effective": false,
+    "formal_execution_count": "0/24",
+    "mcft_cap09_completed": false
+  },
+  "activation_condition_for_future_amendment_review": "REAL_PROVIDER_CADENCE_EVIDENCE_OR_OTHER_QUALIFYING_EXTERNAL_SOURCE_EVIDENCE_DEMONSTRATES_THAT_FRESHNESS_ONLY_CAUSALITY_IS_INSUFFICIENT"
+}
