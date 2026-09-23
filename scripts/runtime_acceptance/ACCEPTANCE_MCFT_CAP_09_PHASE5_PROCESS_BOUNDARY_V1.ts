@@ -451,6 +451,23 @@ function main(): void {
     );
   }
 
+  const evidenceRecoveryWithCode = Object.assign(
+    new Error("the database system is in recovery mode"),
+    { code: "57P03" },
+  );
+  assert.equal(
+    evidenceFailureClassifier.classify(evidenceRecoveryWithCode),
+    "RETRYABLE",
+    "PHASE5_EVIDENCE_POSTGRES_CANNOT_CONNECT_NOW_MUST_RETRY",
+  );
+  assert.equal(
+    evidenceFailureClassifier.classify(
+      new Error("the database system is in recovery mode"),
+    ),
+    "RETRYABLE",
+    "PHASE5_EVIDENCE_POSTGRES_RECOVERY_MESSAGE_MUST_RETRY",
+  );
+
   const twinFailureClassifier = new McftCap09ProductionTwinFailureClassifierV1();
   for (const code of [
     "LEASE_HELD_BY_OTHER_OWNER",
@@ -602,6 +619,8 @@ function main(): void {
     evidence_kbs_historical_drift_fail_closed_nonfatal: true,
     evidence_kbs_forward_gap_remains_fatal: true,
     evidence_kbs_ambiguous_forward_remains_fatal: true,
+    evidence_postgres_cannot_connect_now_retryable: true,
+    evidence_postgres_recovery_message_retryable: true,
     twin_duplicate_coordination_contention_retryable: true,
     twin_postgres_cannot_connect_now_retryable: true,
     twin_postgres_recovery_message_retryable: true,
