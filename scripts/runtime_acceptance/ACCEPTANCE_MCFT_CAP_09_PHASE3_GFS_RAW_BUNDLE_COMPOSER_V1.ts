@@ -203,9 +203,21 @@ async function main(): Promise<void> {
     "INSERT INTO",
     "UPDATE twin_",
     "DELETE FROM twin_",
+    "Buffer.from(entry.body)",
+    "new Uint8Array(Buffer.concat(chunks))",
   ]) {
     assert.equal(source.includes(forbidden), false, `PHASE3_GFS_COMPOSER_FORBIDDEN_DEPENDENCY:${forbidden}`);
   }
+  assert.equal(
+    source.includes("entry.body.buffer") && source.includes("entry.body.byteOffset"),
+    true,
+    "PHASE3_GFS_COMPOSER_ZERO_COPY_MEMBER_VIEW_REQUIRED",
+  );
+  assert.equal(
+    source.includes("return Buffer.concat(chunks);"),
+    true,
+    "PHASE3_GFS_COMPOSER_FINAL_TAR_SINGLE_COPY_REQUIRED",
+  );
 
   const proof = {
     schema_version: "geox_mcft_cap09_phase3_gfs_raw_bundle_composer_qualification_v1",
@@ -225,6 +237,8 @@ async function main(): Promise<void> {
     nomads_grib_filter_minimum_interval_ms:
       MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1,
     nomads_responsible_sharing_cadence_proven: true,
+    zero_copy_member_view_proven: true,
+    final_tar_single_copy_proven: true,
     database_write_count: 0,
     runtime_tick_cursor_mutation: false,
     twin_state_mutation: false,
