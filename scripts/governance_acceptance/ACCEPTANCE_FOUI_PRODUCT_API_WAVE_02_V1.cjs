@@ -69,6 +69,19 @@ try {
     assert.doesNotMatch(route, /\b(?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE)\b/i);
   });
 
+  check("PRODUCTION_FIELD_SCHEMA_COMPATIBILITY", () => {
+    assert.match(builder, /record_json->'payload'->>'tenant_id' = \$1/);
+    assert.match(builder, /record_json->'payload'->>'project_id' = \$2/);
+    assert.match(builder, /record_json->'payload'->>'group_id' = \$3/);
+    assert.match(builder, /LEFT JOIN public\.field_index_v1 fi/);
+    assert.match(builder, /fi\.tenant_id = \$1/);
+    assert.doesNotMatch(builder, /fi\.project_id/);
+    assert.doesNotMatch(builder, /fi\.group_id/);
+    assert.match(builder, /FIELD_IDENTITY_NOT_ESTABLISHED/);
+    assert.match(builder, /FIELD_SCOPE_OBSERVED_IN_GOVERNED_FACTS/);
+    assert.match(sourceRegistry, /GEOX_SCOPED_FACT_FIELD_BASIS_V1/);
+  });
+
   check("CANONICAL_MCFT_READ_MODEL_AND_EXACT_STATE_BINDING", () => {
     assert.match(builder, /PostgresMcftFieldTwinS4ReadApiV1/);
     assert.match(builder, /root_graph_status !== "COMPLETE_EXACT_GRAPH"/);
@@ -115,7 +128,7 @@ try {
   });
 
   check("SOURCE_BINDING_REGISTRY_EXTENDED_EXPLICITLY", () => {
-    for (const role of ["FIELD_IDENTITY", "FIELD_CURRENT_STATE", "FIELD_CURRENT_RUNTIME_LINEAGE"]) {
+    for (const role of ["FIELD_SCOPE_BASIS", "FIELD_IDENTITY", "FIELD_CURRENT_STATE", "FIELD_CURRENT_RUNTIME_LINEAGE"]) {
       assert.match(sourceRegistry, new RegExp('"' + role + '"'));
     }
     assert.match(sourceRegistry, /GEOX_FIELD_INDEX_V1/);
