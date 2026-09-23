@@ -1,0 +1,96 @@
+{
+  "schema_version": "geox_pfe14_mcft09_read_dependency_readjudication_v1",
+  "record_status": "DEPENDENCY_PROVIDER_CANDIDATE_AUTHORIZED_S4_NOT_EFFECTIVE",
+  "base_main_sha": "6df2241f1470e1df930498782b42c6ba9e813b41",
+  "mcft09_s4_effectiveness": {
+    "effective": true,
+    "subject_sha": "6a4138e77fe6b838bc0f552a0bc5e2ceb84c026f",
+    "exact_sha_r2_run_id": 31108834682,
+    "artifact_id": 8970768718,
+    "semantic_artifact_digest": "sha256:64e14355edad6e2711cdde26cc3ac2bd6c7795c7e64439b194679350ce7cc80c",
+    "source": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S5-REGISTRY-REGISTRATION-V1.json"
+  },
+  "implemented_dependency_sources": {
+    "scheduler_cursor_table": "twin_shadow_online_scheduler_cursor_v1",
+    "scheduler_slot_table": "twin_shadow_online_scheduler_slot_v1",
+    "runtime_lease_table": "twin_runtime_lease_v1",
+    "scheduler_reader": "PostgresPersistentSequentialSchedulerAdapterV1",
+    "recovery_reader": "PostgresExpiredSlotRecoveryAdapterV1.inspectOperationalState",
+    "evidence_reader": "PostgresEvidenceIngressAdapterV1.freezeEligibleEvidence",
+    "evidence_source": "facts"
+  },
+  "provider_candidate": {
+    "authorized": true,
+    "method": "GET",
+    "route": "/api/v1/operator/twin/fields/:field_id/runtime/operational-summary",
+    "existing_canonical_route_family_required": true,
+    "exact_six_key_scope_required": true,
+    "database_clock_authoritative": true,
+    "writes_allowed": false,
+    "runtime_claim_allowed": false,
+    "frontend_consumption_authorized": false
+  },
+  "scheduler_summary": {
+    "authorized": true,
+    "fields": [
+      "scheduler_status",
+      "latest_completed_slot",
+      "latest_tick_ref",
+      "latest_tick_status",
+      "latest_tick_started_at",
+      "latest_tick_completed_at",
+      "next_target_slot",
+      "next_target_at",
+      "scheduler_lag_ms"
+    ],
+    "latest_completed_slot_semantics": "LATEST_TERMINALLY_RESOLVED_SCHEDULER_BOUNDARY",
+    "browser_clock_allowed": false
+  },
+  "evidence_availability": {
+    "authorized": true,
+    "eligibility_boundary_order": [
+      "ACTIVE_SCHEDULER_SLOT",
+      "LATEST_TERMINAL_SCHEDULER_SLOT",
+      "NONE"
+    ],
+    "future_boundary_allowed": false,
+    "fields": [
+      "eligibility_boundary",
+      "latest_evidence_observed_at",
+      "latest_evidence_ingested_at",
+      "evidence_age_ms",
+      "freshness_status",
+      "freshness_threshold_ms",
+      "coverage_ratio",
+      "maximum_gap_ms",
+      "future_excluded_count",
+      "late_evidence_count",
+      "out_of_order_count"
+    ],
+    "freshness_status_values": ["FRESH", "STALE", "MISSING", "UNKNOWN"],
+    "age_reference": "ELIGIBILITY_BOUNDARY",
+    "late_reason_codes": ["INGESTED_AFTER_BOUNDARY", "AVAILABLE_AFTER_BOUNDARY"],
+    "future_reason_codes": ["OBSERVED_AFTER_BOUNDARY"]
+  },
+  "still_forbidden": [
+    "DYNAMIC_SHADOW_ONLINE_FRONTEND_CLAIM",
+    "PFE14_S4_EFFECTIVENESS",
+    "PFE14_PAGE_SOURCE_CHANGE",
+    "PFE14_API_CLIENT_CHANGE",
+    "PFE14_SCHEDULER_UI_ACTIVATION",
+    "PFE14_EVIDENCE_UI_ACTIVATION",
+    "RESTART_HISTORY_INFERENCE",
+    "RECOVERY_HISTORY_INFERENCE",
+    "BROWSER_FRESHNESS_DERIVATION",
+    "BROWSER_SCHEDULER_DERIVATION",
+    "WRITER_ROUTE",
+    "CANONICAL_WRITE",
+    "RECOMMENDATION",
+    "APPROVAL",
+    "AO_ACT",
+    "DISPATCH",
+    "MODEL_ACTIVATION"
+  ],
+  "dependency_satisfied": false,
+  "next_action": "MCFT_CAP_09_IMPLEMENT_GET_ONLY_PFE14_OPERATIONAL_READ_PROVIDER_CANDIDATE"
+}

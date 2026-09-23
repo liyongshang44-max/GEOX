@@ -1,17 +1,20 @@
 {
-  "schema_version": "geox_pfe14_mcft09_dependency_map_v1",
+  "schema_version": "geox_pfe14_mcft09_dependency_map_v2",
   "dependency_map_id": "PFE-14-MCFT-09-DEPENDENCY-MAP",
-  "base_main_sha": "0afea2012ae1a50b2160f57cf60c0c758052f132",
+  "base_main_sha": "6df2241f1470e1df930498782b42c6ba9e813b41",
   "frontend_phase": "PFE-14",
   "runtime_capability_line": "MCFT-CAP-09",
+  "read_dependency_readjudication_ref": "docs/frontend-productization/PFE-14-MCFT09-READ-DEPENDENCY-READJUDICATION-V1.json",
   "runtime_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-AUTHORITY-V1.json",
-  "runtime_authority_snapshot": {
-    "status": "PRE_CANDIDATE_GOVERNANCE_FOUNDATION",
-    "implementation_authorized": false,
-    "runtime_source_authorized": false,
-    "live_ingestion_authorized": false,
-    "background_scheduler_authorized": false,
-    "canonical_write_authorized": false
+  "dependency_evidence": {
+    "s4_effective": true,
+    "s4_effective_subject_sha": "6a4138e77fe6b838bc0f552a0bc5e2ceb84c026f",
+    "s4_exact_sha_r2_run_id": 31108834682,
+    "s4_exact_sha_artifact_id": 8970768718,
+    "scheduler_source_present": true,
+    "evidence_ingress_source_present": true,
+    "product_read_provider_present": false,
+    "product_read_provider_qualified": false
   },
   "global_rules": {
     "frontend_may_not_authorize_runtime": true,
@@ -20,20 +23,30 @@
     "frontend_may_not_compute_scheduler_slot": true,
     "frontend_may_not_compute_freshness_verdict": true,
     "frontend_may_not_create_write_capability": true,
-    "formal_runtime_requests_must_remain_get_only": true
+    "formal_runtime_requests_must_remain_get_only": true,
+    "dependency_provider_must_use_existing_runtime_route_family": true
   },
   "slice_dependencies": [
-    {"pfe_slice":"PFE-14.S0","name":"Post-freeze Authority and Repository Reconciliation","mcft09_minimum_dependency":"TASKBOOK_AND_CURRENT_AUTHORITY_PRESENT","dependency_satisfied":true,"implementation_scope":"DOCS_AND_STATIC_ACCEPTANCE_ONLY","runtime_claim_allowed":false},
-    {"pfe_slice":"PFE-14.S1","name":"Frontend Read Contract and State Matrix","mcft09_minimum_dependency":"MCFT09_DESIGN_CONTRACT_AVAILABLE","dependency_satisfied":true,"implementation_scope":"CONTRACT_DESIGN_ONLY","runtime_claim_allowed":false},
-    {"pfe_slice":"PFE-14.S2","name":"Apple Visual Foundation","mcft09_minimum_dependency":"NONE_FOR_VISUAL_PRIMITIVES","dependency_satisfied":true,"implementation_scope":"VISUAL_PRIMITIVES_AND_EXISTING_SEMANTICS_ONLY","runtime_claim_allowed":false},
-    {"pfe_slice":"PFE-14.S3","name":"Operator Shell Consolidation","mcft09_minimum_dependency":"RUNTIME_MODE_READ_CONTRACT_FOR_DYNAMIC_MODE","dependency_satisfied":false,"partial_work_allowed":true,"allowed_before_dependency":["navigation cleanup","visual convergence","existing nonclaim preservation"],"forbidden_before_dependency":["SHADOW_ONLINE label","dynamic scheduler status","live mode claim"]},
-    {"pfe_slice":"PFE-14.S4","name":"Scope and Runtime Overview","mcft09_minimum_dependency":"SCHEDULER_AND_EVIDENCE_AVAILABILITY_READ_CONTRACT","dependency_satisfied":false,"runtime_claim_allowed":false},
+    {"pfe_slice":"PFE-14.S0","name":"Post-freeze Authority and Repository Reconciliation","dependency_satisfied":true,"runtime_claim_allowed":false},
+    {"pfe_slice":"PFE-14.S1","name":"Frontend Read Contract and State Matrix","dependency_satisfied":true,"runtime_claim_allowed":false},
+    {"pfe_slice":"PFE-14.S2","name":"Apple Visual Foundation","dependency_satisfied":true,"runtime_claim_allowed":false},
+    {"pfe_slice":"PFE-14.S3","name":"Operator Shell Consolidation","dependency_satisfied":false,"partial_work_allowed":true,"runtime_claim_allowed":false},
+    {"pfe_slice":"PFE-14.S4","name":"Scope and Runtime Overview","mcft09_minimum_dependency":"SCHEDULER_AND_EVIDENCE_AVAILABILITY_READ_CONTRACT","dependency_satisfied":false,"provider_candidate_authorized":true,"missing_dependency":"QUALIFIED_GET_ONLY_OPERATIONAL_READ_PROVIDER","runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S5","name":"Field Runtime Core Promotion","mcft09_minimum_dependency":"FORMAL_SHADOW_STATE_AND_FORECAST_READBACK","dependency_satisfied":false,"runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S6","name":"Scheduler and Health Product Surface","mcft09_minimum_dependency":"CURSOR_LEASE_FENCING_BACKFILL_RECOVERY_HEALTH_READ_MODELS","dependency_satisfied":false,"runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S7","name":"Trace and Qualification Readback","mcft09_minimum_dependency":"FORMAL_CONTROLLED_O00_O23_RUN_EVIDENCE","dependency_satisfied":false,"runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S8","name":"Product Quality Closure","mcft09_minimum_dependency":"STABLE_FORMAL_READ_CONTRACTS_AND_CONTROLLED_DATASET","dependency_satisfied":false,"runtime_claim_allowed":false},
     {"pfe_slice":"PFE-14.S9","name":"Candidate and Exact Frontend Freeze","mcft09_minimum_dependency":"EXACT_FRONTEND_DEPENDENCY_CONTRACTS_FROZEN","dependency_satisfied":false,"runtime_claim_allowed":false}
   ],
-  "required_runtime_fields": ["runtime_mode","runtime_stage","request_scope","latest_completed_slot","latest_tick_ref","latest_tick_status","latest_tick_started_at","latest_tick_completed_at","next_target_slot","next_target_at","scheduler_lag_ms","persistent_cursor_ref","cursor_slot","lease_status","lease_owner","fencing_token","missed_slot_count","backfill_status","backfill_queue_depth","oldest_backfill_slot","restart_detected","recovery_status","recovered_checkpoint_ref","latest_evidence_observed_at","latest_evidence_ingested_at","evidence_age_ms","freshness_status","coverage_ratio","maximum_gap_ms","future_excluded_count","late_evidence_count","out_of_order_count","runtime_degradation_status","degradation_reason_codes","forecast_status","scenario_source_eligible","response_started_at","response_instance_hash"],
-  "first_runtime_dependent_frontend_gate": "PFE_14_S3_DYNAMIC_RUNTIME_MODE_CONTRACT"
+  "s4_provider_candidate_fields": {
+    "scheduler_summary": ["scheduler_status","latest_completed_slot","latest_tick_ref","latest_tick_status","latest_tick_started_at","latest_tick_completed_at","next_target_slot","next_target_at","scheduler_lag_ms"],
+    "evidence_availability": ["eligibility_boundary","latest_evidence_observed_at","latest_evidence_ingested_at","evidence_age_ms","freshness_status","freshness_threshold_ms","coverage_ratio","maximum_gap_ms","future_excluded_count","late_evidence_count","out_of_order_count"]
+  },
+  "deferred_after_s4_provider": [
+    "dynamic_runtime_context",
+    "persistence_and_recovery_history",
+    "full_runtime_health_product_surface",
+    "formal_shadow_state_and_forecast_readback"
+  ],
+  "first_runtime_dependent_frontend_gate": "PFE_14_S4_OPERATIONAL_READ_PROVIDER_QUALIFICATION"
 }
