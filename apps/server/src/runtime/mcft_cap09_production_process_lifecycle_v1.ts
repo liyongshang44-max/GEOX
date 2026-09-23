@@ -7,6 +7,7 @@
 // Twin tick, or mutate either durable cursor.
 
 import { setTimeout as sleep } from "node:timers/promises";
+import type { Pool } from "pg";
 
 import type {
   EvidenceRuntimeHostFailureClassifierV1,
@@ -27,6 +28,82 @@ export const MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_ID_V1 =
   "MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_V1" as const;
 
 export type McftCap09ProcessSignalV1 = "SIGINT" | "SIGTERM";
+
+export type McftCap09RuntimePoolRoleV1 = "EVIDENCE_RUNTIME" | "TWIN_RUNTIME";
+
+export type McftCap09RuntimePoolIdleErrorEventV1 = {
+  schema_version: "geox_mcft_cap09_runtime_pool_idle_error_v1";
+  runtime_role: McftCap09RuntimePoolRoleV1;
+  lifecycle_id: typeof MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_ID_V1;
+  status: "DEGRADED" | "FATAL";
+  detail: "IDLE_POOL_CLIENT_ERROR";
+  failure_class: "RETRYABLE" | "FATAL";
+  failure_token: string;
+  error_name: string;
+  error_code: string | null;
+};
+
+type McftCap09RuntimePoolFailureClassifierV1 = {
+  classify(error: unknown): "RETRYABLE" | "FATAL";
+};
+
+function runtimePoolErrorCodeV1(error: unknown): string {
+  return typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code?: unknown }).code ?? "").trim()
+    : "";
+}
+
+function runtimePoolFailureTokenV1(error: unknown, code: string): string {
+  if (code) return code;
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (/database system is in recovery mode|cannot connect now/i.test(message)) {
+    return "POSTGRES_RECOVERY_MODE";
+  }
+  if (/connection terminated/i.test(message)) {
+    return "POSTGRES_CONNECTION_TERMINATED";
+  }
+  if (/socket hang up/i.test(message)) return "SOCKET_HANG_UP";
+  if (/timeout/i.test(message)) return "TIMEOUT";
+  return "UNCLASSIFIED_POOL_ERROR";
+}
+
+export function installMcftCap09RuntimePoolIdleErrorGuardV1(input: {
+  pool: Pick<Pool, "on" | "off">;
+  runtime_role: McftCap09RuntimePoolRoleV1;
+  failure_classifier: McftCap09RuntimePoolFailureClassifierV1;
+  event_sink?: (event: McftCap09RuntimePoolIdleErrorEventV1) => void;
+}): { dispose(): void } {
+  const sink = input.event_sink ?? ((event: McftCap09RuntimePoolIdleErrorEventV1) => {
+    process.stderr.write(`${JSON.stringify(event)}\n`);
+  });
+  const onError = (error: Error) => {
+    const classification = input.failure_classifier.classify(error);
+    const code = runtimePoolErrorCodeV1(error);
+    sink({
+      schema_version: "geox_mcft_cap09_runtime_pool_idle_error_v1",
+      runtime_role: input.runtime_role,
+      lifecycle_id: MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_ID_V1,
+      status: classification === "RETRYABLE" ? "DEGRADED" : "FATAL",
+      detail: "IDLE_POOL_CLIENT_ERROR",
+      failure_class: classification,
+      failure_token: runtimePoolFailureTokenV1(error, code),
+      error_name: error instanceof Error ? error.name : "Error",
+      error_code: code || null,
+    });
+    if (classification === "FATAL") {
+      throw error instanceof Error
+        ? error
+        : new Error("MCFT_CAP09_RUNTIME_POOL_IDLE_FATAL");
+    }
+  };
+  input.pool.on("error", onError);
+  return {
+    dispose() {
+      input.pool.off("error", onError);
+    },
+  };
+}
+
 
 export type McftCap09ProcessStopV1 =
   EvidenceRuntimeHostStopPortV1 & TwinRuntimeHostStopPortV1 & {

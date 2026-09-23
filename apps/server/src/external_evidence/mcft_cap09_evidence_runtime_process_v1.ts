@@ -38,6 +38,7 @@ import type {
 } from "./mcft_cap09_production_evidence_host_planner_v1.js";
 import {
   createMcftCap09ProcessStopV1,
+  installMcftCap09RuntimePoolIdleErrorGuardV1,
   McftCap09ConsoleEvidenceHealthV1,
   McftCap09ProductionEvidenceFailureClassifierV1,
   McftCap09ProductionEvidenceWaitV1,
@@ -244,6 +245,12 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
   if (!config.lease_owner) throw new Error("PHASE5_EVIDENCE_LEASE_OWNER_REQUIRED");
 
   const pool = createDatabasePool(config.database_url);
+  const failureClassifier = new McftCap09ProductionEvidenceFailureClassifierV1();
+  const poolErrorGuard = installMcftCap09RuntimePoolIdleErrorGuardV1({
+    pool,
+    runtime_role: "EVIDENCE_RUNTIME",
+    failure_classifier: failureClassifier,
+  });
   const stop = createMcftCap09ProcessStopV1();
   try {
     await assertMcftCap09ServicePrincipalV1(pool, "EVIDENCE_RUNTIME");
@@ -272,7 +279,7 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
       }),
       health: new McftCap09ConsoleEvidenceHealthV1(),
       stop,
-      failure_classifier: new McftCap09ProductionEvidenceFailureClassifierV1(),
+      failure_classifier: failureClassifier,
       completion_clock: input.completion_clock ?? (() => new Date().toISOString()),
       work_item_config: input.work_item_config,
       work_item_factory: input.work_item_factory,
@@ -289,7 +296,11 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
     }
   } finally {
     stop.dispose();
-    await pool.end();
+    try {
+      await pool.end();
+    } finally {
+      poolErrorGuard.dispose();
+    }
   }
 }
 
