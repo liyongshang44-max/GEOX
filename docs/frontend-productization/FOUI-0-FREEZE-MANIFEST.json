@@ -1,0 +1,66 @@
+{
+  "schema_version": "geox_foui0_frontend_reconciliation_freeze_v1",
+  "subject": "FOUI-0_CURRENT_MAIN_FRONTEND_RECONCILIATION",
+  "audit_base_main_sha": "d054b334b3e74f3356b5d02498da9ba845eccdfb",
+  "working_branch": "work/foui-field-operations-reconciliation-v1",
+  "status": "REVIEW_CANDIDATE",
+  "merge_authorization": "NONE_DURING_MCFT_FORMAL_V5_FREEZE",
+  "authority_change": "NONE",
+  "backend_runtime_change": "NONE",
+  "react_implementation_change": "NONE",
+  "wave02_implementation_authorization": "NONE",
+  "high_fidelity_authorization": "NONE",
+  "outcome_promotion": "HOLD",
+  "canonical_field_runtime": {
+    "route_family": "/operator/fields/*",
+    "route_owner": "apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx",
+    "page_owner": "apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx",
+    "api_owner": "apps/web/src/api/mcftFieldTwinRuntime.ts",
+    "policy": "GET_ONLY_EXACT_SIX_KEY_SCOPE_REUSE"
+  },
+  "target_information_architecture": [
+    "Home",
+    "Fields",
+    "Decisions",
+    "Operations",
+    "Evidence",
+    "Outcomes",
+    "Reports",
+    "Administration"
+  ],
+  "classification_vocabulary": [
+    "REUSE",
+    "REFACTOR",
+    "LEGACY",
+    "REMOVE-LATER",
+    "NEW-REQUIRED",
+    "HOLD"
+  ],
+  "projection_runtime": {
+    "contracts": "PRESENT",
+    "source_binding_registry": "PRESENT",
+    "governed_action_case_builder": "NOT_CONSTRUCTED",
+    "capability_availability_builder": "NOT_CONSTRUCTED",
+    "attention_queue_builder": "NOT_CONSTRUCTED",
+    "get_routes": "NOT_CONSTRUCTED",
+    "frontend_adapters": "NOT_CONSTRUCTED"
+  },
+  "legacy_semantic_prohibitions": [
+    "WORKBENCH_PRIORITY_NOT_ATTENTION_AUTHORITY",
+    "EVIDENCE_EXPORT_NOT_EVIDENCE_ARTIFACT_CHAIN",
+    "ACCEPTANCE_PASS_NOT_OPERATION_SUCCESS",
+    "ROI_LEDGER_NOT_OUTCOME_AUTHORITY",
+    "FIELD_MEMORY_NOT_CAUSAL_ATTRIBUTION",
+    "CURRENT_MCFT_STATE_NOT_DECISION_TIME_STATE",
+    "ROUTE_VISIBILITY_NOT_CAPABILITY_AVAILABILITY",
+    "BUTTON_VISIBILITY_NOT_CALLER_AUTHORIZATION"
+  ],
+  "documents": [
+    "docs/frontend-productization/FOUI-0-CURRENT-MAIN-FRONTEND-RECONCILIATION.md",
+    "docs/frontend-productization/FOUI-0-FIELD-OPERATIONS-PRODUCT-SURFACE-MATRIX.md",
+    "docs/frontend-productization/FOUI-0-CAPABILITY-REUSE-REGISTER.md",
+    "docs/product_projection/FOUI-0-PROJECTION-API-GAP-REGISTER.md",
+    "docs/product_projection/FOUI-0-PRE-WAVE02-CONSTRUCTION-HANDOFF.md"
+  ],
+  "acceptance": "scripts/frontend_acceptance/ACCEPTANCE_FOUI_0_FIELD_OPERATIONS_RECONCILIATION_V1.cjs"
+}
