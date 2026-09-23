@@ -392,14 +392,15 @@ export class EvidenceRuntimeHostV1 {
         // continue using it. The next loop reacquires through the durable lease:
         // same-owner/live keeps the fence; expired ownership advances the fence.
         const uncertainClaim = ownerClaim;
+        const priorResult = previousResult;
         ownerClaim = null;
         if (
           uncertainClaim
-          && previousResult?.lease_claim
-          && previousResult.lease_claim.lease_owner === uncertainClaim.lease_owner
-          && previousResult.lease_claim.fencing_token === uncertainClaim.fencing_token
+          && priorResult?.lease_claim
+          && priorResult.lease_claim.lease_owner === uncertainClaim.lease_owner
+          && priorResult.lease_claim.fencing_token === uncertainClaim.fencing_token
         ) {
-          previousResult = { ...previousResult, lease_claim: null };
+          previousResult = { ...priorResult, lease_claim: null };
         }
 
         retryableFailures += 1;
