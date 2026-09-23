@@ -2,40 +2,52 @@
   "schema_version": "geox_pfe14_prototype_authority_v1",
   "authority_id": "PFE-14-PROTOTYPE-AUTHORITY-V1",
   "taskbook_revision": "v0.2",
+  "prototype_policy_revision": "v1.1_no_fabrication",
+  "policy_amendment_ref": "docs/frontend-productization/PFE-14-PROTOTYPE-NO-FABRICATION-AMENDMENT-01.md",
+  "truth_matrix_ref": "docs/frontend-productization/PFE-14-PROTOTYPE-TRUTH-MATRIX-V1.json",
   "artifact_classes": {
     "CURRENT_IMPLEMENTATION_REFERENCE": {
       "source": [
         "current main code",
         "browser render",
-        "accepted current-page fixture"
+        "accepted current-page fixture or immutable acceptance artifact"
       ],
       "may_show_unimplemented_capability": false,
       "may_use_design_sample_data": false,
-      "may_claim_runtime_truth": false
+      "may_claim_runtime_truth": false,
+      "value_rule": "ONLY_ACTUAL_CAPTURED_OR_ACCEPTED_SOURCE_VALUES"
     },
     "TARGET_STATE_PRODUCT_PROTOTYPE": {
       "source": [
         "PFE-14 taskbook v0.2",
         "GEOX Master Task Line V2",
-        "MCFT-CAP-09 taskbook"
+        "MCFT-CAP-09 taskbook",
+        "PFE-14 Prototype Truth Matrix v1"
       ],
-      "required_badge_zh": "目标态原型 / 非当前运行数据",
-      "required_badge_en": "Target-state prototype / Not current runtime data",
+      "required_badge_zh": "目标态结构 / 当前无权威运行值",
+      "required_badge_en": "Target-state structure / No authoritative current runtime values",
       "may_show_unimplemented_capability": true,
-      "may_use_design_sample_data": true,
+      "unimplemented_capability_mode": "STRUCTURE_AND_LABELS_ONLY",
+      "may_use_design_sample_data": false,
       "may_claim_repository_implementation": false,
-      "may_claim_runtime_truth": false
+      "may_claim_runtime_truth": false,
+      "unavailable_value_rule": "RENDER_NOT_ESTABLISHED_OR_WAITING_AUTHORIZED_READ_CONTRACT"
     }
   },
-  "frozen_sample_scope": {
-    "tenant_id": "tenant_sample",
-    "project_id": "project_sample",
-    "group_id": "group_sample",
-    "field_id": "field_sample",
-    "season_id": "season_sample",
-    "zone_id": "zone_sample",
-    "runtime_mode": "SHADOW_ONLINE_SAMPLE"
+  "scope_value_policy": {
+    "may_use_design_sample_scope": false,
+    "may_use_invented_scope_identifiers": false,
+    "may_use_current_governed_scope": true,
+    "current_governed_scope_requires_named_api_or_accepted_artifact_source": true,
+    "otherwise_render": "NO_SCOPE_SELECTED"
   },
+  "allowed_value_classes": [
+    "CURRENT_STATIC_NONCLAIM",
+    "CURRENT_API_VALUE",
+    "ACCEPTED_ARTIFACT_VALUE",
+    "UNAVAILABLE_AUTHORITY",
+    "LABEL_ONLY"
+  ],
   "scope_rule": "ONE_GOVERNED_SIX_KEY_SCOPE_ONLY",
   "primary_navigation": [
     "runtime_overview",
@@ -56,6 +68,8 @@
     "calibration"
   ],
   "static_nonclaims": [
+    "REPLAY_BACKED_DEMO",
+    "READ_ONLY",
     "LIVE_DEVICE_NOT_CONNECTED",
     "PRODUCTION_GATEWAY_NOT_ONLINE",
     "FIELD_PILOT_NOT_STARTED",
@@ -71,6 +85,13 @@
     "PRODUCTION_GATEWAY_ONLINE",
     "LIVE_DEVICE_CONNECTED",
     "MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE",
-    "CURRENT_REPOSITORY_IMPLEMENTATION_COMPLETE"
+    "CURRENT_REPOSITORY_IMPLEMENTATION_COMPLETE",
+    "INVENTED_SCOPE_VALUE",
+    "INVENTED_RUNTIME_TIMESTAMP",
+    "INVENTED_SCHEDULER_SLOT",
+    "INVENTED_EVIDENCE_FRESHNESS",
+    "INVENTED_HEALTH_VERDICT",
+    "INVENTED_NUMERIC_RUNTIME_VALUE",
+    "INVENTED_AGRONOMIC_VALUE"
   ]
 }

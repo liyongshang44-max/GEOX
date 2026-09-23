@@ -1,0 +1,34 @@
+name: pfe-14-prototype-truth-matrix
+
+on:
+  pull_request:
+    paths:
+      - 'docs/frontend-productization/PFE-14-PROTOTYPE-TRUTH-MATRIX-V1.md'
+      - 'docs/frontend-productization/PFE-14-PROTOTYPE-TRUTH-MATRIX-V1.json'
+      - 'docs/frontend-productization/PFE-14-PROTOTYPE-NO-FABRICATION-AMENDMENT-01.md'
+      - 'docs/frontend-productization/PFE-14-PROTOTYPE-AUTHORITY-V1.json'
+      - 'scripts/frontend_acceptance/ACCEPTANCE_PFE_14_PROTOTYPE_TRUTH_MATRIX_V1.cjs'
+      - 'scripts/frontend_acceptance/ACCEPTANCE_PFE_14_TASKBOOK_V02_ALIGNMENT.cjs'
+      - '.github/workflows/pfe-14-prototype-truth-matrix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prototype-truth-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate PFE-14 v0.2 alignment under no-fabrication overlay
+        run: node scripts/frontend_acceptance/ACCEPTANCE_PFE_14_TASKBOOK_V02_ALIGNMENT.cjs
+
+      - name: Validate prototype truth matrix
+        run: node scripts/frontend_acceptance/ACCEPTANCE_PFE_14_PROTOTYPE_TRUTH_MATRIX_V1.cjs
