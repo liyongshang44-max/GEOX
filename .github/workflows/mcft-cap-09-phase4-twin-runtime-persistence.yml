@@ -28,6 +28,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_CAUSAL_REVISION_SELECTION_V1.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -115,7 +116,8 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_CAUSAL_REVISION_SELECTION_V1.ts
 
       - name: Transpile generated-support restart and successor qualifications
         run: |
@@ -174,6 +176,9 @@ jobs:
 
       - name: Prove DB-clock Runtime cursor, fencing, restart and bounded catch-up
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts
+
+      - name: Prove Amendment-19 causal revision selection without future leakage
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT19_CAUSAL_REVISION_SELECTION_V1.ts
 
       - name: Create isolated successor-viability database
         env:
@@ -269,6 +274,7 @@ jobs:
             acceptance-output/MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT19_CAUSAL_REVISION_SELECTION_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_S4_POSTGRESQL_ACCEPTANCE_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1_RESULT.json
           if-no-files-found: warn

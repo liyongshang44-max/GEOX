@@ -228,7 +228,11 @@ export class PostgresExternalFormalAmendment19EvidenceSourceV1 {
     if (rows.length > this.maxCandidateRecords) throw new Error("AM19_EXTERNAL_DB_CANDIDATE_LIMIT_REACHED");
 
     const selected: CanonicalReplayEvidenceRecordV1[] = [];
-    const identities = new Map<string, string>();
+    const causalLatestBySourceId = new Map<string, {
+      record: CanonicalReplayEvidenceRecordV1;
+      source_hash: string;
+      available_at: string;
+    }>();
     let excludedAfterCutoff = 0;
     let excludedNonTargetExactInterval = 0;
 
@@ -252,6 +256,9 @@ export class PostgresExternalFormalAmendment19EvidenceSourceV1 {
         continue;
       }
       // Amendment-19: every family is frozen at the actual scheduler boundary T.
+      // Revision selection therefore occurs only after the causal cutoff. A later
+      // immutable revision may supersede an earlier publication for the same provider
+      // source_record_id only when that revision was already visible at T.
       if (Date.parse(availableAt) > Date.parse(logicalTime) || Date.parse(ingestedAt) > Date.parse(logicalTime)) {
         excludedAfterCutoff += 1;
         continue;
@@ -259,15 +266,38 @@ export class PostgresExternalFormalAmendment19EvidenceSourceV1 {
 
       const sourceId = requiredTextV1(record.source_record_id, `AM19_EXTERNAL_DB_SOURCE_RECORD_ID_REQUIRED:${record.record_type}`);
       const sourceHash = requiredTextV1(record.source_record_hash, `AM19_EXTERNAL_DB_SOURCE_RECORD_HASH_REQUIRED:${record.record_type}`);
-      const previousHash = identities.get(sourceId);
-      if (previousHash !== undefined) {
-        if (previousHash !== sourceHash) throw new Error(`AM19_EXTERNAL_DB_SOURCE_IDENTITY_CONFLICT:${sourceId}`);
+      const previous = causalLatestBySourceId.get(sourceId);
+      if (!previous) {
+        causalLatestBySourceId.set(sourceId, {
+          record,
+          source_hash: sourceHash,
+          available_at: availableAt,
+        });
+        continue;
+      }
+
+      if (previous.source_hash === sourceHash) {
         throw new Error(`AM19_EXTERNAL_DB_DUPLICATE_SOURCE_RECORD_ID:${sourceId}`);
       }
-      identities.set(sourceId, sourceHash);
-      selected.push(record);
+
+      const availabilityOrder = Date.parse(availableAt) - Date.parse(previous.available_at);
+      if (availabilityOrder === 0) {
+        // Two divergent immutable facts claiming the same provider identity at the
+        // same decision-time availability remain a genuine identity conflict.
+        throw new Error(`AM19_EXTERNAL_DB_SOURCE_IDENTITY_CONFLICT:${sourceId}`);
+      }
+      if (availabilityOrder > 0) {
+        causalLatestBySourceId.set(sourceId, {
+          record,
+          source_hash: sourceHash,
+          available_at: availableAt,
+        });
+      }
     }
 
+    selected.push(
+      ...[...causalLatestBySourceId.values()].map((entry) => entry.record),
+    );
     selected.sort(recordSortV1);
     const family = { soil: 0, rainfall: 0, historical_et0: 0, future_weather: 0, future_et0: 0 };
     for (const record of selected) family[authorityForV1(record).family] += 1;
