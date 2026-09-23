@@ -1,0 +1,142 @@
+name: mcft-cap-09-t3r1-cdse-20260814-standing-crop
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-t3r1-cdse-20260814-standing-crop
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-CDSE-20260814-STANDING-CROP-OBSERVATION-V1.json'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP.mjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP.cjs'
+      - '.github/workflows/mcft-cap-09-t3r1-cdse-20260814-standing-crop.yml'
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-CDSE-20260814-STANDING-CROP-OBSERVATION-V1.json'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP.mjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP.cjs'
+      - '.github/workflows/mcft-cap-09-t3r1-cdse-20260814-standing-crop.yml'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+    inputs:
+      run_live:
+        description: 'Run credentialed CDSE qualification for frozen 2026-08-14 acquisition'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-t3r1-cdse-20260814-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  static-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Resolve exact base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=23f224c701dbe0b8bd56eceff3741cb1c3dc1f78" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Syntax-check qualification code
+        run: |
+          set -euo pipefail
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP.mjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP.cjs
+      - name: Execute exact-boundary governance gate
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP.cjs
+      - name: Verify fail-closed static result
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const x = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP_BOUNDARY.json','utf8'));
+          if (x.status !== 'PASS' || x.exact_four_file_boundary !== true) throw new Error('T3R1_CDSE_STATIC_PASS_REQUIRED');
+          if (JSON.stringify(x.strict_scl_clear_land_classes) !== JSON.stringify([4,5])) throw new Error('T3R1_CDSE_STRICT_SCL_REQUIRED');
+          if (x.current_management_season_lifecycle_authority_established !== false || x.bounded_carry_forward_authorized !== false) throw new Error('T3R1_CDSE_PREMATURE_LIFECYCLE_FORBIDDEN');
+          if (x.ea5e2_operational_activation_qualified !== false || x.formal_execution_count !== '0/24') throw new Error('T3R1_CDSE_ACTIVATION_FORBIDDEN');
+          console.log(JSON.stringify({status:x.status, boundary:x.exact_four_file_boundary, scl:x.strict_scl_clear_land_classes, formal:x.formal_execution_count}));
+          NODE
+      - name: Upload static boundary artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t3r1-cdse-20260814-boundary-${{ steps.authority.outputs.subject_sha }}
+          path: acceptance-output/MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP_BOUNDARY.json
+          if-no-files-found: error
+          retention-days: 90
+
+  live-cdse-observation:
+    needs: static-boundary
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Verify exact protected-main ancestry
+        run: git merge-base --is-ancestor 23f224c701dbe0b8bd56eceff3741cb1c3dc1f78 HEAD
+      - name: Verify ephemeral CDSE token binding without printing value
+        env:
+          CDSE_SENTINEL_HUB_ACCESS_TOKEN: ${{ secrets.CDSE_SENTINEL_HUB_ACCESS_TOKEN }}
+        run: test -n "$CDSE_SENTINEL_HUB_ACCESS_TOKEN"
+      - name: Execute live T3R1 2026-08-14 CDSE standing-crop probe
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.sha }}
+          CDSE_SENTINEL_HUB_ACCESS_TOKEN: ${{ secrets.CDSE_SENTINEL_HUB_ACCESS_TOKEN }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP.mjs
+      - name: Verify observation-only live result
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const p='acceptance-output/MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP_RESULT.json';
+          const raw=fs.readFileSync(p,'utf8'); const x=JSON.parse(raw);
+          if (x.status !== 'PASS') throw new Error('T3R1_CDSE_LIVE_PASS_REQUIRED');
+          if (x.represented_scope?.treatment !== 'T3' || x.represented_scope?.replicate !== 'R1') throw new Error('T3R1_CDSE_SCOPE_REQUIRED');
+          if (x.adjudication?.direct_standing_crop_observation_candidate_resolved !== true) throw new Error('T3R1_CDSE_DIRECT_OBSERVATION_REQUIRED');
+          if (x.adjudication?.scl7_used_as_clear_land !== false) throw new Error('T3R1_CDSE_SCL7_FORBIDDEN');
+          if (x.adjudication?.current_management_season_lifecycle_resolved !== false || x.adjudication?.bounded_carry_forward_authorized !== false) throw new Error('T3R1_CDSE_PREMATURE_LIFECYCLE_FORBIDDEN');
+          if (x.ea5e2_operational_activation_qualified !== false || x.formal_execution_count !== '0/24') throw new Error('T3R1_CDSE_ACTIVATION_FORBIDDEN');
+          if (/POLYGON\s*\(\(/i.test(raw)) throw new Error('T3R1_CDSE_RAW_POLYGON_ARTIFACT_FORBIDDEN');
+          console.log(JSON.stringify({status:x.status, datatake:x.cdse_catalog?.datatake_key, clear:x.plot_observation?.plot_clear_land_fraction, vegetation:x.plot_observation?.plot_vegetated_fraction_of_clear_land, ndvi:x.plot_observation?.plot_mean_ndvi_over_clear_land, formal:x.formal_execution_count}));
+          NODE
+      - name: Upload sanitized live result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t3r1-cdse-20260814-live-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_T3R1_CDSE_20260814_STANDING_CROP_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
