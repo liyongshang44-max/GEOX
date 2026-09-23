@@ -118,7 +118,7 @@ function main(): void {
     path.resolve("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts"),
     "utf8",
   );
-  const twinV2Source = fs.readFileSync(
+  const twinV2GuardSource = fs.readFileSync(
     path.resolve("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts"),
     "utf8",
   );
@@ -132,7 +132,7 @@ function main(): void {
   );
   for (const [name, source] of [
     ["TWIN_V1", twinV1Source],
-    ["TWIN_V2", twinV2Source],
+    ["TWIN_V2", twinV2GuardSource],
     ["TWIN_QUALIFICATION", twinQualificationSource],
     ["EVIDENCE", evidenceProcessSource],
   ] as const) {
