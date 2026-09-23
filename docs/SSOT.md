@@ -25,6 +25,7 @@ GEOX uses layered authority. A lower or domain-specific document may be authorit
 |---|---|---|---|
 | Repository entry and governance | `docs/SSOT.md` | Documentation entry, authority model, repository-wide classification | Wins over all documents on repository-level governance |
 | Migration / freeze index | `README_MIGRATION.md` | Sprint numbering, freeze snapshots, tag meaning, acceptance entrypoints, frozen capability boundaries | Wins only inside Sprint / Tag / Freeze state |
+| Product direction / north star | `docs/product/GEOX-PRODUCT-NORTH-STAR-V1.md` | Product root relationship, durable product boundary, vertical-slice positioning, product-level attention semantics | Wins only inside product direction; cannot override domain authority, Sprint/Tag/Freeze state, or proven runtime behavior |
 | Control constitution references | `docs/controlplane/constitution/README.md` and the documents listed there | Control-plane semantic prohibitions and constitution-level control semantics | Wins only inside control-plane constitution semantics, unless it conflicts with this SSOT's repository-level authority model |
 | Control-plane contracts | `docs/controlplane/**` | AO-ACT, execution, audit, authz, and control-plane contracts | Domain reference only; must defer to the constitution layer and this SSOT |
 | Delivery references | `docs/delivery/**` | Delivery envelope, acceptance aggregation, evidence export packaging | Domain reference only; must not define runtime semantics unless separately frozen in `README_MIGRATION.md` |
@@ -51,6 +52,16 @@ If a document conflicts with `README_MIGRATION.md` about Sprint / Tag / Freeze s
 
 If `README_MIGRATION.md` conflicts with `docs/SSOT.md` about repository-level entry, authority layering, API entry classification, DB contract source classification, or runtime delivery classification, `docs/SSOT.md` wins.
 
+### `docs/product/GEOX-PRODUCT-NORTH-STAR-V1.md`
+
+`docs/product/GEOX-PRODUCT-NORTH-STAR-V1.md` is the recognized product-direction domain reference.
+
+It freezes the durable product organization around `Principal × Land × Time`, positions Land Memory as longitudinal organization rather than a new authority, defines `Needs Attention` as a cross-domain non-authoritative product concept, and classifies Field Operations V0 as an execution-closure vertical slice rather than the full GEOX product definition.
+
+It does not override MCFT, ADR, B-Line, Outcome, Identity, Asset, control-plane, runtime, migration, qualification, or code-level authority. If a product-direction statement conflicts with an owning domain authority, the owning domain authority controls the domain semantics and the Product North Star must be amended.
+
+The Product North Star does not expire automatically. Its review date and supersession rule are defined inside that document. A UI, pilot, taskbook, or implementation cannot silently supersede it.
+
 ### `docs/controlplane/constitution/**`
 
 The control-plane constitution documents may define semantic prohibitions and order-of-authority rules inside the control-plane domain.
@@ -67,11 +78,25 @@ No other document may create a competing repository-level authority model.
 
 ### API main entry
 
-External API main entry is:
+GEOX has two canonical API namespaces with different ownership:
 
-- `/api/v1/*`
+- `/api/v1/*` — canonical domain / operational API namespace for authority-owning and operational services.
+- `/api/product/v1/*` — canonical read-only Product Projection namespace for new product consumers.
 
-Legacy paths may exist only as compatibility layers. They must not be treated as the primary external API surface.
+Permanent Product API boundary:
+
+```text
+/api/product/v1/*
+= non-authoritative product read projection
+= GET / HEAD only
+
+POST / PUT / PATCH / DELETE
+= forbidden in the Product Projection namespace
+```
+
+Product commands, approvals, authorization, execution mutation, and other authority-bearing actions must go to the owning domain command boundary and re-authenticate/re-authorize there.
+
+Compatibility-era product presentation routes under `/api/v1/customer/*`, `/api/v1/reports/*`, and `/api/v1/fields/portfolio` may remain for existing consumers during governed migration, but they are not the canonical contract for new product construction.
 
 ### DB contract source
 
@@ -114,6 +139,7 @@ These are domain-specific references, not repository-level SSOT documents:
 - `docs/delivery/**`
 - `docs/qa/**`
 - `docs/commercial/**`
+- `docs/product/**`
 - `docs/ci/**`
 - `docs/contracts/v2/**`
 
@@ -135,6 +161,10 @@ These are domain-specific references, not repository-level SSOT documents:
 
 - `README_MIGRATION.md`
 
+### Product direction
+
+- `docs/product/GEOX-PRODUCT-NORTH-STAR-V1.md`
+
 ### Core engineering references
 
 - `apps/server/db/migrations/`
@@ -149,6 +179,7 @@ These are domain-specific references, not repository-level SSOT documents:
 - `docs/delivery/`
 - `docs/qa/`
 - `docs/commercial/`
+- `docs/product/`
 - `docs/contracts/v2/`
 
 ## SSOT layering rule
@@ -184,9 +215,10 @@ When two documents appear to conflict, resolve in this order:
 1. Identify the conflict domain.
 2. If the conflict is about repository-level entry, authority layering, API entry classification, DB contract source, or runtime delivery model, `docs/SSOT.md` wins.
 3. If the conflict is about Sprint / Tag / Freeze state, `README_MIGRATION.md` wins.
-4. If the conflict is about control-plane constitution semantics, the constitution document recognized by `docs/controlplane/constitution/README.md` wins inside that domain, unless it conflicts with this SSOT's repository-level authority model.
-5. If the conflict is about implementation behavior, code and migrations prove actual behavior; documentation must be corrected to match proven runtime facts.
-6. If the conflict cannot be classified, treat `docs/SSOT.md` as the temporary authority and open a governance issue before changing semantics.
+4. If the conflict is about product direction, product root, product-slice positioning, or product-level attention semantics, `docs/product/GEOX-PRODUCT-NORTH-STAR-V1.md` controls inside that product-direction scope, but it cannot override the owning domain authority.
+5. If the conflict is about control-plane constitution semantics, the constitution document recognized by `docs/controlplane/constitution/README.md` wins inside that domain, unless it conflicts with this SSOT's repository-level authority model.
+6. If the conflict is about implementation behavior, code and migrations prove actual behavior; documentation must be corrected to match proven runtime facts.
+7. If the conflict cannot be classified, treat `docs/SSOT.md` as the temporary authority and open a governance issue before changing semantics.
 
 ## Bare `/api/*` path classification
 
