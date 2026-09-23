@@ -77,20 +77,36 @@ function fakePool(options?: { runtimeScopeCount?: number; includeField?: boolean
   const includeField = options?.includeField ?? true;
   return {
     query: async (sql: string, params: unknown[]) => {
-      if (sql.includes("FROM public.field_index_v1")) {
-        assert.match(sql, /tenant_id = \$1/);
-        assert.match(sql, /project_id = \$2/);
-        assert.match(sql, /group_id = \$3/);
+      if (sql.includes("public.facts") && sql.includes("scope_basis_fact_id")) {
+        assert.match(sql, /record_json->'payload'->>'tenant_id' = \$1/);
+        assert.match(sql, /record_json->'payload'->>'project_id' = \$2/);
+        assert.match(sql, /record_json->'payload'->>'group_id' = \$3/);
+        assert.match(sql, /LEFT JOIN public\.field_index_v1 fi/);
+        assert.match(sql, /fi\.tenant_id = \$1/);
+        assert.doesNotMatch(sql, /fi\.project_id/);
+        assert.doesNotMatch(sql, /fi\.group_id/);
         assert.equal(params[0], "tenant-a");
         assert.equal(params[1], "project-a");
         assert.equal(params[2], "group-a");
-        if (!includeField) return { rows: [], rowCount: 0 };
         return {
           rows: [{
             field_id: "field-a",
-            field_name: "North Field 07",
-            area_ha: 82,
-            updated_ts_ms: 1789948800000,
+            field_name: includeField ? "North Field 07" : null,
+            area_ha: includeField ? 82 : null,
+            updated_ts_ms: includeField ? 1789948800000 : null,
+            identity_present: includeField,
+            scope_basis_fact_id: "fact-scope-a",
+            scope_basis_occurred_at: "2026-09-20T00:00:00.000Z",
+            scope_basis_source: "mcft_cap09_external_formal_evidence_v1",
+            scope_basis_record_json: {
+              type: "soil_moisture_observation_v1",
+              payload: {
+                tenant_id: "tenant-a",
+                project_id: "project-a",
+                group_id: "group-a",
+                field_id: "field-a",
+              },
+            },
           }],
           rowCount: 1,
         };
@@ -261,5 +277,28 @@ test("validator rejects CURRENT reporting when current condition is unavailable"
   assert.throws(
     () => assertFieldSummaryProjectionV1(invalid),
     /FIELD_CURRENT_REPORTING_REQUIRES_AVAILABLE_CONDITION/,
+  );
+});
+
+
+test("production schema can expose an exact scoped field even when field_index identity is absent", async () => {
+  const builder = new PostgresCustomerProductProjectionBuilderV1(fakePool({
+    runtimeScopeCount: 0,
+    includeField: false,
+  }), {
+    readApi: new FakeReadApi(),
+    now: () => "2026-09-23T00:05:00.000Z",
+  });
+  const projection = await builder.buildFieldSummaryV1(scope, "field-a");
+  assertFieldSummaryProjectionV1(projection);
+  assert.equal(projection.field_ref, "field-a");
+  assert.equal(projection.identity.display_name, null);
+  assert.equal(projection.identity.display_name_status, "UNAVAILABLE");
+  assert.equal(projection.current_condition.status, "UNAVAILABLE");
+  assert.ok(projection.limitation_reason_codes.includes("FIELD_IDENTITY_NOT_ESTABLISHED"));
+  assert.ok(projection.limitation_reason_codes.includes("FIELD_SCOPE_OBSERVED_IN_GOVERNED_FACTS"));
+  assert.equal(
+    projection.envelope.source_non_authority_refs.some((ref) => ref.exact_ref === "fact:fact-scope-a"),
+    true,
   );
 });
