@@ -326,10 +326,20 @@ function transientInfrastructureFailureV1(error: unknown): boolean {
   return /socket hang up|connection terminated|fetch failed|network|temporar|timeout|database system is in recovery mode|cannot connect now/i.test(message);
 }
 
+function governedEvidenceSourceBackpressureV1(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.startsWith(
+    "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED:BLOCKED_HISTORICAL_DRIFT:",
+  );
+}
+
 export class McftCap09ProductionEvidenceFailureClassifierV1
 implements EvidenceRuntimeHostFailureClassifierV1 {
   classify(error: unknown): "RETRYABLE" | "FATAL" {
-    return transientInfrastructureFailureV1(error) ? "RETRYABLE" : "FATAL";
+    return transientInfrastructureFailureV1(error)
+      || governedEvidenceSourceBackpressureV1(error)
+      ? "RETRYABLE"
+      : "FATAL";
   }
 }
 

@@ -11,6 +11,7 @@ import {
 import {
   createMcftCap09ProcessStopV1,
   mcftCap09EvidenceLeaseKeepaliveIntervalMsV1,
+  McftCap09ProductionEvidenceFailureClassifierV1,
   McftCap09ProductionTwinFailureClassifierV1,
   MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_ID_V1,
 } from "../../apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.js";
@@ -429,6 +430,27 @@ function main(): void {
   assert.equal(signals.listenerCount("SIGTERM"), 0);
   assert.equal(signals.listenerCount("SIGINT"), 0);
 
+  const evidenceFailureClassifier = new McftCap09ProductionEvidenceFailureClassifierV1();
+  assert.equal(
+    evidenceFailureClassifier.classify(
+      new Error(
+        "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED:BLOCKED_HISTORICAL_DRIFT:HISTORICAL_DRIFT",
+      ),
+    ),
+    "RETRYABLE",
+    "PHASE5_EVIDENCE_KBS_HISTORICAL_DRIFT_MUST_FAIL_CLOSED_WITHOUT_PROCESS_FATAL",
+  );
+  for (const message of [
+    "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED:BLOCKED_FORWARD_GAP:gap",
+    "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED:BLOCKED_AMBIGUOUS_FORWARD:ambiguous",
+  ]) {
+    assert.equal(
+      evidenceFailureClassifier.classify(new Error(message)),
+      "FATAL",
+      `PHASE5_EVIDENCE_KBS_NON_HISTORICAL_BLOCK_REMAINS_FATAL:${message}`,
+    );
+  }
+
   const twinFailureClassifier = new McftCap09ProductionTwinFailureClassifierV1();
   for (const code of [
     "LEASE_HELD_BY_OTHER_OWNER",
@@ -577,6 +599,9 @@ function main(): void {
     evidence_graceful_current_fence_release: true,
     evidence_inflight_lease_keepalive_interval_for_300s_ms: 60_000,
     evidence_inflight_health_keepalive_same_cadence: true,
+    evidence_kbs_historical_drift_fail_closed_nonfatal: true,
+    evidence_kbs_forward_gap_remains_fatal: true,
+    evidence_kbs_ambiguous_forward_remains_fatal: true,
     twin_duplicate_coordination_contention_retryable: true,
     twin_postgres_cannot_connect_now_retryable: true,
     twin_postgres_recovery_message_retryable: true,
