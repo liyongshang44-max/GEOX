@@ -36,7 +36,7 @@ export type EvidenceRuntimeHostHealthEventV1 = {
   consecutive_failure_count: number;
   attempt_kind?: EvidenceRuntimeHostAttemptResultV1["attempt_kind"];
   failure_class?: EvidenceRuntimeHostFailureClassV1;
-  failure_stage?: "MEMBER_FETCH";
+  failure_stage?: "MEMBER_FETCH" | "HOST_COORDINATION";
   failure_token?: string;
   error_name?: string;
   error_code?: string;
@@ -127,7 +127,8 @@ function isNotDuePlanV1(
 function sanitizedFailureEvidenceV1(
   error: unknown,
   classification: EvidenceRuntimeHostFailureClassV1,
-  attemptKind: EvidenceRuntimeHostAttemptResultV1["attempt_kind"],
+  attemptKind?: EvidenceRuntimeHostAttemptResultV1["attempt_kind"],
+  stageOverride?: EvidenceRuntimeHostHealthEventV1["failure_stage"],
 ): Pick<
   EvidenceRuntimeHostHealthEventV1,
   | "attempt_kind"
@@ -169,7 +170,8 @@ function sanitizedFailureEvidenceV1(
     ? tokenCandidate
     : "UNCLASSIFIED_ERROR";
   const failureStage =
-    record.failure_stage === "MEMBER_FETCH" ? "MEMBER_FETCH" : undefined;
+    stageOverride
+    ?? (record.failure_stage === "MEMBER_FETCH" ? "MEMBER_FETCH" : undefined);
   const memberKinds = new Set([
     "GFS_DIRECTORY_LISTING",
     "GFS_PGRB2_FILTER_RESPONSE",
@@ -195,7 +197,7 @@ function sanitizedFailureEvidenceV1(
       ? record.local_retry_ordinal
       : undefined;
   return {
-    attempt_kind: attemptKind,
+    ...(attemptKind ? { attempt_kind: attemptKind } : {}),
     failure_class: classification,
     ...(failureStage ? { failure_stage: failureStage } : {}),
     failure_token: token,
@@ -325,42 +327,103 @@ export class EvidenceRuntimeHostV1 {
         });
       }
 
-      if (ownerClaim) {
-        ownerClaim = await this.deps.lease.renewLease({
-          claim: ownerClaim,
-          lease_duration_seconds: input.lease_duration_seconds,
+      let plan: EvidenceRuntimeHostAttemptPlanV1 | EvidenceRuntimeHostNotDueV1 | null;
+      try {
+        if (ownerClaim) {
+          ownerClaim = await this.deps.lease.renewLease({
+            claim: ownerClaim,
+            lease_duration_seconds: input.lease_duration_seconds,
+          });
+        } else {
+          ownerClaim = await this.deps.lease.acquireLease({
+            scope: input.scope,
+            lease_owner: input.lease_owner,
+            lease_duration_seconds: input.lease_duration_seconds,
+          });
+          if (!ownerClaim) {
+            standbyCycles += 1;
+            consecutiveFailures = 0;
+            await this.healthV1({
+              status: "STANDBY",
+              cycle_attempt: cycleAttempt,
+              successful_cycle_count: successfulCycles,
+              consecutive_failure_count: consecutiveFailures,
+              detail: "LEASE_HELD_BY_OTHER_OWNER",
+            });
+            await this.deps.wait.waitAfterAttempt({
+              reason: "LEASE_STANDBY",
+              cycle_attempt: cycleAttempt,
+              consecutive_failure_count: consecutiveFailures,
+            });
+            continue;
+          }
+        }
+
+        plan = await this.deps.planner.nextAttemptPlan({
+          cycle_attempt: cycleAttempt,
+          successful_cycle_count: successfulCycles,
+          consecutive_failure_count: consecutiveFailures,
+          previous_result: previousResult,
         });
-      } else {
-        ownerClaim = await this.deps.lease.acquireLease({
-          scope: input.scope,
-          lease_owner: input.lease_owner,
-          lease_duration_seconds: input.lease_duration_seconds,
-        });
-        if (!ownerClaim) {
-          standbyCycles += 1;
-          consecutiveFailures = 0;
+      } catch (error) {
+        const classification = this.deps.failure_classifier.classify(error);
+        if (classification === "FATAL") {
+          consecutiveFailures += 1;
           await this.healthV1({
-            status: "STANDBY",
+            status: "DEGRADED",
             cycle_attempt: cycleAttempt,
             successful_cycle_count: successfulCycles,
             consecutive_failure_count: consecutiveFailures,
-            detail: "LEASE_HELD_BY_OTHER_OWNER",
+            detail: "FATAL_ATTEMPT_FAILURE",
+            ...sanitizedFailureEvidenceV1(
+              error,
+              classification,
+              undefined,
+              "HOST_COORDINATION",
+            ),
           });
-          await this.deps.wait.waitAfterAttempt({
-            reason: "LEASE_STANDBY",
-            cycle_attempt: cycleAttempt,
-            consecutive_failure_count: consecutiveFailures,
-          });
-          continue;
+          throw error;
         }
-      }
+        if (classification !== "RETRYABLE") {
+          throw new Error("PHASE3_EVIDENCE_HOST_FAILURE_CLASS_INVALID");
+        }
 
-      const plan = await this.deps.planner.nextAttemptPlan({
-        cycle_attempt: cycleAttempt,
-        successful_cycle_count: successfulCycles,
-        consecutive_failure_count: consecutiveFailures,
-        previous_result: previousResult,
-      });
+        // A failed DB coordination call makes the local claim uncertain. Never
+        // continue using it. The next loop reacquires through the durable lease:
+        // same-owner/live keeps the fence; expired ownership advances the fence.
+        const uncertainClaim = ownerClaim;
+        ownerClaim = null;
+        if (
+          uncertainClaim
+          && previousResult?.lease_claim
+          && previousResult.lease_claim.lease_owner === uncertainClaim.lease_owner
+          && previousResult.lease_claim.fencing_token === uncertainClaim.fencing_token
+        ) {
+          previousResult = { ...previousResult, lease_claim: null };
+        }
+
+        retryableFailures += 1;
+        consecutiveFailures += 1;
+        await this.healthV1({
+          status: "DEGRADED",
+          cycle_attempt: cycleAttempt,
+          successful_cycle_count: successfulCycles,
+          consecutive_failure_count: consecutiveFailures,
+          detail: "RETRYABLE_ATTEMPT_FAILURE",
+          ...sanitizedFailureEvidenceV1(
+            error,
+            classification,
+            undefined,
+            "HOST_COORDINATION",
+          ),
+        });
+        await this.deps.wait.waitAfterAttempt({
+          reason: "RETRY_BACKOFF",
+          cycle_attempt: cycleAttempt,
+          consecutive_failure_count: consecutiveFailures,
+        });
+        continue;
+      }
       if (plan === null) {
         await this.healthV1({
           status: "STOPPING",
