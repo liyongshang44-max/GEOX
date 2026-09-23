@@ -55,6 +55,14 @@ const realClockP0RetentionReusePins = {
   [acceptancePath]: "bb6d8be445c0425c88eccac54d867b7d7935bd04",
   [workflowPath]: "49b35383434a560343f0964cc2414e354612922b"
 };
+const gfsFileBackedStreamingP0Pins = {
+  [rawAdapterPath]: "8d0451870bd995090e039873a21ebccc2498ab86",
+  [collectorPath]: "9d3c79b25bfba91295a27353eca553d49c4600ac",
+  [ingressPath]: "98348646008c6a1f3c5dc3e4b3569755d05a10fc",
+  [governedIngressPath]: "1f665212e82e3c4ef413152e64612438881fd94d",
+  [acceptancePath]: "045057c17f9032e6a34790cfc3d05a8900bc0458",
+  [workflowPath]: "49b35383434a560343f0964cc2414e354612922b"
+};
 
 let validationMode;
 if (base === HISTORICAL_BASE) {
@@ -84,7 +92,14 @@ if (base === HISTORICAL_BASE) {
   }
 
   if (realClockP0RetentionReuse) {
-    for (const [file, expected] of Object.entries(realClockP0RetentionReusePins)) {
+    const gfsFileBackedStreamingP0 =
+      blob("HEAD", rawAdapterPath) === gfsFileBackedStreamingP0Pins[rawAdapterPath]
+      && blob("HEAD", collectorPath) === gfsFileBackedStreamingP0Pins[collectorPath]
+      && blob("HEAD", acceptancePath) === gfsFileBackedStreamingP0Pins[acceptancePath];
+    const exactPins = gfsFileBackedStreamingP0
+      ? gfsFileBackedStreamingP0Pins
+      : realClockP0RetentionReusePins;
+    for (const [file, expected] of Object.entries(exactPins)) {
       eq(blob("HEAD", file), expected, `EA5C1_REAL_CLOCK_P0_EXACT_BLOB_MISMATCH:${file}`);
     }
     const expectedProtectedChanged = [
@@ -100,7 +115,9 @@ if (base === HISTORICAL_BASE) {
       JSON.stringify(expectedProtectedChanged),
       "EA5C1_REAL_CLOCK_P0_EXACT_PROTECTED_BOUNDARY_REQUIRED",
     );
-    validationMode = "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR";
+    validationMode = gfsFileBackedStreamingP0
+      ? "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR"
+      : "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR";
   } else {
     eq(blob("HEAD", rawAdapterPath), candidatePins[rawAdapterPath], "EA5C1_SUCCESSOR_RAW_ADAPTER_MUTATED");
     eq(blob("HEAD", acceptancePath), candidatePins[acceptancePath], "EA5C1_SUCCESSOR_FOCUSED_ACCEPTANCE_MUTATED");
@@ -165,6 +182,11 @@ const rawSource = fs.readFileSync(rawAdapterPath, "utf8");
 for (const marker of ["PRIVATE_RESTRICTED_RAW_EVIDENCE", "mcft-cap09-formal-raw-v1/sha256", "s3-private://", "verifyRetainedRawEvidence", "x-amz-meta-geox-sha256"]) {
   if (!rawSource.includes(marker)) fail(`EA5C1_RAW_ADAPTER_MARKER_MISSING:${marker}`);
 }
+if (validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR") {
+  for (const marker of ["retainRawEvidenceFile", "fs.createReadStream", "EA5C1_FILE_DIGEST_MISMATCH"]) {
+    if (!rawSource.includes(marker)) fail(`EA5C1_GFS_FILE_STREAM_MARKER_MISSING:${marker}`);
+  }
+}
 if (/\b(?:getSignedUrl|presignUrl|createPresignedUrl)\s*\(/.test(rawSource) || rawSource.includes('"public-read"') || rawSource.includes("'public-read'")) {
   fail("EA5C1_PUBLIC_RAW_ACCESS_SURFACE_FORBIDDEN");
 }
@@ -189,6 +211,11 @@ for (const marker of [
 ]) if (!collectorSource.includes(marker)) fail(`EA5C1_SUCCESSOR_COLLECTOR_MARKER_MISSING:${marker}`);
 for (const forbidden of ["process.env", "INSERT INTO facts", "RuntimeTickCursor"]) {
   if (collectorSource.includes(forbidden)) fail(`EA5C1_SUCCESSOR_COLLECTOR_BOUNDARY_FORBIDDEN:${forbidden}`);
+}
+if (validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR") {
+  for (const marker of ["collectRetainDecodeCanonicalizeFileBackedExternalEvidenceWithCompletionClockV1", "EA3_FILE_BACKED_RETENTION_PORT_REQUIRED", "EA3_FILE_BACKED_DECODER_PORT_REQUIRED"]) {
+    if (!collectorSource.includes(marker)) fail(`EA5C1_GFS_FILE_COLLECTOR_MARKER_MISSING:${marker}`);
+  }
 }
 
 const workflow = fs.readFileSync(workflowPath, "utf8");
@@ -229,12 +256,16 @@ const result = {
     validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION" && protectedChanged.includes(collectorPath),
   real_clock_p0_retention_reuse_requalification:
     validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
+  real_clock_p0_gfs_file_backed_streaming_requalification:
+    validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR",
   real_clock_p0_historical_authority_rewritten: false,
   real_clock_p0_raw_object_retained_at_mutation: false,
   real_clock_p0_exact_protected_boundary_proved:
-    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR"
+      || validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR",
   real_clock_p0_qualification_images_pinned:
-    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR"
+      || validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR",
   real_clock_p0_revision_fact_identity_requalification:
     validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
   real_clock_p0_revision_ingress_helper_exact_pinned:
