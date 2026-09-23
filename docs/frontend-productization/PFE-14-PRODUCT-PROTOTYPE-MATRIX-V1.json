@@ -1,0 +1,76 @@
+{
+  "schema_version": "geox_pfe14_product_prototype_matrix_v1",
+  "authority_id": "PFE-14-PRODUCT-PROTOTYPE-MATRIX-V1",
+  "taskbook_revision": "v0.3",
+  "artifact_class": "TARGET_STATE_PRODUCT_PROTOTYPE",
+  "display_locale": "zh-CN",
+  "required_locales_in_product": ["zh-CN", "en-US"],
+  "required_badge": "目标态产品原型 / 非当前运行数据",
+  "scope": {
+    "tenant_id": "tenant_sample",
+    "project_id": "project_sample",
+    "group_id": "group_sample",
+    "field_id": "field_sample",
+    "season_id": "season_sample",
+    "zone_id": "zone_sample"
+  },
+  "matrix_layout": {
+    "columns": 4,
+    "rows": 3,
+    "main_panels": [
+      "P01_RUNTIME_OVERVIEW",
+      "P02_EXACT_SCOPE_NAVIGATOR",
+      "P03_FIELD_RUNTIME_OVERVIEW",
+      "P04_EVIDENCE",
+      "P05_STATE",
+      "P06_FORECAST",
+      "P07_SCENARIO",
+      "P08_ACTION_LIFECYCLE_READ_ONLY",
+      "P09_RESIDUAL",
+      "P10_CALIBRATION_AND_MODEL_GOVERNANCE",
+      "P11_RUNTIME_HEALTH",
+      "P12_TRACE_TIMELINE_AUDIT"
+    ],
+    "state_strip": [
+      "WAITING_FOR_FIRST_SLOT",
+      "DEGRADED_STALE_EVIDENCE",
+      "BACKFILLING",
+      "RECOVERED",
+      "BLOCKED",
+      "FORBIDDEN"
+    ]
+  },
+  "global_ui_requirements": [
+    "APPLE_INSPIRED_LIGHT_VISUAL_SYSTEM",
+    "PRIMARY_NAV_RUNTIME_OVERVIEW_AND_FIELDS_ONLY",
+    "CHINESE_PRIMARY_COPY",
+    "VISIBLE_CHINESE_ENGLISH_SWITCH",
+    "ONE_SIX_KEY_SCOPE_ONLY",
+    "READ_ONLY_BOUNDARY_VISIBLE",
+    "TECHNICAL_DETAILS_PROGRESSIVE_DISCLOSURE",
+    "NO_PAGE_LEVEL_HORIZONTAL_OVERFLOW",
+    "STATUS_USES_TEXT_AND_SHAPE_NOT_COLOR_ONLY"
+  ],
+  "product_story": [
+    "CHECK_DAILY_RUNTIME",
+    "VERIFY_EVIDENCE_ELIGIBILITY",
+    "UNDERSTAND_STATE_AND_FORECAST",
+    "COMPARE_RETURNED_SCENARIOS_WITHOUT_RECOMMENDATION",
+    "REVIEW_EXISTING_ACTION_LIFECYCLE",
+    "INVESTIGATE_RESIDUAL_AND_CALIBRATION",
+    "DIAGNOSE_SCHEDULER_AND_RECOVERY",
+    "TRACE_ANY_CONCLUSION_TO_EVIDENCE"
+  ],
+  "forbidden_visuals": [
+    "MULTI_FIELD_PORTFOLIO",
+    "ALL_FIELDS_FILTER",
+    "LIVE_DEVICE_CONNECTED",
+    "PRODUCTION_GATEWAY_ONLINE",
+    "AUTOMATIC_RECOMMENDATION",
+    "APPROVE_BUTTON",
+    "AO_ACT_CREATE_BUTTON",
+    "DISPATCH_BUTTON",
+    "MODEL_ACTIVATE_BUTTON",
+    "CURRENT_RUNTIME_TRUTH_CLAIM"
+  ]
+}

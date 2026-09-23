@@ -1,26 +1,30 @@
 {
   "schema_version": "geox_pfe14_prototype_authority_v1",
   "authority_id": "PFE-14-PROTOTYPE-AUTHORITY-V1",
-  "taskbook_revision": "v0.2",
+  "taskbook_revision": "v0.3",
+  "product_goal": "USABLE_OPERATOR_PRODUCT",
+  "default_locale": "zh-CN",
+  "required_locales": ["zh-CN", "en-US"],
+  "prototype_display_locale": "zh-CN",
   "artifact_classes": {
     "CURRENT_IMPLEMENTATION_REFERENCE": {
-      "source": [
-        "current main code",
-        "browser render",
-        "accepted current-page fixture"
-      ],
+      "source": ["current main code", "browser render", "accepted current-page fixture"],
       "may_show_unimplemented_capability": false,
       "may_use_design_sample_data": false,
       "may_claim_runtime_truth": false
     },
     "TARGET_STATE_PRODUCT_PROTOTYPE": {
       "source": [
-        "PFE-14 taskbook v0.2",
+        "PFE-14 product taskbook v0.3",
         "GEOX Master Task Line V2",
-        "MCFT-CAP-09 taskbook"
+        "MCFT-CAP-09 taskbook",
+        "current canonical Operator Runtime route and API inventory"
       ],
-      "required_badge_zh": "目标态原型 / 非当前运行数据",
-      "required_badge_en": "Target-state prototype / Not current runtime data",
+      "required_badge_zh": "目标态产品原型 / 非当前运行数据",
+      "required_badge_en": "Target-state product prototype / Not current runtime data",
+      "primary_display_language": "zh-CN",
+      "language_switch_visible": true,
+      "language_switch_labels": ["中文", "English"],
       "may_show_unimplemented_capability": true,
       "may_use_design_sample_data": true,
       "may_claim_repository_implementation": false,
@@ -37,23 +41,30 @@
     "runtime_mode": "SHADOW_ONLINE_SAMPLE"
   },
   "scope_rule": "ONE_GOVERNED_SIX_KEY_SCOPE_ONLY",
-  "primary_navigation": [
+  "primary_navigation": ["runtime_overview", "fields"],
+  "field_runtime_primary_tabs": ["overview", "evidence", "state", "forecast", "runtime_health", "audit"],
+  "field_runtime_more_tabs": ["scenario", "action_lifecycle_read_only", "residual", "calibration"],
+  "required_product_pages": [
     "runtime_overview",
-    "fields"
-  ],
-  "field_runtime_primary_tabs": [
-    "overview",
+    "exact_scope_navigator",
+    "field_runtime_overview",
     "evidence",
     "state",
     "forecast",
-    "runtime_health",
-    "audit"
-  ],
-  "field_runtime_more_tabs": [
     "scenario",
     "action_lifecycle_read_only",
     "residual",
-    "calibration"
+    "calibration_and_model_governance",
+    "runtime_health",
+    "evidence_trace_timeline_audit"
+  ],
+  "required_state_strip": [
+    "WAITING_FOR_FIRST_SLOT",
+    "DEGRADED_STALE_EVIDENCE",
+    "BACKFILLING",
+    "RECOVERED",
+    "BLOCKED",
+    "FORBIDDEN"
   ],
   "static_nonclaims": [
     "LIVE_DEVICE_NOT_CONNECTED",
