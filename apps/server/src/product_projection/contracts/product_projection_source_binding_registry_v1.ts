@@ -58,6 +58,7 @@ export const PRODUCT_PROJECTION_SOURCE_ROLES_V1 = [
   "CAPABILITY_AUTHORITY_MATURITY_BASIS",
   "CAPABILITY_OPERATIONAL_ELIGIBILITY_BASIS",
   "ATTENTION_AUTHORITY_SOURCE",
+  "FIELD_SCOPE_BASIS",
   "FIELD_IDENTITY",
   "FIELD_CURRENT_STATE",
   "FIELD_CURRENT_RUNTIME_LINEAGE",
@@ -110,6 +111,17 @@ function nonAuthorityRegistration(input: Omit<
 // Important: an entry says only that a source object may be *referenced* for a product role.
 // It never upgrades the source object's authority and never supplies missing authority.
 export const PRODUCT_PROJECTION_SOURCE_BINDINGS_V1 = Object.freeze([
+  nonAuthorityRegistration({
+    binding_id: "GEOX_SCOPED_FACT_FIELD_BASIS_V1",
+    source_system: "GEOX_PLATFORM",
+    non_authority_ref_class: "OTHER_NON_AUTHORITY",
+    object_kind_mode: "EXACT",
+    allowed_object_kinds: ["fact_v1"],
+    source_contract: "public.facts exact tenant/project/group/field scoped record",
+    source_contract_version: "v1",
+    allowed_source_paths: ["public.facts"],
+    allowed_product_roles: ["FIELD_SCOPE_BASIS"],
+  }),
   nonAuthorityRegistration({
     binding_id: "GEOX_FIELD_INDEX_V1",
     source_system: "GEOX_PLATFORM",

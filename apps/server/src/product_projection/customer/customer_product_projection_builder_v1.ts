@@ -62,6 +62,11 @@ type FieldIdentityRowV1 = {
   field_name: string | null;
   area_ha: number | null;
   updated_ts_ms: number | null;
+  identity_present: boolean;
+  scope_basis_fact_id: string | null;
+  scope_basis_occurred_at: string | null;
+  scope_basis_source: string | null;
+  scope_basis_record_json: unknown | null;
 };
 
 type RuntimeScopeRowV1 = {
@@ -158,19 +163,34 @@ function fieldRefKeyV1(fieldId: string, suffix: string): string {
 }
 
 function identityExactRefV1(row: FieldIdentityRowV1, scope: CustomerProductReadScopeV1): string {
-  return `field_index_v1:${scope.tenant_id}:${scope.project_id}:${scope.group_id}:${row.field_id}:updated:${row.updated_ts_ms ?? "UNVERSIONED"}`;
+  return `field_index_v1:${scope.tenant_id}:${row.field_id}:updated:${row.updated_ts_ms ?? "UNVERSIONED"}`;
 }
 
 function identityDigestV1(row: FieldIdentityRowV1, scope: CustomerProductReadScopeV1): SemanticHashTextV1 {
   return semanticHashV1({
     source: "public.field_index_v1",
     tenant_id: scope.tenant_id,
-    project_id: scope.project_id,
-    group_id: scope.group_id,
     field_id: row.field_id,
     field_name: row.field_name,
     area_ha: row.area_ha,
     updated_ts_ms: row.updated_ts_ms,
+  }) as SemanticHashTextV1;
+}
+
+function scopeBasisExactRefV1(row: FieldIdentityRowV1): string | null {
+  return row.scope_basis_fact_id ? `fact:${row.scope_basis_fact_id}` : null;
+}
+
+function scopeBasisDigestV1(row: FieldIdentityRowV1): SemanticHashTextV1 | null {
+  if (!row.scope_basis_fact_id || !row.scope_basis_occurred_at || !row.scope_basis_source || !row.scope_basis_record_json) {
+    return null;
+  }
+  return semanticHashV1({
+    source: "public.facts",
+    fact_id: row.scope_basis_fact_id,
+    occurred_at: row.scope_basis_occurred_at,
+    fact_source: row.scope_basis_source,
+    record_json: row.scope_basis_record_json,
   }) as SemanticHashTextV1;
 }
 
@@ -382,21 +402,62 @@ export class PostgresCustomerProductProjectionBuilderV1 {
   private async listFieldRowsV1(scope: CustomerProductReadScopeV1): Promise<FieldIdentityRowV1[]> {
     if (!scope.can_preview_all_fields && scope.allowed_field_ids.length === 0) return [];
     const params: unknown[] = [scope.tenant_id, scope.project_id, scope.group_id];
-    let fieldPredicate = "";
+    let callerFilter = "";
     if (!scope.can_preview_all_fields) {
       params.push([...scope.allowed_field_ids]);
-      fieldPredicate = " AND field_id = ANY($4::text[])";
+      callerFilter = " AND candidate.field_id = ANY($4::text[])";
     }
     const result = await this.pool.query(
-      `SELECT field_id,
-              COALESCE(field_name, name) AS field_name,
-              area_ha,
-              updated_ts_ms
-         FROM public.field_index_v1
-        WHERE tenant_id = $1
-          AND project_id = $2
-          AND group_id = $3${fieldPredicate}
-        ORDER BY field_id ASC
+      `WITH scoped_fact_fields AS (
+         SELECT DISTINCT ON (record_json->'payload'->>'field_id')
+                record_json->'payload'->>'field_id' AS field_id,
+                fact_id AS scope_basis_fact_id,
+                occurred_at AS scope_basis_occurred_at,
+                source AS scope_basis_source,
+                record_json AS scope_basis_record_json
+           FROM public.facts
+          WHERE record_json->'payload'->>'tenant_id' = $1
+            AND record_json->'payload'->>'project_id' = $2
+            AND record_json->'payload'->>'group_id' = $3
+            AND NULLIF(record_json->'payload'->>'field_id', '') IS NOT NULL
+          ORDER BY record_json->'payload'->>'field_id', occurred_at ASC, fact_id ASC
+       ),
+       runtime_fields AS (
+         SELECT DISTINCT field_id
+           FROM public.twin_active_lineage_index_v1
+          WHERE tenant_id = $1
+            AND project_id = $2
+            AND group_id = $3
+       ),
+       candidate_fields AS (
+         SELECT field_id FROM scoped_fact_fields
+         UNION
+         SELECT field_id FROM runtime_fields
+       ),
+       candidate AS (
+         SELECT cf.field_id,
+                sff.scope_basis_fact_id,
+                sff.scope_basis_occurred_at,
+                sff.scope_basis_source,
+                sff.scope_basis_record_json
+           FROM candidate_fields cf
+           LEFT JOIN scoped_fact_fields sff USING (field_id)
+       )
+       SELECT candidate.field_id,
+              COALESCE(fi.field_name, fi.name) AS field_name,
+              fi.area_ha,
+              fi.updated_ts_ms,
+              (fi.field_id IS NOT NULL) AS identity_present,
+              candidate.scope_basis_fact_id,
+              candidate.scope_basis_occurred_at,
+              candidate.scope_basis_source,
+              candidate.scope_basis_record_json
+         FROM candidate
+         LEFT JOIN public.field_index_v1 fi
+           ON fi.tenant_id = $1
+          AND fi.field_id = candidate.field_id
+        WHERE TRUE${callerFilter}
+        ORDER BY candidate.field_id ASC
         LIMIT ${CUSTOMER_PRODUCT_PROJECTION_MAX_FIELDS_V1 + 1}`,
       params,
     );
@@ -412,6 +473,11 @@ export class PostgresCustomerProductProjectionBuilderV1 {
       field_name: nullableTextV1(row.field_name),
       area_ha: Number.isFinite(Number(row.area_ha)) ? Number(row.area_ha) : null,
       updated_ts_ms: Number.isFinite(Number(row.updated_ts_ms)) ? Number(row.updated_ts_ms) : null,
+      identity_present: row.identity_present === true,
+      scope_basis_fact_id: nullableTextV1(row.scope_basis_fact_id),
+      scope_basis_occurred_at: row.scope_basis_occurred_at ? new Date(String(row.scope_basis_occurred_at)).toISOString() : null,
+      scope_basis_source: nullableTextV1(row.scope_basis_source),
+      scope_basis_record_json: row.scope_basis_record_json ?? null,
     })).filter((row: FieldIdentityRowV1) => Boolean(row.field_id));
   }
 
@@ -421,20 +487,50 @@ export class PostgresCustomerProductProjectionBuilderV1 {
   ): Promise<FieldIdentityRowV1 | null> {
     if (!scope.can_preview_all_fields && !scope.allowed_field_ids.includes(fieldId)) return null;
     const result = await this.pool.query(
-      `SELECT field_id,
-              COALESCE(field_name, name) AS field_name,
-              area_ha,
-              updated_ts_ms
-         FROM public.field_index_v1
-        WHERE tenant_id = $1
-          AND project_id = $2
-          AND group_id = $3
-          AND field_id = $4
+      `WITH scoped_fact_field AS (
+         SELECT fact_id AS scope_basis_fact_id,
+                occurred_at AS scope_basis_occurred_at,
+                source AS scope_basis_source,
+                record_json AS scope_basis_record_json
+           FROM public.facts
+          WHERE record_json->'payload'->>'tenant_id' = $1
+            AND record_json->'payload'->>'project_id' = $2
+            AND record_json->'payload'->>'group_id' = $3
+            AND record_json->'payload'->>'field_id' = $4
+          ORDER BY occurred_at ASC, fact_id ASC
+          LIMIT 1
+       ),
+       candidate AS (
+         SELECT $4::text AS field_id
+          WHERE EXISTS (SELECT 1 FROM scoped_fact_field)
+             OR EXISTS (
+                  SELECT 1
+                    FROM public.twin_active_lineage_index_v1
+                   WHERE tenant_id = $1
+                     AND project_id = $2
+                     AND group_id = $3
+                     AND field_id = $4
+             )
+       )
+       SELECT candidate.field_id,
+              COALESCE(fi.field_name, fi.name) AS field_name,
+              fi.area_ha,
+              fi.updated_ts_ms,
+              (fi.field_id IS NOT NULL) AS identity_present,
+              sff.scope_basis_fact_id,
+              sff.scope_basis_occurred_at,
+              sff.scope_basis_source,
+              sff.scope_basis_record_json
+         FROM candidate
+         LEFT JOIN public.field_index_v1 fi
+           ON fi.tenant_id = $1
+          AND fi.field_id = candidate.field_id
+         LEFT JOIN scoped_fact_field sff ON TRUE
         LIMIT 2`,
       [scope.tenant_id, scope.project_id, scope.group_id, fieldId],
     );
     if (result.rows.length > 1) {
-      throw new CustomerProductProjectionReadErrorV1("FIELD_IDENTITY_CARDINALITY_INVALID", 409, fieldId);
+      throw new CustomerProductProjectionReadErrorV1("FIELD_SCOPE_CARDINALITY_INVALID", 409, fieldId);
     }
     if (!result.rows[0]) return null;
     const row = result.rows[0] as Record<string, unknown>;
@@ -443,6 +539,11 @@ export class PostgresCustomerProductProjectionBuilderV1 {
       field_name: nullableTextV1(row.field_name),
       area_ha: Number.isFinite(Number(row.area_ha)) ? Number(row.area_ha) : null,
       updated_ts_ms: Number.isFinite(Number(row.updated_ts_ms)) ? Number(row.updated_ts_ms) : null,
+      identity_present: row.identity_present === true,
+      scope_basis_fact_id: nullableTextV1(row.scope_basis_fact_id),
+      scope_basis_occurred_at: row.scope_basis_occurred_at ? new Date(String(row.scope_basis_occurred_at)).toISOString() : null,
+      scope_basis_source: nullableTextV1(row.scope_basis_source),
+      scope_basis_record_json: row.scope_basis_record_json ?? null,
     };
   }
 
@@ -601,25 +702,11 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     generated_at: string;
   }): FieldSummaryProjectionV1 {
     const identityRefKey = fieldRefKeyV1(input.row.field_id, "identity");
-    const nonAuthorityRefs: ProductProjectionNonAuthorityRefV1[] = [{
-      ref_key: identityRefKey,
-      ref_class: "OTHER_NON_AUTHORITY",
-      object_kind: "field_index_v1",
-      exact_ref: identityExactRefV1(input.row, input.scope),
-      source_fact_ref: null,
-    }];
+    const scopeBasisRefKey = fieldRefKeyV1(input.row.field_id, "scope-basis");
+    const nonAuthorityRefs: ProductProjectionNonAuthorityRefV1[] = [];
     const authorityRefs: ProductProjectionAuthorityRefV1[] = [];
-    const digests: ProductProjectionSourceDigestV1[] = [{
-      source_ref_key: identityRefKey,
-      digest: identityDigestV1(input.row, input.scope),
-      digest_kind: "PRODUCT_SOURCE_ROW_DIGEST",
-    }];
-    const proofs: ProductProjectionSourceBindingProofSetV1["proofs"][number][] = [{
-      ref_key: identityRefKey,
-      binding_id: "GEOX_FIELD_INDEX_V1",
-      observed_object_kind: "field_index_v1",
-      source_path: "public.field_index_v1",
-    }];
+    const digests: ProductProjectionSourceDigestV1[] = [];
+    const proofs: ProductProjectionSourceBindingProofSetV1["proofs"][number][] = [];
     const limitationCodes = new Set<string>([
       "FIELD_FARM_DISPLAY_NOT_PROJECTED_WAVE02",
       "FIELD_CROP_DISPLAY_NOT_PROJECTED_WAVE02",
@@ -629,6 +716,54 @@ export class PostgresCustomerProductProjectionBuilderV1 {
       "ATTENTION_QUEUE_BUILDER_NOT_IMPLEMENTED",
       "OPERATION_PROJECTION_NOT_IMPLEMENTED",
     ]);
+
+    const scopeBasisExactRef = scopeBasisExactRefV1(input.row);
+    const scopeBasisDigest = scopeBasisDigestV1(input.row);
+    if (scopeBasisExactRef && scopeBasisDigest) {
+      nonAuthorityRefs.push({
+        ref_key: scopeBasisRefKey,
+        ref_class: "OTHER_NON_AUTHORITY",
+        object_kind: "fact_v1",
+        exact_ref: scopeBasisExactRef,
+        source_fact_ref: input.row.scope_basis_fact_id,
+      });
+      digests.push({
+        source_ref_key: scopeBasisRefKey,
+        digest: scopeBasisDigest,
+        digest_kind: "PRODUCT_SOURCE_ROW_DIGEST",
+      });
+      proofs.push({
+        ref_key: scopeBasisRefKey,
+        binding_id: "GEOX_SCOPED_FACT_FIELD_BASIS_V1",
+        observed_object_kind: "fact_v1",
+        source_path: "public.facts",
+      });
+      limitationCodes.add("FIELD_SCOPE_OBSERVED_IN_GOVERNED_FACTS");
+    }
+
+    if (input.row.identity_present) {
+      nonAuthorityRefs.push({
+        ref_key: identityRefKey,
+        ref_class: "OTHER_NON_AUTHORITY",
+        object_kind: "field_index_v1",
+        exact_ref: identityExactRefV1(input.row, input.scope),
+        source_fact_ref: null,
+      });
+      digests.push({
+        source_ref_key: identityRefKey,
+        digest: identityDigestV1(input.row, input.scope),
+        digest_kind: "PRODUCT_SOURCE_ROW_DIGEST",
+      });
+      proofs.push({
+        ref_key: identityRefKey,
+        binding_id: "GEOX_FIELD_INDEX_V1",
+        observed_object_kind: "field_index_v1",
+        source_path: "public.field_index_v1",
+      });
+    } else {
+      limitationCodes.add("FIELD_IDENTITY_NOT_ESTABLISHED");
+    }
+
     if (!input.row.field_name) limitationCodes.add("FIELD_DISPLAY_NAME_UNAVAILABLE");
 
     let currentCondition: FieldCurrentConditionProjectionV1;
@@ -727,7 +862,8 @@ export class PostgresCustomerProductProjectionBuilderV1 {
       non_authoritative: true,
     };
     assertProductProjectionSourceBindingsV1(envelope, proofSet);
-    assertSourceRoleV1(proofSet, identityRefKey, "FIELD_IDENTITY");
+    if (scopeBasisExactRef) assertSourceRoleV1(proofSet, scopeBasisRefKey, "FIELD_SCOPE_BASIS");
+    if (input.row.identity_present) assertSourceRoleV1(proofSet, identityRefKey, "FIELD_IDENTITY");
     if (exactStateRefKey) {
       assertSourceRoleV1(proofSet, exactStateRefKey, "FIELD_CURRENT_STATE");
       assertSourceRoleV1(
