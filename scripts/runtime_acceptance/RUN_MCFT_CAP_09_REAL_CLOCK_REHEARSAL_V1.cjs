@@ -71,6 +71,29 @@ function compose(state,secrets,args,options={}){
     capture:options.capture,
   });
 }
+function restartStoppedTwinContainerV1(state,secrets,before){
+  const containerId=String(before?.id??"").trim();
+  req(
+    /^[0-9a-f]{12,64}$/.test(containerId),
+    "REAL_CLOCK_REHEARSAL_FAULT_RESTART_CONTAINER_ID_REQUIRED",
+    containerId,
+  );
+  exec("docker",["start",containerId],{
+    env:{...process.env,...secrets},
+    capture:false,
+  });
+  const after=containerState(state,secrets,"twin-runtime");
+  req(
+    after.running===true,
+    "REAL_CLOCK_REHEARSAL_TWIN_NOT_RUNNING_AFTER_FAULT_RESTART",
+  );
+  req(
+    after.id===containerId,
+    "REAL_CLOCK_REHEARSAL_FAULT_RESTART_CONTAINER_ID_MISMATCH",
+    JSON.stringify({before:containerId,after:after.id}),
+  );
+  return after;
+}
 function loadState(){
   const explicit=arg("state");
   let statePath=explicit?path.resolve(explicit):"";
@@ -237,6 +260,7 @@ async function faultController(){
   const {state,statePath,secrets}=loadState();
   req(state.fault_plan?.enabled===true,"REAL_CLOCK_REHEARSAL_FAULT_PLAN_NOT_ENABLED");
   const proofPath=state.fault_plan.proof_path;
+  try{
   const plannedStop=Date.parse(state.fault_plan.stop_at);
   const plannedRestart=Date.parse(state.fault_plan.restart_at);
   req(Number.isFinite(plannedStop)&&Number.isFinite(plannedRestart)&&plannedRestart>plannedStop,"REAL_CLOCK_REHEARSAL_FAULT_PLAN_INVALID");
@@ -266,8 +290,13 @@ async function faultController(){
   compose(state,secrets,["stop","-t","30","twin-runtime"],{capture:false});
   const stoppedAt=new Date().toISOString();
   await sleepUntil(plannedRestart);
-  compose(state,secrets,["start","twin-runtime"],{capture:false});
+  const restarted=restartStoppedTwinContainerV1(state,secrets,before);
   const restartedAt=new Date().toISOString();
+  req(
+    restarted.id===before.id,
+    "REAL_CLOCK_REHEARSAL_FAULT_RESTART_CONTAINER_ID_DRIFT",
+    JSON.stringify({before:before.id,after:restarted.id}),
+  );
 
   const deadline=Date.now()+10*MINUTE;
   let row="";
@@ -307,7 +336,19 @@ async function faultController(){
     terminal_at:terminalAt,
     oldest_first_backfill_observed:true,
     controlled_restart_recovery_observed:true,
+    restarted_exact_stopped_container_id:before.id,
   });
+  }catch(error){
+    if(!fs.existsSync(proofPath)){
+      writePrivateJson(proofPath,{
+        ...stateProofBase(state),
+        status:"FAIL",
+        error:"REAL_CLOCK_REHEARSAL_FAULT_CONTROLLER_EXCEPTION",
+        detail:error instanceof Error?error.message:String(error),
+      });
+    }
+    throw error;
+  }
 }
 function start(){
   req(fs.existsSync(COMPOSE),"REAL_CLOCK_REHEARSAL_COMPOSE_REQUIRED");
