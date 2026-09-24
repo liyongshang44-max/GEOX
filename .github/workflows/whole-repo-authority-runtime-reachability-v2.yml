@@ -1,0 +1,128 @@
+name: whole-repo-authority-runtime-reachability-v2
+
+on:
+  pull_request:
+    paths:
+      - 'docs/architecture/semantic_convergence/GEOX-WHOLE-REPOSITORY-AUTHORITY-RUNTIME-REACHABILITY-AUDIT-V2.md'
+      - 'docs/architecture/semantic_convergence/GEOX-WHOLE-REPOSITORY-AUTHORITY-RUNTIME-REACHABILITY-METHOD-V2.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_METHOD_V2.cjs'
+      - 'scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_V2.cjs'
+      - 'scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_COMPLETENESS_V3.cjs'
+      - 'scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_FILE_COVERAGE_V4.cjs'
+      - 'docs/architecture/semantic_convergence/GEOX-WHOLE-REPOSITORY-REVERSE-DISCOVERY-ADJUDICATION-V1.json'
+      - '.github/workflows/whole-repo-authority-runtime-reachability-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Validate V2 audit method
+        run: node scripts/governance_acceptance/ACCEPTANCE_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_METHOD_V2.cjs
+
+      - name: Execute fresh whole-repository audit
+        id: runtime_audit
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_V2.cjs
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+
+      - name: Execute audit-completeness scan
+        id: completeness_audit
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_COMPLETENESS_V3.cjs
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+
+      - name: Execute file/language coverage scan
+        id: file_coverage
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/governance_acceptance/AUDIT_GEOX_WHOLE_REPOSITORY_FILE_COVERAGE_V4.cjs
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+
+      - name: Upload audit result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: whole-repo-authority-runtime-reachability-v2-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_AUDIT_V2.json
+            acceptance-output/GEOX_WHOLE_REPOSITORY_AUDIT_COMPLETENESS_V3.json
+            acceptance-output/GEOX_WHOLE_REPOSITORY_FILE_COVERAGE_V4.json
+            acceptance-output/GEOX_WHOLE_REPOSITORY_AUTHORITY_RUNTIME_REACHABILITY_METHOD_V2.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce fail-closed audit result
+        if: always()
+        run: |
+          completeness="${{ steps.completeness_audit.outputs.exit_code }}"
+          if [ -z "$completeness" ]; then
+            echo "AUDIT_COMPLETENESS_RESULT_MISSING"
+            exit 1
+          fi
+          if [ "$completeness" != "0" ]; then
+            echo "WHOLE_REPOSITORY_AUDIT_COMPLETENESS_FAILED"
+            exit "$completeness"
+          fi
+
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p='acceptance-output/GEOX_WHOLE_REPOSITORY_AUDIT_COMPLETENESS_V3.json';
+          if(!fs.existsSync(p)) throw new Error('AUDIT_COMPLETENESS_JSON_MISSING');
+          const r=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(r.scanner_integrity_status!=='PASS') throw new Error('AUDIT_SCANNER_INTEGRITY_NOT_PASS');
+          if(r.discovery_adjudication_status!=='PASS') throw new Error('AUDIT_DISCOVERY_ADJUDICATION_NOT_PASS');
+          if(r.repository_wiring_status!=='PASS') {
+            throw new Error('WHOLE_REPOSITORY_REVERSE_DISCOVERY_DEFECTS_REMAIN:'+JSON.stringify(
+              (r.reverse_discovery_known_defects||[]).map(x=>({source_path:x.source_path,final_disposition:x.final_disposition}))
+            ));
+          }
+          NODE
+
+          coverage="${{ steps.file_coverage.outputs.exit_code }}"
+          if [ -z "$coverage" ]; then
+            echo "AUDIT_FILE_COVERAGE_RESULT_MISSING"
+            exit 1
+          fi
+          if [ "$coverage" != "0" ]; then
+            echo "WHOLE_REPOSITORY_FILE_COVERAGE_FAILED"
+            exit "$coverage"
+          fi
+
+          code="${{ steps.runtime_audit.outputs.exit_code }}"
+          if [ -z "$code" ]; then
+            echo "AUDIT_EXECUTION_RESULT_MISSING"
+            exit 1
+          fi
+          if [ "$code" != "0" ]; then
+            echo "WHOLE_REPOSITORY_RUNTIME_REACHABILITY_AUDIT_FOUND_CLASSIFIED_BLOCKERS"
+            exit "$code"
+          fi
+          echo "WHOLE_REPOSITORY_RUNTIME_REACHABILITY_AND_COMPLETENESS_PASS"
