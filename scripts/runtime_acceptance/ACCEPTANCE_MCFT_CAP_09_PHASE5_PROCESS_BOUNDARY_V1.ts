@@ -563,6 +563,26 @@ function main(): void {
     "PHASE5_EVIDENCE_POSTGRES_RECOVERY_MESSAGE_MUST_RETRY",
   );
 
+  const undiciTerminated = new TypeError("terminated");
+  assert.equal(
+    evidenceFailureClassifier.classify(undiciTerminated),
+    "RETRYABLE",
+    "PHASE5_EVIDENCE_UNDICI_TERMINATED_FETCH_MUST_RETRY",
+  );
+  const undiciTerminatedWithCause = new TypeError("terminated", {
+    cause: Object.assign(new Error("other side closed"), { code: "UND_ERR_SOCKET" }),
+  });
+  assert.equal(
+    evidenceFailureClassifier.classify(undiciTerminatedWithCause),
+    "RETRYABLE",
+    "PHASE5_EVIDENCE_UNDICI_SOCKET_TERMINATION_MUST_RETRY",
+  );
+  assert.equal(
+    evidenceFailureClassifier.classify(new TypeError("terminated by semantic validation")),
+    "FATAL",
+    "PHASE5_EVIDENCE_NONEXACT_TERMINATED_MESSAGE_MUST_REMAIN_FATAL",
+  );
+
   const twinFailureClassifier = new McftCap09ProductionTwinFailureClassifierV1();
   for (const code of [
     "LEASE_HELD_BY_OTHER_OWNER",
@@ -716,6 +736,8 @@ function main(): void {
     evidence_kbs_ambiguous_forward_remains_fatal: true,
     evidence_postgres_cannot_connect_now_retryable: true,
     evidence_postgres_recovery_message_retryable: true,
+    evidence_undici_terminated_fetch_retryable: true,
+    evidence_nonexact_terminated_message_fatal: true,
     twin_duplicate_coordination_contention_retryable: true,
     twin_postgres_cannot_connect_now_retryable: true,
     twin_postgres_recovery_message_retryable: true,

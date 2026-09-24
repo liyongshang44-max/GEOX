@@ -410,10 +410,24 @@ function governedEvidenceSourceBackpressureV1(error: unknown): boolean {
   );
 }
 
+function transientUndiciFetchTerminationV1(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (error.name !== "TypeError" || error.message.trim().toLowerCase() !== "terminated") {
+    return false;
+  }
+  const causeCode = typeof error.cause === "object"
+    && error.cause !== null
+    && "code" in error.cause
+    ? String((error.cause as { code?: unknown }).code ?? "").trim()
+    : "";
+  return causeCode === "" || causeCode.startsWith("UND_ERR_");
+}
+
 export class McftCap09ProductionEvidenceFailureClassifierV1
 implements EvidenceRuntimeHostFailureClassifierV1 {
   classify(error: unknown): "RETRYABLE" | "FATAL" {
     return transientInfrastructureFailureV1(error)
+      || transientUndiciFetchTerminationV1(error)
       || governedEvidenceSourceBackpressureV1(error)
       ? "RETRYABLE"
       : "FATAL";
