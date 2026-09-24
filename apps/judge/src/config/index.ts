@@ -2,7 +2,7 @@
 // SSOT minimal loader + validator for Judge config.
 //
 // Source of truth:
-//   GEOX/config/judge/ruleset_v1.json
+//   GEOX/config/judge/default.json
 //
 // Pipeline imports:
 //   import { loadJudgeConfig } from "./config.js";
@@ -116,10 +116,10 @@ function resolveRepoRoot(): string {
 }
 
 export function loadJudgeConfig(config_profile: string = "default"): JudgeConfigV1 {
-  // Minimal: config_profile is ignored for now; ruleset_v1.json is the SSOT.
+  // Minimal: config_profile is ignored for now; default.json is the SSOT.
   // (You can extend later: ruleset_${profile}.json, etc.)
   const repoRoot = resolveRepoRoot();
-  const rulesetPath = path.join(repoRoot, "config", "judge", "ruleset_v1.json");
+  const rulesetPath = path.join(repoRoot, "config", "judge", "default.json");
 
   const raw = fs.readFileSync(rulesetPath, "utf8");
   const cfg = JSON.parse(raw);

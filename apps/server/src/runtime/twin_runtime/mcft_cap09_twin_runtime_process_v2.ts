@@ -25,6 +25,8 @@ import {
 import {
   composeMcftCap09TwinRuntimeV2,
 } from "./mcft_cap09_twin_runtime_composition_v2.js";
+import type { TwinRuntimeDatabaseClockPortV1 } from "./mcft_cap09_twin_runtime_host_v1.js";
+import type { PersistentSequentialSchedulerClockAuthorityV1 } from "./postgres_persistent_sequential_scheduler_adapter_v1.js";
 import {
   createStaticMcftCap09CurrentCropAuthorityResolverV1,
   type McftCap09CurrentCropAuthorityResolverPortV1,
@@ -76,6 +78,10 @@ export const MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2 = {
   evidence_supply_cursor_authority: false,
   process_clock_for_tick_authority: false,
   database_clock_for_tick_authority: true,
+  qualification_clock_boundary:
+    "EXPLICIT_DATABASE_CLOCK_AND_SCHEDULER_AUTHORITY_INJECTION_WITH_PRODUCTION_DEFAULT",
+  qualification_lease_owner_boundary:
+    "EXPLICIT_QUALIFICATION_ONLY_WITH_EXPLICIT_RUNTIME_START_AUTHORITY",
   production_owner_cutover: false,
   formal_arm_authority: false,
 } as const;
@@ -122,16 +128,40 @@ export async function runMcftCap09TwinRuntimeProcessV2(input?: {
   env?: EnvironmentV2;
   runtime_start_authority?: unknown;
   current_crop_authority_resolver?: McftCap09CurrentCropAuthorityResolverPortV1;
+  database_clock?: TwinRuntimeDatabaseClockPortV1;
+  scheduler_clock_authority?: PersistentSequentialSchedulerClockAuthorityV1;
+  qualification_lease_owner?: string;
+  qualification_run_class?: "ACCELERATED_24T" | "REAL_CLOCK_REHEARSAL";
 }): Promise<void> {
   const document = productionAcquisitionHorizonAuthorityJson as {
     runtime_start_binding?: unknown;
   };
   const env = input?.env ?? process.env;
+  const qualificationLeaseOwner = String(input?.qualification_lease_owner ?? "").trim();
+  if (qualificationLeaseOwner) {
+    if (input?.runtime_start_authority === undefined) {
+      throw new Error("MCFT_CAP09_TWIN_V2_QUALIFICATION_LEASE_OWNER_REQUIRES_EXPLICIT_RUNTIME_START_AUTHORITY");
+    }
+    if (input?.qualification_run_class === "ACCELERATED_24T") {
+      if (input.database_clock === undefined
+        || input.scheduler_clock_authority?.mode !== "ACCELERATED_ENGINEERING_ONLY") {
+        throw new Error("MCFT_CAP09_TWIN_V2_ACCELERATED_QUALIFICATION_REQUIRES_EXPLICIT_ENGINEERING_CLOCKS");
+      }
+    } else if (input?.qualification_run_class === "REAL_CLOCK_REHEARSAL") {
+      if (input.database_clock !== undefined || input.scheduler_clock_authority !== undefined) {
+        throw new Error("MCFT_CAP09_TWIN_V2_REAL_CLOCK_REHEARSAL_CLOCK_OVERRIDE_FORBIDDEN");
+      }
+    } else {
+      throw new Error("MCFT_CAP09_TWIN_V2_QUALIFICATION_RUN_CLASS_REQUIRED");
+    }
+  } else if (input?.database_clock !== undefined || input?.scheduler_clock_authority !== undefined) {
+    throw new Error("MCFT_CAP09_TWIN_V2_PRODUCTION_CLOCK_OVERRIDE_FORBIDDEN");
+  }
 
   const runtimeEnv: EnvironmentV2 = {
     ...env,
     GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_OWNER:
-      buildMcftCap09ProductionLeaseOwnerV1({
+      qualificationLeaseOwner || buildMcftCap09ProductionLeaseOwnerV1({
         plane: "TWIN_RUNTIME",
         configured_service_id: requiredEnvV2(
           env,
@@ -218,6 +248,8 @@ export async function runMcftCap09TwinRuntimeProcessV2(input?: {
       stop,
       failure_classifier:
         new McftCap09ProductionTwinFailureClassifierV1(),
+      database_clock: input?.database_clock,
+      scheduler_clock_authority: input?.scheduler_clock_authority,
     });
 
     await composition.host.run({

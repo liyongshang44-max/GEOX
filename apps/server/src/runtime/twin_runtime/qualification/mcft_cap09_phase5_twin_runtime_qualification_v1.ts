@@ -1,17 +1,20 @@
 // MCFT-CAP-09 Phase 5 qualification-only Twin clock boundary.
 //
-// The production Twin process/composition/host/runner/scheduler/persistence graph is reused.
+// The current Production V2 Twin process/composition/host/runner/scheduler/persistence graph is reused.
 // This module substitutes only the observed clock authority so O00-O23 can be exercised
 // without real elapsed waiting. It does not implement a scheduler, lease, cursor, runner,
 // evidence source, canonical tick, persistence path, or provider fallback.
+
+import crypto from "node:crypto";
+import fs from "node:fs";
 
 import {
   MCFT_CAP09_POSTGRES_TWIN_RUNTIME_DATABASE_CLOCK_ID_V1,
   type TwinRuntimeDatabaseClockPortV1,
 } from "../mcft_cap09_twin_runtime_host_v1.js";
 import {
-  runMcftCap09TwinRuntimeProcessV1,
-} from "../mcft_cap09_twin_runtime_process_v1.js";
+  runMcftCap09TwinRuntimeProcessV2,
+} from "../mcft_cap09_twin_runtime_process_v2.js";
 import {
   MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1,
   type PersistentSequentialSchedulerClockAuthorityV1,
@@ -100,6 +103,8 @@ export function buildPhase5TwinQualificationRuntimeStartAuthorityV1(input: {
   qualification_ack?: string;
   rehearsal_activation_fence_time?: string;
   deployment_subject_sha: string;
+  current_crop_authority_sha256?: string;
+  biological_stage_architecture_effectiveness_sha256?: string;
   scope: {
     tenant_id: string;
     project_id: string;
@@ -163,11 +168,13 @@ export function buildPhase5TwinQualificationRuntimeStartAuthorityV1(input: {
     current_crop_authority_ref:
       "qualification://mcft-cap09/phase5/current-crop-authority-v1",
     current_crop_authority_sha256:
-      "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      input.current_crop_authority_sha256
+      ?? "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     biological_stage_architecture_effectiveness_ref:
       "qualification://mcft-cap09/phase5/biological-stage-architecture-effectiveness-v1",
     biological_stage_architecture_effectiveness_sha256:
-      "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      input.biological_stage_architecture_effectiveness_sha256
+      ?? "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     formal_a0_logical_time: formalA0,
     runtime_process_start_authorized: true,
     evidence_runtime_start_authorized: false,
@@ -204,6 +211,17 @@ export async function runMcftCap09Phase5TwinRuntimeQualificationV1(input?: {
         qualification_ack: qualificationAck!,
       })
     : null;
+  const currentCropAuthorityPath = requiredEnvV1(
+    env,
+    "GEOX_MCFT_CAP09_TWIN_RUNTIME_CURRENT_CROP_AUTHORITY_PATH",
+  );
+  const stageArchitectureEffectivenessPath = requiredEnvV1(
+    env,
+    "GEOX_MCFT_CAP09_TWIN_RUNTIME_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH",
+  );
+  const fileSha256 = (filePath: string) =>
+    "sha256:" + crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+
   const runtimeStartAuthority =
     buildPhase5TwinQualificationRuntimeStartAuthorityV1({
       formal_a0: requiredEnvV1(
@@ -220,6 +238,9 @@ export async function runMcftCap09Phase5TwinRuntimeQualificationV1(input?: {
         env,
         "GEOX_DEPLOYMENT_SUBJECT_COMMIT",
       ),
+      current_crop_authority_sha256: fileSha256(currentCropAuthorityPath),
+      biological_stage_architecture_effectiveness_sha256:
+        fileSha256(stageArchitectureEffectivenessPath),
       scope: {
         tenant_id: requiredEnvV1(env, "GEOX_MCFT_CAP09_TENANT_ID"),
         project_id: requiredEnvV1(env, "GEOX_MCFT_CAP09_PROJECT_ID"),
@@ -230,7 +251,7 @@ export async function runMcftCap09Phase5TwinRuntimeQualificationV1(input?: {
       },
     });
   const hostname = requiredEnvV1(env, "HOSTNAME");
-  await runMcftCap09TwinRuntimeProcessV1({
+  await runMcftCap09TwinRuntimeProcessV2({
     env,
     ...(boundary ?? {}),
     runtime_start_authority: runtimeStartAuthority,
