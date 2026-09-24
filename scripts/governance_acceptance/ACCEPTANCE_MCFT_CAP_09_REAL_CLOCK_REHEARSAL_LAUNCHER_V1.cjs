@@ -64,6 +64,12 @@ try{
     '"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1.ts"',
     '"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts"',
     '"CONTROLLED_PROCESS_RESTART_ACROSS_ONE_REAL_UTC_BOUNDARY"',
+    'restartStoppedTwinContainerV1',
+    'exec("docker",["start",containerId]',
+    '"REAL_CLOCK_REHEARSAL_FAULT_RESTART_CONTAINER_ID_MISMATCH"',
+    '"REAL_CLOCK_REHEARSAL_FAULT_RESTART_CONTAINER_ID_DRIFT"',
+    '"REAL_CLOCK_REHEARSAL_FAULT_CONTROLLER_EXCEPTION"',
+    'restarted_exact_stopped_container_id:before.id',
     'oldest_first_backfill_observed:true',
     'formal_closure_substituted:false',
     '"qualification-verify"',
@@ -84,6 +90,7 @@ try{
     "git merge",
     "gh pr merge",
     "push origin",
+    'compose(state,secrets,["start","twin-runtime"]',
   ]){
     assert.equal(source.includes(forbidden),false,"REAL_CLOCK_REHEARSAL_LAUNCHER_FORBIDDEN_MARKER:"+forbidden);
   }
@@ -116,6 +123,9 @@ try{
     formal_v5_store_binding_count:0,
     actual_database_clock_preserved:true,
     automatic_controlled_restart_and_backfill_probe:true,
+    controlled_restart_uses_exact_stopped_container_id:true,
+    controlled_restart_forbids_compose_dependency_reentry:true,
+    controller_exception_writes_fail_proof:true,
     exact_24_terminal_readback_required:true,
     live_production_evidence_runtime_burn_in:true,
     live_provider_path_required:true,
