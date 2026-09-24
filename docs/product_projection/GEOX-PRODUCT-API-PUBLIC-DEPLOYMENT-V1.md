@@ -238,3 +238,70 @@ This artifact does not claim:
 - `api.geox.ink` DNS is configured;
 - Sites is already showing real data;
 - Product API production qualification is complete.
+
+
+## 13. Production dependency reconciliation — 2026-09-23
+
+The production operational database dependency has now been reconciled under explicit operator authorization.
+
+Target:
+
+- Neon project: `delicate-glade-62464340`;
+- branch: `br-cold-dust-a6j6aymz`;
+- database: `geox_mcft_cap09_production_runtime_v1`.
+
+Verified operational change:
+
+- `public.field_index_v1.project_id` exists;
+- `public.field_index_v1.group_id` exists;
+- `field_index_v1_product_scope_idx` exists over `tenant_id, project_id, group_id, field_id`;
+- exactly one non-authoritative field identity row was materialized from the unique scope already present in production facts:
+  - `tenant_mcft_external`;
+  - `project_mcft_cap09`;
+  - `group_public_research`;
+  - `field_kbs_mcse_t4r1`.
+
+The reconciliation did not invent customer display metadata. `field_name`, `name`, `area_ha`, and `updated_ts_ms` remain unavailable where the existing production sources do not establish them.
+
+Post-change readback preserved the existing fact inventory at 224 rows. The production operational store still has:
+
+- active Twin lineage count = 0;
+- Twin state-history count = 0.
+
+Therefore Product API Wave-02 may expose the real field identity while current field condition remains explicitly `UNAVAILABLE`. No Twin lineage, posterior state, freshness, risk, severity, recommendation, approval, or execution truth is inferred from Evidence facts.
+
+This repository successor records the already-applied operational reconciliation. It does not replay the production database mutation and does not widen MCFT writer authority.
+
+### 13.1 Product database principal state
+
+A dedicated principal `geox_product_readonly_login_v1` has been structurally provisioned with:
+
+- `LOGIN`;
+- `NOINHERIT`;
+- no superuser, create-database, create-role, replication, or bypass-row-level-security attributes;
+- no role memberships;
+- no `CREATE` on schema `public`;
+- `SELECT` on `public.field_index_v1`, `public.twin_active_lineage_index_v1`, and `public.twin_state_history_projection_v1`;
+- no write privilege on those Product dependencies.
+
+The principal does not yet have a usable password credential through the available Neon provisioning path. It therefore must not be treated as a deployable `GEOX_PRODUCT_DATABASE_URL` yet.
+
+Neon API-created login roles were rejected for this purpose because they acquire broad Neon administrative capabilities and `neon_superuser` membership that cannot be stripped by the production database owner.
+
+### 13.2 Railway provisioning status
+
+Railway provisioning has not started successfully.
+
+The current Railway account rejected creation of the new isolated `GEOX Product API` project because the account trial has expired and a plan must be selected first.
+
+No legacy Land-OS Railway project or service may be repurposed for this deployment.
+
+After the Railway account is enabled and a usable dedicated PostgreSQL Product credential exists, the remaining deployment sequence is unchanged:
+
+1. create the isolated `GEOX Product API` Railway project/service;
+2. deploy protected `main` through `docker/product-api.Dockerfile`;
+3. bind only the Product database URL, scoped Product client token source, and allowed origins;
+4. require `/ready = 200`;
+5. require authenticated smoke PASS for all three canonical Product routes;
+6. generate the Railway HTTPS domain;
+7. configure Sites with server-side `GEOX_PRODUCT_API_BASE_URL` and `GEOX_PRODUCT_API_BEARER_TOKEN`.
