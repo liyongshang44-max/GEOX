@@ -6,6 +6,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
+import { performance } from "node:perf_hooks";
+import { setTimeout as waitTimeoutV1 } from "node:timers/promises";
 
 import type {
   RawEvidenceFileRetentionInputV1,
@@ -38,6 +40,10 @@ export type S3CompatiblePrivateRawRetentionConfigV1 = {
   secret_access_key: string;
   allow_insecure_http_for_test?: boolean;
   clock?: () => Date;
+  clock_regression_max_wait_ms?: number;
+  clock_regression_poll_ms?: number;
+  clock_regression_wait?: (milliseconds: number) => Promise<void>;
+  monotonic_now_ms?: () => number;
 };
 
 type SignedResponseV1 = {
@@ -128,6 +134,10 @@ export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
   private readonly accessKeyId: string;
   private readonly secretAccessKey: string;
   private readonly clock: () => Date;
+  private readonly clockRegressionMaxWaitMs: number;
+  private readonly clockRegressionPollMs: number;
+  private readonly clockRegressionWait: (milliseconds: number) => Promise<void>;
+  private readonly monotonicNowMs: () => number;
 
   constructor(config: S3CompatiblePrivateRawRetentionConfigV1) {
     this.endpoint = new URL(requiredTextV1(config.endpoint, "EA5C1_S3_ENDPOINT_REQUIRED"));
@@ -143,6 +153,70 @@ export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
     this.accessKeyId = requiredTextV1(config.access_key_id, "EA5C1_S3_ACCESS_KEY_REQUIRED");
     this.secretAccessKey = requiredTextV1(config.secret_access_key, "EA5C1_S3_SECRET_KEY_REQUIRED");
     this.clock = config.clock ?? (() => new Date());
+
+    const maxWaitMs = config.clock_regression_max_wait_ms ?? 15_000;
+    const pollMs = config.clock_regression_poll_ms ?? 250;
+    if (!Number.isSafeInteger(maxWaitMs) || maxWaitMs < 1 || maxWaitMs > 60_000) {
+      throw new Error("EA5C1_CLOCK_REGRESSION_MAX_WAIT_INVALID");
+    }
+    if (!Number.isSafeInteger(pollMs) || pollMs < 1 || pollMs > maxWaitMs) {
+      throw new Error("EA5C1_CLOCK_REGRESSION_POLL_INVALID");
+    }
+    this.clockRegressionMaxWaitMs = maxWaitMs;
+    this.clockRegressionPollMs = pollMs;
+    this.clockRegressionWait = config.clock_regression_wait ?? (async (milliseconds) => {
+      await waitTimeoutV1(milliseconds);
+    });
+    this.monotonicNowMs = config.monotonic_now_ms ?? (() => performance.now());
+  }
+
+  private async causalRetentionVerificationTimeV1(input: {
+    retrieved_at: string;
+    source_family: string;
+    raw_sha256: string;
+  }): Promise<string> {
+    const retrievedAt = canonicalIsoV1(input.retrieved_at, "EA5C1_RETRIEVED_AT_INVALID");
+    const retrievedMs = Date.parse(retrievedAt);
+    const sourceFamily = requiredTextV1(input.source_family, "EA5C1_SOURCE_FAMILY_REQUIRED")
+      .replace(/[^A-Za-z0-9_.-]/g, "_")
+      .slice(0, 64);
+    rawDigestHexV1(input.raw_sha256);
+
+    const startedMonotonic = this.monotonicNowMs();
+    if (!Number.isFinite(startedMonotonic)) {
+      throw new Error("EA5C1_RETENTION_MONOTONIC_CLOCK_INVALID");
+    }
+
+    while (true) {
+      const observedAt = canonicalIsoV1(
+        this.clock().toISOString(),
+        "EA5C1_RETENTION_VERIFIED_AT_INVALID",
+      );
+      const deltaMs = retrievedMs - Date.parse(observedAt);
+      if (deltaMs <= 0) return observedAt;
+
+      const nowMonotonic = this.monotonicNowMs();
+      const elapsedMs = nowMonotonic - startedMonotonic;
+      if (!Number.isFinite(nowMonotonic) || !Number.isFinite(elapsedMs) || elapsedMs < 0) {
+        throw new Error("EA5C1_RETENTION_MONOTONIC_CLOCK_INVALID");
+      }
+      if (elapsedMs >= this.clockRegressionMaxWaitMs) {
+        throw new Error(
+          "EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL"
+          + `:delta_ms=${Math.ceil(deltaMs)}`
+          + `:source_family=${sourceFamily}`
+          + `:raw_sha256=${input.raw_sha256}`,
+        );
+      }
+
+      const remainingMs = Math.max(
+        1,
+        Math.ceil(this.clockRegressionMaxWaitMs - elapsedMs),
+      );
+      await this.clockRegressionWait(
+        Math.min(this.clockRegressionPollMs, remainingMs),
+      );
+    }
   }
 
   private async requestV1(input: {
@@ -346,11 +420,11 @@ export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
         key,
         probe,
       );
-      const retentionVerifiedAt = this.clock().toISOString();
-      canonicalIsoV1(retentionVerifiedAt, "EA5C1_RETENTION_VERIFIED_AT_INVALID");
-      if (Date.parse(retentionVerifiedAt) < Date.parse(input.retrieved_at)) {
-        throw new Error("EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL");
-      }
+      const retentionVerifiedAt = await this.causalRetentionVerificationTimeV1({
+        retrieved_at: input.retrieved_at,
+        source_family: input.source_family,
+        raw_sha256: actualHash,
+      });
       return {
         retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
         retention_ref: ref,
@@ -382,11 +456,11 @@ export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
       key,
       head,
     );
-    const retentionVerifiedAt = this.clock().toISOString();
-    canonicalIsoV1(retentionVerifiedAt, "EA5C1_RETENTION_VERIFIED_AT_INVALID");
-    if (Date.parse(retentionVerifiedAt) < Date.parse(input.retrieved_at)) {
-      throw new Error("EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL");
-    }
+    const retentionVerifiedAt = await this.causalRetentionVerificationTimeV1({
+      retrieved_at: input.retrieved_at,
+      source_family: input.source_family,
+      raw_sha256: actualHash,
+    });
     return {
       retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
       retention_ref: ref,
@@ -417,11 +491,11 @@ export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
     const probe = await this.requestV1({ method: "HEAD", key, allowed_statuses: [200, 404] });
     if (probe.status === 200) {
       const retainedAt = this.verifyHeadV1({ retention_ref: ref, retained_sha256: actualHash, retained_bytes: raw.byteLength }, key, probe);
-      const retentionVerifiedAt = this.clock().toISOString();
-      canonicalIsoV1(retentionVerifiedAt, "EA5C1_RETENTION_VERIFIED_AT_INVALID");
-      if (Date.parse(retentionVerifiedAt) < Date.parse(input.retrieved_at)) {
-        throw new Error("EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL");
-      }
+      const retentionVerifiedAt = await this.causalRetentionVerificationTimeV1({
+        retrieved_at: input.retrieved_at,
+        source_family: input.source_family,
+        raw_sha256: actualHash,
+      });
       return {
         retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
         retention_ref: ref,
@@ -449,11 +523,11 @@ export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
     });
     const head = await this.requestV1({ method: "HEAD", key, allowed_statuses: [200] });
     const verifiedRetainedAt = this.verifyHeadV1({ retention_ref: ref, retained_sha256: actualHash, retained_bytes: raw.byteLength }, key, head);
-    const retentionVerifiedAt = this.clock().toISOString();
-    canonicalIsoV1(retentionVerifiedAt, "EA5C1_RETENTION_VERIFIED_AT_INVALID");
-    if (Date.parse(retentionVerifiedAt) < Date.parse(input.retrieved_at)) {
-      throw new Error("EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL");
-    }
+    const retentionVerifiedAt = await this.causalRetentionVerificationTimeV1({
+      retrieved_at: input.retrieved_at,
+      source_family: input.source_family,
+      raw_sha256: actualHash,
+    });
     return {
       retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
       retention_ref: ref,
