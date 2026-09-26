@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import {
@@ -19,7 +21,10 @@ import {
 } from "../../apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.js";
 import type {
   ExternalEvidenceDecoderPortV1,
+  ExternalEvidenceFileBackedTransportPortV1,
+  ExternalEvidenceFileDecoderPortV1,
   ExternalEvidenceTransportPortV1,
+  RawEvidenceFileRetentionPortV1,
   RawEvidenceRetentionPortV1,
 } from "../../apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.js";
 import type {
@@ -227,6 +232,116 @@ function work(order: string[]) {
   };
 }
 
+function fileBackedWork(order: string[]) {
+  const transport: ExternalEvidenceTransportPortV1 & ExternalEvidenceFileBackedTransportPortV1 = {
+    async fetchRawEvidence() {
+      throw new Error("PHASE3_FILE_BACKED_BYTE_FETCH_FORBIDDEN");
+    },
+    async fetchRawEvidenceFile(request) {
+      order.push("provider_fetch_file");
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-phase3-file-cycle-"));
+      const filePath = path.join(root, "raw.json");
+      fs.writeFileSync(filePath, RAW, { mode: 0o600 });
+      const rawSha256 = `sha256:${crypto.createHash("sha256").update(RAW).digest("hex")}`;
+      return {
+        status: 200,
+        final_locator: request.locator,
+        content_type: "application/json",
+        retrieved_at: RETRIEVED_AT,
+        available_at: RETRIEVED_AT,
+        file_path: filePath,
+        raw_sha256: rawSha256,
+        raw_bytes: RAW.byteLength,
+        cleanup() {
+          order.push("file_cleanup");
+          fs.rmSync(root, { recursive: true, force: true });
+        },
+      };
+    },
+  };
+  const decoderPort: ExternalEvidenceDecoderPortV1 & ExternalEvidenceFileDecoderPortV1 = {
+    decoder_id: "PHASE3_CYCLE_FILE_TEST_DECODER_V1",
+    decoder_version: "1",
+    async decodeRetainedEvidence() {
+      throw new Error("PHASE3_FILE_BACKED_BYTE_DECODE_FORBIDDEN");
+    },
+    async decodeRetainedEvidenceFile(input) {
+      order.push("retained_decode_file");
+      assert.equal(fs.existsSync(input.raw_file_path), true);
+      return [{
+        role: "SOIL_MOISTURE_OBSERVATION",
+        source_record_id: "phase3-cycle-file-source-001",
+        binding_id: "PHASE3_CYCLE_BINDING_V1",
+        origin_source_kind: "QUALIFICATION_FIXTURE",
+        origin_source_id: "PHASE3_TEST_PROVIDER:FILE",
+        epistemic_class: "OBSERVED",
+        available_to_runtime_at: RETRIEVED_AT,
+        role_time: {
+          observed_at: "2026-08-27T01:55:00.000Z",
+          ingested_at: DECODED_AT,
+        },
+        quality: { status: "PASS" },
+        source_payload: { fixture: true, file_backed: true },
+        canonical_payload: { value: 0.25 },
+        source_unit: "fraction",
+        canonical_unit: "fraction",
+        conversion_rule: {
+          conversion_rule_id: "IDENTITY_PHASE3_FILE_TEST_V1",
+          conversion_rule_version: "1",
+          authority_ref: "PHASE3_QUALIFICATION_ONLY",
+        },
+        source_binding_version: 1,
+        limitations: ["QUALIFICATION_FIXTURE_ONLY"],
+      }];
+    },
+  };
+  return {
+    work_item_id: "phase3-file-cycle",
+    dataset_id: "phase3_cycle_file_qualification_v1",
+    file_backed: true,
+    request: {
+      request_id: "phase3-cycle-file-request-001",
+      provider_id: "PHASE3_TEST_PROVIDER",
+      source_family: "PHASE3_TEST_FILE_SOURCE",
+      locator: "https://example.invalid/phase3-cycle-file",
+      allowed_final_hosts: ["example.invalid"],
+      use_policy_ref: "PHASE3_QUALIFICATION_ONLY",
+      requested_at: REQUESTED_AT,
+      expected_content_type_prefixes: ["application/json"],
+      limitations: ["QUALIFICATION_FIXTURE_ONLY"],
+    },
+    transport,
+    decoder: decoderPort,
+  };
+}
+
+function fileRetention(order: string[]): RawEvidenceRetentionPortV1 & RawEvidenceFileRetentionPortV1 {
+  return {
+    async retainRawEvidence() {
+      throw new Error("PHASE3_FILE_BACKED_BYTE_RETENTION_FORBIDDEN");
+    },
+    async retainRawEvidenceFile(input) {
+      order.push("raw_retention_file");
+      assert.equal(fs.existsSync(input.file_path), true);
+      const bytes = fs.readFileSync(input.file_path);
+      assert.equal(bytes.byteLength, input.raw_bytes);
+      assert.equal(
+        `sha256:${crypto.createHash("sha256").update(bytes).digest("hex")}`,
+        input.raw_sha256,
+      );
+      return {
+        retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+        retention_ref: `s3-private://phase3-cycle/${input.raw_sha256.slice("sha256:".length)}`,
+        retained_sha256: input.raw_sha256,
+        retained_bytes: input.raw_bytes,
+        retained_at: RETAINED_AT,
+        retention_verified_at: RETAINED_AT,
+        externally_publishable: false,
+      };
+    },
+  };
+}
+
 async function main(): Promise<void> {
   const order: string[] = [];
   const service = new EvidenceRuntimeCycleServiceV1({
@@ -268,6 +383,40 @@ async function main(): Promise<void> {
     "raw_retention",
     "retained_decode",
     "canonicalization_completion_clock",
+    "governed_commit_returned",
+    "fresh_post_commit_readback",
+    "durable_supply_cursor_advance",
+  ]);
+
+  const fileOrder: string[] = [];
+  const fileService = new EvidenceRuntimeCycleServiceV1({
+    lease: leasePort(fileOrder),
+    retention: fileRetention(fileOrder),
+    committed_ingress_factory: committedIngressFactory(fileOrder),
+    visibility: visibility(fileOrder),
+    cursor_factory: cursorFactory(fileOrder),
+    completion_clock: () => {
+      fileOrder.push("canonicalization_completion_clock");
+      return CANONICALIZED_AT;
+    },
+  });
+  const fileResult = await fileService.executeCycle({
+    scope: SCOPE,
+    lease_owner: "evidence-host-A",
+    lease_duration_seconds: 300,
+    work_items: [fileBackedWork(fileOrder)],
+  });
+  assert.equal(fileResult.status, "COMPLETED");
+  assert.deepEqual(fileOrder, [
+    "lease_acquire",
+    "lease_renew",
+    "ingress_bound_to_lease",
+    "cursor_bound_to_lease",
+    "provider_fetch_file",
+    "raw_retention_file",
+    "retained_decode_file",
+    "canonicalization_completion_clock",
+    "file_cleanup",
     "governed_commit_returned",
     "fresh_post_commit_readback",
     "durable_supply_cursor_advance",
@@ -316,6 +465,9 @@ async function main(): Promise<void> {
     provider_attempt_fence_after_lease_before_provider: true,
     provider_not_due_zero_provider_request: true,
     raw_retention_before_decode: true,
+    file_backed_retention_before_decode: true,
+    file_backed_cleanup_after_decode_before_commit: true,
+    file_backed_byte_path_forbidden: true,
     governed_commit_before_visibility: true,
     post_commit_visibility_before_cursor: true,
     lease_contention_provider_request_count: 0,

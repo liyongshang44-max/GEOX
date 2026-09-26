@@ -36,9 +36,17 @@ export type EvidenceRuntimeHostHealthEventV1 = {
   consecutive_failure_count: number;
   attempt_kind?: EvidenceRuntimeHostAttemptResultV1["attempt_kind"];
   failure_class?: EvidenceRuntimeHostFailureClassV1;
+  failure_stage?: "MEMBER_FETCH" | "HOST_COORDINATION";
+  failure_token?: string;
   error_name?: string;
   error_code?: string;
-  error_token?: string;
+  member_kind?:
+    | "GFS_DIRECTORY_LISTING"
+    | "GFS_PGRB2_FILTER_RESPONSE"
+    | "GFS_SFLUX_IDX"
+    | "GFS_SFLUX_EXACT_GRIB_MESSAGE";
+  lead?: number;
+  local_retry_ordinal?: number;
   detail:
     | "HOST_START"
     | "ATTEMPT_IN_PROGRESS"
@@ -119,32 +127,87 @@ function isNotDuePlanV1(
 function sanitizedFailureEvidenceV1(
   error: unknown,
   classification: EvidenceRuntimeHostFailureClassV1,
-  attemptKind: EvidenceRuntimeHostAttemptResultV1["attempt_kind"],
+  attemptKind?: EvidenceRuntimeHostAttemptResultV1["attempt_kind"],
+  stageOverride?: EvidenceRuntimeHostHealthEventV1["failure_stage"],
 ): Pick<
   EvidenceRuntimeHostHealthEventV1,
-  "attempt_kind" | "failure_class" | "error_name" | "error_code" | "error_token"
+  | "attempt_kind"
+  | "failure_class"
+  | "failure_stage"
+  | "failure_token"
+  | "error_name"
+  | "error_code"
+  | "member_kind"
+  | "lead"
+  | "local_retry_ordinal"
 > {
   const record = typeof error === "object" && error !== null
-    ? error as { name?: unknown; code?: unknown; diagnostic_token?: unknown; message?: unknown }
+    ? error as {
+        name?: unknown;
+        code?: unknown;
+        diagnostic_token?: unknown;
+        failure_stage?: unknown;
+        failure_token?: unknown;
+        member_kind?: unknown;
+        lead?: unknown;
+        local_retry_ordinal?: unknown;
+        message?: unknown;
+      }
     : {};
   const name = typeof record.name === "string" && /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(record.name)
     ? record.name
     : "Error";
   const codeRaw = typeof record.code === "string" ? record.code : "";
   const code = /^[A-Z0-9_.-]{1,96}$/.test(codeRaw) ? codeRaw : undefined;
-  const diagnosticRaw = typeof record.diagnostic_token === "string" ? record.diagnostic_token : "";
+  const failureTokenRaw =
+    typeof record.failure_token === "string" ? record.failure_token : "";
+  const diagnosticRaw =
+    typeof record.diagnostic_token === "string" ? record.diagnostic_token : "";
   const message = typeof record.message === "string" ? record.message : "";
   const prefix = message.split(":", 1)[0] ?? "";
-  const tokenCandidate = diagnosticRaw || prefix;
+  const tokenCandidate = failureTokenRaw || diagnosticRaw || prefix;
   const token = /^[A-Z0-9_][A-Z0-9_.-]{0,127}$/.test(tokenCandidate)
     ? tokenCandidate
     : "UNCLASSIFIED_ERROR";
+  const failureStage =
+    stageOverride
+    ?? (record.failure_stage === "MEMBER_FETCH" ? "MEMBER_FETCH" : undefined);
+  const memberKinds = new Set([
+    "GFS_DIRECTORY_LISTING",
+    "GFS_PGRB2_FILTER_RESPONSE",
+    "GFS_SFLUX_IDX",
+    "GFS_SFLUX_EXACT_GRIB_MESSAGE",
+  ]);
+  const memberKind =
+    typeof record.member_kind === "string" && memberKinds.has(record.member_kind)
+      ? record.member_kind as EvidenceRuntimeHostHealthEventV1["member_kind"]
+      : undefined;
+  const lead =
+    typeof record.lead === "number"
+    && Number.isInteger(record.lead)
+    && record.lead >= 0
+    && record.lead <= 120
+      ? record.lead
+      : undefined;
+  const localRetryOrdinal =
+    typeof record.local_retry_ordinal === "number"
+    && Number.isInteger(record.local_retry_ordinal)
+    && record.local_retry_ordinal >= 0
+    && record.local_retry_ordinal <= 1
+      ? record.local_retry_ordinal
+      : undefined;
   return {
-    attempt_kind: attemptKind,
+    ...(attemptKind ? { attempt_kind: attemptKind } : {}),
     failure_class: classification,
+    ...(failureStage ? { failure_stage: failureStage } : {}),
+    failure_token: token,
     error_name: name,
     ...(code ? { error_code: code } : {}),
-    error_token: token,
+    ...(memberKind ? { member_kind: memberKind } : {}),
+    ...(lead !== undefined ? { lead } : {}),
+    ...(localRetryOrdinal !== undefined
+      ? { local_retry_ordinal: localRetryOrdinal }
+      : {}),
   };
 }
 
@@ -264,42 +327,104 @@ export class EvidenceRuntimeHostV1 {
         });
       }
 
-      if (ownerClaim) {
-        ownerClaim = await this.deps.lease.renewLease({
-          claim: ownerClaim,
-          lease_duration_seconds: input.lease_duration_seconds,
+      let plan: EvidenceRuntimeHostAttemptPlanV1 | EvidenceRuntimeHostNotDueV1 | null;
+      try {
+        if (ownerClaim) {
+          ownerClaim = await this.deps.lease.renewLease({
+            claim: ownerClaim,
+            lease_duration_seconds: input.lease_duration_seconds,
+          });
+        } else {
+          ownerClaim = await this.deps.lease.acquireLease({
+            scope: input.scope,
+            lease_owner: input.lease_owner,
+            lease_duration_seconds: input.lease_duration_seconds,
+          });
+          if (!ownerClaim) {
+            standbyCycles += 1;
+            consecutiveFailures = 0;
+            await this.healthV1({
+              status: "STANDBY",
+              cycle_attempt: cycleAttempt,
+              successful_cycle_count: successfulCycles,
+              consecutive_failure_count: consecutiveFailures,
+              detail: "LEASE_HELD_BY_OTHER_OWNER",
+            });
+            await this.deps.wait.waitAfterAttempt({
+              reason: "LEASE_STANDBY",
+              cycle_attempt: cycleAttempt,
+              consecutive_failure_count: consecutiveFailures,
+            });
+            continue;
+          }
+        }
+
+        plan = await this.deps.planner.nextAttemptPlan({
+          cycle_attempt: cycleAttempt,
+          successful_cycle_count: successfulCycles,
+          consecutive_failure_count: consecutiveFailures,
+          previous_result: previousResult,
         });
-      } else {
-        ownerClaim = await this.deps.lease.acquireLease({
-          scope: input.scope,
-          lease_owner: input.lease_owner,
-          lease_duration_seconds: input.lease_duration_seconds,
-        });
-        if (!ownerClaim) {
-          standbyCycles += 1;
-          consecutiveFailures = 0;
+      } catch (error) {
+        const classification = this.deps.failure_classifier.classify(error);
+        if (classification === "FATAL") {
+          consecutiveFailures += 1;
           await this.healthV1({
-            status: "STANDBY",
+            status: "DEGRADED",
             cycle_attempt: cycleAttempt,
             successful_cycle_count: successfulCycles,
             consecutive_failure_count: consecutiveFailures,
-            detail: "LEASE_HELD_BY_OTHER_OWNER",
+            detail: "FATAL_ATTEMPT_FAILURE",
+            ...sanitizedFailureEvidenceV1(
+              error,
+              classification,
+              undefined,
+              "HOST_COORDINATION",
+            ),
           });
-          await this.deps.wait.waitAfterAttempt({
-            reason: "LEASE_STANDBY",
-            cycle_attempt: cycleAttempt,
-            consecutive_failure_count: consecutiveFailures,
-          });
-          continue;
+          throw error;
         }
-      }
+        if (classification !== "RETRYABLE") {
+          throw new Error("PHASE3_EVIDENCE_HOST_FAILURE_CLASS_INVALID");
+        }
 
-      const plan = await this.deps.planner.nextAttemptPlan({
-        cycle_attempt: cycleAttempt,
-        successful_cycle_count: successfulCycles,
-        consecutive_failure_count: consecutiveFailures,
-        previous_result: previousResult,
-      });
+        // A failed DB coordination call makes the local claim uncertain. Never
+        // continue using it. The next loop reacquires through the durable lease:
+        // same-owner/live keeps the fence; expired ownership advances the fence.
+        const uncertainClaim = ownerClaim;
+        const priorResult = previousResult;
+        ownerClaim = null;
+        if (
+          uncertainClaim
+          && priorResult?.lease_claim
+          && priorResult.lease_claim.lease_owner === uncertainClaim.lease_owner
+          && priorResult.lease_claim.fencing_token === uncertainClaim.fencing_token
+        ) {
+          previousResult = { ...priorResult, lease_claim: null };
+        }
+
+        retryableFailures += 1;
+        consecutiveFailures += 1;
+        await this.healthV1({
+          status: "DEGRADED",
+          cycle_attempt: cycleAttempt,
+          successful_cycle_count: successfulCycles,
+          consecutive_failure_count: consecutiveFailures,
+          detail: "RETRYABLE_ATTEMPT_FAILURE",
+          ...sanitizedFailureEvidenceV1(
+            error,
+            classification,
+            undefined,
+            "HOST_COORDINATION",
+          ),
+        });
+        await this.deps.wait.waitAfterAttempt({
+          reason: "RETRY_BACKOFF",
+          cycle_attempt: cycleAttempt,
+          consecutive_failure_count: consecutiveFailures,
+        });
+        continue;
+      }
       if (plan === null) {
         await this.healthV1({
           status: "STOPPING",

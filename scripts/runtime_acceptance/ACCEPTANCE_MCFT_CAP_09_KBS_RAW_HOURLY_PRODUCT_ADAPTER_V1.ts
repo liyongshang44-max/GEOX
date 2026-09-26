@@ -17,6 +17,7 @@ import {
   MCFT_CAP09_KBS_RAW_HOURLY_ENDPOINT_V1,
   MCFT_CAP09_KBS_RAW_HOURLY_SCIENTIFIC_CORE_RELATIVE_PATH_V1,
 } from "../../apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.js";
+import { McftCap09ProductionEvidenceFailureClassifierV1 } from "../../apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.js";
 
 const OUT = "acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1_RESULT.json";
 const TARGET = "2026-08-13T03:00:00.000Z";
@@ -218,6 +219,57 @@ async function main(): Promise<void> {
     );
   }
 
+  const oversizedFieldRaw=Buffer.from(
+    '"'+"x".repeat(131_073)+'"\n'+HEADER+BASE_ROWS.join("\n")+"\n",
+    "utf8",
+  );
+  let oversizedFieldFailure:unknown=null;
+  try {
+    await decoder.decodeRetainedEvidence({
+      raw_bytes:oversizedFieldRaw,
+      provenance:retainedProvenance(request,oversizedFieldRaw),
+    });
+  } catch (error) {
+    oversizedFieldFailure=error;
+  }
+  assert(oversizedFieldFailure instanceof Error,"KBS_OVERSIZED_FIELD_FAILURE_REQUIRED");
+  const oversizedRecord=oversizedFieldFailure as Error & {
+    code?:unknown;
+    diagnostic_token?:unknown;
+    failure_token?:unknown;
+  };
+  assert.equal(oversizedRecord.name,"KbsRawHourlyScientificSubprocessError");
+  assert.equal(oversizedRecord.code,"MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_FAILED");
+  assert.equal(oversizedRecord.diagnostic_token,"MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE");
+  assert.equal(oversizedRecord.failure_token,"MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE");
+
+  const evidenceFailureClassifier=new McftCap09ProductionEvidenceFailureClassifierV1();
+  assert.equal(
+    evidenceFailureClassifier.classify(oversizedFieldFailure),
+    "RETRYABLE",
+    "KBS_OVERSIZED_FIELD_PROVIDER_PAYLOAD_SHAPE_MUST_BE_RETRYABLE",
+  );
+
+  let missingExactTargetFailure:unknown=null;
+  try {
+    const missingDecoder=new KbsRawHourlyExactIntervalDecoderV1(TARGET,{
+      clock:()=>new Date(DECODED_AT),
+    });
+    const missingRaw=csv([BASE_ROWS[0],BASE_ROWS[2]]);
+    await missingDecoder.decodeRetainedEvidence({
+      raw_bytes:missingRaw,
+      provenance:retainedProvenance(request,missingRaw),
+    });
+  } catch (error) {
+    missingExactTargetFailure=error;
+  }
+  assert(missingExactTargetFailure instanceof Error,"KBS_MISSING_TARGET_FAILURE_REQUIRED");
+  assert.equal(
+    evidenceFailureClassifier.classify(missingExactTargetFailure),
+    "FATAL",
+    "KBS_SCIENTIFIC_SEMANTIC_FAILURE_MUST_REMAIN_FATAL",
+  );
+
   const providerCountBeforeMismatches = transport.provider_request_count;
   await expectRejectContains(
     () => transport.fetchRawEvidence({ ...request, locator: `${request.locator}?drift=1` }),
@@ -304,6 +356,9 @@ async function main(): Promise<void> {
     raw_payload_embedded: false,
     positive_mock_fetch_count: positiveMockFetchCount,
     final_host_fault_mock_fetch_count: finalHostFaultFetchCount,
+    oversized_csv_field_has_stable_failure_token: true,
+    oversized_csv_field_is_retryable_provider_payload_shape_anomaly: true,
+    other_kbs_scientific_semantic_failure_remains_fatal: true,
     external_network_request_count: 0,
     database_write_count: 0,
     runtime_tick_cursor_mutation: false,

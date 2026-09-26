@@ -12,8 +12,12 @@ import path from "node:path";
 
 import {
   runMcftCap09EvidenceRuntimeProcessV1,
+  runMcftCap09ProductionEvidenceRuntimeV1,
   readMcftCap09EvidenceRuntimeProcessConfigV1,
 } from "../mcft_cap09_evidence_runtime_process_v1.js";
+import {
+  MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1,
+} from "../../runtime/mcft_cap09_production_runtime_start_authority_v1.js";
 import {
   MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
   MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
@@ -479,11 +483,104 @@ implements Phase5ControlledEvidenceFixturePortV1 {
   }
 }
 
+export const MCFT_CAP09_PHASE5_EVIDENCE_ACCELERATED_RUN_CLASS_V1 =
+  "ACCELERATED_24T" as const;
+export const MCFT_CAP09_PHASE5_EVIDENCE_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1 =
+  "REAL_CLOCK_REHEARSAL" as const;
+
+export function buildPhase5EvidenceRealClockRuntimeStartAuthorityV1(input: {
+  env: EnvironmentV1;
+  scope: EvidenceRuntimeScopeV1;
+}) {
+  const subject = requiredEnvV1(input.env, "GEOX_DEPLOYMENT_SUBJECT_COMMIT");
+  if (!/^[0-9a-f]{40}$/.test(subject)) {
+    throw new Error("PHASE5_EVIDENCE_REAL_CLOCK_SUBJECT_INVALID");
+  }
+  const formalA0 = canonicalHourV1(
+    requiredEnvV1(input.env, "GEOX_MCFT_CAP09_PHASE5_A0"),
+    "PHASE5_EVIDENCE_REAL_CLOCK_A0_INVALID",
+  );
+  const activationFence = canonicalIsoV1(
+    requiredEnvV1(
+      input.env,
+      "GEOX_MCFT_CAP09_PHASE5_REHEARSAL_ACTIVATION_FENCE",
+    ),
+    "PHASE5_EVIDENCE_REAL_CLOCK_ACTIVATION_FENCE_INVALID",
+  );
+  if (Date.parse(activationFence) >= Date.parse(formalA0)) {
+    throw new Error("PHASE5_EVIDENCE_REAL_CLOCK_FENCE_MUST_PRECEDE_A0");
+  }
+  return {
+    schema_version:
+      "geox_mcft_cap09_production_runtime_start_authority_instance_v1",
+    authority_id:
+      "GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-AUTHORITY-INSTANCE-V1",
+    status: "AUTHORIZED",
+    armed: true,
+    authority_class: MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1,
+    authority_ref:
+      "qualification://mcft-cap09/phase5/real-clock-rehearsal/evidence-runtime-start-v1",
+    deployment_subject_sha: subject,
+    scope: input.scope,
+    activation_fence_time: activationFence,
+    formal_a0_authority_ref:
+      "qualification://mcft-cap09/phase5/real-clock-rehearsal/a0-clock-v1",
+    formal_a0_authority_sha256: "sha256:" + "a".repeat(64),
+    live_activation_authority_ref:
+      "qualification://mcft-cap09/phase5/real-clock-rehearsal/live-evidence-v1",
+    live_activation_authority_sha256: "sha256:" + "b".repeat(64),
+    current_crop_authority_ref:
+      "qualification://mcft-cap09/phase5/real-clock-rehearsal/not-consumed-by-evidence-v1",
+    current_crop_authority_sha256: "sha256:" + "c".repeat(64),
+    biological_stage_architecture_effectiveness_ref:
+      "qualification://mcft-cap09/phase5/real-clock-rehearsal/not-consumed-by-evidence-v1",
+    biological_stage_architecture_effectiveness_sha256:
+      "sha256:" + "d".repeat(64),
+    formal_a0_logical_time: formalA0,
+    runtime_process_start_authorized: true,
+    evidence_runtime_start_authorized: true,
+    twin_runtime_start_authorized: false,
+    production_owner_activation_authorized: false,
+    formal_v5_arm_authorized: false,
+    a0_authorized: false,
+    o00_authorized: false,
+  } as const;
+}
+
 export async function runMcftCap09Phase5EvidenceRuntimeQualificationV1(input?: {
   env?: EnvironmentV1;
 }): Promise<void> {
   const env = input?.env ?? process.env;
   const processConfig = readMcftCap09EvidenceRuntimeProcessConfigV1(env);
+  const runClass = String(
+    env.GEOX_MCFT_CAP09_PHASE5_RUN_CLASS
+      ?? MCFT_CAP09_PHASE5_EVIDENCE_ACCELERATED_RUN_CLASS_V1,
+  ).trim();
+
+  if (runClass === MCFT_CAP09_PHASE5_EVIDENCE_REAL_CLOCK_REHEARSAL_RUN_CLASS_V1) {
+    const runtimeStartAuthority =
+      buildPhase5EvidenceRealClockRuntimeStartAuthorityV1({
+        env,
+        scope: processConfig.scope,
+      });
+    await runMcftCap09ProductionEvidenceRuntimeV1({
+      env,
+      runtime_start_authority: runtimeStartAuthority,
+      work_item_config: {
+        python_executable:
+          String(env.GEOX_MCFT_CAP09_PHASE5_PYTHON_EXECUTABLE ?? "python").trim()
+          || "python",
+        gfs_product_decoder_path:
+          String(env.GEOX_MCFT_CAP09_PHASE5_GFS_PRODUCT_DECODER_PATH ?? "").trim()
+          || undefined,
+      },
+    });
+    return;
+  }
+  if (runClass !== MCFT_CAP09_PHASE5_EVIDENCE_ACCELERATED_RUN_CLASS_V1) {
+    throw new Error("PHASE5_EVIDENCE_QUALIFICATION_RUN_CLASS_INVALID");
+  }
+
   const fixture = new FileBackedPhase5ControlledEvidenceFixtureV1({
     manifest_path: requiredEnvV1(env, "GEOX_MCFT_CAP09_PHASE5_FIXTURE_MANIFEST_PATH"),
     fixture_root: requiredEnvV1(env, "GEOX_MCFT_CAP09_PHASE5_FIXTURE_ROOT"),

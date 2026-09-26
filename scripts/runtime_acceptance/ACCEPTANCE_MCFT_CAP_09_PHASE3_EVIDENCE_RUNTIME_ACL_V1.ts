@@ -3,6 +3,39 @@ import fs from "node:fs";
 import path from "node:path";
 import { Pool, type PoolClient } from "pg";
 
+import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
+import {
+  MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+  MCFT_CAP09_EXTERNAL_FORMAL_SOIL_OBSERVATION_OPERATOR_ID_V1,
+} from "../../apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.js";
+import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
+import {
+  MCFT_CAP09_EXTERNAL_EVIDENCE_PIPELINE_VERSION_V1,
+  type CanonicalizedExternalEvidenceResultV1,
+  type VerifiedRawEvidenceProvenanceV1,
+} from "../../apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.js";
+import {
+  MCFT_CAP09_EVIDENCE_PRODUCER_LEASE_CONTRACT_ID_V1,
+  type EvidenceRuntimeScopeV1,
+} from "../../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.js";
+import {
+  PostCommitVisibleExternalFormalEvidenceIngressV1,
+} from "../../apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.js";
+import {
+  MCFT_CAP09_KBS_SOIL_DATASET_ID_V1,
+  MCFT_CAP09_KBS_SOIL_DECODER_ID_V1,
+  MCFT_CAP09_KBS_SOIL_DECODER_VERSION_V1,
+  MCFT_CAP09_KBS_SOIL_ENDPOINT_V1,
+  MCFT_CAP09_KBS_SOIL_USE_POLICY_REF_V1,
+} from "../../apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.js";
+import { PostgresEvidenceRuntimeGovernedIngressV1 } from "../../apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.js";
+import { PostgresExternalFormalEvidenceVisibilityV1 } from "../../apps/server/src/persistence/external_evidence/postgres_external_formal_evidence_visibility_v1.js";
+import {
+  PostgresEvidenceProducerLeaseV1,
+  PostgresEvidenceSupplyCursorV1,
+} from "../../apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.js";
+import type { CanonicalReplayEvidenceRecordV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
+
 const OUT = path.resolve("acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1_RESULT.json");
 const DATABASE_URL = process.env.DATABASE_URL?.trim();
 if (!DATABASE_URL) throw new Error("DATABASE_URL_REQUIRED");
@@ -88,6 +121,152 @@ function twinCanonicalEnvelope() {
   };
 }
 
+function soilRepublicationResultV1(input: {
+  observed_at: string;
+  retrieved_at: string;
+  retained_at: string;
+  raw_sha256?: string;
+  retention_ref?: string;
+  value?: number;
+}): CanonicalizedExternalEvidenceResultV1 {
+  const rawSha256 = input.raw_sha256 ?? ("sha256:" + "7".repeat(64));
+  const retentionRef = input.retention_ref
+    ?? ("s3-private://phase3-republication/mcft-cap09-formal-raw-v1/sha256/" + "7".repeat(64));
+  const value = input.value ?? 0.271;
+  const sourceRecordId = `${MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1}:${input.observed_at}`;
+  const sourcePayloadBase = {
+    provider: "KBS_LTER",
+    source_family: "CURRENT_WEATHER_VARIATE_JSON",
+    endpoint_id: 25,
+    endpoint_url: MCFT_CAP09_KBS_SOIL_ENDPOINT_V1,
+    source_version: "KBS_CURRENT_WEATHER_VARIATE_25_V1",
+    quantity_kind: "VOLUMETRIC_WATER_CONTENT",
+    unit: "fraction",
+    measurement_depth_mm: 100,
+    use_policy_ref: MCFT_CAP09_KBS_SOIL_USE_POLICY_REF_V1,
+    raw_values_embedded: false,
+  };
+  const canonicalPayload = {
+    quantity_kind: "VOLUMETRIC_WATER_CONTENT",
+    value,
+    unit: "fraction",
+    measurement_depth_mm: 100,
+    spatial_support: "NEAR_SITE_POINT_SUPPORT",
+    direct_field_equivalence: false,
+    direct_root_zone_equivalence: false,
+    root_zone_representativeness: "PARTIAL",
+    observation_operator_id: MCFT_CAP09_EXTERNAL_FORMAL_SOIL_OBSERVATION_OPERATOR_ID_V1,
+  };
+  const canonicalPayloadHash = semanticHashV1(canonicalPayload);
+  const sourceRecordHash = semanticHashV1({
+    source_record_id: sourceRecordId,
+    raw_sha256: rawSha256,
+    retention_ref: retentionRef,
+    decoder_id: MCFT_CAP09_KBS_SOIL_DECODER_ID_V1,
+    decoder_version: MCFT_CAP09_KBS_SOIL_DECODER_VERSION_V1,
+    source_payload: sourcePayloadBase,
+  });
+  const publicRawProvenance = {
+    provider_id: "KBS_LTER",
+    source_family: "CURRENT_WEATHER_VARIATE_JSON",
+    final_locator: MCFT_CAP09_KBS_SOIL_ENDPOINT_V1,
+    content_type: "application/json",
+    source_issue_time: null,
+    source_event_time: null,
+    retrieved_at: input.retrieved_at,
+    available_at: input.retrieved_at,
+    raw_sha256: rawSha256,
+    raw_bytes: 512,
+    retention_ref: retentionRef,
+    retained_at: input.retained_at,
+    use_policy_ref: MCFT_CAP09_KBS_SOIL_USE_POLICY_REF_V1,
+    decoder_id: MCFT_CAP09_KBS_SOIL_DECODER_ID_V1,
+    decoder_version: MCFT_CAP09_KBS_SOIL_DECODER_VERSION_V1,
+    raw_payload_embedded: false,
+  };
+  const record: CanonicalReplayEvidenceRecordV1 = {
+    ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
+    dataset_id: MCFT_CAP09_KBS_SOIL_DATASET_ID_V1,
+    source_record_id: sourceRecordId,
+    source_record_hash: sourceRecordHash,
+    record_type: "soil_moisture_observation_v1",
+    binding_id: MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+    origin_source_kind: "EXTERNAL_PUBLIC_RESEARCH_DATASET",
+    origin_source_id: "KBS_LTER_CURRENT_WEATHER_VARIATE_25",
+    epistemic_class: "OBSERVED",
+    available_to_runtime_at: input.retrieved_at,
+    role_time: {
+      observed_at: input.observed_at,
+      ingested_at: input.retrieved_at,
+    },
+    quality: {
+      status: "PASS",
+      continuity_window_hours: 24,
+      distinct_point_count: 48,
+      distinct_hour_bucket_count: 24,
+      span_minutes: 1435,
+      maximum_gap_minutes: 30,
+      timestamp_chain_sha256: "sha256:" + "8".repeat(64),
+      raw_value_publication_authorized: false,
+      canonical_payload_sha256: canonicalPayloadHash,
+      raw_source_sha256: rawSha256,
+      raw_retention_ref: retentionRef,
+      raw_payload_embedded: false,
+    },
+    source_payload: { ...sourcePayloadBase, raw_provenance: publicRawProvenance },
+    canonical_payload: canonicalPayload,
+    source_unit: "fraction",
+    canonical_unit: "fraction",
+    conversion_rule: {
+      conversion_rule_id: "IDENTITY_VWC_FRACTION_V1",
+      conversion_rule_version: "1",
+      id: "IDENTITY_VWC_FRACTION_V1",
+      version: "1",
+      authority_ref: MCFT_CAP09_KBS_SOIL_USE_POLICY_REF_V1,
+    },
+    execution_metadata: {
+      policy_id: "SOURCE_BINDING_CONVERSION_RULE_VERSION_FROM_BINDING_VERSION_V1",
+      source_binding_version: 1,
+      conversion_rule_version: "1",
+    },
+    limitations: [
+      "EXTERNAL_PUBLIC_RESEARCH_SCOPE",
+      "KBS_RESTRICTED_USE_POLICY",
+      "NEAR_SITE_POINT_SUPPORT",
+      "PARTIAL_ROOT_ZONE_REPRESENTATIVENESS",
+      "DIRECT_FIELD_EQUIVALENCE_FALSE",
+      "DIRECT_ROOT_ZONE_EQUIVALENCE_FALSE",
+      "NO_PUBLIC_RAW_VALUE_EMISSION",
+    ],
+  };
+  const rawProvenance: VerifiedRawEvidenceProvenanceV1 = {
+    request_id: "phase3-republication-" + input.retrieved_at,
+    provider_id: "KBS_LTER",
+    source_family: "CURRENT_WEATHER_VARIATE_JSON",
+    source_locator: MCFT_CAP09_KBS_SOIL_ENDPOINT_V1,
+    final_locator: MCFT_CAP09_KBS_SOIL_ENDPOINT_V1,
+    content_type: "application/json",
+    retrieved_at: input.retrieved_at,
+    available_at: input.retrieved_at,
+    raw_sha256: rawSha256,
+    raw_bytes: 512,
+    retention_ref: retentionRef,
+    retained_at: input.retained_at,
+    use_policy_ref: MCFT_CAP09_KBS_SOIL_USE_POLICY_REF_V1,
+  };
+  return {
+    pipeline_version: MCFT_CAP09_EXTERNAL_EVIDENCE_PIPELINE_VERSION_V1,
+    raw_provenance: rawProvenance,
+    decoder: {
+      decoder_id: MCFT_CAP09_KBS_SOIL_DECODER_ID_V1,
+      decoder_version: MCFT_CAP09_KBS_SOIL_DECODER_VERSION_V1,
+    },
+    record,
+    canonical_payload_sha256: canonicalPayloadHash,
+    record_semantic_sha256: semanticHashV1(record),
+  };
+}
+
 async function callGovernedFactFunction(
   client: PoolClient,
   input: {
@@ -161,6 +340,226 @@ async function main(): Promise<void> {
     assert.equal(proc.rows[0].prosecdef, true);
     assert.equal(proc.rows[0].owner_name, WRITER_OWNER);
     assert((proc.rows[0].proconfig ?? []).some((value) => value.replace(/\s/g, "") === "search_path=pg_catalog,public"));
+
+    // Real-clock P0 regression: repeated KBS soil polling can rediscover the exact
+    // same source observation with a later transport/ingestion time. The immutable fact
+    // must remain first-seen while the Evidence supply ledger records republication.
+    const productionScope = { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } as EvidenceRuntimeScopeV1;
+    await pool.query(
+      `DELETE FROM public.external_evidence_supply_cursor_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
+      Object.values(productionScope),
+    );
+    await pool.query(
+      `DELETE FROM public.external_evidence_supply_event_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
+      Object.values(productionScope),
+    );
+    await pool.query(
+      `DELETE FROM public.external_evidence_producer_lease_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
+      Object.values(productionScope),
+    );
+
+    const productionLeaseRepo = new PostgresEvidenceProducerLeaseV1(pool, productionScope);
+    const productionClaim = await productionLeaseRepo.acquireLease({
+      scope: productionScope,
+      lease_owner: "phase3-republication-owner",
+      lease_duration_seconds: 300,
+    });
+    assert(productionClaim, "PHASE3_REPUBLICATION_LEASE_REQUIRED");
+    assert.equal(productionClaim.lease_contract_id, MCFT_CAP09_EVIDENCE_PRODUCER_LEASE_CONTRACT_ID_V1);
+
+    let rawVerificationCount = 0;
+    const governedIngress = new PostgresEvidenceRuntimeGovernedIngressV1(
+      pool,
+      {
+        async verifyRetainedRawEvidence() {
+          rawVerificationCount += 1;
+        },
+      },
+      productionScope,
+      productionClaim,
+    );
+    const visibleIngress = new PostCommitVisibleExternalFormalEvidenceIngressV1(
+      governedIngress,
+      new PostgresExternalFormalEvidenceVisibilityV1(pool),
+      new PostgresEvidenceSupplyCursorV1(pool, productionScope, productionClaim),
+    );
+
+    const observedAt = "2026-09-22T09:30:00.000Z";
+    const firstPublicationAt = "2026-09-22T09:48:40.000Z";
+    const secondPublicationAt = "2026-09-22T09:53:40.000Z";
+    const retainedAt = "2026-09-22T09:48:41.000Z";
+    const firstPublication = soilRepublicationResultV1({
+      observed_at: observedAt,
+      retrieved_at: firstPublicationAt,
+      retained_at: retainedAt,
+    });
+    const secondPublication = soilRepublicationResultV1({
+      observed_at: observedAt,
+      retrieved_at: secondPublicationAt,
+      retained_at: retainedAt,
+    });
+
+    const firstPublicationReceipt = await visibleIngress.appendCanonicalizedExternalEvidence(firstPublication);
+    assert.equal(firstPublicationReceipt.status, "INSERTED");
+    assert.equal(firstPublicationReceipt.canonical_fact_write_count, 1);
+
+    const secondPublicationReceipt = await visibleIngress.appendCanonicalizedExternalEvidence(secondPublication);
+    assert.equal(secondPublicationReceipt.status, "EXISTING_IDEMPOTENT_SUCCESS");
+    assert.equal(secondPublicationReceipt.canonical_fact_write_count, 0);
+    assert.equal(secondPublicationReceipt.republication_reused_immutable_fact, true);
+
+    const immutable = await pool.query<{
+      n: number;
+      available_to_runtime_at: string | Date;
+      ingested_at: string | Date;
+    }>(
+      `SELECT count(*)::int AS n,
+              min(record_json#>>'{payload,available_to_runtime_at}')::timestamptz AS available_to_runtime_at,
+              min(record_json#>>'{payload,role_time,ingested_at}')::timestamptz AS ingested_at
+         FROM public.facts
+        WHERE fact_id=$1`,
+      [firstPublicationReceipt.fact_id],
+    );
+    assert.equal(immutable.rows[0].n, 1);
+    assert.equal(new Date(immutable.rows[0].available_to_runtime_at).toISOString(), firstPublicationAt);
+    assert.equal(new Date(immutable.rows[0].ingested_at).toISOString(), firstPublicationAt);
+
+    const publication = await pool.query<{
+      first_publication_available_at: string | Date;
+      last_publication_available_at: string | Date;
+      publication_count: number;
+      revision_count: number;
+    }>(
+      `SELECT first_publication_available_at,last_publication_available_at,publication_count,revision_count
+         FROM public.external_evidence_supply_event_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+          AND binding_id=$7 AND origin_source_id=$8 AND event_time=$9::timestamptz`,
+      [
+        ...Object.values(productionScope),
+        MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+        "KBS_LTER_CURRENT_WEATHER_VARIATE_25",
+        observedAt,
+      ],
+    );
+    assert.equal(publication.rows.length, 1);
+    assert.equal(new Date(publication.rows[0].first_publication_available_at).toISOString(), firstPublicationAt);
+    assert.equal(new Date(publication.rows[0].last_publication_available_at).toISOString(), secondPublicationAt);
+    assert.equal(Number(publication.rows[0].publication_count), 2);
+    assert.equal(Number(publication.rows[0].revision_count), 0);
+    assert.equal(rawVerificationCount, 2);
+
+    const revisionAvailableAt = "2026-09-22T09:54:40.000Z";
+    const revisionRawSha = "sha256:" + "9".repeat(64);
+    const revisionRetentionRef =
+      "s3-private://phase3-republication/mcft-cap09-formal-raw-v1/sha256/" + "9".repeat(64);
+    const trueRevision = soilRepublicationResultV1({
+      observed_at: observedAt,
+      retrieved_at: revisionAvailableAt,
+      retained_at: "2026-09-22T09:54:41.000Z",
+      raw_sha256: revisionRawSha,
+      retention_ref: revisionRetentionRef,
+      value: 0.299,
+    });
+    const trueRevisionReceipt = await visibleIngress.appendCanonicalizedExternalEvidence(trueRevision);
+    assert.equal(trueRevisionReceipt.status, "INSERTED");
+    assert.equal(trueRevisionReceipt.canonical_fact_write_count, 1);
+    assert.equal(trueRevisionReceipt.revision_fact_identity_used, true);
+    assert.equal(trueRevisionReceipt.base_fact_id, firstPublicationReceipt.fact_id);
+    assert.notEqual(trueRevisionReceipt.fact_id, firstPublicationReceipt.fact_id);
+
+    const afterRevision = await pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n
+         FROM public.facts
+        WHERE record_json#>>'{payload,source_record_id}'=$1`,
+      [firstPublication.record.source_record_id],
+    );
+    assert.equal(afterRevision.rows[0].n, 2);
+
+    const revisedPublication = await pool.query<{
+      fact_id: string;
+      last_publication_available_at: string | Date;
+      publication_count: number;
+      revision_count: number;
+    }>(
+      `SELECT fact_id,last_publication_available_at,publication_count,revision_count
+         FROM public.external_evidence_supply_event_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+          AND binding_id=$7 AND origin_source_id=$8 AND event_time=$9::timestamptz`,
+      [
+        ...Object.values(productionScope),
+        MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+        "KBS_LTER_CURRENT_WEATHER_VARIATE_25",
+        observedAt,
+      ],
+    );
+    assert.equal(revisedPublication.rows.length, 1);
+    assert.equal(revisedPublication.rows[0].fact_id, trueRevisionReceipt.fact_id);
+    assert.equal(
+      new Date(revisedPublication.rows[0].last_publication_available_at).toISOString(),
+      revisionAvailableAt,
+    );
+    assert.equal(Number(revisedPublication.rows[0].publication_count), 3);
+    assert.equal(Number(revisedPublication.rows[0].revision_count), 1);
+
+    const revisionRepublicationAt = "2026-09-22T09:55:40.000Z";
+    const revisionRepublication = soilRepublicationResultV1({
+      observed_at: observedAt,
+      retrieved_at: revisionRepublicationAt,
+      retained_at: "2026-09-22T09:54:41.000Z",
+      raw_sha256: revisionRawSha,
+      retention_ref: revisionRetentionRef,
+      value: 0.299,
+    });
+    const revisionRepublicationReceipt =
+      await visibleIngress.appendCanonicalizedExternalEvidence(revisionRepublication);
+    assert.equal(revisionRepublicationReceipt.status, "EXISTING_IDEMPOTENT_SUCCESS");
+    assert.equal(revisionRepublicationReceipt.canonical_fact_write_count, 0);
+    assert.equal(revisionRepublicationReceipt.revision_fact_identity_used, true);
+    assert.equal(revisionRepublicationReceipt.republication_reused_immutable_fact, true);
+    assert.equal(revisionRepublicationReceipt.fact_id, trueRevisionReceipt.fact_id);
+
+    const republishedRevision = await pool.query<{
+      publication_count: number;
+      revision_count: number;
+      last_publication_available_at: string | Date;
+    }>(
+      `SELECT publication_count,revision_count,last_publication_available_at
+         FROM public.external_evidence_supply_event_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+          AND binding_id=$7 AND origin_source_id=$8 AND event_time=$9::timestamptz`,
+      [
+        ...Object.values(productionScope),
+        MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+        "KBS_LTER_CURRENT_WEATHER_VARIATE_25",
+        observedAt,
+      ],
+    );
+    assert.equal(Number(republishedRevision.rows[0].publication_count), 4);
+    assert.equal(Number(republishedRevision.rows[0].revision_count), 1);
+    assert.equal(
+      new Date(republishedRevision.rows[0].last_publication_available_at).toISOString(),
+      revisionRepublicationAt,
+    );
+
+    // Same raw/source identity cannot silently produce a different canonical observation.
+    // That remains an exact fact-identity conflict and must fail closed.
+    const impossibleSameRawRevision = soilRepublicationResultV1({
+      observed_at: observedAt,
+      retrieved_at: "2026-09-22T09:56:40.000Z",
+      retained_at: "2026-09-22T09:54:41.000Z",
+      raw_sha256: revisionRawSha,
+      retention_ref: revisionRetentionRef,
+      value: 0.333,
+    });
+    await assert.rejects(
+      () => visibleIngress.appendCanonicalizedExternalEvidence(impossibleSameRawRevision),
+      /PHASE3_EVIDENCE_DB_INGRESS_FACT_IDENTITY_CONFLICT/,
+    );
+
+    await productionLeaseRepo.releaseLease({ claim: productionClaim });
 
     // Direct arbitrary facts INSERT is denied at the database boundary.
     await expectDenied(
@@ -377,6 +776,12 @@ async function main(): Promise<void> {
       stale_owner_rejected_before_fact_insert: true,
       stale_owner_fact_count: 0,
       current_owner_external_evidence_insert_allowed: true,
+      same_semantic_republication_reuses_immutable_fact: true,
+      republication_advances_supply_publication_ledger: true,
+      later_semantic_revision_gets_distinct_deterministic_fact_id: true,
+      revision_advances_same_event_time_ledger: true,
+      repeated_same_revision_is_idempotent_publication: true,
+      same_raw_identity_canonical_divergence_remains_fail_closed: true,
       security_definer_owner_no_login: true,
       security_definer_fixed_search_path: true,
       exact_table_grants: actual,

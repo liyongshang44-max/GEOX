@@ -10,7 +10,10 @@ import {
 } from "../../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.js";
 import {
   createMcftCap09ProcessStopV1,
+  installMcftCap09RuntimePoolIdleErrorGuardV1,
+  type McftCap09RuntimePoolIdleErrorEventV1,
   mcftCap09EvidenceLeaseKeepaliveIntervalMsV1,
+  McftCap09ProductionEvidenceFailureClassifierV1,
   McftCap09ProductionTwinFailureClassifierV1,
   MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_ID_V1,
 } from "../../apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.js";
@@ -41,11 +44,104 @@ class FakeProcessSignalsV1 extends EventEmitter {
   }
 }
 
+class FakeRuntimePoolV1 extends EventEmitter {
+  off(event: string, listener: (...args: unknown[]) => void): this {
+    return super.off(event, listener);
+  }
+}
+
 function digestFile(file: string): string {
   return "sha256:" + crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
 
 function main(): void {
+  const poolEvents: McftCap09RuntimePoolIdleErrorEventV1[] = [];
+  const fakeTwinPool = new FakeRuntimePoolV1();
+  const twinPoolGuard = installMcftCap09RuntimePoolIdleErrorGuardV1({
+    pool: fakeTwinPool as never,
+    runtime_role: "TWIN_RUNTIME",
+    failure_classifier: new McftCap09ProductionTwinFailureClassifierV1(),
+    event_sink: (event) => poolEvents.push(structuredClone(event)),
+  });
+  const transientRecovery = Object.assign(
+    new Error("the database system is in recovery mode"),
+    { code: "57P03" },
+  );
+  assert.doesNotThrow(() => {
+    fakeTwinPool.emit("error", transientRecovery, {
+      secretKey: 472317303,
+      password: "must-not-leak",
+    });
+  });
+  assert.equal(poolEvents.length, 1);
+  assert.equal(poolEvents[0]?.runtime_role, "TWIN_RUNTIME");
+  assert.equal(poolEvents[0]?.failure_class, "RETRYABLE");
+  assert.equal(poolEvents[0]?.failure_token, "57P03");
+  assert.equal(JSON.stringify(poolEvents).includes("secretKey"), false);
+  assert.equal(JSON.stringify(poolEvents).includes("must-not-leak"), false);
+
+  assert.throws(
+    () => fakeTwinPool.emit(
+      "error",
+      new Error("PHASE5_NON_TRANSIENT_IDLE_POOL_FATAL"),
+    ),
+    /PHASE5_NON_TRANSIENT_IDLE_POOL_FATAL/,
+  );
+  assert.equal(poolEvents.at(-1)?.failure_class, "FATAL");
+  twinPoolGuard.dispose();
+  assert.equal(fakeTwinPool.listenerCount("error"), 0);
+
+  const fakeEvidencePool = new FakeRuntimePoolV1();
+  const evidenceEvents: McftCap09RuntimePoolIdleErrorEventV1[] = [];
+  const evidencePoolGuard = installMcftCap09RuntimePoolIdleErrorGuardV1({
+    pool: fakeEvidencePool as never,
+    runtime_role: "EVIDENCE_RUNTIME",
+    failure_classifier: new McftCap09ProductionEvidenceFailureClassifierV1(),
+    event_sink: (event) => evidenceEvents.push(structuredClone(event)),
+  });
+  assert.doesNotThrow(() => {
+    fakeEvidencePool.emit(
+      "error",
+      new Error("Connection terminated unexpectedly"),
+    );
+  });
+  assert.equal(evidenceEvents.length, 1);
+  assert.equal(evidenceEvents[0]?.failure_class, "RETRYABLE");
+  assert.equal(
+    evidenceEvents[0]?.failure_token,
+    "POSTGRES_CONNECTION_TERMINATED",
+  );
+  evidencePoolGuard.dispose();
+  assert.equal(fakeEvidencePool.listenerCount("error"), 0);
+
+  const twinV1Source = fs.readFileSync(
+    path.resolve("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts"),
+    "utf8",
+  );
+  const twinV2GuardSource = fs.readFileSync(
+    path.resolve("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts"),
+    "utf8",
+  );
+  const twinQualificationSource = fs.readFileSync(
+    path.resolve("apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.ts"),
+    "utf8",
+  );
+  const evidenceProcessSource = fs.readFileSync(
+    path.resolve("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts"),
+    "utf8",
+  );
+  for (const [name, source] of [
+    ["TWIN_V1", twinV1Source],
+    ["TWIN_V2", twinV2GuardSource],
+    ["TWIN_QUALIFICATION", twinQualificationSource],
+    ["EVIDENCE", evidenceProcessSource],
+  ] as const) {
+    assert.equal(
+      source.includes("installMcftCap09RuntimePoolIdleErrorGuardV1"),
+      true,
+      `PHASE5_RUNTIME_POOL_IDLE_ERROR_GUARD_REQUIRED:${name}`,
+    );
+  }
   const twinEnv = {
     GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL:
       "postgres://twin-login:secret@postgres:5432/geox",
@@ -429,6 +525,64 @@ function main(): void {
   assert.equal(signals.listenerCount("SIGTERM"), 0);
   assert.equal(signals.listenerCount("SIGINT"), 0);
 
+  const evidenceFailureClassifier = new McftCap09ProductionEvidenceFailureClassifierV1();
+  assert.equal(
+    evidenceFailureClassifier.classify(
+      new Error(
+        "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED:BLOCKED_HISTORICAL_DRIFT:HISTORICAL_DRIFT",
+      ),
+    ),
+    "RETRYABLE",
+    "PHASE5_EVIDENCE_KBS_HISTORICAL_DRIFT_MUST_FAIL_CLOSED_WITHOUT_PROCESS_FATAL",
+  );
+  for (const message of [
+    "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED:BLOCKED_FORWARD_GAP:gap",
+    "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED:BLOCKED_AMBIGUOUS_FORWARD:ambiguous",
+  ]) {
+    assert.equal(
+      evidenceFailureClassifier.classify(new Error(message)),
+      "FATAL",
+      `PHASE5_EVIDENCE_KBS_NON_HISTORICAL_BLOCK_REMAINS_FATAL:${message}`,
+    );
+  }
+
+  const evidenceRecoveryWithCode = Object.assign(
+    new Error("the database system is in recovery mode"),
+    { code: "57P03" },
+  );
+  assert.equal(
+    evidenceFailureClassifier.classify(evidenceRecoveryWithCode),
+    "RETRYABLE",
+    "PHASE5_EVIDENCE_POSTGRES_CANNOT_CONNECT_NOW_MUST_RETRY",
+  );
+  assert.equal(
+    evidenceFailureClassifier.classify(
+      new Error("the database system is in recovery mode"),
+    ),
+    "RETRYABLE",
+    "PHASE5_EVIDENCE_POSTGRES_RECOVERY_MESSAGE_MUST_RETRY",
+  );
+
+  const undiciTerminated = new TypeError("terminated");
+  assert.equal(
+    evidenceFailureClassifier.classify(undiciTerminated),
+    "RETRYABLE",
+    "PHASE5_EVIDENCE_UNDICI_TERMINATED_FETCH_MUST_RETRY",
+  );
+  const undiciTerminatedWithCause = new TypeError("terminated", {
+    cause: Object.assign(new Error("other side closed"), { code: "UND_ERR_SOCKET" }),
+  });
+  assert.equal(
+    evidenceFailureClassifier.classify(undiciTerminatedWithCause),
+    "RETRYABLE",
+    "PHASE5_EVIDENCE_UNDICI_SOCKET_TERMINATION_MUST_RETRY",
+  );
+  assert.equal(
+    evidenceFailureClassifier.classify(new TypeError("terminated by semantic validation")),
+    "FATAL",
+    "PHASE5_EVIDENCE_NONEXACT_TERMINATED_MESSAGE_MUST_REMAIN_FATAL",
+  );
+
   const twinFailureClassifier = new McftCap09ProductionTwinFailureClassifierV1();
   for (const code of [
     "LEASE_HELD_BY_OTHER_OWNER",
@@ -443,6 +597,23 @@ function main(): void {
       `PHASE5_TWIN_COORDINATION_CONTENTION_MUST_RETRY:${code}`,
     );
   }
+  const postgresRecoveryWithCode = Object.assign(
+    new Error("the database system is in recovery mode"),
+    { code: "57P03" },
+  );
+  assert.equal(
+    twinFailureClassifier.classify(postgresRecoveryWithCode),
+    "RETRYABLE",
+    "PHASE5_TWIN_POSTGRES_CANNOT_CONNECT_NOW_MUST_RETRY",
+  );
+  assert.equal(
+    twinFailureClassifier.classify(
+      new Error("the database system is in recovery mode"),
+    ),
+    "RETRYABLE",
+    "PHASE5_TWIN_POSTGRES_RECOVERY_MESSAGE_MUST_RETRY",
+  );
+
   for (const code of [
     "STALE_FENCING_TOKEN",
     "OLDER_MISSED_SLOT_REQUIRED",
@@ -560,7 +731,24 @@ function main(): void {
     evidence_graceful_current_fence_release: true,
     evidence_inflight_lease_keepalive_interval_for_300s_ms: 60_000,
     evidence_inflight_health_keepalive_same_cadence: true,
+    evidence_kbs_historical_drift_fail_closed_nonfatal: true,
+    evidence_kbs_forward_gap_remains_fatal: true,
+    evidence_kbs_ambiguous_forward_remains_fatal: true,
+    evidence_postgres_cannot_connect_now_retryable: true,
+    evidence_postgres_recovery_message_retryable: true,
+    evidence_undici_terminated_fetch_retryable: true,
+    evidence_nonexact_terminated_message_fatal: true,
     twin_duplicate_coordination_contention_retryable: true,
+    twin_postgres_cannot_connect_now_retryable: true,
+    twin_postgres_recovery_message_retryable: true,
+    twin_idle_pool_recovery_event_retryable: true,
+    evidence_idle_pool_connection_termination_retryable: true,
+    idle_pool_client_object_not_logged: true,
+    idle_pool_nontransient_error_fail_closed: true,
+    twin_v1_pool_guard_installed: true,
+    twin_v2_pool_guard_installed: true,
+    twin_qualification_pool_guard_installed: true,
+    evidence_pool_guard_installed: true,
     twin_stale_fence_corruption_fatal: true,
     twin_scheduler_lease_standby_waits_without_fatal: true,
     stable_compiled_evidence_entrypoint: true,

@@ -34,6 +34,7 @@ import type {
 } from "./external_formal_v4_amendment19_runner_v2.js";
 import {
   createMcftCap09ProcessStopV1,
+  installMcftCap09RuntimePoolIdleErrorGuardV1,
   McftCap09ConsoleTwinHealthV1,
   McftCap09ProductionTwinFailureClassifierV1,
   McftCap09ProductionTwinWaitV1,
@@ -193,6 +194,12 @@ export async function runMcftCap09TwinRuntimeProcessV2(input?: {
   );
 
   const pool = createDatabasePool(config.database_url);
+  const failureClassifier = new McftCap09ProductionTwinFailureClassifierV1();
+  const poolErrorGuard = installMcftCap09RuntimePoolIdleErrorGuardV1({
+    pool,
+    runtime_role: "TWIN_RUNTIME",
+    failure_classifier: failureClassifier,
+  });
   const stop = createMcftCap09ProcessStopV1();
   try {
     await assertMcftCap09ServicePrincipalV1(pool, "TWIN_RUNTIME");
@@ -216,8 +223,7 @@ export async function runMcftCap09TwinRuntimeProcessV2(input?: {
       }),
       health: new McftCap09ConsoleTwinHealthV1(),
       stop,
-      failure_classifier:
-        new McftCap09ProductionTwinFailureClassifierV1(),
+      failure_classifier: failureClassifier,
     });
 
     await composition.host.run({
@@ -226,6 +232,10 @@ export async function runMcftCap09TwinRuntimeProcessV2(input?: {
     });
   } finally {
     stop.dispose();
-    await pool.end();
+    try {
+      await pool.end();
+    } finally {
+      poolErrorGuard.dispose();
+    }
   }
 }

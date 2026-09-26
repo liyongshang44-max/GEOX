@@ -27,8 +27,10 @@ import {
 import {
   collectRetainDecodeCanonicalizeExternalEvidenceV1,
   collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1,
+  collectRetainDecodeCanonicalizeFileBackedExternalEvidenceWithCompletionClockV1,
   type CanonicalizedExternalEvidenceResultV1,
   type ExternalEvidenceDecoderPortV1,
+  type ExternalEvidenceFileBackedTransportPortV1,
   type RawEvidenceRetentionPortV1,
   type VerifiedRawEvidenceProvenanceV1,
 } from "./mcft_cap09_external_collector_canonicalizer_v1.js";
@@ -294,19 +296,42 @@ export class ExternalFormalPrivateCandidateCapturePromotionV1
     const all: CanonicalizedExternalEvidenceResultV1[] = [];
     const raws: ExternalFormalCandidateRawProvenanceV1[] = [];
     for (const item of items) {
-      const results = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1(
-        {
-          dataset_id: item.dataset_id,
-          scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
-          request: item.request,
-        },
-        {
-          transport: item.transport,
-          retention: this.config.retention,
-          decoder: item.decoder,
-        },
-        () => canonicalIso(this.clock().toISOString(), "PHASE7_CAPTURE_CANONICALIZED_AT_INVALID"),
-      );
+      const completionClock = () =>
+        canonicalIso(this.clock().toISOString(), "PHASE7_CAPTURE_CANONICALIZED_AT_INVALID");
+      const results = item.file_backed === true
+        ? await collectRetainDecodeCanonicalizeFileBackedExternalEvidenceWithCompletionClockV1(
+          {
+            dataset_id: item.dataset_id,
+            scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
+            request: item.request,
+          },
+          {
+            transport: (() => {
+              const transport = item.transport as typeof item.transport
+                & Partial<ExternalEvidenceFileBackedTransportPortV1>;
+              if (typeof transport.fetchRawEvidenceFile !== "function") {
+                throw new Error("PHASE7_CAPTURE_FILE_BACKED_TRANSPORT_REQUIRED");
+              }
+              return transport as ExternalEvidenceFileBackedTransportPortV1;
+            })(),
+            retention: this.config.retention,
+            decoder: item.decoder,
+          },
+          completionClock,
+        )
+        : await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1(
+          {
+            dataset_id: item.dataset_id,
+            scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
+            request: item.request,
+          },
+          {
+            transport: item.transport,
+            retention: this.config.retention,
+            decoder: item.decoder,
+          },
+          completionClock,
+        );
       all.push(...results);
       raws.push(rawCandidate(item, results));
     }

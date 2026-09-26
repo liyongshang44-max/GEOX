@@ -745,6 +745,7 @@ function main() {
     "docker/mcft-cap09-runtime.Dockerfile",
     "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.ts",
     "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts",
+    "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v2.ts",
     "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
     "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs",

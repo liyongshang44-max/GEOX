@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23')) && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-v2-qualification-equivalence-v1' && github.event.pull_request.base.sha == '8f63c498bd48978e2dd525ad57b6b8fdb7ada560')) && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -63,6 +63,29 @@ jobs:
             test "$(git rev-parse origin/main)" = 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
 
             MODE=ROUTING_INSTALLATION_PR
+
+          elif [ '${{ github.base_ref }}' = 'main' ] && \
+               [ '${{ github.head_ref }}' = 'fix/mcft-cap09-v2-qualification-equivalence-v1' ]; then
+
+            test '${{ github.event.pull_request.base.sha }}' = '8f63c498bd48978e2dd525ad57b6b8fdb7ada560'
+            test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
+
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = '8f63c498bd48978e2dd525ad57b6b8fdb7ada560'
+
+            # This successor includes the bounded P0-E idle-pool guard hardening
+            # in the production V2 process. The process blob is exact-pinned while
+            # composition and production routing remain identical to protected main.
+            test "$(git rev-parse HEAD:apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts)" = \
+                 "f1f379a40e55d81d43c5d1b7975aded74d10092c"
+            test "$(git rev-parse origin/main:apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts)" = \
+                 "f91baec7e075f282b8e2cecaf56d4256fc728113"
+            test "$(git rev-parse HEAD:apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts)" = \
+                 "$(git rev-parse origin/main:apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts)"
+            test "$(git rev-parse HEAD:docker-compose.mcft-cap09-production.yml)" = \
+                 "$(git rev-parse origin/main:docker-compose.mcft-cap09-production.yml)"
+
+            MODE=P0E_RUNTIME_HARDENING_SUCCESSOR
           fi
 
           echo "MCFT_CAP09_REQUAL_MODE=$MODE" >> "$GITHUB_ENV"

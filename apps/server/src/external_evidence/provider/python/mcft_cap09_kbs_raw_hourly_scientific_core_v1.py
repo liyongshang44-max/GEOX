@@ -15,6 +15,10 @@ import numpy as np
 import refet
 
 
+KBS_RAW_HOURLY_MAX_CSV_FIELD_CHARS_V1 = 131_072
+csv.field_size_limit(KBS_RAW_HOURLY_MAX_CSV_FIELD_CHARS_V1)
+
+
 @dataclass(frozen=True)
 class KbsRawHourlyScientificAuthorityV1:
     historical_online_freshness_diagnostic_hours: float
@@ -87,20 +91,35 @@ def finite_v1(value) -> float | None:
         return None
 
 
+def parse_kbs_csv_row_v1(line: str, *, delimiter: str) -> list[str]:
+    try:
+        return next(csv.reader([line], delimiter=delimiter))
+    except csv.Error as exc:
+        if "field larger than field limit" in str(exc).lower():
+            raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE") from exc
+        raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_CSV_PARSE_ERROR") from exc
+
+
 def parse_kbs_raw_hourly_csv_v1(body: bytes) -> list[dict[str, str]]:
     text = body.decode("utf-8-sig")
     lines = text.splitlines()
     required = ["datetime_utc", "solrad_avg", "wind_speed", "ah", "airtmp_107_avg", "rain_mm"]
     for index, line in enumerate(lines[:80]):
         for delimiter in (",", "\t", ";", "|"):
-            cells = next(csv.reader([line], delimiter=delimiter))
+            cells = parse_kbs_csv_row_v1(line, delimiter=delimiter)
             headers = [normalize_key_v1(cell) for cell in cells]
             if all(name in headers for name in required):
                 rows: list[dict[str, str]] = []
-                for values in csv.reader(lines[index + 1 :], delimiter=delimiter):
-                    if len(values) < len(headers):
-                        continue
-                    rows.append({header: values[position] for position, header in enumerate(headers)})
+                try:
+                    parsed_rows = csv.reader(lines[index + 1 :], delimiter=delimiter)
+                    for values in parsed_rows:
+                        if len(values) < len(headers):
+                            continue
+                        rows.append({header: values[position] for position, header in enumerate(headers)})
+                except csv.Error as exc:
+                    if "field larger than field limit" in str(exc).lower():
+                        raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE") from exc
+                    raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_CSV_PARSE_ERROR") from exc
                 return rows
     raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_HEADER_NOT_FOUND")
 
@@ -139,11 +158,13 @@ def publication_event_summary_v1(event_time: str, row_hashes: list[str]) -> dict
     }
 
 
-def build_kbs_raw_hourly_publication_snapshot_inventory_v1(*, body: bytes, available_at: datetime) -> dict:
-    parsed_row_count, valid_row_count, grouped = publication_event_groups_v1(
-        body=body,
-        available_at=available_at,
-    )
+def publication_snapshot_inventory_from_groups_v1(
+    *,
+    parsed_row_count: int,
+    valid_row_count: int,
+    grouped: dict[str, list[str]],
+) -> dict:
+    require_v1(bool(grouped), "MCFT_CAP09_KBS_PUBLICATION_EVENT_INDEX_REQUIRED")
     event_times = sorted(grouped)
     latest = parse_iso_v1(event_times[-1], "MCFT_CAP09_KBS_PUBLICATION_LATEST_INVALID")
     require_v1(
@@ -172,6 +193,18 @@ def build_kbs_raw_hourly_publication_snapshot_inventory_v1(*, body: bytes, avail
     }
 
 
+def build_kbs_raw_hourly_publication_snapshot_inventory_v1(*, body: bytes, available_at: datetime) -> dict:
+    parsed_row_count, valid_row_count, grouped = publication_event_groups_v1(
+        body=body,
+        available_at=available_at,
+    )
+    return publication_snapshot_inventory_from_groups_v1(
+        parsed_row_count=parsed_row_count,
+        valid_row_count=valid_row_count,
+        grouped=grouped,
+    )
+
+
 def diff_kbs_raw_hourly_publication_forward_v1(
     *,
     body: bytes,
@@ -184,14 +217,17 @@ def diff_kbs_raw_hourly_publication_forward_v1(
         after.minute == 0 and after.second == 0 and after.microsecond == 0,
         "MCFT_CAP09_KBS_PUBLICATION_AFTER_CANONICAL_HOUR_REQUIRED",
     )
-    inventory = build_kbs_raw_hourly_publication_snapshot_inventory_v1(
+    parsed_row_count, valid_row_count, grouped = publication_event_groups_v1(
         body=body,
         available_at=available_at,
     )
+    inventory = publication_snapshot_inventory_from_groups_v1(
+        parsed_row_count=parsed_row_count,
+        valid_row_count=valid_row_count,
+        grouped=grouped,
+    )
     current_latest = parse_iso_v1(inventory["latest_event_time"], "MCFT_CAP09_KBS_PUBLICATION_CURRENT_LATEST_INVALID")
     require_v1(current_latest >= after, "MCFT_CAP09_KBS_PUBLICATION_LATEST_REGRESSION")
-
-    _, _, grouped = publication_event_groups_v1(body=body, available_at=available_at)
     forward: list[dict] = []
     for event_time in sorted(grouped):
         parsed = parse_iso_v1(event_time, "MCFT_CAP09_KBS_PUBLICATION_FORWARD_EVENT_INVALID")
@@ -238,13 +274,23 @@ def compare_kbs_raw_hourly_publication_snapshots_v1(
         "MCFT_CAP09_KBS_PUBLICATION_COMPARE_BASELINE_CANONICAL_HOUR_REQUIRED",
     )
 
-    previous_inventory = build_kbs_raw_hourly_publication_snapshot_inventory_v1(
+    previous_parsed_row_count, previous_valid_row_count, previous_grouped = publication_event_groups_v1(
         body=previous_body,
         available_at=previous_available_at,
     )
-    current_inventory = build_kbs_raw_hourly_publication_snapshot_inventory_v1(
+    current_parsed_row_count, current_valid_row_count, current_grouped = publication_event_groups_v1(
         body=current_body,
         available_at=current_available_at,
+    )
+    previous_inventory = publication_snapshot_inventory_from_groups_v1(
+        parsed_row_count=previous_parsed_row_count,
+        valid_row_count=previous_valid_row_count,
+        grouped=previous_grouped,
+    )
+    current_inventory = publication_snapshot_inventory_from_groups_v1(
+        parsed_row_count=current_parsed_row_count,
+        valid_row_count=current_valid_row_count,
+        grouped=current_grouped,
     )
     previous_latest = parse_iso_v1(
         previous_inventory["latest_event_time"],
@@ -261,15 +307,6 @@ def compare_kbs_raw_hourly_publication_snapshots_v1(
     require_v1(
         current_latest >= baseline,
         "MCFT_CAP09_KBS_PUBLICATION_COMPARE_CURRENT_LATEST_REGRESSION",
-    )
-
-    _, _, previous_grouped = publication_event_groups_v1(
-        body=previous_body,
-        available_at=previous_available_at,
-    )
-    _, _, current_grouped = publication_event_groups_v1(
-        body=current_body,
-        available_at=current_available_at,
     )
 
     historical_times = sorted({
@@ -674,6 +711,33 @@ def selftest_v1() -> None:
         "MCFT_CAP09_KBS_COMPARE_SELFTEST_DRIFT_EVENT",
     )
 
+    original_parse = parse_kbs_raw_hourly_csv_v1
+    parse_call_count = [0]
+
+    def counting_parse(body_value: bytes) -> list[dict[str, str]]:
+        parse_call_count[0] += 1
+        return original_parse(body_value)
+
+    globals()["parse_kbs_raw_hourly_csv_v1"] = counting_parse
+    try:
+        counted_compare = compare_kbs_raw_hourly_publication_snapshots_v1(
+            previous_body=body,
+            previous_available_at=available,
+            current_body=next_body,
+            current_available_at=available,
+            baseline_latest_event_time=datetime(2026, 8, 13, 4, 0, tzinfo=timezone.utc),
+        )
+        require_v1(
+            counted_compare["status"] == "FORWARD_DELTA",
+            "MCFT_CAP09_KBS_COMPARE_SELFTEST_SINGLE_SCAN_STATUS",
+        )
+        require_v1(
+            parse_call_count[0] == 2,
+            "MCFT_CAP09_KBS_COMPARE_SELFTEST_EXACT_ONE_PARSE_PER_SNAPSHOT",
+        )
+    finally:
+        globals()["parse_kbs_raw_hourly_csv_v1"] = original_parse
+
     duplicate_body = (header + "\n".join(rows + [rows[1]]) + "\n").encode("utf-8")
     try:
         decode_exact_kbs_raw_hourly_interval_v1(
@@ -702,6 +766,7 @@ def selftest_v1() -> None:
         "forward_delta_discovery": True,
         "no_change_discovery": True,
         "historical_prefix_snapshot_comparison": True,
+        "comparison_exact_one_parse_per_snapshot": True,
         "historical_revision_backfill_fail_closed": True,
         "provider_request_count": 0,
         "database_write_count": 0,

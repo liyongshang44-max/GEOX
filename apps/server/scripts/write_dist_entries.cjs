@@ -103,7 +103,7 @@ runMcftCap09Phase5TwinRuntimeQualificationV1().catch((error) => {
   },
   {
     name: path.join("qualification", "mcft_cap09_phase5_prepare_24t.js"),
-    content: `import "../apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.js";\n`,
+    content: `import "../apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v2.js";\n`,
   },
   {
     name: path.join("qualification", "mcft_cap09_phase5_verify_24t.js"),

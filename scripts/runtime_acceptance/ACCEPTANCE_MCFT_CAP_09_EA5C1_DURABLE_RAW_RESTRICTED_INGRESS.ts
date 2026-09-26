@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { Pool } from "pg";
 
 import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
@@ -101,6 +104,160 @@ async function main(): Promise<void> {
     },
   };
   const ingress = new PostgresExternalFormalEvidenceIngressV1(pool, countingVerifier);
+
+  // Real-clock regression: repeated provider polls can return byte-identical raw content.
+  // The content-addressed object must keep its original retained_at identity, while the
+  // current retain call establishes a fresh post-retrieval verification barrier.
+  const repeatBytes = Buffer.from(`EA5C1_REPEAT_RAW_${crypto.randomUUID()}\n`, "utf8");
+  const repeatDigest = sha256(repeatBytes);
+  const repeatBaseInput = {
+    retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE" as const,
+    request_id: "ea5c1-repeat-first",
+    provider_id: "KBS_LTER",
+    source_family: "RAW_HOURLY_WEATHER",
+    source_locator: "https://source.example.invalid/repeat",
+    final_locator: "https://source.example.invalid/repeat",
+    content_type: "text/csv",
+    retrieved_at: iso(Date.now() - 1_000),
+    available_at: iso(Date.now() - 1_000),
+    use_policy_ref: "GEOX-MCFT-CAP-09-AMENDMENT-05",
+    raw_sha256: repeatDigest,
+    raw_bytes: repeatBytes.byteLength,
+    bytes: repeatBytes,
+  };
+  const repeatFirst = await retention.retainRawEvidence(repeatBaseInput);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const repeatRetrievedAt = new Date().toISOString();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const repeatSecond = await retention.retainRawEvidence({
+    ...repeatBaseInput,
+    request_id: "ea5c1-repeat-second",
+    retrieved_at: repeatRetrievedAt,
+    available_at: repeatRetrievedAt,
+  });
+  assert.equal(repeatSecond.retention_ref, repeatFirst.retention_ref);
+  assert.equal(repeatSecond.retained_at, repeatFirst.retained_at);
+  assert.ok(repeatSecond.retention_verified_at);
+  assert.ok(Date.parse(repeatSecond.retention_verified_at!) >= Date.parse(repeatRetrievedAt));
+  assert.ok(Date.parse(repeatSecond.retention_verified_at!) >= Date.parse(repeatSecond.retained_at));
+  ok("byte-identical later retrieval reuses immutable raw object identity with a fresh causal verification barrier");
+
+  // A bounded host/container wall-clock regression must not mint a receipt with
+  // retention_verified_at before retrieved_at. Wait on a monotonic budget and
+  // re-observe wall time without rewriting the provider retrieval timestamp.
+  const regressionRetrievedAt = iso(Date.now() - 100);
+  const regressionRetrievedMs = Date.parse(regressionRetrievedAt);
+  const recoveringClock = [
+    regressionRetrievedMs,
+    regressionRetrievedMs - 3_000,
+    regressionRetrievedMs - 1_000,
+    regressionRetrievedMs + 10,
+  ];
+  let recoveringClockIndex = 0;
+  let recoveringMonotonicMs = 0;
+  const recoveringWaits: number[] = [];
+  const recoveringRetention = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1({
+    endpoint: S3_ENDPOINT,
+    bucket: S3_BUCKET,
+    region: "us-east-1",
+    access_key_id: S3_ACCESS_KEY,
+    secret_access_key: S3_SECRET_KEY,
+    allow_insecure_http_for_test: true,
+    clock: () => new Date(
+      recoveringClock[Math.min(recoveringClockIndex++, recoveringClock.length - 1)]!,
+    ),
+    clock_regression_max_wait_ms: 5_000,
+    clock_regression_poll_ms: 1_000,
+    clock_regression_wait: async (milliseconds) => {
+      recoveringWaits.push(milliseconds);
+      recoveringMonotonicMs += milliseconds;
+    },
+    monotonic_now_ms: () => recoveringMonotonicMs,
+  });
+  const recoveredReceipt = await recoveringRetention.retainRawEvidence({
+    ...repeatBaseInput,
+    request_id: "ea5c1-clock-regression-recovers",
+    retrieved_at: regressionRetrievedAt,
+    available_at: regressionRetrievedAt,
+  });
+  assert.equal(recoveredReceipt.retention_ref, repeatFirst.retention_ref);
+  assert.ok(recoveredReceipt.retention_verified_at);
+  assert.ok(
+    Date.parse(recoveredReceipt.retention_verified_at!) >= regressionRetrievedMs,
+  );
+  assert.deepEqual(recoveringWaits, [1_000, 1_000]);
+  ok("bounded wall-clock regression waits on a monotonic budget and preserves causal retention verification");
+
+  const persistentRetrievedAt = iso(Date.now() - 100);
+  const persistentRetrievedMs = Date.parse(persistentRetrievedAt);
+  let persistentClockReads = 0;
+  let persistentMonotonicMs = 0;
+  const persistentWaits: number[] = [];
+  const persistentRetention = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1({
+    endpoint: S3_ENDPOINT,
+    bucket: S3_BUCKET,
+    region: "us-east-1",
+    access_key_id: S3_ACCESS_KEY,
+    secret_access_key: S3_SECRET_KEY,
+    allow_insecure_http_for_test: true,
+    clock: () => new Date(
+      persistentClockReads++ === 0
+        ? persistentRetrievedMs
+        : persistentRetrievedMs - 3_000,
+    ),
+    clock_regression_max_wait_ms: 2_000,
+    clock_regression_poll_ms: 1_000,
+    clock_regression_wait: async (milliseconds) => {
+      persistentWaits.push(milliseconds);
+      persistentMonotonicMs += milliseconds;
+    },
+    monotonic_now_ms: () => persistentMonotonicMs,
+  });
+  await assert.rejects(
+    () => persistentRetention.retainRawEvidence({
+      ...repeatBaseInput,
+      request_id: "ea5c1-clock-regression-persists",
+      retrieved_at: persistentRetrievedAt,
+      available_at: persistentRetrievedAt,
+    }),
+    /EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL:delta_ms=3000:source_family=RAW_HOURLY_WEATHER:raw_sha256=sha256:[0-9a-f]{64}/,
+  );
+  assert.deepEqual(persistentWaits, [1_000, 1_000]);
+  ok("persistent wall-clock regression exhausts the bounded monotonic wait and remains fail-closed");
+
+  const fileRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-ea5c1-file-retention-"));
+  try {
+    const fileBytes = Buffer.from(`EA5C1_FILE_STREAM_${crypto.randomUUID()}\n`, "utf8");
+    const filePath = path.join(fileRoot, "raw.bin");
+    fs.writeFileSync(filePath, fileBytes, { mode: 0o600 });
+    const fileDigest = sha256(fileBytes);
+    const fileRetrievedAt = iso(Date.now() - 1_000);
+    const fileReceipt = await retention.retainRawEvidenceFile({
+      retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+      request_id: "ea5c1-file-stream",
+      provider_id: "NOAA_NCEP_GFS",
+      source_family: "GFS_RAW_BUNDLE_72H_V1",
+      source_locator: "https://source.example.invalid/gfs-file",
+      final_locator: "https://source.example.invalid/gfs-file",
+      content_type: "application/x-tar",
+      retrieved_at: fileRetrievedAt,
+      available_at: fileRetrievedAt,
+      use_policy_ref: "GEOX-MCFT-CAP-09-AMENDMENT-05",
+      raw_sha256: fileDigest,
+      raw_bytes: fileBytes.byteLength,
+      file_path: filePath,
+    });
+    assert.equal(fileReceipt.retained_sha256, fileDigest);
+    assert.equal(fileReceipt.retained_bytes, fileBytes.byteLength);
+    await retention.verifyRetainedRawEvidence({
+      retention_ref: fileReceipt.retention_ref,
+      retained_sha256: fileDigest,
+      retained_bytes: fileBytes.byteLength,
+    });
+    ok("file-backed raw retention streams a SHA-bound private object and passes durable HEAD verification");
+  } finally {
+    fs.rmSync(fileRoot, { recursive: true, force: true });
+  }
 
   const started = Date.now();
   const boundaryMs = Math.ceil((started + 1) / 3_600_000) * 3_600_000;
@@ -310,7 +467,7 @@ async function main(): Promise<void> {
   assert.equal(Number(nonEvidence.rows[0].n), 0);
   ok("EA5C1 writes no Runtime Config, A0, State, Forecast, Scenario, Recommendation, Action, or scheduler facts");
 
-  assert.equal(pass, 11);
+  assert.equal(pass, 15);
   console.log(`MCFT-CAP-09 EA5C1 Durable Raw + Restricted Evidence Ingress: ${pass} PASS, 0 FAIL`);
   await pool.end();
 }

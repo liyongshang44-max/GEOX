@@ -12,6 +12,8 @@ import { promisify } from "node:util";
 import type {
   ExternalEvidenceDecoderInputV1,
   ExternalEvidenceDecoderPortV1,
+  ExternalEvidenceFileDecoderInputV1,
+  ExternalEvidenceFileDecoderPortV1,
   GovernedDecodedEvidenceDraftV1,
 } from "../mcft_cap09_external_collector_canonicalizer_v1.js";
 
@@ -63,7 +65,8 @@ export type GfsRawBundleEvidenceDecoderConfigV1 = {
   restored_ingested_at?: string;
 };
 
-export class GfsRawBundleEvidenceDecoderV1 implements ExternalEvidenceDecoderPortV1 {
+export class GfsRawBundleEvidenceDecoderV1
+  implements ExternalEvidenceDecoderPortV1, ExternalEvidenceFileDecoderPortV1 {
   readonly decoder_id = MCFT_CAP09_GFS_RAW_BUNDLE_PRODUCT_DECODER_ID_V1;
   readonly decoder_version = MCFT_CAP09_GFS_RAW_BUNDLE_PRODUCT_DECODER_VERSION_V1;
   private readonly target: string;
@@ -84,27 +87,28 @@ export class GfsRawBundleEvidenceDecoderV1 implements ExternalEvidenceDecoderPor
       : null;
   }
 
-  async decodeRetainedEvidence(
-    input: ExternalEvidenceDecoderInputV1,
-  ): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
+  private async decodeFileV1(input: {
+    raw_file_path: string;
+    provenance: ExternalEvidenceDecoderInputV1["provenance"];
+  }): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
     const availableAt = canonicalIsoV1(
       input.provenance.available_at,
       "PHASE3_GFS_PRODUCT_DECODER_AVAILABLE_AT_INVALID",
     );
-    if (!(input.raw_bytes instanceof Uint8Array) || input.raw_bytes.byteLength <= 0) {
-      throw new Error("PHASE3_GFS_PRODUCT_DECODER_BUNDLE_BYTES_REQUIRED");
+    const stat = fs.statSync(input.raw_file_path);
+    if (!stat.isFile() || stat.size <= 0) {
+      throw new Error("PHASE3_GFS_PRODUCT_DECODER_BUNDLE_FILE_REQUIRED");
     }
-    const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-cap09-gfs-product-decode-"));
-    const bundlePath = path.join(temp, "gfs.tar");
+
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-cap09-gfs-product-output-"));
     const outputPath = path.join(temp, "gfs-drafts.json");
     try {
-      fs.writeFileSync(bundlePath, Buffer.from(input.raw_bytes), { mode: 0o600 });
       const args = [
         this.productDecoderPath,
         "decode-bundle",
         "--target", this.target,
         "--available-at", availableAt,
-        "--input", bundlePath,
+        "--input", input.raw_file_path,
         "--output", outputPath,
       ];
       if (this.normalizeEt0) args.push("--normalize-et0");
@@ -126,5 +130,30 @@ export class GfsRawBundleEvidenceDecoderV1 implements ExternalEvidenceDecoderPor
     } finally {
       fs.rmSync(temp, { recursive: true, force: true });
     }
+  }
+
+  async decodeRetainedEvidence(
+    input: ExternalEvidenceDecoderInputV1,
+  ): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
+    if (!(input.raw_bytes instanceof Uint8Array) || input.raw_bytes.byteLength <= 0) {
+      throw new Error("PHASE3_GFS_PRODUCT_DECODER_BUNDLE_BYTES_REQUIRED");
+    }
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-cap09-gfs-product-decode-"));
+    const bundlePath = path.join(temp, "gfs.tar");
+    try {
+      fs.writeFileSync(bundlePath, input.raw_bytes, { mode: 0o600 });
+      return await this.decodeFileV1({
+        raw_file_path: bundlePath,
+        provenance: input.provenance,
+      });
+    } finally {
+      fs.rmSync(temp, { recursive: true, force: true });
+    }
+  }
+
+  async decodeRetainedEvidenceFile(
+    input: ExternalEvidenceFileDecoderInputV1,
+  ): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
+    return this.decodeFileV1(input);
   }
 }

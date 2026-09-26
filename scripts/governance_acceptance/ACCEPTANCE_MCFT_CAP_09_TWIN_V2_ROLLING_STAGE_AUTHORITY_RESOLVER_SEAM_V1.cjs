@@ -233,6 +233,29 @@ function allTrue(object) {
   return Object.values(object).every((value) => value === true);
 }
 
+function qualificationOnlyDistDeltaAllowed(baseSha, headSha) {
+  if (!/^[0-9a-f]{40}$/.test(baseSha) || !/^[0-9a-f]{40}$/.test(headSha)) return false;
+  let baseDist;
+  let headDist;
+  try {
+    baseDist = git(["show", `${baseSha}:${DIST}`]);
+    headDist = git(["show", `${headSha}:${DIST}`]);
+  } catch {
+    return false;
+  }
+  const oldMapping =
+    'content: `import "../apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.js";\\n`,';
+  const newMapping =
+    'content: `import "../apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v2.js";\\n`,';
+  if (!baseDist.includes(oldMapping) || !headDist.includes(newMapping)) return false;
+  const normalized = headDist.replace(newMapping, oldMapping);
+  if (normalized !== baseDist) return false;
+  return (
+    headDist.includes("runMcftCap09TwinRuntimeProcessV2().catch") &&
+    !headDist.includes("runMcftCap09TwinRuntimeProcessV2({")
+  );
+}
+
 const currentHeadSha = git(["rev-parse", "HEAD"]);
 const explicitCurrentDeltaBaseSha = String(process.env.GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA || "");
 const qcpCurrentDeltaBaseSha = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");
@@ -273,11 +296,17 @@ const processV2 = read(PROCESS);
 const dist = read(DIST);
 const registry = readJson(REGISTRY);
 
-const forbiddenProductionSurfaceDrift = allTrue(currentDeltaBaseAssertions)
+const rawForbiddenProductionSurfaceDrift = allTrue(currentDeltaBaseAssertions)
   ? FORBIDDEN_PRODUCTION_SURFACES.filter((p) =>
       cp.spawnSync("git", ["diff", "--quiet", currentDeltaBaseSha, currentHeadSha, "--", p]).status !== 0
     )
   : [...FORBIDDEN_PRODUCTION_SURFACES];
+const qualificationOnlyDistDelta =
+  rawForbiddenProductionSurfaceDrift.includes(DIST) &&
+  qualificationOnlyDistDeltaAllowed(currentDeltaBaseSha, currentHeadSha);
+const forbiddenProductionSurfaceDrift = rawForbiddenProductionSurfaceDrift.filter(
+  (p) => !(p === DIST && qualificationOnlyDistDelta),
+);
 
 const currentSeamAssertions = evaluateCurrentSeam({
   resolver,
@@ -441,6 +470,8 @@ const proof = {
   current_delta_base_sha: currentDeltaBaseSha,
   current_delta_base_source: currentDeltaBaseSource,
   current_delta_base_assertions: currentDeltaBaseAssertions,
+  raw_forbidden_production_surface_drift_from_current_delta_base: rawForbiddenProductionSurfaceDrift,
+  qualification_only_dist_delta_admitted: qualificationOnlyDistDelta,
   forbidden_production_surface_drift_from_current_delta_base: forbiddenProductionSurfaceDrift,
 
   governed_registry_path: REGISTRY,

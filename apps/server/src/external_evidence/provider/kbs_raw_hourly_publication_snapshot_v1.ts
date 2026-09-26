@@ -10,6 +10,7 @@ import { promisify } from "node:util";
 
 import {
   MCFT_CAP09_KBS_RAW_HOURLY_SCIENTIFIC_CORE_RELATIVE_PATH_V1,
+  normalizeKbsRawHourlyScientificSubprocessErrorV1,
   type KbsRawHourlyDecoderConfigV1,
 } from "./kbs_raw_hourly_live_provider_v1.js";
 
@@ -208,11 +209,15 @@ export class KbsRawHourlyPublicationSnapshotInspectorV1 {
       if (input.command === "diff-forward") {
         args.push("--after", canonicalHourV1(input.after, "KBS_PUBLICATION_INSPECTOR_AFTER_INVALID"));
       }
-      await execFileAsync(this.pythonExecutable, args, {
-        cwd: process.cwd(),
-        maxBuffer: 4 * 1024 * 1024,
-        timeout: 120_000,
-      });
+      try {
+        await execFileAsync(this.pythonExecutable, args, {
+          cwd: process.cwd(),
+          maxBuffer: 4 * 1024 * 1024,
+          timeout: 120_000,
+        });
+      } catch (error) {
+        normalizeKbsRawHourlyScientificSubprocessErrorV1(error);
+      }
       return JSON.parse(fs.readFileSync(outPath, "utf8"));
     } finally {
       fs.rmSync(temp, { recursive: true, force: true });

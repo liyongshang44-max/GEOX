@@ -1,16 +1,40 @@
 // MCFT-CAP-09 Phase 5 qualification-only Twin clock boundary.
 //
-// The production Twin process/composition/host/runner/scheduler/persistence graph is reused.
+// The current Production V2 Twin process/composition/host/runner/scheduler/persistence graph is reused.
 // This module substitutes only the observed clock authority so O00-O23 can be exercised
 // without real elapsed waiting. It does not implement a scheduler, lease, cursor, runner,
 // evidence source, canonical tick, persistence path, or provider fallback.
+
+import crypto from "node:crypto";
+import fs from "node:fs";
 
 import {
   MCFT_CAP09_POSTGRES_TWIN_RUNTIME_DATABASE_CLOCK_ID_V1,
   type TwinRuntimeDatabaseClockPortV1,
 } from "../mcft_cap09_twin_runtime_host_v1.js";
+import { createDatabasePool } from "../../../infra/database.js";
 import {
-  runMcftCap09TwinRuntimeProcessV1,
+  assertMcftCap09ServicePrincipalV1,
+} from "../../../infra/mcft_cap09_phase5_service_principal_v1.js";
+import {
+  composeMcftCap09TwinRuntimeV2,
+} from "../mcft_cap09_twin_runtime_composition_v2.js";
+import type {
+  ExternalFormalV4Am19WindowManifestV2,
+} from "../external_formal_v4_amendment19_runner_v2.js";
+import {
+  createMcftCap09ProcessStopV1,
+  installMcftCap09RuntimePoolIdleErrorGuardV1,
+  McftCap09ConsoleTwinHealthV1,
+  McftCap09ProductionTwinFailureClassifierV1,
+  McftCap09ProductionTwinWaitV1,
+} from "../../mcft_cap09_production_process_lifecycle_v1.js";
+import {
+  loadMcftCap09ProductionRuntimeStartAuthorityV1,
+} from "../../mcft_cap09_production_runtime_start_authority_v1.js";
+import {
+  loadMcftCap09ProductionStageAuthorityMountsV1,
+  readMcftCap09TwinRuntimeProcessConfigV1,
 } from "../mcft_cap09_twin_runtime_process_v1.js";
 import {
   MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1,
@@ -40,6 +64,14 @@ function requiredEnvV1(env: EnvironmentV1, name: string): string {
   const value = String(env[name] ?? "").trim();
   if (!value) throw new Error(`PHASE5_TWIN_QUALIFICATION_ENV_REQUIRED:${name}`);
   return value;
+}
+
+function readJsonObjectV1(filePath: string, code: string): Record<string, unknown> {
+  const value = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(code);
+  }
+  return value as Record<string, unknown>;
 }
 
 function canonicalHourV1(value: string): string {
@@ -100,6 +132,8 @@ export function buildPhase5TwinQualificationRuntimeStartAuthorityV1(input: {
   qualification_ack?: string;
   rehearsal_activation_fence_time?: string;
   deployment_subject_sha: string;
+  current_crop_authority_sha256?: string;
+  biological_stage_architecture_effectiveness_sha256?: string;
   scope: {
     tenant_id: string;
     project_id: string;
@@ -163,11 +197,13 @@ export function buildPhase5TwinQualificationRuntimeStartAuthorityV1(input: {
     current_crop_authority_ref:
       "qualification://mcft-cap09/phase5/current-crop-authority-v1",
     current_crop_authority_sha256:
-      "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      input.current_crop_authority_sha256
+      ?? "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     biological_stage_architecture_effectiveness_ref:
       "qualification://mcft-cap09/phase5/biological-stage-architecture-effectiveness-v1",
     biological_stage_architecture_effectiveness_sha256:
-      "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      input.biological_stage_architecture_effectiveness_sha256
+      ?? "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     formal_a0_logical_time: formalA0,
     runtime_process_start_authorized: true,
     evidence_runtime_start_authorized: false,
@@ -204,6 +240,17 @@ export async function runMcftCap09Phase5TwinRuntimeQualificationV1(input?: {
         qualification_ack: qualificationAck!,
       })
     : null;
+  const currentCropAuthorityPath = requiredEnvV1(
+    env,
+    "GEOX_MCFT_CAP09_TWIN_RUNTIME_CURRENT_CROP_AUTHORITY_PATH",
+  );
+  const stageArchitectureEffectivenessPath = requiredEnvV1(
+    env,
+    "GEOX_MCFT_CAP09_TWIN_RUNTIME_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH",
+  );
+  const fileSha256 = (filePath: string) =>
+    "sha256:" + crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+
   const runtimeStartAuthority =
     buildPhase5TwinQualificationRuntimeStartAuthorityV1({
       formal_a0: requiredEnvV1(
@@ -220,6 +267,9 @@ export async function runMcftCap09Phase5TwinRuntimeQualificationV1(input?: {
         env,
         "GEOX_DEPLOYMENT_SUBJECT_COMMIT",
       ),
+      current_crop_authority_sha256: fileSha256(currentCropAuthorityPath),
+      biological_stage_architecture_effectiveness_sha256:
+        fileSha256(stageArchitectureEffectivenessPath),
       scope: {
         tenant_id: requiredEnvV1(env, "GEOX_MCFT_CAP09_TENANT_ID"),
         project_id: requiredEnvV1(env, "GEOX_MCFT_CAP09_PROJECT_ID"),
@@ -230,11 +280,79 @@ export async function runMcftCap09Phase5TwinRuntimeQualificationV1(input?: {
       },
     });
   const hostname = requiredEnvV1(env, "HOSTNAME");
-  await runMcftCap09TwinRuntimeProcessV1({
-    env,
-    ...(boundary ?? {}),
-    runtime_start_authority: runtimeStartAuthority,
-    qualification_lease_owner: `twin-runtime:${hostname}`,
-    qualification_run_class: runClass,
+  const leaseOwner = `twin-runtime:${hostname}`;
+  const runtimeEnv: EnvironmentV1 = {
+    ...env,
+    GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_OWNER: leaseOwner,
+  };
+  const config = readMcftCap09TwinRuntimeProcessConfigV1(runtimeEnv);
+  const manifest = readJsonObjectV1(
+    config.manifest_path,
+    "PHASE5_TWIN_V2_MANIFEST_INVALID",
+  ) as unknown as ExternalFormalV4Am19WindowManifestV2;
+  const validatedRuntimeStartAuthority =
+    loadMcftCap09ProductionRuntimeStartAuthorityV1({
+      plane: "TWIN_RUNTIME",
+      expected: {
+        deployment_subject_sha: requiredEnvV1(env, "GEOX_DEPLOYMENT_SUBJECT_COMMIT"),
+        scope: manifest.scope,
+      },
+      explicit_authority: runtimeStartAuthority,
+    });
+  const stageAuthorities = loadMcftCap09ProductionStageAuthorityMountsV1({
+    runtime_start_authority: validatedRuntimeStartAuthority,
+    current_crop_authority_path: config.current_crop_authority_path,
+    biological_stage_architecture_effectiveness_path:
+      config.biological_stage_architecture_effectiveness_path,
   });
+  const cropAuthority = readJsonObjectV1(
+    config.crop_authority_path,
+    "PHASE5_TWIN_V2_CROP_AUTHORITY_INVALID",
+  );
+  const configurationMatrix = readJsonObjectV1(
+    config.configuration_matrix_path,
+    "PHASE5_TWIN_V2_CONFIGURATION_MATRIX_INVALID",
+  );
+  const pool = createDatabasePool(config.database_url);
+  const failureClassifier = new McftCap09ProductionTwinFailureClassifierV1();
+  const poolErrorGuard = installMcftCap09RuntimePoolIdleErrorGuardV1({
+    pool,
+    runtime_role: "TWIN_RUNTIME",
+    failure_classifier: failureClassifier,
+  });
+  const stop = createMcftCap09ProcessStopV1();
+  try {
+    await assertMcftCap09ServicePrincipalV1(pool, "TWIN_RUNTIME");
+    const composition = composeMcftCap09TwinRuntimeV2({
+      pool,
+      manifest,
+      crop_authority: cropAuthority,
+      configuration_matrix: configurationMatrix,
+      current_crop_authority: stageAuthorities.current_crop_authority,
+      biological_stage_architecture_effectiveness:
+        stageAuthorities.biological_stage_architecture_effectiveness,
+      wait: new McftCap09ProductionTwinWaitV1({
+        idle_poll_ms: config.idle_poll_ms,
+        not_ready_poll_ms: config.not_ready_poll_ms,
+        terminal_poll_ms: config.terminal_poll_ms,
+        retry_base_ms: config.retry_base_ms,
+        retry_maximum_ms: config.retry_maximum_ms,
+      }),
+      health: new McftCap09ConsoleTwinHealthV1(),
+      stop,
+      failure_classifier: failureClassifier,
+      ...(boundary ?? {}),
+    });
+    await composition.host.run({
+      lease_owner: leaseOwner,
+      lease_duration_seconds: config.lease_duration_seconds,
+    });
+  } finally {
+    stop.dispose();
+    try {
+      await pool.end();
+    } finally {
+      poolErrorGuard.dispose();
+    }
+  }
 }

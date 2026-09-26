@@ -10,6 +10,7 @@ import { promisify } from "node:util";
 
 import {
   MCFT_CAP09_KBS_RAW_HOURLY_SCIENTIFIC_CORE_RELATIVE_PATH_V1,
+  normalizeKbsRawHourlyScientificSubprocessErrorV1,
   type KbsRawHourlyDecoderConfigV1,
 } from "./kbs_raw_hourly_live_provider_v1.js";
 
@@ -206,20 +207,34 @@ export class KbsRawHourlyPublicationSnapshotComparisonV1 {
     try {
       fs.writeFileSync(previousPath, Buffer.from(input.previous_raw_bytes));
       fs.writeFileSync(currentPath, Buffer.from(input.current_raw_bytes));
-      await execFileAsync(this.pythonExecutable, [
-        this.scientificCorePath,
-        "compare-snapshots",
-        "--previous-input", previousPath,
-        "--previous-available-at", previousAvailable,
-        "--current-input", currentPath,
-        "--current-available-at", currentAvailable,
-        "--baseline-latest-event-time", baseline,
-        "--output", outputPath,
-      ], {
-        cwd: process.cwd(),
-        maxBuffer: 4 * 1024 * 1024,
-        timeout: 120_000,
-      });
+      try {
+        await execFileAsync(this.pythonExecutable, [
+          this.scientificCorePath,
+          "compare-snapshots",
+          "--previous-input", previousPath,
+          "--previous-available-at", previousAvailable,
+          "--current-input", currentPath,
+          "--current-available-at", currentAvailable,
+          "--baseline-latest-event-time", baseline,
+          "--output", outputPath,
+        ], {
+          cwd: process.cwd(),
+          maxBuffer: 4 * 1024 * 1024,
+          timeout: 120_000,
+        });
+      } catch (error) {
+        const row = error && typeof error === "object"
+          ? error as { killed?: unknown; signal?: unknown; code?: unknown }
+          : {};
+        if (
+          row.killed === true
+          || row.signal === "SIGTERM"
+          || row.code === "ETIMEDOUT"
+        ) {
+          throw new Error("KBS_PUBLICATION_COMPARISON_TIMEOUT");
+        }
+        normalizeKbsRawHourlyScientificSubprocessErrorV1(error);
+      }
       return validateComparisonV1(JSON.parse(fs.readFileSync(outputPath, "utf8")), baseline);
     } finally {
       fs.rmSync(temp, { recursive: true, force: true });

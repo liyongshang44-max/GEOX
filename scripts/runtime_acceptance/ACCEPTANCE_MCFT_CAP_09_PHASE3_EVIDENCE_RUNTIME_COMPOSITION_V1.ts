@@ -180,6 +180,7 @@ async function main(): Promise<void> {
 
   let injectedTargetPlannerCalls = 0;
   let injectedFactoryCalls = 0;
+  let injectedClassifierCalls = 0;
   const injectedFactory: EvidenceRuntimeWorkItemFactoryV1 = {
     factory_id: "MCFT_CAP09_PHASE5_CONTROLLED_WORK_ITEM_FACTORY_QUALIFICATION_V1",
     buildForTarget(target) {
@@ -230,8 +231,13 @@ async function main(): Promise<void> {
     health: { async recordHealth() {} },
     stop: { stopRequested: () => false },
     failure_classifier: {
-      classify() {
-        throw new Error("PHASE3_COMPOSITION_INJECTED_FACTORY_CLASSIFIER_FORBIDDEN");
+      classify(error) {
+        injectedClassifierCalls += 1;
+        assert.match(
+          error instanceof Error ? error.message : String(error),
+          /PHASE3_COMPOSITION_INJECTED_WORK_ITEM_FACTORY_SENTINEL/,
+        );
+        return "FATAL";
       },
     },
     completion_clock: () => REQUESTED,
@@ -255,6 +261,7 @@ async function main(): Promise<void> {
   );
   assert.equal(injectedTargetPlannerCalls, 1);
   assert.equal(injectedFactoryCalls, 1);
+  assert.equal(injectedClassifierCalls, 1);
   assert.deepEqual(injectedLeaseTrace, ["acquire", "release"]);
   assert.equal(databaseCalls, 0);
 
