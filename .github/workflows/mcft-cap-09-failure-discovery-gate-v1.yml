@@ -8,6 +8,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1.ts'
       - 'scripts/runtime_acceptance/fixtures/mcft_cap09_failure_corpus_v1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FAILURE-DISCOVERY-GATE-V1.json'
       - '.github/workflows/mcft-cap-09-failure-discovery-gate-v1.yml'
@@ -51,6 +52,8 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts
       - name: Replay GFS file-backed composition regression
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts
+      - name: Run fast resource sanity without live providers
+        run: node --expose-gc --import tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1.ts
       - name: Reject unclassified gate output
         run: |
           node - <<'NODE'
