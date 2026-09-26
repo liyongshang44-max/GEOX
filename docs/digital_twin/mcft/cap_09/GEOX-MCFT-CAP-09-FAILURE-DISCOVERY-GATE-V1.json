@@ -8,6 +8,25 @@
   "a0_authorized": false,
   "o00_o23_authorized": false,
   "purpose": "PRE_FINAL_24H_FAILURE_DISCOVERY_AND_HARDENING",
+  "central_exact_path_ownership": {
+    "schema_version": "geox_mcft_cap09_failure_discovery_exact_path_ownership_v1",
+    "owner_check_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+    "resolver_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+    "path_semantics": "EXACT_PATH_SET",
+    "fail_closed_on_missing_path": true,
+    "production_authority_effect": false,
+    "paths": [
+      ".github/workflows/mcft-cap-09-failure-discovery-gate-v1.yml",
+      "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FAILURE-DISCOVERY-GATE-V1.json",
+      "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1.ts",
+      "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GFS_SUBPROCESS_V1.ts",
+      "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1.ts",
+      "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1.ts",
+      "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1.ts",
+      "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FINAL_24H_ADMISSION_V1.cjs",
+      "scripts/runtime_acceptance/fixtures/mcft_cap09_failure_corpus_v1.json"
+    ]
+  },
   "admission_sequence": [
     "HISTORICAL_FAILURE_CORPUS_REPLAY",
     "FAULT_INJECTION_MATRIX",
