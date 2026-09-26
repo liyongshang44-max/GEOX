@@ -446,6 +446,28 @@ function rejectedKbsProviderPayloadV1(error: unknown): boolean {
   );
 }
 
+function rejectedGfsScientificPayloadV1(error: unknown): boolean {
+  const token = evidenceFailureTokenV1(error);
+  return [
+    /^MCFT_CAP09_GFS_BUNDLE_MEMBER_/,
+    /^MCFT_CAP09_GFS_BUNDLE_MANIFEST_/,
+    /^MCFT_CAP09_GFS_PRODUCT_(?:SUPPORT_LEAD_MISMATCH|LEAD_START_MISMATCH|LEAD_END_MISMATCH|POINT_CARDINALITY)$/,
+    /^MCFT_CAP09_GFS_CYCLE_INVALID$/,
+    /^MCFT_CAP09_GFS_LEAD_CARDINALITY$/,
+    /^MCFT_CAP09_GFS_GRIB_/,
+    /^MCFT_CAP09_GFS_PGRB2_/,
+    /^MCFT_CAP09_GFS_INSTANT_/,
+    /^MCFT_CAP09_GFS_APCP_/,
+    /^MCFT_CAP09_GFS_SFLUX_/,
+    /^MCFT_CAP09_GFS_REFET_NONFINITE$/,
+    /^MCFT_CAP09_GFS_SERIES_/,
+    /^MCFT_CAP09_GFS_RAW_SANITY$/,
+    /^MCFT_CAP09_GFS_SOLAR_/,
+    /^MCFT_CAP09_GFS_ET0_NONFINITE$/,
+    /^MCFT_CAP09_GFS_CANONICAL_DECIMAL_NONFINITE$/,
+  ].some((pattern) => pattern.test(token));
+}
+
 function transientProviderHttpStatusV1(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? "");
   return /_HTTP_STATUS:(?:429|5\d\d)(?:$|:)/.test(message);
@@ -478,7 +500,9 @@ implements EvidenceRuntimeHostFailureClassifierV1 {
       || transientProviderHttpStatusV1(error)
       || transientPrivateRawStoreStatusV1(error)
     ) return "RETRYABLE";
-    if (rejectedKbsProviderPayloadV1(error)) return "ATTEMPT_REJECTED";
+    if (rejectedKbsProviderPayloadV1(error) || rejectedGfsScientificPayloadV1(error)) {
+      return "ATTEMPT_REJECTED";
+    }
     return "PROCESS_FATAL";
   }
 }

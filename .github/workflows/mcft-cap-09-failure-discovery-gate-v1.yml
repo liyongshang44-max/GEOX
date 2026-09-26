@@ -10,6 +10,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1.ts'
       - 'scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FINAL_24H_ADMISSION_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GFS_SUBPROCESS_V1.ts'
       - 'scripts/runtime_acceptance/fixtures/mcft_cap09_failure_corpus_v1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FAILURE-DISCOVERY-GATE-V1.json'
       - '.github/workflows/mcft-cap-09-failure-discovery-gate-v1.yml'
@@ -47,6 +48,8 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1.ts
       - name: Replay P0-H KBS payload and scientific boundary
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1.ts
+      - name: Prove structured GFS scientific subprocess failure taxonomy
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GFS_SUBPROCESS_V1.ts
       - name: Replay GFS member retry and exhaustion
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1.ts
       - name: Replay Phase3 Evidence host lifecycle and fencing
@@ -86,6 +89,7 @@ jobs:
             acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_GFS_SUBPROCESS_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1_RESULT.json
