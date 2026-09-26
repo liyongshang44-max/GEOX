@@ -7,6 +7,7 @@ on:
       - 'apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1.ts'
       - 'scripts/runtime_acceptance/fixtures/mcft_cap09_failure_corpus_v1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FAILURE-DISCOVERY-GATE-V1.json'
       - '.github/workflows/mcft-cap-09-failure-discovery-gate-v1.yml'
@@ -38,6 +39,8 @@ jobs:
         run: pnpm --filter @geox/server typecheck
       - name: Prove Failure Discovery Gate taxonomy and host survival
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1.ts
+      - name: Prove HTTP TLS provider and private-store fault matrix
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1.ts
       - name: Replay P0-G retention clock regression without infrastructure
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1.ts
       - name: Replay P0-H KBS payload and scientific boundary

@@ -429,6 +429,8 @@ function rejectedKbsProviderPayloadV1(error: unknown): boolean {
   if ([
     "MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE",
     "MCFT_CAP09_KBS_RAW_HOURLY_CSV_PARSE_ERROR",
+    "KBS_RAW_HOURLY_CONTENT_TYPE",
+    "KBS_RAW_HOURLY_RAW_BYTES",
     "MCFT_CAP09_KBS_RAW_HOURLY_HEADER_NOT_FOUND",
     "MCFT_CAP09_KBS_EXACT_TARGET_ROW_REQUIRED",
     "MCFT_CAP09_KBS_TARGET_ET0_INPUT_MISSING",
@@ -444,9 +446,14 @@ function rejectedKbsProviderPayloadV1(error: unknown): boolean {
   );
 }
 
-function transientProviderHttp5xxV1(error: unknown): boolean {
+function transientProviderHttpStatusV1(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? "");
-  return /_HTTP_STATUS:5\d\d(?:$|:)/.test(message);
+  return /_HTTP_STATUS:(?:429|5\d\d)(?:$|:)/.test(message);
+}
+
+function transientPrivateRawStoreStatusV1(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /^EA5C1_S3_(?:HEAD|PUT)_STATUS_(?:429|5\d\d)(?:$|:)/.test(message);
 }
 
 function transientUndiciFetchTerminationV1(error: unknown): boolean {
@@ -468,7 +475,8 @@ implements EvidenceRuntimeHostFailureClassifierV1 {
     if (
       transientInfrastructureFailureV1(error)
       || transientUndiciFetchTerminationV1(error)
-      || transientProviderHttp5xxV1(error)
+      || transientProviderHttpStatusV1(error)
+      || transientPrivateRawStoreStatusV1(error)
     ) return "RETRYABLE";
     if (rejectedKbsProviderPayloadV1(error)) return "ATTEMPT_REJECTED";
     return "PROCESS_FATAL";
