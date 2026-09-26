@@ -1,9 +1,7 @@
 name: mcft-cap09-minio-pin-probe
 
 on:
-  push:
-    branches:
-      - diag/mcft-cap09-failure-discovery-gate-v1
+  pull_request:
     paths:
       - '.github/workflows/mcft-cap09-minio-pin-probe.yml'
 
