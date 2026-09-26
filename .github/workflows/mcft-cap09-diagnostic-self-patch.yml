@@ -19,27 +19,10 @@ jobs:
           ref: diag/mcft-cap09-failure-discovery-gate-v1
           fetch-depth: 0
 
-      - name: Apply exact diagnostic blocker fixes
+      - name: Apply exact process-boundary classifier adapter
         shell: python
         run: |
           from pathlib import Path
-
-          old_server = 'quay.io/minio/minio@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e'
-          new_server = 'quay.io/minio/minio@sha256:a1a8bd4ac40ad7881a245bab97323e18f971e4d4cba2c2007ec1bedd21cbaba2'
-          old_mc = 'quay.io/minio/mc@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112'
-          new_mc = 'quay.io/minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727'
-
-          image_files = [
-              Path('.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'),
-              Path('.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml'),
-          ]
-          for path in image_files:
-              text = path.read_text()
-              if text.count(old_server) != 1 or text.count(old_mc) != 1:
-                  raise SystemExit(f'EXACT_MINIO_PIN_SOURCE_MISMATCH:{path}')
-              text = text.replace(old_server, new_server).replace(old_mc, new_mc)
-              path.write_text(text)
-
           path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts')
           text = path.read_text()
           old = '''    failure_classifier: new McftCap09ProductionEvidenceFailureClassifierV1(),'''
@@ -53,7 +36,7 @@ jobs:
               raise SystemExit('PROCESS_BOUNDARY_EVIDENCE_POOL_CLASSIFIER_SOURCE_MISMATCH')
           path.write_text(text.replace(old, new))
 
-      - name: Commit exact patch
+      - name: Commit exact source patch
         shell: bash
         run: |
           set -euo pipefail
@@ -61,10 +44,7 @@ jobs:
           git status --short
           git config user.name 'GEOX CI Diagnostic Patch'
           git config user.email 'actions@users.noreply.github.com'
-          git add \
-            .github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml \
-            .github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+          git add scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
           git diff --cached --exit-code && { echo 'NO_PATCH_REQUIRED'; exit 0; } || true
-          git commit -m 'fix(ci): close FDG admission blockers'
+          git commit -m 'fix(runtime): adapt pool classifier boundary'
           git push origin HEAD:diag/mcft-cap09-failure-discovery-gate-v1
