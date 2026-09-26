@@ -27,11 +27,26 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - run: pnpm install --frozen-lockfile
+      - name: Install frozen KBS scientific dependencies
+        run: python -m pip install --disable-pip-version-check 'numpy==1.26.4' 'refet==0.4.2'
       - name: Typecheck server
         run: pnpm --filter @geox/server typecheck
       - name: Prove Failure Discovery Gate taxonomy and host survival
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1.ts
+      - name: Replay P0-G retention clock regression
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts
+      - name: Replay P0-H KBS payload and scientific boundary
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1.ts
+      - name: Replay GFS member retry and exhaustion
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1.ts
+      - name: Replay Phase3 Evidence host lifecycle and fencing
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts
+      - name: Replay GFS file-backed composition regression
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts
       - name: Reject unclassified gate output
         run: |
           node - <<'NODE'

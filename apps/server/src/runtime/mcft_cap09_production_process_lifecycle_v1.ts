@@ -211,7 +211,13 @@ implements EvidenceRuntimeHostWaitPortV1 {
   }
 
   async waitAfterAttempt(input: {
-    reason: "SUCCESS_CADENCE" | "PLANNER_NOT_DUE" | "PROVIDER_NOT_DUE" | "LEASE_STANDBY" | "RETRY_BACKOFF";
+    reason:
+      | "SUCCESS_CADENCE"
+      | "PLANNER_NOT_DUE"
+      | "PROVIDER_NOT_DUE"
+      | "LEASE_STANDBY"
+      | "RETRY_BACKOFF"
+      | "ATTEMPT_REJECTED_BACKOFF";
     cycle_attempt: number;
     consecutive_failure_count: number;
   }): Promise<void> {

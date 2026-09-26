@@ -249,7 +249,13 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
   const poolErrorGuard = installMcftCap09RuntimePoolIdleErrorGuardV1({
     pool,
     runtime_role: "EVIDENCE_RUNTIME",
-    failure_classifier: failureClassifier,
+    failure_classifier: {
+      classify(error) {
+        return failureClassifier.classify(error) === "RETRYABLE"
+          ? "RETRYABLE"
+          : "FATAL";
+      },
+    },
   });
   const stop = createMcftCap09ProcessStopV1();
   try {
