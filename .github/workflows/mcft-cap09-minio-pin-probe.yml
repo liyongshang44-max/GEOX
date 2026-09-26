@@ -1,0 +1,36 @@
+name: mcft-cap09-minio-pin-probe
+
+on:
+  push:
+    branches:
+      - diag/mcft-cap09-failure-discovery-gate-v1
+    paths:
+      - '.github/workflows/mcft-cap09-minio-pin-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Pull dated MinIO server tag and print immutable repo digest
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+          docker image inspect quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z --format '{{json .RepoDigests}}'
+          docker run -d --name minio-probe -p 9000:9000 -e MINIO_ROOT_USER=probeadmin -e MINIO_ROOT_PASSWORD=probeadmin-secret-001 quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null && exit 0; sleep 1; done
+          docker logs minio-probe
+          exit 1
+
+      - name: Pull dated MinIO client tag and print immutable repo digest
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+          docker image inspect quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z --format '{{json .RepoDigests}}'
+          docker run --rm --entrypoint /bin/sh quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z -ceu 'mc --version'
