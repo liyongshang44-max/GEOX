@@ -34,7 +34,7 @@ services:
       retries: 30
 
   minio:
-    image: quay.io/minio/minio@sha256:a1ea96c261edcd3cf0cc9d09438186d587e364ab92c817db1dcaaf5e39ff8b9a
+    image: quay.io/minio/minio@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e
     command: server /data
     environment:
       MINIO_ROOT_USER: ${GEOX_PHASE5_MINIO_ACCESS_KEY:?GEOX_PHASE5_MINIO_ACCESS_KEY is required}
