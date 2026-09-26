@@ -10,6 +10,7 @@ import { promisify } from "node:util";
 
 import {
   MCFT_CAP09_KBS_RAW_HOURLY_SCIENTIFIC_CORE_RELATIVE_PATH_V1,
+  normalizeKbsRawHourlyScientificSubprocessErrorV1,
   type KbsRawHourlyDecoderConfigV1,
 } from "./kbs_raw_hourly_live_provider_v1.js";
 
@@ -232,7 +233,7 @@ export class KbsRawHourlyPublicationSnapshotComparisonV1 {
         ) {
           throw new Error("KBS_PUBLICATION_COMPARISON_TIMEOUT");
         }
-        throw error;
+        normalizeKbsRawHourlyScientificSubprocessErrorV1(error);
       }
       return validateComparisonV1(JSON.parse(fs.readFileSync(outputPath, "utf8")), baseline);
     } finally {

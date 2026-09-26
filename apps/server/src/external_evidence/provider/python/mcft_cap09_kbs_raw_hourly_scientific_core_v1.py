@@ -15,6 +15,10 @@ import numpy as np
 import refet
 
 
+KBS_RAW_HOURLY_MAX_CSV_FIELD_CHARS_V1 = 131_072
+csv.field_size_limit(KBS_RAW_HOURLY_MAX_CSV_FIELD_CHARS_V1)
+
+
 @dataclass(frozen=True)
 class KbsRawHourlyScientificAuthorityV1:
     historical_online_freshness_diagnostic_hours: float
@@ -87,20 +91,35 @@ def finite_v1(value) -> float | None:
         return None
 
 
+def parse_kbs_csv_row_v1(line: str, *, delimiter: str) -> list[str]:
+    try:
+        return next(csv.reader([line], delimiter=delimiter))
+    except csv.Error as exc:
+        if "field larger than field limit" in str(exc).lower():
+            raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE") from exc
+        raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_CSV_PARSE_ERROR") from exc
+
+
 def parse_kbs_raw_hourly_csv_v1(body: bytes) -> list[dict[str, str]]:
     text = body.decode("utf-8-sig")
     lines = text.splitlines()
     required = ["datetime_utc", "solrad_avg", "wind_speed", "ah", "airtmp_107_avg", "rain_mm"]
     for index, line in enumerate(lines[:80]):
         for delimiter in (",", "\t", ";", "|"):
-            cells = next(csv.reader([line], delimiter=delimiter))
+            cells = parse_kbs_csv_row_v1(line, delimiter=delimiter)
             headers = [normalize_key_v1(cell) for cell in cells]
             if all(name in headers for name in required):
                 rows: list[dict[str, str]] = []
-                for values in csv.reader(lines[index + 1 :], delimiter=delimiter):
-                    if len(values) < len(headers):
-                        continue
-                    rows.append({header: values[position] for position, header in enumerate(headers)})
+                try:
+                    parsed_rows = csv.reader(lines[index + 1 :], delimiter=delimiter)
+                    for values in parsed_rows:
+                        if len(values) < len(headers):
+                            continue
+                        rows.append({header: values[position] for position, header in enumerate(headers)})
+                except csv.Error as exc:
+                    if "field larger than field limit" in str(exc).lower():
+                        raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE") from exc
+                    raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_CSV_PARSE_ERROR") from exc
                 return rows
     raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_HEADER_NOT_FOUND")
 

@@ -22,6 +22,49 @@ import { HttpsExternalEvidenceTransportV1 } from "./https_external_evidence_tran
 
 const execFileAsync = promisify(execFile);
 
+export type KbsRawHourlyScientificSubprocessErrorV1 = Error & {
+  code: "MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_FAILED";
+  diagnostic_token: string;
+  failure_token: string;
+};
+
+function kbsScientificStderrV1(error: unknown): string {
+  if (!error || typeof error !== "object" || !("stderr" in error)) return "";
+  const stderr = (error as { stderr?: unknown }).stderr;
+  if (typeof stderr === "string") return stderr;
+  if (Buffer.isBuffer(stderr)) return stderr.toString("utf8");
+  return "";
+}
+
+export function normalizeKbsRawHourlyScientificSubprocessErrorV1(
+  error: unknown,
+): never {
+  const row = error && typeof error === "object"
+    ? error as { killed?: unknown; signal?: unknown; code?: unknown }
+    : {};
+  if (
+    row.killed === true
+    || row.signal === "SIGTERM"
+    || row.code === "ETIMEDOUT"
+  ) {
+    throw error;
+  }
+
+  const stderr = kbsScientificStderrV1(error);
+  const tokens = stderr.match(/\bMCFT_CAP09_KBS_[A-Z0-9_]+\b/g) ?? [];
+  const token = tokens.at(-1) ?? "MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_UNCLASSIFIED";
+  const normalized = Object.assign(
+    new Error(token),
+    {
+      name: "KbsRawHourlyScientificSubprocessError",
+      code: "MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_FAILED" as const,
+      diagnostic_token: token,
+      failure_token: token,
+    },
+  );
+  throw normalized as KbsRawHourlyScientificSubprocessErrorV1;
+}
+
 export const MCFT_CAP09_KBS_RAW_HOURLY_ENDPOINT_V1 =
   "https://lter.kbs.msu.edu/datatables/13.csv" as const;
 export const MCFT_CAP09_KBS_RAW_HOURLY_DECODER_ID_V1 =
@@ -192,23 +235,27 @@ export class KbsRawHourlyExactIntervalDecoderV1 implements ExternalEvidenceDecod
     const outputPath = path.join(temp, "scientific-result.json");
     try {
       fs.writeFileSync(rawPath, Buffer.from(input.raw_bytes));
-      await execFileAsync(this.pythonExecutable, [
-        this.scientificCorePath,
-        "decode-exact",
-        "--target", this.target,
-        "--available-at", canonicalIsoV1(input.provenance.available_at, "KBS_RAW_HOURLY_AVAILABLE_AT_INVALID"),
-        "--input", rawPath,
-        "--output", outputPath,
-        "--historical-online-freshness-diagnostic-hours", String(HISTORICAL_ONLINE_FRESHNESS_DIAGNOSTIC_HOURS),
-        "--station-elevation-m", String(STATION_ELEVATION_M),
-        "--station-latitude", String(STATION_LATITUDE),
-        "--station-longitude", String(STATION_LONGITUDE),
-        "--wind-10m-to-2m-factor", String(WIND_10M_TO_2M_FACTOR),
-      ], {
-        cwd: process.cwd(),
-        maxBuffer: 4 * 1024 * 1024,
-        timeout: 120_000,
-      });
+      try {
+        await execFileAsync(this.pythonExecutable, [
+          this.scientificCorePath,
+          "decode-exact",
+          "--target", this.target,
+          "--available-at", canonicalIsoV1(input.provenance.available_at, "KBS_RAW_HOURLY_AVAILABLE_AT_INVALID"),
+          "--input", rawPath,
+          "--output", outputPath,
+          "--historical-online-freshness-diagnostic-hours", String(HISTORICAL_ONLINE_FRESHNESS_DIAGNOSTIC_HOURS),
+          "--station-elevation-m", String(STATION_ELEVATION_M),
+          "--station-latitude", String(STATION_LATITUDE),
+          "--station-longitude", String(STATION_LONGITUDE),
+          "--wind-10m-to-2m-factor", String(WIND_10M_TO_2M_FACTOR),
+        ], {
+          cwd: process.cwd(),
+          maxBuffer: 4 * 1024 * 1024,
+          timeout: 120_000,
+        });
+      } catch (error) {
+        normalizeKbsRawHourlyScientificSubprocessErrorV1(error);
+      }
       const scientific = assertScientificResultV1(JSON.parse(fs.readFileSync(outputPath, "utf8")), this.target);
       const decodedAt = canonicalIsoV1(this.clock().toISOString(), "KBS_RAW_HOURLY_DECODED_AT_INVALID");
       const intervalStart = new Date(Date.parse(this.target) - 3_600_000).toISOString();

@@ -403,6 +403,21 @@ function transientInfrastructureFailureV1(error: unknown): boolean {
   return /socket hang up|connection terminated|fetch failed|network|temporar|timeout|database system is in recovery mode|cannot connect now/i.test(message);
 }
 
+function transientKbsProviderPayloadShapeFailureV1(error: unknown): boolean {
+  const record = error && typeof error === "object"
+    ? error as { failure_token?: unknown; diagnostic_token?: unknown }
+    : {};
+  const token =
+    typeof record.failure_token === "string"
+      ? record.failure_token
+      : typeof record.diagnostic_token === "string"
+        ? record.diagnostic_token
+        : error instanceof Error
+          ? error.message.split(":", 1)[0] ?? ""
+          : "";
+  return token === "MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE";
+}
+
 function governedEvidenceSourceBackpressureV1(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? "");
   return message.startsWith(
@@ -428,6 +443,7 @@ implements EvidenceRuntimeHostFailureClassifierV1 {
   classify(error: unknown): "RETRYABLE" | "FATAL" {
     return transientInfrastructureFailureV1(error)
       || transientUndiciFetchTerminationV1(error)
+      || transientKbsProviderPayloadShapeFailureV1(error)
       || governedEvidenceSourceBackpressureV1(error)
       ? "RETRYABLE"
       : "FATAL";
