@@ -26,7 +26,8 @@
       "exact_raw_repository_fixture_materialized": false,
       "exact_raw_preserved_external_control_tree": true,
       "synthetic_equivalent_regression": true,
-      "expected_disposition": "ATTEMPT_REJECTED"
+      "expected_disposition": "ATTEMPT_REJECTED",
+      "repository_fixture_path": "scripts/runtime_acceptance/fixtures/mcft_cap09_failure_corpus_v1/p0h-kbs-csv-field-too-large-931512bb7df21cab42b3d359f7985b76ef554f4eb8d90ee28c924030381fd618.raw"
     },
     {
       "id": "KBS_TIMEOUT",

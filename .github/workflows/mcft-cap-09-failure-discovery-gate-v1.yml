@@ -9,6 +9,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1.ts'
+      - 'scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FINAL_24H_ADMISSION_V1.cjs'
       - 'scripts/runtime_acceptance/fixtures/mcft_cap09_failure_corpus_v1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FAILURE-DISCOVERY-GATE-V1.json'
       - '.github/workflows/mcft-cap-09-failure-discovery-gate-v1.yml'
@@ -54,6 +55,18 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts
       - name: Run fast resource sanity without live providers
         run: node --expose-gc --import tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1.ts
+      - name: Adjudicate final 24h admission frontier
+        run: node scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FINAL_24H_ADMISSION_V1.cjs
+      - name: Require current hardening to remain not admitted until full proofs exist
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP_09_FINAL_24H_ADMISSION_V1_RESULT.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(x.status!=='HARDENING_PASS_FINAL_24H_NOT_ADMITTED') throw new Error('FDG_EXPECTED_HARDENING_FRONTIER_STATUS');
+          if(x.final_24h_admitted!==false) throw new Error('FDG_PREMATURE_FINAL_24H_ADMISSION');
+          if(x.fast_gate?.pass!==true) throw new Error('FDG_FAST_GATE_NOT_PASS');
+          NODE
       - name: Reject unclassified gate output
         run: |
           node - <<'NODE'
@@ -68,5 +81,14 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-failure-discovery-gate-${{ github.sha }}
-          path: acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1_RESULT.json
+          path: |
+            acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_FINAL_24H_ADMISSION_V1_RESULT.json
           retention-days: 90
