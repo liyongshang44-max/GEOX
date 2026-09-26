@@ -143,13 +143,13 @@ jobs:
             -p 9000:9000 \
             -e MINIO_ROOT_USER=minioadmin \
             -e MINIO_ROOT_PASSWORD=minioadmin123 \
-            quay.io/minio/minio@sha256:a1a8bd4ac40ad7881a245bab97323e18f971e4d4cba2c2007ec1bedd21cbaba2 server /data
+            quay.io/minio/minio@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
           for attempt in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
             if [ "$attempt" = 60 ]; then docker logs ea5c2b1-minio; exit 1; fi
             sleep 1
           done
-          docker run --rm --network host --entrypoint /bin/sh quay.io/minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -ceu '
+          docker run --rm --network host --entrypoint /bin/sh quay.io/minio/mc@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112 -ceu '
             mc alias set local http://127.0.0.1:9000 minioadmin minioadmin123
             mc mb --ignore-existing local/geox-mcft-cap09-formal-raw-v1
             mc anonymous set private local/geox-mcft-cap09-formal-raw-v1
