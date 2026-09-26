@@ -160,13 +160,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Exact digests only. Docker Hub retains the public manifests used by this qualification lane.
+          # Exact digests only. Digests are shared with current Phase7/EA5C2B1 CI lanes.
           cat > "$RUNNER_TEMP/mcft-qualification-minio.yml" <<'YAML'
           services:
             minio:
-              image: docker.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+              image: quay.io/minio/minio@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e
             minio-init:
-              image: docker.io/minio/mc@sha256:eb4ea9884b77704230e2423e9004d2fa738dc272876b9cc41a297d29443b8780
+              image: quay.io/minio/mc@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112
           YAML
 
       - name: Build exact scientific Runtime image
