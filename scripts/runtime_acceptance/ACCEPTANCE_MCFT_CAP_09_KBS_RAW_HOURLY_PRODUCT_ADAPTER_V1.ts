@@ -246,8 +246,8 @@ async function main(): Promise<void> {
   const evidenceFailureClassifier=new McftCap09ProductionEvidenceFailureClassifierV1();
   assert.equal(
     evidenceFailureClassifier.classify(oversizedFieldFailure),
-    "RETRYABLE",
-    "KBS_OVERSIZED_FIELD_PROVIDER_PAYLOAD_SHAPE_MUST_BE_RETRYABLE",
+    "ATTEMPT_REJECTED",
+    "KBS_OVERSIZED_FIELD_PROVIDER_PAYLOAD_SHAPE_MUST_REJECT_ATTEMPT_WITHOUT_PROCESS_EXIT",
   );
 
   let missingExactTargetFailure:unknown=null;
@@ -266,8 +266,8 @@ async function main(): Promise<void> {
   assert(missingExactTargetFailure instanceof Error,"KBS_MISSING_TARGET_FAILURE_REQUIRED");
   assert.equal(
     evidenceFailureClassifier.classify(missingExactTargetFailure),
-    "FATAL",
-    "KBS_SCIENTIFIC_SEMANTIC_FAILURE_MUST_REMAIN_FATAL",
+    "ATTEMPT_REJECTED",
+    "KBS_SCIENTIFIC_SEMANTIC_FAILURE_MUST_REJECT_ATTEMPT_WITHOUT_EVIDENCE_PROMOTION",
   );
 
   const providerCountBeforeMismatches = transport.provider_request_count;
@@ -357,8 +357,8 @@ async function main(): Promise<void> {
     positive_mock_fetch_count: positiveMockFetchCount,
     final_host_fault_mock_fetch_count: finalHostFaultFetchCount,
     oversized_csv_field_has_stable_failure_token: true,
-    oversized_csv_field_is_retryable_provider_payload_shape_anomaly: true,
-    other_kbs_scientific_semantic_failure_remains_fatal: true,
+    oversized_csv_field_is_attempt_rejected_provider_payload_shape_anomaly: true,
+    other_kbs_scientific_semantic_failure_is_attempt_rejected_fail_closed: true,
     external_network_request_count: 0,
     database_write_count: 0,
     runtime_tick_cursor_mutation: false,

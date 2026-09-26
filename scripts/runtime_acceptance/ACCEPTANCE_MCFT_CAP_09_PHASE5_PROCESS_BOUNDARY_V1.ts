@@ -96,7 +96,12 @@ function main(): void {
   const evidencePoolGuard = installMcftCap09RuntimePoolIdleErrorGuardV1({
     pool: fakeEvidencePool as never,
     runtime_role: "EVIDENCE_RUNTIME",
-    failure_classifier: new McftCap09ProductionEvidenceFailureClassifierV1(),
+    failure_classifier: {
+    classify(error) {
+      const classification = new McftCap09ProductionEvidenceFailureClassifierV1().classify(error);
+      return classification === "RETRYABLE" ? "RETRYABLE" : "FATAL";
+    },
+  },
     event_sink: (event) => evidenceEvents.push(structuredClone(event)),
   });
   assert.doesNotThrow(() => {
