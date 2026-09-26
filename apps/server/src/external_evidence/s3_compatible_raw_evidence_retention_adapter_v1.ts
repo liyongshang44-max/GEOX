@@ -46,6 +46,65 @@ export type S3CompatiblePrivateRawRetentionConfigV1 = {
   monotonic_now_ms?: () => number;
 };
 
+export type RetentionClockRegressionBarrierInputV1 = {
+  retrieved_at: string;
+  source_family: string;
+  raw_sha256: string;
+  clock: () => Date;
+  max_wait_ms: number;
+  poll_ms: number;
+  wait: (milliseconds: number) => Promise<void>;
+  monotonic_now_ms: () => number;
+};
+
+export async function resolveRetentionVerificationTimeAfterClockRegressionV1(
+  input: RetentionClockRegressionBarrierInputV1,
+): Promise<string> {
+  const retrievedAt = canonicalIsoV1(input.retrieved_at, "EA5C1_RETRIEVED_AT_INVALID");
+  const retrievedMs = Date.parse(retrievedAt);
+  const sourceFamily = requiredTextV1(input.source_family, "EA5C1_SOURCE_FAMILY_REQUIRED")
+    .replace(/[^A-Za-z0-9_.-]/g, "_")
+    .slice(0, 64);
+  rawDigestHexV1(input.raw_sha256);
+  if (!Number.isSafeInteger(input.max_wait_ms) || input.max_wait_ms < 1 || input.max_wait_ms > 60_000) {
+    throw new Error("EA5C1_CLOCK_REGRESSION_MAX_WAIT_INVALID");
+  }
+  if (!Number.isSafeInteger(input.poll_ms) || input.poll_ms < 1 || input.poll_ms > input.max_wait_ms) {
+    throw new Error("EA5C1_CLOCK_REGRESSION_POLL_INVALID");
+  }
+
+  const startedMonotonic = input.monotonic_now_ms();
+  if (!Number.isFinite(startedMonotonic)) {
+    throw new Error("EA5C1_RETENTION_MONOTONIC_CLOCK_INVALID");
+  }
+
+  while (true) {
+    const observedAt = canonicalIsoV1(
+      input.clock().toISOString(),
+      "EA5C1_RETENTION_VERIFIED_AT_INVALID",
+    );
+    const deltaMs = retrievedMs - Date.parse(observedAt);
+    if (deltaMs <= 0) return observedAt;
+
+    const nowMonotonic = input.monotonic_now_ms();
+    const elapsedMs = nowMonotonic - startedMonotonic;
+    if (!Number.isFinite(nowMonotonic) || !Number.isFinite(elapsedMs) || elapsedMs < 0) {
+      throw new Error("EA5C1_RETENTION_MONOTONIC_CLOCK_INVALID");
+    }
+    if (elapsedMs >= input.max_wait_ms) {
+      throw new Error(
+        "EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL"
+        + `:delta_ms=${Math.ceil(deltaMs)}`
+        + `:source_family=${sourceFamily}`
+        + `:raw_sha256=${input.raw_sha256}`,
+      );
+    }
+
+    const remainingMs = Math.max(1, Math.ceil(input.max_wait_ms - elapsedMs));
+    await input.wait(Math.min(input.poll_ms, remainingMs));
+  }
+}
+
 type SignedResponseV1 = {
   status: number;
   headers: http.IncomingHttpHeaders;
@@ -175,48 +234,14 @@ export class S3CompatiblePrivateRawEvidenceRetentionAdapterV1
     source_family: string;
     raw_sha256: string;
   }): Promise<string> {
-    const retrievedAt = canonicalIsoV1(input.retrieved_at, "EA5C1_RETRIEVED_AT_INVALID");
-    const retrievedMs = Date.parse(retrievedAt);
-    const sourceFamily = requiredTextV1(input.source_family, "EA5C1_SOURCE_FAMILY_REQUIRED")
-      .replace(/[^A-Za-z0-9_.-]/g, "_")
-      .slice(0, 64);
-    rawDigestHexV1(input.raw_sha256);
-
-    const startedMonotonic = this.monotonicNowMs();
-    if (!Number.isFinite(startedMonotonic)) {
-      throw new Error("EA5C1_RETENTION_MONOTONIC_CLOCK_INVALID");
-    }
-
-    while (true) {
-      const observedAt = canonicalIsoV1(
-        this.clock().toISOString(),
-        "EA5C1_RETENTION_VERIFIED_AT_INVALID",
-      );
-      const deltaMs = retrievedMs - Date.parse(observedAt);
-      if (deltaMs <= 0) return observedAt;
-
-      const nowMonotonic = this.monotonicNowMs();
-      const elapsedMs = nowMonotonic - startedMonotonic;
-      if (!Number.isFinite(nowMonotonic) || !Number.isFinite(elapsedMs) || elapsedMs < 0) {
-        throw new Error("EA5C1_RETENTION_MONOTONIC_CLOCK_INVALID");
-      }
-      if (elapsedMs >= this.clockRegressionMaxWaitMs) {
-        throw new Error(
-          "EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL"
-          + `:delta_ms=${Math.ceil(deltaMs)}`
-          + `:source_family=${sourceFamily}`
-          + `:raw_sha256=${input.raw_sha256}`,
-        );
-      }
-
-      const remainingMs = Math.max(
-        1,
-        Math.ceil(this.clockRegressionMaxWaitMs - elapsedMs),
-      );
-      await this.clockRegressionWait(
-        Math.min(this.clockRegressionPollMs, remainingMs),
-      );
-    }
+    return await resolveRetentionVerificationTimeAfterClockRegressionV1({
+      ...input,
+      clock: this.clock,
+      max_wait_ms: this.clockRegressionMaxWaitMs,
+      poll_ms: this.clockRegressionPollMs,
+      wait: this.clockRegressionWait,
+      monotonic_now_ms: this.monotonicNowMs,
+    });
   }
 
   private async requestV1(input: {
