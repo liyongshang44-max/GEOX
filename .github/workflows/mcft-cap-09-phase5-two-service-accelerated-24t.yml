@@ -156,17 +156,17 @@ jobs:
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "GEOX_PHASE5_EXECUTION_MODE=$mode" >> "$GITHUB_ENV"
 
-      - name: Pin qualification object-store images to prior successful digests
+      - name: Pin qualification object-store images to exact digests
         shell: bash
         run: |
           set -euo pipefail
-          # Same image digests as successful Phase3 run 34625038137; qualification only.
+          # Exact digests only. MinIO client digest is shared with current Phase7/EA5C2B1 CI lanes.
           cat > "$RUNNER_TEMP/mcft-qualification-minio.yml" <<'YAML'
           services:
             minio:
               image: quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
             minio-init:
-              image: quay.io/minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+              image: quay.io/minio/mc@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112
           YAML
 
       - name: Build exact scientific Runtime image
