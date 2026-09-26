@@ -51,10 +51,14 @@ export function normalizeKbsRawHourlyScientificSubprocessErrorV1(
   }
 
   const stderr = kbsScientificStderrV1(error);
-  const tokens = stderr.match(/\bMCFT_CAP09_KBS_[A-Z0-9_]+\b/g) ?? [];
-  const token = tokens.at(-1) ?? "MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_UNCLASSIFIED";
+  const diagnostics = stderr.match(
+    /\bMCFT_CAP09_KBS_[A-Z0-9_]+(?::[A-Za-z0-9_.-]{1,64})*\b/g,
+  ) ?? [];
+  const diagnostic =
+    diagnostics.at(-1) ?? "MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_UNCLASSIFIED";
+  const token = diagnostic.split(":", 1)[0]!;
   const normalized = Object.assign(
-    new Error(token),
+    new Error(diagnostic),
     {
       name: "KbsRawHourlyScientificSubprocessError",
       code: "MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_FAILED" as const,
