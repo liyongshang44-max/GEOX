@@ -225,7 +225,8 @@ implements EvidenceRuntimeHostWaitPortV1 {
       case "LEASE_STANDBY":
         waitMs = this.standbyMs;
         break;
-      case "RETRY_BACKOFF": {
+      case "RETRY_BACKOFF":
+      case "ATTEMPT_REJECTED_BACKOFF": {
         const exponent = Math.max(0, Math.min(10, input.consecutive_failure_count - 1));
         waitMs = Math.min(this.retryMaximumMs, this.retryBaseMs * 2 ** exponent);
         break;
@@ -403,26 +404,43 @@ function transientInfrastructureFailureV1(error: unknown): boolean {
   return /socket hang up|connection terminated|fetch failed|network|temporar|timeout|database system is in recovery mode|cannot connect now/i.test(message);
 }
 
-function transientKbsProviderPayloadShapeFailureV1(error: unknown): boolean {
+function evidenceFailureTokenV1(error: unknown): string {
   const record = error && typeof error === "object"
-    ? error as { failure_token?: unknown; diagnostic_token?: unknown }
+    ? error as { failure_token?: unknown; diagnostic_token?: unknown; code?: unknown }
     : {};
-  const token =
-    typeof record.failure_token === "string"
-      ? record.failure_token
-      : typeof record.diagnostic_token === "string"
-        ? record.diagnostic_token
-        : error instanceof Error
-          ? error.message.split(":", 1)[0] ?? ""
-          : "";
-  return token === "MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE";
+  if (typeof record.failure_token === "string" && record.failure_token.trim()) {
+    return record.failure_token.trim().split(":", 1)[0] ?? "";
+  }
+  if (typeof record.diagnostic_token === "string" && record.diagnostic_token.trim()) {
+    return record.diagnostic_token.trim().split(":", 1)[0] ?? "";
+  }
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.trim().split(":", 1)[0] ?? "";
 }
 
-function governedEvidenceSourceBackpressureV1(error: unknown): boolean {
+function rejectedKbsProviderPayloadV1(error: unknown): boolean {
+  const token = evidenceFailureTokenV1(error);
+  if ([
+    "MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE",
+    "MCFT_CAP09_KBS_RAW_HOURLY_CSV_PARSE_ERROR",
+    "MCFT_CAP09_KBS_RAW_HOURLY_HEADER_NOT_FOUND",
+    "MCFT_CAP09_KBS_EXACT_TARGET_ROW_REQUIRED",
+    "MCFT_CAP09_KBS_TARGET_ET0_INPUT_MISSING",
+    "MCFT_CAP09_KBS_TARGET_ET0_INPUT_RANGE",
+    "MCFT_CAP09_KBS_TARGET_RAIN_INVALID",
+    "MCFT_CAP09_KBS_PUBLICATION_EVENT_INDEX_REQUIRED",
+    "MCFT_CAP09_KBS_PUBLICATION_LATEST_CANONICAL_HOUR_REQUIRED",
+  ].includes(token)) return true;
+
   const message = error instanceof Error ? error.message : String(error ?? "");
   return message.startsWith(
     "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED:BLOCKED_HISTORICAL_DRIFT:",
   );
+}
+
+function transientProviderHttp5xxV1(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /_HTTP_STATUS:5\d\d(?:$|:)/.test(message);
 }
 
 function transientUndiciFetchTerminationV1(error: unknown): boolean {
@@ -440,13 +458,14 @@ function transientUndiciFetchTerminationV1(error: unknown): boolean {
 
 export class McftCap09ProductionEvidenceFailureClassifierV1
 implements EvidenceRuntimeHostFailureClassifierV1 {
-  classify(error: unknown): "RETRYABLE" | "FATAL" {
-    return transientInfrastructureFailureV1(error)
+  classify(error: unknown): "RETRYABLE" | "ATTEMPT_REJECTED" | "PROCESS_FATAL" {
+    if (
+      transientInfrastructureFailureV1(error)
       || transientUndiciFetchTerminationV1(error)
-      || transientKbsProviderPayloadShapeFailureV1(error)
-      || governedEvidenceSourceBackpressureV1(error)
-      ? "RETRYABLE"
-      : "FATAL";
+      || transientProviderHttp5xxV1(error)
+    ) return "RETRYABLE";
+    if (rejectedKbsProviderPayloadV1(error)) return "ATTEMPT_REJECTED";
+    return "PROCESS_FATAL";
   }
 }
 

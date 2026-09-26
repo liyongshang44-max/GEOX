@@ -1,0 +1,94 @@
+{
+  "schema_version": "geox_mcft_cap09_failure_corpus_v1",
+  "corpus_id": "MCFT_CAP09_REAL_FAILURE_CORPUS_V1",
+  "authority_effect": false,
+  "entries": [
+    {
+      "id": "P0_F_COMPOSE_RESTART_DEPENDENCY_ESCAPE",
+      "family": "RUNTIME",
+      "observed": true,
+      "expected_disposition": "PROCESS_FATAL",
+      "regression": "EXACT_CONTAINER_DIRECT_RESTART_AND_OLDEST_FIRST_BACKFILL"
+    },
+    {
+      "id": "P0_G_RETENTION_CLOCK_REGRESSION",
+      "family": "RAW_RETENTION",
+      "observed": true,
+      "expected_disposition": "PROCESS_FATAL_IF_BOUNDED_RECOVERY_EXHAUSTED",
+      "regression": "MONOTONIC_BOUNDED_WAIT_NO_TIMESTAMP_REWRITE"
+    },
+    {
+      "id": "P0_H_KBS_CSV_FIELD_TOO_LARGE",
+      "family": "KBS",
+      "observed": true,
+      "raw_sha256": "sha256:931512bb7df21cab42b3d359f7985b76ef554f4eb8d90ee28c924030381fd618",
+      "raw_bytes": 205205,
+      "exact_raw_repository_fixture_materialized": false,
+      "exact_raw_preserved_external_control_tree": true,
+      "synthetic_equivalent_regression": true,
+      "expected_disposition": "ATTEMPT_REJECTED"
+    },
+    {
+      "id": "KBS_TIMEOUT",
+      "family": "KBS",
+      "observed": true,
+      "expected_disposition": "RETRYABLE"
+    },
+    {
+      "id": "KBS_UNDICI_TERMINATED",
+      "family": "KBS",
+      "observed": true,
+      "expected_disposition": "RETRYABLE"
+    },
+    {
+      "id": "KBS_HISTORICAL_DRIFT",
+      "family": "KBS",
+      "observed": true,
+      "expected_disposition": "ATTEMPT_REJECTED"
+    },
+    {
+      "id": "GFS_MEMBER_TRANSIENT_FAILURE",
+      "family": "GFS",
+      "observed": true,
+      "expected_disposition": "RETRYABLE"
+    },
+    {
+      "id": "GFS_MEMBER_RETRY_EXHAUSTION",
+      "family": "GFS",
+      "observed": true,
+      "expected_disposition": "RETRYABLE"
+    },
+    {
+      "id": "GFS_FULL_BUNDLE_MEMORY_AMPLIFICATION",
+      "family": "GFS",
+      "observed": true,
+      "expected_disposition": "RESOURCE_GATE_FAILURE",
+      "regression": "FILE_BACKED_STREAMING_MEMBER_AT_A_TIME"
+    },
+    {
+      "id": "POSTGRES_57P03_RECOVERY",
+      "family": "POSTGRES",
+      "observed": true,
+      "expected_disposition": "RETRYABLE"
+    },
+    {
+      "id": "POSTGRES_IDLE_CONNECTION_TERMINATED",
+      "family": "POSTGRES",
+      "observed": true,
+      "expected_disposition": "RETRYABLE"
+    },
+    {
+      "id": "LEASE_STALE_FENCE",
+      "family": "FENCING",
+      "observed": true,
+      "expected_disposition": "PROCESS_FATAL"
+    },
+    {
+      "id": "MISSED_SCHEDULER_BOUNDARY",
+      "family": "TWIN",
+      "observed": true,
+      "expected_disposition": "CONTROLLED_BACKFILL"
+    }
+  ],
+  "exact_raw_materialization_required_before_final_24h": true
+}
