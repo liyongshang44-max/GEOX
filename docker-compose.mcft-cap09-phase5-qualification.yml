@@ -1,4 +1,5 @@
 # MCFT-CAP-09 Production Hosting Phase 5 — dedicated production-equivalent qualification topology.
+# Diagnostic branch retrigger marker: central exact-path ownership repair; no topology/runtime semantic change.
 #
 # Qualification only. No production ownership cutover.
 # Evidence/Twin services run compiled entrypoints that delegate to the same production
