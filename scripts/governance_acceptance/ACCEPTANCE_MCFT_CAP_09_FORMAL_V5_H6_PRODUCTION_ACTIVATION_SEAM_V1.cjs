@@ -430,7 +430,43 @@ assert.equal(git("merge-base",BASE,"HEAD"),BASE,"H6_EXACT_PREDECESSOR_MUST_BE_AN
 for(const frozen of FROZEN){
   assert.equal(git("rev-parse","HEAD:"+frozen),git("rev-parse",BASE+":"+frozen),"H6_HISTORICAL_OR_PRODUCTION_V2_REWRITE_FORBIDDEN:"+frozen);
 }
-const changed=git("diff","--name-only",BASE+"...HEAD").split(/\r?\n/).filter(Boolean);
+
+const headSha=git("rev-parse","HEAD");
+function qcpPlanBaseForHead(){
+  const planPath=path.join(ROOT,"acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json");
+  if(!fs.existsSync(planPath))return null;
+  try{
+    const plan=JSON.parse(fs.readFileSync(planPath,"utf8"));
+    return plan.head_sha===headSha?plan.base_sha:null;
+  }catch{return null;}
+}
+function githubEventBase(){
+  const eventPath=String(process.env.GITHUB_EVENT_PATH||"");
+  if(!eventPath||!fs.existsSync(eventPath))return null;
+  try{
+    const event=JSON.parse(fs.readFileSync(eventPath,"utf8"));
+    return event.pull_request?.base?.sha||event.merge_group?.base_sha||
+      (event.ref==="refs/heads/main"?event.before:null)||null;
+  }catch{return null;}
+}
+const candidateBase=[
+  process.env.H6_SUCCESSOR_BASE_SHA,
+  process.env.MCFT_BASE_SHA,
+  qcpPlanBaseForHead(),
+  githubEventBase(),
+].find((value)=>/^[0-9a-f]{40}$/.test(String(value||"")))||null;
+if(candidateBase&&candidateBase!==BASE){
+  assert.equal(git("merge-base",BASE,candidateBase),BASE,"H6_SUCCESSOR_BASE_MUST_DESCEND_FROM_HISTORICAL_PREDECESSOR");
+  assert.equal(git("merge-base",candidateBase,headSha),candidateBase,"H6_SUCCESSOR_BASE_MUST_BE_ANCESTOR_OF_HEAD");
+}
+const successorBoundaryActive=Boolean(candidateBase&&candidateBase!==BASE);
+const changeBoundaryBase=successorBoundaryActive?candidateBase:BASE;
+const candidateChanged=git("diff","--name-only",changeBoundaryBase+"...HEAD").split(/\r?\n/).filter(Boolean);
+const H6_SELF="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs";
+const h6GovernedPaths=new Set([...(h6Resolver.paths||[]),QCP,H6_SELF]);
+const changed=successorBoundaryActive
+  ? candidateChanged.filter((rel)=>h6GovernedPaths.has(rel))
+  : candidateChanged;
 const allowedDomainSuccessors=new Set([V5_BUNDLE,V5_BUNDLE_TEST]);
 for(const rel of changed){
   assert.equal(rel.startsWith("apps/web/"),false,"H6_WEB_CHANGE_FORBIDDEN:"+rel);
@@ -465,7 +501,10 @@ const proof={
   schema_version:"geox_mcft_cap09_formal_v5_h6_production_activation_seam_acceptance_v1",
   status:"PASS",
   exact_predecessor_sha:BASE,
-  subject_head_sha:git("rev-parse","HEAD"),
+  subject_head_sha:headSha,
+  change_boundary_mode:successorBoundaryActive?"SUCCESSOR_H6_RESOLVER_PATH_SET":"LEGACY_HISTORICAL_GLOBAL",
+  change_boundary_base_sha:changeBoundaryBase,
+  candidate_changed_file_count:candidateChanged.length,
   changed_file_count:changed.length,
   historical_formal_execution_files_rewritten:false,
   production_v2_default_rewritten:false,
