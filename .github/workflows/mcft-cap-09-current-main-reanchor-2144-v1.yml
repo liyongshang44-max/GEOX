@@ -1,4 +1,4 @@
-# Qualification convergence probe: no qualification semantics changed.
+# Qualification convergence probe retrigger after AM21 successor repair; no qualification semantics changed.
 name: MCFT CAP-09 Current-Main Re-Anchor 2144
 
 on:
