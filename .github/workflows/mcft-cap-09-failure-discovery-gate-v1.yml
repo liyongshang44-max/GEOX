@@ -1,0 +1,98 @@
+name: mcft-cap-09-failure-discovery-gate-v1
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/external_evidence/**'
+      - 'apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1.ts'
+      - 'scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FINAL_24H_ADMISSION_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GFS_SUBPROCESS_V1.ts'
+      - 'scripts/runtime_acceptance/fixtures/mcft_cap09_failure_corpus_v1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FAILURE-DISCOVERY-GATE-V1.json'
+      - '.github/workflows/mcft-cap-09-failure-discovery-gate-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  failure-discovery-fast-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pnpm install --frozen-lockfile
+      - name: Install frozen KBS scientific dependencies
+        run: python -m pip install --disable-pip-version-check 'numpy==1.26.4' 'refet==0.4.2'
+      - name: Typecheck server
+        run: pnpm --filter @geox/server typecheck
+      - name: Prove Failure Discovery Gate taxonomy and host survival
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1.ts
+      - name: Prove HTTP TLS provider and private-store fault matrix
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1.ts
+      - name: Replay P0-G retention clock regression without infrastructure
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1.ts
+      - name: Replay P0-H KBS payload and scientific boundary
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1.ts
+      - name: Prove structured GFS scientific subprocess failure taxonomy
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GFS_SUBPROCESS_V1.ts
+      - name: Replay GFS member retry and exhaustion
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1.ts
+      - name: Replay Phase3 Evidence host lifecycle and fencing
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts
+      - name: Replay GFS file-backed composition regression
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts
+      - name: Run fast resource sanity without live providers
+        run: node --expose-gc --import tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1.ts
+      - name: Adjudicate final 24h admission frontier
+        run: node scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FINAL_24H_ADMISSION_V1.cjs
+      - name: Require current hardening to remain not admitted until full proofs exist
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP_09_FINAL_24H_ADMISSION_V1_RESULT.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(x.status!=='HARDENING_PASS_FINAL_24H_NOT_ADMITTED') throw new Error('FDG_EXPECTED_HARDENING_FRONTIER_STATUS');
+          if(x.final_24h_admitted!==false) throw new Error('FDG_PREMATURE_FINAL_24H_ADMISSION');
+          if(x.fast_gate?.pass!==true) throw new Error('FDG_FAST_GATE_NOT_PASS');
+          NODE
+      - name: Reject unclassified gate output
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1_RESULT.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(x.status!=='PASS') throw new Error('FDG_NOT_PASS');
+          if(x.no_unclassified_error!==true) throw new Error('FDG_UNCLASSIFIED_ERROR_PRESENT');
+          if(x.rejected_attempt_does_not_kill_host!==true) throw new Error('FDG_ATTEMPT_REJECTED_HOST_SURVIVAL_NOT_PROVEN');
+          if(x.final_24h_admitted!==false) throw new Error('FDG_FINAL_24H_MUST_REMAIN_UNADMITTED');
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-failure-discovery-gate-${{ github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_GFS_SUBPROCESS_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_FINAL_24H_ADMISSION_V1_RESULT.json
+          retention-days: 90

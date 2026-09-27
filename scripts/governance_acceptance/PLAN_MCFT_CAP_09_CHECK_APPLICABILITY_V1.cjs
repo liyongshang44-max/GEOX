@@ -9,6 +9,8 @@ const cp = require("node:child_process");
 const ROOT = path.resolve(__dirname, "../..");
 const AUTHORITY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const REGISTRY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json";
+const FAILURE_DISCOVERY_GATE_AUTHORITY_PATH =
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FAILURE-DISCOVERY-GATE-V1.json";
 const ACTUAL_FORMAL_STORE_AUTHORITY_PATH =
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json";
 const DEPENDENCY_DIGEST_STRATEGY = "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1";
@@ -190,6 +192,36 @@ function currentCropRegistryDependencyPaths(root, resolverId, registryRef) {
   return [registryRef, ...refs].sort();
 }
 
+function failureDiscoveryPhase5ExactPaths(root) {
+  if (!exists(root, FAILURE_DISCOVERY_GATE_AUTHORITY_PATH)) return [];
+  const gate = readJson(root, FAILURE_DISCOVERY_GATE_AUTHORITY_PATH);
+  const ownership = gate.central_exact_path_ownership;
+  const paths = uniqueSortedPaths(ownership?.paths || []);
+  if (
+    gate.schema_version !== "geox_mcft_cap09_failure_discovery_gate_v1" ||
+    gate.gate_id !== "MCFT_CAP09_FAILURE_DISCOVERY_GATE_V1" ||
+    gate.status !== "CANDIDATE" ||
+    gate.authority_effect !== false ||
+    gate.production_effect !== false ||
+    gate.formal_v5_arm !== false ||
+    gate.a0_authorized !== false ||
+    gate.o00_o23_authorized !== false ||
+    ownership?.schema_version !== "geox_mcft_cap09_failure_discovery_exact_path_ownership_v1" ||
+    ownership?.owner_check_id !== "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS" ||
+    ownership?.resolver_id !== "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS" ||
+    ownership?.path_semantics !== "EXACT_PATH_SET" ||
+    ownership?.fail_closed_on_missing_path !== true ||
+    ownership?.production_authority_effect !== false ||
+    paths.length === 0 ||
+    !paths.includes(FAILURE_DISCOVERY_GATE_AUTHORITY_PATH)
+  ) {
+    throw new Error("FAILURE_DISCOVERY_PHASE5_EXACT_PATH_OWNERSHIP_INVALID");
+  }
+  const missing = paths.filter((rel) => !exists(root, rel));
+  if (missing.length) throw new Error(`FAILURE_DISCOVERY_PHASE5_EXACT_PATH_MISSING:${missing.join(",")}`);
+  return paths;
+}
+
 function resolveDependencyResolvers(root, authority) {
   const resolved = {};
   const errors = [];
@@ -198,7 +230,10 @@ function resolveDependencyResolvers(root, authority) {
       if (spec.kind === "EXACT_PATH_SET") {
         const registryPaths = spec.current_crop_registry_ref === undefined ? []
           : currentCropRegistryDependencyPaths(root, resolverId, spec.current_crop_registry_ref);
-        const paths = [...new Set([...(spec.paths || []).map(norm), ...registryPaths])].sort();
+        const diagnosticPaths = resolverId === "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS"
+          ? failureDiscoveryPhase5ExactPaths(root)
+          : [];
+        const paths = [...new Set([...(spec.paths || []).map(norm), ...registryPaths, ...diagnosticPaths])].sort();
         const missing = paths.filter((p) => !exists(root, p));
         resolved[resolverId] = { resolver_id: resolverId, kind: spec.kind, paths, missing };
         if (missing.length) errors.push({ resolver_id: resolverId, code: "RESOLVER_PATH_MISSING", detail: missing });
@@ -796,6 +831,7 @@ function main() {
 module.exports = {
   AUTHORITY_PATH,
   REGISTRY_PATH,
+  FAILURE_DISCOVERY_GATE_AUTHORITY_PATH,
   ACTUAL_FORMAL_STORE_AUTHORITY_PATH,
   DEPENDENCY_DIGEST_STRATEGY,
   EXACT_EXTERNAL_SEGMENT_ARTIFACT_PATH,
@@ -805,6 +841,7 @@ module.exports = {
   buildImportClosure,
   materializeGeneratedGraph,
   currentCropRegistryDependencyPaths,
+  failureDiscoveryPhase5ExactPaths,
   resolveDependencyResolvers,
   immutableEvidenceBindingSha256,
   readDurableAnchorEntry,

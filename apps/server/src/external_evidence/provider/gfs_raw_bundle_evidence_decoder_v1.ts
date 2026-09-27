@@ -19,6 +19,42 @@ import type {
 
 const execFileAsync = promisify(execFile);
 
+export type GfsRawBundleScientificSubprocessErrorV1 = Error & {
+  code: "MCFT_CAP09_GFS_SCIENTIFIC_SUBPROCESS_FAILED";
+  diagnostic_token: string;
+  failure_token: string;
+};
+
+function gfsScientificStderrV1(error: unknown): string {
+  if (!error || typeof error !== "object" || !("stderr" in error)) return "";
+  const stderr = (error as { stderr?: unknown }).stderr;
+  if (typeof stderr === "string") return stderr;
+  if (Buffer.isBuffer(stderr)) return stderr.toString("utf8");
+  return "";
+}
+
+export function normalizeGfsRawBundleScientificSubprocessErrorV1(error: unknown): never {
+  const row = error && typeof error === "object"
+    ? error as { killed?: unknown; signal?: unknown; code?: unknown }
+    : {};
+  if (row.killed === true || row.signal === "SIGTERM" || row.code === "ETIMEDOUT") {
+    throw error;
+  }
+  const stderr = gfsScientificStderrV1(error);
+  const diagnostics = stderr.match(
+    /\bMCFT_CAP09_GFS_[A-Z0-9_]+(?::[A-Za-z0-9_.=-]{1,96})*\b/g,
+  ) ?? [];
+  const diagnostic =
+    diagnostics.at(-1) ?? "MCFT_CAP09_GFS_SCIENTIFIC_SUBPROCESS_UNCLASSIFIED";
+  const token = diagnostic.split(":", 1)[0]!;
+  throw Object.assign(new Error(diagnostic), {
+    name: "GfsRawBundleScientificSubprocessError",
+    code: "MCFT_CAP09_GFS_SCIENTIFIC_SUBPROCESS_FAILED" as const,
+    diagnostic_token: diagnostic,
+    failure_token: token,
+  }) as GfsRawBundleScientificSubprocessErrorV1;
+}
+
 export const MCFT_CAP09_GFS_RAW_BUNDLE_PRODUCT_DECODER_ID_V1 =
   "MCFT_CAP09_GFS_RAW_BUNDLE_PRODUCT_DECODER_V1" as const;
 export const MCFT_CAP09_GFS_RAW_BUNDLE_PRODUCT_DECODER_VERSION_V1 = "1" as const;
@@ -112,11 +148,15 @@ export class GfsRawBundleEvidenceDecoderV1
         "--output", outputPath,
       ];
       if (this.normalizeEt0) args.push("--normalize-et0");
-      await execFileAsync(this.pythonExecutable, args, {
-        cwd: process.cwd(),
-        maxBuffer: 32 * 1024 * 1024,
-        timeout: 20 * 60_000,
-      });
+      try {
+        await execFileAsync(this.pythonExecutable, args, {
+          cwd: process.cwd(),
+          maxBuffer: 32 * 1024 * 1024,
+          timeout: 20 * 60_000,
+        });
+      } catch (error) {
+        normalizeGfsRawBundleScientificSubprocessErrorV1(error);
+      }
       const parsed = JSON.parse(fs.readFileSync(outputPath, "utf8")) as unknown;
       const drafts = exactDraftPairV1(parsed);
       if (!this.restoredIngestedAt) return drafts;
