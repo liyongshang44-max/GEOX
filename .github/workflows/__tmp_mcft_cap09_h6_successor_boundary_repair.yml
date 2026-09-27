@@ -1,0 +1,128 @@
+name: temp-mcft-cap09-h6-successor-boundary-repair
+
+on:
+  push:
+    branches:
+      - qual/mcft-cap09-control-plane-convergence-v1
+    paths:
+      - '.github/workflows/__tmp_mcft_cap09_h6_successor_boundary_repair.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply narrow H6 lifecycle-boundary repair
+        shell: python
+        run: |
+          from pathlib import Path
+
+          target = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs')
+          text = target.read_text(encoding='utf-8')
+
+          old = '''assert.equal(git("merge-base",BASE,"HEAD"),BASE,"H6_EXACT_PREDECESSOR_MUST_BE_ANCESTOR");
+          for(const frozen of FROZEN){
+            assert.equal(git("rev-parse","HEAD:"+frozen),git("rev-parse",BASE+":"+frozen),"H6_HISTORICAL_OR_PRODUCTION_V2_REWRITE_FORBIDDEN:"+frozen);
+          }
+          const changed=git("diff","--name-only",BASE+"...HEAD").split(/\\r?\\n/).filter(Boolean);
+          '''
+
+          new = '''assert.equal(git("merge-base",BASE,"HEAD"),BASE,"H6_EXACT_PREDECESSOR_MUST_BE_ANCESTOR");
+          for(const frozen of FROZEN){
+            assert.equal(git("rev-parse","HEAD:"+frozen),git("rev-parse",BASE+":"+frozen),"H6_HISTORICAL_OR_PRODUCTION_V2_REWRITE_FORBIDDEN:"+frozen);
+          }
+
+          const headSha=git("rev-parse","HEAD");
+          function qcpPlanBaseForHead(){
+            const planPath=path.join(ROOT,"acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json");
+            if(!fs.existsSync(planPath))return null;
+            try{
+              const plan=JSON.parse(fs.readFileSync(planPath,"utf8"));
+              return plan.head_sha===headSha?plan.base_sha:null;
+            }catch{return null;}
+          }
+          function githubEventBase(){
+            const eventPath=String(process.env.GITHUB_EVENT_PATH||"");
+            if(!eventPath||!fs.existsSync(eventPath))return null;
+            try{
+              const event=JSON.parse(fs.readFileSync(eventPath,"utf8"));
+              return event.pull_request?.base?.sha||event.merge_group?.base_sha||
+                (event.ref==="refs/heads/main"?event.before:null)||null;
+            }catch{return null;}
+          }
+          const candidateBase=[
+            process.env.H6_SUCCESSOR_BASE_SHA,
+            process.env.MCFT_BASE_SHA,
+            qcpPlanBaseForHead(),
+            githubEventBase(),
+          ].find((value)=>/^[0-9a-f]{40}$/.test(String(value||"")))||null;
+          if(candidateBase&&candidateBase!==BASE){
+            assert.equal(git("merge-base",BASE,candidateBase),BASE,"H6_SUCCESSOR_BASE_MUST_DESCEND_FROM_HISTORICAL_PREDECESSOR");
+            assert.equal(git("merge-base",candidateBase,headSha),candidateBase,"H6_SUCCESSOR_BASE_MUST_BE_ANCESTOR_OF_HEAD");
+          }
+          const successorBoundaryActive=Boolean(candidateBase&&candidateBase!==BASE);
+          const changeBoundaryBase=successorBoundaryActive?candidateBase:BASE;
+          const candidateChanged=git("diff","--name-only",changeBoundaryBase+"...HEAD").split(/\\r?\\n/).filter(Boolean);
+          const H6_SELF="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs";
+          const h6GovernedPaths=new Set([...(h6Resolver.paths||[]),QCP,H6_SELF]);
+          const changed=successorBoundaryActive
+            ? candidateChanged.filter((rel)=>h6GovernedPaths.has(rel))
+            : candidateChanged;
+          '''
+
+          if text.count(old) != 1:
+              raise SystemExit(f'H6 boundary block match count={text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          old_proof = '''  exact_predecessor_sha:BASE,
+            subject_head_sha:git("rev-parse","HEAD"),
+            changed_file_count:changed.length,
+          '''
+          new_proof = '''  exact_predecessor_sha:BASE,
+            subject_head_sha:headSha,
+            change_boundary_mode:successorBoundaryActive?"SUCCESSOR_H6_RESOLVER_PATH_SET":"LEGACY_HISTORICAL_GLOBAL",
+            change_boundary_base_sha:changeBoundaryBase,
+            candidate_changed_file_count:candidateChanged.length,
+            changed_file_count:changed.length,
+          '''
+          if text.count(old_proof) != 1:
+              raise SystemExit(f'H6 proof block match count={text.count(old_proof)}')
+          text = text.replace(old_proof, new_proof, 1)
+          target.write_text(text, encoding='utf-8')
+
+      - name: Commit candidate repair locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "geox-mcft-qualification-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/__tmp_mcft_cap09_h6_successor_boundary_repair.yml
+          git add scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs
+          git diff --cached --check
+          git commit -m "fix(mcft-cap09): scope H6 successor diff to current base"
+
+      - name: Verify repaired H6 against exact protected-main successor base
+        env:
+          H6_SUCCESSOR_BASE_SHA: 8f63c498bd48978e2dd525ad57b6b8fdb7ada560
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$H6_SUCCESSOR_BASE_SHA" HEAD)" = "$H6_SUCCESSOR_BASE_SHA"
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs
+          git diff --check "$H6_SUCCESSOR_BASE_SHA...HEAD"
+
+      - name: Publish verified repair and self-remove carrier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin HEAD:${GITHUB_REF_NAME}
