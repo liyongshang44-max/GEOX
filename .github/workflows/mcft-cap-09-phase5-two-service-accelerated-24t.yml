@@ -552,6 +552,8 @@ jobs:
           path: ${{ runner.temp }}/phase5-evidence-resilience-3349
 
       - name: Validate immutable temporal-settlement components and semantic equivalence
+        id: temporal_settlement
+        continue-on-error: true
         if: steps.temporal.outputs.mode == 'TEMPORAL_SETTLEMENT_V1'
         shell: bash
         env:
@@ -727,7 +729,7 @@ jobs:
             > "$GEOX_PHASE5_CONTROL_ROOT/twin-duplicate-proof.json"
 
       - name: Finalize Phase5 temporal settlement proof
-        if: steps.temporal.outputs.mode == 'TEMPORAL_SETTLEMENT_V1'
+        if: ${{ steps.temporal.outputs.mode == 'TEMPORAL_SETTLEMENT_V1' && steps.temporal_settlement.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -760,6 +762,13 @@ jobs:
               evidence_restart_and_fencing_fresh:true,twin_fencing_fresh:true,
               raw_fixture_uploaded:false,production_owner_cutover:false,formal_v5_armed:false}' \
             > "$GEOX_PHASE5_CONTROL_ROOT/workflow-proof.json"
+
+      - name: Preserve temporal-settlement fail-closed rejection after focused discovery
+        if: ${{ always() && steps.temporal.outputs.mode == 'TEMPORAL_SETTLEMENT_V1' && steps.temporal_settlement.outcome == 'failure' }}
+        shell: bash
+        run: |
+          echo "PHASE5_TEMPORAL_SETTLEMENT_REJECTED" >&2
+          exit 1
 
       - name: Upload non-raw exact-head qualification proof
         if: always()
