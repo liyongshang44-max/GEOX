@@ -21,7 +21,6 @@ const FULL={
   full_resource_envelope:path.resolve("acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_FULL_RESOURCE_ENVELOPE_V1_RESULT.json"),
   live_provider_soak:path.resolve("acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_LIVE_PROVIDER_SOAK_V1_RESULT.json"),
   accelerated_restart_backfill:path.resolve("acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_ACCELERATED_RESTART_BACKFILL_V1_RESULT.json"),
-  production_equivalent_candidate:path.resolve("acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_PRODUCTION_EQUIVALENT_CANDIDATE_V1_RESULT.json"),
 };
 
 function readJson(file){
@@ -60,17 +59,19 @@ const resourceSanityOnly=
   fast.resource_sanity.row?.tier==="FAST_SANITY_NOT_FINAL_RESOURCE_ENVELOPE"
   && fast.resource_sanity.row?.full_resource_envelope_complete===false;
 
+// Runtime admission is intentionally limited to the five conditions that can
+// still make FINAL R00-R23 fail. Qualification/control-plane convergence is
+// adjudicated separately and must not create additional Runtime blockers.
 const requirements={
-  fast_failure_discovery_gate:fastPass,
-  no_unclassified_error:noUnclassified,
+  failure_taxonomy_compatibility_seam:
+    fastPass && noUnclassified,
   exact_p0h_raw_materialized_and_hash_verified:rawValid,
   full_resource_envelope:full.full_resource_envelope.pass,
+  accelerated_restart_missed_slot_oldest_first_backfill:full.accelerated_restart_backfill.pass,
   live_provider_soak_2_to_4h:
     full.live_provider_soak.pass
     && Number(full.live_provider_soak.row?.duration_hours)>=2
     && Number(full.live_provider_soak.row?.duration_hours)<=4,
-  accelerated_restart_missed_slot_oldest_first_backfill:full.accelerated_restart_backfill.pass,
-  production_equivalent_final_candidate:full.production_equivalent_candidate.pass,
 };
 const finalAdmitted=Object.values(requirements).every(Boolean);
 const pending=Object.entries(requirements).filter(([,value])=>!value).map(([key])=>key);
