@@ -116,3 +116,5 @@ jobs:
         run: |
           set -euo pipefail
           git push origin HEAD:${GITHUB_REF_NAME}
+
+# retrigger successor-boundary repair: 2026-09-28
