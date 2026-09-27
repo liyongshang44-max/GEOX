@@ -25,8 +25,19 @@ const CORPUS = path.resolve(
   "scripts/runtime_acceptance/fixtures/mcft_cap09_failure_corpus_v1.json",
 );
 const GFS_ITERATIONS = 3;
+const GFS_LEAD_COUNT = 73;
+const MINIMUM_GFS_PROVIDER_OBJECT_COUNT = 1 + GFS_LEAD_COUNT * 3;
 const P0H_REPLAY_ITERATIONS = 100;
+const SAMPLE_INTERVAL_MS = 250;
 const MB = 1024 * 1024;
+
+const RESOURCE_LIMITS = Object.freeze({
+  final_rss_delta_bytes: 96 * MB,
+  final_heap_used_delta_bytes: 32 * MB,
+  final_external_delta_bytes: 64 * MB,
+  peak_rss_delta_bytes: 192 * MB,
+  maximum_fd_delta: 8,
+});
 
 type Sample = {
   rss: number;
@@ -35,6 +46,7 @@ type Sample = {
   array_buffers: number;
   fd_count: number | null;
   temp_root_count: number;
+  observed_at: string;
 };
 
 type Corpus = {
@@ -45,6 +57,9 @@ type Corpus = {
     exact_raw_preserved_external_control_tree?: boolean;
   }>;
 };
+
+type RetentionInput = Parameters<RawEvidenceRetentionPortV1["retainRawEvidence"]>[0];
+type RetentionReceipt = Awaited<ReturnType<RawEvidenceRetentionPortV1["retainRawEvidence"]>>;
 
 function sha256(bytes: Uint8Array): string {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
@@ -59,11 +74,16 @@ function fdCount(): number | null {
 }
 
 function tempRootCount(): number {
-  return fs.readdirSync(os.tmpdir()).filter((name) =>
-    name.startsWith("mcft-cap09-gfs-bundle-")
-    || name.startsWith("mcft-cap09-kbs-publication-")
-    || name.startsWith("mcft-cap09-kbs-raw-hourly-")
-  ).length;
+  try {
+    return fs.readdirSync(os.tmpdir()).filter((name) =>
+      name.startsWith("mcft-cap09-gfs-bundle-")
+      || name.startsWith("mcft-cap09-kbs-publication-")
+      || name.startsWith("mcft-cap09-kbs-raw-hourly-")
+      || name.startsWith("mcft-cap09-fdg-live-retention-")
+    ).length;
+  } catch {
+    return 0;
+  }
 }
 
 function collectGarbage(): void {
@@ -72,8 +92,7 @@ function collectGarbage(): void {
   gc();
 }
 
-function sample(): Sample {
-  collectGarbage();
+function rawSample(): Sample {
   const usage = process.memoryUsage();
   return {
     rss: usage.rss,
@@ -82,7 +101,13 @@ function sample(): Sample {
     array_buffers: usage.arrayBuffers,
     fd_count: fdCount(),
     temp_root_count: tempRootCount(),
+    observed_at: new Date().toISOString(),
   };
+}
+
+function stableSample(): Sample {
+  collectGarbage();
+  return rawSample();
 }
 
 function canonicalTarget(): string {
@@ -138,6 +163,38 @@ function loadP0h(): {
   };
 }
 
+class LocalPrivateRetentionProbeV1 implements RawEvidenceRetentionPortV1 {
+  readonly root = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-cap09-fdg-live-retention-"));
+  retained_object_count = 0;
+  retained_bytes = 0;
+
+  async retainRawEvidence(input: RetentionInput): Promise<RetentionReceipt> {
+    const digest = sha256(input.bytes);
+    assert.equal(digest, input.raw_sha256, "FDG_FULL_RESOURCE_ENVELOPE_RETENTION_SHA256_MISMATCH");
+    assert.equal(input.bytes.byteLength, input.raw_bytes, "FDG_FULL_RESOURCE_ENVELOPE_RETENTION_BYTES_MISMATCH");
+    const file = path.join(
+      this.root,
+      `${String(this.retained_object_count).padStart(4, "0")}-${input.raw_sha256.slice(7)}.raw`,
+    );
+    fs.writeFileSync(file, Buffer.from(input.bytes), { mode: 0o600 });
+    this.retained_object_count += 1;
+    this.retained_bytes += input.raw_bytes;
+    return {
+      retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+      retention_ref: `file-private://${path.basename(this.root)}/${path.basename(file)}`,
+      retained_sha256: input.raw_sha256,
+      retained_bytes: input.raw_bytes,
+      retained_at: input.retrieved_at,
+      retention_verified_at: input.retrieved_at,
+      externally_publishable: false,
+    };
+  }
+
+  cleanup(): void {
+    fs.rmSync(this.root, { recursive: true, force: true });
+  }
+}
+
 async function replayExactP0h(input: { bytes: Buffer }): Promise<void> {
   const inspector = new KbsRawHourlyPublicationSnapshotInspectorV1();
   for (let iteration = 0; iteration < P0H_REPLAY_ITERATIONS; iteration += 1) {
@@ -159,9 +216,13 @@ async function replayExactP0h(input: { bytes: Buffer }): Promise<void> {
 }
 
 async function oneLiveGfs(iteration: number, target: string): Promise<{
+  lead_count: number;
+  member_count: number;
   raw_bundle_bytes: number;
   provider_request_count: number;
   raw_provider_object_count: number;
+  retained_object_count: number;
+  retained_bytes: number;
   selected_cycle: string;
 }> {
   const byteClient = new ControlledHttpsByteClientV1({
@@ -170,42 +231,57 @@ async function oneLiveGfs(iteration: number, target: string): Promise<{
     timeout_ms: 90_000,
   });
   const provider = new GfsNomadsLiveProviderV1({ byte_client: byteClient });
-  const retention: RawEvidenceRetentionPortV1 = {
-    async retainRawEvidence(input) {
-      return {
-        retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
-        retention_ref: `fdg-resource-envelope://${iteration}/${input.raw_sha256.slice(7)}`,
-        retained_sha256: input.raw_sha256,
-        retained_bytes: input.raw_bytes,
-        retained_at: input.retrieved_at,
-        retention_verified_at: input.retrieved_at,
-        externally_publishable: false,
-      };
-    },
-  };
-  const composer = new GfsNomadsRawBundleComposerV1({
-    provider,
-    retention,
-    clock: () => new Date(),
-  });
-  const result = await composer.compose({
-    target_logical_time: target,
-    request_id_prefix: `fdg-full-resource-${iteration}`,
-  });
+  const retention = new LocalPrivateRetentionProbeV1();
   try {
-    assert.equal(fs.existsSync(result.bundle_file_path), true);
-    assert.ok(result.raw_bundle_bytes > 0, "FDG_FULL_RESOURCE_ENVELOPE_GFS_BUNDLE_EMPTY");
-    assert.ok(result.provider_request_count > 0, "FDG_FULL_RESOURCE_ENVELOPE_GFS_REQUESTS_REQUIRED");
-    assert.ok(result.raw_provider_object_count > 0, "FDG_FULL_RESOURCE_ENVELOPE_GFS_OBJECTS_REQUIRED");
-    return {
-      raw_bundle_bytes: result.raw_bundle_bytes,
-      provider_request_count: result.provider_request_count,
-      raw_provider_object_count: result.raw_provider_object_count,
-      selected_cycle: result.selected_cycle,
-    };
+    const composer = new GfsNomadsRawBundleComposerV1({
+      provider,
+      retention,
+      clock: () => new Date(),
+    });
+    const result = await composer.compose({
+      target_logical_time: target,
+      request_id_prefix: `fdg-full-resource-${iteration}`,
+    });
+    try {
+      const leadCount = result.lead_end - result.support_lead + 1;
+      assert.equal(leadCount, GFS_LEAD_COUNT, "FDG_FULL_RESOURCE_ENVELOPE_GFS_73_LEADS_REQUIRED");
+      assert.equal(fs.existsSync(result.bundle_file_path), true);
+      assert.ok(result.raw_bundle_bytes > 0, "FDG_FULL_RESOURCE_ENVELOPE_GFS_BUNDLE_EMPTY");
+      assert.ok(
+        result.raw_provider_object_count >= MINIMUM_GFS_PROVIDER_OBJECT_COUNT,
+        `FDG_FULL_RESOURCE_ENVELOPE_GFS_OBJECT_COUNT_TOO_LOW:${result.raw_provider_object_count}`,
+      );
+      assert.equal(
+        result.provider_request_count,
+        result.raw_provider_object_count,
+        "FDG_FULL_RESOURCE_ENVELOPE_GFS_REQUEST_OBJECT_COUNT_MISMATCH",
+      );
+      assert.equal(
+        retention.retained_object_count,
+        result.raw_provider_object_count,
+        "FDG_FULL_RESOURCE_ENVELOPE_GFS_RETENTION_OBJECT_COUNT_MISMATCH",
+      );
+      assert.equal(
+        result.members.length,
+        result.raw_provider_object_count,
+        "FDG_FULL_RESOURCE_ENVELOPE_GFS_MEMBER_OBJECT_COUNT_MISMATCH",
+      );
+      return {
+        lead_count: leadCount,
+        member_count: result.members.length,
+        raw_bundle_bytes: result.raw_bundle_bytes,
+        provider_request_count: result.provider_request_count,
+        raw_provider_object_count: result.raw_provider_object_count,
+        retained_object_count: retention.retained_object_count,
+        retained_bytes: retention.retained_bytes,
+        selected_cycle: result.selected_cycle,
+      };
+    } finally {
+      result.cleanup();
+      assert.equal(fs.existsSync(result.bundle_file_path), false);
+    }
   } finally {
-    result.cleanup();
-    assert.equal(fs.existsSync(result.bundle_file_path), false);
+    retention.cleanup();
   }
 }
 
@@ -215,22 +291,35 @@ async function main(): Promise<void> {
   }
   const p0h = loadP0h();
   const target = canonicalTarget();
-  const before = sample();
-  const samples: Sample[] = [];
-
-  await replayExactP0h({ bytes: p0h.bytes });
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  samples.push(sample());
+  const before = stableSample();
+  const liveSamples: Sample[] = [rawSample()];
+  const sampler = setInterval(() => {
+    liveSamples.push(rawSample());
+  }, SAMPLE_INTERVAL_MS);
+  sampler.unref();
 
   const gfs: Array<Awaited<ReturnType<typeof oneLiveGfs>>> = [];
-  for (let iteration = 0; iteration < GFS_ITERATIONS; iteration += 1) {
-    gfs.push(await oneLiveGfs(iteration, target));
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    samples.push(sample());
+  try {
+    await replayExactP0h({ bytes: p0h.bytes });
+    liveSamples.push(rawSample());
+
+    for (let iteration = 0; iteration < GFS_ITERATIONS; iteration += 1) {
+      gfs.push(await oneLiveGfs(iteration, target));
+      liveSamples.push(rawSample());
+      assert.equal(
+        tempRootCount(),
+        before.temp_root_count,
+        `FDG_FULL_RESOURCE_ENVELOPE_TEMP_ROOT_LEAK_AFTER_GFS:${iteration}`,
+      );
+    }
+  } finally {
+    clearInterval(sampler);
   }
 
-  const after = sample();
-  const all = [before, ...samples, after];
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const after = stableSample();
+  liveSamples.push(rawSample());
+  const all = [before, ...liveSamples, after];
   const peakRss = Math.max(...all.map((row) => row.rss));
   const peakHeap = Math.max(...all.map((row) => row.heap_used));
   const peakExternal = Math.max(...all.map((row) => row.external));
@@ -243,11 +332,25 @@ async function main(): Promise<void> {
     : after.fd_count - before.fd_count;
 
   assert.equal(after.temp_root_count, before.temp_root_count, "FDG_FULL_RESOURCE_ENVELOPE_TEMP_ROOT_LEAK");
-  if (fdDelta !== null) assert.ok(fdDelta <= 8, `FDG_FULL_RESOURCE_ENVELOPE_FD_GROWTH:${fdDelta}`);
-  assert.ok(rssDelta <= 96 * MB, `FDG_FULL_RESOURCE_ENVELOPE_FINAL_RSS_DELTA_TOO_HIGH:${rssDelta}`);
-  assert.ok(heapDelta <= 32 * MB, `FDG_FULL_RESOURCE_ENVELOPE_FINAL_HEAP_DELTA_TOO_HIGH:${heapDelta}`);
-  assert.ok(externalDelta <= 64 * MB, `FDG_FULL_RESOURCE_ENVELOPE_FINAL_EXTERNAL_DELTA_TOO_HIGH:${externalDelta}`);
-  assert.ok(peakRssDelta <= 192 * MB, `FDG_FULL_RESOURCE_ENVELOPE_PEAK_RSS_DELTA_TOO_HIGH:${peakRssDelta}`);
+  if (fdDelta !== null) {
+    assert.ok(fdDelta <= RESOURCE_LIMITS.maximum_fd_delta, `FDG_FULL_RESOURCE_ENVELOPE_FD_GROWTH:${fdDelta}`);
+  }
+  assert.ok(
+    rssDelta <= RESOURCE_LIMITS.final_rss_delta_bytes,
+    `FDG_FULL_RESOURCE_ENVELOPE_FINAL_RSS_DELTA_TOO_HIGH:${rssDelta}`,
+  );
+  assert.ok(
+    heapDelta <= RESOURCE_LIMITS.final_heap_used_delta_bytes,
+    `FDG_FULL_RESOURCE_ENVELOPE_FINAL_HEAP_DELTA_TOO_HIGH:${heapDelta}`,
+  );
+  assert.ok(
+    externalDelta <= RESOURCE_LIMITS.final_external_delta_bytes,
+    `FDG_FULL_RESOURCE_ENVELOPE_FINAL_EXTERNAL_DELTA_TOO_HIGH:${externalDelta}`,
+  );
+  assert.ok(
+    peakRssDelta <= RESOURCE_LIMITS.peak_rss_delta_bytes,
+    `FDG_FULL_RESOURCE_ENVELOPE_PEAK_RSS_DELTA_TOO_HIGH:${peakRssDelta}`,
+  );
 
   const result = {
     schema_version: "geox_mcft_cap09_failure_discovery_full_resource_envelope_v1",
@@ -269,7 +372,10 @@ async function main(): Promise<void> {
     gfs_live: {
       target_logical_time: target,
       acquisition_iterations: GFS_ITERATIONS,
+      required_lead_count_per_acquisition: GFS_LEAD_COUNT,
+      minimum_provider_object_count_per_acquisition: MINIMUM_GFS_PROVIDER_OBJECT_COUNT,
       file_backed_streaming_composer: true,
+      private_retention_materialized_to_local_files: true,
       responsible_grib_filter_cadence_preserved: true,
       runs: gfs,
       proven: true,
@@ -277,6 +383,9 @@ async function main(): Promise<void> {
     resources: {
       baseline: before,
       final: after,
+      live_sample_interval_ms: SAMPLE_INTERVAL_MS,
+      live_sample_count: liveSamples.length,
+      peak_sampling_occurs_during_provider_acquisition: true,
       peak_rss_bytes: peakRss,
       peak_heap_used_bytes: peakHeap,
       peak_external_bytes: peakExternal,
@@ -286,13 +395,7 @@ async function main(): Promise<void> {
       peak_rss_delta_bytes: peakRssDelta,
       fd_delta: fdDelta,
       temp_root_leak: false,
-      limits: {
-        final_rss_delta_bytes: 96 * MB,
-        final_heap_used_delta_bytes: 32 * MB,
-        final_external_delta_bytes: 64 * MB,
-        peak_rss_delta_bytes: 192 * MB,
-        maximum_fd_delta: 8,
-      },
+      limits: RESOURCE_LIMITS,
     },
     full_gfs_3x_live_acquisition_proven: true,
     exact_p0h_raw_100x_replay_proven: true,
