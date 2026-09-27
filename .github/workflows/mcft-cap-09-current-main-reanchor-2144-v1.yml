@@ -1,3 +1,4 @@
+# Qualification convergence probe: no qualification semantics changed.
 name: MCFT CAP-09 Current-Main Re-Anchor 2144
 
 on:
@@ -99,7 +100,7 @@ jobs:
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-36B6-V1.json
             acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1_RESULT.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-0AC2-V1.json
-            acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR-0AC2-V1_RESULT.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json
             acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1_RESULT.json
