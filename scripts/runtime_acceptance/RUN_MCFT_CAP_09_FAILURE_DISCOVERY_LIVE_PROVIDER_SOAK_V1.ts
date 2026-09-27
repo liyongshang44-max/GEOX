@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import type { RawEvidenceRetentionPortV1 } from "../../apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.js";
+import type {
+  RawEvidenceFileRetentionPortV1,
+  RawEvidenceRetentionPortV1,
+} from "../../apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.js";
 import {
   ControlledHttpsByteClientV1,
 } from "../../apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.js";
@@ -22,6 +26,12 @@ import {
   GfsNomadsRawBundleComposerV1,
 } from "../../apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.js";
 import {
+  buildGfsNomadsBundleFetchRequestV1,
+} from "../../apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.js";
+import {
+  GfsRawBundleEvidenceDecoderV1,
+} from "../../apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.js";
+import {
   McftCap09ProductionEvidenceFailureClassifierV1,
 } from "../../apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.js";
 
@@ -30,6 +40,8 @@ const OUT = path.resolve(
 );
 const KBS_INTERVAL_MS = 15 * 60 * 1000;
 const GFS_INTERVAL_MS = 60 * 60 * 1000;
+const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+const FOUR_HOUR_END_GUARD_MS = 5_000;
 
 type Disposition = "RETRYABLE" | "ATTEMPT_REJECTED" | "PROCESS_FATAL";
 type ProviderCounters = {
@@ -50,8 +62,23 @@ type Sample = {
   temp_root_count: number;
 };
 
+type RetentionInput = Parameters<RawEvidenceRetentionPortV1["retainRawEvidence"]>[0];
+type FileRetentionInput = Parameters<RawEvidenceFileRetentionPortV1["retainRawEvidenceFile"]>[0];
+type RetentionReceipt = Awaited<ReturnType<RawEvidenceRetentionPortV1["retainRawEvidence"]>>;
+
 function counters(): ProviderCounters {
   return { attempts: 0, pass: 0, retryable: 0, attempt_rejected: 0, process_fatal: 0 };
+}
+
+function sha256(bytes: Uint8Array): string {
+  return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+}
+
+async function sha256File(file: string): Promise<string> {
+  const hash = createHash("sha256");
+  const stream = fs.createReadStream(file, { highWaterMark: 256 * 1024 });
+  for await (const chunk of stream) hash.update(chunk as Buffer);
+  return `sha256:${hash.digest("hex")}`;
 }
 
 function fdCount(): number | null {
@@ -63,11 +90,17 @@ function fdCount(): number | null {
 }
 
 function tempRootCount(): number {
-  return fs.readdirSync(os.tmpdir()).filter((name) =>
-    name.startsWith("mcft-cap09-gfs-bundle-")
-    || name.startsWith("mcft-cap09-kbs-publication-")
-    || name.startsWith("mcft-cap09-kbs-raw-hourly-")
-  ).length;
+  try {
+    return fs.readdirSync(os.tmpdir()).filter((name) =>
+      name.startsWith("mcft-cap09-gfs-bundle-")
+      || name.startsWith("mcft-cap09-gfs-product-output-")
+      || name.startsWith("mcft-cap09-kbs-publication-")
+      || name.startsWith("mcft-cap09-kbs-raw-hourly-")
+      || name.startsWith("mcft-cap09-fdg-live-soak-retention-")
+    ).length;
+  } catch {
+    return 0;
+  }
 }
 
 function sample(): Sample {
@@ -112,6 +145,59 @@ function sanitizedToken(error: unknown): string {
   return (message.trim().split(":", 1)[0] || "UNKNOWN").slice(0, 120);
 }
 
+class LocalPrivateRetentionV1 implements RawEvidenceRetentionPortV1, RawEvidenceFileRetentionPortV1 {
+  readonly root = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-cap09-fdg-live-soak-retention-"));
+  retained_object_count = 0;
+  retained_bytes = 0;
+
+  private target(rawSha256: string): string {
+    const ordinal = String(this.retained_object_count).padStart(5, "0");
+    return path.join(this.root, `${ordinal}-${rawSha256.slice("sha256:".length)}.raw`);
+  }
+
+  async retainRawEvidence(input: RetentionInput): Promise<RetentionReceipt> {
+    assert.equal(sha256(input.bytes), input.raw_sha256, "FDG_LIVE_SOAK_RETENTION_SHA256_MISMATCH");
+    assert.equal(input.bytes.byteLength, input.raw_bytes, "FDG_LIVE_SOAK_RETENTION_BYTES_MISMATCH");
+    const file = this.target(input.raw_sha256);
+    fs.writeFileSync(file, Buffer.from(input.bytes), { mode: 0o600 });
+    this.retained_object_count += 1;
+    this.retained_bytes += input.raw_bytes;
+    return {
+      retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+      retention_ref: `file-private://${path.basename(this.root)}/${path.basename(file)}`,
+      retained_sha256: input.raw_sha256,
+      retained_bytes: input.raw_bytes,
+      retained_at: input.retrieved_at,
+      retention_verified_at: input.retrieved_at,
+      externally_publishable: false,
+    };
+  }
+
+  async retainRawEvidenceFile(input: FileRetentionInput): Promise<RetentionReceipt> {
+    const stat = fs.statSync(input.file_path);
+    assert.equal(stat.isFile(), true, "FDG_LIVE_SOAK_RETENTION_FILE_REQUIRED");
+    assert.equal(stat.size, input.raw_bytes, "FDG_LIVE_SOAK_RETENTION_FILE_BYTES_MISMATCH");
+    assert.equal(await sha256File(input.file_path), input.raw_sha256, "FDG_LIVE_SOAK_RETENTION_FILE_SHA256_MISMATCH");
+    const file = this.target(input.raw_sha256);
+    fs.copyFileSync(input.file_path, file);
+    this.retained_object_count += 1;
+    this.retained_bytes += input.raw_bytes;
+    return {
+      retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+      retention_ref: `file-private://${path.basename(this.root)}/${path.basename(file)}`,
+      retained_sha256: input.raw_sha256,
+      retained_bytes: input.raw_bytes,
+      retained_at: input.retrieved_at,
+      retention_verified_at: input.retrieved_at,
+      externally_publishable: false,
+    };
+  }
+
+  cleanup(): void {
+    fs.rmSync(this.root, { recursive: true, force: true });
+  }
+}
+
 async function runKbs(input: {
   classifier: McftCap09ProductionEvidenceFailureClassifierV1;
   counter: ProviderCounters;
@@ -119,12 +205,34 @@ async function runKbs(input: {
 }): Promise<void> {
   input.counter.attempts += 1;
   const requestedAt = new Date().toISOString();
+  const retention = new LocalPrivateRetentionV1();
   try {
-    const transport = new KbsRawHourlyLiveTransportV1();
-    const response = await transport.fetchRawEvidence(buildKbsRawHourlyFetchRequestV1({
+    const request = buildKbsRawHourlyFetchRequestV1({
       request_id: `fdg-live-soak-kbs-${Date.now()}`,
       requested_at: requestedAt,
-    }));
+    });
+    const transport = new KbsRawHourlyLiveTransportV1();
+    const response = await transport.fetchRawEvidence(request);
+    const rawSha256 = sha256(response.bytes);
+    const receipt = await retention.retainRawEvidence({
+      retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+      request_id: request.request_id,
+      provider_id: request.provider_id,
+      source_family: request.source_family,
+      source_locator: request.locator,
+      final_locator: response.final_locator,
+      content_type: response.content_type,
+      retrieved_at: response.retrieved_at,
+      available_at: response.available_at,
+      source_issue_time: request.source_issue_time,
+      source_event_time: request.source_event_time,
+      use_policy_ref: request.use_policy_ref,
+      raw_sha256: rawSha256,
+      raw_bytes: response.bytes.byteLength,
+      bytes: response.bytes,
+    });
+    assert.equal(receipt.retained_sha256, rawSha256);
+    assert.equal(receipt.retained_bytes, response.bytes.byteLength);
     const inspector = new KbsRawHourlyPublicationSnapshotInspectorV1();
     const inventory = await inspector.inspectSnapshot({
       raw_bytes: response.bytes,
@@ -140,6 +248,7 @@ async function runKbs(input: {
       valid_row_count: inventory.valid_row_count,
       unique_event_time_count: inventory.unique_event_time_count,
       latest_event_time: inventory.latest_event_time,
+      private_retention_before_scientific_parse: true,
       raw_values_emitted: false,
     });
   } catch (error) {
@@ -153,6 +262,8 @@ async function runKbs(input: {
       raw_values_emitted: false,
     });
     if (disposition === "PROCESS_FATAL") throw error;
+  } finally {
+    retention.cleanup();
   }
 }
 
@@ -163,6 +274,7 @@ async function runGfs(input: {
   ordinal: number;
 }): Promise<void> {
   input.counter.attempts += 1;
+  const retention = new LocalPrivateRetentionV1();
   let result: Awaited<ReturnType<GfsNomadsRawBundleComposerV1["compose"]>> | null = null;
   try {
     const byteClient = new ControlledHttpsByteClientV1({
@@ -171,29 +283,70 @@ async function runGfs(input: {
       timeout_ms: 90_000,
     });
     const provider = new GfsNomadsLiveProviderV1({ byte_client: byteClient });
-    const retention: RawEvidenceRetentionPortV1 = {
-      async retainRawEvidence(raw) {
-        return {
-          retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
-          retention_ref: `fdg-live-soak://${input.ordinal}/${raw.raw_sha256.slice(7)}`,
-          retained_sha256: raw.raw_sha256,
-          retained_bytes: raw.raw_bytes,
-          retained_at: raw.retrieved_at,
-          retention_verified_at: raw.retrieved_at,
-          externally_publishable: false,
-        };
-      },
-    };
     const composer = new GfsNomadsRawBundleComposerV1({
       provider,
       retention,
       clock: () => new Date(),
     });
     const target = floorUtcHour();
+    const request = buildGfsNomadsBundleFetchRequestV1({
+      request_id: `fdg-live-soak-gfs-bundle-${input.ordinal}`,
+      requested_at: new Date().toISOString(),
+      target_logical_time: target,
+    });
     result = await composer.compose({
       target_logical_time: target,
-      request_id_prefix: `fdg-live-soak-gfs-${input.ordinal}`,
+      request_id_prefix: `fdg-live-soak-gfs-members-${input.ordinal}`,
     });
+    const bundleReceipt = await retention.retainRawEvidenceFile({
+      retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
+      request_id: request.request_id,
+      provider_id: request.provider_id,
+      source_family: request.source_family,
+      source_locator: request.locator,
+      final_locator: request.locator,
+      content_type: "application/x-tar",
+      retrieved_at: result.retrieved_at,
+      available_at: result.retrieved_at,
+      source_issue_time: request.source_issue_time,
+      source_event_time: request.source_event_time,
+      use_policy_ref: request.use_policy_ref,
+      raw_sha256: result.raw_bundle_sha256,
+      raw_bytes: result.raw_bundle_bytes,
+      file_path: result.bundle_file_path,
+    });
+    const decoder = new GfsRawBundleEvidenceDecoderV1(target, { normalize_et0: true });
+    const drafts = await decoder.decodeRetainedEvidenceFile({
+      raw_file_path: result.bundle_file_path,
+      provenance: {
+        request_id: request.request_id,
+        provider_id: request.provider_id,
+        source_family: request.source_family,
+        source_locator: request.locator,
+        final_locator: request.locator,
+        content_type: "application/x-tar",
+        source_issue_time: request.source_issue_time,
+        source_event_time: request.source_event_time,
+        retrieved_at: result.retrieved_at,
+        available_at: result.retrieved_at,
+        raw_sha256: result.raw_bundle_sha256,
+        raw_bytes: result.raw_bundle_bytes,
+        retention_ref: bundleReceipt.retention_ref,
+        retained_at: bundleReceipt.retained_at,
+        use_policy_ref: request.use_policy_ref,
+      },
+    });
+    assert.equal(drafts.length, 2, "FDG_LIVE_SOAK_GFS_SCIENTIFIC_DRAFT_PAIR_REQUIRED");
+    assert.deepEqual(
+      drafts.map((draft) => draft.role),
+      ["FUTURE_WEATHER_ASSUMPTION", "FUTURE_ET0_ASSUMPTION"],
+      "FDG_LIVE_SOAK_GFS_SCIENTIFIC_ROLE_PAIR_REQUIRED",
+    );
+    assert.equal(
+      retention.retained_object_count,
+      result.raw_provider_object_count + 1,
+      "FDG_LIVE_SOAK_GFS_ALL_RAW_AND_BUNDLE_RETENTION_REQUIRED",
+    );
     input.counter.pass += 1;
     input.events.push({
       at: new Date().toISOString(),
@@ -204,6 +357,10 @@ async function runGfs(input: {
       provider_request_count: result.provider_request_count,
       raw_provider_object_count: result.raw_provider_object_count,
       raw_bundle_bytes: result.raw_bundle_bytes,
+      scientific_draft_count: drafts.length,
+      private_member_retention_before_parse: true,
+      private_bundle_retention_before_scientific_decode: true,
+      scientific_decode_completed: true,
       raw_values_emitted: false,
     });
   } catch (error) {
@@ -219,6 +376,7 @@ async function runGfs(input: {
     if (disposition === "PROCESS_FATAL") throw error;
   } finally {
     result?.cleanup();
+    retention.cleanup();
   }
 }
 
@@ -228,6 +386,9 @@ async function main(): Promise<void> {
   }
   const requestedHours = soakHours();
   const requestedDurationMs = requestedHours * 3_600_000;
+  const plannedDurationMs = requestedDurationMs >= FOUR_HOURS_MS
+    ? requestedDurationMs - FOUR_HOUR_END_GUARD_MS
+    : requestedDurationMs;
   const classifier = new McftCap09ProductionEvidenceFailureClassifierV1();
   const kbs = counters();
   const gfs = counters();
@@ -235,7 +396,7 @@ async function main(): Promise<void> {
   const resources: Sample[] = [sample()];
   const startWall = new Date();
   const startMono = process.hrtime.bigint();
-  const endMono = startMono + BigInt(Math.ceil(requestedDurationMs * 1_000_000));
+  const endMono = startMono + BigInt(Math.ceil(plannedDurationMs * 1_000_000));
   let nextKbs = startMono;
   let nextGfs = startMono;
   let gfsOrdinal = 0;
@@ -269,8 +430,10 @@ async function main(): Promise<void> {
   assert.ok(durationHours <= 4, `FDG_LIVE_PROVIDER_SOAK_TOO_LONG:${durationHours}`);
   assert.equal(kbs.process_fatal, 0, "FDG_LIVE_PROVIDER_SOAK_KBS_PROCESS_FATAL");
   assert.equal(gfs.process_fatal, 0, "FDG_LIVE_PROVIDER_SOAK_GFS_PROCESS_FATAL");
-  assert.ok(kbs.attempts > 0, "FDG_LIVE_PROVIDER_SOAK_KBS_ATTEMPT_REQUIRED");
-  assert.ok(gfs.attempts > 0, "FDG_LIVE_PROVIDER_SOAK_GFS_ATTEMPT_REQUIRED");
+  assert.ok(kbs.attempts >= 8, `FDG_LIVE_PROVIDER_SOAK_KBS_ATTEMPTS_TOO_LOW:${kbs.attempts}`);
+  assert.ok(gfs.attempts >= 2, `FDG_LIVE_PROVIDER_SOAK_GFS_ATTEMPTS_TOO_LOW:${gfs.attempts}`);
+  assert.ok(kbs.pass > 0, "FDG_LIVE_PROVIDER_SOAK_KBS_SUCCESS_REQUIRED");
+  assert.ok(gfs.pass > 0, "FDG_LIVE_PROVIDER_SOAK_GFS_SUCCESS_REQUIRED");
   assert.equal(
     resources.at(-1)?.temp_root_count,
     resources[0]?.temp_root_count,
@@ -295,6 +458,9 @@ async function main(): Promise<void> {
     peak_heap_used_bytes: Math.max(...resources.map((row) => row.heap_used)),
     peak_external_bytes: Math.max(...resources.map((row) => row.external)),
     temp_root_leak: false,
+    kbs_private_retention_before_scientific_parse: true,
+    gfs_private_retention_before_scientific_decode: true,
+    gfs_scientific_decode_in_live_soak: true,
     no_process_fatal: true,
     no_unexpected_process_exit: true,
     raw_values_emitted: false,
