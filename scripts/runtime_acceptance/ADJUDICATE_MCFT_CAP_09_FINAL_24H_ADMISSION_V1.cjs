@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 "use strict";
 
-const crypto=require("node:crypto");
 const fs=require("node:fs");
 const path=require("node:path");
 
@@ -18,6 +17,7 @@ const FAST={
   resource_sanity:path.resolve("acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1_RESULT.json"),
 };
 const FULL={
+  exact_p0h_raw:path.resolve("acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_EXACT_P0H_RAW_V1_RESULT.json"),
   full_resource_envelope:path.resolve("acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_FULL_RESOURCE_ENVELOPE_V1_RESULT.json"),
   live_provider_soak:path.resolve("acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_LIVE_PROVIDER_SOAK_V1_RESULT.json"),
   accelerated_restart_backfill:path.resolve("acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_ACCELERATED_RESTART_BACKFILL_V1_RESULT.json"),
@@ -27,12 +27,9 @@ function readJson(file){
   return JSON.parse(fs.readFileSync(file,"utf8"));
 }
 function status(file){
-  if(!fs.existsSync(file))return {present:false,pass:false,status:"MISSING"};
+  if(!fs.existsSync(file))return {present:false,pass:false,status:"MISSING",row:null};
   const row=readJson(file);
   return {present:true,pass:row.status==="PASS",status:String(row.status??"UNKNOWN"),row};
-}
-function sha256(file){
-  return "sha256:"+crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
 
 const corpus=readJson(CORPUS);
@@ -44,14 +41,16 @@ for(const [key,file] of Object.entries(FAST))fast[key]=status(file);
 const full={};
 for(const [key,file] of Object.entries(FULL))full[key]=status(file);
 
-const rawPath=path.resolve(String(p0h.repository_fixture_path??""));
-const rawPresent=Boolean(p0h.repository_fixture_path)&&fs.existsSync(rawPath);
-let rawDigest=null,rawBytes=null,rawValid=false;
-if(rawPresent){
-  rawDigest=sha256(rawPath);
-  rawBytes=fs.statSync(rawPath).size;
-  rawValid=rawDigest===p0h.raw_sha256 && rawBytes===p0h.raw_bytes;
-}
+const p0hProofValid=
+  full.exact_p0h_raw.pass
+  && full.exact_p0h_raw.row?.materialization_class==="CONTROLLED_EXTERNAL_FIXTURE"
+  && full.exact_p0h_raw.row?.raw_sha256===p0h.raw_sha256
+  && Number(full.exact_p0h_raw.row?.raw_bytes)===Number(p0h.raw_bytes)
+  && full.exact_p0h_raw.row?.raw_values_emitted===false
+  && full.exact_p0h_raw.row?.raw_path_emitted===false
+  && full.exact_p0h_raw.row?.normalized_scientific_failure==="MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE"
+  && full.exact_p0h_raw.row?.runtime_disposition==="ATTEMPT_REJECTED"
+  && full.exact_p0h_raw.row?.evidence_promotion_authorized===false;
 
 const fastPass=Object.values(fast).every(row=>row.pass===true);
 const noUnclassified=fast.failure_discovery.row?.no_unclassified_error===true;
@@ -65,7 +64,7 @@ const resourceSanityOnly=
 const requirements={
   failure_taxonomy_compatibility_seam:
     fastPass && noUnclassified,
-  exact_p0h_raw_materialized_and_hash_verified:rawValid,
+  exact_p0h_raw_materialized_and_hash_verified:p0hProofValid,
   full_resource_envelope:full.full_resource_envelope.pass,
   accelerated_restart_missed_slot_oldest_first_backfill:full.accelerated_restart_backfill.pass,
   live_provider_soak_2_to_4h:
@@ -88,13 +87,16 @@ const result={
     resource_sanity_is_not_full_envelope:resourceSanityOnly,
   },
   exact_p0h_raw:{
-    expected_path:p0h.repository_fixture_path,
-    present:rawPresent,
+    proof_present:full.exact_p0h_raw.present,
+    proof_status:full.exact_p0h_raw.status,
+    materialization_class:full.exact_p0h_raw.row?.materialization_class??null,
     expected_sha256:p0h.raw_sha256,
-    actual_sha256:rawDigest,
+    proven_sha256:full.exact_p0h_raw.row?.raw_sha256??null,
     expected_bytes:p0h.raw_bytes,
-    actual_bytes:rawBytes,
-    verified:rawValid,
+    proven_bytes:full.exact_p0h_raw.row?.raw_bytes??null,
+    raw_values_emitted:full.exact_p0h_raw.row?.raw_values_emitted??null,
+    raw_path_emitted:full.exact_p0h_raw.row?.raw_path_emitted??null,
+    verified:p0hProofValid,
   },
   authority_effect:false,
   production_effect:false,
