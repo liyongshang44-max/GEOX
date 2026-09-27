@@ -42,7 +42,7 @@ type Corpus = {
     id?: string;
     raw_sha256?: string;
     raw_bytes?: number;
-    repository_fixture_path?: string;
+    exact_raw_preserved_external_control_tree?: boolean;
   }>;
 };
 
@@ -102,7 +102,6 @@ function canonicalTarget(): string {
 }
 
 function loadP0h(): {
-  path: string;
   bytes: Buffer;
   sha256: string;
   expected_bytes: number;
@@ -110,13 +109,18 @@ function loadP0h(): {
   const corpus = JSON.parse(fs.readFileSync(CORPUS, "utf8")) as Corpus;
   const p0h = corpus.entries?.find((row) => row.id === "P0_H_KBS_CSV_FIELD_TOO_LARGE");
   if (!p0h) throw new Error("FDG_FULL_RESOURCE_ENVELOPE_P0H_CORPUS_ENTRY_MISSING");
-  if (!p0h.repository_fixture_path || !p0h.raw_sha256 || !Number.isSafeInteger(p0h.raw_bytes)) {
+  if (!p0h.raw_sha256 || !Number.isSafeInteger(p0h.raw_bytes)) {
     throw new Error("FDG_FULL_RESOURCE_ENVELOPE_P0H_CORPUS_METADATA_INVALID");
   }
-  const rawPath = path.resolve(p0h.repository_fixture_path);
-  if (!fs.existsSync(rawPath)) {
-    throw new Error(`FDG_FULL_RESOURCE_ENVELOPE_EXACT_P0H_RAW_MISSING:${p0h.repository_fixture_path}`);
-  }
+  assert.equal(
+    p0h.exact_raw_preserved_external_control_tree,
+    true,
+    "FDG_FULL_RESOURCE_ENVELOPE_P0H_CONTROLLED_PRESERVATION_REQUIRED",
+  );
+  const supplied = String(process.env.GEOX_MCFT_CAP09_P0H_RAW_PATH ?? "").trim();
+  if (!supplied) throw new Error("GEOX_MCFT_CAP09_P0H_RAW_PATH_REQUIRED");
+  const rawPath = path.resolve(supplied);
+  if (!fs.existsSync(rawPath)) throw new Error("FDG_FULL_RESOURCE_ENVELOPE_CONTROLLED_P0H_RAW_NOT_FOUND");
   const bytes = fs.readFileSync(rawPath);
   const digest = sha256(bytes);
   if (bytes.byteLength !== p0h.raw_bytes) {
@@ -128,7 +132,6 @@ function loadP0h(): {
     throw new Error(`FDG_FULL_RESOURCE_ENVELOPE_P0H_SHA256_MISMATCH:${digest}:${p0h.raw_sha256}`);
   }
   return {
-    path: p0h.repository_fixture_path,
     bytes,
     sha256: digest,
     expected_bytes: p0h.raw_bytes,
@@ -145,7 +148,7 @@ async function replayExactP0h(input: { bytes: Buffer }): Promise<void> {
       }),
       (error: unknown) => {
         const row = error && typeof error === "object"
-          ? error as { code?: unknown; diagnostic_token?: unknown; message?: unknown }
+          ? error as { code?: unknown; diagnostic_token?: unknown }
           : {};
         return row.code === "MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_FAILED"
           && row.diagnostic_token === "MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE";
@@ -252,12 +255,14 @@ async function main(): Promise<void> {
     subject_sha: String(process.env.GEOX_DEPLOYMENT_SUBJECT_COMMIT ?? "").trim() || null,
     tier: "FULL_RUNTIME_RESOURCE_ENVELOPE",
     exact_p0h_raw: {
-      path: p0h.path,
+      materialization_class: "CONTROLLED_EXTERNAL_FIXTURE",
       sha256: p0h.sha256,
       bytes: p0h.expected_bytes,
       replay_iterations: P0H_REPLAY_ITERATIONS,
       expected_disposition: "ATTEMPT_REJECTED",
       scientific_failure_token: "MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE",
+      raw_values_emitted: false,
+      raw_path_emitted: false,
       host_process_exit_required: false,
       proven: true,
     },
@@ -312,6 +317,8 @@ main().catch((error) => {
     status: "FAIL",
     error: error instanceof Error ? error.message : String(error),
     full_resource_envelope_complete: false,
+    raw_values_emitted: false,
+    raw_path_emitted: false,
     production_database_mutation: false,
     formal_v5_armed: false,
     final_24h_admitted: false,
