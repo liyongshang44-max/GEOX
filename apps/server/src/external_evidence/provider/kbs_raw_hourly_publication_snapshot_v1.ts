@@ -79,6 +79,72 @@ function nonNegativeIntegerV1(value: unknown, code: string): number {
   return Number(value);
 }
 
+function appendScientificErrorTextV1(parts: string[], value: unknown): void {
+  if (typeof value === "string" && value) {
+    parts.push(value);
+    return;
+  }
+  if (Buffer.isBuffer(value)) parts.push(value.toString("utf8"));
+}
+
+function kbsPublicationScientificErrorTextV1(error: unknown): string {
+  const parts: string[] = [];
+  if (error instanceof Error) appendScientificErrorTextV1(parts, error.message);
+  if (!error || typeof error !== "object") return parts.join("\n");
+
+  const row = error as {
+    stderr?: unknown;
+    stdout?: unknown;
+    message?: unknown;
+    cause?: unknown;
+  };
+  appendScientificErrorTextV1(parts, row.stderr);
+  appendScientificErrorTextV1(parts, row.stdout);
+  appendScientificErrorTextV1(parts, row.message);
+
+  if (row.cause && typeof row.cause === "object") {
+    const cause = row.cause as { stderr?: unknown; stdout?: unknown; message?: unknown };
+    appendScientificErrorTextV1(parts, cause.stderr);
+    appendScientificErrorTextV1(parts, cause.stdout);
+    appendScientificErrorTextV1(parts, cause.message);
+  }
+  return parts.join("\n");
+}
+
+function normalizeKbsPublicationScientificSubprocessErrorV1(error: unknown): never {
+  try {
+    normalizeKbsRawHourlyScientificSubprocessErrorV1(error);
+  } catch (normalized) {
+    const row = normalized && typeof normalized === "object"
+      ? normalized as { code?: unknown; diagnostic_token?: unknown }
+      : {};
+    if (
+      row.code !== "MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_FAILED"
+      || row.diagnostic_token !== "MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_UNCLASSIFIED"
+    ) {
+      throw normalized;
+    }
+
+    const text = kbsPublicationScientificErrorTextV1(error);
+    const diagnostics = text.match(
+      /\bMCFT_CAP09_KBS_[A-Z0-9_]+(?::[A-Za-z0-9_.-]{1,64})*\b/g,
+    ) ?? [];
+    const diagnostic = diagnostics.at(-1)
+      ?? (/field larger than field limit/i.test(text)
+        ? "MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE"
+        : null);
+    if (!diagnostic) throw normalized;
+
+    const token = diagnostic.split(":", 1)[0]!;
+    throw Object.assign(new Error(diagnostic), {
+      name: "KbsRawHourlyScientificSubprocessError",
+      code: "MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_FAILED" as const,
+      diagnostic_token: token,
+      failure_token: token,
+    });
+  }
+}
+
 function validateInventoryV1(value: unknown): KbsRawHourlyPublicationSnapshotInventoryV1 {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("KBS_PUBLICATION_SNAPSHOT_INVENTORY_OBJECT_REQUIRED");
@@ -216,7 +282,7 @@ export class KbsRawHourlyPublicationSnapshotInspectorV1 {
           timeout: 120_000,
         });
       } catch (error) {
-        normalizeKbsRawHourlyScientificSubprocessErrorV1(error);
+        normalizeKbsPublicationScientificSubprocessErrorV1(error);
       }
       return JSON.parse(fs.readFileSync(outPath, "utf8"));
     } finally {
