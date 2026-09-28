@@ -133,7 +133,24 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-0AC2-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1.cjs",
         ".github/workflows/ci.yml",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs"
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs",
+        ".github/workflows/mcft-cap-09-failure-discovery-gate-v1.yml",
+        ".github/workflows/mcft-cap-09-failure-discovery-live-provider-soak-v1.yml",
+        ".github/workflows/mcft-cap-09-minio-immutable-mirror-preflight-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FAILURE-DISCOVERY-GATE-V1.json",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_EXACT_P0H_RAW_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_FULL_RESOURCE_ENVELOPE_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GATE_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_GFS_SUBPROCESS_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_RESOURCE_SANITY_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FAILURE_DISCOVERY_TRANSPORT_MATRIX_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_NON_CSV_CLASSIFIER_REPLAY_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_NON_CSV_PAYLOAD_REJECTION_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RETENTION_CLOCK_REGRESSION_FAST_V1.ts",
+        "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FAILURE_DISCOVERY_ACCELERATED_RESTART_BACKFILL_V1.cjs",
+        "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FINAL_24H_ADMISSION_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FAILURE_DISCOVERY_LIVE_PROVIDER_SOAK_V1.ts",
+        "scripts/runtime_acceptance/fixtures/mcft_cap09_failure_corpus_v1.json"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {
