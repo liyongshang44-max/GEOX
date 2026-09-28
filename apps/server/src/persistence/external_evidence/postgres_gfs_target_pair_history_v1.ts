@@ -100,6 +100,17 @@ export class PostgresGfsCanonicalTargetPairHistoryV1 implements GfsCanonicalTarg
          FROM public.facts
         WHERE source=$1
           AND record_json->>'type'=ANY($2::text[])
+          AND (
+            (
+              record_json->>'type'='future_weather_assumption_v1'
+              AND record_json#>>'{payload,origin_source_kind}'='NOAA_NCEP_NOMADS_GFS'
+            )
+            OR
+            (
+              record_json->>'type'='future_et0_assumption_v1'
+              AND record_json#>>'{payload,origin_source_kind}'='NOAA_NCEP_NOMADS_GFS_DERIVED'
+            )
+          )
           AND record_json#>>'{payload,tenant_id}'=$3
           AND record_json#>>'{payload,project_id}'=$4
           AND record_json#>>'{payload,group_id}'=$5

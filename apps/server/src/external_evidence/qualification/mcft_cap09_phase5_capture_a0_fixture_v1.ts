@@ -413,6 +413,7 @@ async function main():Promise<void> {
     throw new Error("PHASE5_CAPTURE_GFS_RETRIEVED_AFTER_A0");
   }
   if(composed.selected_cycle!==cycle) throw new Error("PHASE5_CAPTURE_GFS_SELECTED_CYCLE_DRIFT");
+  composed.cleanup();
 
   const extendedWindow=gfsLeadWindowV1(lastRollingTarget,cycle);
   let extendedLeadCount=0;

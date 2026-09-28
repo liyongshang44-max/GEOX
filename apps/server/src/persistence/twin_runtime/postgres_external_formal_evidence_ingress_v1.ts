@@ -126,6 +126,18 @@ export function externalFormalEvidenceFactIdV1(record: CanonicalReplayEvidenceRe
   return `fact_external_evidence_${crypto.createHash("sha256").update(identityV1(record), "utf8").digest("hex")}`;
 }
 
+export function externalFormalEvidenceRevisionFactIdV1(record: CanonicalReplayEvidenceRecordV1): string {
+  const sourceRecordHash = requiredTextV1(
+    record.source_record_hash,
+    "EA5C1_REVISION_SOURCE_RECORD_HASH_REQUIRED",
+  );
+  if (!/^sha256:[0-9a-f]{64}$/.test(sourceRecordHash)) {
+    throw new Error("EA5C1_REVISION_SOURCE_RECORD_HASH_INVALID");
+  }
+  const revisionIdentity = identityV1(record) + "|revision|" + sourceRecordHash;
+  return `fact_external_evidence_${crypto.createHash("sha256").update(revisionIdentity, "utf8").digest("hex")}`;
+}
+
 function parseFactRecordV1(value: unknown): CanonicalReplayEvidenceRecordV1 {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
   const envelope = objectRecordV1(parsed, "EA5C1_EXISTING_FACT_ENVELOPE_INVALID");

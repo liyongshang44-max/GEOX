@@ -23,6 +23,7 @@ const authorityPath = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURA
 const rawAdapterPath = "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts";
 const collectorPath = "apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts";
 const ingressPath = "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts";
+const governedIngressPath = "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts";
 const acceptancePath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts";
 const successorAcceptancePath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts";
 const gatePath = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs";
@@ -46,6 +47,30 @@ const candidatePins = {
   [ingressPath]: "6f7b6450d4f671c75affc2c7aba45ed71cb518c5",
   [acceptancePath]: "1916143d1339d2d7e6bd3174d637f64d71ce9091"
 };
+const realClockP0RetentionReusePins = {
+  [rawAdapterPath]: "4a730990d962b8d8095541117993a1e42b415589",
+  [collectorPath]: "0bdf416f17f7d72f1089ff962a93d1b8f4d655d9",
+  [ingressPath]: "98348646008c6a1f3c5dc3e4b3569755d05a10fc",
+  [governedIngressPath]: "1f665212e82e3c4ef413152e64612438881fd94d",
+  [acceptancePath]: "bb6d8be445c0425c88eccac54d867b7d7935bd04",
+  [workflowPath]: "49b35383434a560343f0964cc2414e354612922b"
+};
+const gfsFileBackedStreamingP0Pins = {
+  [rawAdapterPath]: "8d0451870bd995090e039873a21ebccc2498ab86",
+  [collectorPath]: "9d3c79b25bfba91295a27353eca553d49c4600ac",
+  [ingressPath]: "98348646008c6a1f3c5dc3e4b3569755d05a10fc",
+  [governedIngressPath]: "1f665212e82e3c4ef413152e64612438881fd94d",
+  [acceptancePath]: "045057c17f9032e6a34790cfc3d05a8900bc0458",
+  [workflowPath]: "49b35383434a560343f0964cc2414e354612922b"
+};
+const clockRegressionResilienceP0Pins = {
+  [rawAdapterPath]: "02ca021611172a9ce6e05369294527ab0550e505",
+  [collectorPath]: "9d3c79b25bfba91295a27353eca553d49c4600ac",
+  [ingressPath]: "98348646008c6a1f3c5dc3e4b3569755d05a10fc",
+  [governedIngressPath]: "1f665212e82e3c4ef413152e64612438881fd94d",
+  [acceptancePath]: "064104b83741828d39863acb21a97fdc9b836ca8",
+  [workflowPath]: "49b35383434a560343f0964cc2414e354612922b"
+};
 
 let validationMode;
 if (base === HISTORICAL_BASE) {
@@ -57,26 +82,69 @@ if (base === HISTORICAL_BASE) {
   for (const [file, expected] of Object.entries(candidatePins)) eq(blob("HEAD", file), expected, `EA5C1_CANDIDATE_BLOB_PIN_MISMATCH:${file}`);
   validationMode = "EXACT_HISTORICAL_CANDIDATE";
 } else {
-  // Successor maintenance must not rewrite the historical qualification record or silently
-  // mutate its raw-store/acceptance surfaces. The restricted ingress itself may evolve,
-  // but this PR must preserve the current predecessor contracts and re-run the real I/O proof.
+  // Successor maintenance must not rewrite the historical qualification record.
+  // A raw-store / focused-acceptance mutation is permitted only under the exact
+  // real-clock P0 successor pins below; this does not rewrite the historical pins.
   eq(blob(base, authorityPath), candidatePins[authorityPath], "EA5C1_SUCCESSOR_BASE_HISTORICAL_AUTHORITY_DRIFT");
   eq(blob("HEAD", authorityPath), candidatePins[authorityPath], "EA5C1_SUCCESSOR_HISTORICAL_AUTHORITY_MUTATED");
   eq(blob(base, rawAdapterPath), candidatePins[rawAdapterPath], "EA5C1_SUCCESSOR_BASE_RAW_ADAPTER_DRIFT");
-  eq(blob("HEAD", rawAdapterPath), candidatePins[rawAdapterPath], "EA5C1_SUCCESSOR_RAW_ADAPTER_MUTATED");
   eq(blob(base, acceptancePath), candidatePins[acceptancePath], "EA5C1_SUCCESSOR_BASE_FOCUSED_ACCEPTANCE_DRIFT");
-  eq(blob("HEAD", acceptancePath), candidatePins[acceptancePath], "EA5C1_SUCCESSOR_FOCUSED_ACCEPTANCE_MUTATED");
+
+  const realClockP0RetentionReuse =
+    blob("HEAD", rawAdapterPath) !== candidatePins[rawAdapterPath]
+    || blob("HEAD", acceptancePath) !== candidatePins[acceptancePath];
+
   for (const file of Object.keys(predecessorPins)) {
     if (file === collectorPath) continue;
     eq(blob("HEAD", file), blob(base, file), `EA5C1_SUCCESSOR_PREDECESSOR_MUTATED:${file}`);
   }
-  const allowedMaintenance = new Set([ingressPath, collectorPath, gatePath, workflowPath]);
-  const forbiddenProtected = protectedChanged.filter((file) => !allowedMaintenance.has(file));
-  eq(JSON.stringify(forbiddenProtected), JSON.stringify([]), "EA5C1_SUCCESSOR_PROTECTED_SURFACE_CHANGE_REQUIRES_NEW_EXACT_GATE");
-  if (!protectedChanged.includes(ingressPath) && !protectedChanged.includes(collectorPath)) {
-    fail("EA5C1_SUCCESSOR_INGRESS_OR_COLLECTOR_CHANGE_REQUIRED_FOR_MAINTENANCE_REVALIDATION");
+
+  if (realClockP0RetentionReuse) {
+    const clockRegressionResilienceP0 =
+      blob("HEAD", rawAdapterPath) === clockRegressionResilienceP0Pins[rawAdapterPath]
+      && blob("HEAD", collectorPath) === clockRegressionResilienceP0Pins[collectorPath]
+      && blob("HEAD", acceptancePath) === clockRegressionResilienceP0Pins[acceptancePath];
+    const gfsFileBackedStreamingP0 =
+      blob("HEAD", rawAdapterPath) === gfsFileBackedStreamingP0Pins[rawAdapterPath]
+      && blob("HEAD", collectorPath) === gfsFileBackedStreamingP0Pins[collectorPath]
+      && blob("HEAD", acceptancePath) === gfsFileBackedStreamingP0Pins[acceptancePath];
+    const exactPins = clockRegressionResilienceP0
+      ? clockRegressionResilienceP0Pins
+      : gfsFileBackedStreamingP0
+        ? gfsFileBackedStreamingP0Pins
+        : realClockP0RetentionReusePins;
+    for (const [file, expected] of Object.entries(exactPins)) {
+      eq(blob("HEAD", file), expected, `EA5C1_REAL_CLOCK_P0_EXACT_BLOB_MISMATCH:${file}`);
+    }
+    const expectedProtectedChanged = [
+      rawAdapterPath,
+      collectorPath,
+      ingressPath,
+      acceptancePath,
+      gatePath,
+      workflowPath,
+    ].sort();
+    eq(
+      JSON.stringify(protectedChanged),
+      JSON.stringify(expectedProtectedChanged),
+      "EA5C1_REAL_CLOCK_P0_EXACT_PROTECTED_BOUNDARY_REQUIRED",
+    );
+    validationMode = clockRegressionResilienceP0
+      ? "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR"
+      : gfsFileBackedStreamingP0
+        ? "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR"
+        : "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR";
+  } else {
+    eq(blob("HEAD", rawAdapterPath), candidatePins[rawAdapterPath], "EA5C1_SUCCESSOR_RAW_ADAPTER_MUTATED");
+    eq(blob("HEAD", acceptancePath), candidatePins[acceptancePath], "EA5C1_SUCCESSOR_FOCUSED_ACCEPTANCE_MUTATED");
+    const allowedMaintenance = new Set([ingressPath, collectorPath, gatePath, workflowPath]);
+    const forbiddenProtected = protectedChanged.filter((file) => !allowedMaintenance.has(file));
+    eq(JSON.stringify(forbiddenProtected), JSON.stringify([]), "EA5C1_SUCCESSOR_PROTECTED_SURFACE_CHANGE_REQUIRES_NEW_EXACT_GATE");
+    if (!protectedChanged.includes(ingressPath) && !protectedChanged.includes(collectorPath)) {
+      fail("EA5C1_SUCCESSOR_INGRESS_OR_COLLECTOR_CHANGE_REQUIRED_FOR_MAINTENANCE_REVALIDATION");
+    }
+    validationMode = "SUCCESSOR_MAINTENANCE_REVALIDATION";
   }
-  validationMode = "SUCCESSOR_MAINTENANCE_REVALIDATION";
 }
 
 const amendment = fs.readFileSync("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-05-EXTERNAL-FORMAL-RUNTIME-AUTHORITY-PROFILE.md", "utf8");
@@ -130,6 +198,38 @@ const rawSource = fs.readFileSync(rawAdapterPath, "utf8");
 for (const marker of ["PRIVATE_RESTRICTED_RAW_EVIDENCE", "mcft-cap09-formal-raw-v1/sha256", "s3-private://", "verifyRetainedRawEvidence", "x-amz-meta-geox-sha256"]) {
   if (!rawSource.includes(marker)) fail(`EA5C1_RAW_ADAPTER_MARKER_MISSING:${marker}`);
 }
+if (validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR") {
+  for (const marker of ["retainRawEvidenceFile", "fs.createReadStream", "EA5C1_FILE_DIGEST_MISMATCH"]) {
+    if (!rawSource.includes(marker)) fail(`EA5C1_GFS_FILE_STREAM_MARKER_MISSING:${marker}`);
+  }
+}
+if (validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR") {
+  for (const marker of [
+    "clock_regression_max_wait_ms",
+    "clock_regression_poll_ms",
+    "monotonic_now_ms",
+    "performance.now()",
+    "causalRetentionVerificationTimeV1",
+    "EA5C1_RETENTION_VERIFICATION_BEFORE_RETRIEVAL",
+  ]) {
+    if (!rawSource.includes(marker)) fail(`EA5C1_CLOCK_REGRESSION_RESILIENCE_MARKER_MISSING:${marker}`);
+  }
+  for (const forbidden of [
+    "retentionVerifiedAt = input.retrieved_at",
+    "retention_verified_at: input.retrieved_at",
+  ]) {
+    if (rawSource.includes(forbidden)) fail(`EA5C1_CLOCK_REGRESSION_TIMESTAMP_REWRITE_FORBIDDEN:${forbidden}`);
+  }
+  const focusedAcceptance = fs.readFileSync(acceptancePath, "utf8");
+  for (const marker of [
+    "ea5c1-clock-regression-recovers",
+    "ea5c1-clock-regression-persists",
+    "recoveringWaits",
+    "persistentWaits",
+  ]) {
+    if (!focusedAcceptance.includes(marker)) fail(`EA5C1_CLOCK_REGRESSION_ACCEPTANCE_MARKER_MISSING:${marker}`);
+  }
+}
 if (/\b(?:getSignedUrl|presignUrl|createPresignedUrl)\s*\(/.test(rawSource) || rawSource.includes('"public-read"') || rawSource.includes("'public-read'")) {
   fail("EA5C1_PUBLIC_RAW_ACCESS_SURFACE_FORBIDDEN");
 }
@@ -155,6 +255,11 @@ for (const marker of [
 for (const forbidden of ["process.env", "INSERT INTO facts", "RuntimeTickCursor"]) {
   if (collectorSource.includes(forbidden)) fail(`EA5C1_SUCCESSOR_COLLECTOR_BOUNDARY_FORBIDDEN:${forbidden}`);
 }
+if (validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR") {
+  for (const marker of ["collectRetainDecodeCanonicalizeFileBackedExternalEvidenceWithCompletionClockV1", "EA3_FILE_BACKED_RETENTION_PORT_REQUIRED", "EA3_FILE_BACKED_DECODER_PORT_REQUIRED"]) {
+    if (!collectorSource.includes(marker)) fail(`EA5C1_GFS_FILE_COLLECTOR_MARKER_MISSING:${marker}`);
+  }
+}
 
 const workflow = fs.readFileSync(workflowPath, "utf8");
 for (const marker of [
@@ -164,7 +269,7 @@ for (const marker of [
   successorAcceptancePath
 ]) if (!workflow.includes(marker)) fail(`EA5C1_WORKFLOW_PROOF_MARKER_MISSING:${marker}`);
 
-if (validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION") {
+if (validationMode !== "EXACT_HISTORICAL_CANDIDATE") {
   const successorAcceptance = fs.readFileSync(successorAcceptancePath, "utf8");
   for (const marker of [
     "const rawProvenance = {",
@@ -192,6 +297,29 @@ const result = {
   successor_ingress_maintenance_revalidation: validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION",
   successor_collector_maintenance_revalidation:
     validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION" && protectedChanged.includes(collectorPath),
+  real_clock_p0_retention_reuse_requalification:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
+  real_clock_p0_gfs_file_backed_streaming_requalification:
+    validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR"
+      || validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR",
+  real_clock_p0_retention_clock_regression_resilience_requalification:
+    validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR",
+  real_clock_p0_historical_authority_rewritten: false,
+  real_clock_p0_raw_object_retained_at_mutation: false,
+  real_clock_p0_exact_protected_boundary_proved:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR"
+      || validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR"
+      || validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR",
+  real_clock_p0_qualification_images_pinned:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR"
+      || validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR"
+      || validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR",
+  real_clock_p0_revision_fact_identity_requalification:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
+  real_clock_p0_revision_ingress_helper_exact_pinned:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
+  real_clock_p0_governed_runtime_ingress_exact_pinned:
+    validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
   predecessor_contracts_unchanged_from_current_base: true,
   durable_raw_before_decode_and_before_facts_proved: true,
   exact_external_five_source_ingress_profile_proved: true,
