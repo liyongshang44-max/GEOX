@@ -96,7 +96,12 @@ function main(): void {
   const evidencePoolGuard = installMcftCap09RuntimePoolIdleErrorGuardV1({
     pool: fakeEvidencePool as never,
     runtime_role: "EVIDENCE_RUNTIME",
-    failure_classifier: new McftCap09ProductionEvidenceFailureClassifierV1(),
+    failure_classifier: {
+    classify(error) {
+      const classification = new McftCap09ProductionEvidenceFailureClassifierV1().classify(error);
+      return classification === "RETRYABLE" ? "RETRYABLE" : "FATAL";
+    },
+  },
     event_sink: (event) => evidenceEvents.push(structuredClone(event)),
   });
   assert.doesNotThrow(() => {
@@ -532,7 +537,7 @@ function main(): void {
         "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED:BLOCKED_HISTORICAL_DRIFT:HISTORICAL_DRIFT",
       ),
     ),
-    "RETRYABLE",
+    "ATTEMPT_REJECTED",
     "PHASE5_EVIDENCE_KBS_HISTORICAL_DRIFT_MUST_FAIL_CLOSED_WITHOUT_PROCESS_FATAL",
   );
   for (const message of [
@@ -541,7 +546,7 @@ function main(): void {
   ]) {
     assert.equal(
       evidenceFailureClassifier.classify(new Error(message)),
-      "FATAL",
+      "PROCESS_FATAL",
       `PHASE5_EVIDENCE_KBS_NON_HISTORICAL_BLOCK_REMAINS_FATAL:${message}`,
     );
   }
@@ -579,7 +584,7 @@ function main(): void {
   );
   assert.equal(
     evidenceFailureClassifier.classify(new TypeError("terminated by semantic validation")),
-    "FATAL",
+    "PROCESS_FATAL",
     "PHASE5_EVIDENCE_NONEXACT_TERMINATED_MESSAGE_MUST_REMAIN_FATAL",
   );
 

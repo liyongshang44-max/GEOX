@@ -100,8 +100,32 @@ def parse_kbs_csv_row_v1(line: str, *, delimiter: str) -> list[str]:
         raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_CSV_PARSE_ERROR") from exc
 
 
+def kbs_raw_hourly_non_csv_payload_hint_v1(body: bytes) -> str | None:
+    if body.startswith(b"GRIB"):
+        return "GRIB"
+    if body.startswith(b"\\x1f\\x8b"):
+        return "GZIP"
+    if body.startswith(b"PK\\x03\\x04"):
+        return "ZIP"
+    if len(body) > 265 and body[257:262] == b"ustar":
+        return "TAR"
+    if body.startswith(b"CDF") or body.startswith(b"\\x89HDF"):
+        return "NETCDF"
+    return None
+
+
+def decode_kbs_raw_hourly_csv_text_v1(body: bytes) -> str:
+    hint = kbs_raw_hourly_non_csv_payload_hint_v1(body)
+    if hint is not None:
+        raise RuntimeError(f"MCFT_CAP09_KBS_RAW_HOURLY_NON_CSV_PAYLOAD:{hint}")
+    try:
+        return body.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_INVALID_UTF8") from None
+
+
 def parse_kbs_raw_hourly_csv_v1(body: bytes) -> list[dict[str, str]]:
-    text = body.decode("utf-8-sig")
+    text = decode_kbs_raw_hourly_csv_text_v1(body)
     lines = text.splitlines()
     required = ["datetime_utc", "solrad_avg", "wind_speed", "ah", "airtmp_107_avg", "rain_mm"]
     for index, line in enumerate(lines[:80]):

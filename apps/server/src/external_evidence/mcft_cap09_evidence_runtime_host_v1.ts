@@ -26,7 +26,11 @@ export const MCFT_CAP09_EVIDENCE_RUNTIME_DURABLE_RESTART_COMPONENTS_V1 = [
   "CANONICAL_GFS_HOURLY_TARGET_PAIR_HISTORY",
 ] as const;
 
-export type EvidenceRuntimeHostFailureClassV1 = "RETRYABLE" | "FATAL";
+export type EvidenceRuntimeHostFailureClassV1 =
+  | "RETRYABLE"
+  | "ATTEMPT_REJECTED"
+  | "PROCESS_FATAL"
+  | "FATAL"; // legacy alias; new production classifiers must not emit this
 
 export type EvidenceRuntimeHostHealthEventV1 = {
   host_id: typeof MCFT_CAP09_EVIDENCE_RUNTIME_HOST_ID_V1;
@@ -55,6 +59,8 @@ export type EvidenceRuntimeHostHealthEventV1 = {
     | "PLANNER_NOT_DUE"
     | "PROVIDER_NOT_DUE"
     | "RETRYABLE_ATTEMPT_FAILURE"
+    | "ATTEMPT_REJECTED"
+    | "PROCESS_FATAL_ATTEMPT_FAILURE"
     | "FATAL_ATTEMPT_FAILURE"
     | "STOP_REQUESTED"
     | "PLANNER_EXHAUSTED";
@@ -80,7 +86,8 @@ export interface EvidenceRuntimeHostWaitPortV1 {
       | "PLANNER_NOT_DUE"
       | "PROVIDER_NOT_DUE"
       | "LEASE_STANDBY"
-      | "RETRY_BACKOFF";
+      | "RETRY_BACKOFF"
+      | "ATTEMPT_REJECTED_BACKOFF";
     cycle_attempt: number;
     consecutive_failure_count: number;
   }): Promise<void>;
@@ -367,14 +374,16 @@ export class EvidenceRuntimeHostV1 {
         });
       } catch (error) {
         const classification = this.deps.failure_classifier.classify(error);
-        if (classification === "FATAL") {
+        if (classification === "FATAL" || classification === "PROCESS_FATAL") {
           consecutiveFailures += 1;
           await this.healthV1({
             status: "DEGRADED",
             cycle_attempt: cycleAttempt,
             successful_cycle_count: successfulCycles,
             consecutive_failure_count: consecutiveFailures,
-            detail: "FATAL_ATTEMPT_FAILURE",
+            detail: classification === "PROCESS_FATAL"
+              ? "PROCESS_FATAL_ATTEMPT_FAILURE"
+              : "FATAL_ATTEMPT_FAILURE",
             ...sanitizedFailureEvidenceV1(
               error,
               classification,
@@ -383,6 +392,9 @@ export class EvidenceRuntimeHostV1 {
             ),
           });
           throw error;
+        }
+        if (classification === "ATTEMPT_REJECTED") {
+          throw new Error("PHASE3_EVIDENCE_HOST_COORDINATION_ATTEMPT_REJECTED_FORBIDDEN");
         }
         if (classification !== "RETRYABLE") {
           throw new Error("PHASE3_EVIDENCE_HOST_FAILURE_CLASS_INVALID");
@@ -581,17 +593,36 @@ export class EvidenceRuntimeHostV1 {
         });
       } catch (error) {
         const classification = this.deps.failure_classifier.classify(error);
-        if (classification === "FATAL") {
+        if (classification === "FATAL" || classification === "PROCESS_FATAL") {
           consecutiveFailures += 1;
           await this.healthV1({
             status: "DEGRADED",
             cycle_attempt: cycleAttempt,
             successful_cycle_count: successfulCycles,
             consecutive_failure_count: consecutiveFailures,
-            detail: "FATAL_ATTEMPT_FAILURE",
+            detail: classification === "PROCESS_FATAL"
+              ? "PROCESS_FATAL_ATTEMPT_FAILURE"
+              : "FATAL_ATTEMPT_FAILURE",
             ...sanitizedFailureEvidenceV1(error, classification, plan.attempt_kind),
           });
           throw error;
+        }
+        if (classification === "ATTEMPT_REJECTED") {
+          consecutiveFailures += 1;
+          await this.healthV1({
+            status: "DEGRADED",
+            cycle_attempt: cycleAttempt,
+            successful_cycle_count: successfulCycles,
+            consecutive_failure_count: consecutiveFailures,
+            detail: "ATTEMPT_REJECTED",
+            ...sanitizedFailureEvidenceV1(error, classification, plan.attempt_kind),
+          });
+          await this.deps.wait.waitAfterAttempt({
+            reason: "ATTEMPT_REJECTED_BACKOFF",
+            cycle_attempt: cycleAttempt,
+            consecutive_failure_count: consecutiveFailures,
+          });
+          continue;
         }
         if (classification !== "RETRYABLE") {
           throw new Error("PHASE3_EVIDENCE_HOST_FAILURE_CLASS_INVALID");
