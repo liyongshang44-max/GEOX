@@ -335,12 +335,12 @@ jobs:
 
           server_remote="$(
             docker buildx imagetools inspect "$SERVER_MIRROR" |
-              awk '$1 == "Digest:" { print $2; exit }'
+              awk '$1 == "Digest:" && !seen { digest=$2; seen=1 } END { if (!seen) exit 2; print digest }'
           )"
 
           mc_remote="$(
             docker buildx imagetools inspect "$MC_MIRROR" |
-              awk '$1 == "Digest:" { print $2; exit }'
+              awk '$1 == "Digest:" && !seen { digest=$2; seen=1 } END { if (!seen) exit 2; print digest }'
           )"
 
           test "$server_remote" = "$SERVER_DIGEST"

@@ -28,8 +28,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          server_remote="$(docker buildx imagetools inspect "$SERVER_MIRROR" | awk '$1 == "Digest:" { print $2; exit }')"
-          mc_remote="$(docker buildx imagetools inspect "$MC_MIRROR" | awk '$1 == "Digest:" { print $2; exit }')"
+          server_remote="$(docker buildx imagetools inspect "$SERVER_MIRROR" | awk '$1 == "Digest:" && !seen { digest=$2; seen=1 } END { if (!seen) exit 2; print digest }')"
+          mc_remote="$(docker buildx imagetools inspect "$MC_MIRROR" | awk '$1 == "Digest:" && !seen { digest=$2; seen=1 } END { if (!seen) exit 2; print digest }')"
           test "$server_remote" = "$SERVER_DIGEST"
           test "$mc_remote" = "$MC_DIGEST"
           echo "SERVER_MIRROR_INDEX_DIGEST=$server_remote"
