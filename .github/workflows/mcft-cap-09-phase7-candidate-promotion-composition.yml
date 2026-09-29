@@ -14,6 +14,7 @@ on:
       - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts'
       - 'apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts'
       - 'apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts'
       - 'apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts'
       - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
@@ -121,14 +122,14 @@ jobs:
             -p 9000:9000 \
             -e MINIO_ROOT_USER=phase7composition \
             -e MINIO_ROOT_PASSWORD=phase7-composition-secret-key-001 \
-            quay.io/minio/minio@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
+            ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
           for attempt in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
             sleep 1
           done
           curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
           docker run --rm --network host --entrypoint /bin/sh \
-            quay.io/minio/mc@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112 -ceu '
+            docker.io/minio/mc:RELEASE.2024-11-21T17-21-54Z@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112 -ceu '
               mc alias set phase7 http://127.0.0.1:9000 phase7composition phase7-composition-secret-key-001
               mc mb --ignore-existing phase7/geox-mcft-cap09-formal-raw-v1
               mc anonymous set private phase7/geox-mcft-cap09-formal-raw-v1
