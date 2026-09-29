@@ -1,0 +1,131 @@
+name: mcft-cap-09-causal-revision-temporal-semantics-postgres-v1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-causal-revision-temporal-semantics-postgres-v1.yml'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts'
+      - 'apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts'
+      - 'apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/ports.ts'
+      - 'apps/server/src/infra/migrations.ts'
+      - 'apps/server/db/migrations/**'
+      - 'docker/postgres/init/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'apps/server/package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-causal-revision-temporal-semantics-postgres-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  causal-revision-postgres-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: causal_revision_qv1
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d causal_revision_qv1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/causal_revision_qv1
+      GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/causal_revision_qv1
+      GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:causal-revision-migrator@127.0.0.1:5432/causal_revision_qv1
+      GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:causal-revision-runtime@127.0.0.1:5432/causal_revision_qv1
+      GEOX_MCFT_MIGRATOR_PASSWORD: causal-revision-migrator
+      GEOX_RUNTIME_DATABASE_PASSWORD: causal-revision-runtime
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prove frozen Runtime source identity and semantic revision ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          frozen='3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a'
+          semantic_revision='9ffecd38d3093c4a3f566ee996e3ad00aaf6004a'
+          source_path='apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts'
+          expected_blob='5e132eb1b307f908dea6118292fb8e0e9d53084c'
+
+          test "$(git rev-parse "${frozen}:${source_path}")" = "${expected_blob}"
+          test "$(git rev-parse "HEAD:${source_path}")" = "${expected_blob}"
+          git merge-base --is-ancestor "${semantic_revision}" "${frozen}"
+          git diff --quiet "${frozen}" HEAD -- "${source_path}"
+
+          echo "FROZEN_RUNTIME_SOURCE_IDENTITY_PASS"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck causal-revision qualification seam
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck
+          --target ES2022 --module NodeNext --moduleResolution NodeNext
+          --esModuleInterop --types node
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts
+
+      - name: Apply production PostgreSQL init chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in docker/postgres/init/*.sql; do
+            echo "applying ${file}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done
+
+      - name: Apply exact database-platform bootstrap and full migration inventory
+        run: >-
+          pnpm exec tsx -e "import('./apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts').then(m => m.runMcftCap07DatabasePlatformBootstrapFromEnvironmentV1())"
+
+      - name: Seed persistent causal-revision fixture and capture logical-time selections
+        run: >-
+          pnpm exec tsx
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts
+          seed-and-capture
+
+      - name: Restart qualification process and replay persisted evidence deterministically
+        run: >-
+          pnpm exec tsx
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts
+          replay-and-verify
+
+      - name: Upload causal-revision temporal-semantics proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-causal-revision-temporal-semantics-postgres-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_STATE.json
+          if-no-files-found: warn
+          retention-days: 90
