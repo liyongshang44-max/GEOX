@@ -14,7 +14,6 @@ on:
       - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts'
       - 'apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts'
-      - 'apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts'
       - 'apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts'
       - 'apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts'
       - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
