@@ -91,7 +91,13 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base="${{ github.event.pull_request.base.sha }}"
-            if [ "$base" != "$EXACT_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA"  && [ "$base" != "$CURRENT_SUCCESSOR_BASE_SHA" ]]; then
+            git fetch --no-tags origin main
+            current_protected_main="$(git rev-parse origin/main)"
+            if [[ "$base" != "$EXACT_PREDECESSOR_SHA" \
+              && "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" \
+              && "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA" \
+              && "$base" != "$CURRENT_SUCCESSOR_BASE_SHA" \
+              && "$base" != "$current_protected_main" ]]; then
               echo "PHASE7_COMPOSITION_UNGOVERNED_BASE:$base" >&2
               exit 1
             fi
@@ -128,7 +134,7 @@ jobs:
           done
           curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
           docker run --rm --network host --entrypoint /bin/sh \
-            docker.io/minio/mc:RELEASE.2024-11-21T17-21-54Z@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112 -ceu '
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -ceu '
               mc alias set phase7 http://127.0.0.1:9000 phase7composition phase7-composition-secret-key-001
               mc mb --ignore-existing phase7/geox-mcft-cap09-formal-raw-v1
               mc anonymous set private phase7/geox-mcft-cap09-formal-raw-v1

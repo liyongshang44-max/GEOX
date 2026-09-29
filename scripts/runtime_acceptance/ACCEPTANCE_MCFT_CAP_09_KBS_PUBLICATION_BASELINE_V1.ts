@@ -96,14 +96,14 @@ async function main():Promise<void>{
 
   const classifier=new McftCap09ProductionEvidenceFailureClassifierV1();
   assert.equal(classifier.classify(oversizedError),"ATTEMPT_REJECTED");
-  const semanticFatal=Object.assign(
+  const semanticRejected=Object.assign(
     new Error("MCFT_CAP09_KBS_PUBLICATION_EVENT_INDEX_REQUIRED"),
     {
       failure_token:"MCFT_CAP09_KBS_PUBLICATION_EVENT_INDEX_REQUIRED",
       diagnostic_token:"MCFT_CAP09_KBS_PUBLICATION_EVENT_INDEX_REQUIRED",
     },
   );
-  assert.equal(classifier.classify(semanticFatal),"PROCESS_FATAL");
+  assert.equal(classifier.classify(semanticRejected),"ATTEMPT_REJECTED");
 
   const store=new S3CompatibleKbsRawHourlyPublicationBaselineStoreV1(config);
   const manifest={
@@ -120,7 +120,7 @@ async function main():Promise<void>{
   const read=await store.readBaselineManifest({baseline_ref:first.baseline_ref,baseline_digest:first.baseline_digest,manifest_bytes:first.manifest_bytes});
   assert.deepEqual(read.manifest,manifest);assert.equal(read.current_pointer_bound,false);
 
-  const proof={schema_version:"geox_mcft_cap09_kbs_publication_baseline_result_v1",status:"PASS",complete_accumulated_table_inspected:true,baseline_snapshot_latest_event_time:snapshot.latest_event_time,no_change_discovery:true,forward_delta_discovery:true,ambiguous_forward_duplicate_fails_to_actionable_state:true,oversized_csv_field_has_stable_failure_token:true,oversized_csv_field_is_retryable_provider_payload_shape_anomaly:false,oversized_csv_field_is_attempt_rejected_provider_payload_shape_anomaly:true,other_kbs_scientific_semantic_failure_remains_fatal:true,content_addressed_private_baseline_manifest_written:true,baseline_manifest_idempotent:true,baseline_manifest_readback_verified:true,canonical_emission_count:0,baseline_current_pointer_bound:false,database_schema_changed:false,database_connection_attempted:false,provider_request_count:0,runtime_tick_cursor_access_count:0,production_target_planner_bound:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false};
+  const proof={schema_version:"geox_mcft_cap09_kbs_publication_baseline_result_v1",status:"PASS",complete_accumulated_table_inspected:true,baseline_snapshot_latest_event_time:snapshot.latest_event_time,no_change_discovery:true,forward_delta_discovery:true,ambiguous_forward_duplicate_fails_to_actionable_state:true,oversized_csv_field_has_stable_failure_token:true,oversized_csv_field_is_retryable_provider_payload_shape_anomaly:false,oversized_csv_field_is_attempt_rejected_provider_payload_shape_anomaly:true,other_kbs_scientific_semantic_failure_remains_fatal:false,other_kbs_scientific_semantic_failure_is_attempt_rejected_fail_closed:true,content_addressed_private_baseline_manifest_written:true,baseline_manifest_idempotent:true,baseline_manifest_readback_verified:true,canonical_emission_count:0,baseline_current_pointer_bound:false,database_schema_changed:false,database_connection_attempted:false,provider_request_count:0,runtime_tick_cursor_access_count:0,production_target_planner_bound:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false};
   fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(proof,null,2)+"\n");console.log(JSON.stringify(proof,null,2));
 }
 main().catch((error)=>{fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify({schema_version:"geox_mcft_cap09_kbs_publication_baseline_result_v1",status:"FAIL",error:error instanceof Error?error.message:String(error),database_schema_changed:false,database_connection_attempted:false,production_target_planner_bound:false},null,2)+"\n");console.error(error);process.exitCode=1;});

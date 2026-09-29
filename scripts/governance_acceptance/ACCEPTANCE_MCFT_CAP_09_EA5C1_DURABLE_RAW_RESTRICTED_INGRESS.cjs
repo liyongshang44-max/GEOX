@@ -13,6 +13,7 @@ function blob(ref, file) { return git("rev-parse", `${ref}:${file}`); }
 function readJson(file) { return JSON.parse(fs.readFileSync(file, "utf8")); }
 
 const HISTORICAL_BASE = "b9e212f98dd1d0c1e8fff5e9f93f369167e6f065";
+const FROZEN_RUNTIME_SUBJECT_SHA = "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a";
 const base = process.env.MCFT_BASE_SHA;
 if (!base) fail("EA5C1_BASE_SHA_REQUIRED");
 if (!/^[0-9a-f]{40}$/.test(base)) fail("EA5C1_BASE_SHA_INVALID");
@@ -83,8 +84,8 @@ if (base === HISTORICAL_BASE) {
   validationMode = "EXACT_HISTORICAL_CANDIDATE";
 } else {
   // Successor maintenance must not rewrite the historical qualification record.
-  // A raw-store / focused-acceptance mutation is permitted only under the exact
-  // real-clock P0 successor pins below; this does not rewrite the historical pins.
+  // Current integration may requalify the later frozen Runtime only when every
+  // semantic EA5C1 surface remains byte-identical to that exact frozen subject.
   eq(blob(base, authorityPath), candidatePins[authorityPath], "EA5C1_SUCCESSOR_BASE_HISTORICAL_AUTHORITY_DRIFT");
   eq(blob("HEAD", authorityPath), candidatePins[authorityPath], "EA5C1_SUCCESSOR_HISTORICAL_AUTHORITY_MUTATED");
   eq(blob(base, rawAdapterPath), candidatePins[rawAdapterPath], "EA5C1_SUCCESSOR_BASE_RAW_ADAPTER_DRIFT");
@@ -100,22 +101,11 @@ if (base === HISTORICAL_BASE) {
   }
 
   if (realClockP0RetentionReuse) {
-    const clockRegressionResilienceP0 =
-      blob("HEAD", rawAdapterPath) === clockRegressionResilienceP0Pins[rawAdapterPath]
-      && blob("HEAD", collectorPath) === clockRegressionResilienceP0Pins[collectorPath]
-      && blob("HEAD", acceptancePath) === clockRegressionResilienceP0Pins[acceptancePath];
-    const gfsFileBackedStreamingP0 =
-      blob("HEAD", rawAdapterPath) === gfsFileBackedStreamingP0Pins[rawAdapterPath]
-      && blob("HEAD", collectorPath) === gfsFileBackedStreamingP0Pins[collectorPath]
-      && blob("HEAD", acceptancePath) === gfsFileBackedStreamingP0Pins[acceptancePath];
-    const exactPins = clockRegressionResilienceP0
-      ? clockRegressionResilienceP0Pins
-      : gfsFileBackedStreamingP0
-        ? gfsFileBackedStreamingP0Pins
-        : realClockP0RetentionReusePins;
-    for (const [file, expected] of Object.entries(exactPins)) {
-      eq(blob("HEAD", file), expected, `EA5C1_REAL_CLOCK_P0_EXACT_BLOB_MISMATCH:${file}`);
-    }
+    const frozenRuntimeIntegration =
+      git("merge-base", FROZEN_RUNTIME_SUBJECT_SHA, head) === FROZEN_RUNTIME_SUBJECT_SHA
+      && [rawAdapterPath, collectorPath, ingressPath, governedIngressPath, acceptancePath]
+        .every((file) => blob("HEAD", file) === blob(FROZEN_RUNTIME_SUBJECT_SHA, file));
+
     const expectedProtectedChanged = [
       rawAdapterPath,
       collectorPath,
@@ -124,16 +114,42 @@ if (base === HISTORICAL_BASE) {
       gatePath,
       workflowPath,
     ].sort();
-    eq(
-      JSON.stringify(protectedChanged),
-      JSON.stringify(expectedProtectedChanged),
-      "EA5C1_REAL_CLOCK_P0_EXACT_PROTECTED_BOUNDARY_REQUIRED",
-    );
-    validationMode = clockRegressionResilienceP0
-      ? "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR"
-      : gfsFileBackedStreamingP0
-        ? "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR"
-        : "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR";
+
+    if (frozenRuntimeIntegration) {
+      eq(
+        JSON.stringify(protectedChanged),
+        JSON.stringify(expectedProtectedChanged),
+        "EA5C1_FROZEN_RUNTIME_EXACT_PROTECTED_BOUNDARY_REQUIRED",
+      );
+      validationMode = "FROZEN_RUNTIME_INTEGRATION_REQUALIFICATION";
+    } else {
+      const clockRegressionResilienceP0 =
+        blob("HEAD", rawAdapterPath) === clockRegressionResilienceP0Pins[rawAdapterPath]
+        && blob("HEAD", collectorPath) === clockRegressionResilienceP0Pins[collectorPath]
+        && blob("HEAD", acceptancePath) === clockRegressionResilienceP0Pins[acceptancePath];
+      const gfsFileBackedStreamingP0 =
+        blob("HEAD", rawAdapterPath) === gfsFileBackedStreamingP0Pins[rawAdapterPath]
+        && blob("HEAD", collectorPath) === gfsFileBackedStreamingP0Pins[collectorPath]
+        && blob("HEAD", acceptancePath) === gfsFileBackedStreamingP0Pins[acceptancePath];
+      const exactPins = clockRegressionResilienceP0
+        ? clockRegressionResilienceP0Pins
+        : gfsFileBackedStreamingP0
+          ? gfsFileBackedStreamingP0Pins
+          : realClockP0RetentionReusePins;
+      for (const [file, expected] of Object.entries(exactPins)) {
+        eq(blob("HEAD", file), expected, `EA5C1_REAL_CLOCK_P0_EXACT_BLOB_MISMATCH:${file}`);
+      }
+      eq(
+        JSON.stringify(protectedChanged),
+        JSON.stringify(expectedProtectedChanged),
+        "EA5C1_REAL_CLOCK_P0_EXACT_PROTECTED_BOUNDARY_REQUIRED",
+      );
+      validationMode = clockRegressionResilienceP0
+        ? "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR"
+        : gfsFileBackedStreamingP0
+          ? "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR"
+          : "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR";
+    }
   } else {
     eq(blob("HEAD", rawAdapterPath), candidatePins[rawAdapterPath], "EA5C1_SUCCESSOR_RAW_ADAPTER_MUTATED");
     eq(blob("HEAD", acceptancePath), candidatePins[acceptancePath], "EA5C1_SUCCESSOR_FOCUSED_ACCEPTANCE_MUTATED");
@@ -198,12 +214,12 @@ const rawSource = fs.readFileSync(rawAdapterPath, "utf8");
 for (const marker of ["PRIVATE_RESTRICTED_RAW_EVIDENCE", "mcft-cap09-formal-raw-v1/sha256", "s3-private://", "verifyRetainedRawEvidence", "x-amz-meta-geox-sha256"]) {
   if (!rawSource.includes(marker)) fail(`EA5C1_RAW_ADAPTER_MARKER_MISSING:${marker}`);
 }
-if (validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR") {
+if (validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR" || validationMode === "FROZEN_RUNTIME_INTEGRATION_REQUALIFICATION") {
   for (const marker of ["retainRawEvidenceFile", "fs.createReadStream", "EA5C1_FILE_DIGEST_MISMATCH"]) {
     if (!rawSource.includes(marker)) fail(`EA5C1_GFS_FILE_STREAM_MARKER_MISSING:${marker}`);
   }
 }
-if (validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR") {
+if (validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR" || validationMode === "FROZEN_RUNTIME_INTEGRATION_REQUALIFICATION") {
   for (const marker of [
     "clock_regression_max_wait_ms",
     "clock_regression_poll_ms",
@@ -255,7 +271,7 @@ for (const marker of [
 for (const forbidden of ["process.env", "INSERT INTO facts", "RuntimeTickCursor"]) {
   if (collectorSource.includes(forbidden)) fail(`EA5C1_SUCCESSOR_COLLECTOR_BOUNDARY_FORBIDDEN:${forbidden}`);
 }
-if (validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR") {
+if (validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR" || validationMode === "FROZEN_RUNTIME_INTEGRATION_REQUALIFICATION") {
   for (const marker of ["collectRetainDecodeCanonicalizeFileBackedExternalEvidenceWithCompletionClockV1", "EA3_FILE_BACKED_RETENTION_PORT_REQUIRED", "EA3_FILE_BACKED_DECODER_PORT_REQUIRED"]) {
     if (!collectorSource.includes(marker)) fail(`EA5C1_GFS_FILE_COLLECTOR_MARKER_MISSING:${marker}`);
   }
@@ -287,6 +303,7 @@ const result = {
   status: "PASS",
   validation_mode: validationMode,
   historical_qualification_base_sha: HISTORICAL_BASE,
+  frozen_runtime_subject_sha: validationMode === "FROZEN_RUNTIME_INTEGRATION_REQUALIFICATION" ? FROZEN_RUNTIME_SUBJECT_SHA : null,
   base_main_sha: base,
   subject_head_sha: head,
   ea5c1_protected_changed_file_count: protectedChanged.length,
@@ -294,6 +311,7 @@ const result = {
   historical_authority_record_immutable: blob("HEAD", authorityPath) === candidatePins[authorityPath],
   historical_raw_adapter_immutable: blob("HEAD", rawAdapterPath) === candidatePins[rawAdapterPath],
   historical_focused_acceptance_immutable: blob("HEAD", acceptancePath) === candidatePins[acceptancePath],
+  frozen_runtime_integration_requalification: validationMode === "FROZEN_RUNTIME_INTEGRATION_REQUALIFICATION",
   successor_ingress_maintenance_revalidation: validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION",
   successor_collector_maintenance_revalidation:
     validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION" && protectedChanged.includes(collectorPath),
@@ -301,15 +319,18 @@ const result = {
     validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR",
   real_clock_p0_gfs_file_backed_streaming_requalification:
     validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR"
-      || validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR",
+      || validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR"
+      || validationMode === "FROZEN_RUNTIME_INTEGRATION_REQUALIFICATION",
   real_clock_p0_retention_clock_regression_resilience_requalification:
-    validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR",
+    validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR"
+      || validationMode === "FROZEN_RUNTIME_INTEGRATION_REQUALIFICATION",
   real_clock_p0_historical_authority_rewritten: false,
   real_clock_p0_raw_object_retained_at_mutation: false,
   real_clock_p0_exact_protected_boundary_proved:
     validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR"
       || validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR"
-      || validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR",
+      || validationMode === "REAL_CLOCK_P0_RETENTION_CLOCK_REGRESSION_RESILIENCE_SUCCESSOR"
+      || validationMode === "FROZEN_RUNTIME_INTEGRATION_REQUALIFICATION",
   real_clock_p0_qualification_images_pinned:
     validationMode === "REAL_CLOCK_P0_RETENTION_REUSE_SUCCESSOR"
       || validationMode === "REAL_CLOCK_P0_GFS_FILE_BACKED_STREAMING_SUCCESSOR"

@@ -149,7 +149,7 @@ jobs:
             if [ "$attempt" = 60 ]; then docker logs ea5c2b1-minio; exit 1; fi
             sleep 1
           done
-          docker run --rm --network host --entrypoint /bin/sh docker.io/minio/mc:RELEASE.2024-11-21T17-21-54Z@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112 -ceu '
+          docker run --rm --network host --entrypoint /bin/sh docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -ceu '
             mc alias set local http://127.0.0.1:9000 minioadmin minioadmin123
             mc mb --ignore-existing local/geox-mcft-cap09-formal-raw-v1
             mc anonymous set private local/geox-mcft-cap09-formal-raw-v1
