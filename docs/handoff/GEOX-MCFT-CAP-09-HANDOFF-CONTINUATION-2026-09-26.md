@@ -1,5 +1,559 @@
 # GEOX MCFT CAP-09 HANDOFF CONTINUATION — 2026-09-26
 
+## 2026-09-29 ACTIVE CHECKPOINT — CAP-09 blocker convergence on main-based integration successor
+
+This section is the newest continuation checkpoint. It supersedes the 2026-09-27 and 2026-09-26 current-state summaries below wherever they conflict. Older sections are intentionally preserved as historical engineering context.
+
+### A. Mandatory reading order for the next engineer
+
+There are exactly two MCFT CAP-09 handoff documents in the current handoff model. Read both before changing code:
+
+1. Historical canonical archive — frozen, do not rewrite:
+   `docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md`
+
+2. Active continuation — current-state authority from 2026-09-26 onward:
+   `docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-09-26.md`
+
+Also read the MCFT / Digital Twin master task document and the CAP-09 task / acceptance / governance documents before engineering changes. Do not start from this handoff alone.
+
+### B. What task is active now
+
+The active task is no longer Runtime feature development and is not “continue building Twin”.
+
+The active task is:
+
+```text
+close the remaining qualification / governance blockers on the
+main-based MCFT CAP-09 integration successor
+without reopening the frozen Runtime line
+```
+
+Current integration successor:
+
+```text
+PR            #3636 — MCFT CAP-09 integration successor: qualified infra + frozen Runtime
+state         OPEN / DRAFT / UNMERGED
+base          main
+base SHA      8f63c498bd48978e2dd525ad57b6b8fdb7ada560
+head branch   integration/mcft-cap09-qualified-runtime-infra-v1
+exact head    8b14b729be755bd9c800bd13b1b9d688bcf99fd6
+mergeable     true
+```
+
+Exact component inputs recorded by #3636:
+
+```text
+qualified infra   29c0ca1379940516482e05ae1661770c67d3cb74
+frozen Runtime    3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a
+original combined synthetic merge object
+                  b77f8ffcc640f44eb8ce50742098ae1729509ed8
+```
+
+PR #3636 remains qualification / integration only. It does not authorize merge, production mutation, Formal-v5 arm, A0, O00–O23, Stage 1B closure, or CAP-09 completion.
+
+### C. Frozen Runtime state — do not reopen for QCP / CI red
+
+The Runtime candidate used by the current integration line is:
+
+`3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a`
+
+Exact-head final Runtime admission was machine-proven:
+
+```text
+status                 PASS
+FINAL_24H_ADMITTED     true
+pending                0
+authority_effect       false
+production_effect      false
+formal_v5_arm          false
+a0_authorized          false
+o00_o23_authorized     false
+```
+
+Admission requirements on this exact Runtime subject include:
+
+```text
+failure taxonomy compatibility seam                  PASS
+exact P0-H raw materialized / hash verified          PASS
+full resource envelope                               PASS
+accelerated restart / missed-slot oldest-first       PASS
+2–4h live-provider soak                              PASS
+```
+
+This is Runtime admission, not Formal closure:
+
+```text
+FINAL_24H_ADMITTED = true
+    ≠ Formal-v5 armed
+    ≠ A0 authorized
+    ≠ O00–O23 authorized
+    ≠ Stage 1B closed
+    ≠ MCFT CAP-09 completed
+```
+
+Do not modify Runtime merely because qualification evidence, workflow topology, registry binding, or QCP is red. Runtime changes now require new machine evidence of an actual Runtime defect.
+
+### D. Important Runtime hardening completed after the older b497 checkpoint
+
+The Runtime line advanced beyond the 2026-09-27 `b497...` checkpoint and closed a real KBS failure mode before freezing at `3d5fd13c...`.
+
+Root cause discovered from retained real objects:
+
+- non-KBS GRIB payloads could reach the KBS raw-hourly scientific parser;
+- the parser attempted UTF-8 decoding;
+- raw `UnicodeDecodeError` escaped as an unclassified scientific subprocess failure;
+- the production classifier could therefore promote the attempt to `PROCESS_FATAL` and kill Evidence Runtime.
+
+The fix normalized these provider payload failures:
+
+```text
+MCFT_CAP09_KBS_RAW_HOURLY_NON_CSV_PAYLOAD:<type>
+MCFT_CAP09_KBS_RAW_HOURLY_INVALID_UTF8
+```
+
+Both classify as:
+
+`ATTEMPT_REJECTED`
+
+and do not kill the host.
+
+Committed acceptance coverage includes:
+
+```text
+ACCEPTANCE_MCFT_CAP_09_KBS_NON_CSV_PAYLOAD_REJECTION_V1.cjs
+ACCEPTANCE_MCFT_CAP_09_KBS_NON_CSV_CLASSIFIER_REPLAY_V1.cjs
+FAILURE_DISCOVERY_GATE matrix cases
+Phase5 process-boundary taxonomy alignment
+```
+
+Known-case `UNCLASSIFIED_ERROR` remains zero in the FDG contract.
+
+### E. Qualification path-ownership blocker closed
+
+The first major #3636 QCP blocker was not a Runtime defect. The central applicability planner saw new failure-discovery / qualification files as unknown changed paths.
+
+A narrow control-plane authority change added 17 exact paths to:
+
+`dependency_resolvers.CONTROL_PLANE_FILES.paths`
+
+in:
+
+`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json`
+
+Commit:
+
+`3c98bd2d0bf5c320fe3910ae4ec97f25f140b88a — Govern failure-discovery qualification paths`
+
+The result after the patch:
+
+```text
+planner exit             0
+planner status           PASS
+generation               v13
+unknown_changed_paths    0
+authority_errors         0
+resolver_errors          0
+planner blockers         0
+
+CONTROL_PLANE_INTEGRITY
+status                   REQUALIFY
+reason                   GOVERNED_DEPENDENCY_CHANGED
+```
+
+Central applicability self-acceptance also passed:
+
+```text
+status                         PASS
+resolver_count                 32
+all resolvers materialized     true
+unknown changed path fails closed
+                               true
+regex fallback used            false
+runtime mutation               false
+production workflow activation false
+formal database mutation       false
+```
+
+This means the old “unknown path / ownership” first-red is CLOSED. Do not reopen it by weakening the planner or adding broad globs.
+
+### F. #3636 advanced after 3c98 — current exact head is 8b14
+
+After the path-ownership fix, #3636 advanced five commits to current head `8b14b729...`.
+
+The changes were narrow workflow / acceptance convergence, not a reopening of the Runtime feature line. The commit sequence includes:
+
+```text
+Fix Phase3 immutable MinIO mirror source
+Align KBS baseline acceptance with rejection taxonomy
+Fix Phase7 immutable MinIO mirror sources
+Keep Phase7 mirror fix source-only
+Fix EA5C2B1 immutable MinIO mirror sources
+```
+
+Changed paths from `3c98...` to `8b14...` are limited to:
+
+```text
+.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml
+.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml
+.github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml
+scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts
+```
+
+The immutable MinIO rule remains:
+
+```text
+exact digest / immutable mirror required
+floating latest forbidden
+```
+
+### G. Current QCP first-red — blocker inventory, not topology or ownership
+
+Latest QCP on current exact head:
+
+```text
+run      36509905988
+job      109219520177
+head     8b14b729be755bd9c800bd13b1b9d688bcf99fd6
+result   FAILURE
+artifact 11008573410
+```
+
+Step state:
+
+```text
+Require governed successor predecessor and zero production bindings   PASS
+Prove central applicability semantics                                 PASS
+Prove generation, durable-anchor, dependency-digest semantics         PASS
+Resolve immutable qualification evidence references                   PASS
+Generate exact PR applicability plan                                  PASS
+Enumerate all blockers without fail-fast                              FAIL
+Validate control-plane machine proof                                  SKIPPED
+```
+
+Official blocker artifact counts:
+
+```text
+total checks           33
+pass                   15
+fail                   13
+not applicable          5
+unknown                  0
+forbidden                0
+authority errors         0
+unknown changed paths    0
+blocker count           13
+planner status          PASS
+```
+
+Therefore the current QCP failure is NOT:
+
+- unknown path ownership;
+- central applicability semantics;
+- predecessor topology;
+- durable anchor generation;
+- immutable evidence reference resolution.
+
+It is now the next layer: exact-head requalification evidence plus two remaining diagnostics.
+
+### H. Current official 13 blockers
+
+The GitHub QCP artifact on exact head `8b14...` lists:
+
+```text
+1.  V13_AUTONOMOUS_FORCING_FOUNDATION
+2.  V13_HOLISTIC_SCHEMA
+3.  V13_NEXT_TICK_VIABILITY
+4.  EA5C1_DURABLE_RAW_RESTRICTED_INGRESS
+5.  LEGACY_AM19_PERSISTENT_24T
+6.  PHASE2_EVIDENCE_PROVIDER_MODULES
+7.  PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+8.  PHASE4_TWIN_RUNTIME_FOUNDATION
+9.  PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS
+10. PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION
+11. FORMAL_V5_H6_SUCCESSOR_SEAM
+12. PRODUCTION_TWIN_PROCESS_V2_ROUTING
+13. PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING
+```
+
+Classification:
+
+```text
+11 = invalid / missing current successor requalification evidence
+ 2 = diagnostic failures
+```
+
+For most durable evidence candidates, the repeated decisive mismatch is:
+
+`dependency_digest_match = false`
+
+Phase3 and Phase5 use successor-chain-specific requalification evidence and also remain unresolved on the current integration subject.
+
+Do not interpret these 11 entries as eleven independent Runtime bugs. The dominant pattern is stale / non-current evidence identity after integration dependency closure changed.
+
+### I. Two current diagnostic blockers that require careful governance analysis
+
+#### I1. FORMAL_V5_H6_SUCCESSOR_SEAM
+
+Current diagnostic error:
+
+```text
+H6_HISTORICAL_OR_PRODUCTION_V2_REWRITE_FORBIDDEN:
+apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts
+
+actual blob   f1f379a40e55d81d43c5d1b7975aded74d10092c
+expected blob f91baec7e075f282b8e2cecaf56d4256fc728113
+```
+
+Do not “fix” this by casually rewriting the frozen H6 acceptance or production V2 Runtime. First determine whether current integration contains an already-governed successor replacement that the H6 diagnostic must bind to, or whether this is a genuine forbidden rewrite.
+
+#### I2. PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING
+
+The current diagnostic fails its changed-path / exact-boundary assertion against the large integration successor.
+
+Earlier local inspection showed this acceptance was written around a narrow historical successor boundary. Do not treat a bare diagnostic failure on an 83-file integration PR as proof that private-store Runtime is broken.
+
+First determine the correct governed successor mode / evidence path for the current integration subject. Do not weaken the private-store contract merely to make QCP green.
+
+### J. Current workflow landscape on 8b14
+
+Important exact-head workflows already green include:
+
+```text
+ci                                             SUCCESS
+mcft-release-lane-v1                           SUCCESS
+mcft-delivery-policy-v2                        SUCCESS
+mcft-cap09-minio-immutable-mirror-preflight-v1 SUCCESS
+mcft-cap-09-failure-discovery-gate-v1          SUCCESS
+mcft-cap-09-phase4-twin-runtime-persistence    SUCCESS
+mcft-cap-09-phase5-production-equivalent-containers SUCCESS
+mcft-cap-09-ea5e2-runtime-dependency-graph     SUCCESS
+mcft-cap-09-ea5e2-successor-runner-qualification SUCCESS
+mcft-cap-09-v13-autonomous-forcing-foundation  SUCCESS
+mcft-cap-09-v13-holistic-schema-postgres       SUCCESS
+mcft-cap-09-v13-next-tick-viability-postgres   SUCCESS
+MCFT CAP-09 Current-Main Re-Anchor 2144        SUCCESS
+MCFT CAP-09 Production Runtime Owner Cutover    SUCCESS
+```
+
+Important exact-head workflows still red include:
+
+```text
+mcft-cap-09-qualification-control-plane-v1
+mcft-cap-09-phase3-evidence-runtime-persistence
+mcft-cap-09-ea5c1-durable-raw-restricted-ingress
+mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor
+mcft-cap-09-phase7-candidate-promotion-composition
+mcft-cap-09-amendment-19-persistent-production-cutover
+mcft-cap-09-phase5-two-service-accelerated-24t
+MCFT CAP-09 Production Twin Process V2 Routing
+MCFT CAP-09 Production Evidence Runtime Private Store Binding
+mcft-cap-09-formal-v5-post-graduation-readiness
+mcft-cap-09-v13-fenced-fact-promotion-postgres
+```
+
+At the time of this checkpoint, the current-head failure-discovery live-provider soak workflow was still in progress. Do not assume a final result without re-reading GitHub.
+
+The fact that many component workflows are green while QCP still reports `NO_VALID_REQUALIFICATION_EVIDENCE` is a critical clue: successful workflow execution and durable requalification-evidence graduation are separate things.
+
+### K. Immediate next plan — handle blocker root causes, not the count
+
+Proceed in this order:
+
+```text
+1. Keep frozen Runtime 3d5fd13c... unchanged.
+
+2. Stay on #3636 main-based integration successor.
+
+3. For current failed formal workflows, retrieve the first failed job/step/log on exact head 8b14...:
+   - Phase3
+   - EA5C1
+   - EA5C2B1
+   - AM19
+   - Phase7
+   - accelerated 24T
+   - Production Twin V2 Routing
+   - Private Store Binding
+   - Formal-v5 post-graduation readiness
+
+4. Separate failures into:
+   A. workflow genuinely fails;
+   B. workflow succeeds but current exact-head durable evidence is not graduated / registered;
+   C. bare diagnostic is inapplicable because required governed-base / successor context is missing.
+
+5. Prioritize the common upstream evidence problem:
+   current dependency digest / subject / stage / binding identity must produce or select valid successor requalification evidence.
+
+6. Do not manufacture evidence JSON.
+
+7. Do not copy old evidence and edit subject/digest fields.
+
+8. Do not weaken `dependency_digest_match` or successor-chain checks.
+
+9. For H6 and Private Store diagnostics, establish whether a current governed successor mode exists before changing acceptance code.
+
+10. Re-run QCP only after one root blocker is materially closed; take the new machine first-red.
+
+11. Do not merge #3636 without separate user authorization.
+
+12. Formal-v5 arm / A0 / O00–O23 remain separate explicit authorization boundaries.
+```
+
+### L. Post-CAP-09 direction — planned, NOT YET STARTED
+
+Once CAP-09 is genuinely closed, MCFT must stop being an open-ended Twin feature-development line.
+
+The agreed direction is:
+
+```text
+MCFT
+→ stable Field-State Authority provider
+→ exact, read-only state export
+→ ADR-consumable measurement/context semantics
+→ governed GEOX Field ↔ ADR target binding
+→ ADR Applicability / RuntimeBinding / DecisionResult
+→ B-Line Approval / Execution Authorization / ExecutionReceipt
+→ DecisionTimeAuthorityManifest composition / replay proof
+```
+
+The first integrated chain must deliberately remain small:
+
+```text
+ONE REAL FIELD
+ONE REAL DECISION SUBJECT
+```
+
+The first irrigation integration is allowed to end in:
+
+`ADR = UNRESOLVED / ASK`
+
+when FC/AWC/PWP, root-zone aggregation, crop/stage, MAD or other scientific semantics are not qualified. MCFT must not fabricate scientific parameters or turn measurement availability into agronomic authority.
+
+Do NOT start this T1–T6 integration work while CAP-09 closure is still open. Current priority is blocker convergence only.
+
+After closure, retain only a small MCFT maintenance / authority-provider ownership and move the main engineering effort to a temporary MCFT + ADR + B-Line integration workstream. The integration team owns no new authority.
+
+### M. Pitfalls discovered in the 2026-09-28 / 2026-09-29 work — do not repeat
+
+1. **Local all-blockers preflight can produce false diagnostic reds.**
+   Bare diagnostic execution may omit required exact-base environment / governed successor context. The local preflight once showed 19 blockers while the formal GitHub QCP artifact reduced the authoritative set to 13. Use formal workflow evidence for adjudication.
+
+2. **Do not equate a green component workflow with durable requalification evidence.**
+   QCP can still reject historical candidates on `dependency_digest_match=false`. Evidence graduation / registry binding is a separate step.
+
+3. **Do not feed arbitrary retained objects to the KBS parser based on size alone.**
+   Retention contains heterogeneous objects, including GRIB. Fingerprint payloads first. GRIB-at-KBS was the root of a real `PROCESS_FATAL` escape before classification was fixed.
+
+4. **PowerShell `elseif` cannot be entered as a new independent command after an `if` block has already executed.**
+   Keep `if / elseif / else` in the same submitted block.
+
+5. **Windows PowerShell 5.1 does not support `Set-Content -Encoding utf8NoBOM`.**
+   Use `[System.Text.UTF8Encoding]::new($false)` with `WriteAllText` when a BOM-free script is required.
+
+6. **UTF-8 BOM before a Node shebang causes `SyntaxError: Invalid or unexpected token`.**
+   Verify first bytes when generating `.cjs` scripts; `23 21 2F 75...` is the expected `#!/u...` prefix.
+
+7. **`node --expose-gc` can be lost through a wrapper invocation.**
+   The working form for the TS resource sanity acceptance was:
+   `node --expose-gc --import tsx <script.ts>`.
+
+8. **An empty Docker container ID is dangerous.**
+   `docker stats --no-stream $Cid` with an empty `$Cid` can display every running container and create a false diagnosis. Test the ID before inspect/stats.
+
+9. **Do not install toolchains ad hoc inside the proof container when the base image can provide them exactly.**
+   A first full-resource proof attempt failed because NodeSource TLS failed, Debian `nodejs` installed without npm, and the script stopped. The robust path used a multi-stage Node + Python proof image.
+
+10. **MinIO exact digest pinning must remain immutable and pipefail-safe.**
+    Do not use floating tags. The digest parser was changed from early-exit `awk ... { print $2; exit }` to a pipefail-safe accumulator because early pipe termination can make the producer fail under `set -o pipefail`.
+
+11. **Do not treat QCP / workflow / evidence-registry red as permission to reopen Runtime.**
+    The frozen Runtime already has exact-head admission proof. New Runtime work needs new Runtime-defect evidence.
+
+12. **Exact-head proofs are SHA-bound.**
+    Every new commit invalidates assumptions about prior exact-head qualification unless the governance contract explicitly carries evidence forward.
+
+13. **Long Windows applicability self-acceptance is not necessarily hung.**
+    It may spend substantial time spawning Git operations. Check CPU delta and new Git subprocesses before aborting.
+
+14. **Keep the handoff branch documentation-only.**
+    Do not mix engineering changes into PR #3298.
+
+### N. Explicit authority ceiling at this checkpoint
+
+Unless separately authorized:
+
+- do not merge #3636;
+- do not merge #3632 merely because Runtime admission is green;
+- do not mutate production DB or Formal store;
+- do not restart / cut over production owners to satisfy qualification;
+- do not arm Formal-v5;
+- do not start A0;
+- do not start O00–O23;
+- do not claim Stage 1B closure;
+- do not claim MCFT CAP-09 completion;
+- do not begin MCFT→ADR→B-Line implementation before CAP-09 closure;
+- do not weaken exact SHA / digest / authority / evidence identity checks.
+
+### O. Compact state for the next engineer — 2026-09-29
+
+```text
+READ FIRST
+1. docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+2. docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-09-26.md
+
+protected main
+8f63c498bd48978e2dd525ad57b6b8fdb7ada560
+
+FROZEN RUNTIME
+3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a
+Runtime admission            PASS
+FINAL_24H_ADMITTED           true
+pending                      0
+Formal-v5                    NOT ARMED
+A0                           NOT AUTHORIZED
+O00–O23                      NOT AUTHORIZED
+CAP-09 complete              false
+
+ACTIVE INTEGRATION
+PR #3636                    DRAFT / OPEN / UNMERGED
+base                         main@8f63c498bd48978e2dd525ad57b6b8fdb7ada560
+head                         8b14b729be755bd9c800bd13b1b9d688bcf99fd6
+qualified infra              29c0ca1379940516482e05ae1661770c67d3cb74
+frozen Runtime component     3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a
+
+QCP
+run                          36509905988
+step 3                       PASS
+step 4                       PASS
+step 5                       PASS
+step 6                       PASS
+step 7                       PASS
+step 8 blocker inventory     FAIL
+planner                      PASS
+unknown_changed_paths        0
+authority_errors             0
+blockers                     13
+
+CURRENT BLOCKER SHAPE
+11  current requalification evidence / successor-chain evidence
+ 2  diagnostics: H6 successor seam + Private Store Binding
+
+NEXT
+retrieve exact failed workflow first-reds
+identify common evidence-graduation / digest-binding root cause
+fix one upstream blocker only
+rerun QCP
+
+DO NOT
+reopen Runtime for qualification red
+fabricate evidence
+weaken digest checks
+merge without authorization
+arm Formal-v5 / start A0 / O00–O23
+start post-CAP09 MCFT→ADR→B-Line work yet
+```
+
+---
+
 ## 2026-09-27 ACTIVE CHECKPOINT — Runtime admission closed; qualification / infra convergence is the only active engineering frontier
 
 This section is the newest continuation checkpoint and supersedes older current-state summaries below where they conflict. The 2026-09-26 material is intentionally preserved after this section as historical baseline.
