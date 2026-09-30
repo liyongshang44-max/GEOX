@@ -7,6 +7,7 @@
 // Twin tick, or mutate either durable cursor.
 
 import { setTimeout as sleep } from "node:timers/promises";
+import type { Pool } from "pg";
 
 import type {
   EvidenceRuntimeHostFailureClassifierV1,
@@ -27,6 +28,82 @@ export const MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_ID_V1 =
   "MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_V1" as const;
 
 export type McftCap09ProcessSignalV1 = "SIGINT" | "SIGTERM";
+
+export type McftCap09RuntimePoolRoleV1 = "EVIDENCE_RUNTIME" | "TWIN_RUNTIME";
+
+export type McftCap09RuntimePoolIdleErrorEventV1 = {
+  schema_version: "geox_mcft_cap09_runtime_pool_idle_error_v1";
+  runtime_role: McftCap09RuntimePoolRoleV1;
+  lifecycle_id: typeof MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_ID_V1;
+  status: "DEGRADED" | "FATAL";
+  detail: "IDLE_POOL_CLIENT_ERROR";
+  failure_class: "RETRYABLE" | "FATAL";
+  failure_token: string;
+  error_name: string;
+  error_code: string | null;
+};
+
+type McftCap09RuntimePoolFailureClassifierV1 = {
+  classify(error: unknown): "RETRYABLE" | "FATAL";
+};
+
+function runtimePoolErrorCodeV1(error: unknown): string {
+  return typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code?: unknown }).code ?? "").trim()
+    : "";
+}
+
+function runtimePoolFailureTokenV1(error: unknown, code: string): string {
+  if (code) return code;
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (/database system is in recovery mode|cannot connect now/i.test(message)) {
+    return "POSTGRES_RECOVERY_MODE";
+  }
+  if (/connection terminated/i.test(message)) {
+    return "POSTGRES_CONNECTION_TERMINATED";
+  }
+  if (/socket hang up/i.test(message)) return "SOCKET_HANG_UP";
+  if (/timeout/i.test(message)) return "TIMEOUT";
+  return "UNCLASSIFIED_POOL_ERROR";
+}
+
+export function installMcftCap09RuntimePoolIdleErrorGuardV1(input: {
+  pool: Pick<Pool, "on" | "off">;
+  runtime_role: McftCap09RuntimePoolRoleV1;
+  failure_classifier: McftCap09RuntimePoolFailureClassifierV1;
+  event_sink?: (event: McftCap09RuntimePoolIdleErrorEventV1) => void;
+}): { dispose(): void } {
+  const sink = input.event_sink ?? ((event: McftCap09RuntimePoolIdleErrorEventV1) => {
+    process.stderr.write(`${JSON.stringify(event)}\n`);
+  });
+  const onError = (error: Error) => {
+    const classification = input.failure_classifier.classify(error);
+    const code = runtimePoolErrorCodeV1(error);
+    sink({
+      schema_version: "geox_mcft_cap09_runtime_pool_idle_error_v1",
+      runtime_role: input.runtime_role,
+      lifecycle_id: MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_ID_V1,
+      status: classification === "RETRYABLE" ? "DEGRADED" : "FATAL",
+      detail: "IDLE_POOL_CLIENT_ERROR",
+      failure_class: classification,
+      failure_token: runtimePoolFailureTokenV1(error, code),
+      error_name: error instanceof Error ? error.name : "Error",
+      error_code: code || null,
+    });
+    if (classification === "FATAL") {
+      throw error instanceof Error
+        ? error
+        : new Error("MCFT_CAP09_RUNTIME_POOL_IDLE_FATAL");
+    }
+  };
+  input.pool.on("error", onError);
+  return {
+    dispose() {
+      input.pool.off("error", onError);
+    },
+  };
+}
+
 
 export type McftCap09ProcessStopV1 =
   EvidenceRuntimeHostStopPortV1 & TwinRuntimeHostStopPortV1 & {
@@ -134,7 +211,13 @@ implements EvidenceRuntimeHostWaitPortV1 {
   }
 
   async waitAfterAttempt(input: {
-    reason: "SUCCESS_CADENCE" | "PLANNER_NOT_DUE" | "PROVIDER_NOT_DUE" | "LEASE_STANDBY" | "RETRY_BACKOFF";
+    reason:
+      | "SUCCESS_CADENCE"
+      | "PLANNER_NOT_DUE"
+      | "PROVIDER_NOT_DUE"
+      | "LEASE_STANDBY"
+      | "RETRY_BACKOFF"
+      | "ATTEMPT_REJECTED_BACKOFF";
     cycle_attempt: number;
     consecutive_failure_count: number;
   }): Promise<void> {
@@ -148,7 +231,8 @@ implements EvidenceRuntimeHostWaitPortV1 {
       case "LEASE_STANDBY":
         waitMs = this.standbyMs;
         break;
-      case "RETRY_BACKOFF": {
+      case "RETRY_BACKOFF":
+      case "ATTEMPT_REJECTED_BACKOFF": {
         const exponent = Math.max(0, Math.min(10, input.consecutive_failure_count - 1));
         waitMs = Math.min(this.retryMaximumMs, this.retryBaseMs * 2 ** exponent);
         break;
@@ -307,6 +391,7 @@ function transientInfrastructureFailureV1(error: unknown): boolean {
     "40001", // PostgreSQL serialization failure
     "40P01", // PostgreSQL deadlock
     "57P01", // admin shutdown / reconnect
+    "57P03", // cannot connect now / startup or recovery
     "08000",
     "08001",
     "08003",
@@ -322,13 +407,105 @@ function transientInfrastructureFailureV1(error: unknown): boolean {
   ].includes(code)) return true;
 
   const message = error instanceof Error ? error.message : String(error ?? "");
-  return /socket hang up|connection terminated|fetch failed|network|temporar|timeout/i.test(message);
+  return /socket hang up|connection terminated|fetch failed|network|temporar|timeout|database system is in recovery mode|cannot connect now/i.test(message);
+}
+
+function evidenceFailureTokenV1(error: unknown): string {
+  const record = error && typeof error === "object"
+    ? error as { failure_token?: unknown; diagnostic_token?: unknown; code?: unknown }
+    : {};
+  if (typeof record.failure_token === "string" && record.failure_token.trim()) {
+    return record.failure_token.trim().split(":", 1)[0] ?? "";
+  }
+  if (typeof record.diagnostic_token === "string" && record.diagnostic_token.trim()) {
+    return record.diagnostic_token.trim().split(":", 1)[0] ?? "";
+  }
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.trim().split(":", 1)[0] ?? "";
+}
+
+function rejectedKbsProviderPayloadV1(error: unknown): boolean {
+  const token = evidenceFailureTokenV1(error);
+  if ([
+    "MCFT_CAP09_KBS_RAW_HOURLY_CSV_FIELD_TOO_LARGE",
+    "MCFT_CAP09_KBS_RAW_HOURLY_CSV_PARSE_ERROR",
+    "MCFT_CAP09_KBS_RAW_HOURLY_NON_CSV_PAYLOAD",
+    "MCFT_CAP09_KBS_RAW_HOURLY_INVALID_UTF8",
+    "KBS_RAW_HOURLY_CONTENT_TYPE",
+    "KBS_RAW_HOURLY_RAW_BYTES",
+    "MCFT_CAP09_KBS_RAW_HOURLY_HEADER_NOT_FOUND",
+    "MCFT_CAP09_KBS_EXACT_TARGET_ROW_REQUIRED",
+    "MCFT_CAP09_KBS_TARGET_ET0_INPUT_MISSING",
+    "MCFT_CAP09_KBS_TARGET_ET0_INPUT_RANGE",
+    "MCFT_CAP09_KBS_TARGET_RAIN_INVALID",
+    "MCFT_CAP09_KBS_PUBLICATION_EVENT_INDEX_REQUIRED",
+    "MCFT_CAP09_KBS_PUBLICATION_LATEST_CANONICAL_HOUR_REQUIRED",
+  ].includes(token)) return true;
+
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.startsWith(
+    "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED:BLOCKED_HISTORICAL_DRIFT:",
+  );
+}
+
+function rejectedGfsScientificPayloadV1(error: unknown): boolean {
+  const token = evidenceFailureTokenV1(error);
+  return [
+    /^MCFT_CAP09_GFS_BUNDLE_MEMBER_/,
+    /^MCFT_CAP09_GFS_BUNDLE_MANIFEST_/,
+    /^MCFT_CAP09_GFS_PRODUCT_(?:SUPPORT_LEAD_MISMATCH|LEAD_START_MISMATCH|LEAD_END_MISMATCH|POINT_CARDINALITY)$/,
+    /^MCFT_CAP09_GFS_CYCLE_INVALID$/,
+    /^MCFT_CAP09_GFS_LEAD_CARDINALITY$/,
+    /^MCFT_CAP09_GFS_GRIB_/,
+    /^MCFT_CAP09_GFS_PGRB2_/,
+    /^MCFT_CAP09_GFS_INSTANT_/,
+    /^MCFT_CAP09_GFS_APCP_/,
+    /^MCFT_CAP09_GFS_SFLUX_/,
+    /^MCFT_CAP09_GFS_REFET_NONFINITE$/,
+    /^MCFT_CAP09_GFS_SERIES_/,
+    /^MCFT_CAP09_GFS_RAW_SANITY$/,
+    /^MCFT_CAP09_GFS_SOLAR_/,
+    /^MCFT_CAP09_GFS_ET0_NONFINITE$/,
+    /^MCFT_CAP09_GFS_CANONICAL_DECIMAL_NONFINITE$/,
+  ].some((pattern) => pattern.test(token));
+}
+
+function transientProviderHttpStatusV1(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /_HTTP_STATUS:(?:429|5\d\d)(?:$|:)/.test(message);
+}
+
+function transientPrivateRawStoreStatusV1(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /^EA5C1_S3_(?:HEAD|PUT)_STATUS_(?:429|5\d\d)(?:$|:)/.test(message);
+}
+
+function transientUndiciFetchTerminationV1(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (error.name !== "TypeError" || error.message.trim().toLowerCase() !== "terminated") {
+    return false;
+  }
+  const causeCode = typeof error.cause === "object"
+    && error.cause !== null
+    && "code" in error.cause
+    ? String((error.cause as { code?: unknown }).code ?? "").trim()
+    : "";
+  return causeCode === "" || causeCode.startsWith("UND_ERR_");
 }
 
 export class McftCap09ProductionEvidenceFailureClassifierV1
 implements EvidenceRuntimeHostFailureClassifierV1 {
-  classify(error: unknown): "RETRYABLE" | "FATAL" {
-    return transientInfrastructureFailureV1(error) ? "RETRYABLE" : "FATAL";
+  classify(error: unknown): "RETRYABLE" | "ATTEMPT_REJECTED" | "PROCESS_FATAL" {
+    if (
+      transientInfrastructureFailureV1(error)
+      || transientUndiciFetchTerminationV1(error)
+      || transientProviderHttpStatusV1(error)
+      || transientPrivateRawStoreStatusV1(error)
+    ) return "RETRYABLE";
+    if (rejectedKbsProviderPayloadV1(error) || rejectedGfsScientificPayloadV1(error)) {
+      return "ATTEMPT_REJECTED";
+    }
+    return "PROCESS_FATAL";
   }
 }
 

@@ -217,6 +217,7 @@ export class ProductionEvidenceWorkItemFactoryV1 {
     return {
       work_item_id: `${prefix}:gfs-bundle`,
       dataset_id: "noaa_ncep_gfs_same_cycle_72h_bundle_v1",
+      file_backed: true,
       request,
       transport: new GfsNomadsBundleTransportV1(
         composer,
