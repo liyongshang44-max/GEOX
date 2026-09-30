@@ -150,7 +150,12 @@
         "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FAILURE_DISCOVERY_ACCELERATED_RESTART_BACKFILL_V1.cjs",
         "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FINAL_24H_ADMISSION_V1.cjs",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FAILURE_DISCOVERY_LIVE_PROVIDER_SOAK_V1.ts",
-        "scripts/runtime_acceptance/fixtures/mcft_cap09_failure_corpus_v1.json"
+        "scripts/runtime_acceptance/fixtures/mcft_cap09_failure_corpus_v1.json",
+        ".github/workflows/mcft-cap-09-causal-revision-temporal-semantics-postgres-v1.yml",
+        ".github/workflows/mcft-cap-09-qcp-causal-basis-central-register-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-QUALIFICATION-BASIS-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {
