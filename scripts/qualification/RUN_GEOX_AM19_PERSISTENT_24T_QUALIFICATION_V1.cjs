@@ -81,12 +81,13 @@ function assertCandidate(candidate, contract) {
   if (Date.now() >= Date.parse(expires)) throw new Error('AM19_QMIG_CANDIDATE_EXPIRED');
   const types = ['future_et0_assumption_v1', 'future_weather_assumption_v1', 'soil_moisture_observation_v1'];
   if (!Array.isArray(candidate.record_types) || canonicalJson([...candidate.record_types].sort()) !== canonicalJson(types)) throw new Error('AM19_QMIG_CANDIDATE_EXACT_THREE_RECORD_TYPES_REQUIRED');
-  const side = candidate.side_effects ?? {};
+  const side = candidate.side_effects;
+  if (!side || typeof side !== 'object' || Array.isArray(side)) throw new Error('AM19_QMIG_CANDIDATE_SIDE_EFFECTS_REQUIRED');
   for (const key of ['formal_database_write_count', 'formal_r2_prefix_write_count', 'scheduler_write_count', 'runtime_write_count']) {
-    if (Number(side[key] ?? 0) !== 0) throw new Error(`AM19_QMIG_CANDIDATE_ZERO_FORMAL_EFFECT_REQUIRED:${key}`);
+    if (side[key] !== 0) throw new Error(`AM19_QMIG_CANDIDATE_ZERO_FORMAL_EFFECT_REQUIRED:${key}`);
   }
-  if (side.crop_authority_effect !== undefined && side.crop_authority_effect !== 'NONE') throw new Error('AM19_QMIG_CANDIDATE_CROP_AUTHORITY_EFFECT_FORBIDDEN');
-  if (candidate.raw_values_emitted !== undefined && candidate.raw_values_emitted !== false) throw new Error('AM19_QMIG_CANDIDATE_RAW_VALUES_EMITTED_FORBIDDEN');
+  if (side.crop_authority_effect !== 'NONE') throw new Error('AM19_QMIG_CANDIDATE_CROP_AUTHORITY_EFFECT_FORBIDDEN');
+  if (candidate.raw_values_emitted !== false) throw new Error('AM19_QMIG_CANDIDATE_RAW_VALUES_EMITTED_FORBIDDEN');
 }
 function safeParentBinding(raw, expectedDatabase) {
   const u = new URL(raw);
@@ -139,7 +140,7 @@ function requireFreshPersistentResult(result, contract, subject, mainDb, blocked
   if (result.status !== 'PASS') throw new Error(`AM19_QMIG_FRESH_PASS_REQUIRED:${result.status}`);
   if (result.subject_sha !== subject || result.qualified_subject_sha !== subject) throw new Error('AM19_QMIG_EXACT_QUALIFICATION_SUBJECT_REQUIRED');
   if (result.main_database_name !== mainDb || result.blocked_database_name !== blockedDb) throw new Error('AM19_QMIG_RUN_SCOPED_DATABASE_BINDING_REQUIRED');
-  if (Number(result.static_blocker_count) !== 0) throw new Error('AM19_QMIG_STATIC_BLOCKER_COUNT_NONZERO');
+  if (result.static_blocker_count !== 0) throw new Error('AM19_QMIG_STATIC_BLOCKER_COUNT_NONZERO');
   for (const key of contract.required_machine_statuses) {
     if (result.machine_statuses?.[key] !== 'PASS') throw new Error(`AM19_QMIG_MACHINE_STATUS_NOT_PASS:${key}`);
   }
@@ -186,8 +187,8 @@ function main() {
   const s3Endpoint = requiredHostEnv('MCFT_EA5E2_TRANSIENT_S3_ENDPOINT');
   const s3Bucket = requiredHostEnv('MCFT_EA5E2_TRANSIENT_S3_BUCKET');
   const s3Region = requiredHostEnv('MCFT_EA5E2_TRANSIENT_S3_REGION');
-  requiredHostEnv('MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID');
-  requiredHostEnv('MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY');
+  const s3AccessKey = requiredHostEnv('MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID');
+  const s3SecretKey = requiredHostEnv('MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY');
   const s3Binding = safeS3Binding(s3Endpoint, s3Bucket, s3Region);
 
   const qualificationRoot = path.resolve(args.root ?? process.env.GEOX_QUALIFICATION_ROOT ?? path.join(os.homedir(), '.geox', 'qualification'));
@@ -208,7 +209,6 @@ function main() {
   let workspaceAdded = false;
   let terminalStatus = 'FAIL';
   let terminalError = null;
-  let environmentManifest = null;
 
   const runManifest = {
     schema_version: 'geox_qualification_run_manifest_v1',
@@ -291,8 +291,8 @@ function main() {
       MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: s3Endpoint,
       MCFT_EA5E2_TRANSIENT_S3_BUCKET: s3Bucket,
       MCFT_EA5E2_TRANSIENT_S3_REGION: s3Region,
-      MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: process.env.MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID,
-      MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: process.env.MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY,
+      MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: s3AccessKey,
+      MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: s3SecretKey,
     });
 
     const runnerInWorkspace = path.join(workspaceDir, contract.qualification_runner_ref);
@@ -309,7 +309,7 @@ function main() {
       credential_names_present: ['MCFT_CAP09_PARENT_DATABASE_URL', 'MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID', 'MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY'],
       credential_values_recorded: false,
     };
-    environmentManifest = {
+    const environmentManifest = {
       schema_version: 'geox_qualification_environment_manifest_v1',
       host_class: 'GEOX_CONTROLLED_QUALIFICATION_HOST_V1',
       os: `${os.platform()} ${os.release()}`,
@@ -355,13 +355,13 @@ function main() {
     const outputRoot = path.join(workspaceDir, 'acceptance-output');
     const rehydration = readJson(path.join(outputRoot, 'MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json'));
     if (rehydration.status !== 'PASS' || rehydration.consumer_subject_sha !== subjectSha || rehydration.producer_subject_sha !== candidate.producer_subject_sha || rehydration.target_t !== candidate.target_t) throw new Error('AM19_QMIG_REHYDRATION_IDENTITY_REQUIRED');
-    if (rehydration.semantic_manifest_match !== true || rehydration.producer_bound_raw_reverification !== true || Number(rehydration.provider_refetch_count) !== 0 || Number(rehydration.private_r2_put_count ?? 0) !== 0 || Number(rehydration.private_r2_delete_count ?? 0) !== 0) throw new Error('AM19_QMIG_REHYDRATION_PROVENANCE_REQUIRED');
-    for (const key of ['formal_database_write_count', 'formal_r2_prefix_write_count', 'scheduler_write_count', 'runtime_write_count']) if (Number(rehydration[key] ?? 0) !== 0) throw new Error(`AM19_QMIG_REHYDRATION_ZERO_FORMAL_EFFECT_REQUIRED:${key}`);
-    if (rehydration.formal_effect !== undefined && rehydration.formal_effect !== false) throw new Error('AM19_QMIG_REHYDRATION_FORMAL_EFFECT_FORBIDDEN');
+    if (rehydration.semantic_manifest_match !== true || rehydration.producer_bound_raw_reverification !== true || rehydration.provider_refetch_count !== 0 || rehydration.private_r2_put_count !== 0 || rehydration.private_r2_delete_count !== 0) throw new Error('AM19_QMIG_REHYDRATION_PROVENANCE_REQUIRED');
+    for (const key of ['formal_database_write_count', 'formal_r2_prefix_write_count', 'scheduler_write_count', 'runtime_write_count']) if (rehydration[key] !== 0) throw new Error(`AM19_QMIG_REHYDRATION_ZERO_FORMAL_EFFECT_REQUIRED:${key}`);
+    if (rehydration.formal_effect !== false || rehydration.raw_values_emitted !== false) throw new Error('AM19_QMIG_REHYDRATION_FORMAL_EFFECT_FORBIDDEN');
 
     exec('pnpm', ['exec', 'tsx', contract.persistence_free_ref], { cwd: workspaceDir, env: qenv, logFile, errorCode: 'AM19_QMIG_PERSISTENCE_FREE_PROOF_FAILED' });
     const persistenceFree = readJson(path.join(outputRoot, 'MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T_RESULT.json'));
-    if (persistenceFree.status !== 'PASS' || persistenceFree.machine_statuses?.PERSISTENCE_FREE_24T !== 'PASS' || Number(persistenceFree.canonical_tick_count) !== 24 || Number(persistenceFree.provider_wait_count) !== 0 || Number(persistenceFree.database_write_count) !== 0 || Number(persistenceFree.provider_request_count) !== 0) throw new Error('AM19_QMIG_PERSISTENCE_FREE_BOUNDARY_DRIFT');
+    if (persistenceFree.status !== 'PASS' || persistenceFree.machine_statuses?.PERSISTENCE_FREE_24T !== 'PASS' || persistenceFree.canonical_tick_count !== 24 || persistenceFree.provider_wait_count !== 0 || persistenceFree.database_write_count !== 0 || persistenceFree.provider_request_count !== 0) throw new Error('AM19_QMIG_PERSISTENCE_FREE_BOUNDARY_DRIFT');
 
     assertCandidate(readJson(workspaceCandidate), contract);
     exec('pnpm', ['exec', 'tsx', contract.controlled_adapter_ref, 'run'], { cwd: workspaceDir, env: qenv, logFile, errorCode: 'AM19_QMIG_PERSISTENT_24T_EXECUTION_FAILED' });
