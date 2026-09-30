@@ -1,5 +1,444 @@
 # GEOX MCFT CAP-09 HANDOFF CONTINUATION — 2026-09-26
 
+## 2026-09-30 ACTIVE CHECKPOINT — QCP causal-basis central registration first-red / CAP-09 closure frontier
+
+This is the newest active checkpoint. It supersedes the 2026-09-29, 2026-09-27 and 2026-09-26 current-state summaries below wherever facts conflict. Older sections are intentionally preserved as engineering history and must not be deleted.
+
+### A. Mandatory takeover reading — there are TWO handoffs, and both are required
+
+The next engineer / conversation must not start from this continuation alone. There are exactly two MCFT CAP-09 handoff documents in the current model and both must be read before changing code:
+
+1. Historical canonical handoff — frozen archive / prior engineering history:
+   `docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md`
+
+2. Active continuation handoff — current-state authority from 2026-09-26 onward:
+   `docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-09-26.md`
+
+Also read the MCFT / Digital Twin master task document and the CAP-09 task, acceptance, governance and qualification documents before engineering changes.
+
+Interpretation rule:
+
+```text
+canonical handoff = historical engineering / governance context
+continuation      = newest exact frontier / current machine state
+```
+
+Do not use either handoff in isolation. The newest continuation checkpoint supersedes stale SHA / workflow / blocker facts, but it does not supersede frozen mandate, authority boundaries or acceptance requirements from the canonical history and task documents.
+
+### B. Live repository identity at this checkpoint
+
+Handoff PR:
+
+```text
+PR            #3298
+state         DRAFT / OPEN / UNMERGED
+head branch   docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+head before this checkpoint commit
+              9f60e24356100114c81223923170dd952216ca07
+purpose       documentation / handoff only
+```
+
+Active engineering successor:
+
+```text
+PR            #3636
+state         DRAFT / OPEN / UNMERGED
+head branch   integration/mcft-cap09-qualified-runtime-infra-v1
+base SHA      8f63c498bd48978e2dd525ad57b6b8fdb7ada560
+exact head    c5fbfa25ce339bcc7186432569d078e2e9be3b62
+```
+
+Frozen Runtime remains:
+
+`3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a`
+
+This checkpoint does not authorize or imply any protected-main mutation, merge, Runtime mutation, production mutation, Formal-v5 arm, A0, O00–O23, Stage 1B closure or CAP-09 completion.
+
+### C. What task is active now
+
+Only T0 / CAP-09 closure is active.
+
+The current task is NOT feature development and is NOT to add more Twin capability. The current task is:
+
+```text
+make the central CAP-09 Qualification Control Plane formally consume
+and adjudicate the new causal-revision temporal-semantics qualification basis,
+then close the remaining exact-head immutable requalification evidence,
+without reopening frozen Runtime semantics
+```
+
+Post-CAP-09 T1–T6 direction remains planned but deferred:
+
+```text
+T1 Field-State Authority Export
+T2 Measurement Semantic Package
+T3 GEOX Field ↔ ADR target binding
+T4 ADR single-subject cutover
+T5 ADR → B-Line seam
+T6 DecisionTimeAuthorityManifest proof
+```
+
+Do not put T1–T6 into PR #3636 while T0 is still open.
+
+### D. What has been completed since the 2026-09-29 checkpoint
+
+The integration line has moved materially forward without reopening frozen Runtime.
+
+Closed / converged items include:
+
+```text
+H6 strict-typecheck / frozen-Runtime boundary repair
+Phase2 qualification path repair
+Phase3 private S3 / taxonomy acceptance repair
+Phase7 qualification / fail-closed repair
+EA5C1 frozen-generation qualification repair
+Private Store governed-boundary repair
+Production Twin V2 Routing integration requalification mode
+AM19 import-closure / workflow applicability repair
+Phase5 exact-digest immutable MinIO mirror repair
+```
+
+Important Phase5 root cause was infrastructure / image routing, not Runtime semantics and not PostgreSQL:
+
+```text
+old server pin
+quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+
+verified mirror
+ ghcr.io/datalens-tech/minio:25.09@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+
+old mc pin
+quay.io/minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+
+verified mirror
+ docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+```
+
+The software digests were unchanged; only the registry/image route changed, and the mirror had independent exact-digest pull/start/S3 compatibility proof.
+
+On current exact head `c5fbfa25...`, important machine-green workflows now include:
+
+```text
+Causal-revision temporal semantics qualification            PASS
+Causal-revision immutable contract qualification            PASS
+Phase5 two-service accelerated 24T                         PASS
+Formal-v5 H6 post-graduation readiness                      PASS
+QCP immutable-evidence freshness doctor                     PASS
+QCP exact-scope qualification inspector                     PASS
+```
+
+Therefore do not reopen already-closed Runtime / Phase5 / H6 semantics merely because the central QCP remains red.
+
+### E. Current authoritative first-red — QCP fails BEFORE the old 11 evidence blockers
+
+Current central QCP:
+
+```text
+workflow   MCFT CAP-09 Qualification Control Plane
+run        36662310640
+job        109719560352
+head       c5fbfa25ce339bcc7186432569d078e2e9be3b62
+result     FAILURE
+```
+
+The exact failing step is:
+
+`Phase 0-2: changed-scope planner and successor-chain candidate qualification (fail-closed)`
+
+Steps before it are green. Later QCP phases are skipped because Phase 0-2 fails first.
+
+The machine first-red is successor-chain control-plane recognition, with errors including:
+
+```text
+CP2_SUCCESSOR_CHAIN_CANDIDATE_UNKNOWN_PATH
+CP2_SUCCESSOR_CHAIN_CANDIDATE_UNKNOWN_OUTSIDE_ACCEPTED_ANCHOR
+```
+
+The affected causal-revision package is exactly these five paths:
+
+```text
+.github/workflows/mcft-cap-09-causal-revision-temporal-semantics-postgres-v1.yml
+
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-QUALIFICATION-BASIS-V1.json
+
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_WIRING_V1.cjs
+
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1.cjs
+
+scripts/runtime_acceptance/
+ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts
+```
+
+This is now more upstream than the previously discussed 11 `NO_VALID_REQUALIFICATION_EVIDENCE` entries.
+
+Do NOT start by graduating those 11 old entries. Until CP2 accepts this causal package, the central QCP has not reached the later semantic/evidence adjudication layer. After CP2 becomes green, re-read the new exact-head QCP artifact and enumerate the then-current evidence blockers from machine output.
+
+### F. Causal-revision qualification basis exists and is not the missing scientific proof
+
+The causal-revision temporal-semantics proof / contract already exists and current-head qualification workflows are green.
+
+The intended semantic rule is:
+
+```text
+for historical cutoff T:
+select only revisions with revision.visible_at <= T,
+then select the latest revision legal at that cutoff
+```
+
+The replacement qualification basis explicitly preserves the old 24T evidence as historical evidence but forbids silently reinterpreting it as proof of the new causal-revision semantics.
+
+The replacement subject must be established through the governed causal-revision basis, including real PostgreSQL proof, exact frozen Runtime identity, revision ancestry and current-head qualification. Missing or ambiguous replacement evidence must fail closed.
+
+Therefore the current problem is not “prove temporal semantics from scratch”. The current problem is central QCP registration / adjudication of an already-created governed causal package.
+
+### G. The `central-register` workflow was diagnosed — do not repeat the investigation
+
+Current helper workflow:
+
+`.github/workflows/mcft-cap-09-qcp-causal-basis-central-register-v1.yml`
+
+It is NOT itself the central registration. It is a one-time patch generator intended to:
+
+1. mutate the central QCP authority JSON in an isolated runner;
+2. verify the resulting QCP acceptance;
+3. publish a QCP-only registration patch to a temporary automation branch.
+
+Observed run:
+
+```text
+workflow    QCP causal basis central registration
+run         36662307332
+job         109719511228
+result      FAILURE
+steps 1–5   PASS
+Publish     SKIPPED
+```
+
+Critical exact finding from the failing step:
+
+The generated QCP mutation itself passed:
+
+`PASS ACCEPTANCE_MCFT_CAP_09_QUALIFICATION_CONTROL_PLANE_V1`
+
+and the acceptance output recognized the intended causal replacement state, including:
+
+```text
+causal_revision_qualification_basis_v1 = ...QUALIFICATION-BASIS-V1.json
+causal_revision_replacement_key        = MCFT_CAP09_PERSISTENT_24T_POSTGRES_CAUSAL_REVISION_V1
+legacy_am19_semantic_action            = SEMANTIC_SUPERSEDED
+requalification_requirements_action    = SEMANTIC_SUPERSEDED
+```
+
+The generator then failed its own changed-scope guard because it deliberately deleted itself and simultaneously required the candidate patch to modify only one QCP JSON file.
+
+Exact generated tree delta was:
+
+```text
+D .github/workflows/mcft-cap-09-qcp-causal-basis-central-register-v1.yml
+M docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+```
+
+Exact error:
+
+`central-register patch must modify only the QCP JSON`
+
+Therefore:
+
+```text
+intended QCP JSON mutation             acceptance PASS
+self-deletion in same candidate patch  adds second changed file
+QCP-only scope guard                   correctly rejects 2-file delta
+Publish                                never runs
+central QCP                            remains unregistered
+CP2                                    sees five causal package paths as UNKNOWN
+```
+
+Do NOT solve this by weakening or deleting the QCP-only guard.
+
+Do NOT invent a second registry mechanism.
+
+Do NOT interpret a green helper acceptance as proof that the real central QCP consumed the registration; verify the actual committed QCP authority JSON and the real QCP run.
+
+### H. Exact next plan
+
+Proceed in this order:
+
+```text
+1. Preserve frozen Runtime 3d5fd13c... exactly.
+
+2. Preserve #3636 as DRAFT / OPEN / UNMERGED.
+
+3. Audit/extract the exact QCP JSON mutation already generated by the
+   central-register helper and already proven by
+   ACCEPTANCE_MCFT_CAP_09_QUALIFICATION_CONTROL_PLANE_V1.
+
+4. Land a genuinely QCP-JSON-only registration patch on the #3636
+   integration line, OR minimally repair the generator so its published
+   candidate is genuinely QCP-only.
+
+5. Keep helper cleanup / self-deletion separate from the QCP-only
+   registration change. Do not weaken the one-file scope guard.
+
+6. Re-run the real central QCP on the new exact head.
+
+7. Require the five causal package paths to stop producing
+   CP2_*UNKNOWN* errors.
+
+8. Take the NEW machine first-red only.
+
+9. If the next red is causal supersession adjudication:
+   - preserve old 24T evidence historically;
+   - do not reinterpret old 24T as new causal-revision proof;
+   - require the exact replacement basis;
+   - fail closed on missing / ambiguous replacement evidence.
+
+10. Only after CP2 / semantic adjudication is green, read the new QCP
+    artifact and enumerate the CURRENT immutable requalification blockers.
+
+11. Graduate evidence only from real successful exact-head runs/artifacts
+    through the existing immutable registry / anchor mechanism.
+
+12. Do not hand-create evidence JSON and do not edit dependency digests
+    to make old evidence look current.
+
+13. Rerun QCP and drive the real blocker count to zero.
+
+14. Even after QCP=green, do NOT merge #3636, arm Formal-v5, start A0,
+    or start O00–O23 without a separate explicit authorization.
+```
+
+### I. The old “11 evidence blockers” are historical context, not the immediate action list
+
+At a previous stable exact head, QCP had 11 current requalification / successor-chain evidence blockers after the direct H6 / Private Store diagnostics were closed.
+
+Many corresponding execution workflows are now green on current head, including Phase5 and H6.
+
+However, current `c5fb...` QCP dies earlier at CP2. Consequently:
+
+```text
+old 11-list ≠ current immediate work queue
+```
+
+Do not hard-code the old list or graduate evidence against a moving head. First fix CP2. Then obtain the new exact-head blocker inventory from QCP.
+
+Every head movement can invalidate subject identity / dependency digest / evidence binding. Evidence graduation must happen only after the execution/control-plane head is stable.
+
+### J. Pitfalls / rules learned in this closure work — do not repeat
+
+1. **First-red controls the work order.** Do not work on downstream blocker counts when QCP dies earlier in CP2.
+
+2. **QCP binding, not workflow name similarity, determines which workflow counts.** Several similarly named Phase5 workflows existed; only the QCP-bound execution workflow was relevant.
+
+3. **Do not reopen frozen Runtime for a compiler-policy mismatch.** H6 ad-hoc `tsc --strict` recursively pulled frozen Runtime through type-only imports and exposed TS7022, while canonical server Typecheck/Build passed. The correct fix was the H6 boundary / seam identity proof, not Runtime mutation.
+
+4. **Removing a few strict roots was insufficient.** Type-only import closure can recurse into producer code. Split the qualification boundary explicitly.
+
+5. **No `@ts-ignore`, fake `.d.ts`, broad cast workaround, `|| true`, `noResolve` hiding imports, or global strict disable.**
+
+6. **Registry pull failure is not automatically Runtime or DB failure.** In Phase5, `postgres Interrupted` was compose fallout after MinIO pull authorization failed. Diagnose the first causal error.
+
+7. **Exact-digest mirrors are acceptable only when content digest remains identical and the mirror itself is verified.** Never replace with floating `latest`.
+
+8. **Historical evidence cannot be silently reinterpreted under revised semantics.** The old 24T result remains evidence of its old proposition only.
+
+9. **Do not graduate immutable evidence before final exact head stabilizes.** A subsequent control-plane commit can invalidate current-head evidence and dependency digests.
+
+10. **Do not fabricate evidence or manually rewrite subject/dependency-digest fields.** Use real runs/artifacts and the existing registry/anchor mechanism.
+
+11. **A helper “register” workflow being locally green is not the same as central QCP consuming registration.** Verify the committed authority JSON and real QCP machine output.
+
+12. **Do not weaken successor-chain fail-closed gates with broad allowlists/globs.** Register only the governed exact package/boundary required by the contract.
+
+13. **Specifically for the current central-register failure: do not weaken the one-file guard.** Its mechanical contradiction is self-deletion in the same candidate patch. Separate cleanup from registration.
+
+14. **User local worktree has intentionally been kept on the frozen Runtime line during integration work.** Prefer fetch/object inspection or detached temporary worktrees; do not casually checkout #3636 over that working tree.
+
+15. **Remote drift must fail closed.** Re-read #3636 exact head before any write. No force push.
+
+16. **Keep PR #3298 documentation-only.** Engineering changes belong on the engineering line, not the handoff branch.
+
+### K. Authority ceiling remains unchanged
+
+Unless the user separately and explicitly authorizes it:
+
+- do not merge #3636;
+- do not mutate protected main;
+- do not mutate frozen Runtime semantics;
+- do not mutate production DB / Formal store;
+- do not activate / cut over production owners merely to satisfy qualification;
+- do not arm Formal-v5;
+- do not start A0;
+- do not start O00–O23;
+- do not claim Stage 1B closure;
+- do not claim MCFT CAP-09 completion;
+- do not start T1–T6 MCFT→ADR→B-Line implementation yet;
+- do not weaken exact SHA / digest / authority / successor-chain / evidence identity checks.
+
+### L. Compact takeover state — 2026-09-30
+
+```text
+MANDATORY READ — BOTH HANDOFFS
+1. docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+2. docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-09-26.md
+
+FROZEN RUNTIME
+3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a
+Runtime feature line                  FROZEN
+FINAL_24H_ADMITTED                    true
+Formal-v5                             NOT ARMED
+A0                                    NOT AUTHORIZED
+O00–O23                               NOT AUTHORIZED
+CAP-09 complete                       false
+
+ACTIVE ENGINEERING
+PR #3636                              DRAFT / OPEN / UNMERGED
+base                                  8f63c498bd48978e2dd525ad57b6b8fdb7ada560
+exact head                            c5fbfa25ce339bcc7186432569d078e2e9be3b62
+
+CURRENT QCP
+run                                   36662310640
+job                                   109719560352
+first-red                             Phase 0-2 successor-chain candidate qualification
+error family                          CP2_*UNKNOWN*
+affected causal package paths         5
+
+CENTRAL-REGISTER HELPER
+run                                   36662307332
+job                                   109719511228
+QCP JSON acceptance in isolation      PASS
+candidate tree delta                  2 files
+                                       D helper workflow
+                                       M QCP JSON
+QCP-only guard                        FAIL — correctly
+Publish                               SKIPPED
+
+CURRENT ROOT BLOCKER
+central QCP has not yet committed / consumed the
+causal-revision qualification-basis registration
+
+NEXT
+land/audit genuine QCP-JSON-only registration
+→ rerun central QCP
+→ require CP2 unknown=0
+→ take new first-red
+→ only then enumerate/graduate current-head immutable evidence
+
+DO NOT
+reopen Runtime
+weaken QCP-only or successor-chain guards
+fabricate evidence
+reuse stale 11-blocker list as current queue
+merge #3636
+arm Formal-v5
+start A0 / O00–O23
+start T1–T6
+```
+
+---
+
 ## 2026-09-29 ACTIVE CHECKPOINT — CAP-09 blocker convergence on main-based integration successor
 
 This section is the newest continuation checkpoint. It supersedes the 2026-09-27 and 2026-09-26 current-state summaries below wherever they conflict. Older sections are intentionally preserved as historical engineering context.
