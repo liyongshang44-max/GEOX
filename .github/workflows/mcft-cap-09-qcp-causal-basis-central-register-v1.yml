@@ -1,0 +1,139 @@
+name: mcft-cap-09-qcp-causal-basis-central-register-v1
+
+on:
+  push:
+    branches:
+      - integration/mcft-cap09-qualified-runtime-infra-v1
+    paths:
+      - '.github/workflows/mcft-cap-09-qcp-causal-basis-central-register-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  register-central-ownership:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify exact predecessor and unchanged QCP authority blob
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_parent='687cfe07cdb98b06f6dcc5c523b6510229d301d4'
+          qcp='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+          expected_blob='3d0a6716caa0cdab8bf2e323e1397fbfc7af4d4e'
+          test "$(git rev-parse HEAD^)" = "$expected_parent"
+          test "$(git rev-parse "HEAD:${qcp}")" = "$expected_blob"
+          echo "QCP_CAUSAL_BASIS_PATCH_PRECONDITION_PASS"
+
+      - name: Add only the four causal qualification paths to CONTROL_PLANE_FILES
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          qcp = Path('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json')
+          raw = qcp.read_text(encoding='utf-8')
+          data = json.loads(raw)
+          canonical = json.dumps(data, indent=2, ensure_ascii=False) + '\n'
+          if canonical != raw:
+              raise SystemExit('QCP_JSON_NOT_CANONICAL_BEFORE_PATCH')
+
+          resolver = data['dependency_resolvers']['CONTROL_PLANE_FILES']
+          if resolver.get('kind') != 'EXACT_PATH_SET':
+              raise SystemExit('CONTROL_PLANE_FILES_NOT_EXACT_PATH_SET')
+          paths = resolver.get('paths')
+          if not isinstance(paths, list) or len(paths) != 79:
+              raise SystemExit(f'CONTROL_PLANE_FILES_PREPATCH_COUNT_INVALID:{len(paths) if isinstance(paths, list) else None}')
+
+          additions = [
+              '.github/workflows/mcft-cap-09-causal-revision-temporal-semantics-postgres-v1.yml',
+              'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-QUALIFICATION-BASIS-V1.json',
+              'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1.cjs',
+              'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts',
+          ]
+          overlap = [p for p in additions if p in paths]
+          if overlap:
+              raise SystemExit('CAUSAL_CONTROL_PATH_ALREADY_REGISTERED:' + ','.join(overlap))
+
+          paths.extend(additions)
+          if len(paths) != 83 or len(set(paths)) != 83:
+              raise SystemExit('CONTROL_PLANE_FILES_POSTPATCH_CARDINALITY_INVALID')
+
+          qcp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          print('CONTROL_PLANE_FILES_CAUSAL_REGISTRATION_PASS')
+          for p in additions:
+              print('ADDED=' + p)
+          PY
+
+          git diff --check
+
+      - name: Remove one-shot patch workflow and audit final tree delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          self='.github/workflows/mcft-cap-09-qcp-causal-basis-central-register-v1.yml'
+          qcp='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+          git rm "$self"
+
+          mapfile -t changed < <(git diff HEAD^ --name-only)
+          printf 'FINAL_TREE_CHANGED=%s\n' "${changed[*]}"
+          test "${#changed[@]}" -eq 1
+          test "${changed[0]}" = "$qcp"
+
+          git diff HEAD^ --check
+          git diff HEAD^ -- "$qcp"
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          qcp = Path('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json')
+          data = json.loads(qcp.read_text(encoding='utf-8'))
+          paths = data['dependency_resolvers']['CONTROL_PLANE_FILES']['paths']
+          required = {
+              '.github/workflows/mcft-cap-09-causal-revision-temporal-semantics-postgres-v1.yml',
+              'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-QUALIFICATION-BASIS-V1.json',
+              'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1.cjs',
+              'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts',
+          }
+          assert len(paths) == 83
+          assert len(set(paths)) == 83
+          assert required.issubset(paths)
+          print('FINAL_QCP_EXACT_PATH_REGISTRATION_AUDIT_PASS')
+          PY
+
+      - name: Commit patched QCP tree to isolated temporary ref
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+          git add -u .github/workflows/mcft-cap-09-qcp-causal-basis-central-register-v1.yml
+          git commit -m 'governance(mcft-cap09): register causal qualification basis in QCP'
+
+          patch_sha="$(git rev-parse HEAD)"
+          temp_ref="automation/mcft-cap09-qcp-causal-basis-${GITHUB_SHA:0:12}"
+          printf '%s\n' "$patch_sha" > /tmp/qcp-causal-patch-sha.txt
+          printf '%s\n' "$temp_ref" > /tmp/qcp-causal-temp-ref.txt
+          echo "PATCH_COMMIT_SHA=$patch_sha"
+          echo "TEMP_REF=$temp_ref"
+          git push origin "HEAD:refs/heads/$temp_ref"
+
+      - name: Upload patch handoff
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-qcp-causal-basis-central-register-${{ github.sha }}
+          path: |
+            /tmp/qcp-causal-patch-sha.txt
+            /tmp/qcp-causal-temp-ref.txt
+          if-no-files-found: error
+          retention-days: 7
