@@ -7,6 +7,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-QUALIFICATION-BASIS-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts'
       - 'apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts'
       - 'apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts'
