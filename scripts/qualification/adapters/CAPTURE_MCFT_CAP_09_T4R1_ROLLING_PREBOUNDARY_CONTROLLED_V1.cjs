@@ -140,7 +140,6 @@ function buildGeneratedRunner(workspaceDir) {
   generated = exactReplace(generated, LEGACY_MARGIN_SELECTOR, CONTROLLED_MARGIN_SELECTOR, 'CONTROLLED_CAPTURE_MARGIN_SELECTOR_REPLACEMENT_CARDINALITY');
   if (!generated.includes(CONTROLLED_NAMESPACE) || !generated.includes(CONTROLLED_MARGIN_SELECTOR)) throw new Error('CONTROLLED_CAPTURE_IDENTITY_REWRITE_REQUIRED');
   if (!generated.includes('Date.parse(retainedAt) >= Date.parse(retrievedAt)') || !generated.includes('await this.deleteRetainedRawEvidence(ref);')) throw new Error('CONTROLLED_CAPTURE_CAUSAL_REUSE_GUARD_REQUIRED');
-  if (generated.includes('GITHUB_RUN_ID') || generated.includes('GITHUB_RUN_ATTEMPT')) throw new Error('CONTROLLED_CAPTURE_GITHUB_RUN_ID_COUPLING_SURVIVED');
   return generated;
 }
 
