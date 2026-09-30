@@ -1,6 +1,6 @@
 {
   "schema_version": "geox_mcft_cap09_am19_persistent_24t_qualification_migration_v1",
-  "status": "IMPLEMENTED_AWAITING_CONTROLLED_HOST_EXECUTION",
+  "status": "CONTROLLED_CAPTURE_IMPLEMENTED_AWAITING_CONTROLLED_HOST_EXECUTION",
   "blocker_target": "LEGACY_AM19_PERSISTENT_24T",
   "owner": "MIGRATION_TEAM",
   "adjudication_owner": "CLOSURE_TEAM",
@@ -14,7 +14,26 @@
     "github_actions_execution": "FORBIDDEN",
     "github_role": "SOURCE_GOVERNANCE_AND_EXTERNAL_VERIFICATION_ONLY",
     "qualification_host_role": "EVIDENCE_PRODUCER_NOT_AUTHORITY_SYSTEM",
-    "candidate_selection": "EXPLICIT_IMMUTABLE_INPUT_NO_LATEST_FALLBACK"
+    "candidate_selection": "FINALIZED_CONTROLLED_CAPTURE_EXPLICIT_IMMUTABLE_INPUT_NO_LATEST_FALLBACK"
+  },
+  "controlled_rolling_capture": {
+    "adapter_ref": "scripts/qualification/adapters/CAPTURE_MCFT_CAP_09_T4R1_ROLLING_PREBOUNDARY_CONTROLLED_V1.cjs",
+    "producer_subject_policy": "EXACT_PROTECTED_MAIN_AT_CAPTURE",
+    "current_producer_subject_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+    "policy_identity": "mcft-cap-09-rolling-preboundary-capture",
+    "historical_workflow_reactivated": false,
+    "historical_workflow_commit_sha": "75d4961279bd64dc1c9dd7d68aac189c72c98846",
+    "historical_workflow_blob_sha": "800cbd91a5d84801405affa6f372c0aa6388b173",
+    "provider_source_blob_sha": "26dd21c5a0b7a60fca06e5e4c2ec92289a102a47",
+    "historical_deadline_compat_blob_sha": "9d0ba5913fada1573da954c24b59490376a32ef7",
+    "planner_blob_sha": "42f5cc0c3b216d83ebf4471c8ddb544347a0bc8e",
+    "assembler_blob_sha": "4e0934fd339bbba09782655869cdefa32ae45c2d",
+    "namespace_identity": "TARGET_PLUS_CONTROLLED_CAPTURE_RUN_TOKEN",
+    "causal_retention_reuse_rule_preserved": true,
+    "stale_intrarun_retention_delete_before_reretention": true,
+    "rolling_minimum_ingress_margin_minutes": 0,
+    "zero_formal_effect_contract_preserved": true,
+    "capture_package_finalized_immutable": true
   },
   "semantic_preservation": {
     "historical_runner_reimplemented": false,
@@ -31,14 +50,18 @@
   "input_binding": {
     "rolling_candidate_bytes_digest_required": true,
     "rolling_candidate_source_ref_required": true,
+    "rolling_candidate_capture_package_digest_required": true,
     "rolling_candidate_producer_subject_required": true,
+    "rolling_candidate_exact_main_producer_required": true,
     "governed_repository_blob_binding_required": true,
     "parent_database_identity_digest_required": true,
     "retained_raw_store_identity_digest_required": true,
     "secret_values_in_manifest": false
   },
   "delivery_chain": [
-    "CONTROLLED_HOST_RUN",
+    "CONTROLLED_EXACT_MAIN_ROLLING_CAPTURE",
+    "FINALIZED_CAPTURE_PACKAGE",
+    "CONTROLLED_HOST_AM19_PERSISTENT_13_OF_13_RUN",
     "FINALIZED_EVIDENCE_PACKAGE",
     "QualificationEvidenceManifestV1",
     "INDEPENDENT_MANIFEST_VERIFIER",
@@ -52,11 +75,12 @@
     "qcp_semantics_mutation": false,
     "closure_subject_mutation": false,
     "blocker_semantics_mutation": false,
+    "github_production_capture_owner_reactivated": false,
     "formal_v5_arm": false,
     "a0": false,
     "o00_o23": false,
     "mcft_cap09_completion_claim": false,
     "github_lane_superseded": false
   },
-  "handoff_rule": "Migration Team returns exact qualification head, manifest identity, manifest verifier PASS, closure delivery identity and delivery verifier PASS. Closure Team alone performs blocker adjudication and QCP rebind."
+  "handoff_rule": "Migration Team returns exact qualification head, fresh controlled capture identity, manifest identity, manifest verifier PASS, closure delivery identity and delivery verifier PASS. Closure Team alone performs blocker adjudication and QCP rebind."
 }
