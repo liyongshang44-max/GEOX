@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-causal-revision-temporal-semantics-postgres-v1.yml'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-QUALIFICATION-BASIS-V1.json'
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts'
       - 'apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts'
       - 'apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts'
@@ -119,6 +121,13 @@ jobs:
           scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts
           replay-and-verify
 
+      - name: Adjudicate causal-revision QCP qualification-basis supersession
+        run: >-
+          node
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1.cjs
+          --proof-result
+          acceptance-output/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_RESULT.json
+
       - name: Upload causal-revision temporal-semantics proof
         if: always()
         uses: actions/upload-artifact@v4
@@ -127,5 +136,6 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_STATE.json
+            acceptance-output/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90
