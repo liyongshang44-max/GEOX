@@ -1,0 +1,82 @@
+name: mcft-cap09-minio-immutable-mirror-preflight-v1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-minio-immutable-mirror-preflight-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-mirror-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SERVER_DIGEST: sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+      MC_DIGEST: sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+      SERVER_MIRROR: ghcr.io/datalens-tech/minio:25.09@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+      MC_MIRROR: docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+      LOCAL_SERVER: geox/mcft-cap09-minio:server-14cea493d9a3
+      LOCAL_MC: geox/mcft-cap09-minio:mc-a7fe349ef4bd
+      NETWORK: mcft-cap09-minio-preflight
+      SERVER_NAME: mcft-cap09-minio-preflight-server
+
+    steps:
+      - name: Verify mirror index digests before pull
+        shell: bash
+        run: |
+          set -euo pipefail
+          server_remote="$(docker buildx imagetools inspect "$SERVER_MIRROR" | awk '$1 == "Digest:" && !seen { digest=$2; seen=1 } END { if (!seen) exit 2; print digest }')"
+          mc_remote="$(docker buildx imagetools inspect "$MC_MIRROR" | awk '$1 == "Digest:" && !seen { digest=$2; seen=1 } END { if (!seen) exit 2; print digest }')"
+          test "$server_remote" = "$SERVER_DIGEST"
+          test "$mc_remote" = "$MC_DIGEST"
+          echo "SERVER_MIRROR_INDEX_DIGEST=$server_remote"
+          echo "MC_MIRROR_INDEX_DIGEST=$mc_remote"
+
+      - name: Materialize exact images locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$SERVER_MIRROR"
+          docker pull "$MC_MIRROR"
+          docker tag "$SERVER_MIRROR" "$LOCAL_SERVER"
+          docker tag "$MC_MIRROR" "$LOCAL_MC"
+          docker image inspect "$LOCAL_SERVER" >/dev/null
+          docker image inspect "$LOCAL_MC" >/dev/null
+
+      - name: Prove isolated S3 and mc compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker network create "$NETWORK"
+          docker run -d --rm \
+            --name "$SERVER_NAME" \
+            --network "$NETWORK" \
+            -e MINIO_ROOT_USER=geoxpreflight \
+            -e MINIO_ROOT_PASSWORD=geox-preflight-secret-2026 \
+            "$LOCAL_SERVER" server /data
+
+          for attempt in $(seq 1 60); do
+            if docker run --rm \
+              --network "$NETWORK" \
+              --entrypoint /bin/sh \
+              "$LOCAL_MC" \
+              -c 'mc alias set local http://mcft-cap09-minio-preflight-server:9000 geoxpreflight geox-preflight-secret-2026 >/dev/null 2>&1 && mc mb --ignore-existing local/evidence-exports-v1 >/dev/null 2>&1 && mc stat local/evidence-exports-v1 >/dev/null 2>&1'; then
+              echo "MINIO_IMMUTABLE_MIRROR_PREFLIGHT=PASS"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker logs "$SERVER_NAME" || true
+          echo "MINIO_IMMUTABLE_MIRROR_PREFLIGHT=FAIL" >&2
+          exit 1
+
+      - name: Cleanup isolated preflight
+        if: always()
+        shell: bash
+        run: |
+          docker rm -f "$SERVER_NAME" >/dev/null 2>&1 || true
+          docker network rm "$NETWORK" >/dev/null 2>&1 || true

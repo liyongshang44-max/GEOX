@@ -82,6 +82,19 @@ const baseEnv=String(process.env.MCFT_BASE_SHA||"").trim();
 const subjectEnv=String(process.env.MCFT_SUBJECT_SHA||process.env.SUBJECT_SHA||"").trim();
 if(subjectEnv)assert.equal(head,subjectEnv,"AM21_EXACT_SUBJECT_REQUIRED");
 
+function currentMainSuccessorBase(){
+  const explicit=String(process.env.AM21_SUCCESSOR_BASE_SHA||"").trim();
+  if(/^[0-9a-f]{40}$/.test(explicit))return explicit;
+  const eventPath=String(process.env.GITHUB_EVENT_PATH||"").trim();
+  if(!eventPath||!fs.existsSync(eventPath))return null;
+  try{
+    const event=JSON.parse(fs.readFileSync(eventPath,"utf8"));
+    if(event.pull_request?.base?.ref!=="main")return null;
+    const sha=String(event.pull_request?.base?.sha||"").trim();
+    return /^[0-9a-f]{40}$/.test(sha)?sha:null;
+  }catch{return null;}
+}
+
 assert.equal(git("merge-base",INITIAL_BASE,head),INITIAL_BASE,"AM21_INITIAL_BASE_MUST_BE_ANCESTOR");
 let exactPredecessor=INITIAL_BASE;
 let exactBoundaryFileCount=0;
@@ -107,7 +120,19 @@ if(baseEnv){
   }else if(baseEnv===REARM_PROOF_RETENTION_BASE){
     expectedFiles=REARM_PROOF_RETENTION_EXACT_FILES;
   }else{
-    assert.fail("AM21_EXACT_PR_BASE_REQUIRED:"+baseEnv);
+    const successorBase=currentMainSuccessorBase();
+    assert.equal(baseEnv,successorBase,"AM21_EXACT_PR_BASE_REQUIRED:"+baseEnv);
+    assert.equal(
+      git("merge-base",REARM_PROOF_RETENTION_BASE,baseEnv),
+      REARM_PROOF_RETENTION_BASE,
+      "AM21_CURRENT_MAIN_SUCCESSOR_BASE_MUST_DESCEND_FROM_REARM_PROOF_RETENTION_BASE",
+    );
+    assert.equal(
+      git("merge-base",baseEnv,head),
+      baseEnv,
+      "AM21_CURRENT_MAIN_SUCCESSOR_BASE_MUST_BE_ANCESTOR_OF_HEAD",
+    );
+    expectedFiles=null;
   }
   exactPredecessor=baseEnv;
   const changed=git("diff","--name-only",baseEnv+"..."+head).split(/\r?\n/).filter(Boolean).sort();

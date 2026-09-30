@@ -74,7 +74,7 @@ jobs:
           node-version: '20.11.1'
           cache: pnpm
 
-      - name: Install repository dependencies for H6 typecheck only
+      - name: Install repository dependencies for H6 and canonical server compile
         run: pnpm install --frozen-lockfile
 
       - name: Require exact subject
@@ -111,7 +111,90 @@ jobs:
       - name: Prove pre-arm Formal-v5 Evidence epoch candidate boundaries
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts
 
-      - name: Typecheck H6 activation seam TypeScript
+      - name: Prove H6 frozen Evidence Runtime seam identity
+        shell: node {0}
+        run: |
+          const assert=require('node:assert/strict');
+          const fs=require('node:fs');
+          const cp=require('node:child_process');
+          const frozen='3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a';
+          const ownerPath='apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v1.ts';
+          const handoffAuthorityPath='apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts';
+          const plannerPath='apps/server/src/external_evidence/mcft_cap09_production_evidence_host_planner_v1.ts';
+          const processPath='apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts';
+          const compositionPath='apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts';
+          const hostPath='apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts';
+          const qcpPath='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
+          const phase3Workflow='.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml';
+          const phase5Workflow='.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml';
+          const owner=fs.readFileSync(ownerPath,'utf8');
+          const handoffAuthority=fs.readFileSync(handoffAuthorityPath,'utf8');
+          const planner=fs.readFileSync(plannerPath,'utf8');
+          const exactImport='import { runMcftCap09ProductionEvidenceRuntimeV1 } from "../external_evidence/mcft_cap09_evidence_runtime_process_v1.js";';
+          const exactCall='await runMcftCap09ProductionEvidenceRuntimeV1({runtime_start_authority:handoffRuntimeStart});';
+          const handoffTypeEdge=/import type \{\s*ProductionEvidenceRuntimeStartAuthorityInstanceV1,?\s*\} from "\.\.\/external_evidence\/mcft_cap09_production_evidence_host_planner_v1\.js";/m;
+          const plannerHostTypeEdge=/import type \{ EvidenceRuntimeHostPlannerV1 \} from "\.\/mcft_cap09_evidence_runtime_host_v1\.js";/m;
+          assert.ok(owner.includes(exactImport),'H6_EVIDENCE_OWNER_EXACT_ENTRYPOINT_IMPORT_REQUIRED');
+          assert.ok(owner.includes(exactCall),'H6_EVIDENCE_OWNER_EXACT_ENTRYPOINT_CALL_REQUIRED');
+          assert.equal((owner.match(/mcft_cap09_evidence_runtime_process_v1\.js/g)||[]).length,1,'H6_EVIDENCE_OWNER_ENTRYPOINT_IMPORT_MUST_BE_EXACT_ONE');
+          assert.match(handoffAuthority,handoffTypeEdge,'H6_HANDOFF_AUTHORITY_PRODUCER_TYPE_EDGE_REQUIRED');
+          assert.match(planner,plannerHostTypeEdge,'H6_PRODUCER_PLANNER_HOST_TYPE_EDGE_REQUIRED');
+          const rev=(spec)=>cp.execFileSync('git',['rev-parse',spec],{encoding:'utf8'}).trim();
+          for(const rel of [processPath,compositionPath,hostPath]){
+            assert.equal(rev('HEAD:'+rel),rev(frozen+':'+rel),'H6_FROZEN_EVIDENCE_PRODUCER_BLOB_DRIFT:'+rel);
+          }
+          const serverTsconfig=JSON.parse(fs.readFileSync('apps/server/tsconfig.json','utf8'));
+          assert.equal(serverTsconfig.compilerOptions?.strict,true,'H6_CANONICAL_SERVER_STRICT_REQUIRED');
+          assert.equal(serverTsconfig.compilerOptions?.noImplicitAny,false,'H6_CANONICAL_SERVER_NO_IMPLICIT_ANY_POLICY_MISMATCH');
+          const serverPackage=JSON.parse(fs.readFileSync('apps/server/package.json','utf8'));
+          assert.equal(serverPackage.scripts?.typecheck,'pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json','H6_CANONICAL_SERVER_TYPECHECK_SCRIPT_MISMATCH');
+          assert.equal(serverPackage.scripts?.build,'pnpm -w exec tsc -p apps/server/tsconfig.json && node scripts/write_dist_entries.cjs','H6_CANONICAL_SERVER_BUILD_SCRIPT_MISMATCH');
+          const qcp=JSON.parse(fs.readFileSync(qcpPath,'utf8'));
+          const phase3Resolver=qcp.dependency_resolvers?.PHASE3_EVIDENCE_RUNTIME_FOUNDATION;
+          assert.ok(phase3Resolver,'H6_PHASE3_PRODUCER_RESOLVER_REQUIRED');
+          assert.equal(phase3Resolver.kind,'EXACT_PATH_SET','H6_PHASE3_PRODUCER_RESOLVER_KIND');
+          for(const rel of [compositionPath,hostPath]){
+            assert.ok((phase3Resolver.paths||[]).includes(rel),'H6_PHASE3_PRODUCER_PATH_REQUIRED:'+rel);
+          }
+          const phase3Check=(qcp.checks||[]).find((row)=>row.check_id==='PHASE3_EVIDENCE_RUNTIME_FOUNDATION');
+          assert.ok(phase3Check,'H6_PHASE3_PRODUCER_CHECK_REQUIRED');
+          assert.equal(phase3Check.execution_workflow,phase3Workflow,'H6_PHASE3_PRODUCER_WORKFLOW_MISMATCH');
+          assert.equal(phase3Check.historical_evidence_policy,'FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD','H6_PHASE3_PRODUCER_POLICY_MISMATCH');
+          assert.equal(phase3Check.carry_forward_policy,'NONE','H6_PHASE3_PRODUCER_CARRY_FORWARD_FORBIDDEN');
+          assert.equal(phase3Check.fail_policy,'FAIL_CLOSED','H6_PHASE3_PRODUCER_FAIL_POLICY_MISMATCH');
+          const phase5Resolver=qcp.dependency_resolvers?.PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS;
+          assert.ok(phase5Resolver,'H6_PHASE5_PROCESS_RESOLVER_REQUIRED');
+          assert.equal(phase5Resolver.kind,'EXACT_PATH_SET','H6_PHASE5_PROCESS_RESOLVER_KIND');
+          assert.ok((phase5Resolver.paths||[]).includes(processPath),'H6_PHASE5_PROCESS_ENTRYPOINT_PATH_REQUIRED');
+          const phase5Check=(qcp.checks||[]).find((row)=>row.check_id==='PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
+          assert.ok(phase5Check,'H6_PHASE5_PROCESS_CHECK_REQUIRED');
+          assert.equal(phase5Check.execution_workflow,phase5Workflow,'H6_PHASE5_PROCESS_WORKFLOW_MISMATCH');
+          assert.equal(phase5Check.historical_evidence_policy,'FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD','H6_PHASE5_PROCESS_POLICY_MISMATCH');
+          assert.equal(phase5Check.carry_forward_policy,'NONE','H6_PHASE5_PROCESS_CARRY_FORWARD_FORBIDDEN');
+          assert.equal(phase5Check.fail_policy,'FAIL_CLOSED','H6_PHASE5_PROCESS_FAIL_POLICY_MISMATCH');
+          console.log(JSON.stringify({
+            status:'PASS',
+            frozen_runtime_subject_sha:frozen,
+            exact_entrypoint_binding:true,
+            cross_boundary_type_identity_preserved:true,
+            frozen_producer_blobs_unchanged:true,
+            phase3_producer_qualification_ref_preserved:true,
+            phase5_process_qualification_ref_preserved:true,
+            canonical_server_typecheck_contract_preserved:true,
+            canonical_server_build_contract_preserved:true,
+            canonical_server_no_implicit_any:false,
+            h6_redefines_producer_compiler_policy:false,
+            runtime_kernel_rewrite:false,
+            scheduler_semantics_rewrite:false
+          },null,2));
+
+      - name: Typecheck actual GEOX server via canonical compiler contract
+        run: pnpm run typecheck:server
+
+      - name: Build actual GEOX server via canonical compiler contract
+        run: pnpm run build:server
+
+      - name: Typecheck H6-owned closed successor TypeScript
         run: >-
           pnpm exec tsc --noEmit --strict
           --target ES2022 --module ESNext --moduleResolution Bundler
@@ -120,10 +203,6 @@ jobs:
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts
           scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP_V1.ts
           scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts
-          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_EVIDENCE_RUNTIME_HANDOFF_V1.ts
-          apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v1.ts
-          apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v1.ts
-          apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts
           apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts
           apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts
           scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts

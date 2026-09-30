@@ -1,0 +1,54 @@
+{
+  "schema_version": "geox_mcft_cap09_failure_discovery_gate_v1",
+  "gate_id": "MCFT_CAP09_FAILURE_DISCOVERY_GATE_V1",
+  "status": "CANDIDATE",
+  "authority_effect": false,
+  "production_effect": false,
+  "formal_v5_arm": false,
+  "a0_authorized": false,
+  "o00_o23_authorized": false,
+  "purpose": "PRE_FINAL_24H_FAILURE_DISCOVERY_AND_HARDENING",
+  "admission_sequence": [
+    "HISTORICAL_FAILURE_CORPUS_REPLAY",
+    "FAULT_INJECTION_MATRIX",
+    "RESOURCE_ENVELOPE",
+    "SHORT_LIVE_PROVIDER_SOAK",
+    "CANDIDATE_FREEZE",
+    "FINAL_24H_REAL_CLOCK_REHEARSAL"
+  ],
+  "failure_taxonomy": {
+    "RETRYABLE": "transient transport or infrastructure failure; bounded retry/backoff; host survives",
+    "ATTEMPT_REJECTED": "provider payload or scientific-input anomaly; current acquisition fails closed; no Evidence promotion; durable health; host survives",
+    "PROCESS_FATAL": "fencing, authority, corruption, impossible invariant, scheduler/durable-state corruption; process exits"
+  },
+  "legacy_fatal_alias_allowed_during_migration": true,
+  "final_24h_admission_requires": {
+    "historical_real_clock_p0_corpus_replay": true,
+    "http_tls_fault_matrix": true,
+    "postgres_recovery_fault_matrix": true,
+    "lease_fencing_fault_matrix": true,
+    "kbs_payload_mutation_matrix": true,
+    "gfs_resource_envelope": true,
+    "no_unclassified_error": true,
+    "no_unexpected_process_exit": true,
+    "production_equivalent_container_build": true,
+    "accelerated_restart_backfill": true,
+    "live_provider_soak_hours_minimum": 2,
+    "live_provider_soak_hours_maximum": 4
+  },
+  "final_24h_scope": [
+    "24_ACTUAL_UTC_BOUNDARIES",
+    "24_PERSISTED_SCHEDULER_SLOTS",
+    "REAL_WALL_CLOCK_CONTINUITY",
+    "CONTROLLED_MISSED_BOUNDARY_BACKFILL",
+    "LONG_LIVED_LEASE_AND_FENCING",
+    "PROVIDER_EVOLUTION_ACROSS_TIME",
+    "NO_FUTURE_EVIDENCE",
+    "LONG_DURATION_RESOURCE_STABILITY"
+  ],
+  "nonclaims": {
+    "final_24h_substituted": false,
+    "formal_closure_substituted": false,
+    "mcft_cap09_completed": false
+  }
+}

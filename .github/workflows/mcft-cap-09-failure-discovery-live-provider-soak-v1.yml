@@ -1,0 +1,86 @@
+name: mcft-cap-09-failure-discovery-live-provider-soak-v1
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_FAILURE_DISCOVERY_LIVE_PROVIDER_SOAK_V1.ts'
+      - '.github/workflows/mcft-cap-09-failure-discovery-live-provider-soak-v1.yml'
+  workflow_dispatch:
+    inputs:
+      duration_hours:
+        description: 'Runtime-only live-provider soak duration (2-4 hours)'
+        required: true
+        default: '2'
+        type: choice
+        options:
+          - '2'
+          - '3'
+          - '4'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-runtime-live-provider-soak-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runtime-only-live-provider-soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 270
+    env:
+      GEOX_MCFT_CAP09_LIVE_PROVIDER_SOAK: '1'
+      GEOX_MCFT_CAP09_LIVE_PROVIDER_SOAK_HOURS: ${{ github.event_name == 'workflow_dispatch' && inputs.duration_hours || '2' }}
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install exact production scientific decoder stack
+        run: |
+          python -m pip install --disable-pip-version-check \
+            'eccodes==2.47.0' \
+            'eccodeslib==2.47.3.23' \
+            'numpy==1.26.4' \
+            'refet==0.4.2'
+          python -m eccodes selfcheck
+      - name: Compile live-provider soak harness
+        run: |
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_FAILURE_DISCOVERY_LIVE_PROVIDER_SOAK_V1.ts
+      - name: Run isolated 2-4h live-provider soak
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_FAILURE_DISCOVERY_LIVE_PROVIDER_SOAK_V1.ts
+      - name: Adjudicate soak result only
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_LIVE_PROVIDER_SOAK_V1_RESULT.json';
+          const x=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(x.status!=='PASS') throw new Error('FDG_LIVE_PROVIDER_SOAK_NOT_PASS');
+          if(x.subject_sha!==process.env.GEOX_DEPLOYMENT_SUBJECT_COMMIT) throw new Error('FDG_LIVE_PROVIDER_SOAK_SUBJECT_SHA_MISMATCH');
+          if(!(Number(x.duration_hours)>=2 && Number(x.duration_hours)<=4)) throw new Error('FDG_LIVE_PROVIDER_SOAK_DURATION_OUT_OF_RANGE');
+          if(x.no_process_fatal!==true || x.no_unexpected_process_exit!==true) throw new Error('FDG_LIVE_PROVIDER_SOAK_HOST_SURVIVAL_NOT_PROVEN');
+          if(x.kbs_private_retention_before_scientific_parse!==true) throw new Error('FDG_LIVE_PROVIDER_SOAK_KBS_RETENTION_ORDER_NOT_PROVEN');
+          if(x.gfs_private_retention_before_scientific_decode!==true || x.gfs_scientific_decode_in_live_soak!==true) throw new Error('FDG_LIVE_PROVIDER_SOAK_GFS_SCIENTIFIC_PATH_NOT_PROVEN');
+          if(x.providers?.kbs?.attempts<8 || x.providers?.kbs?.pass<1) throw new Error('FDG_LIVE_PROVIDER_SOAK_KBS_COVERAGE_INSUFFICIENT');
+          if(x.providers?.gfs?.attempts<2 || x.providers?.gfs?.pass<1) throw new Error('FDG_LIVE_PROVIDER_SOAK_GFS_COVERAGE_INSUFFICIENT');
+          if(x.production_database_mutation!==false || x.runtime_tick_cursor_mutation!==false || x.twin_state_mutation!==false) throw new Error('FDG_LIVE_PROVIDER_SOAK_RUNTIME_AUTHORITY_MUTATION_FORBIDDEN');
+          if(x.production_owner_cutover!==false || x.formal_v5_armed!==false || x.final_24h_admitted!==false) throw new Error('FDG_LIVE_PROVIDER_SOAK_PREMATURE_AUTHORITY_EFFECT');
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-runtime-live-provider-soak-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_LIVE_PROVIDER_SOAK_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type {
+  ExternalEvidenceFileBackedTransportPortV1,
   RawEvidenceRetentionPortV1,
 } from "../../apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.js";
 import {
@@ -120,8 +121,12 @@ async function main(): Promise<void> {
   assert.deepEqual(calls, ["KBS_SOIL", "KBS_RAW_HOURLY"]);
   assert.equal(retentionCalls, 0);
 
+  assert.equal(work[2]!.file_backed, true);
+  const gfsTransport = work[2]!.transport as typeof work[2]["transport"]
+    & Partial<ExternalEvidenceFileBackedTransportPortV1>;
+  assert.equal(typeof gfsTransport.fetchRawEvidenceFile, "function");
   await assert.rejects(
-    work[2]!.transport.fetchRawEvidence(work[2]!.request),
+    gfsTransport.fetchRawEvidenceFile!(work[2]!.request),
     /PHASE5_CONTROLLED_PROVIDER_GFS_DIRECTORY_SENTINEL/,
   );
   assert.deepEqual(calls, [
@@ -170,6 +175,7 @@ async function main(): Promise<void> {
     product_raw_hourly_decoder_preserved: true,
     product_gfs_bundle_composer_preserved: true,
     product_gfs_bundle_transport_preserved: true,
+    product_gfs_file_backed_transport_required: true,
     product_gfs_scientific_decoder_preserved: true,
     controlled_boundary_stops_at_raw_acquisition: true,
     gfs_fake_scientific_payload_used: false,
