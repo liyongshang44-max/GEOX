@@ -2523,6 +2523,26 @@
         "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "21a784e1c0465b08f75ab52ae98448a2efc671263faf372129c751127e726749"
+      },
+      {
+        "evidence_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_A7EEDEAE_CLOSURE_V1",
+        "check_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-phase5-a7eedeae-exact-run-requalification-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "a7eedeaebec1131ac6778ba3a4fc77c04b4334aa",
+        "workflow_name": "mcft-cap-09-phase5-two-service-accelerated-24t",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+        "run_id": 36720068726,
+        "run_conclusion": "success",
+        "artifact_id": 11098171781,
+        "artifact_digest": "sha256:0ec58be9d716bd56e8d3c7b6192dba5e15b79b52c2d8429d1f7297dbebe4642c",
+        "dependency_subject_sha": "a7eedeaebec1131ac6778ba3a4fc77c04b4334aa",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:d9222de776f58405a0182070b282cc4fca04e1bde545c40d6295f684be4f5229",
+        "artifact_absence_reason": null,
+        "immutable": true,
+        "immutable_binding_sha256": "bfdbdbb1ba4a98668c38f19188d54ce1e8a2713bf07ad00e0da879f43450db62"
       }
     ],
     "durable_anchors": {
@@ -4093,6 +4113,18 @@
             "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
             "created_at": "2026-09-30T03:43:00Z",
             "updated_at": "2026-09-30T03:44:06Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_A7EEDEAE_CLOSURE_V1",
+          "run_id": 36720068726,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 755,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+            "workflow_name": "mcft-cap-09-phase5-two-service-accelerated-24t",
+            "head_sha": "a7eedeaebec1131ac6778ba3a4fc77c04b4334aa",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560"
           }
         }
       ],
