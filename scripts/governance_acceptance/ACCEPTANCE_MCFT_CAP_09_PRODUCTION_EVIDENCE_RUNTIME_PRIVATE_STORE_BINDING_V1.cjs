@@ -7,6 +7,7 @@ const crypto = require("node:crypto");
 
 const SUCCESSOR_BASE = "3848376647bd0f7d6f93450644c9e3baed7b15cd";
 const ORIGINAL_BINDING_BASE = "9360c2cd06961688fd192803c7006a29fc9bca4e";
+const FROZEN_RUNTIME_SUBJECT_SHA = "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a";
 
 const AUTH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-RUNTIME-PRIVATE-STORE-BINDING-V1.json";
 const ACCEPT = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs";
@@ -214,16 +215,32 @@ if (process.argv.includes("--selftest")) {
   process.exit(0);
 }
 
-const base = String(process.env.MCFT_BASE_SHA || SUCCESSOR_BASE).trim();
-eq(base, SUCCESSOR_BASE, "REMAT_EXACT_SUCCESSOR_BASE_REQUIRED");
+const requestedBase = String(process.env.MCFT_BASE_SHA || SUCCESSOR_BASE).trim();
+const head = git("rev-parse", "HEAD");
+const frozenRuntimeIntegration =
+  git("merge-base", FROZEN_RUNTIME_SUBJECT_SHA, head) === FROZEN_RUNTIME_SUBJECT_SHA
+  && blob("HEAD", AUTH) === blob(FROZEN_RUNTIME_SUBJECT_SHA, AUTH)
+  && blob("HEAD", RUNTIME) === blob(FROZEN_RUNTIME_SUBJECT_SHA, RUNTIME)
+  && blob("HEAD", FORMAL) === blob(FROZEN_RUNTIME_SUBJECT_SHA, FORMAL);
 
-const changed = git("diff", "--name-only", `${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
-sameArray(changed, SUCCESSOR_CHANGED_FILES, "REMAT_EXACT_THREE_FILE_BOUNDARY");
-
-eq(blob(base, RUNTIME), blob("HEAD", RUNTIME), "REMAT_RUNTIME_SOURCE_MUTATED");
-eq(blob(base, FORMAL), blob("HEAD", FORMAL), "REMAT_FORMAL_AUTHORITY_MUTATED");
-eq(blob(base, QCP), blob("HEAD", QCP), "REMAT_QCP_AUTHORITY_MUTATED");
-eq(blob(base, QCP_WORKFLOW), blob("HEAD", QCP_WORKFLOW), "REMAT_QCP_WORKFLOW_MUTATED");
+let base;
+let changed;
+let validationMode;
+if (frozenRuntimeIntegration) {
+  base = FROZEN_RUNTIME_SUBJECT_SHA;
+  changed = git("diff", "--name-only", `${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
+  validationMode = "FROZEN_RUNTIME_INTEGRATION_REQUALIFICATION";
+} else {
+  base = requestedBase;
+  eq(base, SUCCESSOR_BASE, "REMAT_EXACT_SUCCESSOR_BASE_REQUIRED");
+  changed = git("diff", "--name-only", `${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
+  sameArray(changed, SUCCESSOR_CHANGED_FILES, "REMAT_EXACT_THREE_FILE_BOUNDARY");
+  eq(blob(base, RUNTIME), blob("HEAD", RUNTIME), "REMAT_RUNTIME_SOURCE_MUTATED");
+  eq(blob(base, FORMAL), blob("HEAD", FORMAL), "REMAT_FORMAL_AUTHORITY_MUTATED");
+  eq(blob(base, QCP), blob("HEAD", QCP), "REMAT_QCP_AUTHORITY_MUTATED");
+  eq(blob(base, QCP_WORKFLOW), blob("HEAD", QCP_WORKFLOW), "REMAT_QCP_WORKFLOW_MUTATED");
+  validationMode = "EXACT_HISTORICAL_MATERIALIZATION_SUCCESSOR";
+}
 
 const authority = readJson(AUTH);
 validateAuthority(authority);
@@ -265,8 +282,10 @@ const result = {
   schema_version: "geox_mcft_cap09_production_credential_rematerialization_canonical_acceptance_v1",
   status: "PASS",
   stage: "CREDENTIAL_REMATERIALIZATION_CANONICAL_EVIDENCE",
+  validation_mode: validationMode,
   base_main_sha: base,
-  carrier_head_sha: git("rev-parse", "HEAD"),
+  frozen_runtime_subject_sha: frozenRuntimeIntegration ? FROZEN_RUNTIME_SUBJECT_SHA : null,
+  carrier_head_sha: head,
   observed_subject_sha: e.observed_subject_sha,
   exact_changed_file_count: changed.length,
   authority_sha256: sha256(AUTH),

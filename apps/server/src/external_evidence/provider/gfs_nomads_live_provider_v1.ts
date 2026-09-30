@@ -103,6 +103,11 @@ function requireConditionV1(condition: unknown, code: string): asserts condition
 type GfsMemberRetryExhaustedErrorV1 = Error & {
   code: typeof MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED_CODE_V1;
   diagnostic_token: string;
+  failure_stage: "MEMBER_FETCH";
+  failure_token: string;
+  member_kind: GfsNomadsRawObjectV1["kind"];
+  lead?: number;
+  local_retry_ordinal: number;
   cause?: unknown;
 };
 
@@ -122,7 +127,15 @@ function transientGfsMemberFailureV1(error: unknown): boolean {
   return /_HTTP_STATUS:(408|425|429|500|502|503|504)$/.test(message);
 }
 
-function memberRetryExhaustedV1(token: string, cause: unknown): GfsMemberRetryExhaustedErrorV1 {
+function memberRetryExhaustedV1(
+  token: string,
+  cause: unknown,
+  metadata: {
+    member_kind: GfsNomadsRawObjectV1["kind"];
+    lead?: number;
+    local_retry_ordinal: number;
+  },
+): GfsMemberRetryExhaustedErrorV1 {
   const error = new Error(
     `${MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED_CODE_V1}:${token}`,
     { cause },
@@ -130,6 +143,11 @@ function memberRetryExhaustedV1(token: string, cause: unknown): GfsMemberRetryEx
   error.name = "GfsMemberRetryExhaustedError";
   error.code = MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED_CODE_V1;
   error.diagnostic_token = token;
+  error.failure_stage = "MEMBER_FETCH";
+  error.failure_token = token;
+  error.member_kind = metadata.member_kind;
+  if (metadata.lead !== undefined) error.lead = metadata.lead;
+  error.local_retry_ordinal = metadata.local_retry_ordinal;
   return error;
 }
 
@@ -409,9 +427,12 @@ export class GfsNomadsLiveProviderV1 {
 
   private async requestMemberWithRetryV1<T>(
     diagnosticToken: string,
+    memberKind: GfsNomadsRawObjectV1["kind"],
+    lead: number | undefined,
     request: () => Promise<T>,
     beforeAttempt?: () => Promise<void>,
   ): Promise<T> {
+    let localRetryOrdinal = 0;
     for (let attempt = 1; attempt <= this.memberRetryMaxAttempts; attempt += 1) {
       try {
         if (beforeAttempt) await beforeAttempt();
@@ -422,9 +443,14 @@ export class GfsNomadsLiveProviderV1 {
           attempt >= this.memberRetryMaxAttempts
           || this.memberRetryTotalRetries >= this.memberRetryMaxTotalRetries
         ) {
-          throw memberRetryExhaustedV1(diagnosticToken, error);
+          throw memberRetryExhaustedV1(diagnosticToken, error, {
+            member_kind: memberKind,
+            ...(lead !== undefined ? { lead } : {}),
+            local_retry_ordinal: localRetryOrdinal,
+          });
         }
         this.memberRetryTotalRetries += 1;
+        localRetryOrdinal += 1;
         await this.memberRetryWaitMs(
           Math.min(30_000, this.memberRetryBaseMs * 2 ** (attempt - 1)),
         );
@@ -485,6 +511,8 @@ export class GfsNomadsLiveProviderV1 {
     const issue = canonicalUtcHourV1(cycle, "MCFT_CAP09_GFS_CYCLE_INVALID");
     const response = await this.requestMemberWithRetryV1(
       "MCFT_CAP09_GFS_DIRECTORY",
+      "GFS_DIRECTORY_LISTING",
+      undefined,
       () => this.byteClient.requestBytes({
         locator: gfsDirectoryUrlV1(issue),
         allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,
@@ -535,6 +563,8 @@ export class GfsNomadsLiveProviderV1 {
     const token = `MCFT_CAP09_GFS_PGRB2_F${String(lead).padStart(3, "0")}`;
     const response = await this.requestMemberWithRetryV1(
       token,
+      "GFS_PGRB2_FILTER_RESPONSE",
+      lead,
       () => this.byteClient.requestBytes({
         locator: gfsPgrb2FilterUrlV1(issue, lead),
         allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,
@@ -559,6 +589,8 @@ export class GfsNomadsLiveProviderV1 {
     const token = `MCFT_CAP09_GFS_SFLUX_IDX_F${String(lead).padStart(3, "0")}`;
     const response = await this.requestMemberWithRetryV1(
       token,
+      "GFS_SFLUX_IDX",
+      lead,
       () => this.byteClient.requestBytes({
         locator: idxUrl,
         allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,
@@ -588,6 +620,8 @@ export class GfsNomadsLiveProviderV1 {
     const token = `MCFT_CAP09_GFS_SFLUX_RANGE_F${String(lead).padStart(3, "0")}`;
     const response = await this.requestMemberWithRetryV1(
       token,
+      "GFS_SFLUX_EXACT_GRIB_MESSAGE",
+      lead,
       () => this.byteClient.requestBytes({
         locator: gribUrl,
         allowed_final_hosts: MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1.allowed_final_hosts,

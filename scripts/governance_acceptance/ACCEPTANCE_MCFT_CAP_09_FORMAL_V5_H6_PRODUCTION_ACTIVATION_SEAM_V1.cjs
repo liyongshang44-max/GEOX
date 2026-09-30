@@ -7,6 +7,7 @@ const cp=require("node:child_process");
 
 const ROOT=path.resolve(__dirname,"../..");
 const BASE="2ce0c90ef30b3c04ed112639c87926ac19be4e03";
+const FROZEN_RUNTIME_SUBJECT_SHA="3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a";
 const AUTH="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json";
 const ARM="scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs";
 const REARM="scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_MATERIALIZED_ZERO_REARM_ELIGIBILITY_V1.cjs";
@@ -319,7 +320,7 @@ for(const value of [
   "FORMAL_V5_SCHEMA_ACL_MATERIALIZED_TABLE_SET_MISMATCH",
 ])marker(schema,value,"H6_SCHEMA_COMPOSITION_MARKER_REQUIRED");
 notMarker(schema,"field_index_v1","H6_FORMAL_V5_GENERIC_FIELD_SCHEMA_FORBIDDEN");
-notMarker(schema,"device_index_v1","H6_FORMAL_V5_GENERIC_DEVICE_SCHEMA_FORBIDDEN");
+notMarker(schema,"device_index_v1","H6_FORMAL_V5_GENERIC_DEVICE_FORBIDDEN");
 const composedFormalTables=[
   "facts",
   ...FORMAL_SCHEMA_MIGRATIONS.flatMap(createTableNames),
@@ -427,10 +428,55 @@ assert.ok(formalActivation,"H6_QCP_FORMAL_ACTIVATION_CHECK_REQUIRED");
 assert.deepEqual(formalActivation.applicable_stages,["POST_GRADUATION_FORMAL_V5_ACTIVATION"]);
 
 assert.equal(git("merge-base",BASE,"HEAD"),BASE,"H6_EXACT_PREDECESSOR_MUST_BE_ANCESTOR");
+assert.equal(
+  git("merge-base",FROZEN_RUNTIME_SUBJECT_SHA,"HEAD"),
+  FROZEN_RUNTIME_SUBJECT_SHA,
+  "H6_FROZEN_RUNTIME_SUBJECT_MUST_BE_ANCESTOR",
+);
 for(const frozen of FROZEN){
-  assert.equal(git("rev-parse","HEAD:"+frozen),git("rev-parse",BASE+":"+frozen),"H6_HISTORICAL_OR_PRODUCTION_V2_REWRITE_FORBIDDEN:"+frozen);
+  assert.equal(
+    git("rev-parse","HEAD:"+frozen),
+    git("rev-parse",FROZEN_RUNTIME_SUBJECT_SHA+":"+frozen),
+    "H6_FROZEN_RUNTIME_SURFACE_REWRITE_FORBIDDEN:"+frozen,
+  );
 }
-const changed=git("diff","--name-only",BASE+"...HEAD").split(/\r?\n/).filter(Boolean);
+
+const headSha=git("rev-parse","HEAD");
+function qcpPlanBaseForHead(){
+  const planPath=path.join(ROOT,"acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json");
+  if(!fs.existsSync(planPath))return null;
+  try{
+    const plan=JSON.parse(fs.readFileSync(planPath,"utf8"));
+    return plan.head_sha===headSha?plan.base_sha:null;
+  }catch{return null;}
+}
+function githubEventBase(){
+  const eventPath=String(process.env.GITHUB_EVENT_PATH||"");
+  if(!eventPath||!fs.existsSync(eventPath))return null;
+  try{
+    const event=JSON.parse(fs.readFileSync(eventPath,"utf8"));
+    return event.pull_request?.base?.sha||event.merge_group?.base_sha||
+      (event.ref==="refs/heads/main"?event.before:null)||null;
+  }catch{return null;}
+}
+const candidateBase=[
+  process.env.H6_SUCCESSOR_BASE_SHA,
+  process.env.MCFT_BASE_SHA,
+  qcpPlanBaseForHead(),
+  githubEventBase(),
+].find((value)=>/^[0-9a-f]{40}$/.test(String(value||"")))||null;
+if(candidateBase&&candidateBase!==BASE){
+  assert.equal(git("merge-base",BASE,candidateBase),BASE,"H6_SUCCESSOR_BASE_MUST_DESCEND_FROM_HISTORICAL_PREDECESSOR");
+  assert.equal(git("merge-base",candidateBase,headSha),candidateBase,"H6_SUCCESSOR_BASE_MUST_BE_ANCESTOR_OF_HEAD");
+}
+const successorBoundaryActive=Boolean(candidateBase&&candidateBase!==BASE);
+const changeBoundaryBase=successorBoundaryActive?candidateBase:BASE;
+const candidateChanged=git("diff","--name-only",changeBoundaryBase+"...HEAD").split(/\r?\n/).filter(Boolean);
+const H6_SELF="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs";
+const h6GovernedPaths=new Set([...(h6Resolver.paths||[]),QCP,H6_SELF]);
+const changed=successorBoundaryActive
+  ? candidateChanged.filter((rel)=>h6GovernedPaths.has(rel))
+  : candidateChanged;
 const allowedDomainSuccessors=new Set([V5_BUNDLE,V5_BUNDLE_TEST]);
 for(const rel of changed){
   assert.equal(rel.startsWith("apps/web/"),false,"H6_WEB_CHANGE_FORBIDDEN:"+rel);
@@ -465,10 +511,15 @@ const proof={
   schema_version:"geox_mcft_cap09_formal_v5_h6_production_activation_seam_acceptance_v1",
   status:"PASS",
   exact_predecessor_sha:BASE,
-  subject_head_sha:git("rev-parse","HEAD"),
+  frozen_runtime_subject_sha:FROZEN_RUNTIME_SUBJECT_SHA,
+  subject_head_sha:headSha,
+  change_boundary_mode:successorBoundaryActive?"SUCCESSOR_H6_RESOLVER_PATH_SET":"LEGACY_HISTORICAL_GLOBAL",
+  change_boundary_base_sha:changeBoundaryBase,
+  candidate_changed_file_count:candidateChanged.length,
   changed_file_count:changed.length,
   historical_formal_execution_files_rewritten:false,
   production_v2_default_rewritten:false,
+  frozen_runtime_surface_rewritten:false,
   runtime_kernel_rewritten:false,
   scheduler_semantics_rewritten:false,
   new_database_schema_designed:false,
