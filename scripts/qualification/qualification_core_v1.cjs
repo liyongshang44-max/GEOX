@@ -36,9 +36,15 @@ function appendLog(logFile, payload) {
   fs.appendFileSync(logFile, payload.endsWith('\n') ? payload : `${payload}\n`);
 }
 
+function executableForPlatform(command) {
+  if (process.platform === 'win32' && command === 'pnpm') return 'pnpm.cmd';
+  return command;
+}
+
 function exec(command, args = [], options = {}) {
   const started = new Date().toISOString();
-  const result = spawnSync(command, args, {
+  const executable = executableForPlatform(command);
+  const result = spawnSync(executable, args, {
     cwd: options.cwd,
     env: options.env ?? process.env,
     input: options.input,
@@ -49,14 +55,14 @@ function exec(command, args = [], options = {}) {
   const stdout = result.stdout ?? '';
   const stderr = result.stderr ?? '';
   if (options.logFile) {
-    appendLog(options.logFile, JSON.stringify({ started_at: started, command, args }));
+    appendLog(options.logFile, JSON.stringify({ started_at: started, command: executable, args }));
     if (stdout) appendLog(options.logFile, stdout);
     if (stderr) appendLog(options.logFile, stderr);
   }
   if (result.error) throw result.error;
   if (result.status !== 0 && !options.allowFailure) {
-    const error = new Error(`${options.errorCode ?? 'QUALIFICATION_COMMAND_FAILED'}:${command}:${result.status}`);
-    error.command = command;
+    const error = new Error(`${options.errorCode ?? 'QUALIFICATION_COMMAND_FAILED'}:${executable}:${result.status}`);
+    error.command = executable;
     error.args = args;
     error.stdout = stdout;
     error.stderr = stderr;
@@ -84,12 +90,29 @@ function commandVersion(command, args) {
   return output(command, args, { errorCode: 'QUALIFICATION_ENVIRONMENT_NOT_READY' });
 }
 
-function environmentVariableDigest() {
-  const rows = Object.keys(process.env)
-    .filter((name) => name.startsWith('GEOX_'))
-    .sort()
-    .map((name) => `${name}=${sha256Buffer(String(process.env[name] ?? ''))}`);
-  return { names: rows.map((row) => row.split('=')[0]), digest: sha256Buffer(rows.join('\n')) };
+function controlledEnvironmentVariableDigest(subjectSha) {
+  const normalized = {
+    DATABASE_URL: 'ISOLATED_LOCALHOST_EPHEMERAL_POSTGRES',
+    GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: 'ISOLATED_LOCALHOST_EPHEMERAL_POSTGRES',
+    GEOX_DEPLOYMENT_SUBJECT_COMMIT: subjectSha,
+    GEOX_MCFT_MIGRATOR_PASSWORD: 'RUN_LOCAL_EPHEMERAL_CREDENTIAL',
+    GEOX_MIGRATION_DATABASE_URL: 'ISOLATED_LOCALHOST_EPHEMERAL_POSTGRES',
+    GEOX_RUNTIME_DATABASE_PASSWORD: 'RUN_LOCAL_EPHEMERAL_CREDENTIAL',
+    GEOX_RUNTIME_DATABASE_URL: 'ISOLATED_LOCALHOST_EPHEMERAL_POSTGRES',
+    LANG: String(process.env.LANG ?? ''),
+    TZ: String(process.env.TZ ?? ''),
+  };
+  for (const name of Object.keys(process.env).filter((name) => name.startsWith('LC_')).sort()) {
+    normalized[name] = String(process.env[name] ?? '');
+  }
+  const rows = Object.entries(normalized)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, value]) => `${name}=${sha256Buffer(value)}`);
+  return {
+    names: Object.keys(normalized).sort(),
+    digest: sha256Buffer(rows.join('\n')),
+    policy: 'ONLY_CONTROLLED_OR_SEMANTIC_ENVIRONMENT_INPUTS_ARE_FINGERPRINTED',
+  };
 }
 
 function hostPreflight({ qualificationRoot }) {
@@ -113,7 +136,7 @@ function hostPreflight({ qualificationRoot }) {
 }
 
 function buildEnvironmentManifest({ repoRoot, subjectSha, runtimeSha, contract, contractPath, runnerPath, postgresImage, versions }) {
-  const envDigest = environmentVariableDigest();
+  const envDigest = controlledEnvironmentVariableDigest(subjectSha);
   const lockPath = path.join(repoRoot, 'pnpm-lock.yaml');
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UNKNOWN';
   const locale = Intl.DateTimeFormat().resolvedOptions().locale ?? 'UNKNOWN';
@@ -122,6 +145,7 @@ function buildEnvironmentManifest({ repoRoot, subjectSha, runtimeSha, contract, 
     host_class: 'GEOX_CONTROLLED_QUALIFICATION_HOST_V1',
     os: `${os.platform()} ${os.release()}`,
     architecture: os.arch(),
+    git_version: versions.git,
     docker_version: versions.docker,
     compose_version: versions.compose,
     node_version: versions.node,
@@ -141,6 +165,7 @@ function buildEnvironmentManifest({ repoRoot, subjectSha, runtimeSha, contract, 
     contract_version: contract.contract_version,
     environment_variable_names: envDigest.names,
     environment_variables_digest: envDigest.digest,
+    environment_variables_digest_policy: envDigest.policy,
     generated_at: new Date().toISOString(),
   };
 }

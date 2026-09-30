@@ -32,6 +32,9 @@ assert.equal(authority.dual_lane.old_lane_supersession_requires.local_replacemen
 assert.equal(authority.dual_lane.old_lane_supersession_requires.github_verifier_pass, true);
 assert.equal(authority.dual_lane.old_lane_supersession_requires.qcp_integration_pass, true);
 assert.match(core, /QUALIFICATION_L2_L3_GITHUB_EXECUTION_FORBIDDEN/);
+assert.match(core, /process\.platform === 'win32' && command === 'pnpm'/);
+assert.match(core, /ONLY_CONTROLLED_OR_SEMANTIC_ENVIRONMENT_INPUTS_ARE_FINGERPRINTED/);
+assert.doesNotMatch(core, /filter\(\(name\) => name\.startsWith\('GEOX_'\)\)/);
 assert.match(runner, /QUALIFICATION_DIRTY_LAUNCHER_WORKTREE_FORBIDDEN/);
 assert.match(runner, /git', \['worktree', 'add', '--detach'/);
 assert.match(runner, /QUALIFICATION_PINNED_POSTGRES_IMAGE_REQUIRED/);
@@ -54,6 +57,8 @@ process.stdout.write(JSON.stringify({
   status: 'PASS',
   frozen_runtime_preserved: true,
   github_l2_l3_workflow_mutation: false,
+  windows_pnpm_command_compatibility_guarded: true,
+  ambient_geox_environment_excluded_from_fingerprint: true,
   dual_lane_isolation_static_proof: true,
   changed_files: changed,
 }, null, 2) + '\n');
