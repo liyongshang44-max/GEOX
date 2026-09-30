@@ -29,6 +29,9 @@ assert(builder.includes('FINALIZED_DELIVERY_MUST_NOT_BE_MODIFIED_IN_PLACE_NEW_DE
 assert(builder.includes('supersedes_github_lane: false'), 'CLOSURE_DELIVERY_GITHUB_SUPERSESSION_FORBIDDEN');
 assert(builder.includes('qcp_semantics_modified: false'), 'CLOSURE_DELIVERY_QCP_NON_EFFECT_REQUIRED');
 assert(builder.includes('closure_subject_mutated: false'), 'CLOSURE_DELIVERY_CLOSURE_NON_EFFECT_REQUIRED');
+assert(builder.includes('const deliveryParentDir = path.dirname(deliveryDir);'), 'CLOSURE_DELIVERY_PARENT_BOOTSTRAP_REQUIRED');
+assert(builder.includes('fs.mkdirSync(deliveryParentDir, { recursive: true });'), 'CLOSURE_DELIVERY_PARENT_RECURSIVE_CREATE_REQUIRED');
+assert(builder.includes('fs.mkdirSync(deliveryDir, { recursive: false });'), 'CLOSURE_DELIVERY_ID_COLLISION_FAIL_CLOSED_REQUIRED');
 assert(verifier.includes('QUALIFICATION_CLOSURE_DELIVERY_VERIFIER_POLICY_WEAKENED'), 'CLOSURE_DELIVERY_FAIL_CLOSED_POLICY_REQUIRED');
 assert(verifier.includes('descriptor.latest_run_fallback_used !== false'), 'CLOSURE_DELIVERY_LATEST_RUN_FALLBACK_GUARD_REQUIRED');
 
@@ -54,6 +57,8 @@ process.stdout.write(`${JSON.stringify({
   source_manifest_interface: 'QualificationEvidenceManifestV1',
   exact_subject_binding_guarded: true,
   immutable_delivery_guarded: true,
+  first_run_parent_bootstrap_guarded: true,
+  delivery_id_collision_fail_closed: true,
   latest_run_fallback_forbidden: true,
   blocker_adjudication_authority_retained_by_closure_team: true,
   qcp_semantics_modified: false,
