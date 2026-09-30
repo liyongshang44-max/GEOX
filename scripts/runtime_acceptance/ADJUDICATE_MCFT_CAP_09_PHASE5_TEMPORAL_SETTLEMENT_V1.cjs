@@ -16,6 +16,14 @@ const EVIDENCE_RESILIENCE_RUN_ID = 33110416779;
 const EVIDENCE_RESILIENCE_ARTIFACT_ID = 9671930864;
 const EVIDENCE_RESILIENCE_ARTIFACT_DIGEST = "sha256:ba40853403b3b7f53794e83aa7c4f283def431f63a29b346c53d043add856479";
 const AUTHORITY = path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json");
+const CAUSAL_REVISION_SUPERSEDED_PATH =
+  "apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts";
+const CAUSAL_REVISION_OLD_FULL_BLOB = "9d83584a1bc4b2e0817a5e443539afd615aa1468";
+const CAUSAL_REVISION_FROZEN_RUNTIME = "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a";
+const CAUSAL_REVISION_SEMANTIC_REVISION = "9ffecd38d3093c4a3f566ee996e3ad00aaf6004a";
+const CAUSAL_REVISION_FROZEN_BLOB = "5e132eb1b307f908dea6118292fb8e0e9d53084c";
+const CAUSAL_REVISION_REPLACEMENT_CLAIM =
+  "FROZEN_RUNTIME_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFIED_BY_REAL_POSTGRES_V1";
 
 // Successor repository changes outside the frozen Phase5 semantic core are governed by
 // the central exact-path control plane and fresh resolver-owned requalification workflows.
@@ -142,7 +150,7 @@ if(mode==="plan") {
     temporal_window_expired:!live,
   });
 } else if(mode==="settle") {
-  const out=arg("--out"), oldRoot=arg("--old-root"), evidenceRoot=arg("--evidence-root");
+  const out=arg("--out"), oldRoot=arg("--old-root"), evidenceRoot=arg("--evidence-root"), causalRoot=arg("--causal-root");
   const subject=git(["rev-parse","HEAD"]);
   req(/^[0-9a-f]{40}$/.test(subject),"PHASE5_SETTLEMENT_SUBJECT_INVALID");
   const p=profile(), last=lastViableA0(p);
@@ -152,11 +160,56 @@ if(mode==="plan") {
   const protectedTemporalChanged=PROTECTED_TEMPORAL_SEMANTIC_CORE.filter((pth)=>
     git(["diff","--name-only",OLD_FULL_HEAD+".."+subject,"--",pth])!==""
   );
-  req(
-    protectedTemporalChanged.length===0,
-    "PHASE5_SETTLEMENT_TEMPORAL_SEMANTIC_CORE_CHANGED",
-    protectedTemporalChanged,
-  );
+  const causalSupersessionActive=protectedTemporalChanged.length>0;
+  let causalProof=null;
+  let causalBasis=null;
+  if(causalSupersessionActive) {
+    req(
+      protectedTemporalChanged.length===1 &&
+        protectedTemporalChanged[0]===CAUSAL_REVISION_SUPERSEDED_PATH,
+      "PHASE5_SETTLEMENT_UNCOVERED_TEMPORAL_SEMANTIC_CORE_CHANGED",
+      protectedTemporalChanged,
+    );
+    req(
+      git(["rev-parse",OLD_FULL_HEAD+":"+CAUSAL_REVISION_SUPERSEDED_PATH])===CAUSAL_REVISION_OLD_FULL_BLOB,
+      "PHASE5_SETTLEMENT_CAUSAL_REVISION_OLD_FULL_BLOB_DRIFT",
+    );
+    req(
+      git(["rev-parse",CAUSAL_REVISION_FROZEN_RUNTIME+":"+CAUSAL_REVISION_SUPERSEDED_PATH])===CAUSAL_REVISION_FROZEN_BLOB,
+      "PHASE5_SETTLEMENT_CAUSAL_REVISION_FROZEN_BLOB_DRIFT",
+    );
+    req(
+      git(["rev-parse","HEAD:"+CAUSAL_REVISION_SUPERSEDED_PATH])===CAUSAL_REVISION_FROZEN_BLOB,
+      "PHASE5_SETTLEMENT_CAUSAL_REVISION_CURRENT_HEAD_BLOB_DRIFT",
+    );
+
+    causalProof=load(
+      causalRoot,
+      "MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_RESULT.json",
+    );
+    causalBasis=load(
+      causalRoot,
+      "MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1_RESULT.json",
+    );
+
+    req(
+      causalProof.status==="PASS" &&
+      causalProof.qualified_runtime?.frozen_runtime_subject_sha===CAUSAL_REVISION_FROZEN_RUNTIME &&
+      causalProof.qualified_runtime?.postgres_evidence_source_blob_sha===CAUSAL_REVISION_FROZEN_BLOB,
+      "PHASE5_SETTLEMENT_CAUSAL_REVISION_CURRENT_HEAD_PROOF_IDENTITY_INVALID",
+    );
+    req(
+      causalBasis.status==="PASS" &&
+      causalBasis.adjudicated_head_sha===subject &&
+      causalBasis.frozen_runtime_subject_sha===CAUSAL_REVISION_FROZEN_RUNTIME &&
+      causalBasis.frozen_runtime_source_blob_sha===CAUSAL_REVISION_FROZEN_BLOB &&
+      causalBasis.supersession_scope==="CAUSAL_REVISION_TEMPORAL_SEMANTICS_ONLY" &&
+      causalBasis.current_basis_head_real_postgres_proof_pass===true &&
+      causalBasis.replacement_claim===CAUSAL_REVISION_REPLACEMENT_CLAIM &&
+      causalBasis.fail_closed_preserved===true,
+      "PHASE5_SETTLEMENT_CAUSAL_REVISION_BASIS_INVALID",
+    );
+  }
 
   const rehearsalExtensionChanged=QUALIFICATION_REHEARSAL_EXTENSION_SEAM.filter((entry)=>
     git(["diff","--name-only",OLD_FULL_HEAD+".."+subject,"--",entry.path])!==""
@@ -228,9 +281,11 @@ if(mode==="plan") {
     current_head_full_live_24t_claimed:false,
     old_full_24t:{head_sha:OLD_FULL_HEAD,run_id:OLD_FULL_RUN_ID,artifact_id:OLD_FULL_ARTIFACT_ID,artifact_digest:OLD_FULL_ARTIFACT_DIGEST},
     fresh_evidence_resilience:{head_sha:EVIDENCE_RESILIENCE_HEAD,run_id:EVIDENCE_RESILIENCE_RUN_ID,artifact_id:EVIDENCE_RESILIENCE_ARTIFACT_ID,artifact_digest:EVIDENCE_RESILIENCE_ARTIFACT_DIGEST},
-    protected_temporal_semantic_core_unchanged:true,
+    protected_temporal_semantic_core_unchanged:protectedTemporalChanged.length===0,
     protected_temporal_semantic_core_path_count:PROTECTED_TEMPORAL_SEMANTIC_CORE.length,
     protected_temporal_semantic_core_changed_paths:protectedTemporalChanged,
+    causal_revision_temporal_semantics_supersession_active:causalSupersessionActive,
+    historical_24t_reinterpreted_for_new_temporal_semantics:false,
     qualification_rehearsal_extension_seam_status:
       rehearsalExtensionChanged.length>0
         ?"EXACT_BLOB_PINNED_ACCELERATED_DEFAULT_PRESERVED"

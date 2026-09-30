@@ -30,6 +30,9 @@ on:
       - 'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts'
       - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql'
       - 'scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-QUALIFICATION-BASIS-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts'
       - 'scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts'
       - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts'
       - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts'
@@ -554,9 +557,46 @@ jobs:
           test "$(jq -r .digest <<<"$current_meta")" = "sha256:ba40853403b3b7f53794e83aa7c4f283def431f63a29b346c53d043add856479"
           test "$(jq -r .workflow_run.head_sha <<<"$current_meta")" = "3349eaaaab68f80fc9b771f16e4bfe909126eed2"
 
+          rm -f \
+            "$GEOX_PHASE5_CONTROL_ROOT/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_STATE.json" \
+            "$GEOX_PHASE5_CONTROL_ROOT/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_RESULT.json" \
+            "$GEOX_PHASE5_CONTROL_ROOT/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1_RESULT.json"
+          mkdir -p acceptance-output
+          rm -f \
+            acceptance-output/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_RESULT.json \
+            acceptance-output/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1_RESULT.json
+
+          docker compose -f "$COMPOSE_FILE" -f "$RUNNER_TEMP/mcft-qualification-minio.yml" \
+            run --rm --no-deps \
+            -v "$GEOX_PHASE5_CONTROL_ROOT:/app/acceptance-output" \
+            --entrypoint /bin/sh \
+            -e DATABASE_URL="postgres://$GEOX_PHASE5_POSTGRES_USER:$GEOX_PHASE5_POSTGRES_PASSWORD@postgres:5432/$GEOX_PHASE5_DATABASE_NAME" \
+            database-platform-bootstrap \
+            -ceu '
+              node_modules/.bin/tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts seed-and-capture
+              node_modules/.bin/tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts replay-and-verify
+            '
+
+          causal_result="$GEOX_PHASE5_CONTROL_ROOT/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_RESULT.json"
+          test -s "$causal_result"
+          test "$(jq -r .status "$causal_result")" = "PASS"
+          test "$(jq -r .qualified_runtime.frozen_runtime_subject_sha "$causal_result")" = "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a"
+          test "$(jq -r .qualified_runtime.postgres_evidence_source_blob_sha "$causal_result")" = "5e132eb1b307f908dea6118292fb8e0e9d53084c"
+          test "$(jq -r .qualification_supersession.supersession_scope "$causal_result")" = "CAUSAL_REVISION_TEMPORAL_SEMANTICS_ONLY"
+
+          cp "$causal_result" acceptance-output/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_RESULT.json
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1.cjs \
+            --proof-result acceptance-output/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1_RESULT.json
+          causal_basis="acceptance-output/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1_RESULT.json"
+          test -s "$causal_basis"
+          test "$(jq -r .status "$causal_basis")" = "PASS"
+          test "$(jq -r .adjudicated_head_sha "$causal_basis")" = "$GEOX_DEPLOYMENT_SUBJECT_COMMIT"
+          cp "$causal_basis" "$GEOX_PHASE5_CONTROL_ROOT/MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1_RESULT.json"
+
           node scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs settle \
             --old-root "$RUNNER_TEMP/phase5-old-full-24t" \
             --evidence-root "$RUNNER_TEMP/phase5-evidence-resilience-3349" \
+            --causal-root "$GEOX_PHASE5_CONTROL_ROOT" \
             --out "$GEOX_PHASE5_CONTROL_ROOT/temporal-settlement-proof.json"
           cp "$(find "$RUNNER_TEMP/phase5-old-full-24t" -name verify-proof.json -print -quit)" "$GEOX_PHASE5_CONTROL_ROOT/old-full-verify-proof.json"
           cp "$(find "$RUNNER_TEMP/phase5-old-full-24t" -name workflow-proof.json -print -quit)" "$GEOX_PHASE5_CONTROL_ROOT/old-full-workflow-proof.json"
