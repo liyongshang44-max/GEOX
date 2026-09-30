@@ -98,6 +98,8 @@ function main() {
   const deliveryId = `${manifest.run_id}-${digestSuffix}`;
   const deliveryDir = path.resolve(args.out ?? path.join(os.homedir(), '.geox', 'qualification', 'deliveries', deliveryId));
   if (fs.existsSync(deliveryDir)) throw new Error(`QUALIFICATION_CLOSURE_DELIVERY_ALREADY_EXISTS:${deliveryDir}`);
+  const deliveryParentDir = path.dirname(deliveryDir);
+  fs.mkdirSync(deliveryParentDir, { recursive: true });
   fs.mkdirSync(deliveryDir, { recursive: false });
 
   fs.copyFileSync(manifestPath, path.join(deliveryDir, 'QualificationEvidenceManifestV1.json'), fs.constants.COPYFILE_EXCL);
