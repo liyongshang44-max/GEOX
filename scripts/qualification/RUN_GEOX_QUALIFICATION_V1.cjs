@@ -160,8 +160,12 @@ function main() {
     if (!match) throw new Error(`QUALIFICATION_POSTGRES_PORT_UNRESOLVED:${portLine}`);
     const port = match[1];
     const adminUrl = `postgres://postgres:postgres@127.0.0.1:${port}/causal_revision_qv1`;
-    const qenv = {
-      ...process.env,
+    const qenv = {};
+    const safeExact = new Set(['PATH', 'HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'TEMP', 'TMP', 'SystemRoot', 'ComSpec', 'PATHEXT', 'PNPM_HOME', 'LANG', 'TZ']);
+    for (const [name, value] of Object.entries(process.env)) {
+      if (safeExact.has(name) || name.startsWith('LC_') || name.startsWith('NPM_CONFIG_')) qenv[name] = value;
+    }
+    Object.assign(qenv, {
       DATABASE_URL: adminUrl,
       GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: adminUrl,
       GEOX_MIGRATION_DATABASE_URL: `postgres://geox_mcft_migrator_v1:causal-revision-migrator@127.0.0.1:${port}/causal_revision_qv1`,
@@ -169,7 +173,7 @@ function main() {
       GEOX_MCFT_MIGRATOR_PASSWORD: 'causal-revision-migrator',
       GEOX_RUNTIME_DATABASE_PASSWORD: 'causal-revision-runtime',
       GEOX_DEPLOYMENT_SUBJECT_COMMIT: subjectSha,
-    };
+    });
 
     const initDir = path.join(workspaceDir, 'docker', 'postgres', 'init');
     const initFiles = fs.readdirSync(initDir).filter((name) => name.endsWith('.sql')).sort();

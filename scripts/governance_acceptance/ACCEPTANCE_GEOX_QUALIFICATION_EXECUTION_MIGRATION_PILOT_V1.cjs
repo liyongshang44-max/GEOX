@@ -38,6 +38,8 @@ assert.match(runner, /QUALIFICATION_PINNED_POSTGRES_IMAGE_REQUIRED/);
 assert.match(runner, /production_mutation: false/);
 assert.match(runner, /runtime_mutated: false/);
 assert.doesNotMatch(runner, /GEOX_PRODUCTION_DATABASE_URL/);
+assert.doesNotMatch(runner, /\.\.\.process\.env/);
+assert.match(runner, /const safeExact = new Set/);
 
 const base = authority.pilot_source_head;
 const changed = execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], { cwd: ROOT, encoding: 'utf8' })
