@@ -2535,14 +2535,14 @@
         "workflow_path": ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
         "run_id": 36720068726,
         "run_conclusion": "success",
-        "artifact_id": 11098171781,
-        "artifact_digest": "sha256:0ec58be9d716bd56e8d3c7b6192dba5e15b79b52c2d8429d1f7297dbebe4642c",
+        "artifact_id": null,
+        "artifact_digest": null,
         "dependency_subject_sha": "a7eedeaebec1131ac6778ba3a4fc77c04b4334aa",
         "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
         "dependency_digest": "sha256:d9222de776f58405a0182070b282cc4fca04e1bde545c40d6295f684be4f5229",
-        "artifact_absence_reason": null,
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
-        "immutable_binding_sha256": "bfdbdbb1ba4a98668c38f19188d54ce1e8a2713bf07ad00e0da879f43450db62"
+        "immutable_binding_sha256": "73634b56c4d65d2c42dc29df672f826dd54f48007789e1e342b13611e5a262d1"
       }
     ],
     "durable_anchors": {
