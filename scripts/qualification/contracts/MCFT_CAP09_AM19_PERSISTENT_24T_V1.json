@@ -38,7 +38,6 @@
   "rolling_capture_source_blob_sha": "26dd21c5a0b7a60fca06e5e4c2ec92289a102a47",
   "rolling_capture_deadline_compat_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_T4R1_ROLLING_PREBOUNDARY_DEADLINE_COMPAT.cjs",
   "rolling_capture_deadline_compat_blob_sha": "9d0ba5913fada1573da954c24b59490376a32ef7",
-  "rolling_capture_planner_blob_sha": "42f5cc0c3b216d83ebf4471c8ddb544347a0bc8e",
   "rolling_capture_assembler_ref": "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.cjs",
   "rolling_capture_assembler_blob_sha": "4e0934fd339bbba09782655869cdefa32ae45c2d",
   "controlled_capture_package_policy": "FINALIZED_IMMUTABLE_PACKAGE_WITH_EXACT_MAIN_PRODUCER_AND_HISTORICAL_SOURCE_AUTHORITY",
