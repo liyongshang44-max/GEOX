@@ -14,8 +14,10 @@
     "historical_compatibility_shim_path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_T4R1_ROLLING_PREBOUNDARY_DEADLINE_COMPAT.cjs",
     "historical_compatibility_shim_blob": "9d0ba5913fada1573da954c24b59490376a32ef7",
     "provider_runner_path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
+    "exact_provider_runner_source_commit": "f1c43c5c7379748c5609184cd8acc86ff9b1608e",
     "exact_provider_runner_blob": "26dd21c5a0b7a60fca06e5e4c2ec92289a102a47",
-    "source_resolution": "GIT_BLOB_OBJECT_NOT_CURRENT_MAIN_PATH_EQUALITY"
+    "source_commit_is_ancestor_of_historical_capture_commit": true,
+    "source_resolution": "EXACT_REACHABLE_COMMIT_PATH_BLOB_NOT_CURRENT_MAIN_PATH_EQUALITY"
   },
   "compatibility_semantics": {
     "run_scoped_retention_namespace_required": true,
