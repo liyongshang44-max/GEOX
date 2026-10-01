@@ -1,0 +1,64 @@
+{
+  "schema_version": "geox_mcft_cap09_controlled_capture_source_binding_v1",
+  "record_status": "PILOT_BINDING_ACTIVE",
+  "scope": "QUALIFICATION_EXECUTION_MIGRATION_ONLY",
+  "producer_identity": {
+    "protected_main_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+    "role": "CAPTURE_PRODUCER_IDENTITY",
+    "same_path_source_blob_is_authority": false
+  },
+  "provider_source_authority": {
+    "historical_capture_commit": "75d4961279bd64dc1c9dd7d68aac189c72c98846",
+    "historical_capture_workflow_path": ".github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml",
+    "historical_capture_workflow_blob": "800cbd91a5d84801405affa6f372c0aa6388b173",
+    "historical_compatibility_shim_path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_T4R1_ROLLING_PREBOUNDARY_DEADLINE_COMPAT.cjs",
+    "historical_compatibility_shim_blob": "9d0ba5913fada1573da954c24b59490376a32ef7",
+    "provider_runner_path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
+    "exact_provider_runner_blob": "26dd21c5a0b7a60fca06e5e4c2ec92289a102a47",
+    "source_resolution": "GIT_BLOB_OBJECT_NOT_CURRENT_MAIN_PATH_EQUALITY"
+  },
+  "compatibility_semantics": {
+    "run_scoped_retention_namespace_required": true,
+    "retrieval_clock_required": true,
+    "causal_reuse_guard_required": true,
+    "stale_intrarun_retention_delete_before_reretention_required": true,
+    "provider_fetch_decode_canonicalization_semantics_change_forbidden": true,
+    "raw_retention_semantics_change_forbidden": true,
+    "formal_effect_change_forbidden": true
+  },
+  "controlled_adapter": {
+    "purpose": "REMOVE_GITHUB_EXECUTION_IDENTITY_COUPLING_ONLY",
+    "allowed_changes": [
+      "execution_identity_environment_variable_names",
+      "generated_file_location"
+    ],
+    "forbidden_changes": [
+      "provider_fetch_logic",
+      "decoder_logic",
+      "temporal_offsets",
+      "causal_reuse_semantics",
+      "retention_bucket_or_prefix_semantics",
+      "formal_effect_semantics",
+      "runtime_semantics"
+    ],
+    "github_actions_execution_required": false,
+    "github_production_owner_revival": false
+  },
+  "host_credential_bindings": {
+    "MCFT_EA5E2_TRANSIENT_S3_ENDPOINT": "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT",
+    "MCFT_EA5E2_TRANSIENT_S3_BUCKET": "GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET",
+    "MCFT_EA5E2_TRANSIENT_S3_REGION": "GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION",
+    "MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID": "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID",
+    "MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY": "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY",
+    "MCFT_CAP09_PARENT_DATABASE_URL": "GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL"
+  },
+  "secret_values_stored_in_repository": false,
+  "authority_ceiling": {
+    "production_mutation": false,
+    "runtime_semantic_change": false,
+    "formal_v5_arm": false,
+    "a0": false,
+    "o00_o23": false,
+    "cap09_completion_claim": false
+  }
+}
