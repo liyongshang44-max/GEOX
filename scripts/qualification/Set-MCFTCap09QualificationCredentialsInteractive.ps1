@@ -35,7 +35,7 @@ if (@('localhost', '127.0.0.1', '::1') -contains $endpointUri.Host) {
     throw 'CONTROLLED_CAPTURE_REMOTE_S3_ENDPOINT_REQUIRED'
 }
 if ($bucket -ne $ExpectedBucket) {
-    throw "CONTROLLED_CAPTURE_EXISTING_PRIVATE_BUCKET_BINDING_REQUIRED:$ExpectedBucket:$bucket"
+    throw "CONTROLLED_CAPTURE_EXISTING_PRIVATE_BUCKET_BINDING_REQUIRED:${ExpectedBucket}:$bucket"
 }
 if ([string]::IsNullOrWhiteSpace($accessKey) -or [string]::IsNullOrWhiteSpace($secretKey)) {
     throw 'CONTROLLED_CAPTURE_R2_CREDENTIAL_REQUIRED'
@@ -50,7 +50,7 @@ if (@('postgres', 'postgresql') -notcontains $dbUri.Scheme) {
 }
 $dbName = [uri]::UnescapeDataString($dbUri.AbsolutePath.TrimStart('/'))
 if ($dbName -ne $ExpectedParentDatabase) {
-    throw "CONTROLLED_CAPTURE_T4R1_PARENT_DATABASE_REQUIRED:$ExpectedParentDatabase:$dbName"
+    throw "CONTROLLED_CAPTURE_T4R1_PARENT_DATABASE_REQUIRED:${ExpectedParentDatabase}:$dbName"
 }
 
 [Environment]::SetEnvironmentVariable('MCFT_EA5E2_TRANSIENT_S3_ENDPOINT', $endpointUri.GetLeftPart([System.UriPartial]::Authority) + '/', 'Process')
