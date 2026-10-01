@@ -40,7 +40,8 @@
     "formal_effect_change_forbidden": true
   },
   "controlled_adapter": {
-    "purpose": "REMOVE_GITHUB_EXECUTION_IDENTITY_COUPLING_AND_BIND_EXACT_TRANSITIVE_PROVIDER_HELPER_ONLY",
+    "purpose": "REMOVE_GITHUB_EXECUTION_IDENTITY_COUPLING_ONLY",
+    "transitive_provider_helper_binding": "EXACT_HISTORICAL_HELPER_PLUS_ZERO_DIFF_EA4_DEPENDENCY_V1",
     "allowed_changes": [
       "execution_identity_environment_variable_names",
       "generated_file_location",
