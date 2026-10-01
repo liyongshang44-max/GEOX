@@ -36,6 +36,8 @@ for (const marker of [
   'mcft_cap09_gfs_scientific_core_v1.py',
   'mcft_cap09_gfs_raw_bundle_decoder_v1.py',
   'python_package_set_digest',
+  "mode === 'selftest'",
+  'transformed_source_sha256',
   CAPTURE_V2_BLOB,
 ]) assert.ok(capture.includes(marker), `AM19_CAPTURE_PLATFORM_GUARD_MISSING:${marker}`);
 
@@ -46,6 +48,23 @@ for (const marker of [
   CAPTURE_V2_BLOB,
   VERIFY_V2_BLOB,
 ]) assert.ok(verify.includes(marker), `AM19_CAPTURE_PLATFORM_VERIFIER_GUARD_MISSING:${marker}`);
+
+const transformSelftest = JSON.parse(execFileSync(process.execPath, [CAPTURE_V3, 'selftest'], { encoding: 'utf8', windowsHide: true }));
+assert.equal(transformSelftest.status, 'PASS');
+assert.equal(transformSelftest.base_adapter_blob, CAPTURE_V2_BLOB);
+assert.match(transformSelftest.transformed_source_sha256, /^sha256:[0-9a-f]{64}$/);
+assert.equal(transformSelftest.provider_semantics_changed, false);
+assert.equal(transformSelftest.runtime_semantic_mutation, false);
+assert.equal(transformSelftest.production_mutation, false);
+if (process.platform === 'win32') {
+  assert.equal(transformSelftest.python_package_profile, 'WINDOWS_ECCODES_BUNDLED_BINARY_V1');
+  assert.equal(transformSelftest.eccodeslib_package_required, false);
+  assert.deepEqual(transformSelftest.python_packages_required, ['eccodes==2.47.0', 'numpy==1.26.4', 'refet==0.4.2']);
+} else {
+  assert.equal(transformSelftest.python_package_profile, 'LINUX_MAC_ECCODESLIB_V1');
+  assert.equal(transformSelftest.eccodeslib_package_required, true);
+  assert.deepEqual(transformSelftest.python_packages_required, ['eccodes==2.47.0', 'eccodeslib==2.47.3.23', 'numpy==1.26.4', 'refet==0.4.2']);
+}
 
 const changed = git('diff', '--name-only', BASE, 'HEAD').split(/\r?\n/).filter(Boolean).sort();
 const allowed = [CAPTURE_V3, VERIFY_V3, SELF].sort();
@@ -59,6 +78,10 @@ process.stdout.write(JSON.stringify({
   predecessor_capture_head: BASE,
   capture_v2_blob_preserved: true,
   verifier_v2_blob_preserved: true,
+  transform_selftest_pass: true,
+  transformed_source_sha256: transformSelftest.transformed_source_sha256,
+  active_platform: process.platform,
+  active_python_package_profile: transformSelftest.python_package_profile,
   windows_profile: 'WINDOWS_ECCODES_BUNDLED_BINARY_V1',
   windows_eccodeslib_package_required: false,
   windows_eccodes_binary_source: 'ECCODES_2_47_0_WINDOWS_WHEEL_BUNDLED_NATIVE_BINARY',
