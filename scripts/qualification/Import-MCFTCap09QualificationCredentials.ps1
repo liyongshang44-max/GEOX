@@ -6,6 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+$ExpectedParentDatabase = 'geox_mcft_cap09_s6_formal_t4r1_24h_v5'
 $Bindings = [ordered]@{
     'MCFT_EA5E2_TRANSIENT_S3_ENDPOINT'          = 'GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT'
     'MCFT_EA5E2_TRANSIENT_S3_BUCKET'            = 'GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET'
@@ -103,8 +104,8 @@ if (@('postgres', 'postgresql') -notcontains $Parent.Scheme) {
     throw 'CONTROLLED_CAPTURE_POSTGRES_PARENT_REQUIRED'
 }
 $ParentDatabase = [uri]::UnescapeDataString($Parent.AbsolutePath.TrimStart('/'))
-if ($ParentDatabase -ne 'geox_mcft_cap09_s6_formal_t4r1_24h') {
-    throw 'CONTROLLED_CAPTURE_T4R1_PARENT_DATABASE_REQUIRED'
+if ($ParentDatabase -ne $ExpectedParentDatabase) {
+    throw "CONTROLLED_CAPTURE_T4R1_PARENT_DATABASE_REQUIRED:$ExpectedParentDatabase:$ParentDatabase"
 }
 
 if (-not $PreflightOnly) {
@@ -119,7 +120,7 @@ if (-not $PreflightOnly) {
     status         = 'PASS'
     mode           = $(if ($PreflightOnly) { 'PREFLIGHT_ONLY' } else { 'PROCESS_INJECTED' })
     binding_count  = $Bindings.Count
-    parent_database_identity = 'geox_mcft_cap09_s6_formal_t4r1_24h'
+    parent_database_identity = $ExpectedParentDatabase
     private_bucket_identity  = 'geox-mcft-cap09-formal-raw-v1'
     secret_values_emitted    = $false
     production_mutation      = $false
