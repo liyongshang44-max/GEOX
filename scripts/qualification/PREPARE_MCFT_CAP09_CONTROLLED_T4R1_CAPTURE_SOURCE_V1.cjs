@@ -48,18 +48,19 @@ function assertAuthorityObjects() {
   if (workflowBlob !== a.historical_capture_workflow_blob) throw new Error(`QMIG_CAPTURE_WORKFLOW_BLOB_DRIFT:${workflowBlob}`);
   const shimBlob = git(["rev-parse", `${a.historical_capture_commit}:${a.historical_compatibility_shim_path}`]);
   if (shimBlob !== a.historical_compatibility_shim_blob) throw new Error(`QMIG_CAPTURE_SHIM_BLOB_DRIFT:${shimBlob}`);
-  const runnerType = git(["cat-file", "-t", a.exact_provider_runner_blob]);
-  if (runnerType !== "blob") throw new Error(`QMIG_CAPTURE_RUNNER_OBJECT_NOT_BLOB:${runnerType}`);
+  const runnerBlob = git(["rev-parse", `${a.exact_provider_runner_source_commit}:${a.provider_runner_path}`]);
+  if (runnerBlob !== a.exact_provider_runner_blob) throw new Error(`QMIG_CAPTURE_PROVIDER_RUNNER_BLOB_DRIFT:${runnerBlob}`);
+  execFileSync("git", ["merge-base", "--is-ancestor", a.exact_provider_runner_source_commit, a.historical_capture_commit], { cwd: ROOT, stdio: "ignore" });
   const shim = git(["show", `${a.historical_capture_commit}:${a.historical_compatibility_shim_path}`]);
   if (!shim.includes(`const RUNNER_BLOB = "${a.exact_provider_runner_blob}";`)) throw new Error("QMIG_CAPTURE_SHIM_RUNNER_BINDING_DRIFT");
   const currentPathBlob = git(["rev-parse", `${AUTH.producer_identity.protected_main_sha}:${a.provider_runner_path}`]);
   if (!/^[0-9a-f]{40}$/.test(currentPathBlob)) throw new Error("QMIG_CAPTURE_CURRENT_MAIN_PATH_BLOB_INVALID");
-  return { workflowBlob, shimBlob, currentPathBlob };
+  return { workflowBlob, shimBlob, runnerBlob, currentPathBlob };
 }
 
 function buildControlledSource() {
   const a = AUTH.provider_source_authority;
-  let source = execFileSync("git", ["cat-file", "blob", a.exact_provider_runner_blob], { cwd: ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  let source = execFileSync("git", ["show", `${a.exact_provider_runner_source_commit}:${a.provider_runner_path}`], { cwd: ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 
   source = exactReplace(source, HISTORICAL_NAMESPACE, RUN_SCOPED_NAMESPACE, "QMIG_CAPTURE_RETENTION_NAMESPACE_REPLACEMENT_CARDINALITY");
   source = exactReplace(source, HISTORICAL_RETRIEVAL_VALIDATION, CURRENT_RETRIEVAL_CLOCK, "QMIG_CAPTURE_RETRIEVAL_CLOCK_REPLACEMENT_CARDINALITY");
@@ -93,7 +94,8 @@ function summary(source, objects, outputPath) {
     status: "PASS",
     producer_subject_sha: AUTH.producer_identity.protected_main_sha,
     historical_capture_commit: AUTH.provider_source_authority.historical_capture_commit,
-    provider_runner_blob: AUTH.provider_source_authority.exact_provider_runner_blob,
+    provider_runner_source_commit: AUTH.provider_source_authority.exact_provider_runner_source_commit,
+    provider_runner_blob: objects.runnerBlob,
     historical_workflow_blob: objects.workflowBlob,
     historical_compatibility_shim_blob: objects.shimBlob,
     current_main_same_path_blob_observed_not_authority: objects.currentPathBlob,
