@@ -72,9 +72,15 @@ function main() {
   requireEqual(environment.runtime_sha, result.runtime_sha, 'QUALIFICATION_MANIFEST_ENVIRONMENT_RUNTIME_MISMATCH');
   requireEqual(environment.contract_id, result.contract_id, 'QUALIFICATION_MANIFEST_CONTRACT_ID_MISMATCH');
   requireEqual(environment.contract_version, result.contract_version, 'QUALIFICATION_MANIFEST_CONTRACT_VERSION_MISMATCH');
+  if (result.closure_semantic_subject_sha !== undefined) {
+    requireEqual(result.closure_semantic_subject_sha, runManifest.closure_semantic_subject_sha, 'QUALIFICATION_MANIFEST_CLOSURE_SEMANTIC_SUBJECT_MISMATCH');
+    requireEqual(result.closure_semantic_subject_sha, environment.closure_semantic_subject_sha, 'QUALIFICATION_MANIFEST_ENV_CLOSURE_SEMANTIC_SUBJECT_MISMATCH');
+    requireEqual(result.closure_semantic_subject_sha, provenance.closure_semantic_subject_sha, 'QUALIFICATION_MANIFEST_PROVENANCE_CLOSURE_SEMANTIC_SUBJECT_MISMATCH');
+  }
 
   output('git', ['cat-file', '-e', `${result.subject_sha}^{commit}`], { cwd: repoRoot, errorCode: 'QUALIFICATION_MANIFEST_SUBJECT_COMMIT_MISSING' });
   output('git', ['cat-file', '-e', `${result.runtime_sha}^{commit}`], { cwd: repoRoot, errorCode: 'QUALIFICATION_MANIFEST_RUNTIME_COMMIT_MISSING' });
+  if (result.closure_semantic_subject_sha !== undefined) output('git', ['cat-file', '-e', `${result.closure_semantic_subject_sha}^{commit}`], { cwd: repoRoot, errorCode: 'QUALIFICATION_MANIFEST_CLOSURE_SEMANTIC_SUBJECT_COMMIT_MISSING' });
   const contractDigest = gitFileSha256(repoRoot, result.subject_sha, environment.qualification_contract_ref);
   const runnerDigest = gitFileSha256(repoRoot, result.subject_sha, environment.qualification_runner_ref);
   requireEqual(contractDigest, environment.qualification_contract_digest, 'QUALIFICATION_MANIFEST_CONTRACT_DIGEST_MISMATCH');
@@ -95,6 +101,12 @@ function main() {
     runtime_source: { path: provenance.runtime_source_path, git_blob_sha: provenance.runtime_source_blob_sha },
     semantic_revision_sha: provenance.semantic_revision_sha,
   };
+  const explicitInputsPath = path.join(runDir, 'provenance', 'input-artifacts.json');
+  if (fs.existsSync(explicitInputsPath)) {
+    const explicitInputs = readJson(explicitInputsPath);
+    if (explicitInputs.schema_version !== 'geox_qualification_input_artifacts_v1') throw new Error('QUALIFICATION_MANIFEST_INPUT_ARTIFACT_SCHEMA_UNSUPPORTED');
+    inputArtifactDigests.qualification_inputs = explicitInputs;
+  }
 
   const base = {
     schema_version: 'QualificationEvidenceManifestV1',
@@ -103,6 +115,7 @@ function main() {
     contract_digest: contractDigest,
     runtime_subject_sha: result.runtime_sha,
     qualification_subject_sha: result.subject_sha,
+    ...(result.closure_semantic_subject_sha !== undefined ? { closure_semantic_subject_sha: result.closure_semantic_subject_sha } : {}),
     qualification_subject_type: 'REPOSITORY_COMMIT_WITH_FROZEN_RUNTIME_BINDING',
     qualification_runner_ref: environment.qualification_runner_ref,
     qualification_runner_digest: runnerDigest,
@@ -144,6 +157,7 @@ function main() {
     run_id: manifest.run_id,
     qualification_subject_sha: manifest.qualification_subject_sha,
     runtime_subject_sha: manifest.runtime_subject_sha,
+    closure_semantic_subject_sha: manifest.closure_semantic_subject_sha ?? null,
     evidence_package_digest: manifest.evidence_package_digest,
     manifest_digest: manifest.manifest_digest,
     manifest_path: manifestPath,

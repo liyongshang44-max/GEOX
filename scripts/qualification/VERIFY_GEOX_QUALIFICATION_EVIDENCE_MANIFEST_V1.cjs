@@ -58,6 +58,33 @@ function walkFiles(root) {
   walk(root);
   return rows;
 }
+function verifyQualificationInputs({ manifest, runDir, repoRoot, evidenceMap }) {
+  const declared = manifest.input_artifact_digests?.qualification_inputs;
+  if (declared === undefined) return false;
+  const provenancePath = path.join(runDir, 'provenance', 'input-artifacts.json');
+  if (!fs.existsSync(provenancePath)) throw new Error('QUALIFICATION_VERIFIER_INPUT_ARTIFACT_PROVENANCE_MISSING');
+  const stored = readJson(provenancePath);
+  if (stored.schema_version !== 'geox_qualification_input_artifacts_v1') throw new Error('QUALIFICATION_VERIFIER_INPUT_ARTIFACT_SCHEMA_UNSUPPORTED');
+  requireEqual(canonicalJson(declared), canonicalJson(stored), 'QUALIFICATION_VERIFIER_INPUT_ARTIFACT_DECLARATION_MISMATCH');
+  if (stored.latest_run_fallback_used !== false) throw new Error('QUALIFICATION_VERIFIER_INPUT_LATEST_FALLBACK_FORBIDDEN');
+
+  for (const artifact of stored.external_artifacts ?? []) {
+    if (!artifact.package_path || !artifact.sha256) throw new Error('QUALIFICATION_VERIFIER_EXTERNAL_INPUT_BINDING_INCOMPLETE');
+    const entry = evidenceMap.get(artifact.package_path);
+    if (!entry) throw new Error(`QUALIFICATION_VERIFIER_EXTERNAL_INPUT_PACKAGE_PATH_MISSING:${artifact.package_path}`);
+    requireEqual(entry.sha256, artifact.sha256, `QUALIFICATION_VERIFIER_EXTERNAL_INPUT_DIGEST_MISMATCH:${artifact.package_path}`);
+    const full = path.join(runDir, artifact.package_path.replaceAll('/', path.sep));
+    requireEqual(sha256File(full), artifact.sha256, `QUALIFICATION_VERIFIER_EXTERNAL_INPUT_FILE_DIGEST_MISMATCH:${artifact.package_path}`);
+    if (!artifact.source_ref || /latest/i.test(String(artifact.source_ref))) throw new Error('QUALIFICATION_VERIFIER_EXTERNAL_INPUT_IMMUTABLE_SOURCE_REF_REQUIRED');
+  }
+
+  for (const input of stored.repository_inputs ?? []) {
+    if (!input.ref || !/^[0-9a-f]{40}$/.test(String(input.git_blob_sha ?? ''))) throw new Error('QUALIFICATION_VERIFIER_REPOSITORY_INPUT_BINDING_INCOMPLETE');
+    const actualBlob = output('git', ['rev-parse', `${manifest.qualification_subject_sha}:${input.ref}`], { cwd: repoRoot, errorCode: `QUALIFICATION_VERIFIER_REPOSITORY_INPUT_MISSING:${input.ref}` });
+    requireEqual(actualBlob, input.git_blob_sha, `QUALIFICATION_VERIFIER_REPOSITORY_INPUT_BLOB_MISMATCH:${input.ref}`);
+  }
+  return true;
+}
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const manifestPath = path.resolve(args.manifest);
@@ -103,6 +130,15 @@ function main() {
 
   output('git', ['cat-file', '-e', `${manifest.qualification_subject_sha}^{commit}`], { cwd: repoRoot, errorCode: 'QUALIFICATION_VERIFIER_SUBJECT_COMMIT_MISSING' });
   output('git', ['cat-file', '-e', `${manifest.runtime_subject_sha}^{commit}`], { cwd: repoRoot, errorCode: 'QUALIFICATION_VERIFIER_RUNTIME_COMMIT_MISSING' });
+  if (manifest.closure_semantic_subject_sha !== undefined) {
+    requireEqual(manifest.closure_semantic_subject_sha, result.closure_semantic_subject_sha, 'QUALIFICATION_VERIFIER_CLOSURE_SEMANTIC_RESULT_MISMATCH');
+    requireEqual(manifest.closure_semantic_subject_sha, runManifest.closure_semantic_subject_sha, 'QUALIFICATION_VERIFIER_CLOSURE_SEMANTIC_RUN_MISMATCH');
+    requireEqual(manifest.closure_semantic_subject_sha, environment.closure_semantic_subject_sha, 'QUALIFICATION_VERIFIER_CLOSURE_SEMANTIC_ENV_MISMATCH');
+    requireEqual(manifest.closure_semantic_subject_sha, provenance.closure_semantic_subject_sha, 'QUALIFICATION_VERIFIER_CLOSURE_SEMANTIC_PROVENANCE_MISMATCH');
+    output('git', ['cat-file', '-e', `${manifest.closure_semantic_subject_sha}^{commit}`], { cwd: repoRoot, errorCode: 'QUALIFICATION_VERIFIER_CLOSURE_SEMANTIC_SUBJECT_MISSING' });
+    output('git', ['merge-base', '--is-ancestor', manifest.closure_semantic_subject_sha, manifest.qualification_subject_sha], { cwd: repoRoot, errorCode: 'QUALIFICATION_VERIFIER_CLOSURE_SEMANTIC_ANCESTRY_REQUIRED' });
+  }
+
   const contractDigest = gitFileSha256(repoRoot, manifest.qualification_subject_sha, manifest.input_artifact_digests.contract.ref);
   const runnerDigest = gitFileSha256(repoRoot, manifest.qualification_subject_sha, manifest.qualification_runner_ref);
   requireEqual(contractDigest, manifest.contract_digest, 'QUALIFICATION_VERIFIER_CONTRACT_DIGEST_MISMATCH');
@@ -120,6 +156,7 @@ function main() {
     requireEqual(entry.sha256, ref.sha256, `QUALIFICATION_VERIFIER_EVIDENCE_DIGEST_MISMATCH:${ref.path}`);
     requireEqual(entry.bytes, ref.bytes, `QUALIFICATION_VERIFIER_EVIDENCE_BYTES_MISMATCH:${ref.path}`);
   }
+  const qualificationInputsVerified = verifyQualificationInputs({ manifest, runDir, repoRoot, evidenceMap });
   if (manifest.verification_instructions.no_latest_run_fallback !== true || manifest.verification_instructions.exact_subject_binding_required !== true || manifest.verification_instructions.fail_closed !== true) {
     throw new Error('QUALIFICATION_VERIFIER_POLICY_WEAKENED');
   }
@@ -130,6 +167,7 @@ function main() {
     run_id: manifest.run_id,
     qualification_subject_sha: manifest.qualification_subject_sha,
     runtime_subject_sha: manifest.runtime_subject_sha,
+    closure_semantic_subject_sha: manifest.closure_semantic_subject_sha ?? null,
     contract_id: manifest.contract_id,
     contract_version: manifest.contract_version,
     environment_digest: manifest.environment_digest,
@@ -142,6 +180,7 @@ function main() {
     exact_subject_binding_verified: true,
     package_integrity_verified: true,
     repository_inputs_verified: true,
+    qualification_inputs_verified: qualificationInputsVerified,
   }));
 }
 
