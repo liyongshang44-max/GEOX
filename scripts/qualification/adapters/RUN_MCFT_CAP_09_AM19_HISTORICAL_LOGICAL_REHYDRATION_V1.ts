@@ -4,10 +4,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
+const PRODUCER_SHA = "91d2f518efc5c4c7796c398dabd12801949a9289";
 const SOURCE_PATH = "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts";
-const SOURCE = path.resolve(SOURCE_PATH);
-const SOURCE_BLOB = "04006c5e94967aa387e3e766f205c5bdca783784";
+const SOURCE_BLOB = "19c920e863cc9d802f6476a6892d90d2e768894d";
+const PROVIDER_HELPER_PATH = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py";
+const PROVIDER_HELPER_BLOB = "c9bab62c980273ba3669b2bff002d66244916d1b";
 const GENERATED = path.resolve("scripts/qualification/.generated_RUN_MCFT_CAP_09_AM19_HISTORICAL_LOGICAL_REHYDRATION_V1.ts");
+const GENERATED_PROVIDER_HELPER_RELATIVE = "scripts/qualification/.generated_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_HISTORICAL.py";
+const GENERATED_PROVIDER_HELPER = path.resolve(GENERATED_PROVIDER_HELPER_RELATIVE);
 const DESCRIPTOR_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM19-HISTORICAL-LOGICAL-EPOCH-V1.json";
 const DESCRIPTOR = path.resolve(DESCRIPTOR_PATH);
 const REHYDRATION_OUTPUT = path.resolve("acceptance-output/MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json");
@@ -17,9 +21,13 @@ const SOURCE_EXPIRY_GATE = 'if (Date.parse(candidate.candidate_expires_at) <= Da
 const HISTORICAL_EXPIRY_GATE = 'if (candidate.candidate_expires_at !== process.env.MCFT_CAP09_HISTORICAL_CANDIDATE_EXPIRES_AT) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_HISTORICAL_EXPIRY_BINDING_REQUIRED");';
 const SOURCE_MAIN_GATE = 'if (!["push", "workflow_dispatch", "schedule", "workflow_run"].includes(process.env.GITHUB_EVENT_NAME ?? "") || process.env.GITHUB_REF !== "refs/heads/main" || process.env.GITHUB_SHA !== consumerSha) {\n    throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_EXACT_MAIN_REQUIRED");\n  }';
 const CONTROLLED_MAIN_GATE = 'if (String(process.env.GITHUB_ACTIONS ?? "").toLowerCase() === "true" || process.env.GEOX_AM19_HISTORICAL_LOGICAL_EPOCH_ACK !== "true") {\n    throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_CONTROLLED_HISTORICAL_HOST_REQUIRED");\n  }';
+const SOURCE_PROVIDER_BINDING = 'const PROVIDER_SCRIPT = path.resolve("scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py");';
+const HISTORICAL_PROVIDER_BINDING = `const PROVIDER_SCRIPT = path.resolve("${GENERATED_PROVIDER_HELPER_RELATIVE}");`;
+const PRODUCER_TARGET_GATE = 'require(manifest.get("target_logical_time") == iso(target), "EA5E2_LIVE_GFS_BUNDLE_TARGET_MISMATCH")';
 
 function executable(name: string): string { return process.platform === "win32" && name === "pnpm" ? "pnpm.cmd" : name; }
-function git(...args: string[]): string { return execFileSync("git", args, { encoding: "utf8" }).trim(); }
+function git(...args: string[]): string { return execFileSync("git", args, { encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 }).trim(); }
+function gitShow(commit: string, file: string): string { return execFileSync("git", ["show", `${commit}:${file}`], { encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 }); }
 function readJson(file: string): any { return JSON.parse(fs.readFileSync(file, "utf8")); }
 function sha256File(file: string): string { return `sha256:${crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex")}`; }
 function exactReplace(source: string, oldValue: string, newValue: string, code: string): string {
@@ -27,12 +35,16 @@ function exactReplace(source: string, oldValue: string, newValue: string, code: 
   assert.equal(count, 1, `${code}:${count}`);
   return source.replace(oldValue, newValue);
 }
-function cleanup(): void { try { fs.unlinkSync(GENERATED); } catch {} }
+function cleanup(): void {
+  for (const file of [GENERATED, GENERATED_PROVIDER_HELPER]) {
+    try { fs.unlinkSync(file); } catch {}
+  }
+}
 
 function descriptor(): any {
   const d = readJson(DESCRIPTOR);
   assert.equal(d.schema_version, "geox_mcft_cap09_am19_historical_logical_epoch_v1", "AM19_HISTORICAL_REHYDRATION_DESCRIPTOR_SCHEMA_REQUIRED");
-  assert.equal(d.historical_producer.producer_subject_sha, "91d2f518efc5c4c7796c398dabd12801949a9289", "AM19_HISTORICAL_REHYDRATION_PRODUCER_DRIFT");
+  assert.equal(d.historical_producer.producer_subject_sha, PRODUCER_SHA, "AM19_HISTORICAL_REHYDRATION_PRODUCER_DRIFT");
   assert.equal(d.logical_epoch.target_t, "2026-08-21T19:00:00.000Z", "AM19_HISTORICAL_REHYDRATION_TARGET_DRIFT");
   assert.equal(d.retained_raw_objects.length, 2, "AM19_HISTORICAL_REHYDRATION_TWO_RAW_OBJECTS_REQUIRED");
   assert.equal(d.expected_records.length, 3, "AM19_HISTORICAL_REHYDRATION_THREE_RECORDS_REQUIRED");
@@ -56,17 +68,34 @@ function assertControlledBoundary(): any {
   return d;
 }
 
-function build(): string {
-  assert.equal(git("rev-parse", `HEAD:${SOURCE_PATH}`), SOURCE_BLOB, "AM19_HISTORICAL_REHYDRATION_SOURCE_BLOB_DRIFT");
-  let generated = fs.readFileSync(SOURCE, "utf8");
-  generated = exactReplace(generated, SOURCE_EXPIRY_GATE, HISTORICAL_EXPIRY_GATE, "AM19_HISTORICAL_REHYDRATION_EXPIRY_GATE_CARDINALITY");
-  generated = exactReplace(generated, SOURCE_MAIN_GATE, CONTROLLED_MAIN_GATE, "AM19_HISTORICAL_REHYDRATION_MAIN_GATE_CARDINALITY");
-  assert(!generated.includes(SOURCE_EXPIRY_GATE), "AM19_HISTORICAL_REHYDRATION_SOURCE_EXPIRY_GATE_SURVIVED");
-  assert(!generated.includes(SOURCE_MAIN_GATE), "AM19_HISTORICAL_REHYDRATION_SOURCE_MAIN_GATE_SURVIVED");
-  return generated;
+function historicalSources(): { source: string; helper: string } {
+  assert.equal(git("rev-parse", `${PRODUCER_SHA}:${SOURCE_PATH}`), SOURCE_BLOB, "AM19_HISTORICAL_REHYDRATION_PRODUCER_SOURCE_BLOB_DRIFT");
+  assert.equal(git("rev-parse", `${PRODUCER_SHA}:${PROVIDER_HELPER_PATH}`), PROVIDER_HELPER_BLOB, "AM19_HISTORICAL_REHYDRATION_PRODUCER_HELPER_BLOB_DRIFT");
+  const source = gitShow(PRODUCER_SHA, SOURCE_PATH);
+  const helper = gitShow(PRODUCER_SHA, PROVIDER_HELPER_PATH);
+  assert(source.includes("class PythonGfsRawBundleDecoderV2"), "AM19_HISTORICAL_REHYDRATION_PRODUCER_DECODER_CLASS_REQUIRED");
+  assert(helper.includes(PRODUCER_TARGET_GATE), "AM19_HISTORICAL_REHYDRATION_PRODUCER_TARGET_SERIALIZATION_GATE_REQUIRED");
+  return { source, helper };
 }
 
-function writeGenerated(): void { fs.writeFileSync(GENERATED, build(), { flag: "wx" }); }
+function build(): { generated: string; helper: string } {
+  const historical = historicalSources();
+  let generated = historical.source;
+  generated = exactReplace(generated, SOURCE_EXPIRY_GATE, HISTORICAL_EXPIRY_GATE, "AM19_HISTORICAL_REHYDRATION_EXPIRY_GATE_CARDINALITY");
+  generated = exactReplace(generated, SOURCE_MAIN_GATE, CONTROLLED_MAIN_GATE, "AM19_HISTORICAL_REHYDRATION_MAIN_GATE_CARDINALITY");
+  generated = exactReplace(generated, SOURCE_PROVIDER_BINDING, HISTORICAL_PROVIDER_BINDING, "AM19_HISTORICAL_REHYDRATION_PROVIDER_BINDING_CARDINALITY");
+  assert(!generated.includes(SOURCE_EXPIRY_GATE), "AM19_HISTORICAL_REHYDRATION_SOURCE_EXPIRY_GATE_SURVIVED");
+  assert(!generated.includes(SOURCE_MAIN_GATE), "AM19_HISTORICAL_REHYDRATION_SOURCE_MAIN_GATE_SURVIVED");
+  assert(!generated.includes(SOURCE_PROVIDER_BINDING), "AM19_HISTORICAL_REHYDRATION_CURRENT_PROVIDER_BINDING_SURVIVED");
+  assert(generated.includes("new PythonGfsRawBundleDecoderV2(candidate.target_t, manifest.gfs.ingested_at)"), "AM19_HISTORICAL_REHYDRATION_PRODUCER_DECODER_USE_REQUIRED");
+  return { generated, helper: historical.helper };
+}
+
+function writeGenerated(): void {
+  const built = build();
+  fs.writeFileSync(GENERATED_PROVIDER_HELPER, built.helper, { flag: "wx" });
+  fs.writeFileSync(GENERATED, built.generated, { flag: "wx" });
+}
 
 function writeRetainedRawProof(d: any): void {
   const r = readJson(REHYDRATION_OUTPUT);
@@ -75,6 +104,8 @@ function writeRetainedRawProof(d: any): void {
   assert.equal(r.target_t, d.logical_epoch.target_t, "AM19_HISTORICAL_RETAINED_RAW_TARGET_MISMATCH");
   assert.equal(r.semantic_manifest_match, true, "AM19_HISTORICAL_RETAINED_RAW_SEMANTIC_MATCH_REQUIRED");
   assert.equal(r.producer_bound_raw_reverification, true, "AM19_HISTORICAL_RETAINED_RAW_REVERIFICATION_REQUIRED");
+  assert.equal(r.producer_dataset_identity_preserved, true, "AM19_HISTORICAL_RETAINED_RAW_DATASET_IDENTITY_REQUIRED");
+  assert.equal(r.producer_decoder_identity_preserved, true, "AM19_HISTORICAL_RETAINED_RAW_DECODER_IDENTITY_REQUIRED");
   assert.equal(r.provider_refetch_count, 0, "AM19_HISTORICAL_RETAINED_RAW_PROVIDER_REFETCH_FORBIDDEN");
   assert.equal(r.private_r2_get_count, 2, "AM19_HISTORICAL_RETAINED_RAW_EXACT_TWO_GETS_REQUIRED");
   assert.equal(r.private_r2_put_count, 0, "AM19_HISTORICAL_RETAINED_RAW_PUT_FORBIDDEN");
@@ -101,6 +132,9 @@ function writeRetainedRawProof(d: any): void {
     expected_semantic_manifest_digest: d.logical_epoch.semantic_manifest_digest,
     semantic_manifest_match: true,
     exact_byte_and_digest_reverification: true,
+    producer_rehydration_source_blob_sha: SOURCE_BLOB,
+    producer_provider_helper_blob_sha: PROVIDER_HELPER_BLOB,
+    producer_decoder_identity_preserved: true,
     provider_refetch_count: 0,
     private_r2_get_count: 2,
     private_r2_put_count: 0,
@@ -116,19 +150,22 @@ function writeRetainedRawProof(d: any): void {
   console.log(JSON.stringify(out));
 }
 
+function childEnv(d: any): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    GEOX_AM19_HISTORICAL_LOGICAL_EPOCH_ACK: "true",
+    MCFT_CAP09_HISTORICAL_CANDIDATE_EXPIRES_AT: d.logical_epoch.original_candidate_expires_at,
+  };
+}
+
 function selftest(): void {
   const d = assertControlledBoundary();
   writeGenerated();
   try {
-    execFileSync(executable("pnpm"), ["exec", "tsx", GENERATED, "selftest"], {
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        GEOX_AM19_HISTORICAL_LOGICAL_EPOCH_ACK: "true",
-        MCFT_CAP09_HISTORICAL_CANDIDATE_EXPIRES_AT: d.logical_epoch.original_candidate_expires_at,
-      },
-    });
-    console.log(JSON.stringify({status:"PASS",source_blob:SOURCE_BLOB,historical_expiry_is_provenance_not_current_admission:true,database_access:false,provider_access:false}));
+    const py = process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
+    execFileSync(py, ["-c", `compile(open(r'''${GENERATED_PROVIDER_HELPER}''', encoding='utf-8').read(), r'''${GENERATED_PROVIDER_HELPER}''', 'exec')`], { stdio: "inherit" });
+    execFileSync(executable("pnpm"), ["exec", "tsx", GENERATED, "selftest"], { stdio: "inherit", env: childEnv(d) });
+    console.log(JSON.stringify({status:"PASS",producer_rehydration_source_blob:SOURCE_BLOB,producer_provider_helper_blob:PROVIDER_HELPER_BLOB,producer_decoder_identity_preserved:true,historical_target_serialization:"ISO_MILLISECONDS_Z",historical_expiry_is_provenance_not_current_admission:true,database_access:false,provider_access:false}));
   } finally { cleanup(); }
 }
 
@@ -136,14 +173,7 @@ function run(): void {
   const d = assertControlledBoundary();
   writeGenerated();
   try {
-    execFileSync(executable("pnpm"), ["exec", "tsx", GENERATED, "run"], {
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        GEOX_AM19_HISTORICAL_LOGICAL_EPOCH_ACK: "true",
-        MCFT_CAP09_HISTORICAL_CANDIDATE_EXPIRES_AT: d.logical_epoch.original_candidate_expires_at,
-      },
-    });
+    execFileSync(executable("pnpm"), ["exec", "tsx", GENERATED, "run"], { stdio: "inherit", env: childEnv(d) });
     writeRetainedRawProof(d);
   } finally { cleanup(); }
 }
