@@ -61,7 +61,7 @@
   "github_actions_execution": "FORBIDDEN",
   "python_packages": [
     "eccodes==2.47.0",
-    "eccodeslib==2.47.3.23",
+    "eccodeslib==2.47.3.23; sys_platform != 'win32'",
     "numpy==1.26.4",
     "refet==0.4.2"
   ],
