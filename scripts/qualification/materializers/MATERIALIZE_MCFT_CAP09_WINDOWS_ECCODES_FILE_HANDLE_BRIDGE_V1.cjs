@@ -3,7 +3,6 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const os = require('node:os');
 const crypto = require('node:crypto');
 const { execFileSync, spawnSync } = require('node:child_process');
 
@@ -12,9 +11,12 @@ const HELPER_REF = 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_T
 const HELPER_BLOB = 'c9bab62c980273ba3669b2bff002d66244916d1b';
 const EA4_REF = 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py';
 const EA4_BLOB = 'ff2ad210387402a74731968e14746210fd2440dd';
+const GENERATED_HELPER_AUTHORITY_REL = 'scripts/runtime_acceptance/.generated_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_HISTORICAL_V5_AUTHORITY_EXACT.py';
+const GENERATED_EA4_AUTHORITY_REL = 'scripts/runtime_acceptance/.generated_PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_V5_AUTHORITY_EXACT.py';
 const GENERATED_HELPER_REL = 'scripts/runtime_acceptance/.generated_MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE_HISTORICAL_V5_WINDOWS_BRIDGE.py';
 const GENERATED_EA4_REL = 'scripts/runtime_acceptance/.generated_PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION_V5_WINDOWS_BRIDGE.py';
 const TRANSFORM_ID = 'WINDOWS_ECCODES_NAMED_TEMPFILE_REOPEN_FILE_POINTER_BRIDGE_V1';
+const ALLOWED_PLATFORMS = new Set(['win32', 'linux', 'darwin']);
 
 function git(root, args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim();
@@ -84,7 +86,7 @@ function buildHelperCompat(source) {
     'QMIG_V5_BRIDGE_HELPER_EA4_REBIND_CARDINALITY'
   );
 }
-function outputRecord(repoRoot, platform, helperSource, ea4Source, helperCompat, ea4Compat) {
+function outputRecord(platform, helperSource, ea4Source, helperCompat, ea4Compat) {
   return {
     schema_version: 'geox_mcft_cap09_windows_eccodes_file_handle_bridge_materialization_v1',
     status: 'PASS',
@@ -99,6 +101,8 @@ function outputRecord(repoRoot, platform, helperSource, ea4Source, helperCompat,
     historical_ea4_source_sha256: sha256(ea4Source),
     provider_helper_compat_sha256: sha256(helperCompat),
     ea4_compat_sha256: sha256(ea4Compat),
+    generated_provider_helper_authority_rel: GENERATED_HELPER_AUTHORITY_REL,
+    generated_ea4_authority_rel: GENERATED_EA4_AUTHORITY_REL,
     generated_provider_helper_rel: GENERATED_HELPER_REL,
     generated_ea4_rel: GENERATED_EA4_REL,
     windows_file_handle_bridge_required: platform === 'win32',
@@ -159,9 +163,12 @@ function main() {
   const { mode, args } = parseArgs(process.argv.slice(2));
   const repoRoot = git(process.cwd(), ['rev-parse', '--show-toplevel']);
   const { helperSource, ea4Source } = authority(repoRoot);
-  const ea4Compat = buildEa4Compat(ea4Source, process.platform);
+  const requestedPlatform = args.platform ?? process.platform;
+  if (!ALLOWED_PLATFORMS.has(requestedPlatform)) throw new Error(`QMIG_V5_BRIDGE_PLATFORM_INVALID:${requestedPlatform}`);
+  const platform = mode === 'selftest' ? requestedPlatform : process.platform;
+  const ea4Compat = buildEa4Compat(ea4Source, platform);
   const helperCompat = buildHelperCompat(helperSource);
-  const record = outputRecord(repoRoot, process.platform, helperSource, ea4Source, helperCompat, ea4Compat);
+  const record = outputRecord(platform, helperSource, ea4Source, helperCompat, ea4Compat);
 
   if (mode === 'selftest') {
     process.stdout.write(JSON.stringify(record, null, 2) + '\n');
@@ -170,12 +177,28 @@ function main() {
   if (mode === 'materialize') {
     const workspace = path.resolve(args.workspace ?? '');
     if (!workspace || !fs.existsSync(workspace)) throw new Error('QMIG_V5_BRIDGE_WORKSPACE_REQUIRED');
+    const helperAuthorityPath = path.join(workspace, GENERATED_HELPER_AUTHORITY_REL);
+    const ea4AuthorityPath = path.join(workspace, GENERATED_EA4_AUTHORITY_REL);
     const helperPath = path.join(workspace, GENERATED_HELPER_REL);
     const ea4Path = path.join(workspace, GENERATED_EA4_REL);
     fs.mkdirSync(path.dirname(helperPath), { recursive: true });
+    fs.writeFileSync(helperAuthorityPath, helperSource, { encoding: 'utf8', flag: 'wx' });
+    fs.writeFileSync(ea4AuthorityPath, ea4Source, { encoding: 'utf8', flag: 'wx' });
     fs.writeFileSync(ea4Path, ea4Compat, { encoding: 'utf8', flag: 'wx' });
     fs.writeFileSync(helperPath, helperCompat, { encoding: 'utf8', flag: 'wx' });
-    process.stdout.write(JSON.stringify({ ...record, generated_provider_helper_path: helperPath, generated_ea4_path: ea4Path }, null, 2) + '\n');
+    const materializedHelperBlob = git(repoRoot, ['hash-object', helperAuthorityPath]);
+    const materializedEa4Blob = git(repoRoot, ['hash-object', ea4AuthorityPath]);
+    if (materializedHelperBlob !== HELPER_BLOB) throw new Error(`QMIG_V5_BRIDGE_MATERIALIZED_HELPER_BLOB_MISMATCH:${materializedHelperBlob}:${HELPER_BLOB}`);
+    if (materializedEa4Blob !== EA4_BLOB) throw new Error(`QMIG_V5_BRIDGE_MATERIALIZED_EA4_BLOB_MISMATCH:${materializedEa4Blob}:${EA4_BLOB}`);
+    process.stdout.write(JSON.stringify({
+      ...record,
+      materialized_historical_provider_helper_blob_sha: materializedHelperBlob,
+      materialized_historical_ea4_dependency_blob_sha: materializedEa4Blob,
+      generated_provider_helper_authority_path: helperAuthorityPath,
+      generated_ea4_authority_path: ea4AuthorityPath,
+      generated_provider_helper_path: helperPath,
+      generated_ea4_path: ea4Path,
+    }, null, 2) + '\n');
     return;
   }
   if (mode === 'smoke') {
