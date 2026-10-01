@@ -1,6 +1,6 @@
 {
   "schema_version": "geox_mcft_cap09_am19_persistent_24t_qualification_migration_v1",
-  "status": "CONTROLLED_CAPTURE_IMPLEMENTED_AWAITING_CONTROLLED_HOST_EXECUTION",
+  "status": "CONTROLLED_CAPTURE_V2_IMPLEMENTED_AWAITING_CONTROLLED_HOST_EXECUTION",
   "blocker_target": "LEGACY_AM19_PERSISTENT_24T",
   "owner": "MIGRATION_TEAM",
   "adjudication_owner": "CLOSURE_TEAM",
@@ -17,28 +17,34 @@
     "candidate_selection": "FINALIZED_CONTROLLED_CAPTURE_EXPLICIT_IMMUTABLE_INPUT_NO_LATEST_FALLBACK"
   },
   "controlled_rolling_capture": {
-    "adapter_ref": "scripts/qualification/adapters/CAPTURE_MCFT_CAP_09_T4R1_ROLLING_PREBOUNDARY_CONTROLLED_V1.cjs",
+    "adapter_ref": "scripts/qualification/adapters/CAPTURE_MCFT_CAP_09_T4R1_ROLLING_PREBOUNDARY_CONTROLLED_V2.cjs",
+    "verifier_ref": "scripts/qualification/VERIFY_GEOX_T4R1_CONTROLLED_CAPTURE_V2.cjs",
+    "source_binding_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CONTROLLED-CAPTURE-SOURCE-BINDING-V1.json",
+    "source_materializer_ref": "scripts/qualification/PREPARE_MCFT_CAP09_CONTROLLED_T4R1_CAPTURE_SOURCE_V1.cjs",
     "producer_subject_policy": "EXACT_PROTECTED_MAIN_AT_CAPTURE",
     "current_producer_subject_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
     "policy_identity": "mcft-cap-09-rolling-preboundary-capture",
     "historical_workflow_reactivated": false,
     "historical_workflow_commit_sha": "75d4961279bd64dc1c9dd7d68aac189c72c98846",
     "historical_workflow_blob_sha": "800cbd91a5d84801405affa6f372c0aa6388b173",
+    "provider_source_commit_sha": "f1c43c5c7379748c5609184cd8acc86ff9b1608e",
     "provider_source_blob_sha": "26dd21c5a0b7a60fca06e5e4c2ec92289a102a47",
+    "current_main_same_path_blob_is_authority": false,
     "historical_deadline_compat_blob_sha": "9d0ba5913fada1573da954c24b59490376a32ef7",
     "planner_blob_sha": "42f5cc0c3b216d83ebf4471c8ddb544347a0bc8e",
     "assembler_blob_sha": "4e0934fd339bbba09782655869cdefa32ae45c2d",
-    "namespace_identity": "TARGET_PLUS_CONTROLLED_CAPTURE_RUN_TOKEN",
+    "namespace_identity": "TARGET_PLUS_QMIG_RUN_ID_ATTEMPT",
     "causal_retention_reuse_rule_preserved": true,
     "stale_intrarun_retention_delete_before_reretention": true,
     "rolling_minimum_ingress_margin_minutes": 0,
     "zero_formal_effect_contract_preserved": true,
-    "capture_package_finalized_immutable": true
+    "capture_package_finalized_immutable": true,
+    "deterministic_source_materialization_verified_before_capture": true
   },
   "semantic_preservation": {
     "historical_runner_reimplemented": false,
     "historical_runner_blob_sha": "ae3e47593ef35cba08946427304a0d3271bb86e9",
-    "t4r1_parent_database_name": "geox_mcft_cap09_s6_formal_t4r1_24h",
+    "t4r1_parent_database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
     "fresh_run_scoped_qualification_databases": true,
     "fresh_pass_required": true,
     "already_qualified_read_only_accepted": false,
@@ -47,20 +53,30 @@
     "final_actual_24h_still_required": true,
     "final_actual_24h_substituted": false
   },
+  "host_binding": {
+    "private_raw_store_provider": "CLOUDFLARE_R2_S3_COMPATIBLE",
+    "private_raw_store_bucket": "geox-mcft-cap09-formal-raw-v1",
+    "credential_source": "PROCESS_ONLY_SECRET_BINDING",
+    "parent_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+    "credential_values_persisted": false,
+    "production_mutation": false
+  },
   "input_binding": {
     "rolling_candidate_bytes_digest_required": true,
     "rolling_candidate_source_ref_required": true,
     "rolling_candidate_capture_package_digest_required": true,
     "rolling_candidate_producer_subject_required": true,
     "rolling_candidate_exact_main_producer_required": true,
+    "historical_provider_source_commit_and_blob_required": true,
     "governed_repository_blob_binding_required": true,
     "parent_database_identity_digest_required": true,
     "retained_raw_store_identity_digest_required": true,
     "secret_values_in_manifest": false
   },
   "delivery_chain": [
-    "CONTROLLED_EXACT_MAIN_ROLLING_CAPTURE",
+    "CONTROLLED_EXACT_MAIN_ROLLING_CAPTURE_WITH_HISTORICAL_SOURCE_AUTHORITY",
     "FINALIZED_CAPTURE_PACKAGE",
+    "INDEPENDENT_CAPTURE_VERIFIER",
     "CONTROLLED_HOST_AM19_PERSISTENT_13_OF_13_RUN",
     "FINALIZED_EVIDENCE_PACKAGE",
     "QualificationEvidenceManifestV1",
@@ -82,5 +98,5 @@
     "mcft_cap09_completion_claim": false,
     "github_lane_superseded": false
   },
-  "handoff_rule": "Migration Team returns exact qualification head, fresh controlled capture identity, manifest identity, manifest verifier PASS, closure delivery identity and delivery verifier PASS. Closure Team alone performs blocker adjudication and QCP rebind."
+  "handoff_rule": "Migration Team returns exact qualification head, fresh controlled capture identity, capture verifier PASS, manifest identity, manifest verifier PASS, closure delivery identity and delivery verifier PASS. Closure Team alone performs blocker adjudication and QCP rebind."
 }
