@@ -30,6 +30,21 @@
     "mixed_historical_runner_current_helper_execution_forbidden": true,
     "target_mismatch_guard_relaxation_forbidden": true
   },
+  "qualification_host_compatibility_bridge": {
+    "bridge_id": "WINDOWS_ECCODES_NAMED_TEMPFILE_REOPEN_FILE_POINTER_BRIDGE_V1",
+    "materializer_ref": "scripts/qualification/materializers/MATERIALIZE_MCFT_CAP09_WINDOWS_ECCODES_FILE_HANDLE_BRIDGE_V1.cjs",
+    "scope": "QUALIFICATION_LOCAL_FILE_HANDLE_IO_ONLY",
+    "trigger_platform": "win32",
+    "authority_inputs_remain_exact_historical_blobs": true,
+    "generated_ea4_copy_required": true,
+    "generated_provider_helper_dependency_rebind_required": true,
+    "file_handle_smoke_required": true,
+    "provider_request_in_smoke_forbidden": true,
+    "provider_fetch_logic_change_forbidden": true,
+    "decoder_semantic_guard_change_forbidden": true,
+    "target_identity_guard_relaxation_forbidden": true,
+    "runtime_or_production_source_mutation_forbidden": true
+  },
   "compatibility_semantics": {
     "run_scoped_retention_namespace_required": true,
     "retrieval_clock_required": true,
@@ -45,11 +60,12 @@
     "allowed_changes": [
       "execution_identity_environment_variable_names",
       "generated_file_location",
-      "provider_helper_path_binding_to_exact_historical_blob"
+      "provider_helper_path_binding_to_exact_historical_blob",
+      "qualification_local_windows_file_handle_bridge"
     ],
     "forbidden_changes": [
       "provider_fetch_logic",
-      "decoder_logic",
+      "decoder_semantic_guards",
       "target_identity_guard_relaxation",
       "temporal_offsets",
       "causal_reuse_semantics",
