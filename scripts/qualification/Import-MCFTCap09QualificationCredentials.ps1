@@ -47,13 +47,13 @@ function Resolve-EnvironmentValue {
     return $null
 }
 
-$Resolved = @{}
+$ResolvedValues = @{}
 $Report = @()
 $Missing = @()
 
 foreach ($entry in $Bindings.GetEnumerator()) {
-    $resolved = Resolve-EnvironmentValue -TargetName $entry.Key -SourceName $entry.Value
-    if ($null -eq $resolved) {
+    $resolution = Resolve-EnvironmentValue -TargetName $entry.Key -SourceName $entry.Value
+    if ($null -eq $resolution) {
         $Missing += $entry.Key
         $Report += [pscustomobject]@{
             target = $entry.Key
@@ -64,12 +64,12 @@ foreach ($entry in $Bindings.GetEnumerator()) {
         continue
     }
 
-    $Resolved[$entry.Key] = $resolved.Value
+    $ResolvedValues[$entry.Key] = $resolution.Value
     $Report += [pscustomobject]@{
         target = $entry.Key
         source = $entry.Value
         status = 'PRESENT'
-        scope  = $resolved.Scope
+        scope  = $resolution.Scope
     }
 }
 
@@ -84,22 +84,22 @@ if ($Missing.Count -gt 0) {
     throw ('CONTROLLED_CAPTURE_HOST_ENV_REQUIRED:' + ($Missing -join ','))
 }
 
-$Endpoint = [uri]$Resolved['MCFT_EA5E2_TRANSIENT_S3_ENDPOINT']
+$Endpoint = [uri]$ResolvedValues['MCFT_EA5E2_TRANSIENT_S3_ENDPOINT']
 if ($Endpoint.Scheme -ne 'https') {
     throw 'CONTROLLED_CAPTURE_S3_HTTPS_ENDPOINT_REQUIRED'
 }
 if (@('localhost', '127.0.0.1', '::1') -contains $Endpoint.Host) {
     throw 'CONTROLLED_CAPTURE_REMOTE_S3_ENDPOINT_REQUIRED'
 }
-if ($Resolved['MCFT_EA5E2_TRANSIENT_S3_BUCKET'] -ne 'geox-mcft-cap09-formal-raw-v1') {
+if ($ResolvedValues['MCFT_EA5E2_TRANSIENT_S3_BUCKET'] -ne 'geox-mcft-cap09-formal-raw-v1') {
     throw 'CONTROLLED_CAPTURE_EXISTING_PRIVATE_BUCKET_BINDING_REQUIRED'
 }
-if ($Resolved['MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID'] -eq 'minioadmin' -or
-    $Resolved['MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY'] -eq 'minioadmin123') {
+if ($ResolvedValues['MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID'] -eq 'minioadmin' -or
+    $ResolvedValues['MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY'] -eq 'minioadmin123') {
     throw 'CONTROLLED_CAPTURE_CI_CREDENTIAL_FORBIDDEN'
 }
 
-$Parent = [uri]$Resolved['MCFT_CAP09_PARENT_DATABASE_URL']
+$Parent = [uri]$ResolvedValues['MCFT_CAP09_PARENT_DATABASE_URL']
 if (@('postgres', 'postgresql') -notcontains $Parent.Scheme) {
     throw 'CONTROLLED_CAPTURE_POSTGRES_PARENT_REQUIRED'
 }
@@ -110,7 +110,7 @@ if ($ParentDatabase -ne $ExpectedParentDatabase) {
 
 if (-not $PreflightOnly) {
     foreach ($entry in $Bindings.GetEnumerator()) {
-        [Environment]::SetEnvironmentVariable($entry.Key, [string]$Resolved[$entry.Key], 'Process')
+        [Environment]::SetEnvironmentVariable($entry.Key, [string]$ResolvedValues[$entry.Key], 'Process')
     }
     [Environment]::SetEnvironmentVariable('MCFT_QMIG_CREDENTIAL_BINDING_READY', 'true', 'Process')
 }
