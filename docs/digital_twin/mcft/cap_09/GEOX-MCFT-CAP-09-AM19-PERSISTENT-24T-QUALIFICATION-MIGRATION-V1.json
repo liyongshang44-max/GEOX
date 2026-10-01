@@ -1,6 +1,6 @@
 {
   "schema_version": "geox_mcft_cap09_am19_persistent_24t_qualification_migration_v1",
-  "status": "CONTROLLED_CAPTURE_V2_IMPLEMENTED_AWAITING_CONTROLLED_HOST_EXECUTION",
+  "status": "CONTROLLED_CAPTURE_V4_TRANSITIVE_PROVIDER_HELPER_BINDING_IMPLEMENTED_AWAITING_SELFTEST_AND_FRESH_CAPTURE",
   "blocker_target": "LEGACY_AM19_PERSISTENT_24T",
   "owner": "MIGRATION_TEAM",
   "adjudication_owner": "CLOSURE_TEAM",
@@ -17,8 +17,8 @@
     "candidate_selection": "FINALIZED_CONTROLLED_CAPTURE_EXPLICIT_IMMUTABLE_INPUT_NO_LATEST_FALLBACK"
   },
   "controlled_rolling_capture": {
-    "adapter_ref": "scripts/qualification/adapters/CAPTURE_MCFT_CAP_09_T4R1_ROLLING_PREBOUNDARY_CONTROLLED_V2.cjs",
-    "verifier_ref": "scripts/qualification/VERIFY_GEOX_T4R1_CONTROLLED_CAPTURE_V2.cjs",
+    "adapter_ref": "scripts/qualification/adapters/CAPTURE_MCFT_CAP_09_T4R1_ROLLING_PREBOUNDARY_CONTROLLED_V4.cjs",
+    "verifier_ref": "scripts/qualification/VERIFY_GEOX_T4R1_CONTROLLED_CAPTURE_V4.cjs",
     "source_binding_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CONTROLLED-CAPTURE-SOURCE-BINDING-V1.json",
     "source_materializer_ref": "scripts/qualification/PREPARE_MCFT_CAP09_CONTROLLED_T4R1_CAPTURE_SOURCE_V1.cjs",
     "producer_subject_policy": "EXACT_PROTECTED_MAIN_AT_CAPTURE",
@@ -29,6 +29,15 @@
     "historical_workflow_blob_sha": "800cbd91a5d84801405affa6f372c0aa6388b173",
     "provider_source_commit_sha": "f1c43c5c7379748c5609184cd8acc86ff9b1608e",
     "provider_source_blob_sha": "26dd21c5a0b7a60fca06e5e4c2ec92289a102a47",
+    "provider_helper_ref": "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py",
+    "provider_helper_source_commit_sha": "f1c43c5c7379748c5609184cd8acc86ff9b1608e",
+    "provider_helper_blob_sha": "c9bab62c980273ba3669b2bff002d66244916d1b",
+    "provider_helper_ea4_dependency_ref": "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py",
+    "provider_helper_ea4_dependency_blob_sha": "ff2ad210387402a74731968e14746210fd2440dd",
+    "producer_subject_ea4_dependency_blob_sha": "ff2ad210387402a74731968e14746210fd2440dd",
+    "transitive_execution_closure_policy": "EXACT_HISTORICAL_HELPER_PLUS_ZERO_DIFF_EA4_DEPENDENCY_V1",
+    "mixed_historical_runner_current_helper_execution_forbidden": true,
+    "target_mismatch_guard_relaxed": false,
     "current_main_same_path_blob_is_authority": false,
     "historical_deadline_compat_blob_sha": "9d0ba5913fada1573da954c24b59490376a32ef7",
     "planner_blob_sha": "42f5cc0c3b216d83ebf4471c8ddb544347a0bc8e",
@@ -39,11 +48,15 @@
     "rolling_minimum_ingress_margin_minutes": 0,
     "zero_formal_effect_contract_preserved": true,
     "capture_package_finalized_immutable": true,
-    "deterministic_source_materialization_verified_before_capture": true
+    "deterministic_source_materialization_verified_before_capture": true,
+    "deterministic_transitive_helper_rebind_verified_before_capture": true
   },
   "semantic_preservation": {
     "historical_runner_reimplemented": false,
     "historical_runner_blob_sha": "ae3e47593ef35cba08946427304a0d3271bb86e9",
+    "provider_fetch_logic_changed": false,
+    "decoder_logic_changed": false,
+    "target_identity_guard_relaxed": false,
     "t4r1_parent_database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
     "fresh_run_scoped_qualification_databases": true,
     "fresh_pass_required": true,
@@ -68,13 +81,15 @@
     "rolling_candidate_producer_subject_required": true,
     "rolling_candidate_exact_main_producer_required": true,
     "historical_provider_source_commit_and_blob_required": true,
+    "historical_provider_helper_commit_and_blob_required": true,
+    "historical_provider_helper_transitive_dependency_binding_required": true,
     "governed_repository_blob_binding_required": true,
     "parent_database_identity_digest_required": true,
     "retained_raw_store_identity_digest_required": true,
     "secret_values_in_manifest": false
   },
   "delivery_chain": [
-    "CONTROLLED_EXACT_MAIN_ROLLING_CAPTURE_WITH_HISTORICAL_SOURCE_AUTHORITY",
+    "CONTROLLED_EXACT_MAIN_ROLLING_CAPTURE_WITH_HISTORICAL_SOURCE_AND_TRANSITIVE_HELPER_AUTHORITY",
     "FINALIZED_CAPTURE_PACKAGE",
     "INDEPENDENT_CAPTURE_VERIFIER",
     "CONTROLLED_HOST_AM19_PERSISTENT_13_OF_13_RUN",
