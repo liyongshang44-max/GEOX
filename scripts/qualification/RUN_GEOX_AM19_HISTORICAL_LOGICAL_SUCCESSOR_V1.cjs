@@ -11,8 +11,8 @@ const { execFileSync, spawnSync } = require('node:child_process');
 const SOURCE_PATH = 'scripts/qualification/RUN_GEOX_AM19_PERSISTENT_24T_QUALIFICATION_V1.cjs';
 const SOURCE = path.resolve(SOURCE_PATH);
 const SOURCE_BLOB = '46c67bbbabac1ee08182cbea60f3cbd0419c4045';
-const GENERATED = path.resolve('scripts/qualification/.generated_RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_V1.cjs');
 const EXPECTED_CONTRACT_ID = 'MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1';
+const SOURCE_CORE_REQUIRE = "require('./qualification_core_v1.cjs')";
 const SOURCE_CONTRACT_GATE = "if (contract.schema_version !== 'geox_qualification_contract_v1' || contract.contract_id !== 'MCFT_CAP09_AM19_PERSISTENT_24T_V1') throw new Error('AM19_QMIG_CONTRACT_SCHEMA_OR_ID_UNSUPPORTED');";
 const SUCCESSOR_CONTRACT_GATE = `if (contract.schema_version !== 'geox_qualification_contract_v1' || contract.contract_id !== '${EXPECTED_CONTRACT_ID}') throw new Error('AM19_HISTORICAL_SUCCESSOR_CONTRACT_SCHEMA_OR_ID_UNSUPPORTED');`;
 const SOURCE_EXPIRY_GATE = "if (Date.now() >= Date.parse(expires)) throw new Error('AM19_QMIG_CANDIDATE_EXPIRED');";
@@ -24,7 +24,6 @@ function sha256File(file) { return sha256Buffer(fs.readFileSync(file)); }
 function canonicalIso(value, code) { const t = Date.parse(value); if (!Number.isFinite(t) || new Date(t).toISOString() !== value) throw new Error(code); return value; }
 function git(...args) { return execFileSync('git', args, { encoding: 'utf8', windowsHide: true }).trim(); }
 function exactReplace(source, oldValue, newValue, code) { const count = source.split(oldValue).length - 1; assert.equal(count, 1, `${code}:${count}`); return source.replace(oldValue, newValue); }
-function cleanup(file) { try { fs.unlinkSync(file); } catch {} }
 
 function parseArgs(argv) {
   const mode = argv[0];
@@ -137,14 +136,16 @@ function materializeCandidate(d, subject) {
   return { candidate, file, root };
 }
 
-function buildGeneratedRunner() {
+function buildGeneratedRunner(repoRoot, generatedPath) {
   assert.equal(git('rev-parse', `HEAD:${SOURCE_PATH}`), SOURCE_BLOB, 'AM19_HISTORICAL_SUCCESSOR_SOURCE_RUNNER_BLOB_DRIFT');
   let source = fs.readFileSync(SOURCE, 'utf8');
+  const corePath = path.resolve(repoRoot, 'scripts/qualification/qualification_core_v1.cjs');
+  source = exactReplace(source, SOURCE_CORE_REQUIRE, `require(${JSON.stringify(corePath)})`, 'AM19_HISTORICAL_SUCCESSOR_CORE_REQUIRE_CARDINALITY');
   source = exactReplace(source, SOURCE_CONTRACT_GATE, SUCCESSOR_CONTRACT_GATE, 'AM19_HISTORICAL_SUCCESSOR_CONTRACT_GATE_CARDINALITY');
   source = exactReplace(source, SOURCE_EXPIRY_GATE, HISTORICAL_EXPIRY_GATE, 'AM19_HISTORICAL_SUCCESSOR_EXPIRY_GATE_CARDINALITY');
   assert(!source.includes(SOURCE_CONTRACT_GATE), 'AM19_HISTORICAL_SUCCESSOR_OLD_CONTRACT_GATE_SURVIVED');
   assert(!source.includes(SOURCE_EXPIRY_GATE), 'AM19_HISTORICAL_SUCCESSOR_CURRENT_EXPIRY_GATE_SURVIVED');
-  fs.writeFileSync(GENERATED, source, { flag: 'wx' });
+  fs.writeFileSync(generatedPath, source, { flag: 'wx' });
 }
 
 function sourceRef(d, descriptorPath) {
@@ -166,9 +167,10 @@ function main() {
   canonicalIso(d.logical_epoch.target_t, 'AM19_HISTORICAL_SUCCESSOR_TARGET_INVALID');
   canonicalIso(d.logical_epoch.original_candidate_expires_at, 'AM19_HISTORICAL_SUCCESSOR_HISTORICAL_EXPIRY_INVALID');
   const materialized = materializeCandidate(d, subject);
-  buildGeneratedRunner();
+  const generatedPath = path.join(materialized.root, 'RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_GENERATED.cjs');
+  buildGeneratedRunner(repoRoot, generatedPath);
   try {
-    const check = spawnSync(process.execPath, ['--check', GENERATED], { encoding: 'utf8', windowsHide: true });
+    const check = spawnSync(process.execPath, ['--check', generatedPath], { encoding: 'utf8', windowsHide: true });
     if (check.error) throw check.error;
     if (check.status !== 0) throw new Error(`AM19_HISTORICAL_SUCCESSOR_GENERATED_SYNTAX_FAILED:${check.stderr || ''}`);
     if (args.mode === 'selftest') {
@@ -176,7 +178,7 @@ function main() {
       return;
     }
     const childArgs = [
-      GENERATED,
+      generatedPath,
       'run',
       '--contract', path.relative(repoRoot, contractPath),
       '--subject', subject,
@@ -191,11 +193,10 @@ function main() {
       GEOX_AM19_HISTORICAL_LOGICAL_EPOCH_ACK: 'true',
       MCFT_CAP09_HISTORICAL_CANDIDATE_EXPIRES_AT: d.logical_epoch.original_candidate_expires_at,
     };
-    const r = spawnSync(process.execPath, childArgs, { stdio: 'inherit', env, windowsHide: true });
+    const r = spawnSync(process.execPath, childArgs, { stdio: 'inherit', env, windowsHide: true, cwd: repoRoot });
     if (r.error) throw r.error;
     if (r.status !== 0) process.exitCode = r.status || 1;
   } finally {
-    cleanup(GENERATED);
     fs.rmSync(materialized.root, { recursive: true, force: true });
   }
 }
