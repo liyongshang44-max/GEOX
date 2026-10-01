@@ -276,6 +276,7 @@ function main() {
     const safeExact = new Set(['PATH', 'HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'TEMP', 'TMP', 'SystemRoot', 'ComSpec', 'PATHEXT', 'PNPM_HOME', 'LANG', 'TZ']);
     for (const [name, value] of Object.entries(process.env)) if (safeExact.has(name) || name.startsWith('LC_') || name.startsWith('NPM_CONFIG_')) qenv[name] = value;
     Object.assign(qenv, {
+      SUBJECT_SHA: subjectSha,
       DATABASE_URL: localDatabaseUrl,
       PYTHON: py,
       GEOX_QUALIFICATION_SUBJECT_SHA: subjectSha,
