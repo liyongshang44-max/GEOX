@@ -105,7 +105,7 @@ if (@('postgres', 'postgresql') -notcontains $Parent.Scheme) {
 }
 $ParentDatabase = [uri]::UnescapeDataString($Parent.AbsolutePath.TrimStart('/'))
 if ($ParentDatabase -ne $ExpectedParentDatabase) {
-    throw "CONTROLLED_CAPTURE_T4R1_PARENT_DATABASE_REQUIRED:$ExpectedParentDatabase:$ParentDatabase"
+    throw "CONTROLLED_CAPTURE_T4R1_PARENT_DATABASE_REQUIRED:${ExpectedParentDatabase}:$ParentDatabase"
 }
 
 if (-not $PreflightOnly) {
