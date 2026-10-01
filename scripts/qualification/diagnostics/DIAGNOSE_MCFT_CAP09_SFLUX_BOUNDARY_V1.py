@@ -52,11 +52,15 @@ def repo_root() -> Path:
     return Path(git(Path.cwd(), "rev-parse", "--show-toplevel"))
 
 
-def canonical_hour(raw: str) -> datetime:
+def parse_utc(raw: str) -> datetime:
     value = raw.strip().replace("Z", "+00:00")
     dt = datetime.fromisoformat(value)
-    require(dt.tzinfo is not None, "SFLUX_DIAGNOSTIC_TARGET_TZ_REQUIRED")
-    dt = dt.astimezone(timezone.utc)
+    require(dt.tzinfo is not None, "SFLUX_DIAGNOSTIC_TIMESTAMP_TZ_REQUIRED")
+    return dt.astimezone(timezone.utc)
+
+
+def canonical_hour(raw: str) -> datetime:
+    dt = parse_utc(raw)
     require(dt.minute == 0 and dt.second == 0 and dt.microsecond == 0, "SFLUX_DIAGNOSTIC_TARGET_CANONICAL_HOUR_REQUIRED")
     return dt
 
@@ -143,8 +147,7 @@ def header_utc(headers, name: str) -> str | None:
     if not raw:
         return None
     parsed = parsedate_to_datetime(raw)
-    if parsed.tzinfo is None:
-        return raw
+    require(parsed.tzinfo is not None, f"SFLUX_DIAGNOSTIC_{name.upper().replace('-', '_')}_TZ_REQUIRED")
     return iso(parsed.astimezone(timezone.utc))
 
 
@@ -227,6 +230,7 @@ def selftest() -> None:
     require(selected["end"] == 119, "SFLUX_DIAGNOSTIC_SELFTEST_END")
     require(selected["length"] == 120, "SFLUX_DIAGNOSTIC_SELFTEST_LENGTH")
     require(canonical_hour("2026-10-01T09:00:00Z") == datetime(2026, 10, 1, 9, tzinfo=timezone.utc), "SFLUX_DIAGNOSTIC_SELFTEST_TARGET")
+    require(parse_utc("2026-10-01T08:37:15Z") < datetime(2026, 10, 1, 9, tzinfo=timezone.utc), "SFLUX_DIAGNOSTIC_SELFTEST_NONCANONICAL_LAST_MODIFIED")
     print(json.dumps({
         "schema_version": "geox_mcft_cap09_sflux_boundary_diagnostic_selftest_v1",
         "status": "PASS",
@@ -298,8 +302,8 @@ def main() -> None:
     ends_7777 = message.endswith(b"7777")
     idx_last_modified = header_utc(idx_headers, "Last-Modified")
     grib_last_modified = header_utc(grib_headers, "Last-Modified")
-    idx_not_after_target = bool(idx_last_modified) and canonical_hour(idx_last_modified) <= target if idx_last_modified else False
-    grib_not_after_target = bool(grib_last_modified) and canonical_hour(grib_last_modified) <= target if grib_last_modified else False
+    idx_not_after_target = parse_utc(idx_last_modified) <= target if idx_last_modified else False
+    grib_not_after_target = parse_utc(grib_last_modified) <= target if grib_last_modified else False
 
     failures = []
     if idx_status != 200:
