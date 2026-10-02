@@ -8,6 +8,7 @@ const { spawnSync } = require('node:child_process');
 
 const EXPECTED_PARENT_DB = 'geox_mcft_cap09_s6_formal_t4r1_24h_v5';
 const EXPECTED_REMOTE_SERVER_MAJOR = 18;
+const EXPECTED_LOCAL_SERVER_MAJOR = 18;
 const EXPECTED_LOCAL_BASE_DB = 'ea5e2_readiness';
 const MAIN_PREFIX = 'geox_mcft_cap09_am19_q_';
 const BLOCKED_PREFIX = 'geox_mcft_cap09_am19_b_';
@@ -142,6 +143,14 @@ function schemaClientMajor(image) {
   return major;
 }
 
+function localServerMajor(container) {
+  const raw = dockerExec(container, 'psql -U postgres -d postgres -v ON_ERROR_STOP=1 -Atqc "SHOW server_version_num"').trim();
+  if (!/^\d+$/.test(raw)) throw new Error(`AM19_QMIG_DB_PROVISION_LOCAL_SERVER_VERSION_INVALID:${raw}`);
+  const major = Math.floor(Number(raw) / 10000);
+  if (major !== EXPECTED_LOCAL_SERVER_MAJOR) throw new Error(`AM19_QMIG_DB_PROVISION_LOCAL_SERVER_MAJOR_REQUIRED:${major}`);
+  return major;
+}
+
 function remoteServerMajor(image, sourceUrl) {
   const command = 'IFS= read -r SOURCE_DATABASE_URL; export SOURCE_DATABASE_URL; psql "$SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 -Atqc "SHOW server_version_num"';
   const raw = dockerSchemaClient(image, command, `${sourceUrl}\n`).trim();
@@ -187,15 +196,16 @@ function common(args) {
   const image = args['postgres-image'];
   const schemaClientImage = args['schema-client-image'];
   assertContainer(container, image);
+  const executionMajor = localServerMajor(container);
   const capability = localRoleCapability(container);
   const clientMajor = schemaClientMajor(schemaClientImage);
   const serverMajor = remoteServerMajor(schemaClientImage, parent.raw);
   const schema = dumpSchemaFromRemoteParent(schemaClientImage, parent.raw);
-  return { parent, local, container, image, schemaClientImage, capability, clientMajor, serverMajor, schema };
+  return { parent, local, container, image, schemaClientImage, executionMajor, capability, clientMajor, serverMajor, schema };
 }
 
 function preflight(args) {
-  const { parent, local, container, image, schemaClientImage, capability, clientMajor, serverMajor, schema } = common(args);
+  const { parent, local, container, image, schemaClientImage, executionMajor, capability, clientMajor, serverMajor, schema } = common(args);
   process.stdout.write(`${JSON.stringify({
     status: 'PASS',
     mode: 'READ_ONLY_PREFLIGHT',
@@ -209,6 +219,9 @@ function preflight(args) {
     local_base_database: local.database,
     local_postgres_container: container,
     postgres_image: image,
+    execution_postgres_image: image,
+    execution_postgres_major: executionMajor,
+    execution_postgres_policy: 'EXACT_PINNED_POSTGRESQL_18_LOCAL_EPHEMERAL_EXECUTION_ONLY',
     local_createdb_authority: capability.createdb || capability.superuser,
     local_superuser: capability.superuser,
     source_schema_dump_digest: sha256(schema),
@@ -223,7 +236,7 @@ function preflight(args) {
 }
 
 function run(args) {
-  const { parent, local, container, image, schemaClientImage, clientMajor, serverMajor, schema } = common(args);
+  const { parent, local, container, image, schemaClientImage, executionMajor, clientMajor, serverMajor, schema } = common(args);
   const mainDb = assertTarget(required('GEOX_AM19_QMIG_MAIN_DB'), MAIN_PREFIX, 'AM19_QMIG_DB_PROVISION_MAIN_DB_INVALID');
   const blockedDb = assertTarget(required('GEOX_AM19_QMIG_BLOCKED_DB'), BLOCKED_PREFIX, 'AM19_QMIG_DB_PROVISION_BLOCKED_DB_INVALID');
   if (mainDb === blockedDb) throw new Error('AM19_QMIG_DB_PROVISION_TARGET_COLLISION');
@@ -254,6 +267,9 @@ function run(args) {
     qualification_main_database: mainDb,
     qualification_blocked_database: blockedDb,
     postgres_image: image,
+    execution_postgres_image: image,
+    execution_postgres_major: executionMajor,
+    execution_postgres_policy: 'EXACT_PINNED_POSTGRESQL_18_LOCAL_EPHEMERAL_EXECUTION_ONLY',
     source_schema_dump_digest: sha256(schema),
     source_schema_only: true,
     data_clone_forbidden: true,
@@ -286,6 +302,8 @@ function selftest(args) {
     status: 'PASS',
     mode: 'SELFTEST',
     postgres_image_pinned: true,
+    execution_postgres_image_pinned: true,
+    execution_postgres_required_major: EXPECTED_LOCAL_SERVER_MAJOR,
     schema_client_image_pinned: true,
     expected_remote_server_major: EXPECTED_REMOTE_SERVER_MAJOR,
     parent_database: EXPECTED_PARENT_DB,
