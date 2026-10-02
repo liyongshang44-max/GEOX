@@ -23,7 +23,7 @@ function sha256(value) {
 
 function parseArgs(argv) {
   const mode = argv[0] ?? '';
-  if (!['selftest', 'run'].includes(mode)) throw new Error('AM19_QMIG_DB_PROVISION_MODE_REQUIRED');
+  if (!['selftest', 'preflight', 'run'].includes(mode)) throw new Error('AM19_QMIG_DB_PROVISION_MODE_REQUIRED');
   const args = { mode };
   for (let i = 1; i < argv.length; i += 1) {
     const token = argv[i];
@@ -79,6 +79,20 @@ function docker(image, envVars, command, input) {
   return String(result.stdout ?? '');
 }
 
+function roleCapability(image, adminUrl) {
+  const role = docker(image, { ADMIN_DATABASE_URL: adminUrl }, 'psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -Atqc "SELECT current_user||\'|\'||rolsuper::text||\'|\'||rolcreatedb::text FROM pg_roles WHERE rolname=current_user"').trim();
+  const parts = role.split('|');
+  if (parts.length !== 3 || (parts[1] !== 't' && parts[2] !== 't')) throw new Error('AM19_QMIG_DB_PROVISION_CREATEDB_AUTHORITY_REQUIRED');
+  return { superuser: parts[1] === 't', createdb: parts[2] === 't' };
+}
+
+function dumpSchema(image, sourceUrl) {
+  const schema = docker(image, { SOURCE_DATABASE_URL: sourceUrl }, 'pg_dump --schema-only --no-owner --no-privileges "$SOURCE_DATABASE_URL"');
+  if (!schema.trim()) throw new Error('AM19_QMIG_DB_PROVISION_SCHEMA_DUMP_EMPTY');
+  if (/^COPY\s|^INSERT\s+INTO\s/im.test(schema)) throw new Error('AM19_QMIG_DB_PROVISION_DATA_CLONE_FORBIDDEN');
+  return schema;
+}
+
 function exists(image, adminUrl, name) {
   const sql = `SELECT count(*)::int FROM pg_database WHERE datname='${name}'`;
   const out = docker(image, { ADMIN_DATABASE_URL: adminUrl }, `psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -Atqc "${sql}"`);
@@ -96,6 +110,16 @@ function tableCount(image, targetUrl) {
   return Number(out.trim());
 }
 
+function preflight(args) {
+  if (String(process.env.GITHUB_ACTIONS ?? '').toLowerCase() === 'true') throw new Error('AM19_QMIG_DB_PROVISION_GITHUB_ACTIONS_FORBIDDEN');
+  const { raw, url, database } = parsedParent();
+  const image = args['postgres-image'];
+  const adminUrl = withDatabase(url, 'postgres');
+  const capability = roleCapability(image, adminUrl);
+  const schema = dumpSchema(image, raw);
+  process.stdout.write(`${JSON.stringify({status:'PASS',mode:'READ_ONLY_PREFLIGHT',parent_database_name:database,postgres_image:image,createdb_authority:true,superuser:capability.superuser,source_schema_dump_digest:sha256(schema),source_schema_only:true,data_clone_forbidden:true,database_write_count:0,formal_database_mutation:false,production_database_mutation:false,credential_values_recorded:false})}\n`);
+}
+
 function run(args) {
   if (String(process.env.GITHUB_ACTIONS ?? '').toLowerCase() === 'true') throw new Error('AM19_QMIG_DB_PROVISION_GITHUB_ACTIONS_FORBIDDEN');
   const { raw, url, database } = parsedParent();
@@ -108,13 +132,8 @@ function run(args) {
   const blockedUrl = withDatabase(url, blockedDb);
   const image = args['postgres-image'];
 
-  const role = docker(image, { ADMIN_DATABASE_URL: adminUrl }, 'psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -Atqc "SELECT current_user||\'|\'||rolsuper::text||\'|\'||rolcreatedb::text FROM pg_roles WHERE rolname=current_user"').trim();
-  const parts = role.split('|');
-  if (parts.length !== 3 || (parts[1] !== 't' && parts[2] !== 't')) throw new Error('AM19_QMIG_DB_PROVISION_CREATEDB_AUTHORITY_REQUIRED');
-
-  const schema = docker(image, { SOURCE_DATABASE_URL: raw }, 'pg_dump --schema-only --no-owner --no-privileges "$SOURCE_DATABASE_URL"');
-  if (!schema.trim()) throw new Error('AM19_QMIG_DB_PROVISION_SCHEMA_DUMP_EMPTY');
-  if (/^COPY\s|^INSERT\s+INTO\s/im.test(schema)) throw new Error('AM19_QMIG_DB_PROVISION_DATA_CLONE_FORBIDDEN');
+  roleCapability(image, adminUrl);
+  const schema = dumpSchema(image, raw);
 
   createDatabase(image, adminUrl, mainDb);
   createDatabase(image, adminUrl, blockedDb);
@@ -161,4 +180,5 @@ function selftest(args) {
 
 const args = parseArgs(process.argv.slice(2));
 if (args.mode === 'selftest') selftest(args);
+else if (args.mode === 'preflight') preflight(args);
 else run(args);
