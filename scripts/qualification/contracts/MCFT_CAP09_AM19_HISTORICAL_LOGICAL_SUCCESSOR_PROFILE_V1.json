@@ -1,0 +1,66 @@
+{
+  "schema_version": "geox_mcft_cap09_am19_historical_logical_successor_profile_v1",
+  "profile_id": "MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PROFILE_V1",
+  "profile_version": 1,
+  "status": "CURRENT_SUCCESSOR_PROFILE",
+  "admission_route": "HISTORICAL_LOGICAL_SUCCESSOR_V1",
+  "authority_ceiling": "QUALIFICATION_EVIDENCE_PRODUCER_ONLY",
+  "single_current_contract_ref": "scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1.json",
+  "single_current_contract_id": "MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1",
+  "single_current_runner_ref": "scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_V1.cjs",
+  "frozen_runtime_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+  "historical_logical_epoch": {
+    "descriptor_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM19-HISTORICAL-LOGICAL-EPOCH-V1.json",
+    "epoch_id": "mcft_cap09_am19_historical_logical_20260821t190000z_v1",
+    "producer_subject_sha": "91d2f518efc5c4c7796c398dabd12801949a9289",
+    "target_t": "2026-08-21T19:00:00.000Z",
+    "semantic_manifest_digest": "sha256:4123573d4a936a8d4c5c39da2d323b10426fbd156b34aa2d6866490ba7c3a132",
+    "retained_raw_object_count": 2,
+    "provider_refetch_authorized": false
+  },
+  "database": {
+    "execution_plane": "LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER",
+    "execution_postgres_image": "postgres@sha256:3725f4e2499eef5134592b3b4ab79a543ed7f8e533b05b5b637af926630f6650",
+    "execution_postgres_required_major": 18,
+    "schema_client_image": "postgres@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722",
+    "schema_client_required_major": 18,
+    "parent_database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+    "parent_database_access": "READ_ONLY_SCHEMA_SOURCE_AND_REHYDRATION_PROVENANCE_ONLY",
+    "data_clone_forbidden": true,
+    "remote_parent_mutation_authorized": false,
+    "formal_database_mutation_authorized": false,
+    "production_database_mutation_authorized": false
+  },
+  "current_season_boundary": {
+    "current_2026_crop_window_status": "CLOSED_NO_RETRY_NO_RECAPTURE_NO_BYPASS",
+    "formal_current_season_admission_policy": "DECOUPLED_UNCHANGED_REAL_CLOCK_CROP_PREFLIGHT",
+    "current_season_formal_admission_substituted": false,
+    "current_season_recapture_authorized": false,
+    "current_season_retry_authorized": false,
+    "current_season_bypass_authorized": false
+  },
+  "legacy_capture_lane": {
+    "classification": "HISTORICAL_PROVENANCE_FALLBACK_COMPARISON_ONLY",
+    "required_for_current_admission": false,
+    "reactivation_authorized": false,
+    "may_replace_historical_logical_epoch": false
+  },
+  "historical_source_assets": {
+    "historical_runner_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts",
+    "historical_crop_preflight_source_ref": "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs",
+    "rehydration_source_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts",
+    "classification": "SOURCE_PROVENANCE_ONLY_NOT_CURRENT_ADMISSION_AUTHORITY"
+  },
+  "non_effects": {
+    "runtime_mutation": false,
+    "provider_semantics_mutation": false,
+    "authority_semantics_mutation": false,
+    "qcp_semantics_mutation": false,
+    "closure_semantics_mutation": false,
+    "formal_v5_arm": false,
+    "a0": false,
+    "o00_o23": false,
+    "stage_1b_closure_claim": false,
+    "mcft_cap09_completion_claim": false
+  }
+}
