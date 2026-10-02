@@ -13,6 +13,7 @@ const SOURCE = path.resolve(SOURCE_PATH);
 const SOURCE_BLOB = '46c67bbbabac1ee08182cbea60f3cbd0419c4045';
 const EXPECTED_CONTRACT_ID = 'MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1';
 const EXPECTED_DATABASE_PROVISIONER_REF = 'scripts/qualification/PROVISION_MCFT_CAP09_AM19_RUN_SCOPED_DATABASES_V1.cjs';
+const EXPECTED_DATABASE_EXECUTION_PLANE = 'LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER';
 const SOURCE_CORE_REQUIRE = "require('./qualification_core_v1.cjs')";
 const SOURCE_CONTRACT_GATE = "if (contract.schema_version !== 'geox_qualification_contract_v1' || contract.contract_id !== 'MCFT_CAP09_AM19_PERSISTENT_24T_V1') throw new Error('AM19_QMIG_CONTRACT_SCHEMA_OR_ID_UNSUPPORTED');";
 const SUCCESSOR_CONTRACT_GATE = `if (contract.schema_version !== 'geox_qualification_contract_v1' || contract.contract_id !== '${EXPECTED_CONTRACT_ID}') throw new Error('AM19_HISTORICAL_SUCCESSOR_CONTRACT_SCHEMA_OR_ID_UNSUPPORTED');`;
@@ -22,6 +23,12 @@ const SOURCE_ADAPTER_SELFTEST_CALL = "    exec('pnpm', ['exec', 'tsx', contract.
 const SUCCESSOR_ADAPTER_SELFTEST_CALL = `    exec('node', [contract.database_provisioner_ref, 'run', '--postgres-image', postgresImage], { cwd: workspaceDir, env: qenv, logFile, errorCode: 'AM19_QMIG_RUN_SCOPED_DATABASE_PROVISION_FAILED' });\n${SOURCE_ADAPTER_SELFTEST_CALL}`;
 const SOURCE_REPOSITORY_INPUTS = "    const repositoryInputs = [...new Set([...contract.governed_dependency_refs, contract.historical_runner_ref, contract.controlled_adapter_ref])].sort().map((ref) => ({";
 const SUCCESSOR_REPOSITORY_INPUTS = "    const repositoryInputs = [...new Set([...contract.governed_dependency_refs, contract.historical_runner_ref, contract.controlled_adapter_ref, contract.database_provisioner_ref])].sort().map((ref) => ({";
+const SOURCE_QENV_LOCAL_DB_BINDING = "      DATABASE_URL: localDatabaseUrl,\n      PYTHON: py,";
+const SUCCESSOR_QENV_LOCAL_DB_BINDING = "      DATABASE_URL: localDatabaseUrl,\n      GEOX_AM19_QUALIFICATION_DATABASE_BASE_URL: localDatabaseUrl,\n      GEOX_AM19_QMIG_LOCAL_POSTGRES_CONTAINER: container,\n      PYTHON: py,";
+const SOURCE_CONTROLLED_ENV_DATABASE_SUMMARY = "      qualification_blocked_database: blockedDb,\n      credential_names_present:";
+const SUCCESSOR_CONTROLLED_ENV_DATABASE_SUMMARY = "      qualification_blocked_database: blockedDb,\n      qualification_database_execution_plane: 'LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER',\n      remote_parent_database_access: 'READ_ONLY',\n      credential_names_present:";
+const SOURCE_DATABASE_PROOF_MUTATION = "      remote_qualification_database_mutation: true,\n      production_database_mutation: false,";
+const SUCCESSOR_DATABASE_PROOF_MUTATION = "      remote_qualification_database_mutation: false,\n      local_ephemeral_qualification_database_mutation: true,\n      qualification_database_execution_plane: 'LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER',\n      remote_parent_database_access: 'READ_ONLY',\n      production_database_mutation: false,";
 
 function readJson(file) { return JSON.parse(fs.readFileSync(file, 'utf8')); }
 function sha256Buffer(value) { return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`; }
@@ -57,6 +64,7 @@ function validateContract(repoRoot, args) {
   assert.equal(contract.formal_current_season_admission_policy, 'DECOUPLED_UNCHANGED_REAL_CLOCK_CROP_PREFLIGHT', 'AM19_HISTORICAL_SUCCESSOR_FORMAL_ADMISSION_DECOUPLING_REQUIRED');
   assert.equal(contract.qualification_runner_ref, 'scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_V1.cjs', 'AM19_HISTORICAL_SUCCESSOR_RUNNER_REF_REQUIRED');
   assert.equal(contract.database_provisioner_ref, EXPECTED_DATABASE_PROVISIONER_REF, 'AM19_HISTORICAL_SUCCESSOR_DATABASE_PROVISIONER_REF_REQUIRED');
+  assert.equal(contract.database_execution_plane, EXPECTED_DATABASE_EXECUTION_PLANE, 'AM19_HISTORICAL_SUCCESSOR_DATABASE_EXECUTION_PLANE_REQUIRED');
   return { contract, contractPath };
 }
 
@@ -149,12 +157,19 @@ function buildGeneratedRunner(repoRoot, generatedPath) {
   source = exactReplace(source, SOURCE_CORE_REQUIRE, `require(${JSON.stringify(corePath)})`, 'AM19_HISTORICAL_SUCCESSOR_CORE_REQUIRE_CARDINALITY');
   source = exactReplace(source, SOURCE_CONTRACT_GATE, SUCCESSOR_CONTRACT_GATE, 'AM19_HISTORICAL_SUCCESSOR_CONTRACT_GATE_CARDINALITY');
   source = exactReplace(source, SOURCE_EXPIRY_GATE, HISTORICAL_EXPIRY_GATE, 'AM19_HISTORICAL_SUCCESSOR_EXPIRY_GATE_CARDINALITY');
+  source = exactReplace(source, SOURCE_QENV_LOCAL_DB_BINDING, SUCCESSOR_QENV_LOCAL_DB_BINDING, 'AM19_HISTORICAL_SUCCESSOR_LOCAL_DB_QENV_BINDING_CARDINALITY');
   source = exactReplace(source, SOURCE_ADAPTER_SELFTEST_CALL, SUCCESSOR_ADAPTER_SELFTEST_CALL, 'AM19_HISTORICAL_SUCCESSOR_DATABASE_PROVISION_CALL_CARDINALITY');
+  source = exactReplace(source, SOURCE_CONTROLLED_ENV_DATABASE_SUMMARY, SUCCESSOR_CONTROLLED_ENV_DATABASE_SUMMARY, 'AM19_HISTORICAL_SUCCESSOR_CONTROLLED_ENV_DATABASE_SUMMARY_CARDINALITY');
+  source = exactReplace(source, SOURCE_DATABASE_PROOF_MUTATION, SUCCESSOR_DATABASE_PROOF_MUTATION, 'AM19_HISTORICAL_SUCCESSOR_DATABASE_PROOF_EXECUTION_PLANE_CARDINALITY');
   source = exactReplace(source, SOURCE_REPOSITORY_INPUTS, SUCCESSOR_REPOSITORY_INPUTS, 'AM19_HISTORICAL_SUCCESSOR_REPOSITORY_INPUTS_CARDINALITY');
   assert(!source.includes(SOURCE_CONTRACT_GATE), 'AM19_HISTORICAL_SUCCESSOR_OLD_CONTRACT_GATE_SURVIVED');
   assert(!source.includes(SOURCE_EXPIRY_GATE), 'AM19_HISTORICAL_SUCCESSOR_CURRENT_EXPIRY_GATE_SURVIVED');
+  assert(!source.includes(SOURCE_QENV_LOCAL_DB_BINDING), 'AM19_HISTORICAL_SUCCESSOR_LOCAL_DB_QENV_BINDING_NOT_REPLACED');
+  assert(source.includes('GEOX_AM19_QUALIFICATION_DATABASE_BASE_URL: localDatabaseUrl'), 'AM19_HISTORICAL_SUCCESSOR_LOCAL_QUALIFICATION_DATABASE_URL_REQUIRED');
+  assert(source.includes('GEOX_AM19_QMIG_LOCAL_POSTGRES_CONTAINER: container'), 'AM19_HISTORICAL_SUCCESSOR_LOCAL_POSTGRES_CONTAINER_BINDING_REQUIRED');
   assert(source.includes('AM19_QMIG_RUN_SCOPED_DATABASE_PROVISION_FAILED'), 'AM19_HISTORICAL_SUCCESSOR_DATABASE_PROVISION_CALL_REQUIRED');
   assert(source.includes('contract.database_provisioner_ref'), 'AM19_HISTORICAL_SUCCESSOR_DATABASE_PROVISIONER_INPUT_REQUIRED');
+  assert(source.includes("qualification_database_execution_plane: 'LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER'"), 'AM19_HISTORICAL_SUCCESSOR_DATABASE_EXECUTION_PLANE_EVIDENCE_REQUIRED');
   fs.writeFileSync(generatedPath, source, { flag: 'wx' });
 }
 
@@ -184,7 +199,7 @@ function main() {
     if (check.error) throw check.error;
     if (check.status !== 0) throw new Error(`AM19_HISTORICAL_SUCCESSOR_GENERATED_SYNTAX_FAILED:${check.stderr || ''}`);
     if (args.mode === 'selftest') {
-      process.stdout.write(`${JSON.stringify({status:'PASS',contract_id:contract.contract_id,source_runner_blob:SOURCE_BLOB,historical_logical_epoch_id:d.epoch_id,producer_subject_sha:d.historical_producer.producer_subject_sha,target_t:d.logical_epoch.target_t,semantic_manifest_digest:d.logical_epoch.semantic_manifest_digest,retained_raw_object_count:2,current_2026_crop_window_status:d.current_2026_crop_window_status,current_season_formal_admission_substituted:false,database_provisioner_ref:contract.database_provisioner_ref,database_access:false,provider_access:false})}\n`);
+      process.stdout.write(`${JSON.stringify({status:'PASS',contract_id:contract.contract_id,source_runner_blob:SOURCE_BLOB,historical_logical_epoch_id:d.epoch_id,producer_subject_sha:d.historical_producer.producer_subject_sha,target_t:d.logical_epoch.target_t,semantic_manifest_digest:d.logical_epoch.semantic_manifest_digest,retained_raw_object_count:2,current_2026_crop_window_status:d.current_2026_crop_window_status,current_season_formal_admission_substituted:false,database_provisioner_ref:contract.database_provisioner_ref,database_execution_plane:contract.database_execution_plane,remote_admin_credential_required:false,database_access:false,provider_access:false})}\n`);
       return;
     }
     const childArgs = [
