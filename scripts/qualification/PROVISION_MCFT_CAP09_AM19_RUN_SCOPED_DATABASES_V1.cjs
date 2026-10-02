@@ -102,14 +102,21 @@ function dockerExec(container, command, input) {
   return docker(args, { input });
 }
 
+function parseLocalRoleCapability(role) {
+  const parts = String(role).trim().split('|');
+  if (parts.length !== 3 || parts[0] !== 'postgres') throw new Error('AM19_QMIG_DB_PROVISION_LOCAL_ROLE_CAPABILITY_RESULT_INVALID');
+  const superuser = parts[1] === '1';
+  const createdb = parts[2] === '1';
+  if (!superuser && !createdb) throw new Error('AM19_QMIG_DB_PROVISION_LOCAL_CREATEDB_AUTHORITY_REQUIRED');
+  return { role: parts[0], superuser, createdb };
+}
+
 function localRoleCapability(container) {
   const role = dockerExec(
     container,
-    'psql -U postgres -d postgres -v ON_ERROR_STOP=1 -Atqc "SELECT current_user||chr(124)||rolsuper::text||chr(124)||rolcreatedb::text FROM pg_roles WHERE rolname=current_user"',
+    'psql -U postgres -d postgres -v ON_ERROR_STOP=1 -Atqc "SELECT current_user||chr(124)||(CASE WHEN rolsuper THEN \'1\' ELSE \'0\' END)||chr(124)||(CASE WHEN rolcreatedb THEN \'1\' ELSE \'0\' END) FROM pg_roles WHERE rolname=current_user"',
   ).trim();
-  const parts = role.split('|');
-  if (parts.length !== 3 || parts[0] !== 'postgres' || (parts[1] !== 't' && parts[2] !== 't')) throw new Error('AM19_QMIG_DB_PROVISION_LOCAL_CREATEDB_AUTHORITY_REQUIRED');
-  return { role: parts[0], superuser: parts[1] === 't', createdb: parts[2] === 't' };
+  return parseLocalRoleCapability(role);
 }
 
 function dumpSchemaFromRemoteParent(container, sourceUrl) {
@@ -228,6 +235,8 @@ function selftest(args) {
   if (decodeURIComponent(remote.pathname.replace(/^\//, '')) !== EXPECTED_PARENT_DB) throw new Error('AM19_QMIG_DB_PROVISION_SELFTEST_PARENT');
   if (!['127.0.0.1', 'localhost', '::1'].includes(local.hostname)) throw new Error('AM19_QMIG_DB_PROVISION_SELFTEST_LOCALHOST');
   if (decodeURIComponent(local.pathname.replace(/^\//, '')) !== EXPECTED_LOCAL_BASE_DB) throw new Error('AM19_QMIG_DB_PROVISION_SELFTEST_LOCAL_BASE');
+  const localCapability = parseLocalRoleCapability('postgres|1|1');
+  if (!localCapability.superuser || !localCapability.createdb) throw new Error('AM19_QMIG_DB_PROVISION_SELFTEST_LOCAL_ROLE_CAPABILITY');
   process.stdout.write(`${JSON.stringify({
     status: 'PASS',
     mode: 'SELFTEST',
@@ -236,6 +245,7 @@ function selftest(args) {
     parent_database_policy: 'REMOTE_READ_ONLY_SCHEMA_SOURCE',
     qualification_database_execution_plane: 'LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER',
     local_base_database: EXPECTED_LOCAL_BASE_DB,
+    local_role_capability_encoding: 'CASE_BOOLEAN_TO_1_0_V1',
     template0_required: true,
     schema_only_restore_required: true,
     data_clone_forbidden: true,
