@@ -7,6 +7,7 @@
   "successor_profile_version": 1,
   "current_admission_route": "HISTORICAL_LOGICAL_SUCCESSOR_V1",
   "reconciliation_verifier_ref": "scripts/qualification/VERIFY_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_RECONCILIATION_V1.cjs",
+  "successor_preflight_ref": "scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PREFLIGHT_V1.cjs",
   "legacy_controlled_capture_required_for_current_admission": false,
   "legacy_controlled_capture_reactivation_authorized": false,
   "legacy_controlled_capture_policy": "HISTORICAL_PROVENANCE_FALLBACK_COMPARISON_ONLY",
