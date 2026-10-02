@@ -8,6 +8,7 @@
   "single_current_contract_ref": "scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1.json",
   "single_current_contract_id": "MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1",
   "single_current_runner_ref": "scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_V1.cjs",
+  "controlled_host_preflight_ref": "scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PREFLIGHT_V1.cjs",
   "frozen_runtime_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
   "historical_logical_epoch": {
     "descriptor_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM19-HISTORICAL-LOGICAL-EPOCH-V1.json",
