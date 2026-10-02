@@ -8,10 +8,12 @@ const { execFileSync, spawnSync } = require('node:child_process');
 
 const CONTRACT_REF = 'scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1.json';
 const PROFILE_REF = 'scripts/qualification/contracts/MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PROFILE_V1.json';
+const BINDING_REF = 'scripts/qualification/contracts/MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_RECONCILIATION_BINDINGS_V1.json';
 const VERIFIER_REF = 'scripts/qualification/VERIFY_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_RECONCILIATION_V1.cjs';
 const RUNNER_REF = 'scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_V1.cjs';
 const CONTRACT_ID = 'MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1';
 const PROFILE_ID = 'MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PROFILE_V1';
+const BINDING_ID = 'MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_RECONCILIATION_BINDINGS_V1';
 
 function git(...args) {
   return execFileSync('git', args, { encoding: 'utf8', windowsHide: true }).trim();
@@ -61,15 +63,22 @@ function main() {
 
   const contract = readJson(path.resolve(repoRoot, CONTRACT_REF));
   const profile = readJson(path.resolve(repoRoot, PROFILE_REF));
+  const binding = readJson(path.resolve(repoRoot, BINDING_REF));
   assert.equal(contract.contract_id, CONTRACT_ID, 'AM19_SUCCESSOR_PREFLIGHT_CONTRACT_ID_REQUIRED');
   assert.equal(profile.profile_id, PROFILE_ID, 'AM19_SUCCESSOR_PREFLIGHT_PROFILE_ID_REQUIRED');
+  assert.equal(binding.binding_id, BINDING_ID, 'AM19_SUCCESSOR_PREFLIGHT_BINDING_ID_REQUIRED');
   assert.equal(contract.successor_profile_ref, PROFILE_REF, 'AM19_SUCCESSOR_PREFLIGHT_PROFILE_REF_MISMATCH');
+  assert.equal(contract.design_reconciliation_binding_ref, BINDING_REF, 'AM19_SUCCESSOR_PREFLIGHT_CONTRACT_BINDING_REF_MISMATCH');
+  assert.equal(profile.design_reconciliation_binding_ref, BINDING_REF, 'AM19_SUCCESSOR_PREFLIGHT_PROFILE_BINDING_REF_MISMATCH');
   assert.equal(contract.reconciliation_verifier_ref, VERIFIER_REF, 'AM19_SUCCESSOR_PREFLIGHT_VERIFIER_REF_MISMATCH');
   assert.equal(contract.qualification_runner_ref, RUNNER_REF, 'AM19_SUCCESSOR_PREFLIGHT_RUNNER_REF_MISMATCH');
   assert.equal(contract.current_admission_route, 'HISTORICAL_LOGICAL_SUCCESSOR_V1', 'AM19_SUCCESSOR_PREFLIGHT_ROUTE_REQUIRED');
+  assert.equal(binding.admission_route, 'HISTORICAL_LOGICAL_SUCCESSOR_V1', 'AM19_SUCCESSOR_PREFLIGHT_BINDING_ROUTE_REQUIRED');
   assert.equal(contract.current_2026_crop_window_status, 'CLOSED_NO_RETRY_NO_RECAPTURE_NO_BYPASS', 'AM19_SUCCESSOR_PREFLIGHT_CURRENT_CROP_WINDOW_MUST_REMAIN_CLOSED');
   assert.equal(contract.legacy_controlled_capture_required_for_current_admission, false, 'AM19_SUCCESSOR_PREFLIGHT_LEGACY_CAPTURE_NOT_REQUIRED');
   assert.equal(contract.legacy_controlled_capture_reactivation_authorized, false, 'AM19_SUCCESSOR_PREFLIGHT_LEGACY_CAPTURE_REACTIVATION_FORBIDDEN');
+  assert.equal(binding.execution_gate.qualification_execution_allowed_before_static_reconciliation_pass, false, 'AM19_SUCCESSOR_PREFLIGHT_EXECUTION_BEFORE_RECONCILIATION_FORBIDDEN');
+  assert.equal(binding.execution_gate.required_static_blocker_count, 0, 'AM19_SUCCESSOR_PREFLIGHT_ZERO_STATIC_BLOCKERS_REQUIRED');
 
   syntaxCheck(repoRoot, VERIFIER_REF);
   syntaxCheck(repoRoot, RUNNER_REF);
@@ -77,6 +86,15 @@ function main() {
   const reconciliation = runNodeJson(repoRoot, VERIFIER_REF);
   assert.equal(reconciliation.status, 'PASS', 'AM19_SUCCESSOR_PREFLIGHT_RECONCILIATION_PASS_REQUIRED');
   assert.equal(reconciliation.blocker_count, 0, 'AM19_SUCCESSOR_PREFLIGHT_RECONCILIATION_ZERO_BLOCKERS_REQUIRED');
+  assert.equal(reconciliation.design_reconciliation_binding_id, BINDING_ID, 'AM19_SUCCESSOR_PREFLIGHT_RECONCILIATION_BINDING_MISMATCH');
+  assert.equal(reconciliation.package_binding, 'PASS', 'AM19_SUCCESSOR_PREFLIGHT_PACKAGE_BINDING_PASS_REQUIRED');
+  assert.equal(reconciliation.verifier_1_binding, 'PASS', 'AM19_SUCCESSOR_PREFLIGHT_VERIFIER1_BINDING_PASS_REQUIRED');
+  assert.equal(reconciliation.verifier_2_binding, 'PASS', 'AM19_SUCCESSOR_PREFLIGHT_VERIFIER2_BINDING_PASS_REQUIRED');
+  assert.equal(reconciliation.qcp_binding, 'PASS', 'AM19_SUCCESSOR_PREFLIGHT_QCP_BINDING_PASS_REQUIRED');
+  assert.equal(reconciliation.closure_binding, 'PASS', 'AM19_SUCCESSOR_PREFLIGHT_CLOSURE_BINDING_PASS_REQUIRED');
+  assert.equal(reconciliation.legacy_qcp_check_current_admission, false, 'AM19_SUCCESSOR_PREFLIGHT_LEGACY_QCP_CURRENT_ADMISSION_FORBIDDEN');
+  assert.equal(reconciliation.current_successor_qcp_registered, false, 'AM19_SUCCESSOR_PREFLIGHT_PREMATURE_QCP_REGISTRATION_FORBIDDEN');
+  assert.equal(reconciliation.static_reconciliation_complete, true, 'AM19_SUCCESSOR_PREFLIGHT_FULL_STATIC_RECONCILIATION_REQUIRED');
   assert.equal(reconciliation.qualification_execution_performed, false, 'AM19_SUCCESSOR_PREFLIGHT_RECONCILIATION_STATIC_REQUIRED');
   assert.equal(reconciliation.database_access, false, 'AM19_SUCCESSOR_PREFLIGHT_RECONCILIATION_DATABASE_ACCESS_FORBIDDEN');
   assert.equal(reconciliation.provider_access, false, 'AM19_SUCCESSOR_PREFLIGHT_RECONCILIATION_PROVIDER_ACCESS_FORBIDDEN');
@@ -104,8 +122,17 @@ function main() {
     subject_sha: subject,
     contract_id: CONTRACT_ID,
     profile_id: PROFILE_ID,
+    design_reconciliation_binding_id: BINDING_ID,
     current_admission_route: 'HISTORICAL_LOGICAL_SUCCESSOR_V1',
     reconciliation_status: reconciliation.status,
+    package_binding: reconciliation.package_binding,
+    verifier_1_binding: reconciliation.verifier_1_binding,
+    verifier_2_binding: reconciliation.verifier_2_binding,
+    qcp_binding: reconciliation.qcp_binding,
+    closure_binding: reconciliation.closure_binding,
+    legacy_qcp_check_current_admission: reconciliation.legacy_qcp_check_current_admission,
+    current_successor_qcp_registered: reconciliation.current_successor_qcp_registered,
+    static_reconciliation_complete: reconciliation.static_reconciliation_complete,
     runner_selftest_status: runnerSelftest.status,
     current_2026_crop_window_status: contract.current_2026_crop_window_status,
     legacy_controlled_capture_required_for_current_admission: false,
@@ -128,6 +155,7 @@ try {
     status: 'FAIL',
     blocker_count: 1,
     error: error && error.message ? error.message : String(error),
+    static_reconciliation_complete: false,
     qualification_execution_performed: false,
     database_access: false,
     provider_access: false,
