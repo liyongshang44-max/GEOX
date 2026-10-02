@@ -51,8 +51,11 @@ const EXPECTED_PUBLIC_TABLES = [
 const INIT_COMPLETE_MARKER = 'PostgreSQL init process complete; ready for start up.';
 const READINESS_POLICY = 'OFFICIAL_POSTGRES_INIT_COMPLETE_MARKER_THEN_SQL_PROBE_V1';
 const SCHEMA_BINDING_POLICY = 'FORMAL_STORE_AUTHORITY_V3_EXACT_V13_29_TABLE_SET_V1';
+const SCHEMA_DUMP_RESTRICT_KEY = 'GEOXMCFTCAP09V13SchemaAuthorityV1';
+const SCHEMA_DUMP_REPEATABILITY_POLICY = 'POSTGRESQL18_FIXED_RESTRICT_KEY_FOR_REPEATABLE_SCHEMA_ONLY_DUMP_V1';
 
 const SOURCE_OUTPUT_DECLARATION = "const OUTPUT = path.resolve('acceptance-output/MCFT_CAP_09_AM19_RUN_SCOPED_DATABASE_PROVISIONING_V1.json');";
+const SOURCE_SCHEMA_DUMP_COMMAND = "  const command = 'IFS= read -r SOURCE_DATABASE_URL; export SOURCE_DATABASE_URL; pg_dump --schema-only --no-owner --no-privileges \\\"$SOURCE_DATABASE_URL\\\"';";
 const SOURCE_TABLE_COUNT_GUARD = "  if (mainCount !== 26 || blockedCount !== 26) throw new Error(`AM19_QMIG_DB_PROVISION_REQUIRED_TABLE_COUNT_MISMATCH:${mainCount}:${blockedCount}`);";
 const SOURCE_PROOF_TABLE_FIELDS = "    main_required_table_count: mainCount,\n    blocked_required_table_count: blockedCount,";
 
@@ -139,6 +142,7 @@ function buildAuthorityBoundInner(innerPath, authorityBlob) {
     `const SCHEMA_AUTHORITY_REF = ${JSON.stringify(SCHEMA_AUTHORITY_REF)};`,
     `const SCHEMA_AUTHORITY_BLOB_SHA = ${JSON.stringify(authorityBlob)};`,
     `const SCHEMA_BINDING_POLICY = ${JSON.stringify(SCHEMA_BINDING_POLICY)};`,
+    `const SCHEMA_DUMP_REPEATABILITY_POLICY = ${JSON.stringify(SCHEMA_DUMP_REPEATABILITY_POLICY)};`,
     `const EXPECTED_PUBLIC_TABLES = ${JSON.stringify(EXPECTED_PUBLIC_TABLES)};`,
   ].join('\n');
 
@@ -147,6 +151,16 @@ function buildAuthorityBoundInner(innerPath, authorityBlob) {
     SOURCE_OUTPUT_DECLARATION,
     generatedConstants,
     'AM19_QMIG_DB_PROVISION_OUTPUT_DECLARATION_CARDINALITY',
+  );
+
+  const deterministicDumpCommand =
+    `  const command = 'IFS= read -r SOURCE_DATABASE_URL; export SOURCE_DATABASE_URL; pg_dump --restrict-key=${SCHEMA_DUMP_RESTRICT_KEY} --schema-only --no-owner --no-privileges "$SOURCE_DATABASE_URL"';`;
+
+  source = exactReplace(
+    source,
+    SOURCE_SCHEMA_DUMP_COMMAND,
+    deterministicDumpCommand,
+    'AM19_QMIG_DB_PROVISION_SCHEMA_DUMP_COMMAND_CARDINALITY',
   );
 
   const authorityBoundGuard = [
@@ -168,6 +182,7 @@ function buildAuthorityBoundInner(innerPath, authorityBlob) {
     "    schema_authority_ref: SCHEMA_AUTHORITY_REF,",
     "    schema_authority_blob_sha: SCHEMA_AUTHORITY_BLOB_SHA,",
     "    schema_binding_policy: SCHEMA_BINDING_POLICY,",
+    "    schema_dump_repeatability_policy: SCHEMA_DUMP_REPEATABILITY_POLICY,",
     "    expected_public_table_count: EXPECTED_PUBLIC_TABLES.length,",
     "    main_required_table_count: mainCount,",
     "    blocked_required_table_count: blockedCount,",
