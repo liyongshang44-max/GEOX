@@ -7,6 +7,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const EXPECTED_PARENT_DB = 'geox_mcft_cap09_s6_formal_t4r1_24h_v5';
+const EXPECTED_REMOTE_SERVER_MAJOR = 18;
 const EXPECTED_LOCAL_BASE_DB = 'ea5e2_readiness';
 const MAIN_PREFIX = 'geox_mcft_cap09_am19_q_';
 const BLOCKED_PREFIX = 'geox_mcft_cap09_am19_b_';
@@ -35,8 +36,10 @@ function parseArgs(argv) {
     if (!value || value.startsWith('--')) throw new Error(`AM19_QMIG_DB_PROVISION_ARGUMENT_VALUE_REQUIRED:${key}`);
     args[key] = value;
   }
-  if (!args['postgres-image']) throw new Error('AM19_QMIG_DB_PROVISION_POSTGRES_IMAGE_REQUIRED');
-  if (!/^.+@sha256:[0-9a-f]{64}$/.test(args['postgres-image'])) throw new Error('AM19_QMIG_DB_PROVISION_PINNED_POSTGRES_IMAGE_REQUIRED');
+  for (const key of ['postgres-image', 'schema-client-image']) {
+    if (!args[key]) throw new Error(`AM19_QMIG_DB_PROVISION_ARGUMENT_REQUIRED:${key}`);
+    if (!/^.+@sha256:[0-9a-f]{64}$/.test(args[key])) throw new Error(`AM19_QMIG_DB_PROVISION_PINNED_IMAGE_REQUIRED:${key}`);
+  }
   return args;
 }
 
@@ -102,6 +105,13 @@ function dockerExec(container, command, input) {
   return docker(args, { input });
 }
 
+function dockerSchemaClient(image, command, input) {
+  const args = ['run', '--rm'];
+  if (input !== undefined) args.push('-i');
+  args.push(image, 'sh', '-c', command);
+  return docker(args, { input });
+}
+
 function parseLocalRoleCapability(role) {
   const parts = String(role).trim().split('|');
   if (parts.length !== 3 || parts[0] !== 'postgres') throw new Error('AM19_QMIG_DB_PROVISION_LOCAL_ROLE_CAPABILITY_RESULT_INVALID');
@@ -119,9 +129,32 @@ function localRoleCapability(container) {
   return parseLocalRoleCapability(role);
 }
 
-function dumpSchemaFromRemoteParent(container, sourceUrl) {
+function parsePgToolMajor(value, code) {
+  const match = String(value).match(/PostgreSQL\)?\s+(\d+)(?:\.\d+)?/i);
+  if (!match) throw new Error(`${code}:${String(value).trim()}`);
+  return Number(match[1]);
+}
+
+function schemaClientMajor(image) {
+  const out = docker(['run', '--rm', image, 'pg_dump', '--version']).trim();
+  const major = parsePgToolMajor(out, 'AM19_QMIG_DB_PROVISION_SCHEMA_CLIENT_VERSION_UNPARSEABLE');
+  if (major !== EXPECTED_REMOTE_SERVER_MAJOR) throw new Error(`AM19_QMIG_DB_PROVISION_SCHEMA_CLIENT_MAJOR_REQUIRED:${major}`);
+  return major;
+}
+
+function remoteServerMajor(image, sourceUrl) {
+  const command = 'IFS= read -r SOURCE_DATABASE_URL; export SOURCE_DATABASE_URL; psql "$SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 -Atqc "SHOW server_version_num"';
+  const raw = dockerSchemaClient(image, command, `${sourceUrl}\n`).trim();
+  if (!/^\d+$/.test(raw)) throw new Error(`AM19_QMIG_DB_PROVISION_REMOTE_SERVER_VERSION_INVALID:${raw}`);
+  const versionNum = Number(raw);
+  const major = Math.floor(versionNum / 10000);
+  if (major !== EXPECTED_REMOTE_SERVER_MAJOR) throw new Error(`AM19_QMIG_DB_PROVISION_REMOTE_SERVER_MAJOR_REQUIRED:${major}`);
+  return major;
+}
+
+function dumpSchemaFromRemoteParent(schemaClientImage, sourceUrl) {
   const command = 'IFS= read -r SOURCE_DATABASE_URL; export SOURCE_DATABASE_URL; pg_dump --schema-only --no-owner --no-privileges "$SOURCE_DATABASE_URL"';
-  const schema = dockerExec(container, command, `${sourceUrl}\n`);
+  const schema = dockerSchemaClient(schemaClientImage, command, `${sourceUrl}\n`);
   if (!schema.trim()) throw new Error('AM19_QMIG_DB_PROVISION_SCHEMA_DUMP_EMPTY');
   if (/^COPY\s|^INSERT\s+INTO\s/im.test(schema)) throw new Error('AM19_QMIG_DB_PROVISION_DATA_CLONE_FORBIDDEN');
   return schema;
@@ -152,19 +185,26 @@ function common(args) {
   const local = parsedLocalBase();
   const container = containerName();
   const image = args['postgres-image'];
+  const schemaClientImage = args['schema-client-image'];
   assertContainer(container, image);
   const capability = localRoleCapability(container);
-  const schema = dumpSchemaFromRemoteParent(container, parent.raw);
-  return { parent, local, container, image, capability, schema };
+  const clientMajor = schemaClientMajor(schemaClientImage);
+  const serverMajor = remoteServerMajor(schemaClientImage, parent.raw);
+  const schema = dumpSchemaFromRemoteParent(schemaClientImage, parent.raw);
+  return { parent, local, container, image, schemaClientImage, capability, clientMajor, serverMajor, schema };
 }
 
 function preflight(args) {
-  const { parent, local, container, image, capability, schema } = common(args);
+  const { parent, local, container, image, schemaClientImage, capability, clientMajor, serverMajor, schema } = common(args);
   process.stdout.write(`${JSON.stringify({
     status: 'PASS',
     mode: 'READ_ONLY_PREFLIGHT',
     parent_database_name: parent.database,
     parent_database_policy: 'REMOTE_READ_ONLY_SCHEMA_SOURCE',
+    remote_parent_server_major: serverMajor,
+    schema_client_image: schemaClientImage,
+    schema_client_major: clientMajor,
+    schema_client_policy: 'EXACT_PINNED_POSTGRESQL_18_CLIENT_ONLY',
     qualification_database_execution_plane: 'LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER',
     local_base_database: local.database,
     local_postgres_container: container,
@@ -183,7 +223,7 @@ function preflight(args) {
 }
 
 function run(args) {
-  const { parent, local, container, image, schema } = common(args);
+  const { parent, local, container, image, schemaClientImage, clientMajor, serverMajor, schema } = common(args);
   const mainDb = assertTarget(required('GEOX_AM19_QMIG_MAIN_DB'), MAIN_PREFIX, 'AM19_QMIG_DB_PROVISION_MAIN_DB_INVALID');
   const blockedDb = assertTarget(required('GEOX_AM19_QMIG_BLOCKED_DB'), BLOCKED_PREFIX, 'AM19_QMIG_DB_PROVISION_BLOCKED_DB_INVALID');
   if (mainDb === blockedDb) throw new Error('AM19_QMIG_DB_PROVISION_TARGET_COLLISION');
@@ -204,6 +244,10 @@ function run(args) {
     mode: 'REMOTE_PARENT_SCHEMA_READ_ONLY_TO_LOCAL_EPHEMERAL_TEMPLATE0_DATABASES',
     parent_database_name: parent.database,
     parent_database_policy: 'REMOTE_READ_ONLY_SCHEMA_SOURCE',
+    remote_parent_server_major: serverMajor,
+    schema_client_image: schemaClientImage,
+    schema_client_major: clientMajor,
+    schema_client_policy: 'EXACT_PINNED_POSTGRESQL_18_CLIENT_ONLY',
     qualification_database_execution_plane: 'LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER',
     local_base_database: local.database,
     local_postgres_container: container,
@@ -237,10 +281,13 @@ function selftest(args) {
   if (decodeURIComponent(local.pathname.replace(/^\//, '')) !== EXPECTED_LOCAL_BASE_DB) throw new Error('AM19_QMIG_DB_PROVISION_SELFTEST_LOCAL_BASE');
   const localCapability = parseLocalRoleCapability('postgres|1|1');
   if (!localCapability.superuser || !localCapability.createdb) throw new Error('AM19_QMIG_DB_PROVISION_SELFTEST_LOCAL_ROLE_CAPABILITY');
+  if (parsePgToolMajor('pg_dump (PostgreSQL) 18.6', 'SELFTEST_SCHEMA_CLIENT') !== EXPECTED_REMOTE_SERVER_MAJOR) throw new Error('AM19_QMIG_DB_PROVISION_SELFTEST_SCHEMA_CLIENT_MAJOR');
   process.stdout.write(`${JSON.stringify({
     status: 'PASS',
     mode: 'SELFTEST',
     postgres_image_pinned: true,
+    schema_client_image_pinned: true,
+    expected_remote_server_major: EXPECTED_REMOTE_SERVER_MAJOR,
     parent_database: EXPECTED_PARENT_DB,
     parent_database_policy: 'REMOTE_READ_ONLY_SCHEMA_SOURCE',
     qualification_database_execution_plane: 'LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER',
