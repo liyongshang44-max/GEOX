@@ -1,5 +1,523 @@
 # GEOX MCFT CAP-09 HANDOFF CONTINUATION — 2026-09-26
 
+## 2026-10-02 ACTIVE CHECKPOINT — Migration Team / AM19 historical-logical successor / PostgreSQL 18 schema-client tooling frontier
+
+This is the newest active checkpoint. It supersedes the 2026-09-30, 2026-09-29, 2026-09-27 and 2026-09-26 current-state summaries below wherever facts conflict. Older sections are intentionally preserved as engineering history and must not be deleted.
+
+This checkpoint is deliberately conservative: the AM19 historical-logical successor is **not fixed yet**. The last machine-tested execution boundary remains red at a schema-client compatibility preflight. A newer remote tooling commit exists, but it has not yet produced a passing preflight and must not be described as qualification success.
+
+### A. Mandatory takeover reading — there are exactly TWO handoffs
+
+The next engineer / conversation must read both handoff documents before changing code:
+
+1. Historical canonical handoff — frozen archive / prior engineering history:
+   `docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md`
+
+2. Active continuation handoff — current-state authority from 2026-09-26 onward:
+   `docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-09-26.md`
+
+Do not create a third handoff. Continue to prepend new current-state checkpoints to this active continuation while preserving older sections.
+
+Also read, before engineering changes:
+
+- the MCFT / Digital Twin master task document;
+- the CAP-09 task, acceptance, governance and qualification documents;
+- `GEOX QUALIFICATION EXECUTION MIGRATION — CTO Migration Mandate V1`;
+- the historical-logical successor contract and descriptor named below.
+
+Interpretation rule:
+
+```text
+canonical handoff = historical engineering / governance context
+continuation      = newest exact frontier / current machine state
+```
+
+### B. Team ownership and exact task boundary
+
+The active owner is still the **Migration Team**. Do not hand the work to Closure Team yet.
+
+The active task is the migration / requalification of the legacy AM19 persistent 24T proof into the controlled qualification architecture, using a governed historical logical epoch rather than the now-closed current-season crop window.
+
+CTO adjudication currently frozen into this line:
+
+```text
+AM19 persistent qualification
+    DECOUPLED from current-season Formal crop admission
+
+current 2026 crop window
+    CLOSED_NO_RETRY_NO_RECAPTURE_NO_BYPASS
+
+persistent production-graph proof
+    historical logical epoch
+    + Authority V3 legality
+    + retained immutable raw
+    + exact producer/source closure
+    + controlled qualification host
+
+Formal A0 / O00–O23
+    still controlled by current/future real-clock crop preflight
+    and remains separately authorized
+```
+
+The Migration Team must not change:
+
+- frozen Runtime semantics;
+- AM19 production semantics;
+- provider semantics;
+- Authority semantics;
+- QCP semantics merely to make this proof pass;
+- Closure authority or Closure adjudication rules;
+- Formal-v5 / A0 / O00–O23 authorization state.
+
+Frozen Runtime remains:
+
+`3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a`
+
+Protected main was re-read at this checkpoint and remains:
+
+`8f63c498bd48978e2dd525ad57b6b8fdb7ada560`
+
+### C. Active migration branch — distinguish last tested head from newer unverified tooling head
+
+Active branch:
+
+`qualification/mcft-cap09-am19-historical-logical-successor-v1`
+
+The last machine-tested head that reached the current schema-client first-red is:
+
+`d82bbd2ba387d45b3e99eef606d1c8bf946050dc`
+
+At `d82bbd2ba...`, machine state is exactly:
+
+```text
+local role parsing                 PASS
+credential binding                 PASS
+provisioner selftest               PASS
+local role capability              PASS
+read-only parent schema preflight  FAIL
+```
+
+Current first-red at that tested head:
+
+```text
+remote PostgreSQL server  = 18.6
+schema dump client        = pg_dump 16.15
+result                    = incompatible client/server major
+```
+
+This is the current proven blocker. Do not reinterpret it as a Runtime defect, Authority defect, AM19 semantic defect, parent-schema defect, credential defect, local CREATEDB defect, or Closure defect.
+
+The remote branch has subsequently advanced by exactly one tooling commit to:
+
+`307027b6dcd4f539f5d827a57156ac74ba230dab`
+
+Commit message:
+
+`qualification(mcft-cap09): split remote schema client from local execution postgres`
+
+Comparison from `d82bbd2ba...` to `307027b6...`:
+
+```text
+ahead_by       1
+changed files  1
+
+scripts/qualification/
+PROVISION_MCFT_CAP09_AM19_RUN_SCOPED_DATABASES_V1.cjs
+
++55 / -8
+```
+
+That newer commit is **UNVERIFIED** at handoff time. It changes only execution tooling and introduces a separate exact-pinned schema-client image path with PostgreSQL-major checks. It must not be called a fix until the controlled-host preflight is rerun and passes.
+
+Important follow-up finding from static inspection of `307027b6...`:
+
+```text
+provisioner now requires:
+  --postgres-image
+  --schema-client-image
+
+but successor runner still invokes the provisioner with:
+  --postgres-image only
+
+historical successor contract also does not yet freeze a schema-client image identity
+```
+
+Therefore `307027b6...` should be treated as a **partial execution-tooling repair**, not a completed successor-chain binding. The next engineer must finish the exact-pinned PostgreSQL 18 schema-client binding through the successor execution chain before rerunning the preflight.
+
+### D. What has already been completed on the Migration line
+
+The work is not starting from scratch. The following migration/proof layers have already been established and must not be reopened without new evidence.
+
+#### D1. Controlled capture / host-compatibility chain
+
+The controlled capture path was repaired through the Windows-host compatibility sequence without changing provider semantics:
+
+```text
+V4 transitive provider-helper binding
+Windows ecCodes FILE* bridge
+short py_compile output-path repair
+SFLUX F015 read-only boundary diagnostic
+```
+
+The SFLUX boundary diagnostic was read-only and passed the historical boundary guard with zero database/R2 writes and no provider-semantic mutation.
+
+A usable V5 controlled candidate was subsequently produced and used by the old AM19 path. The later CTO adjudication intentionally moved the persistent successor away from depending on a current-season recapture, so do not restart capture merely because the historical successor remains red.
+
+#### D2. Current-season crop window adjudication
+
+The old current-season AM19 path exposed the hidden coupling between persistent qualification and current crop admission.
+
+CTO decision:
+
+`CLOSED_NO_RETRY_NO_RECAPTURE_NO_BYPASS`
+
+Do not retry the 2026 crop window, do not recapture to manufacture a new admissible window, and do not weaken crop preflight.
+
+#### D3. Historical logical epoch successor contract
+
+Successor contract identity exists:
+
+`scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1.json`
+
+Contract id:
+
+`MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1`
+
+Historical logical epoch:
+
+`mcft_cap09_am19_historical_logical_20260821t190000z_v1`
+
+Historical producer:
+
+`91d2f518efc5c4c7796c398dabd12801949a9289`
+
+Target logical time:
+
+`2026-08-21T19:00:00.000Z`
+
+Semantic manifest digest:
+
+`sha256:4123573d4a936a8d4c5c39da2d323b10426fbd156b34aa2d6866490ba7c3a132`
+
+Authority V3 historical viability was frozen as 25 / 25 passing contexts.
+
+#### D4. Historical retained-raw immutable provenance inventory
+
+Exact retained-raw readback passed with zero provider refetch and zero writes.
+
+Two retained objects were proven readable and digest-bound:
+
+```text
+SOIL
+bytes   205175
+sha256  65f9bdef363f27732dfa065da170497101d5f0809fa559b7b50964cd66cfccd8
+
+GFS
+bytes   231055360
+sha256  d1c317aa65aa259ecd93ccf915e21c1ee4a04fef83edce11064570e7506e176e
+```
+
+Machine proof also recorded:
+
+```text
+provider_refetch_count       0
+PUT count                    0
+DELETE count                 0
+formal database write count  0
+runtime write count          0
+scheduler write count        0
+```
+
+Do not fetch replacement provider data for this historical epoch.
+
+#### D5. Historical producer source closure / rehydration
+
+Historical rehydration source-closure selftest passed with an exact detached producer worktree and preserved producer/provider-helper blob identities.
+
+The rehydration path was then moved to the controlled local qualification database execution plane, rather than writing into the remote Formal parent.
+
+Do not reopen producer semantics or decoder semantics to address the current PostgreSQL tooling mismatch.
+
+#### D6. Local run-scoped qualification database architecture
+
+The intended database architecture is now:
+
+```text
+remote Formal T4R1 V5 parent
+    = READ-ONLY schema source / provenance source
+
+local exact-pinned ephemeral PostgreSQL
+    = qualification execution plane
+    = ea5e2_readiness base DB
+    + fresh geox_mcft_cap09_am19_q_<runTag>
+    + fresh geox_mcft_cap09_am19_b_<runTag>
+
+fresh qualification DB creation
+    = TEMPLATE template0
+    + schema-only restore
+    + NO data clone
+```
+
+A remote admin credential is **not required** for this architecture. Earlier investigation of `GEOX_MCFT_CAP09_FORMAL_V5_ADMIN_DATABASE_URL` was a wrong path for this successor and must not be revived merely to satisfy local qualification database creation.
+
+At `d82bbd2ba...` the local-role parser and capability check are already green. The remaining blocker occurs before schema dump can complete because the schema client is too old for the remote PostgreSQL 18.6 server.
+
+### E. Current authoritative first-red
+
+The authoritative work queue is one narrow execution-tooling incompatibility:
+
+```text
+read-only parent schema preflight
+    ↓
+remote server PostgreSQL 18.6
+    ↓
+pg_dump 16.15
+    ↓
+FAIL
+```
+
+Correct adjudication:
+
+```text
+this IS:
+  qualification execution tooling mismatch
+
+this is NOT:
+  Runtime semantic failure
+  provider semantic failure
+  AM19 semantic failure
+  Authority failure
+  retained-raw failure
+  rehydration source-closure failure
+  credential-binding failure
+  local role / CREATEDB failure
+  QCP semantic failure
+  Closure failure
+```
+
+Do not rerun the same `d82bbd2ba...` preflight without changing the schema-client execution tooling. It will reproduce the same incompatibility and add no evidence.
+
+### F. Exact next plan for the Migration Team
+
+Proceed in this order:
+
+```text
+1. Re-read branch head before any write.
+
+2. Treat d82bbd2ba... as the last tested red baseline.
+
+3. Audit 307027b6... as an unverified partial tooling repair only.
+
+4. Finish the successor execution-chain binding for an exact-pinned
+   PostgreSQL 18 schema client.
+
+   Required properties:
+   - exact image@sha256 identity;
+   - client major = 18;
+   - remote server major = 18;
+   - schema client used only for remote read-only psql / pg_dump work;
+   - local qualification execution PostgreSQL remains its separately
+     pinned execution image;
+   - no floating tag;
+   - no remote admin credential;
+   - no remote database creation;
+   - no provider/runtime/authority semantic changes.
+
+5. Freeze that schema-client identity in the successor qualification
+   contract / runner inputs so the environment is reproducible and the
+   evidence package can prove which client produced the schema dump.
+
+6. Extend successor selftest / environment evidence to assert the
+   PostgreSQL 18 schema-client binding, without changing AM19 proof
+   semantics.
+
+7. Only then rerun the READ-ONLY parent schema preflight.
+
+8. Require preflight to prove at minimum:
+   - credential binding PASS;
+   - local role parsing PASS;
+   - local role capability PASS;
+   - remote server major 18;
+   - schema-client major 18;
+   - exact schema-client image digest recorded;
+   - schema-only dump non-empty;
+   - COPY / INSERT absent;
+   - remote_parent_mutation=false;
+   - formal_database_mutation=false;
+   - production_database_mutation=false.
+
+9. If preflight is PASS, run local run-scoped provisioning smoke:
+   - create fresh main / blocked DBs locally;
+   - TEMPLATE template0;
+   - restore schema-only;
+   - require 26 public tables in both;
+   - retain zero remote mutation.
+
+10. Only after provisioning smoke is green, start a FRESH historical
+    successor qualification run.
+
+11. Fresh qualification target remains the full 13 / 13 persistent
+    production-graph proof. Do not debug with Closure delivery.
+
+12. When 13 / 13 is genuinely green:
+    - freeze immutable manifest / evidence package;
+    - run the independent verifier;
+    - only then prepare Closure delivery.
+
+13. Closure Team handoff is NOT due yet. Ask the user to transfer to
+    Closure Team only after Migration has a fresh successful 13 / 13,
+    immutable manifest, and independent verification package ready.
+```
+
+### G. Remaining end-to-end sequence
+
+The agreed Migration sequence remains:
+
+```text
+historical logical epoch immutable provenance inventory       DONE
+retained raw exact readback                                   DONE
+successor contract identity                                   DONE
+historical logical epoch controlled rehydration/source closure DONE
+local qualification DB execution-plane design                 DONE
+
+exact-pinned PostgreSQL 18 schema-client binding              IN PROGRESS
+read-only parent schema preflight                              BLOCKED
+local run-scoped provisioning smoke                           NOT YET GREEN
+fresh persistent 24T 13 / 13                                  NOT YET RUN TO PASS
+immutable manifest / evidence package                         NOT YET FINAL
+independent verifier                                          NOT YET PASS
+Closure delivery                                              NOT YET DUE
+```
+
+### H. Pitfalls / mistakes already encountered — do not repeat
+
+1. **Do not claim “fixed” from a commit alone.**
+   `307027b6...` is a candidate execution-tooling repair until machine preflight passes.
+
+2. **Do not rerun the exact same failing preflight without changing the first-red cause.**
+   `d82bbd2ba...` already proves the pg_dump 16.15 vs server 18.6 incompatibility.
+
+3. **Do not use the local PostgreSQL execution image's pg_dump as an implicit remote schema client.**
+   The remote server major and remote read-only tooling major must be compatible and independently pinned.
+
+4. **Do not collapse two database roles into one image identity.**
+   Local execution PostgreSQL and remote schema client are different execution-tool responsibilities even if both use PostgreSQL tooling.
+
+5. **Do not introduce a remote admin credential / remote CREATEDB requirement.**
+   Qualification databases are local ephemeral databases. The Formal parent remains read-only.
+
+6. **Do not misdiagnose local PostgreSQL startup readiness as a database architecture failure.**
+   A newly started container can reject the first probe. Use a retry/readiness loop such as `pg_isready`; do not let PowerShell `ErrorActionPreference=Stop` convert an expected early probe miss into the qualification first-red.
+
+7. **Do not regress the local role parser.**
+   PostgreSQL boolean textual output can be `true/false`; the current fix emits explicit `1/0` and parses that stable representation. At the tested boundary, local role capability is PASS.
+
+8. **Do not trust a trailing `PASS` banner after a prior PowerShell `throw`.**
+   When commands are pasted/executed as separate blocks, later `Write-Host` statements can still print. Use the actual exit code / thrown error / machine result, not a cosmetic tail banner.
+
+9. **Do not recapture the 2026 crop window.**
+   Current-season crop admission is CLOSED_NO_RETRY_NO_RECAPTURE_NO_BYPASS and is intentionally decoupled from this historical persistent proof.
+
+10. **Do not refetch provider raw for the historical epoch.**
+    Exact retained raw already exists and has passed HEAD/GET/digest/byte verification.
+
+11. **Do not mutate provider semantics, Runtime semantics, Authority semantics, AM19 semantics, QCP semantics, or Closure semantics to repair host tooling.**
+
+12. **Do not use floating PostgreSQL image tags.**
+    The schema client must be exact-pinned by digest and its major version must be machine-proven.
+
+13. **Do not send this to Closure Team early.**
+    Migration still owns the first-red. Closure adjudication begins only after the successor proof package exists and independently verifies.
+
+14. **Keep PR #3298 documentation-only.**
+    Engineering changes stay on the migration branch; this handoff branch carries only the handoff update.
+
+### I. Authority ceiling / non-effects
+
+Unless separately and explicitly authorized:
+
+- do not merge the migration successor into protected main;
+- do not mutate protected main;
+- do not mutate frozen Runtime;
+- do not mutate production database or Formal store;
+- do not reactivate GitHub as the primary L2/L3 qualification runtime;
+- do not change current 2026 crop-window adjudication;
+- do not arm Formal-v5;
+- do not start A0;
+- do not start O00–O23;
+- do not claim Stage 1B closure;
+- do not claim MCFT CAP-09 completion;
+- do not let Migration Team make Closure Team's blocker adjudication decision;
+- do not weaken SHA / digest / exact-source / immutable evidence requirements.
+
+### J. Compact takeover state — 2026-10-02
+
+```text
+MANDATORY READ — EXACTLY TWO HANDOFFS
+1. docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+2. docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-09-26.md
+
+TEAM
+Migration Team                         ACTIVE
+Closure Team                           NOT YET DUE
+
+PROTECTED MAIN
+8f63c498bd48978e2dd525ad57b6b8fdb7ada560
+
+FROZEN RUNTIME
+3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a
+
+MIGRATION BRANCH
+qualification/mcft-cap09-am19-historical-logical-successor-v1
+
+LAST MACHINE-TESTED HEAD
+d82bbd2ba387d45b3e99eef606d1c8bf946050dc
+
+TESTED STATE
+local role parsing                 PASS
+credential binding                 PASS
+provisioner selftest               PASS
+local role capability              PASS
+read-only parent schema preflight  FAIL
+
+FIRST-RED
+remote PostgreSQL                  18.6
+pg_dump client                     16.15
+class                              EXECUTION TOOLING COMPATIBILITY
+
+REMOTE UNVERIFIED HEAD
+307027b6dcd4f539f5d827a57156ac74ba230dab
+one commit ahead of d82
+one changed file: provisioner only
+status: PARTIAL TOOLING REPAIR / NOT MACHINE-PROVEN
+
+NEXT
+finish exact-pinned PostgreSQL 18 schema-client binding
+through successor contract + runner
+→ rerun read-only parent schema preflight
+→ local main/blocked provisioning smoke
+→ fresh historical successor 13/13
+→ immutable manifest
+→ independent verifier
+→ then Closure delivery
+
+CURRENT 2026 CROP WINDOW
+CLOSED_NO_RETRY_NO_RECAPTURE_NO_BYPASS
+
+DO NOT
+call 3070 fixed before preflight PASS
+rerun d82 unchanged
+use remote CREATEDB/admin credential
+recapture current crop window
+refetch historical provider raw
+change Runtime / provider / Authority / AM19 / QCP / Closure semantics
+use floating PostgreSQL tags
+start Formal-v5 / A0 / O00-O23
+send to Closure Team before proof package is ready
+```
+
+---
+
 ## 2026-09-30 ACTIVE CHECKPOINT — QCP causal-basis central registration first-red / CAP-09 closure frontier
 
 This is the newest active checkpoint. It supersedes the 2026-09-29, 2026-09-27 and 2026-09-26 current-state summaries below wherever facts conflict. Older sections are intentionally preserved as engineering history and must not be deleted.
