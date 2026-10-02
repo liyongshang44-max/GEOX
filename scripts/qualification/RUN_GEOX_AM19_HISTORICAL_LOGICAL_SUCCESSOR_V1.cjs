@@ -12,11 +12,16 @@ const SOURCE_PATH = 'scripts/qualification/RUN_GEOX_AM19_PERSISTENT_24T_QUALIFIC
 const SOURCE = path.resolve(SOURCE_PATH);
 const SOURCE_BLOB = '46c67bbbabac1ee08182cbea60f3cbd0419c4045';
 const EXPECTED_CONTRACT_ID = 'MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1';
+const EXPECTED_DATABASE_PROVISIONER_REF = 'scripts/qualification/PROVISION_MCFT_CAP09_AM19_RUN_SCOPED_DATABASES_V1.cjs';
 const SOURCE_CORE_REQUIRE = "require('./qualification_core_v1.cjs')";
 const SOURCE_CONTRACT_GATE = "if (contract.schema_version !== 'geox_qualification_contract_v1' || contract.contract_id !== 'MCFT_CAP09_AM19_PERSISTENT_24T_V1') throw new Error('AM19_QMIG_CONTRACT_SCHEMA_OR_ID_UNSUPPORTED');";
 const SUCCESSOR_CONTRACT_GATE = `if (contract.schema_version !== 'geox_qualification_contract_v1' || contract.contract_id !== '${EXPECTED_CONTRACT_ID}') throw new Error('AM19_HISTORICAL_SUCCESSOR_CONTRACT_SCHEMA_OR_ID_UNSUPPORTED');`;
 const SOURCE_EXPIRY_GATE = "if (Date.now() >= Date.parse(expires)) throw new Error('AM19_QMIG_CANDIDATE_EXPIRED');";
 const HISTORICAL_EXPIRY_GATE = "if (process.env.GEOX_AM19_HISTORICAL_LOGICAL_EPOCH_ACK !== 'true' || expires !== String(process.env.MCFT_CAP09_HISTORICAL_CANDIDATE_EXPIRES_AT ?? '')) throw new Error('AM19_HISTORICAL_SUCCESSOR_CANDIDATE_EXPIRY_PROVENANCE_REQUIRED');";
+const SOURCE_ADAPTER_SELFTEST_CALL = "    exec('pnpm', ['exec', 'tsx', contract.controlled_adapter_ref, 'selftest'], { cwd: workspaceDir, env: qenv, logFile, errorCode: 'AM19_QMIG_CONTROLLED_ADAPTER_SELFTEST_FAILED' });";
+const SUCCESSOR_ADAPTER_SELFTEST_CALL = `    exec('node', [contract.database_provisioner_ref, 'run', '--postgres-image', postgresImage], { cwd: workspaceDir, env: qenv, logFile, errorCode: 'AM19_QMIG_RUN_SCOPED_DATABASE_PROVISION_FAILED' });\n${SOURCE_ADAPTER_SELFTEST_CALL}`;
+const SOURCE_REPOSITORY_INPUTS = "    const repositoryInputs = [...new Set([...contract.governed_dependency_refs, contract.historical_runner_ref, contract.controlled_adapter_ref])].sort().map((ref) => ({";
+const SUCCESSOR_REPOSITORY_INPUTS = "    const repositoryInputs = [...new Set([...contract.governed_dependency_refs, contract.historical_runner_ref, contract.controlled_adapter_ref, contract.database_provisioner_ref])].sort().map((ref) => ({";
 
 function readJson(file) { return JSON.parse(fs.readFileSync(file, 'utf8')); }
 function sha256Buffer(value) { return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`; }
@@ -51,6 +56,7 @@ function validateContract(repoRoot, args) {
   assert.equal(contract.current_2026_crop_window_status, 'CLOSED_NO_RETRY_NO_RECAPTURE_NO_BYPASS', 'AM19_HISTORICAL_SUCCESSOR_CURRENT_CROP_WINDOW_MUST_REMAIN_CLOSED');
   assert.equal(contract.formal_current_season_admission_policy, 'DECOUPLED_UNCHANGED_REAL_CLOCK_CROP_PREFLIGHT', 'AM19_HISTORICAL_SUCCESSOR_FORMAL_ADMISSION_DECOUPLING_REQUIRED');
   assert.equal(contract.qualification_runner_ref, 'scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_V1.cjs', 'AM19_HISTORICAL_SUCCESSOR_RUNNER_REF_REQUIRED');
+  assert.equal(contract.database_provisioner_ref, EXPECTED_DATABASE_PROVISIONER_REF, 'AM19_HISTORICAL_SUCCESSOR_DATABASE_PROVISIONER_REF_REQUIRED');
   return { contract, contractPath };
 }
 
@@ -143,8 +149,12 @@ function buildGeneratedRunner(repoRoot, generatedPath) {
   source = exactReplace(source, SOURCE_CORE_REQUIRE, `require(${JSON.stringify(corePath)})`, 'AM19_HISTORICAL_SUCCESSOR_CORE_REQUIRE_CARDINALITY');
   source = exactReplace(source, SOURCE_CONTRACT_GATE, SUCCESSOR_CONTRACT_GATE, 'AM19_HISTORICAL_SUCCESSOR_CONTRACT_GATE_CARDINALITY');
   source = exactReplace(source, SOURCE_EXPIRY_GATE, HISTORICAL_EXPIRY_GATE, 'AM19_HISTORICAL_SUCCESSOR_EXPIRY_GATE_CARDINALITY');
+  source = exactReplace(source, SOURCE_ADAPTER_SELFTEST_CALL, SUCCESSOR_ADAPTER_SELFTEST_CALL, 'AM19_HISTORICAL_SUCCESSOR_DATABASE_PROVISION_CALL_CARDINALITY');
+  source = exactReplace(source, SOURCE_REPOSITORY_INPUTS, SUCCESSOR_REPOSITORY_INPUTS, 'AM19_HISTORICAL_SUCCESSOR_REPOSITORY_INPUTS_CARDINALITY');
   assert(!source.includes(SOURCE_CONTRACT_GATE), 'AM19_HISTORICAL_SUCCESSOR_OLD_CONTRACT_GATE_SURVIVED');
   assert(!source.includes(SOURCE_EXPIRY_GATE), 'AM19_HISTORICAL_SUCCESSOR_CURRENT_EXPIRY_GATE_SURVIVED');
+  assert(source.includes('AM19_QMIG_RUN_SCOPED_DATABASE_PROVISION_FAILED'), 'AM19_HISTORICAL_SUCCESSOR_DATABASE_PROVISION_CALL_REQUIRED');
+  assert(source.includes('contract.database_provisioner_ref'), 'AM19_HISTORICAL_SUCCESSOR_DATABASE_PROVISIONER_INPUT_REQUIRED');
   fs.writeFileSync(generatedPath, source, { flag: 'wx' });
 }
 
@@ -174,7 +184,7 @@ function main() {
     if (check.error) throw check.error;
     if (check.status !== 0) throw new Error(`AM19_HISTORICAL_SUCCESSOR_GENERATED_SYNTAX_FAILED:${check.stderr || ''}`);
     if (args.mode === 'selftest') {
-      process.stdout.write(`${JSON.stringify({status:'PASS',contract_id:contract.contract_id,source_runner_blob:SOURCE_BLOB,historical_logical_epoch_id:d.epoch_id,producer_subject_sha:d.historical_producer.producer_subject_sha,target_t:d.logical_epoch.target_t,semantic_manifest_digest:d.logical_epoch.semantic_manifest_digest,retained_raw_object_count:2,current_2026_crop_window_status:d.current_2026_crop_window_status,current_season_formal_admission_substituted:false,database_access:false,provider_access:false})}\n`);
+      process.stdout.write(`${JSON.stringify({status:'PASS',contract_id:contract.contract_id,source_runner_blob:SOURCE_BLOB,historical_logical_epoch_id:d.epoch_id,producer_subject_sha:d.historical_producer.producer_subject_sha,target_t:d.logical_epoch.target_t,semantic_manifest_digest:d.logical_epoch.semantic_manifest_digest,retained_raw_object_count:2,current_2026_crop_window_status:d.current_2026_crop_window_status,current_season_formal_admission_substituted:false,database_provisioner_ref:contract.database_provisioner_ref,database_access:false,provider_access:false})}\n`);
       return;
     }
     const childArgs = [
