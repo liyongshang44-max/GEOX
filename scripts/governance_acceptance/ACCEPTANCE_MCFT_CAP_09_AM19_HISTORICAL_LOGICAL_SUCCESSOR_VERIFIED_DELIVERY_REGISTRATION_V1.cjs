@@ -13,6 +13,8 @@ const ACCEPTANCE_REF = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM1
 const QCP_REF = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
 const REGISTRY_REF = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
 const VERIFIER2_REF = 'scripts/qualification/VERIFY_GEOX_QUALIFICATION_CLOSURE_DELIVERY_V1.cjs';
+const CONTRACT_REF = 'scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1.json';
+const DEFAULT_ADJUDICATION_OUT = 'acceptance-output/MCFT_CAP_09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_CLOSURE_ADJUDICATION_V1.json';
 
 const EXPECTED = Object.freeze({
   registrationId: 'MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_VERIFIED_DELIVERY_4EE4989F_V1',
@@ -37,8 +39,18 @@ function readJson(ref) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, ref), 'utf8'));
 }
 
+function readJsonPath(file) {
+  return JSON.parse(fs.readFileSync(path.resolve(ROOT, file), 'utf8'));
+}
+
 function git(...args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', windowsHide: true }).trim();
+}
+
+function isAncestor(ancestor, descendant) {
+  if (!/^[0-9a-f]{40}$/.test(String(ancestor || '')) || !/^[0-9a-f]{40}$/.test(String(descendant || ''))) return false;
+  const r = spawnSync('git', ['merge-base', '--is-ancestor', ancestor, descendant], { cwd: ROOT, stdio: 'ignore', windowsHide: true });
+  return r.status === 0;
 }
 
 function parseArgs(argv) {
@@ -177,12 +189,114 @@ function verifyLocalDelivery(args) {
   return { performed: true, proof };
 }
 
+function adjudicateLegacyAm19(reg, qcpProof, args) {
+  assert.equal(args['adjudicate-legacy-am19'], true, 'AM19_CLOSURE_ADJUDICATION_MODE_REQUIRED');
+  const allBlockersRef = String(args['all-blockers'] || '').trim();
+  assert(allBlockersRef, 'AM19_CLOSURE_ADJUDICATION_ALL_BLOCKERS_REQUIRED');
+  const allBlockers = readJsonPath(allBlockersRef);
+  const contract = readJson(CONTRACT_REF);
+
+  assert.equal(allBlockers.preflight_id, 'MCFT_CAP09_ALL_BLOCKERS_PREFLIGHT_V1', 'AM19_CLOSURE_ADJUDICATION_PREFLIGHT_ID_REQUIRED');
+  assert.equal(allBlockers.planner_status, 'PASS', 'AM19_CLOSURE_ADJUDICATION_PLANNER_PASS_REQUIRED');
+  assert.equal(allBlockers.base_sha, EXPECTED.subject, 'AM19_CLOSURE_ADJUDICATION_BASE_SUBJECT_MISMATCH');
+  assert(/^[0-9a-f]{40}$/.test(String(allBlockers.head_sha || '')), 'AM19_CLOSURE_ADJUDICATION_HEAD_SHA_REQUIRED');
+  assert.equal(isAncestor(EXPECTED.subject, allBlockers.head_sha), true, 'AM19_CLOSURE_ADJUDICATION_SUBJECT_ANCESTRY_REQUIRED');
+
+  const legacyResults = (allBlockers.results || []).filter((row) => row.check_id === EXPECTED.legacyCheckId);
+  assert.equal(legacyResults.length, 1, 'AM19_CLOSURE_ADJUDICATION_LEGACY_RESULT_CARDINALITY');
+  const legacyResult = legacyResults[0];
+  assert.equal(legacyResult.status, 'FAIL', 'AM19_CLOSURE_ADJUDICATION_RAW_LEGACY_FAIL_REQUIRED');
+  assert.equal(legacyResult.reason_code, 'NO_VALID_REQUALIFICATION_EVIDENCE', 'AM19_CLOSURE_ADJUDICATION_RAW_REASON_REQUIRED');
+
+  const legacyBlockers = (allBlockers.blockers || []).filter((row) => row.check_id === EXPECTED.legacyCheckId);
+  assert.equal(legacyBlockers.length, 1, 'AM19_CLOSURE_ADJUDICATION_LEGACY_BLOCKER_CARDINALITY');
+
+  assert.equal(contract.contract_id, 'MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1', 'AM19_CLOSURE_ADJUDICATION_CONTRACT_ID_REQUIRED');
+  assert.equal(contract.frozen_runtime_sha, EXPECTED.runtime, 'AM19_CLOSURE_ADJUDICATION_RUNTIME_SUBJECT_MISMATCH');
+  assert.equal(contract.closure_semantic_subject_sha, EXPECTED.closureSemanticSubject, 'AM19_CLOSURE_ADJUDICATION_SEMANTIC_SUBJECT_MISMATCH');
+  assert.equal(legacyResult.dependency_digest, contract.closure_authoritative_dependency_digest, 'AM19_CLOSURE_ADJUDICATION_DEPENDENCY_DIGEST_MISMATCH');
+
+  assert.equal(reg.qualification.qualification_subject_sha, allBlockers.base_sha, 'AM19_CLOSURE_ADJUDICATION_REGISTRATION_BASE_MISMATCH');
+  assert.equal(reg.qualification.result, 'PASS', 'AM19_CLOSURE_ADJUDICATION_QUALIFICATION_PASS_REQUIRED');
+  assert.equal(reg.qualification.fresh_historical_successor_13_of_13, true, 'AM19_CLOSURE_ADJUDICATION_13OF13_REQUIRED');
+  assert.equal(reg.manifest.verifier_1_status, 'PASS', 'AM19_CLOSURE_ADJUDICATION_MANIFEST_PASS_REQUIRED');
+  assert.equal(reg.manifest.exact_subject_binding_verified, true, 'AM19_CLOSURE_ADJUDICATION_MANIFEST_SUBJECT_BINDING_REQUIRED');
+  assert.equal(reg.manifest.package_integrity_verified, true, 'AM19_CLOSURE_ADJUDICATION_MANIFEST_PACKAGE_REQUIRED');
+  assert.equal(reg.manifest.repository_inputs_verified, true, 'AM19_CLOSURE_ADJUDICATION_MANIFEST_REPOSITORY_INPUTS_REQUIRED');
+  assert.equal(reg.manifest.qualification_inputs_verified, true, 'AM19_CLOSURE_ADJUDICATION_MANIFEST_QUALIFICATION_INPUTS_REQUIRED');
+  assert.equal(reg.manifest.latest_run_fallback_used, false, 'AM19_CLOSURE_ADJUDICATION_MANIFEST_FALLBACK_FORBIDDEN');
+  assert.equal(reg.closure_delivery.verifier_2_status, 'PASS', 'AM19_CLOSURE_ADJUDICATION_DELIVERY_PASS_REQUIRED');
+  assert.equal(reg.closure_delivery.exact_subject_binding_verified, true, 'AM19_CLOSURE_ADJUDICATION_DELIVERY_SUBJECT_BINDING_REQUIRED');
+  assert.equal(reg.closure_delivery.package_integrity_verified, true, 'AM19_CLOSURE_ADJUDICATION_DELIVERY_PACKAGE_REQUIRED');
+  assert.equal(reg.closure_delivery.repository_inputs_verified, true, 'AM19_CLOSURE_ADJUDICATION_DELIVERY_REPOSITORY_INPUTS_REQUIRED');
+  assert.equal(reg.closure_delivery.latest_run_fallback_used, false, 'AM19_CLOSURE_ADJUDICATION_DELIVERY_FALLBACK_FORBIDDEN');
+  assert.equal(qcpProof.qcpRegistered, true, 'AM19_CLOSURE_ADJUDICATION_QCP_OWNERSHIP_REQUIRED');
+  assert.equal(git('rev-parse', `HEAD:${REGISTRY_REF}`), EXPECTED.registryBlob, 'AM19_CLOSURE_ADJUDICATION_LEGACY_REGISTRY_BLOB_DRIFT');
+  assert.equal((qcpProof.registry.entries || []).some((entry) => entry.subject_sha === EXPECTED.subject), false, 'AM19_CLOSURE_ADJUDICATION_CURRENT_SUCCESSOR_LEGACY_INSERT_FORBIDDEN');
+
+  for (const key of ['runtime_mutated', 'production_mutation', 'blocker_semantics_modified', 'qcp_semantics_modified', 'closure_subject_mutated', 'supersedes_github_lane']) {
+    assert.equal(reg.closure_delivery[key], false, `AM19_CLOSURE_ADJUDICATION_DELIVERY_NON_EFFECT_REQUIRED:${key}`);
+  }
+
+  const rawBlockers = allBlockers.blockers || [];
+  const remainingBlockers = rawBlockers.filter((row) => row.check_id !== EXPECTED.legacyCheckId);
+  assert.equal(rawBlockers.length - remainingBlockers.length, 1, 'AM19_CLOSURE_ADJUDICATION_EXACTLY_ONE_BLOCKER_ADMITTED');
+
+  const result = {
+    schema_version: 'geox_mcft_cap09_am19_historical_logical_successor_closure_adjudication_v1',
+    status: 'PASS',
+    adjudication_id: 'MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_CLOSURE_ADJUDICATION_4EE4989F_V1',
+    check_id: EXPECTED.legacyCheckId,
+    execution: 'AM19_HISTORICAL_LOGICAL_SUCCESSOR_VERIFIED_DELIVERY_ADJUDICATION',
+    reason_code: 'CURRENT_SUCCESSOR_VERIFIED_DELIVERY_AND_DEPENDENCY_DIGEST_VALID',
+    raw_preflight_ref: allBlockersRef,
+    raw_preflight_status: allBlockers.status,
+    planner_status: allBlockers.planner_status,
+    base_sha: allBlockers.base_sha,
+    head_sha: allBlockers.head_sha,
+    qualification_subject_sha: EXPECTED.subject,
+    runtime_subject_sha: EXPECTED.runtime,
+    closure_semantic_subject_sha: EXPECTED.closureSemanticSubject,
+    dependency_digest: legacyResult.dependency_digest,
+    contract_dependency_digest: contract.closure_authoritative_dependency_digest,
+    evidence_package_digest: EXPECTED.evidencePackageDigest,
+    manifest_digest: EXPECTED.manifestDigest,
+    delivery_id: EXPECTED.deliveryId,
+    delivery_package_digest: EXPECTED.deliveryPackageDigest,
+    qcp_central_ownership_registered: true,
+    legacy_registry_blob_unchanged: true,
+    current_successor_inserted_into_legacy_registry: false,
+    raw_blocker_count: rawBlockers.length,
+    admitted_blocker_count: 1,
+    adjudicated_blocker_count: remainingBlockers.length,
+    remaining_blockers: remainingBlockers,
+    closure_effect: 'LEGACY_AM19_PERSISTENT_24T_SATISFIED_BY_CURRENT_SUCCESSOR_VERIFIED_DELIVERY',
+    non_effects: {
+      legacy_registry_mutation: false,
+      qcp_planner_decision_semantics_mutation: false,
+      runtime_mutation: false,
+      production_mutation: false,
+      formal_v5_arm: false,
+      a0: false,
+      o00_o23: false,
+      mcft_cap09_completion_claim: false,
+    },
+  };
+
+  const outRef = String(args['adjudication-out'] || DEFAULT_ADJUDICATION_OUT).trim();
+  const outPath = path.resolve(ROOT, outRef);
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
+  return result;
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const reg = readJson(REGISTRATION_REF);
   verifyRegistration(reg);
   const qcpProof = verifyQcpAndRegistry(reg, args);
   const local = verifyLocalDelivery(args);
+  const adjudication = args['adjudicate-legacy-am19'] ? adjudicateLegacyAm19(reg, qcpProof, args) : null;
 
   process.stdout.write(`${JSON.stringify({
     schema_version: 'geox_mcft_cap09_am19_historical_logical_successor_verified_delivery_registration_acceptance_v1',
@@ -202,7 +316,11 @@ function main() {
     current_successor_inserted_into_legacy_registry: false,
     v13_harness_dependency_set_modified: false,
     qcp_check_decision_semantics_modified: false,
-    closure_adjudication_performed: false,
+    closure_adjudication_performed: Boolean(adjudication),
+    closure_adjudication_status: adjudication?.status ?? null,
+    closure_adjudication_check_id: adjudication?.check_id ?? null,
+    raw_blocker_count: adjudication?.raw_blocker_count ?? null,
+    adjudicated_blocker_count: adjudication?.adjudicated_blocker_count ?? null,
     formal_v5_arm: false,
     a0: false,
     o00_o23: false,
