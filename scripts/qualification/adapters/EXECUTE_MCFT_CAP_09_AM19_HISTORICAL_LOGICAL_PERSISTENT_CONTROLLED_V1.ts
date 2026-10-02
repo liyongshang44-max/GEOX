@@ -21,6 +21,29 @@ const HISTORICAL_CANDIDATE_GATE = 'if (candidate.producer_subject_sha !== subjec
 const CONTROLLED_CANDIDATE_GATE = 'const producerSubject = process.env.MCFT_CAP09_ROLLING_PRODUCER_SUBJECT_SHA?.trim(); if (!producerSubject || !/^[0-9a-f]{40}$/.test(producerSubject)) throw new Error("AM19_P24_SUCCESSOR_PRODUCER_SUBJECT_REQUIRED"); if (candidate.producer_subject_sha !== producerSubject || (candidate.subject_sha !== undefined && candidate.subject_sha !== producerSubject)) throw new Error("AM19_P24_CANDIDATE_PRODUCER_SUBJECT_REQUIRED");';
 const SOURCE_EXPIRY_GATE = 'if (Date.now() >= Date.parse(candidate.candidate_expires_at)) throw new Error("AM19_P24_CANDIDATE_EXPIRED");';
 const HISTORICAL_EXPIRY_GATE = 'if (process.env.GEOX_AM19_HISTORICAL_LOGICAL_EPOCH_ACK !== "true" || candidate.candidate_expires_at !== process.env.MCFT_CAP09_HISTORICAL_CANDIDATE_EXPIRES_AT) throw new Error("AM19_P24_HISTORICAL_CANDIDATE_EXPIRY_BINDING_REQUIRED");';
+const SOURCE_DATABASE_BINDING = [
+  '  const sourceUrl = requiredEnv("MCFT_CAP09_PARENT_DATABASE_URL");',
+  '  const localUrl = requiredEnv("LOCAL_REHYDRATION_DATABASE_URL");',
+  '  const mainUrl = databaseUrlFor(sourceUrl, MAIN_DB);',
+  '  const blockedUrl = databaseUrlFor(sourceUrl, BLOCKED_DB);',
+].join("\n");
+const CONTROLLED_DATABASE_BINDING = [
+  '  const sourceUrl = requiredEnv("MCFT_CAP09_PARENT_DATABASE_URL");',
+  '  const localUrl = requiredEnv("LOCAL_REHYDRATION_DATABASE_URL");',
+  '  const qualificationBaseUrl = requiredEnv("GEOX_AM19_QUALIFICATION_DATABASE_BASE_URL");',
+  '  const qualificationDatabaseUrlFor = (base: string, database: string): string => {',
+  '    const parsed = new URL(base);',
+  '    if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") throw new Error("AM19_P24_QUALIFICATION_POSTGRES_URL_REQUIRED");',
+  '    if (!["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) throw new Error("AM19_P24_QUALIFICATION_LOCAL_DATABASE_REQUIRED");',
+  '    const baseDatabase = decodeURIComponent(parsed.pathname.replace(/^\\//, ""));',
+  '    if (baseDatabase !== "ea5e2_readiness") throw new Error(`AM19_P24_QUALIFICATION_BASE_DATABASE_REQUIRED:${baseDatabase}`);',
+  '    if (database !== MAIN_DB && database !== BLOCKED_DB) throw new Error(`AM19_P24_QUALIFICATION_DATABASE_NAME_FORBIDDEN:${database}`);',
+  '    parsed.pathname = `/${database}`;',
+  '    return parsed.toString();',
+  '  };',
+  '  const mainUrl = qualificationDatabaseUrlFor(qualificationBaseUrl, MAIN_DB);',
+  '  const blockedUrl = qualificationDatabaseUrlFor(qualificationBaseUrl, BLOCKED_DB);',
+].join("\n");
 
 function executable(name: string): string { return process.platform === "win32" && name === "pnpm" ? "pnpm.cmd" : name; }
 function git(...args: string[]): string { return execFileSync("git", args, { encoding: "utf8" }).trim(); }
@@ -47,6 +70,7 @@ function build(): string {
   generated = exactReplace(generated, SOURCE_BLOCKED_DB, blockedDb, "CONTROLLED_AM19_HISTORICAL_BLOCKED_DB_REPLACEMENT_CARDINALITY");
   generated = exactReplace(generated, HISTORICAL_CANDIDATE_GATE, CONTROLLED_CANDIDATE_GATE, "CONTROLLED_AM19_HISTORICAL_CANDIDATE_GATE_REPLACEMENT_CARDINALITY");
   generated = exactReplace(generated, SOURCE_EXPIRY_GATE, HISTORICAL_EXPIRY_GATE, "CONTROLLED_AM19_HISTORICAL_EXPIRY_GATE_REPLACEMENT_CARDINALITY");
+  generated = exactReplace(generated, SOURCE_DATABASE_BINDING, CONTROLLED_DATABASE_BINDING, "CONTROLLED_AM19_HISTORICAL_DATABASE_EXECUTION_PLANE_REPLACEMENT_CARDINALITY");
   generated = exactReplaceCount(generated, SOURCE_AUTHORITY_BLOB_SYMBOL, TARGET_AUTHORITY_BLOB_SYMBOL, 2, "CONTROLLED_AM19_HISTORICAL_AUTHORITY_BLOB_SYMBOL_REPLACEMENT_CARDINALITY");
   generated = exactReplaceCount(generated, SOURCE_AUTHORITY_REF_SYMBOL, TARGET_AUTHORITY_REF_SYMBOL, 2, "CONTROLLED_AM19_HISTORICAL_AUTHORITY_REF_SYMBOL_REPLACEMENT_CARDINALITY");
   assert(!generated.includes(HISTORICAL_PARENT_DB), "CONTROLLED_AM19_HISTORICAL_PARENT_DB_SURVIVED");
@@ -54,6 +78,8 @@ function build(): string {
   assert(!generated.includes(SOURCE_BLOCKED_DB), "CONTROLLED_AM19_HISTORICAL_V4_BLOCKED_DB_SURVIVED");
   assert(!generated.includes(HISTORICAL_CANDIDATE_GATE), "CONTROLLED_AM19_HISTORICAL_CANDIDATE_GATE_SURVIVED");
   assert(!generated.includes(SOURCE_EXPIRY_GATE), "CONTROLLED_AM19_HISTORICAL_CURRENT_EXPIRY_GATE_SURVIVED");
+  assert(!generated.includes(SOURCE_DATABASE_BINDING), "CONTROLLED_AM19_HISTORICAL_REMOTE_QUALIFICATION_DATABASE_BINDING_SURVIVED");
+  assert(generated.includes("GEOX_AM19_QUALIFICATION_DATABASE_BASE_URL"), "CONTROLLED_AM19_HISTORICAL_LOCAL_QUALIFICATION_DATABASE_BINDING_REQUIRED");
   assert.equal(generated.split(TARGET_AUTHORITY_BLOB_SYMBOL).length - 1, 2, "CONTROLLED_AM19_HISTORICAL_V4_AUTHORITY_BLOB_SYMBOL_REQUIRED");
   assert.equal(generated.split(TARGET_AUTHORITY_REF_SYMBOL).length - 1, 2, "CONTROLLED_AM19_HISTORICAL_V4_AUTHORITY_REF_SYMBOL_REQUIRED");
   return generated;
@@ -79,6 +105,12 @@ function assertControlledBoundary(): any {
   assert(["postgres:", "postgresql:"].includes(parent.protocol), "CONTROLLED_AM19_HISTORICAL_POSTGRES_PARENT_REQUIRED");
   assert(!["localhost", "127.0.0.1", "::1"].includes(parent.hostname), "CONTROLLED_AM19_HISTORICAL_REMOTE_PARENT_REQUIRED");
   assert.equal(decodeURIComponent(parent.pathname.replace(/^\//, "")), T4R1_PARENT_DB, "CONTROLLED_AM19_HISTORICAL_T4R1_PARENT_DB_IDENTITY_REQUIRED");
+  const qualificationBase = new URL(required("GEOX_AM19_QUALIFICATION_DATABASE_BASE_URL"));
+  assert(["postgres:", "postgresql:"].includes(qualificationBase.protocol), "CONTROLLED_AM19_HISTORICAL_QUALIFICATION_POSTGRES_REQUIRED");
+  assert(["localhost", "127.0.0.1", "::1"].includes(qualificationBase.hostname), "CONTROLLED_AM19_HISTORICAL_QUALIFICATION_LOCALHOST_REQUIRED");
+  assert.equal(decodeURIComponent(qualificationBase.pathname.replace(/^\//, "")), "ea5e2_readiness", "CONTROLLED_AM19_HISTORICAL_QUALIFICATION_BASE_DB_REQUIRED");
+  assert.equal(required("GEOX_AM19_QUALIFICATION_DATABASE_BASE_URL"), required("DATABASE_URL"), "CONTROLLED_AM19_HISTORICAL_QUALIFICATION_BASE_URL_DRIFT");
+  assert.match(required("GEOX_AM19_QMIG_LOCAL_POSTGRES_CONTAINER"), /^geox-am19-q-[0-9a-f]{16}$/, "CONTROLLED_AM19_HISTORICAL_LOCAL_POSTGRES_CONTAINER_REQUIRED");
   qualificationDatabase(required("GEOX_AM19_QMIG_MAIN_DB"), "geox_mcft_cap09_am19_q_");
   qualificationDatabase(required("GEOX_AM19_QMIG_BLOCKED_DB"), "geox_mcft_cap09_am19_b_");
   return d;
@@ -90,6 +122,8 @@ function childEnv(d: any): NodeJS.ProcessEnv {
     GEOX_AM19_HISTORICAL_LOGICAL_EPOCH_ACK: "true",
     MCFT_CAP09_HISTORICAL_CANDIDATE_EXPIRES_AT: d.logical_epoch.original_candidate_expires_at,
     LOCAL_REHYDRATION_DATABASE_URL: required("DATABASE_URL"),
+    GEOX_AM19_QUALIFICATION_DATABASE_BASE_URL: required("GEOX_AM19_QUALIFICATION_DATABASE_BASE_URL"),
+    GEOX_AM19_QMIG_LOCAL_POSTGRES_CONTAINER: required("GEOX_AM19_QMIG_LOCAL_POSTGRES_CONTAINER"),
   };
 }
 
@@ -99,7 +133,7 @@ function selftest(): void {
   try {
     execFileSync(executable("pnpm"), ["exec", "tsc", "--noEmit", "--pretty", "false", "--skipLibCheck", "--target", "ES2022", "--module", "NodeNext", "--moduleResolution", "NodeNext", "--esModuleInterop", "--types", "node", GENERATED], { stdio: "inherit", env: childEnv(d) });
     execFileSync(executable("pnpm"), ["exec", "tsx", GENERATED, "selftest"], { stdio: "inherit", env: childEnv(d) });
-    console.log(JSON.stringify({status:"PASS",execution_plane:"GEOX_CONTROLLED_QUALIFICATION_HOST_V1",source_runner_blob:SOURCE_BLOB,source_runner_reimplemented:false,historical_logical_epoch_id:d.epoch_id,current_candidate_expiry_gate_substituted:false,historical_expiry_bound_as_provenance:true,parent_database:T4R1_PARENT_DB,producer_subject_binding:"EXACT_HISTORICAL_DESCRIPTOR",qualification_subject_binding:"EXACT_CONTROLLED_HOST_CHECKOUT",authority_generation:"V4",database_access:false,provider_access:false}));
+    console.log(JSON.stringify({status:"PASS",execution_plane:"GEOX_CONTROLLED_QUALIFICATION_HOST_V1",source_runner_blob:SOURCE_BLOB,source_runner_reimplemented:false,historical_logical_epoch_id:d.epoch_id,current_candidate_expiry_gate_substituted:false,historical_expiry_bound_as_provenance:true,parent_database:T4R1_PARENT_DB,parent_database_access:"REMOTE_READ_ONLY",qualification_database_execution_plane:"LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER",producer_subject_binding:"EXACT_HISTORICAL_DESCRIPTOR",qualification_subject_binding:"EXACT_CONTROLLED_HOST_CHECKOUT",authority_generation:"V4",database_access:false,provider_access:false}));
   } finally { cleanup(); }
 }
 
