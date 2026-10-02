@@ -89,6 +89,7 @@ function childEnv(d: any): NodeJS.ProcessEnv {
     ...process.env,
     GEOX_AM19_HISTORICAL_LOGICAL_EPOCH_ACK: "true",
     MCFT_CAP09_HISTORICAL_CANDIDATE_EXPIRES_AT: d.logical_epoch.original_candidate_expires_at,
+    LOCAL_REHYDRATION_DATABASE_URL: required("DATABASE_URL"),
   };
 }
 
