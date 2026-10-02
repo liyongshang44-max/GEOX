@@ -103,9 +103,7 @@
     "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts",
     "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
     "apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts",
-    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
-    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
-    "scripts/qualification/PROVISION_MCFT_CAP09_AM19_RUN_SCOPED_DATABASES_INNER_V1.cjs"
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json"
   ],
   "required_proof_surface": [
     "historical_logical_epoch_authority_v3_25_of_25",
