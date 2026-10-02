@@ -9,6 +9,7 @@ const PROFILE_REF = 'scripts/qualification/contracts/MCFT_CAP09_AM19_HISTORICAL_
 const CONTRACT_REF = 'scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1.json';
 const RUNNER_REF = 'scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_V1.cjs';
 const VERIFIER_REF = 'scripts/qualification/VERIFY_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_RECONCILIATION_V1.cjs';
+const PREFLIGHT_REF = 'scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PREFLIGHT_V1.cjs';
 const PROFILE_ID = 'MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PROFILE_V1';
 const CONTRACT_ID = 'MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1';
 const RUNTIME_SHA = '3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a';
@@ -42,6 +43,7 @@ function run() {
   const contract = readJson(root, CONTRACT_REF);
   const descriptor = readJson(root, contract.historical_logical_epoch_descriptor_ref);
   const runner = fs.readFileSync(path.resolve(root, RUNNER_REF), 'utf8');
+  const preflight = fs.readFileSync(path.resolve(root, PREFLIGHT_REF), 'utf8');
 
   assert.equal(profile.schema_version, 'geox_mcft_cap09_am19_historical_logical_successor_profile_v1');
   assert.equal(profile.profile_id, PROFILE_ID);
@@ -52,6 +54,7 @@ function run() {
   assert.equal(profile.single_current_contract_ref, CONTRACT_REF);
   assert.equal(profile.single_current_contract_id, CONTRACT_ID);
   assert.equal(profile.single_current_runner_ref, RUNNER_REF);
+  assert.equal(profile.controlled_host_preflight_ref, PREFLIGHT_REF);
 
   assert.equal(contract.schema_version, 'geox_qualification_contract_v1');
   assert.equal(contract.contract_id, CONTRACT_ID);
@@ -62,6 +65,7 @@ function run() {
   assert.equal(contract.successor_profile_version, 1);
   assert.equal(contract.current_admission_route, 'HISTORICAL_LOGICAL_SUCCESSOR_V1');
   assert.equal(contract.reconciliation_verifier_ref, VERIFIER_REF);
+  assert.equal(contract.successor_preflight_ref, PREFLIGHT_REF);
   assert.equal(contract.qualification_runner_ref, RUNNER_REF);
 
   assert.equal(profile.frozen_runtime_sha, RUNTIME_SHA);
@@ -154,6 +158,9 @@ function run() {
   assert.match(runner, /VERIFY_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_RECONCILIATION_V1\.cjs/);
   assert.match(runner, /CLOSED_NO_RETRY_NO_RECAPTURE_NO_BYPASS/);
   assert.match(runner, /LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER/);
+  assert.match(preflight, /MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1/);
+  assert.match(preflight, /MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PROFILE_V1/);
+  assert.match(preflight, /admitted_to_fresh_historical_successor_13_of_13/);
 
   const result = {
     schema_version: 'geox_mcft_cap09_am19_historical_logical_successor_reconciliation_v1',
@@ -162,6 +169,7 @@ function run() {
     profile_id: PROFILE_ID,
     contract_id: CONTRACT_ID,
     current_admission_route: profile.admission_route,
+    controlled_host_preflight_ref: PREFLIGHT_REF,
     frozen_runtime_sha: RUNTIME_SHA,
     descriptor_ref: DESCRIPTOR_REF,
     historical_logical_epoch_id: EPOCH_ID,
