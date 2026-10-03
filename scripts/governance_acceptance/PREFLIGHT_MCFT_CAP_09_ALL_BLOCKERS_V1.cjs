@@ -822,12 +822,74 @@ function main() {
           detail: evidence,
         });
       } else if (decision.diagnostic_command && !adoptionDurableRequalification) {
-        const diagnosticEnv = decision.check_id === "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM"
-          ? { GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA: args.base || "" }
-          : {};
-        const diagnostic = runDiagnostic(decision.diagnostic_command, diagnosticEnv);
-        result = { ...common, execution: "DIAGNOSTIC_COMMAND", status: diagnostic.status, reason_code: diagnostic.status === "PASS" ? "DIAGNOSTIC_PASS" : "DIAGNOSTIC_FAIL", diagnostic_command: decision.diagnostic_command, diagnostic };
-        if (diagnostic.status !== "PASS") blockers.push({ blocker_class: "DIAGNOSTIC_FAILURE", check_id: decision.check_id, detail: diagnostic });
+        const durableBeforeDiagnostic =
+          PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(
+            decision.check_id,
+          )
+            ? resolveRequalificationEvidence(
+                decision,
+                authority,
+                registry,
+                stage,
+                args.head || null,
+              )
+            : null;
+
+        if (durableBeforeDiagnostic?.status === "PASS") {
+          result = {
+            ...common,
+            execution:
+              "DURABLE_REQUALIFICATION_EVIDENCE_BEFORE_HISTORICAL_DIAGNOSTIC",
+            status: "PASS",
+            reason_code: durableBeforeDiagnostic.reason_code,
+            evidence_id:
+              durableBeforeDiagnostic.evidence_id ?? null,
+            evidence_run_id:
+              durableBeforeDiagnostic.run_id ?? null,
+            evidence_subject_sha:
+              durableBeforeDiagnostic.subject_sha ?? null,
+            evidence_adjudication:
+              durableBeforeDiagnostic.candidates,
+            historical_diagnostic_skipped: true,
+          };
+        } else {
+          const diagnosticEnv =
+            decision.check_id ===
+            "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM"
+              ? {
+                  GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA:
+                    args.base || "",
+                }
+              : {};
+
+          const diagnostic = runDiagnostic(
+            decision.diagnostic_command,
+            diagnosticEnv,
+          );
+
+          result = {
+            ...common,
+            execution: "DIAGNOSTIC_COMMAND",
+            status: diagnostic.status,
+            reason_code:
+              diagnostic.status === "PASS"
+                ? "DIAGNOSTIC_PASS"
+                : "DIAGNOSTIC_FAIL",
+            diagnostic_command:
+              decision.diagnostic_command,
+            diagnostic,
+            durable_requalification_precheck:
+              durableBeforeDiagnostic,
+          };
+
+          if (diagnostic.status !== "PASS") {
+            blockers.push({
+              blocker_class: "DIAGNOSTIC_FAILURE",
+              check_id: decision.check_id,
+              detail: diagnostic,
+            });
+          }
+        }
       } else {
         const evidence = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null);
         result = {
