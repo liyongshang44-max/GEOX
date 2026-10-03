@@ -870,6 +870,12 @@ function main() {
 
           }
 
+          if (decision.check_id === "FORMAL_V5_H6_SUCCESSOR_SEAM") {
+
+            diagnosticEnv.H6_SUCCESSOR_BASE_SHA = args.base || "";
+
+          }
+
           const diagnostic = runDiagnostic(
             decision.diagnostic_command,
             diagnosticEnv,
