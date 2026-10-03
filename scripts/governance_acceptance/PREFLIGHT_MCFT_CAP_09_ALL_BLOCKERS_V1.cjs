@@ -862,6 +862,14 @@ function main() {
                 }
               : {};
 
+          if (decision.check_id === "T4R1_CURRENT_CROP_ROLLING_REFRESH") {
+
+            diagnosticEnv.MCFT_CAP09_CURRENT_CROP_BASE_SHA = args.base || "";
+
+            diagnosticEnv.MCFT_CAP09_CURRENT_CROP_HEAD_SHA = args.head || "";
+
+          }
+
           const diagnostic = runDiagnostic(
             decision.diagnostic_command,
             diagnosticEnv,
