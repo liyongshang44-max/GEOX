@@ -2423,6 +2423,86 @@
         "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "46126334866d7600fbd30d1ac1770d681c7cdf5c4ee382f4d0074d687efbc772"
+      },
+      {
+        "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+        "run_id": 36665643987,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:1f7db1f41c0ad8e72855cf71256e738d2d8a05815301246b26a915fb447df4ac",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "ab63a5704d5826bfbddabb833da5f8c9434ba96e7611c9ae5d430707fead5cac"
+      },
+      {
+        "evidence_id": "PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "mcft-cap-09-phase4-twin-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+        "run_id": 36665643844,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:ce5d2e9754f1ecc7814f3ab6a1328063c2af5784cc29316c6779023c007efdd5",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "2082f4411cb3a1ff62d95582a7add014cb3ba4adbf29b5cd0b050a161c27cb32"
+      },
+      {
+        "evidence_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "mcft-cap-09-phase7-candidate-promotion-composition",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
+        "run_id": 36665644144,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:6d09054147c7ebf292cc50050f5e9187651af42195c623d3409928390f5e8161",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "b91ce877604260a0866c3bc6229d4ffb81b36d74d0267c303fca39a352ae6f8b"
+      },
+      {
+        "evidence_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "MCFT CAP-09 Production Twin Process V2 Routing",
+        "workflow_path": ".github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml",
+        "run_id": 36665643915,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:6bebff54fef4bbd53cd804b65ecc5dbcff9bae6efd98fb091d2c3ddcc5bf9a24",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "21a784e1c0465b08f75ab52ae98448a2efc671263faf372129c751127e726749"
       }
     ],
     "durable_anchors": {
@@ -3923,6 +4003,62 @@
             "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
             "created_at": "2026-09-30T03:43:00Z",
             "updated_at": "2026-09-30T03:46:35Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665643987,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 887,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:44:42Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665643844,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 539,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase4-twin-runtime-persistence",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:44:54Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665644144,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 553,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
+            "workflow_name": "mcft-cap-09-phase7-candidate-promotion-composition",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:44:46Z"
+          }
+        },
+        {
+          "evidence_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665643915,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 159,
+            "workflow_path": ".github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml",
+            "workflow_name": "MCFT CAP-09 Production Twin Process V2 Routing",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:44:06Z"
           }
         }
       ],
