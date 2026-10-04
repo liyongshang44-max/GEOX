@@ -23,6 +23,11 @@ eq(a.record_status,"CURRENT_CROP_AUTHORITY_COMPOSITION_CANDIDATE_NO_PRODUCTION_E
 eq(a.scope.site_id,"KBS_MCSE_T4R1","CURRENT_CROP_COMPOSITION_SCOPE");
 eq(a.lifecycle_axis.required.domain_state,"ACTIVE","CURRENT_CROP_COMPOSITION_LIFE_STATE");
 eq(a.biological_stage_axis.required_epistemic_class,"THERMAL_MODEL_DERIVED","CURRENT_CROP_COMPOSITION_EPISTEMIC");
+eq(JSON.stringify(a.biological_stage_axis.allowed_late_season_candidates),JSON.stringify([
+  "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
+  "R6_OR_LATER_MODEL_ESTIMATE"
+]),"CURRENT_CROP_COMPOSITION_ALLOWED_LATE_STAGE_SET");
+eq(a.biological_stage_axis.resolution_rule,"RESOLVED_BIOLOGICAL_STAGE_MUST_BE_EXACT_MEMBER_OF_ALLOWED_LATE_SEASON_CANDIDATES","CURRENT_CROP_COMPOSITION_STAGE_RESOLUTION_RULE");
 eq(a.water_use_axis.expected_singleton_stage,"LATE","CURRENT_CROP_COMPOSITION_STAGE");
 eq(a.crop_model_parameter_axis.expected_kc,0.6,"CURRENT_CROP_COMPOSITION_KC");
 for(const [k,v] of Object.entries(a.non_effects))eq(v,false,"CURRENT_CROP_COMPOSITION_NON_EFFECT:"+k);
