@@ -56,7 +56,7 @@ jobs:
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.cjs
 
       - name: Build current rolling snapshot overlay
-        if: github.event_name != 'pull_request' || (github.event_name == 'pull_request' && github.head_ref == 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' && github.event.pull_request.base.sha == 'a268e1dfb056fe702a0dd31974d8ddf451775dbd')
+        if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/cap_09"
@@ -70,43 +70,36 @@ jobs:
             "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json"
 
       - name: Run existing thermal scientific probe against overlay
-        if: github.event_name != 'pull_request' || (github.event_name == 'pull_request' && github.head_ref == 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' && github.event.pull_request.base.sha == 'a268e1dfb056fe702a0dd31974d8ddf451775dbd')
+        if: github.event_name != 'pull_request'
         working-directory: ${{ runner.temp }}/mcft-cap09-rolling
         run: python "$GITHUB_WORKSPACE/scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py"
 
       - name: Install lifecycle qualification dependencies
-        if: github.event_name != 'pull_request' || (github.event_name == 'pull_request' && github.head_ref == 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' && github.event.pull_request.base.sha == 'a268e1dfb056fe702a0dd31974d8ddf451775dbd')
+        if: github.event_name != 'pull_request'
         run: |
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
 
       - name: Adjudicate current protected-main successor-chain effectiveness
-        if: github.event_name != 'pull_request' || (github.event_name == 'pull_request' && github.head_ref == 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' && github.event.pull_request.base.sha == 'a268e1dfb056fe702a0dd31974d8ddf451775dbd')
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
           git fetch --no-tags origin main
           current_main="$(git rev-parse origin/main)"
           subject="$(git rev-parse HEAD)"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            base="${{ github.event.pull_request.base.sha }}"
-            test "$current_main" = "$base"
-            test "$subject" = "${{ github.event.pull_request.head.sha }}"
-          else
-            base="$subject"
-            if [ "$subject" != "${{ github.sha }}" ] || [ "$subject" != "$current_main" ]; then
-              echo "T4R1_ROLLING_CURRENT_MAIN_RACE:${subject}:${current_main}:${{ github.sha }}" >&2
-              exit 1
-            fi
+          if [ "$subject" != "${{ github.sha }}" ] || [ "$subject" != "$current_main" ]; then
+            echo "T4R1_ROLLING_CURRENT_MAIN_RACE:${subject}:${current_main}:${{ github.sha }}" >&2
+            exit 1
           fi
-          MCFT_BASE_SHA="$base" \
+          MCFT_BASE_SHA="$subject" \
           MCFT_SUBJECT_SHA="$subject" \
             node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.cjs
 
       - name: Run fresh persistent lifecycle qualification
-        if: github.event_name != 'pull_request' || (github.event_name == 'pull_request' && github.head_ref == 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' && github.event.pull_request.base.sha == 'a268e1dfb056fe702a0dd31974d8ddf451775dbd')
+        if: github.event_name != 'pull_request'
         env:
-          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          MCFT_SUBJECT_SHA: ${{ github.sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
 
       - name: Bind live lifecycle result to admitted current protected main
@@ -147,7 +140,7 @@ jobs:
           console.log(JSON.stringify({status:'PASS',subject_sha:subject,outcome:result.qualification_outcome,adoptable_on_current_protected_main:adoptable,successor_chain_hops:gov.successor_chain_hop_count,exact_main_rerun_required:false}));
 
       - name: Compose ephemeral fresh current-crop candidate
-        if: github.event_name != 'pull_request' || (github.event_name == 'pull_request' && github.head_ref == 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' && github.event.pull_request.base.sha == 'a268e1dfb056fe702a0dd31974d8ddf451775dbd')
+        if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           cp "$RUNNER_TEMP/mcft-cap09-rolling/acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json" \
@@ -155,7 +148,7 @@ jobs:
           node scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
 
       - name: Enforce candidate-only authority ceiling
-        if: github.event_name != 'pull_request' || (github.event_name == 'pull_request' && github.head_ref == 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' && github.event.pull_request.base.sha == 'a268e1dfb056fe702a0dd31974d8ddf451775dbd')
+        if: github.event_name != 'pull_request'
         shell: node {0}
         run: |
           const fs=require('fs');
@@ -163,9 +156,7 @@ jobs:
           const c=JSON.parse(fs.readFileSync(p,'utf8'));
           const life=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json','utf8'));
           if(c.status!=='PASS') throw new Error('ROLLING_CURRENT_CROP_CANDIDATE_NOT_PASS');
-          const carrier = '${{ github.event_name }}' === 'pull_request';
-          if(!carrier && (life.protected_main_authority_context?.subject_is_current_protected_main!==true||life.protected_main_authority_context?.successor_chain_effectiveness_adjudicated!==true||life.amendment_16_effectiveness?.exact_main_rerun_required_after_effectiveness!==false)) throw new Error('ROLLING_CURRENT_CROP_LIFECYCLE_EFFECTIVENESS_NOT_BOUND');
-          if(carrier && (life.subject_sha !== '${{ github.event.pull_request.head.sha }}' || life.status !== 'PASS' || life.qualification_outcome !== 'ACTIVE_CANDIDATE')) throw new Error('ROLLING_CURRENT_CROP_CARRIER_LIFECYCLE_RESULT_REQUIRED');
+          if(life.protected_main_authority_context?.subject_is_current_protected_main!==true||life.protected_main_authority_context?.successor_chain_effectiveness_adjudicated!==true||life.amendment_16_effectiveness?.exact_main_rerun_required_after_effectiveness!==false) throw new Error('ROLLING_CURRENT_CROP_LIFECYCLE_EFFECTIVENESS_NOT_BOUND');
           if(c.architecture_effective!==false || c.runtime_consumption_authorized!==false) throw new Error('ROLLING_CURRENT_CROP_PREMATURE_GRADUATION');
           for(const key of [
             'runtime_config_write_authorized','database_write_authorized','scheduler_write_authorized',
@@ -176,7 +167,7 @@ jobs:
           console.log(JSON.stringify({status:'PASS',candidate_only:true,production_effect:false,stage:c.biological_stage?.resolved_biological_stage,as_of:c.biological_stage?.authority_as_of,successor_chain_effectiveness:true,exact_main_rerun_required:false}));
 
       - name: Upload ephemeral rolling candidate evidence
-        if: github.event_name != 'pull_request' || (github.event_name == 'pull_request' && github.head_ref == 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' && github.event.pull_request.base.sha == 'a268e1dfb056fe702a0dd31974d8ddf451775dbd')
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-t4r1-rolling-current-crop-candidate-${{ github.sha }}
