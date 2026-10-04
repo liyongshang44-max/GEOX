@@ -1,3 +1,163 @@
+# 2026-10-04 FINAL T0 CLOSURE CHECKPOINT — ZERO BLOCKERS / DO NOT REOPEN
+
+Status: **CAP-09 T0 BLOCKER CONVERGENCE CLOSED / ADJUDICATED ZERO**
+
+This checkpoint is a pure-prepend current-state record. Historical handoff content below remains authoritative for its own time and must not be rewritten. This checkpoint supersedes older blocker/frontier statements where they conflict.
+
+## 0. Canonical closure identity
+
+- T0 closure exact head: `18fa562804124f69f5a64f0fa549bdf69c656ea3`
+- qualification branch at closure: `qualification/mcft-cap09-am19-historical-logical-successor-v1`
+- QCP applicability base: `4ee4989fc4f40cc52a3819be282c1d192b58a9b2`
+- QCP stage: `SUCCESSOR_SUBJECT_PRE_MERGE`
+- frozen Runtime: `3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a`
+- final adjudicated blocker count: **0**
+- remaining blockers: **0**
+- T0 blocker convergence: **ZERO / CLOSED**
+
+Important: `18fa562...` is the machine-proven local qualification closure subject. At the time this handoff checkpoint is written, that engineering commit is not readable from the remote GitHub repository. The handoff commit created below is documentation only and must never be substituted for the qualification closure subject.
+
+## 1. Final authoritative raw ledger
+
+Local artifact:
+
+`acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_18FA562_EXACT_V1.json`
+
+Machine-verified identity:
+
+- head: `18fa562804124f69f5a64f0fa549bdf69c656ea3`
+- base: `4ee4989fc4f40cc52a3819be282c1d192b58a9b2`
+- planner: `PASS`
+- total checks: `33`
+- PASS: `27`
+- FAIL: `1`
+- NOT_APPLICABLE: `5`
+- authority errors: `0`
+- unknown changed paths: `0`
+- raw blocker count: `1`
+- sole raw blocker: `LEGACY_AM19_PERSISTENT_24T`
+
+The raw ledger intentionally retains the historical AM19 raw FAIL. It is not an open T0 blocker after the closure adjudication in section 3.
+
+### Raw-ledger file digest binding
+
+- requested digest type: SHA-256 of the exact local JSON bytes
+- status at this remote handoff write: **LOCAL-ONLY ARTIFACT / HASH NOT RECOVERABLE BY REMOTE WRITER**
+- reason: the artifact was generated in the operator's local `acceptance-output` directory and was not uploaded/committed before the previous handoff script terminated
+- rule: **do not invent, substitute, or derive a different hash and label it as the file digest**
+- reopening rule: absence of the remote file hash alone does **not** reopen a machine-completed blocker; any future evidence export must bind the original local JSON bytes before claiming a file-level digest
+
+## 2. Phase5 closure — formally PASS
+
+`PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS` is closed.
+
+Final authoritative result:
+
+- applicability: `REQUIRED`
+- execution: `PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_ADMISSION`
+- status: `PASS`
+- reason: `PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_VALID`
+- evidence id: `MCFT_CAP09_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_DC9EA15_V1`
+- causal qualification subject: `dc9ea15a26c718594807fd0ac7158742518981b4`
+- supersession durable package anchor: `e74f4348cc0318bb1fd3b3345bce7fe6c9c9dba6`
+- Phase5 dependency digest: `sha256:058d42929efedbbc7f55bf6ca4c2380260731e1c652f27226e86e3f832518965`
+- frozen Runtime remains: `3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a`
+
+The causal temporal supersession package proved the replacement semantics using real PostgreSQL and exact-subject binding. The old `PROTECTED_TEMPORAL_SEMANTIC_CORE_UNCHANGED` premise was superseded; the historical 24T result was **not** reinterpreted as proving the new causal-revision semantics.
+
+Do not rerun historical Phase5 24T merely to recreate the superseded premise. Do not mutate frozen Runtime to reopen or re-close Phase5.
+
+## 3. Final AM19 zero-closure adjudication
+
+Local artifact:
+
+`acceptance-output/MCFT_CAP_09_AM19_FINAL_ZERO_CLOSURE_18FA562_V1.json`
+
+Final adjudication:
+
+- status: `PASS`
+- check: `LEGACY_AM19_PERSISTENT_24T`
+- reason: `CURRENT_SUCCESSOR_VERIFIED_DELIVERY_AND_DEPENDENCY_DIGEST_VALID`
+- raw blocker count: `1`
+- AM19 blocker admitted/closed: `1`
+- adjudicated blocker count: `0`
+- remaining blockers: `[]`
+- QCP central ownership registered: `true`
+- control-plane path count at final adjudication: `90`
+- legacy registry boundary preserved: `true`
+- requalification evidence append-only: `true`
+- current successor inserted into legacy registry: `false`
+
+Verified successor evidence retained:
+
+- qualification subject: `4ee4989fc4f40cc52a3819be282c1d192b58a9b2`
+- Runtime subject: `3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a`
+- evidence package digest: `sha256:99ddad64a525f7bd22c55be5a9d994bd09118e77ae7e86d383056ca4f492e40f`
+- manifest digest: `sha256:970cfbf743d44f9c1c84e9fd20e297f90a41e611b3466d55f97985d9534ecaec`
+- delivery package digest: `sha256:c1f9987f7fd5776a1683b85f95941bd454aac1ea1410a1921809f5c9c4404a1a`
+
+### Final-adjudication file digest binding
+
+- requested digest type: SHA-256 of the exact local JSON bytes
+- status at this remote handoff write: **LOCAL-ONLY ARTIFACT / HASH NOT RECOVERABLE BY REMOTE WRITER**
+- reason: same local-only `acceptance-output` boundary as the raw ledger
+- rule: **do not fabricate a file SHA-256**
+- the adjudication semantics above are machine-proven from the operator output; future artifact export may add the exact file hash without changing or reopening the closure decision
+
+## 4. Final T0 interpretation
+
+The authoritative sequence is:
+
+```text
+raw authoritative ledger:
+  LEGACY_AM19_PERSISTENT_24T = FAIL
+  PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS = PASS
+
+AM19 closure adjudication:
+  LEGACY_AM19_PERSISTENT_24T = SATISFIED
+
+final adjudicated state:
+  blocker_count = 0
+  remaining_blockers = []
+```
+
+Therefore:
+
+**CAP-09 T0 blocker convergence = ZERO / CLOSED.**
+
+The raw ledger is not to be rewritten to pretend the historical AM19 failure never existed. Conversely, the presence of that historical raw failure is not a reason to reopen AM19 after the verified-delivery closure adjudication.
+
+A closed blocker may only be reopened by a new governed invalidation of its applicable dependency/evidence contract. Stale raw status, a new conversation, a new operator, or missing remote copies of local acceptance-output files are not invalidation events.
+
+## 5. HOLD boundary — separate authorization remains mandatory
+
+The following remain explicitly unauthorized:
+
+- `Formal-v5 arm = HOLD / false`
+- `A0 = HOLD / false`
+- `O00-O23 = HOLD / false`
+- production database mutation = unauthorized
+- production owner activation caused by this closure = unauthorized
+- provider request caused by this closure = none
+- graduation effect caused by this closure = none
+- `MCFT CAP-09 completed` claim = **false**
+
+Zero T0 blockers does **not** imply Formal-v5 arm authorization, A0 authorization, O00-O23 authorization, production activation, successor graduation, merge authorization, or CAP-09 completion.
+
+## 6. Mandatory next-operator rules
+
+1. Read the historical canonical handoff and this active continuation before touching CAP-09.
+2. Treat `18fa562804124f69f5a64f0fa549bdf69c656ea3` as the completed T0 closure subject.
+3. Do not rerun historical 24T to reopen AM19 or Phase5.
+4. Do not reopen `LEGACY_AM19_PERSISTENT_24T` or `PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS` without a new governed invalidation event.
+5. Preserve frozen Runtime `3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a`.
+6. Preserve the Phase5 supersession package anchor `e74f4348cc0318bb1fd3b3345bce7fe6c9c9dba6`.
+7. Do not invent the two unavailable local acceptance-output file hashes; bind the original bytes if those artifacts are later exported.
+8. Keep Formal-v5 arm, A0, and O00-O23 on HOLD until separately and explicitly authorized.
+9. Do not claim CAP-09 completion from T0 convergence alone.
+
+---
+
 # GEOX MCFT CAP-09 HANDOFF CONTINUATION — 2026-10-03
 
 Status: **ACTIVE CONVERSATION HANDOFF / CURRENT FRONTIER — NOT MASTER-TASK AUTHORITY**
