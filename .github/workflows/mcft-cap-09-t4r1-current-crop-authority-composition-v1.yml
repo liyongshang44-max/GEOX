@@ -1,7 +1,5 @@
 name: MCFT CAP-09 T4R1 Current Crop Authority Composition
 
-# qualification-carrier: 2026-10-04 current-crop refresh
-
 on:
   pull_request:
     branches:
@@ -26,11 +24,6 @@ jobs:
         github.base_ref == 'main' &&
         github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' &&
         github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
-      ) ||
-      (
-        github.base_ref == 'main' &&
-        github.head_ref == 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' &&
-        github.event.pull_request.base.sha == 'a268e1dfb056fe702a0dd31974d8ddf451775dbd'
       )
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -40,7 +33,7 @@ jobs:
       - name: Checkout exact candidate
         uses: actions/checkout@v4
         with:
-          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23') || (github.base_ref == 'main' && github.head_ref == 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' && github.event.pull_request.base.sha == 'a268e1dfb056fe702a0dd31974d8ddf451775dbd')) && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23')) && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -74,17 +67,6 @@ jobs:
             test "$(git rev-parse origin/main)" = 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
 
             MODE=ROUTING_INSTALLATION_PR
-
-          elif [ '${{ github.base_ref }}' = 'main' ] && \
-               [ '${{ github.head_ref }}' = 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' ]; then
-
-            test '${{ github.event.pull_request.base.sha }}' = 'a268e1dfb056fe702a0dd31974d8ddf451775dbd'
-            test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
-
-            git fetch --no-tags origin main
-            test "$(git rev-parse origin/main)" = 'a268e1dfb056fe702a0dd31974d8ddf451775dbd'
-
-            MODE=CURRENT_MAIN_REQUALIFICATION_CARRIER
           fi
 
           echo "MCFT_CAP09_REQUAL_MODE=$MODE" >> "$GITHUB_ENV"
