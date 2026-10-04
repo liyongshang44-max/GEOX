@@ -357,10 +357,27 @@ function validateDefinitions(authority, registry, root = ROOT) {
   return errors;
 }
 
+const gitCommitExistsCache = new Map();
+const gitSubjectFileShaCache = new Map();
+
 function gitCommitExists(root, sha) {
   if (!/^[0-9a-f]{40}$/.test(String(sha || ""))) return false;
-  const result = cp.spawnSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: root, stdio: "ignore" });
-  return result.status === 0;
+
+  const key = `${root}\u0000${sha}`;
+
+  if (gitCommitExistsCache.has(key)) {
+    return gitCommitExistsCache.get(key);
+  }
+
+  const result = cp.spawnSync(
+    "git",
+    ["cat-file", "-e", `${sha}^{commit}`],
+    { cwd: root, stdio: "ignore" },
+  );
+
+  const exists = result.status === 0;
+  gitCommitExistsCache.set(key, exists);
+  return exists;
 }
 
 function gitChangedPathsBetween(root, base, head) {
@@ -437,11 +454,50 @@ function exactExternalSegmentAdjudication(root, headSha) {
 
 function fileShaAtSubject(root, subjectSha, rel, allowWorkingTreeFallback) {
   if (gitCommitExists(root, subjectSha)) {
-    const result = cp.spawnSync("git", ["show", `${subjectSha}:${rel}`], { cwd: root, encoding: null, maxBuffer: 64 * 1024 * 1024 });
-    if (result.status === 0) return sha256(result.stdout);
-    if (!allowWorkingTreeFallback) return null;
+    const key = `${root}\u0000${subjectSha}\u0000${rel}`;
+
+    if (gitSubjectFileShaCache.has(key)) {
+      const cached = gitSubjectFileShaCache.get(key);
+
+      if (cached !== null) {
+        return cached;
+      }
+
+      if (!allowWorkingTreeFallback) {
+        return null;
+      }
+    } else {
+      const result = cp.spawnSync(
+        "git",
+        ["show", `${subjectSha}:${rel}`],
+        {
+          cwd: root,
+          encoding: null,
+          maxBuffer: 64 * 1024 * 1024,
+        },
+      );
+
+      const digest =
+        result.status === 0
+          ? sha256(result.stdout)
+          : null;
+
+      gitSubjectFileShaCache.set(key, digest);
+
+      if (digest !== null) {
+        return digest;
+      }
+
+      if (!allowWorkingTreeFallback) {
+        return null;
+      }
+    }
   }
+
   if (!allowWorkingTreeFallback || !exists(root, rel)) return null;
+
+  // Deliberately uncached:
+  // working-tree bytes may change during the current process.
   return sha256(fs.readFileSync(path.join(root, rel)));
 }
 
