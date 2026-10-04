@@ -1,0 +1,68 @@
+{
+    "schema_version":  "geox_mcft_cap09_phase5_causal_temporal_supersession_contract_v1",
+    "contract_id":  "MCFT_CAP09_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_DC9EA15_V1",
+    "status":  "QUALIFIED_SUBJECT_SUCCESSOR_ADMISSION_CONTRACT",
+    "check_id":  "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+    "qualification_subject_sha":  "dc9ea15a26c718594807fd0ac7158742518981b4",
+    "qcp_base_sha":  "4ee4989fc4f40cc52a3819be282c1d192b58a9b2",
+    "frozen_runtime_subject_sha":  "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+    "phase5_dependency_digest":  "sha256:058d42929efedbbc7f55bf6ca4c2380260731e1c652f27226e86e3f832518965",
+    "supersession":  {
+                         "scope":  "CAUSAL_REVISION_TEMPORAL_SEMANTICS_ONLY",
+                         "superseded_claim":  "PROTECTED_TEMPORAL_SEMANTIC_CORE_UNCHANGED",
+                         "replacement_claim":  "FROZEN_RUNTIME_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFIED_BY_REAL_POSTGRES_V1",
+                         "historical_24t_result_retained":  true,
+                         "historical_24t_reinterpreted_for_new_semantics":  false,
+                         "old_24t_causal_revision_semantics_coverage":  false
+                     },
+    "durable_evidence":  {
+                             "postgres_proof_ref":  "docs/digital_twin/mcft/cap_09/evidence/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-POSTGRES-PROOF-DC9EA15-V1.json",
+                             "postgres_proof_sha256":  "sha256:b3372463c59a57384d508242c7fc62980e0a2de8447096293d75f4e21df56aea",
+                             "basis_acceptance_ref":  "docs/digital_twin/mcft/cap_09/evidence/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-BASIS-ACCEPTANCE-DC9EA15-V1.json",
+                             "basis_acceptance_sha256":  "sha256:e0b2b117b8d32d44824ae62177d316931e8ff66984e156aa3490684f0efa077b",
+                             "proof_subject_exact":  true,
+                             "proof_subject_sha":  "dc9ea15a26c718594807fd0ac7158742518981b4",
+                             "real_postgresql_persistence":  true,
+                             "logical_time_cutoff":  true,
+                             "causal_latest_selection":  true,
+                             "future_revision_backward_leakage_rejected":  true,
+                             "future_event_leakage_fail_closed":  true,
+                             "ambiguous_revision_fail_closed":  true,
+                             "restart_replay_determinism":  true,
+                             "runtime_database_write_count":  0,
+                             "runtime_provider_request_count":  0
+                         },
+    "phase5_surface":  {
+                           "resolver_path_count":  56,
+                           "different_from_frozen_runtime_count":  1,
+                           "only_different_path":  ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+                           "difference_class":  "QUALIFICATION_OBJECT_STORE_IMAGE_REGISTRY_LOCATOR_ONLY",
+                           "exact_image_digest_preserved":  true,
+                           "runtime_semantics_changed":  false
+                       },
+    "successor_admission":  {
+                                "subject_must_be_ancestor_of_adjudicated_head":  true,
+                                "phase5_resolver_must_equal_subject":  true,
+                                "phase5_qcp_check_semantics_must_equal_subject":  true,
+                                "allowed_post_subject_changed_paths":  [
+                                                                           "docs/digital_twin/mcft/cap_09/evidence/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-POSTGRES-PROOF-DC9EA15-V1.json",
+                                                                           "docs/digital_twin/mcft/cap_09/evidence/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-BASIS-ACCEPTANCE-DC9EA15-V1.json",
+                                                                           "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE5-CAUSAL-TEMPORAL-SUPERSESSION-CONTRACT-V1.json",
+                                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_V1.cjs",
+                                                                           "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+                                                                           "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
+                                                                       ],
+                                "qcp_control_plane_registration_required":  true
+                            },
+    "non_effects":  {
+                        "runtime_mutation":  false,
+                        "production_database_mutation":  false,
+                        "production_owner_activation":  false,
+                        "provider_request":  false,
+                        "formal_v5_arm":  false,
+                        "a0":  false,
+                        "o00_o23":  false,
+                        "stage_1b_closure_claim":  false,
+                        "mcft_cap09_completion_claim":  false
+                    }
+}
