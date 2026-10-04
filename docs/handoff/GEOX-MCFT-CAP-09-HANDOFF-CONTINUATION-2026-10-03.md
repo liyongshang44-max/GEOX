@@ -1,3 +1,104 @@
+# 2026-10-04 REMOTE CLOSURE PUSH CONFIRMATION — EXACTLY TWO CURRENT HANDOFFS
+
+Status: **REMOTE ENGINEERING CLOSURE HEAD CONFIRMED / TWO-HANDOFF MODEL FROZEN**
+
+This checkpoint supersedes any older handoff text that says the final engineering closure subject is local-only or not readable from GitHub.
+
+## 0. Exactly two current MCFT CAP-09 handoffs
+
+There are **exactly two current handoff documents** for MCFT CAP-09 takeover:
+
+1. Historical canonical archive — frozen / do not rewrite:
+
+`docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md`
+
+2. Current active continuation — this file:
+
+`docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-10-03.md`
+
+No third current continuation is authorized.
+
+Other handoff-looking files that remain under `docs/handoff/` are historical or retired artifacts. They are preserved for provenance only and are **not** current takeover entry points. A new engineer or conversation must not select them as a third/current handoff merely because they remain present in repository history.
+
+The current takeover sequence is therefore always:
+
+```text
+MCFT / Digital Twin master task
+→ CAP-09 task / acceptance / governance documents
+→ historical canonical handoff (2026-08-27)
+→ active continuation (2026-10-03, with current checkpoints prepended)
+→ current GitHub / QCP / evidence state
+```
+
+## 1. Engineering closure subject is now remote-confirmed
+
+Remote branch:
+
+`qualification/mcft-cap09-am19-historical-logical-successor-v1`
+
+Remote exact head, independently confirmed after push:
+
+`18fa562804124f69f5a64f0fa549bdf69c656ea3`
+
+This is the machine-proven CAP-09 T0 qualification closure subject.
+
+Do not substitute a later documentation/handoff commit SHA for this engineering closure subject.
+
+The previous warning that `18fa562...` was local-only is now retired.
+
+## 2. T0 closure remains final
+
+At exact head `18fa562804124f69f5a64f0fa549bdf69c656ea3`:
+
+- QCP applicability base: `4ee4989fc4f40cc52a3819be282c1d192b58a9b2`
+- stage: `SUCCESSOR_SUBJECT_PRE_MERGE`
+- frozen Runtime: `3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a`
+- `PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS`: **PASS / CLOSED**
+- `LEGACY_AM19_PERSISTENT_24T`: **PASS / CLOSED by final read-only closure adjudication**
+- final adjudicated blocker count: **0**
+- remaining blockers: **0**
+- CAP-09 T0 blocker convergence: **ZERO / CLOSED**
+
+Do not rerun historical 24T and do not reopen AM19 or Phase5 merely because older raw evidence or older handoff checkpoints contain FAIL/frontier state.
+
+A closed blocker may only be reopened by a new governed invalidation of the applicable dependency/evidence contract.
+
+## 3. Phase5 durable supersession anchor remains frozen
+
+- causal qualification subject: `dc9ea15a26c718594807fd0ac7158742518981b4`
+- durable package anchor: `e74f4348cc0318bb1fd3b3345bce7fe6c9c9dba6`
+- dependency digest: `sha256:058d42929efedbbc7f55bf6ca4c2380260731e1c652f27226e86e3f832518965`
+- frozen Runtime: `3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a`
+
+The historical 24T result was not reinterpreted as proving the replacement causal-revision semantics.
+
+## 4. Final acceptance-output artifact status
+
+The final machine artifacts remain:
+
+- `acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_18FA562_EXACT_V1.json`
+- `acceptance-output/MCFT_CAP_09_AM19_FINAL_ZERO_CLOSURE_18FA562_V1.json`
+
+These exact JSON files are still local artifacts until separately exported as immutable repository evidence. Their current local-only file status does **not** invalidate the remote-confirmed engineering closure subject or reopen T0 blockers.
+
+If exported later, bind the exact original JSON bytes and compute their file-level SHA-256; do not fabricate or reconstruct substitute digests.
+
+## 5. HOLD boundary remains unchanged
+
+T0 zero blockers does not authorize the next execution gate:
+
+- Formal-v5 arm: **HOLD / false**
+- A0: **HOLD / false**
+- O00-O23: **HOLD / false**
+- production database mutation: unauthorized
+- production owner activation caused by this closure: unauthorized
+- provider request caused by this closure: none
+- CAP-09 completion claim: **false**
+
+No operator, automation, CI job, or future conversation may infer Formal-v5/A0/O00-O23 authorization from T0 closure.
+
+---
+
 # 2026-10-04 FINAL T0 CLOSURE CHECKPOINT — ZERO BLOCKERS / DO NOT REOPEN
 
 Status: **CAP-09 T0 BLOCKER CONVERGENCE CLOSED / ADJUDICATED ZERO**
