@@ -49,6 +49,15 @@ function requiredDatabaseUrlV1(): string {
   return value;
 }
 
+function requiredQualificationSubjectShaV1(): string {
+  const value = String(process.env.GEOX_DEPLOYMENT_SUBJECT_COMMIT ?? "").trim();
+  assert(
+    /^[0-9a-f]{40}$/.test(value),
+    "CAUSAL_REVISION_QUALIFICATION_SUBJECT_SHA_REQUIRED",
+  );
+  return value;
+}
+
 function hashV1(char: string): string {
   return "sha256:" + char.repeat(64);
 }
@@ -308,9 +317,12 @@ async function replayAndVerifyV1(): Promise<void> {
     await proveAmbiguousRevisionFailClosedV1(pool);
     await proveFutureEventLeakageRejectedV1(pool);
 
+    const qualificationSubjectSha = requiredQualificationSubjectShaV1();
+
     const proof = {
       schema_version: "geox_mcft_cap09_causal_revision_temporal_semantics_postgres_qualification_v1",
       status: "PASS",
+      qualification_subject_sha: qualificationSubjectSha,
       qualified_runtime: {
         frozen_runtime_subject_sha: FROZEN_RUNTIME_SUBJECT_SHA,
         semantic_revision_commit_sha: SEMANTIC_REVISION_COMMIT_SHA,

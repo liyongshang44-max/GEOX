@@ -134,6 +134,11 @@ function main() {
   // retained only as durable historical evidence and cannot substitute for this proof result.
   assert.equal(proof.schema_version, "geox_mcft_cap09_causal_revision_temporal_semantics_postgres_qualification_v1");
   assert.equal(proof.status, "PASS");
+  assert.equal(
+    proof.qualification_subject_sha,
+    head,
+    "CURRENT_HEAD_CAUSAL_REVISION_PROOF_SUBJECT_MISMATCH",
+  );
   assert.equal(proof.qualified_runtime?.frozen_runtime_subject_sha, EXPECTED.frozenRuntime);
   assert.equal(proof.qualified_runtime?.semantic_revision_commit_sha, EXPECTED.semanticRevision);
   assert.equal(proof.qualified_runtime?.postgres_evidence_source_blob_sha, EXPECTED.sourceBlob);
@@ -189,6 +194,8 @@ function main() {
     historical_24t_reinterpreted_for_new_semantics: false,
     current_basis_head_real_postgres_proof_required: true,
     current_basis_head_real_postgres_proof_pass: true,
+    proof_qualification_subject_sha: proof.qualification_subject_sha,
+    proof_subject_matches_adjudicated_head: proof.qualification_subject_sha === head,
     replacement_claim: EXPECTED.replacementClaim,
     fail_closed_preserved: true,
     non_effects: basis.non_effects,
