@@ -320,6 +320,257 @@ function validateProofBoundPhase5Requalification(decision, head, base) {
   );
 }
 
+function validatePhase5CausalTemporalSupersessionV1(decision, head, base) {
+  const anchor = Object.freeze({
+    package_sha: "e74f4348cc0318bb1fd3b3345bce7fe6c9c9dba6",
+    qualification_subject_sha: "dc9ea15a26c718594807fd0ac7158742518981b4",
+    base_sha: "4ee4989fc4f40cc52a3819be282c1d192b58a9b2",
+    frozen_runtime_sha: "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+    dependency_digest: "sha256:058d42929efedbbc7f55bf6ca4c2380260731e1c652f27226e86e3f832518965",
+    check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+    workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+    contract_id: "MCFT_CAP09_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_DC9EA15_V1",
+    checker_path: "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_V1.cjs",
+  });
+
+  const durablePaths = [
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE5-CAUSAL-TEMPORAL-SUPERSESSION-CONTRACT-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+    "docs/digital_twin/mcft/cap_09/evidence/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-BASIS-ACCEPTANCE-DC9EA15-V1.json",
+    "docs/digital_twin/mcft/cap_09/evidence/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-POSTGRES-PROOF-DC9EA15-V1.json",
+    anchor.checker_path,
+  ];
+
+  const checks = {
+    check_id_match:
+      decision.check_id === anchor.check_id,
+
+    applicability_required:
+      decision.status === "REQUIRED",
+
+    expected_required_reason:
+      decision.reason_code === "APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE",
+
+    requested_base_match:
+      base === anchor.base_sha,
+
+    qualification_subject_is_ancestor:
+      isAncestor(anchor.qualification_subject_sha, head),
+
+    durable_package_is_ancestor:
+      isAncestor(anchor.package_sha, head),
+
+    dependency_digest_match:
+      decision.dependency_digest === anchor.dependency_digest,
+
+    workflow_path_match:
+      decision.execution_workflow === anchor.workflow_path,
+
+    phase5_dependency_delta_empty:
+      Array.isArray(decision.changed_dependencies) &&
+      decision.changed_dependencies.length === 0,
+  };
+
+  if (!Object.values(checks).every(Boolean)) {
+    return {
+      status: "FAIL",
+      reason_code:
+        "PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_PRECONDITION_INVALID",
+      evidence_id: anchor.contract_id,
+      subject_sha: anchor.qualification_subject_sha,
+      dependency_digest: anchor.dependency_digest,
+      package_sha: anchor.package_sha,
+      checks,
+      package_blob_checks: [],
+      adjudication_checks: null,
+      adjudication: null,
+    };
+  }
+
+  const packageBlobChecks = durablePaths.map((rel) => {
+    let anchored = null;
+    let current = null;
+
+    try {
+      anchored = cp.execFileSync(
+        "git",
+        ["rev-parse", `${anchor.package_sha}:${rel}`],
+        { cwd: ROOT, encoding: "utf8" },
+      ).trim();
+
+      current = cp.execFileSync(
+        "git",
+        ["rev-parse", `HEAD:${rel}`],
+        { cwd: ROOT, encoding: "utf8" },
+      ).trim();
+    } catch {
+      return {
+        path: rel,
+        anchored_blob_sha: anchored,
+        current_blob_sha: current,
+        match: false,
+      };
+    }
+
+    return {
+      path: rel,
+      anchored_blob_sha: anchored,
+      current_blob_sha: current,
+      match: anchored === current,
+    };
+  });
+
+  if (!packageBlobChecks.every((row) => row.match)) {
+    return {
+      status: "FAIL",
+      reason_code:
+        "PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_DURABLE_PACKAGE_DRIFT",
+      evidence_id: anchor.contract_id,
+      subject_sha: anchor.qualification_subject_sha,
+      dependency_digest: anchor.dependency_digest,
+      package_sha: anchor.package_sha,
+      checks,
+      package_blob_checks: packageBlobChecks,
+      adjudication_checks: null,
+      adjudication: null,
+    };
+  }
+
+  const invocation = cp.spawnSync(
+    process.execPath,
+    [
+      anchor.checker_path,
+      "--base",
+      base,
+      "--head",
+      head,
+      "--dependency-digest",
+      decision.dependency_digest,
+    ],
+    {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        MCFT_CAP09_ALL_BLOCKERS_CHILD: "1",
+      },
+    },
+  );
+
+  let adjudication = null;
+
+  try {
+    adjudication = JSON.parse(
+      String(invocation.stdout || "").trim(),
+    );
+  } catch {
+    adjudication = null;
+  }
+
+  const expectedNonEffects = [
+    "runtime_mutation",
+    "production_database_mutation",
+    "production_owner_activation",
+    "provider_request",
+    "formal_v5_arm",
+    "a0",
+    "o00_o23",
+    "stage_1b_closure_claim",
+    "mcft_cap09_completion_claim",
+  ];
+
+  const nonEffectsClear =
+    adjudication &&
+    expectedNonEffects.every(
+      (key) => adjudication.non_effects?.[key] === false,
+    );
+
+  const adjudicationChecks = {
+    checker_exit_zero:
+      invocation.status === 0,
+
+    checker_json_present:
+      adjudication !== null,
+
+    status_pass:
+      adjudication?.status === "PASS",
+
+    check_id_match:
+      adjudication?.check_id === anchor.check_id,
+
+    qualification_subject_match:
+      adjudication?.qualification_subject_sha ===
+      anchor.qualification_subject_sha,
+
+    adjudicated_head_match:
+      adjudication?.adjudicated_head_sha === head,
+
+    base_match:
+      adjudication?.qcp_base_sha === anchor.base_sha,
+
+    frozen_runtime_match:
+      adjudication?.frozen_runtime_subject_sha ===
+      anchor.frozen_runtime_sha,
+
+    dependency_digest_match:
+      adjudication?.dependency_digest ===
+      anchor.dependency_digest,
+
+    exact_subject_proof:
+      adjudication?.proof_subject_exact === true,
+
+    real_postgres_temporal_proof:
+      adjudication?.real_postgresql_causal_temporal_proof === true,
+
+    old_24t_not_reinterpreted:
+      adjudication?.historical_24t_reinterpreted === false,
+
+    phase5_resolver_preserved:
+      adjudication?.phase5_resolver_unchanged_from_subject === true,
+
+    phase5_qcp_check_preserved:
+      adjudication?.phase5_qcp_check_semantics_unchanged_from_subject === true,
+
+    frozen_resolver_path_count:
+      adjudication?.frozen_phase5_resolver_path_count === 56,
+
+    frozen_difference_count:
+      adjudication?.frozen_phase5_difference_count === 1,
+
+    image_digest_set_preserved:
+      adjudication?.qualification_image_digest_set_preserved === true,
+
+    forbidden_successor_paths_empty:
+      Array.isArray(
+        adjudication?.forbidden_successor_changed_paths,
+      ) &&
+      adjudication.forbidden_successor_changed_paths.length === 0,
+
+    non_effects_clear:
+      nonEffectsClear,
+  };
+
+  const valid =
+    Object.values(adjudicationChecks).every(Boolean);
+
+  return {
+    status: valid ? "PASS" : "FAIL",
+    reason_code: valid
+      ? "PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_VALID"
+      : "PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_INVALID",
+    evidence_id: anchor.contract_id,
+    subject_sha: anchor.qualification_subject_sha,
+    dependency_digest: anchor.dependency_digest,
+    package_sha: anchor.package_sha,
+    checks,
+    package_blob_checks: packageBlobChecks,
+    adjudication_checks: adjudicationChecks,
+    adjudication,
+    checker_exit_status: invocation.status,
+    checker_stderr: String(invocation.stderr || ""),
+  };
+}
+
 function resolveRequalificationEvidence(decision, authority, registry, stage, head) {
   const section = registry.requalification_evidence;
   if (!section || section.binding_strategy !== REQUALIFICATION_BINDING_STRATEGY) {
@@ -754,6 +1005,48 @@ function main() {
             blocker_class: "INVALID_OR_MISSING_SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_EVIDENCE",
             check_id: decision.check_id,
             detail: { historical_anchor: evidence, fresh_durable_evidence: fresh },
+          });
+        }
+      } else if (
+        decision.check_id === "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS" &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "4ee4989fc4f40cc52a3819be282c1d192b58a9b2" &&
+        isAncestor(
+          "e74f4348cc0318bb1fd3b3345bce7fe6c9c9dba6",
+          args.head || "",
+        )
+      ) {
+        const evidence =
+          validatePhase5CausalTemporalSupersessionV1(
+            decision,
+            args.head || "",
+            args.base || "",
+          );
+
+        result = {
+          ...common,
+          execution:
+            "PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_ADMISSION",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_dependency_digest:
+            evidence.dependency_digest ?? null,
+          evidence_package_sha:
+            evidence.package_sha ?? null,
+          evidence_checks:
+            evidence.checks ?? null,
+          causal_temporal_supersession:
+            evidence,
+        };
+
+        if (evidence.status !== "PASS") {
+          blockers.push({
+            blocker_class:
+              "INVALID_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_ADMISSION",
+            check_id: decision.check_id,
+            detail: evidence,
           });
         }
       } else if (
