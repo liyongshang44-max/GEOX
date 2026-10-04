@@ -40,7 +40,11 @@
     "qualified_predecessor_head": "ffc9d03533670d2f47ace71d170602d8768ec1bc",
     "required_epistemic_class": "THERMAL_MODEL_DERIVED",
     "required_observed_claim": false,
-    "expected_current_candidate": "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE"
+    "allowed_late_season_candidates": [
+      "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
+      "R6_OR_LATER_MODEL_ESTIMATE"
+    ],
+    "resolution_rule": "RESOLVED_BIOLOGICAL_STAGE_MUST_BE_EXACT_MEMBER_OF_ALLOWED_LATE_SEASON_CANDIDATES"
   },
   "water_use_axis": {
     "expected_singleton_stage": "LATE",
