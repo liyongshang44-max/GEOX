@@ -4,7 +4,9 @@
 
 import {
   collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1,
+  collectRetainDecodeCanonicalizeFileBackedExternalEvidenceWithCompletionClockV1,
   type ExternalEvidenceDecoderPortV1,
+  type ExternalEvidenceFileBackedTransportPortV1,
   type ExternalEvidenceFetchRequestV1,
   type ExternalEvidenceTransportPortV1,
   type RawEvidenceRetentionPortV1,
@@ -34,6 +36,7 @@ export type EvidenceRuntimeCycleWorkItemV1 = {
   transport: ExternalEvidenceTransportPortV1;
   decoder: ExternalEvidenceDecoderPortV1;
   retention?: RawEvidenceRetentionPortV1;
+  file_backed?: boolean;
 };
 
 export interface EvidenceSupplyCursorFactoryV1 {
@@ -177,19 +180,40 @@ export class EvidenceRuntimeCycleServiceV1 {
         cursor,
       );
 
-      const canonical = await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1(
-        {
-          dataset_id: item.dataset_id,
-          scope: input.scope,
-          request: item.request,
-        },
-        {
-          transport: item.transport,
-          retention: item.retention ?? this.deps.retention,
-          decoder: item.decoder,
-        },
-        this.deps.completion_clock,
-      );
+      const canonical = item.file_backed === true
+        ? await collectRetainDecodeCanonicalizeFileBackedExternalEvidenceWithCompletionClockV1(
+          {
+            dataset_id: item.dataset_id,
+            scope: input.scope,
+            request: item.request,
+          },
+          {
+            transport: (() => {
+              const transport = item.transport as ExternalEvidenceTransportPortV1
+                & Partial<ExternalEvidenceFileBackedTransportPortV1>;
+              if (typeof transport.fetchRawEvidenceFile !== "function") {
+                throw new Error("PHASE3_EVIDENCE_CYCLE_FILE_BACKED_TRANSPORT_REQUIRED");
+              }
+              return transport as ExternalEvidenceFileBackedTransportPortV1;
+            })(),
+            retention: item.retention ?? this.deps.retention,
+            decoder: item.decoder,
+          },
+          this.deps.completion_clock,
+        )
+        : await collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1(
+          {
+            dataset_id: item.dataset_id,
+            scope: input.scope,
+            request: item.request,
+          },
+          {
+            transport: item.transport,
+            retention: item.retention ?? this.deps.retention,
+            decoder: item.decoder,
+          },
+          this.deps.completion_clock,
+        );
 
       let itemVisibleCount = 0;
       for (const result of canonical) {

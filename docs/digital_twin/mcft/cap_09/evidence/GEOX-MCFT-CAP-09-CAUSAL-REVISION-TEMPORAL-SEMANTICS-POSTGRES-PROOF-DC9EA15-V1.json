@@ -1,0 +1,39 @@
+{
+  "schema_version": "geox_mcft_cap09_causal_revision_temporal_semantics_postgres_qualification_v1",
+  "status": "PASS",
+  "qualification_subject_sha": "dc9ea15a26c718594807fd0ac7158742518981b4",
+  "qualified_runtime": {
+    "frozen_runtime_subject_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+    "semantic_revision_commit_sha": "9ffecd38d3093c4a3f566ee996e3ad00aaf6004a",
+    "postgres_evidence_source_blob_sha": "5e132eb1b307f908dea6118292fb8e0e9d53084c",
+    "frozen_runtime_modified_by_this_qualification": false
+  },
+  "proof_surface": {
+    "real_postgresql_persistence": true,
+    "logical_time_cutoff": true,
+    "causal_latest_selection": true,
+    "future_revision_backward_leakage_rejected": true,
+    "future_event_leakage_fail_closed": true,
+    "ambiguous_revision_fail_closed": true,
+    "restart_replay_determinism": true,
+    "persisted_fact_count_survived_process_restart": 4,
+    "runtime_database_write_count": 0,
+    "runtime_provider_request_count": 0
+  },
+  "temporal_semantics": {
+    "earlier_boundary": "2026-09-23T05:00:00.000Z",
+    "later_boundary": "2026-09-23T06:00:00.000Z",
+    "earlier_boundary_selected_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "later_boundary_selected_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "same_source_record_id_revision_selection_by_causal_availability": true
+  },
+  "qualification_supersession": {
+    "supersession_scope": "CAUSAL_REVISION_TEMPORAL_SEMANTICS_ONLY",
+    "old_full_24t_head_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+    "superseded_claim": "PROTECTED_TEMPORAL_SEMANTIC_CORE_UNCHANGED",
+    "replacement_claim": "FROZEN_RUNTIME_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFIED_BY_REAL_POSTGRES_V1",
+    "old_24t_proof_reinterpreted_as_covering_new_semantics": false,
+    "old_24t_proof_causal_revision_semantics_coverage": false,
+    "old_24t_historical_result_deleted_or_weakened": false
+  }
+}

@@ -34,6 +34,55 @@ function gitShow(sha,rel){return run("git",["show",sha+":"+rel]).stdout;}
 function patchId(sha){const patch=run("git",["show","--pretty=format:","--binary",sha],{encoding:null}).stdout;const out=run("git",["patch-id","--stable"],{input:patch,encoding:null}).stdout;return Buffer.from(out||Buffer.alloc(0)).toString("utf8").trim().split(/\s+/)[0]||null;}
 function isSha(value){return /^[0-9a-f]{40}$/.test(String(value||""));}
 
+function withHistoricalPlannerGitReadCache(fn){
+  const original=cp.spawnSync;
+  const cache=new Map();
+
+  cp.spawnSync=function(file,args,options){
+    const opts=options||{};
+    const gitArgs=Array.isArray(args)?args:[];
+
+    const cacheableCommit=
+      file==="git" &&
+      gitArgs.length===3 &&
+      gitArgs[0]==="cat-file" &&
+      gitArgs[1]==="-e" &&
+      typeof gitArgs[2]==="string" &&
+      gitArgs[2].endsWith("^{commit}") &&
+      opts.stdio==="ignore";
+
+    const cacheableShow=
+      file==="git" &&
+      gitArgs.length===2 &&
+      gitArgs[0]==="show" &&
+      typeof gitArgs[1]==="string" &&
+      /^[0-9a-f]{40}:.+/.test(gitArgs[1]) &&
+      opts.encoding===null;
+
+    if(!cacheableCommit&&!cacheableShow){
+      return original.call(cp,file,args,options);
+    }
+
+    const key=JSON.stringify([
+      path.resolve(String(opts.cwd||process.cwd())),
+      gitArgs,
+      cacheableCommit?"COMMIT_EXISTS":"SHOW_BUFFER"
+    ]);
+
+    if(cache.has(key)) return cache.get(key);
+
+    const result=original.call(cp,file,args,options);
+    cache.set(key,result);
+    return result;
+  };
+
+  try{
+    return fn();
+  }finally{
+    cp.spawnSync=original;
+  }
+}
+
 function coreProof(wt){
   const first=text("git",["rev-list","--first-parent","--reverse",OLD_BASE+".."+NEW_BASE]).split(/\r?\n/).filter(Boolean);
   if(!same(first,EXPECTED_MERGES.map(x=>x.sha))) throw new Error("LINEAGE_FIRST_PARENT_MISMATCH");
@@ -67,7 +116,8 @@ function coreProof(wt){
   const depI=changed.filter(x=>allOwned.has(x));
   if(cpI.length||refI.length||depI.length) throw new Error("LINEAGE_MCFT_INTERSECTION:"+JSON.stringify({cpI,refI,depI}));
 
-  const rows=[],changes=[];
+  const {rows,changes}=withHistoricalPlannerGitReadCache(() => {
+    const rows=[],changes=[];
   for(const [id,resolved] of Object.entries(rr.resolved).sort(([a],[b])=>a.localeCompare(b))){
     const spec=authority.dependency_resolvers[id];
     const defOld=sha256(Buffer.from(JSON.stringify(spec),"utf8"));
@@ -79,6 +129,8 @@ function coreProof(wt){
     if(!match) changes.push({resolver_id:id,old_definition_digest:defOld,new_definition_digest:defNew,old_dependency_digest:dOld.digest,new_dependency_digest:dNew.digest,old_path_count:dOld.path_count,new_path_count:dNew.path_count});
     rows.push({resolver_id:id,kind:resolved.kind,path_count:resolved.paths.length,definition_digest_old:defOld,definition_digest_new:defNew,dependency_digest_old:dOld.digest,dependency_digest_new:dNew.digest,digest_match:match});
   }
+    return {rows,changes};
+  });
   if(changes.length) throw new Error("LINEAGE_MCFT_RESOLVER_DIGEST_CHANGE:"+JSON.stringify(changes));
 
   return {

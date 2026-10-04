@@ -1,0 +1,29 @@
+{
+  "schema_version": "geox_mcft_cap09_causal_revision_temporal_semantics_qualification_basis_acceptance_v1",
+  "status": "PASS",
+  "acceptance_id": "MCFT_CAP09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1",
+  "adjudicated_head_sha": "dc9ea15a26c718594807fd0ac7158742518981b4",
+  "frozen_runtime_subject_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+  "frozen_runtime_source_blob_sha": "5e132eb1b307f908dea6118292fb8e0e9d53084c",
+  "semantic_revision_role": "ANCESTRY_BOUND_IMPLEMENTED_SEMANTICS_NOT_WHITELIST",
+  "bare_sha_whitelist_authorized": false,
+  "supersession_scope": "CAUSAL_REVISION_TEMPORAL_SEMANTICS_ONLY",
+  "historical_24t_result_retained": true,
+  "historical_24t_reinterpreted_for_new_semantics": false,
+  "current_basis_head_real_postgres_proof_required": true,
+  "current_basis_head_real_postgres_proof_pass": true,
+  "proof_qualification_subject_sha": "dc9ea15a26c718594807fd0ac7158742518981b4",
+  "proof_subject_matches_adjudicated_head": true,
+  "replacement_claim": "FROZEN_RUNTIME_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFIED_BY_REAL_POSTGRES_V1",
+  "fail_closed_preserved": true,
+  "non_effects": {
+    "frozen_runtime_mutation": false,
+    "production_database_mutation": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0": false,
+    "o00_o23": false,
+    "stage_1b_closure_claim": false,
+    "mcft_cap09_completion_claim": false
+  }
+}

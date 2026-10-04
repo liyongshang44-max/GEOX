@@ -1,0 +1,85 @@
+{
+  "schema_version": "geox_mcft_cap09_am19_historical_logical_successor_verified_delivery_registration_v1",
+  "registration_id": "MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_VERIFIED_DELIVERY_4EE4989F_V1",
+  "registration_version": 1,
+  "status": "VERIFIED_DELIVERY_READY_FOR_QCP_CENTRAL_OWNERSHIP",
+  "purpose": "REGISTER_THE_VERIFIED_HISTORICAL_LOGICAL_SUCCESSOR_DELIVERY_AS_A_QCP_GOVERNED_CLOSURE_TEAM_EVIDENCE_INPUT_WITHOUT_REWRITING_LEGACY_QCP_GENERATION_OR_EVIDENCE_REGISTRY_SEMANTICS",
+  "current_admission_route": "HISTORICAL_LOGICAL_SUCCESSOR_V1",
+  "qualification": {
+    "contract_id": "MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1",
+    "qualification_subject_sha": "4ee4989fc4f40cc52a3819be282c1d192b58a9b2",
+    "runtime_subject_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+    "closure_semantic_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+    "run_id": "mcft_cap09_am19_persistent_24t_historical_logical_v1-20261002t122627462z-4ee4989fc4f4-dd17a3a4",
+    "environment_digest": "sha256:7ca3312d9343566c196f697cf2f03848e2dacd7d44190b92e828ea286bca2039",
+    "evidence_package_digest": "sha256:99ddad64a525f7bd22c55be5a9d994bd09118e77ae7e86d383056ca4f492e40f",
+    "result": "PASS",
+    "fresh_historical_successor_13_of_13": true
+  },
+  "manifest": {
+    "schema_version": "QualificationEvidenceManifestV1",
+    "manifest_digest": "sha256:970cfbf743d44f9c1c84e9fd20e297f90a41e611b3466d55f97985d9534ecaec",
+    "verifier_1_schema_version": "geox_qualification_evidence_manifest_verification_result_v1",
+    "verifier_1_status": "PASS",
+    "exact_subject_binding_verified": true,
+    "package_integrity_verified": true,
+    "repository_inputs_verified": true,
+    "qualification_inputs_verified": true,
+    "latest_run_fallback_used": false
+  },
+  "closure_delivery": {
+    "schema_version": "GEOXQualificationClosureDeliveryV1",
+    "delivery_id": "mcft_cap09_am19_persistent_24t_historical_logical_v1-20261002t122627462z-4ee4989fc4f4-dd17a3a4-970cfbf743d4",
+    "delivery_package_digest": "sha256:c1f9987f7fd5776a1683b85f95941bd454aac1ea1410a1921809f5c9c4404a1a",
+    "verifier_2_schema_version": "geox_qualification_closure_delivery_verification_result_v1",
+    "verifier_2_status": "PASS",
+    "exact_subject_binding_verified": true,
+    "package_integrity_verified": true,
+    "repository_inputs_verified": true,
+    "latest_run_fallback_used": false,
+    "runtime_mutated": false,
+    "production_mutation": false,
+    "blocker_semantics_modified": false,
+    "qcp_semantics_modified": false,
+    "closure_subject_mutated": false,
+    "supersedes_github_lane": false
+  },
+  "qcp_registration": {
+    "qcp_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+    "qcp_pre_registration_blob_sha": "63a04286600a03463b22bb066ca88c1860b2d9d5",
+    "qcp_existing_frozen_successor_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+    "registration_mechanism": "CONTROL_PLANE_FILES_CENTRAL_OWNERSHIP_ONLY",
+    "registration_basis_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM19-HISTORICAL-LOGICAL-SUCCESSOR-VERIFIED-DELIVERY-REGISTRATION-V1.json",
+    "registration_acceptance_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_VERIFIED_DELIVERY_REGISTRATION_V1.cjs",
+    "must_not_change_frozen_successor_subject_sha": true,
+    "must_not_register_into_legacy_workflow_evidence_entries": true,
+    "must_not_change_v13_qualification_harness_dependency_set": true,
+    "must_not_change_qcp_check_decision_semantics": true
+  },
+  "legacy_registry_boundary": {
+    "registry_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json",
+    "registry_blob_sha": "626d5c277b7f8fbd194d3c0849a9337082d6e2b5",
+    "legacy_evidence_id": "LEGACY_AM19_24T_SUCCESSOR_ROUTING_3BBF096E",
+    "legacy_check_id": "LEGACY_AM19_PERSISTENT_24T",
+    "legacy_generation": "historical-am19-successor-maintenance-routing",
+    "legacy_entry_must_remain_unchanged": true,
+    "current_successor_must_not_be_inserted_into_legacy_entries": true
+  },
+  "consumer_boundary": {
+    "consumer_scope": "MCFT_CAP_09_CLOSURE_TEAM_EVIDENCE_INPUT",
+    "authority_ceiling": "EVIDENCE_INPUT_ONLY_CLOSURE_TEAM_RETAINS_BLOCKER_ADJUDICATION_AUTHORITY",
+    "closure_adjudication_performed": false,
+    "mcft_cap09_completion_claim": false
+  },
+  "non_effects": {
+    "runtime_mutation": false,
+    "provider_semantics_mutation": false,
+    "production_mutation": false,
+    "formal_database_mutation": false,
+    "qcp_check_semantics_mutation": false,
+    "legacy_registry_mutation": false,
+    "formal_v5_arm": false,
+    "a0": false,
+    "o00_o23": false
+  }
+}

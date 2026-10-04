@@ -34,6 +34,34 @@ const REQUALIFICATION_BINDING_FIELDS = [
   "dependency_subject_sha", "dependency_digest_strategy", "dependency_digest",
   "artifact_absence_reason", "immutable",
 ];
+
+const T0_GRADUATION_CARRY_FORWARD_V1 = Object.freeze({
+  closure_subject_sha: "18fa562804124f69f5a64f0fa549bdf69c656ea3",
+  protected_main_base_sha: "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+  qcp_base_sha: "4ee4989fc4f40cc52a3819be282c1d192b58a9b2",
+  frozen_runtime_sha: "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+  preflight_path: "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+  am19: Object.freeze({
+    check_id: "LEGACY_AM19_PERSISTENT_24T",
+    qualification_subject_sha: "4ee4989fc4f40cc52a3819be282c1d192b58a9b2",
+    closure_semantic_subject_sha: "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+    dependency_digest: "sha256:2ec59117bc25b8848fed8acaeccfe0f20a20fcc0db87ecb7258722bc320263f0",
+    registration_path: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM19-HISTORICAL-LOGICAL-SUCCESSOR-VERIFIED-DELIVERY-REGISTRATION-V1.json",
+    acceptance_path: "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_VERIFIED_DELIVERY_REGISTRATION_V1.cjs",
+    contract_path: "scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1.json",
+    legacy_evidence_id: "LEGACY_AM19_24T_SUCCESSOR_ROUTING_3BBF096E",
+  }),
+  phase5: Object.freeze({
+    check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+    qualification_subject_sha: "dc9ea15a26c718594807fd0ac7158742518981b4",
+    durable_package_anchor_sha: "e74f4348cc0318bb1fd3b3345bce7fe6c9c9dba6",
+    dependency_digest: "sha256:058d42929efedbbc7f55bf6ca4c2380260731e1c652f27226e86e3f832518965",
+    contract_path: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE5-CAUSAL-TEMPORAL-SUPERSESSION-CONTRACT-V1.json",
+    proof_path: "docs/digital_twin/mcft/cap_09/evidence/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-POSTGRES-PROOF-DC9EA15-V1.json",
+    basis_path: "docs/digital_twin/mcft/cap_09/evidence/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-BASIS-ACCEPTANCE-DC9EA15-V1.json",
+    checker_path: "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_V1.cjs",
+  }),
+});
 const RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1 = {
   evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_7C5A74CD_RUNTIME_CUTOVER_V1",
   check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
@@ -290,6 +318,310 @@ function validateExactRunAnchor(decision, head, base, anchor, reasonPrefix, opti
   };
 }
 
+
+function gitJsonAt(ref, rel) {
+  return JSON.parse(cp.execFileSync("git", ["show", `${ref}:${rel}`], {
+    cwd: ROOT,
+    encoding: "utf8",
+  }));
+}
+
+function gitBlobAt(ref, rel) {
+  try {
+    return cp.execFileSync("git", ["rev-parse", `${ref}:${rel}`], {
+      cwd: ROOT,
+      encoding: "utf8",
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function jsonStableEqual(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function t0GraduationPostClosureDelta(head) {
+  const authority = T0_GRADUATION_CARRY_FORWARD_V1;
+  let currentHead = null;
+  let changed = [];
+  try {
+    currentHead = cp.execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    }).trim();
+    changed = cp.execFileSync(
+      "git",
+      ["diff", "--name-only", `${authority.closure_subject_sha}..${head}`],
+      { cwd: ROOT, encoding: "utf8" },
+    ).trim().split(/\r?\n/).filter(Boolean);
+  } catch {
+    return {
+      exact_checkout: false,
+      changed_paths: [],
+      forbidden_paths: ["GIT_DELTA_UNRESOLVABLE"],
+    };
+  }
+  const allowed = new Set([
+    AUTHORITY_PATH,
+    REGISTRY_PATH,
+    authority.preflight_path,
+  ]);
+  return {
+    exact_checkout: currentHead === head,
+    changed_paths: changed,
+    forbidden_paths: changed.filter((rel) => !allowed.has(rel)),
+  };
+}
+
+function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority, registry) {
+  const t0 = T0_GRADUATION_CARRY_FORWARD_V1;
+  const anchor = t0.am19;
+  const delta = t0GraduationPostClosureDelta(head);
+  const currentQcp = authority;
+  const t0Qcp = gitJsonAt(t0.closure_subject_sha, AUTHORITY_PATH);
+  const t0Registry = gitJsonAt(t0.closure_subject_sha, REGISTRY_PATH);
+  const contract = readJson(anchor.contract_path);
+  const registration = readJson(anchor.registration_path);
+  const currentCheck = (currentQcp.checks || []).find((row) => row.check_id === anchor.check_id);
+  const t0Check = (t0Qcp.checks || []).find((row) => row.check_id === anchor.check_id);
+  const currentResolver = currentQcp.dependency_resolvers?.[anchor.check_id];
+  const t0Resolver = t0Qcp.dependency_resolvers?.[anchor.check_id];
+  const currentLegacy = (registry.entries || []).find((row) => row.evidence_id === anchor.legacy_evidence_id);
+  const t0Legacy = (t0Registry.entries || []).find((row) => row.evidence_id === anchor.legacy_evidence_id);
+
+  const registrationInvocation = cp.spawnSync(
+    process.execPath,
+    [anchor.acceptance_path, "--require-qcp-registered"],
+    {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: { ...process.env, MCFT_CAP09_ALL_BLOCKERS_CHILD: "1" },
+    },
+  );
+  let registrationAcceptance = null;
+  try {
+    registrationAcceptance = JSON.parse(String(registrationInvocation.stdout || "").trim());
+  } catch {
+    registrationAcceptance = null;
+  }
+
+  const frozenRefs = [
+    anchor.registration_path,
+    anchor.acceptance_path,
+    anchor.contract_path,
+  ];
+  const frozenRefChecks = frozenRefs.map((rel) => ({
+    path: rel,
+    t0_blob_sha: gitBlobAt(t0.closure_subject_sha, rel),
+    current_blob_sha: gitBlobAt(head, rel),
+  })).map((row) => ({ ...row, match: row.t0_blob_sha !== null && row.t0_blob_sha === row.current_blob_sha }));
+
+  const expectedRegistrationNonEffects = [
+    "runtime_mutated",
+    "production_mutation",
+    "blocker_semantics_modified",
+    "qcp_semantics_modified",
+    "closure_subject_mutated",
+    "supersedes_github_lane",
+  ];
+  const registrationNonEffectsClear = expectedRegistrationNonEffects.every(
+    (key) => registration.closure_delivery?.[key] === false,
+  );
+
+  const checks = {
+    exact_checkout: delta.exact_checkout,
+    check_id_match: decision.check_id === anchor.check_id,
+    requalification_state: decision.status === "REQUALIFY",
+    protected_main_base_match: base === t0.protected_main_base_sha,
+    protected_main_precedes_qualification_subject:
+      isAncestor(base, anchor.qualification_subject_sha),
+    qualification_subject_precedes_t0_closure:
+      isAncestor(anchor.qualification_subject_sha, t0.closure_subject_sha),
+    t0_closure_precedes_current_head:
+      isAncestor(t0.closure_subject_sha, head),
+    dependency_digest_match:
+      decision.dependency_digest === anchor.dependency_digest,
+    contract_id_match:
+      contract.contract_id === "MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1",
+    contract_pilot_base_match:
+      contract.pilot_base_sha === t0.protected_main_base_sha,
+    contract_runtime_match:
+      contract.frozen_runtime_sha === t0.frozen_runtime_sha,
+    contract_closure_subject_match:
+      contract.closure_semantic_subject_sha === anchor.closure_semantic_subject_sha,
+    contract_dependency_digest_match:
+      contract.closure_authoritative_dependency_digest === anchor.dependency_digest,
+    registration_subject_match:
+      registration.qualification?.qualification_subject_sha === anchor.qualification_subject_sha,
+    registration_runtime_match:
+      registration.qualification?.runtime_subject_sha === t0.frozen_runtime_sha,
+    registration_13_of_13:
+      registration.qualification?.fresh_historical_successor_13_of_13 === true,
+    registration_verifier_1_pass:
+      registration.manifest?.verifier_1_status === "PASS",
+    registration_verifier_2_pass:
+      registration.closure_delivery?.verifier_2_status === "PASS",
+    registration_latest_fallback_forbidden:
+      registration.manifest?.latest_run_fallback_used === false &&
+      registration.closure_delivery?.latest_run_fallback_used === false,
+    registration_non_effects_clear:
+      registrationNonEffectsClear,
+    qcp_resolver_unchanged_since_t0:
+      jsonStableEqual(currentResolver, t0Resolver),
+    qcp_check_semantics_unchanged_since_t0:
+      jsonStableEqual(currentCheck, t0Check),
+    legacy_registry_entry_preserved:
+      Boolean(currentLegacy) && Boolean(t0Legacy) &&
+      jsonStableEqual(currentLegacy, t0Legacy),
+    verified_delivery_files_unchanged_since_t0:
+      frozenRefChecks.every((row) => row.match),
+    post_t0_delta_closure_control_only:
+      delta.forbidden_paths.length === 0,
+    registration_acceptance_exit_zero:
+      registrationInvocation.status === 0,
+    registration_acceptance_pass:
+      registrationAcceptance?.status === "PASS",
+    qcp_central_ownership_registered:
+      registrationAcceptance?.qcp_central_ownership_registered === true,
+    legacy_registry_boundary_preserved:
+      registrationAcceptance?.legacy_registry_boundary_preserved === true,
+    successor_not_inserted_into_legacy_registry:
+      registrationAcceptance?.current_successor_inserted_into_legacy_registry === false,
+  };
+
+  const valid = Object.values(checks).every(Boolean);
+  return {
+    status: valid ? "PASS" : "FAIL",
+    reason_code: valid
+      ? "AM19_T0_VERIFIED_DELIVERY_GRADUATION_CARRY_FORWARD_VALID"
+      : "AM19_T0_VERIFIED_DELIVERY_GRADUATION_CARRY_FORWARD_INVALID",
+    evidence_id: registration.registration_id || null,
+    subject_sha: anchor.qualification_subject_sha,
+    dependency_digest: anchor.dependency_digest,
+    t0_closure_subject_sha: t0.closure_subject_sha,
+    checks,
+    frozen_ref_checks: frozenRefChecks,
+    post_t0_delta: delta,
+    registration_acceptance: registrationAcceptance,
+    registration_acceptance_exit_status: registrationInvocation.status,
+    registration_acceptance_stderr: String(registrationInvocation.stderr || "").slice(-4000),
+  };
+}
+
+function validatePhase5T0GraduationCarryForwardV1(decision, head, base, authority) {
+  const t0 = T0_GRADUATION_CARRY_FORWARD_V1;
+  const anchor = t0.phase5;
+  const delta = t0GraduationPostClosureDelta(head);
+  const currentQcp = authority;
+  const t0Qcp = gitJsonAt(t0.closure_subject_sha, AUTHORITY_PATH);
+  const qualificationQcp = gitJsonAt(anchor.qualification_subject_sha, AUTHORITY_PATH);
+  const currentCheck = (currentQcp.checks || []).find((row) => row.check_id === anchor.check_id);
+  const t0Check = (t0Qcp.checks || []).find((row) => row.check_id === anchor.check_id);
+  const qualificationCheck = (qualificationQcp.checks || []).find((row) => row.check_id === anchor.check_id);
+  const currentResolver = currentQcp.dependency_resolvers?.[anchor.check_id];
+  const t0Resolver = t0Qcp.dependency_resolvers?.[anchor.check_id];
+  const qualificationResolver = qualificationQcp.dependency_resolvers?.[anchor.check_id];
+  const contract = readJson(anchor.contract_path);
+
+  const phase5PathBlobChecks = (currentResolver?.paths || []).map((rel) => ({
+    path: rel,
+    t0_blob_sha: gitBlobAt(t0.closure_subject_sha, rel),
+    current_blob_sha: gitBlobAt(head, rel),
+  })).map((row) => ({ ...row, match: row.t0_blob_sha !== null && row.t0_blob_sha === row.current_blob_sha }));
+
+  const durableRefs = [
+    anchor.contract_path,
+    anchor.proof_path,
+    anchor.basis_path,
+    anchor.checker_path,
+  ];
+  const durableRefChecks = durableRefs.map((rel) => ({
+    path: rel,
+    package_blob_sha: gitBlobAt(anchor.durable_package_anchor_sha, rel),
+    current_blob_sha: gitBlobAt(head, rel),
+  })).map((row) => ({ ...row, match: row.package_blob_sha !== null && row.package_blob_sha === row.current_blob_sha }));
+
+  const contractNonEffectsClear = [
+    "runtime_mutation",
+    "production_database_mutation",
+    "production_owner_activation",
+    "provider_request",
+    "formal_v5_arm",
+    "a0",
+    "o00_o23",
+    "stage_1b_closure_claim",
+    "mcft_cap09_completion_claim",
+  ].every((key) => contract.non_effects?.[key] === false);
+
+  const checks = {
+    exact_checkout: delta.exact_checkout,
+    check_id_match: decision.check_id === anchor.check_id,
+    requalification_state: decision.status === "REQUALIFY",
+    protected_main_base_match: base === t0.protected_main_base_sha,
+    protected_main_precedes_qcp_base:
+      isAncestor(base, t0.qcp_base_sha),
+    qcp_base_precedes_qualification_subject:
+      isAncestor(t0.qcp_base_sha, anchor.qualification_subject_sha),
+    qualification_subject_precedes_package_anchor:
+      isAncestor(anchor.qualification_subject_sha, anchor.durable_package_anchor_sha),
+    package_anchor_precedes_t0_closure:
+      isAncestor(anchor.durable_package_anchor_sha, t0.closure_subject_sha),
+    t0_closure_precedes_current_head:
+      isAncestor(t0.closure_subject_sha, head),
+    dependency_digest_match:
+      decision.dependency_digest === anchor.dependency_digest,
+    contract_id_match:
+      contract.contract_id === "MCFT_CAP09_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_DC9EA15_V1",
+    contract_status_match:
+      contract.status === "QUALIFIED_SUBJECT_SUCCESSOR_ADMISSION_CONTRACT",
+    contract_subject_match:
+      contract.qualification_subject_sha === anchor.qualification_subject_sha,
+    contract_qcp_base_match:
+      contract.qcp_base_sha === t0.qcp_base_sha,
+    contract_runtime_match:
+      contract.frozen_runtime_subject_sha === t0.frozen_runtime_sha,
+    contract_dependency_digest_match:
+      contract.phase5_dependency_digest === anchor.dependency_digest,
+    historical_24t_not_reinterpreted:
+      contract.supersession?.historical_24t_reinterpreted_for_new_semantics === false,
+    current_resolver_matches_t0:
+      jsonStableEqual(currentResolver, t0Resolver),
+    current_resolver_matches_qualification_subject:
+      jsonStableEqual(currentResolver, qualificationResolver),
+    current_check_matches_t0:
+      jsonStableEqual(currentCheck, t0Check),
+    current_check_matches_qualification_subject:
+      jsonStableEqual(currentCheck, qualificationCheck),
+    phase5_governed_surface_unchanged_since_t0:
+      phase5PathBlobChecks.length === 56 &&
+      phase5PathBlobChecks.every((row) => row.match),
+    durable_supersession_package_unchanged:
+      durableRefChecks.every((row) => row.match),
+    contract_non_effects_clear:
+      contractNonEffectsClear,
+    post_t0_delta_closure_control_only:
+      delta.forbidden_paths.length === 0,
+  };
+
+  const valid = Object.values(checks).every(Boolean);
+  return {
+    status: valid ? "PASS" : "FAIL",
+    reason_code: valid
+      ? "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_GRADUATION_CARRY_FORWARD_VALID"
+      : "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_GRADUATION_CARRY_FORWARD_INVALID",
+    evidence_id: contract.contract_id || null,
+    subject_sha: anchor.qualification_subject_sha,
+    dependency_digest: anchor.dependency_digest,
+    package_sha: anchor.durable_package_anchor_sha,
+    t0_closure_subject_sha: t0.closure_subject_sha,
+    checks,
+    phase5_path_blob_checks: phase5PathBlobChecks,
+    durable_ref_checks: durableRefChecks,
+    post_t0_delta: delta,
+  };
+}
+
 function validateRuntimeCutoverPhase5Requalification(decision, head, base) {
   return validateExactRunAnchor(
     decision,
@@ -318,6 +650,257 @@ function validateProofBoundPhase5Requalification(decision, head, base) {
     PROOF_BOUND_PHASE5_REQUALIFICATION_V1,
     "PROOF_BOUND_PHASE5",
   );
+}
+
+function validatePhase5CausalTemporalSupersessionV1(decision, head, base) {
+  const anchor = Object.freeze({
+    package_sha: "e74f4348cc0318bb1fd3b3345bce7fe6c9c9dba6",
+    qualification_subject_sha: "dc9ea15a26c718594807fd0ac7158742518981b4",
+    base_sha: "4ee4989fc4f40cc52a3819be282c1d192b58a9b2",
+    frozen_runtime_sha: "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+    dependency_digest: "sha256:058d42929efedbbc7f55bf6ca4c2380260731e1c652f27226e86e3f832518965",
+    check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+    workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+    contract_id: "MCFT_CAP09_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_DC9EA15_V1",
+    checker_path: "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_V1.cjs",
+  });
+
+  const durablePaths = [
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE5-CAUSAL-TEMPORAL-SUPERSESSION-CONTRACT-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+    "docs/digital_twin/mcft/cap_09/evidence/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-BASIS-ACCEPTANCE-DC9EA15-V1.json",
+    "docs/digital_twin/mcft/cap_09/evidence/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-POSTGRES-PROOF-DC9EA15-V1.json",
+    anchor.checker_path,
+  ];
+
+  const checks = {
+    check_id_match:
+      decision.check_id === anchor.check_id,
+
+    applicability_required:
+      decision.status === "REQUIRED",
+
+    expected_required_reason:
+      decision.reason_code === "APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE",
+
+    requested_base_match:
+      base === anchor.base_sha,
+
+    qualification_subject_is_ancestor:
+      isAncestor(anchor.qualification_subject_sha, head),
+
+    durable_package_is_ancestor:
+      isAncestor(anchor.package_sha, head),
+
+    dependency_digest_match:
+      decision.dependency_digest === anchor.dependency_digest,
+
+    workflow_path_match:
+      decision.execution_workflow === anchor.workflow_path,
+
+    phase5_dependency_delta_empty:
+      Array.isArray(decision.changed_dependencies) &&
+      decision.changed_dependencies.length === 0,
+  };
+
+  if (!Object.values(checks).every(Boolean)) {
+    return {
+      status: "FAIL",
+      reason_code:
+        "PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_PRECONDITION_INVALID",
+      evidence_id: anchor.contract_id,
+      subject_sha: anchor.qualification_subject_sha,
+      dependency_digest: anchor.dependency_digest,
+      package_sha: anchor.package_sha,
+      checks,
+      package_blob_checks: [],
+      adjudication_checks: null,
+      adjudication: null,
+    };
+  }
+
+  const packageBlobChecks = durablePaths.map((rel) => {
+    let anchored = null;
+    let current = null;
+
+    try {
+      anchored = cp.execFileSync(
+        "git",
+        ["rev-parse", `${anchor.package_sha}:${rel}`],
+        { cwd: ROOT, encoding: "utf8" },
+      ).trim();
+
+      current = cp.execFileSync(
+        "git",
+        ["rev-parse", `HEAD:${rel}`],
+        { cwd: ROOT, encoding: "utf8" },
+      ).trim();
+    } catch {
+      return {
+        path: rel,
+        anchored_blob_sha: anchored,
+        current_blob_sha: current,
+        match: false,
+      };
+    }
+
+    return {
+      path: rel,
+      anchored_blob_sha: anchored,
+      current_blob_sha: current,
+      match: anchored === current,
+    };
+  });
+
+  if (!packageBlobChecks.every((row) => row.match)) {
+    return {
+      status: "FAIL",
+      reason_code:
+        "PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_DURABLE_PACKAGE_DRIFT",
+      evidence_id: anchor.contract_id,
+      subject_sha: anchor.qualification_subject_sha,
+      dependency_digest: anchor.dependency_digest,
+      package_sha: anchor.package_sha,
+      checks,
+      package_blob_checks: packageBlobChecks,
+      adjudication_checks: null,
+      adjudication: null,
+    };
+  }
+
+  const invocation = cp.spawnSync(
+    process.execPath,
+    [
+      anchor.checker_path,
+      "--base",
+      base,
+      "--head",
+      head,
+      "--dependency-digest",
+      decision.dependency_digest,
+    ],
+    {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        MCFT_CAP09_ALL_BLOCKERS_CHILD: "1",
+      },
+    },
+  );
+
+  let adjudication = null;
+
+  try {
+    adjudication = JSON.parse(
+      String(invocation.stdout || "").trim(),
+    );
+  } catch {
+    adjudication = null;
+  }
+
+  const expectedNonEffects = [
+    "runtime_mutation",
+    "production_database_mutation",
+    "production_owner_activation",
+    "provider_request",
+    "formal_v5_arm",
+    "a0",
+    "o00_o23",
+    "stage_1b_closure_claim",
+    "mcft_cap09_completion_claim",
+  ];
+
+  const nonEffectsClear =
+    adjudication &&
+    expectedNonEffects.every(
+      (key) => adjudication.non_effects?.[key] === false,
+    );
+
+  const adjudicationChecks = {
+    checker_exit_zero:
+      invocation.status === 0,
+
+    checker_json_present:
+      adjudication !== null,
+
+    status_pass:
+      adjudication?.status === "PASS",
+
+    check_id_match:
+      adjudication?.check_id === anchor.check_id,
+
+    qualification_subject_match:
+      adjudication?.qualification_subject_sha ===
+      anchor.qualification_subject_sha,
+
+    adjudicated_head_match:
+      adjudication?.adjudicated_head_sha === head,
+
+    base_match:
+      adjudication?.qcp_base_sha === anchor.base_sha,
+
+    frozen_runtime_match:
+      adjudication?.frozen_runtime_subject_sha ===
+      anchor.frozen_runtime_sha,
+
+    dependency_digest_match:
+      adjudication?.dependency_digest ===
+      anchor.dependency_digest,
+
+    exact_subject_proof:
+      adjudication?.proof_subject_exact === true,
+
+    real_postgres_temporal_proof:
+      adjudication?.real_postgresql_causal_temporal_proof === true,
+
+    old_24t_not_reinterpreted:
+      adjudication?.historical_24t_reinterpreted === false,
+
+    phase5_resolver_preserved:
+      adjudication?.phase5_resolver_unchanged_from_subject === true,
+
+    phase5_qcp_check_preserved:
+      adjudication?.phase5_qcp_check_semantics_unchanged_from_subject === true,
+
+    frozen_resolver_path_count:
+      adjudication?.frozen_phase5_resolver_path_count === 56,
+
+    frozen_difference_count:
+      adjudication?.frozen_phase5_difference_count === 1,
+
+    image_digest_set_preserved:
+      adjudication?.qualification_image_digest_set_preserved === true,
+
+    forbidden_successor_paths_empty:
+      Array.isArray(
+        adjudication?.forbidden_successor_changed_paths,
+      ) &&
+      adjudication.forbidden_successor_changed_paths.length === 0,
+
+    non_effects_clear:
+      nonEffectsClear,
+  };
+
+  const valid =
+    Object.values(adjudicationChecks).every(Boolean);
+
+  return {
+    status: valid ? "PASS" : "FAIL",
+    reason_code: valid
+      ? "PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_VALID"
+      : "PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_INVALID",
+    evidence_id: anchor.contract_id,
+    subject_sha: anchor.qualification_subject_sha,
+    dependency_digest: anchor.dependency_digest,
+    package_sha: anchor.package_sha,
+    checks,
+    package_blob_checks: packageBlobChecks,
+    adjudication_checks: adjudicationChecks,
+    adjudication,
+    checker_exit_status: invocation.status,
+    checker_stderr: String(invocation.stderr || ""),
+  };
 }
 
 function resolveRequalificationEvidence(decision, authority, registry, stage, head) {
@@ -586,6 +1169,72 @@ function main() {
           detail: diagnostic,
         });
       } else if (
+        decision.check_id === T0_GRADUATION_CARRY_FORWARD_V1.am19.check_id &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        successorChainAdmissionActive &&
+        args.base === T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha &&
+        isAncestor(
+          T0_GRADUATION_CARRY_FORWARD_V1.closure_subject_sha,
+          args.head || "",
+        )
+      ) {
+        const evidence = validateAm19T0GraduationCarryForwardV1(
+          decision,
+          args.head || "",
+          args.base || "",
+          authority,
+          registry,
+        );
+        result = {
+          ...common,
+          execution: "AM19_T0_VERIFIED_DELIVERY_GRADUATION_CARRY_FORWARD",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_dependency_digest: evidence.dependency_digest ?? null,
+          t0_closure_subject_sha: evidence.t0_closure_subject_sha ?? null,
+          t0_graduation_carry_forward: evidence,
+        };
+        if (evidence.status !== "PASS") blockers.push({
+          blocker_class: "INVALID_AM19_T0_GRADUATION_CARRY_FORWARD",
+          check_id: decision.check_id,
+          detail: evidence,
+        });
+      } else if (
+        decision.check_id === T0_GRADUATION_CARRY_FORWARD_V1.phase5.check_id &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        successorChainAdmissionActive &&
+        args.base === T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha &&
+        isAncestor(
+          T0_GRADUATION_CARRY_FORWARD_V1.closure_subject_sha,
+          args.head || "",
+        )
+      ) {
+        const evidence = validatePhase5T0GraduationCarryForwardV1(
+          decision,
+          args.head || "",
+          args.base || "",
+          authority,
+        );
+        result = {
+          ...common,
+          execution: "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_GRADUATION_CARRY_FORWARD",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_dependency_digest: evidence.dependency_digest ?? null,
+          evidence_package_sha: evidence.package_sha ?? null,
+          t0_closure_subject_sha: evidence.t0_closure_subject_sha ?? null,
+          t0_graduation_carry_forward: evidence,
+        };
+        if (evidence.status !== "PASS") blockers.push({
+          blocker_class: "INVALID_PHASE5_T0_GRADUATION_CARRY_FORWARD",
+          check_id: decision.check_id,
+          detail: evidence,
+        });
+      } else if (
         decision.check_id === PROOF_BOUND_PHASE3_REQUALIFICATION_V1.check_id &&
         proofBoundFreshRequalificationActive &&
         args.base === PROOF_BOUND_PHASE3_REQUALIFICATION_V1.base_sha
@@ -757,6 +1406,48 @@ function main() {
           });
         }
       } else if (
+        decision.check_id === "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS" &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "4ee4989fc4f40cc52a3819be282c1d192b58a9b2" &&
+        isAncestor(
+          "e74f4348cc0318bb1fd3b3345bce7fe6c9c9dba6",
+          args.head || "",
+        )
+      ) {
+        const evidence =
+          validatePhase5CausalTemporalSupersessionV1(
+            decision,
+            args.head || "",
+            args.base || "",
+          );
+
+        result = {
+          ...common,
+          execution:
+            "PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_ADMISSION",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_dependency_digest:
+            evidence.dependency_digest ?? null,
+          evidence_package_sha:
+            evidence.package_sha ?? null,
+          evidence_checks:
+            evidence.checks ?? null,
+          causal_temporal_supersession:
+            evidence,
+        };
+
+        if (evidence.status !== "PASS") {
+          blockers.push({
+            blocker_class:
+              "INVALID_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_ADMISSION",
+            check_id: decision.check_id,
+            detail: evidence,
+          });
+        }
+      } else if (
         decision.check_id === SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.check_id &&
         successorChainAdmissionActive &&
         isAncestor(SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.merge_commit_sha, args.base || "")
@@ -822,12 +1513,88 @@ function main() {
           detail: evidence,
         });
       } else if (decision.diagnostic_command && !adoptionDurableRequalification) {
-        const diagnosticEnv = decision.check_id === "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM"
-          ? { GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA: args.base || "" }
-          : {};
-        const diagnostic = runDiagnostic(decision.diagnostic_command, diagnosticEnv);
-        result = { ...common, execution: "DIAGNOSTIC_COMMAND", status: diagnostic.status, reason_code: diagnostic.status === "PASS" ? "DIAGNOSTIC_PASS" : "DIAGNOSTIC_FAIL", diagnostic_command: decision.diagnostic_command, diagnostic };
-        if (diagnostic.status !== "PASS") blockers.push({ blocker_class: "DIAGNOSTIC_FAILURE", check_id: decision.check_id, detail: diagnostic });
+        const durableBeforeDiagnostic =
+          PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(
+            decision.check_id,
+          )
+            ? resolveRequalificationEvidence(
+                decision,
+                authority,
+                registry,
+                stage,
+                args.head || null,
+              )
+            : null;
+
+        if (durableBeforeDiagnostic?.status === "PASS") {
+          result = {
+            ...common,
+            execution:
+              "DURABLE_REQUALIFICATION_EVIDENCE_BEFORE_HISTORICAL_DIAGNOSTIC",
+            status: "PASS",
+            reason_code: durableBeforeDiagnostic.reason_code,
+            evidence_id:
+              durableBeforeDiagnostic.evidence_id ?? null,
+            evidence_run_id:
+              durableBeforeDiagnostic.run_id ?? null,
+            evidence_subject_sha:
+              durableBeforeDiagnostic.subject_sha ?? null,
+            evidence_adjudication:
+              durableBeforeDiagnostic.candidates,
+            historical_diagnostic_skipped: true,
+          };
+        } else {
+          const diagnosticEnv =
+            decision.check_id ===
+            "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM"
+              ? {
+                  GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA:
+                    args.base || "",
+                }
+              : {};
+
+          if (decision.check_id === "T4R1_CURRENT_CROP_ROLLING_REFRESH") {
+
+            diagnosticEnv.MCFT_CAP09_CURRENT_CROP_BASE_SHA = args.base || "";
+
+            diagnosticEnv.MCFT_CAP09_CURRENT_CROP_HEAD_SHA = args.head || "";
+
+          }
+
+          if (decision.check_id === "FORMAL_V5_H6_SUCCESSOR_SEAM") {
+
+            diagnosticEnv.H6_SUCCESSOR_BASE_SHA = args.base || "";
+
+          }
+
+          const diagnostic = runDiagnostic(
+            decision.diagnostic_command,
+            diagnosticEnv,
+          );
+
+          result = {
+            ...common,
+            execution: "DIAGNOSTIC_COMMAND",
+            status: diagnostic.status,
+            reason_code:
+              diagnostic.status === "PASS"
+                ? "DIAGNOSTIC_PASS"
+                : "DIAGNOSTIC_FAIL",
+            diagnostic_command:
+              decision.diagnostic_command,
+            diagnostic,
+            durable_requalification_precheck:
+              durableBeforeDiagnostic,
+          };
+
+          if (diagnostic.status !== "PASS") {
+            blockers.push({
+              blocker_class: "DIAGNOSTIC_FAILURE",
+              check_id: decision.check_id,
+              detail: diagnostic,
+            });
+          }
+        }
       } else {
         const evidence = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null);
         result = {

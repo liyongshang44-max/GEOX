@@ -90,8 +90,51 @@ function requireMarkers(file, markers, code) {
 }
 
 try {
-  const base = exactCommit(process.env.MCFT_BASE_SHA || PHASE1_BASE, "EA5C2B1_PHASE2_BASE_SHA_INVALID");
-  const protectedMainAdoption = process.env.MCFT_CAP09_PROTECTED_MAIN_ADOPTION === "1";
+  const explicitBase = String(process.env.MCFT_BASE_SHA || "").trim();
+  const explicitProtectedMainAdoption =
+    String(process.env.MCFT_CAP09_PROTECTED_MAIN_ADOPTION || "").trim();
+
+  assert.ok(
+    explicitProtectedMainAdoption === "" ||
+      explicitProtectedMainAdoption === "0" ||
+      explicitProtectedMainAdoption === "1",
+    "EA5C2B1_PROTECTED_MAIN_ADOPTION_FLAG_INVALID",
+  );
+
+  const standaloneDiagnostic =
+    explicitBase === "" &&
+    explicitProtectedMainAdoption === "";
+
+  let resolvedBase = explicitBase;
+  let protectedMainAdoption =
+    explicitProtectedMainAdoption === "1";
+
+  if (standaloneDiagnostic) {
+    const standaloneSuccessorSubject =
+      "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9";
+
+    assert.equal(
+      git("merge-base", standaloneSuccessorSubject, "HEAD"),
+      standaloneSuccessorSubject,
+      "EA5C2B1_STANDALONE_SUCCESSOR_SUBJECT_ANCESTRY_REQUIRED",
+    );
+
+    resolvedBase = git("rev-parse", "origin/main");
+
+    assert.equal(
+      resolvedBase,
+      "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+      "EA5C2B1_STANDALONE_PROTECTED_MAIN_EXACT_BASE_REQUIRED",
+    );
+
+    protectedMainAdoption = true;
+  }
+
+  const base = exactCommit(
+    resolvedBase || PHASE1_BASE,
+    "EA5C2B1_PHASE2_BASE_SHA_INVALID",
+  );
+
   if (protectedMainAdoption) {
     const legacyProtectedMainBase =
       [PROTECTED_MAIN_ADOPTION_BASE, ROLLING_STAGE_RESOLVER_BASE].includes(base);

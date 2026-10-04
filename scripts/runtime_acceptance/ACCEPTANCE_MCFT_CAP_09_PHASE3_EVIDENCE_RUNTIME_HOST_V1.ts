@@ -57,6 +57,65 @@ async function main():Promise<void>{
   assert.deepEqual(waits,["RETRY_BACKOFF","LEASE_STANDBY","SUCCESS_CADENCE"]);
   assert.deepEqual(health.map(e=>[e.status,e.detail]),[["STARTING","HOST_START"],["DEGRADED","RETRYABLE_ATTEMPT_FAILURE"],["STANDBY","LEASE_HELD_BY_OTHER_OWNER"],["HEALTHY","ATTEMPT_COMPLETED"],["STOPPING","PLANNER_EXHAUSTED"]]);
 
+  const structuredHealth:EvidenceRuntimeHostHealthEventV1[]=[];
+  const structuredRetryError=Object.assign(
+    new Error("MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED:MCFT_CAP09_GFS_PGRB2_F041"),
+    {
+      name:"GfsMemberRetryExhaustedError",
+      code:"MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED",
+      diagnostic_token:"MCFT_CAP09_GFS_PGRB2_F041",
+      failure_stage:"MEMBER_FETCH",
+      failure_token:"MCFT_CAP09_GFS_PGRB2_F041",
+      member_kind:"GFS_PGRB2_FILTER_RESPONSE",
+      lead:41,
+      local_retry_ordinal:1,
+      url:"https://secret.example.invalid/path?credential=forbidden",
+      authorization:"Bearer forbidden",
+      response_body:"forbidden",
+      cause:new Error("unsafe raw cause"),
+    },
+  );
+  const structuredHost=new EvidenceRuntimeHostV1({
+    lease:leaseV1(),
+    planner:{async nextAttemptPlan(input){
+      if(input.cycle_attempt>=1)return null;
+      return planV1("structured-retry","GFS_PARTIAL_PAIR_REHYDRATION",async()=>{throw structuredRetryError;});
+    }},
+    wait:{
+      waitForLeaseRenewal:waitForCancelledLeaseRenewalV1,
+      async waitAfterAttempt(input){assert.equal(input.reason,"RETRY_BACKOFF");},
+    },
+    health:{async recordHealth(event){structuredHealth.push(structuredClone(event));}},
+    stop:{stopRequested:()=>false},
+    failure_classifier:{classify:()=> "RETRYABLE"},
+  });
+  const structuredRun=await structuredHost.run({
+    scope:SCOPE,
+    lease_owner:"host-structured",
+    lease_duration_seconds:300,
+  });
+  assert.equal(structuredRun.stop_reason,"PLANNER_EXHAUSTED");
+  const structuredFailure=structuredHealth.find(
+    (event)=>event.detail==="RETRYABLE_ATTEMPT_FAILURE",
+  );
+  assert(structuredFailure,"PHASE3_HOST_STRUCTURED_RETRY_HEALTH_REQUIRED");
+  assert.equal(structuredFailure.attempt_kind,"GFS_PARTIAL_PAIR_REHYDRATION");
+  assert.equal(structuredFailure.failure_class,"RETRYABLE");
+  assert.equal(structuredFailure.failure_stage,"MEMBER_FETCH");
+  assert.equal(structuredFailure.failure_token,"MCFT_CAP09_GFS_PGRB2_F041");
+  assert.equal(structuredFailure.error_name,"GfsMemberRetryExhaustedError");
+  assert.equal(structuredFailure.error_code,"MCFT_CAP09_GFS_MEMBER_RETRY_EXHAUSTED");
+  assert.equal(structuredFailure.member_kind,"GFS_PGRB2_FILTER_RESPONSE");
+  assert.equal(structuredFailure.lead,41);
+  assert.equal(structuredFailure.local_retry_ordinal,1);
+  for(const forbidden of ["url","authorization","response_body","cause","headers","request_headers"]){
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(structuredFailure,forbidden),
+      false,
+      `PHASE3_HOST_STRUCTURED_RETRY_SECRET_FIELD_FORBIDDEN:${forbidden}`,
+    );
+  }
+
   const kinds:EvidenceRuntimeHostAttemptKindV1[]=["KBS_RAW_HOURLY_PUBLICATION_CYCLE","GFS_PARTIAL_PAIR_REHYDRATION","CANONICAL_WORK_ITEM_CYCLE"],executed:EvidenceRuntimeHostAttemptKindV1[]=[];let stop=false;
   const heterogeneousHost=new EvidenceRuntimeHostV1({
     lease:leaseV1(),
@@ -81,6 +140,103 @@ async function main():Promise<void>{
   const notDueHost=new EvidenceRuntimeHostV1({lease:leaseV1(notDueLeaseTrace),planner:{async nextAttemptPlan(){return {status:"NOT_DUE" as const};}},wait:{waitForLeaseRenewal:waitForCancelledLeaseRenewalV1,async waitAfterAttempt(input){assert.equal(input.reason,"PLANNER_NOT_DUE");notDueWaitCount+=1;}},health:{async recordHealth(){}},stop:{stopRequested:()=>notDueWaitCount>=3},failure_classifier:{classify:()=> "FATAL"}});
   const notDue=await notDueHost.run({scope:SCOPE,lease_owner:"host-not-due",lease_duration_seconds:300});assert.equal(notDue.cycle_attempt_count,0);assert.equal(notDue.not_due_wait_count,3);
   assert.deepEqual(notDueLeaseTrace,["acquire","renew","renew","release"],"PHASE3_HOST_NOT_DUE_OWNER_LEASE_KEEPALIVE_REQUIRED");
+
+  const recoveryTrace:string[]=[];
+  const recoveryHealth:EvidenceRuntimeHostHealthEventV1[]=[];
+  let recoveryAcquireCount=0,recoveryRenewCount=0,recoveryPlannerCount=0,recoveryWaitCount=0;
+  const recoveryLease:EvidenceProducerLeasePortV1={
+    async acquireLease(input){
+      recoveryTrace.push("acquire");
+      recoveryAcquireCount+=1;
+      return leaseClaimV1(input.lease_owner,recoveryAcquireCount);
+    },
+    async renewLease(input){
+      recoveryTrace.push("renew");
+      recoveryRenewCount+=1;
+      if(recoveryRenewCount===1){
+        const error=Object.assign(new Error("the database system is in recovery mode"),{code:"57P03"});
+        throw error;
+      }
+      return {...input.claim,heartbeat_at:"2026-08-27T02:00:20.000Z",database_now:"2026-08-27T02:00:20.000Z"};
+    },
+    async releaseLease(){recoveryTrace.push("release");},
+  };
+  const recoveryHost=new EvidenceRuntimeHostV1({
+    lease:recoveryLease,
+    planner:{async nextAttemptPlan(){
+      recoveryPlannerCount+=1;
+      return recoveryPlannerCount===1?{status:"NOT_DUE" as const}:null;
+    }},
+    wait:{
+      waitForLeaseRenewal:waitForCancelledLeaseRenewalV1,
+      async waitAfterAttempt(input){
+        if(input.reason==="PLANNER_NOT_DUE")return;
+        assert.equal(input.reason,"RETRY_BACKOFF");
+        recoveryWaitCount+=1;
+      },
+    },
+    health:{async recordHealth(event){recoveryHealth.push(structuredClone(event));}},
+    stop:{stopRequested:()=>false},
+    failure_classifier:{classify(error){
+      const code=typeof error==="object"&&error!==null&&"code" in error?String((error as {code?:unknown}).code??""):"";
+      const message=error instanceof Error?error.message:String(error??"");
+      return code==="57P03"||/database system is in recovery mode/i.test(message)?"RETRYABLE":"FATAL";
+    }},
+  });
+  const recoveryRun=await recoveryHost.run({
+    scope:SCOPE,
+    lease_owner:"host-recovery",
+    lease_duration_seconds:300,
+  });
+  assert.equal(recoveryRun.stop_reason,"PLANNER_EXHAUSTED");
+  assert.equal(recoveryRun.retryable_failure_count,1);
+  assert.equal(recoveryRun.cycle_attempt_count,0);
+  assert.equal(recoveryWaitCount,1);
+  assert.equal(recoveryAcquireCount,2,"PHASE3_HOST_COORDINATION_RECOVERY_MUST_REACQUIRE");
+  assert.deepEqual(
+    recoveryTrace,
+    ["acquire","renew","acquire","release"],
+    "PHASE3_HOST_COORDINATION_RECOVERY_REACQUIRE_TRACE_REQUIRED",
+  );
+  const recoveryFailure=recoveryHealth.find((event)=>event.failure_stage==="HOST_COORDINATION");
+  assert(recoveryFailure,"PHASE3_HOST_COORDINATION_RECOVERY_HEALTH_REQUIRED");
+  assert.equal(recoveryFailure.detail,"RETRYABLE_ATTEMPT_FAILURE");
+  assert.equal(recoveryFailure.failure_class,"RETRYABLE");
+  assert.equal(recoveryFailure.error_code,"57P03");
+  assert.equal(recoveryFailure.attempt_kind,undefined);
+
+  const staleFenceHealth:EvidenceRuntimeHostHealthEventV1[]=[];
+  let staleFencePlannerCalls=0;
+  const staleFenceHost=new EvidenceRuntimeHostV1({
+    lease:{
+      async acquireLease(input){return leaseClaimV1(input.lease_owner,1);},
+      async renewLease(){throw new Error("PHASE3_EVIDENCE_LEASE_RENEW_STALE_FENCE");},
+      async releaseLease(){},
+    },
+    planner:{async nextAttemptPlan(){
+      staleFencePlannerCalls+=1;
+      return {status:"NOT_DUE" as const};
+    }},
+    wait:{
+      waitForLeaseRenewal:waitForCancelledLeaseRenewalV1,
+      async waitAfterAttempt(input){assert.equal(input.reason,"PLANNER_NOT_DUE");},
+    },
+    health:{async recordHealth(event){staleFenceHealth.push(structuredClone(event));}},
+    stop:{stopRequested:()=>false},
+    failure_classifier:{classify(error){
+      const message=error instanceof Error?error.message:String(error??"");
+      return /database system is in recovery mode/i.test(message)?"RETRYABLE":"FATAL";
+    }},
+  });
+  await expectReject(
+    ()=>staleFenceHost.run({scope:SCOPE,lease_owner:"host-stale-fence",lease_duration_seconds:300}),
+    /PHASE3_EVIDENCE_LEASE_RENEW_STALE_FENCE/,
+  );
+  assert.equal(staleFencePlannerCalls,1);
+  const staleFenceFailure=staleFenceHealth.find((event)=>event.failure_stage==="HOST_COORDINATION");
+  assert(staleFenceFailure,"PHASE3_HOST_COORDINATION_STALE_FENCE_HEALTH_REQUIRED");
+  assert.equal(staleFenceFailure.detail,"FATAL_ATTEMPT_FAILURE");
+  assert.equal(staleFenceFailure.failure_class,"FATAL");
 
   let longAttemptRelease:()=>void=()=>{};
   const longAttemptGate=new Promise<void>((resolve)=>{longAttemptRelease=resolve;});
@@ -145,7 +301,7 @@ async function main():Promise<void>{
   assert.equal(source.includes("ATTEMPT_IN_PROGRESS"),true,"PHASE3_HOST_INFLIGHT_STRUCTURED_HEALTH_REQUIRED");
   for(const component of MCFT_CAP09_EVIDENCE_RUNTIME_DURABLE_RESTART_COMPONENTS_V1)assert.equal(source.includes(component),true);
 
-  const proof={schema_version:"geox_mcft_cap09_phase3_evidence_runtime_host_qualification_v1",status:"PASS",retryable_attempt_retried:true,lease_standby_waited:true,successful_attempt_waited_for_cadence:true,fatal_attempt_fail_closed:true,immediate_stop_skips_planner_and_attempt:true,planner_not_due_waits_without_attempt_or_provider:true,planner_not_due_owner_lease_keepalive_proven:true,inflight_attempt_owner_lease_keepalive_proven:true,inflight_attempt_structured_health_keepalive_proven:true,inflight_attempt_virtual_elapsed_ms:longVirtualElapsedMs,inflight_attempt_exceeded_original_lease_window:longVirtualElapsedMs>1000,owner_lease_lifecycle_host_managed:true,released_owner_claim_not_exposed_to_process_cleanup:true,provider_not_due_is_nonfailure_standby:true,heterogeneous_attempt_kinds_executed_in_single_host:executed,second_evidence_host_required:false,host_attempt_execution_seam:true,host_direct_cycle_service_dependency:false,provider_direct_call_from_host:false,database_direct_call_from_host:false,durable_restart_authority:run.durable_restart_authority,durable_restart_components:run.durable_restart_components,canonical_gfs_hourly_target_history_in_restart_authority:run.durable_restart_components.includes("CANONICAL_GFS_HOURLY_TARGET_PAIR_HISTORY"),production_activation:false,runtime_tick_cursor_mutation:false,twin_state_mutation:false,formal_v5_armed:false,graduation_effect:false};
+  const proof={schema_version:"geox_mcft_cap09_phase3_evidence_runtime_host_qualification_v1",status:"PASS",retryable_attempt_retried:true,host_coordination_recovery_retryable:true,host_coordination_uncertain_claim_reacquired:true,host_coordination_stale_fence_remains_fatal:true,lease_standby_waited:true,successful_attempt_waited_for_cadence:true,fatal_attempt_fail_closed:true,immediate_stop_skips_planner_and_attempt:true,planner_not_due_waits_without_attempt_or_provider:true,planner_not_due_owner_lease_keepalive_proven:true,inflight_attempt_owner_lease_keepalive_proven:true,inflight_attempt_structured_health_keepalive_proven:true,inflight_attempt_virtual_elapsed_ms:longVirtualElapsedMs,inflight_attempt_exceeded_original_lease_window:longVirtualElapsedMs>1000,owner_lease_lifecycle_host_managed:true,released_owner_claim_not_exposed_to_process_cleanup:true,provider_not_due_is_nonfailure_standby:true,heterogeneous_attempt_kinds_executed_in_single_host:executed,second_evidence_host_required:false,host_attempt_execution_seam:true,host_direct_cycle_service_dependency:false,provider_direct_call_from_host:false,database_direct_call_from_host:false,durable_restart_authority:run.durable_restart_authority,durable_restart_components:run.durable_restart_components,canonical_gfs_hourly_target_history_in_restart_authority:run.durable_restart_components.includes("CANONICAL_GFS_HOURLY_TARGET_PAIR_HISTORY"),production_activation:false,runtime_tick_cursor_mutation:false,twin_state_mutation:false,formal_v5_armed:false,graduation_effect:false};
   fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(proof,null,2)+"\n");console.log(JSON.stringify(proof,null,2));
 }
 main().catch(error=>{fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify({status:"FAIL",error:error instanceof Error?error.message:String(error)},null,2)+"\n");console.error(error);process.exitCode=1;});

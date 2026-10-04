@@ -2343,6 +2343,186 @@
         "artifact_absence_reason": "RUN_LEVEL_EXACT_SUBJECT_TWIN_RESTART_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "865adc6184269765f09a49eadda08b2099bb3ef305971c03ac969660644e9765"
+      },
+      {
+        "evidence_id": "V13_AUTONOMOUS_FORCING_FOUNDATION_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "mcft-cap-09-v13-autonomous-forcing-foundation",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+        "run_id": 36665643853,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:14e03fdfbd7909de60c56122d7efb98b779bd16af7bae69fffe458fd2de65a9b",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "3baac3a76ccbd318c8b777465419ba0d1f34a64b35551967a70349611ee37be1"
+      },
+      {
+        "evidence_id": "V13_HOLISTIC_SCHEMA_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "V13_HOLISTIC_SCHEMA",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "mcft-cap-09-v13-holistic-schema-postgres",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+        "run_id": 36665643892,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:14e03fdfbd7909de60c56122d7efb98b779bd16af7bae69fffe458fd2de65a9b",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "df281d956106cee43b5f1afdafbe32a5ed6940c12d42ba25f827f4ce0b143077"
+      },
+      {
+        "evidence_id": "V13_NEXT_TICK_VIABILITY_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "V13_NEXT_TICK_VIABILITY",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "mcft-cap-09-v13-next-tick-viability-postgres",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+        "run_id": 36665643897,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:14e03fdfbd7909de60c56122d7efb98b779bd16af7bae69fffe458fd2de65a9b",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "b9300861317b2f39c425adbe11c68107c69ecd484df91bd68dc75ac730cc0a86"
+      },
+      {
+        "evidence_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "mcft-cap-09-ea5c1-durable-raw-restricted-ingress",
+        "workflow_path": ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml",
+        "run_id": 36665644104,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:08361c4ee5a17a95c2834bcd48d5b67a1a8a68d3c1875132785d60db496c0e14",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "46126334866d7600fbd30d1ac1770d681c7cdf5c4ee382f4d0074d687efbc772"
+      },
+      {
+        "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+        "run_id": 36665643987,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:1f7db1f41c0ad8e72855cf71256e738d2d8a05815301246b26a915fb447df4ac",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "ab63a5704d5826bfbddabb833da5f8c9434ba96e7611c9ae5d430707fead5cac"
+      },
+      {
+        "evidence_id": "PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "mcft-cap-09-phase4-twin-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+        "run_id": 36665643844,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:ce5d2e9754f1ecc7814f3ab6a1328063c2af5784cc29316c6779023c007efdd5",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "2082f4411cb3a1ff62d95582a7add014cb3ba4adbf29b5cd0b050a161c27cb32"
+      },
+      {
+        "evidence_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "mcft-cap-09-phase7-candidate-promotion-composition",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
+        "run_id": 36665644144,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:6d09054147c7ebf292cc50050f5e9187651af42195c623d3409928390f5e8161",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "b91ce877604260a0866c3bc6229d4ffb81b36d74d0267c303fca39a352ae6f8b"
+      },
+      {
+        "evidence_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING_REQUAL_DA09A68F_CLOSURE_V1",
+        "check_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "closure-registry-binding-da09-v1",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "workflow_name": "MCFT CAP-09 Production Twin Process V2 Routing",
+        "workflow_path": ".github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml",
+        "run_id": 36665643915,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:6bebff54fef4bbd53cd804b65ecc5dbcff9bae6efd98fb091d2c3ddcc5bf9a24",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "21a784e1c0465b08f75ab52ae98448a2efc671263faf372129c751127e726749"
+      },
+      {
+        "evidence_id": "PHASE2_EVIDENCE_PROVIDER_MODULES_REQUAL_3AC5360E_GRADUATION_V1",
+        "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "successor-graduation-phase2-provider-modules-exact-head-requalification",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "3ac5360e3a2f5fd2e9fe3b83427aee953eefe85f",
+        "workflow_name": "mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor",
+        "workflow_path": ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+        "run_id": 37201296425,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "3ac5360e3a2f5fd2e9fe3b83427aee953eefe85f",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:1fde0f991f032d91615674c7195252f44fe22d039ba8e5128a5c2843e334ec74",
+        "artifact_absence_reason": "RUN_LEVEL_EXACT_SUBJECT_GRADUATION_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "919ccc51269c1f9a4eb89516b18deec24eb9b55348590103c85e1fb4549cccc4"
       }
     ],
     "durable_anchors": {
@@ -3788,6 +3968,132 @@
             "bare_sha_allowlist_admission_authorized": false,
             "acceptance_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs"
           }
+        },
+        {
+          "evidence_id": "V13_AUTONOMOUS_FORCING_FOUNDATION_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665643853,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 605,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+            "workflow_name": "mcft-cap-09-v13-autonomous-forcing-foundation",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:43:52Z"
+          }
+        },
+        {
+          "evidence_id": "V13_HOLISTIC_SCHEMA_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665643892,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 560,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+            "workflow_name": "mcft-cap-09-v13-holistic-schema-postgres",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:44:32Z"
+          }
+        },
+        {
+          "evidence_id": "V13_NEXT_TICK_VIABILITY_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665643897,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 579,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+            "workflow_name": "mcft-cap-09-v13-next-tick-viability-postgres",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:43:59Z"
+          }
+        },
+        {
+          "evidence_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665644104,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 326,
+            "workflow_path": ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml",
+            "workflow_name": "mcft-cap-09-ea5c1-durable-raw-restricted-ingress",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:46:35Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665643987,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 887,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:44:42Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665643844,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 539,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase4-twin-runtime-persistence",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:44:54Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665644144,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 553,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
+            "workflow_name": "mcft-cap-09-phase7-candidate-promotion-composition",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:44:46Z"
+          }
+        },
+        {
+          "evidence_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING_REQUAL_DA09A68F_CLOSURE_V1",
+          "run_id": 36665643915,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 159,
+            "workflow_path": ".github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml",
+            "workflow_name": "MCFT CAP-09 Production Twin Process V2 Routing",
+            "head_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-09-30T03:43:00Z",
+            "updated_at": "2026-09-30T03:44:06Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE2_EVIDENCE_PROVIDER_MODULES_REQUAL_3AC5360E_GRADUATION_V1",
+          "run_id": 37201296425,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 483,
+            "workflow_path": ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+            "workflow_name": "mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor",
+            "head_sha": "3ac5360e3a2f5fd2e9fe3b83427aee953eefe85f",
+            "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+            "created_at": "2026-10-04T12:12:15Z",
+            "updated_at": "2026-10-04T12:13:32Z"
+          }
         }
       ],
       "rules": {
@@ -3833,7 +4139,8 @@
           "f7d28aef3d2fe8e65ce0afff64e6f2673c2eb39b",
           "7a9482104e0bbced906f48df220657f39da23b51",
           "d054b334b3e74f3356b5d02498da9ba845eccdfb",
-          "0c71e55843c659cce402a1457d481e412cdc203c"
+          "0c71e55843c659cce402a1457d481e412cdc203c",
+          "8f63c498bd48978e2dd525ad57b6b8fdb7ada560"
         ],
         "dependency_digest_must_match_current": true,
         "anchor_is_not_production_authority": true

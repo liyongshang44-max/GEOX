@@ -1,0 +1,40 @@
+{
+  "schema_version": "geox_mcft_cap09_qualification_evidence_manifest_interface_v1",
+  "status": "M5_IMPLEMENTED_FOR_CONTROLLED_HOST_VALIDATION",
+  "scope": "QUALIFICATION_MIGRATION_ONLY",
+  "closure_track_base_sha": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+  "verified_migration_baseline_sha": "e53ee1e89c58b821c6e12b6bdbf6eec672354774",
+  "qualification_contract": "scripts/qualification/contracts/MCFT_CAP09_CAUSAL_REVISION_TEMPORAL_V1.json",
+  "frozen_runtime_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+  "manifest_schema": "QualificationEvidenceManifestV1",
+  "manifest_location_policy": "OUTSIDE_FINALIZED_RUN_PACKAGE",
+  "manifest_digest_policy": "SHA256_CANONICAL_JSON_WITHOUT_MANIFEST_DIGEST_FIELD",
+  "package_verification": {
+    "requires_finalized_package": true,
+    "recomputes_all_package_file_digests": true,
+    "rejects_unexpected_package_files": true,
+    "verifies_exact_contract_bytes_at_qualification_subject": true,
+    "verifies_exact_runner_bytes_at_qualification_subject": true,
+    "latest_successful_run_fallback": false,
+    "fail_closed": true
+  },
+  "producer_authority": "QUALIFICATION_EVIDENCE_PRODUCER_NOT_AUTHORITY_SYSTEM",
+  "consumer_boundary": {
+    "closure_team_decides_blocker_satisfaction": true,
+    "qcp_blocker_semantics_changed": false,
+    "qcp_blocker_classification_changed": false,
+    "closure_criteria_changed": false,
+    "successor_graduation_criteria_changed": false
+  },
+  "non_effects": {
+    "runtime_semantic_mutation": false,
+    "production_mutation": false,
+    "production_owner_cutover": false,
+    "formal_v5_arm": false,
+    "a0": false,
+    "o00_o23": false,
+    "stage_1b_closure_claim": false,
+    "mcft_cap09_completion_claim": false,
+    "closure_subject_advance": false
+  }
+}

@@ -28,6 +28,8 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts'
+      - 'scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FAILURE_DISCOVERY_ACCELERATED_RESTART_BACKFILL_V1.cjs'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -66,6 +68,7 @@ jobs:
       GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:phase4-runtime@127.0.0.1:5432/phase4_twin
       GEOX_MCFT_MIGRATOR_PASSWORD: phase4-migrator
       GEOX_RUNTIME_DATABASE_PASSWORD: phase4-runtime
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -196,6 +199,9 @@ jobs:
           DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/phase4_restart \
             pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts
 
+      - name: Adjudicate Runtime-only accelerated restart/backfill matrix
+        run: node scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_FAILURE_DISCOVERY_ACCELERATED_RESTART_BACKFILL_V1.cjs
+
       - name: Prove Phase4 host and composition remain database-only
         shell: python
         run: |
@@ -271,5 +277,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_S4_POSTGRESQL_ACCEPTANCE_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_FAILURE_DISCOVERY_ACCELERATED_RESTART_BACKFILL_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90
