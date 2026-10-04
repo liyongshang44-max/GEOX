@@ -1,5 +1,7 @@
 name: MCFT CAP-09 T4R1 Current Crop Authority Composition
 
+# qualification-carrier: 2026-10-04 current-crop refresh
+
 on:
   pull_request:
     branches:
