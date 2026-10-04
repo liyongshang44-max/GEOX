@@ -1,0 +1,73 @@
+{
+  "document_id": "PRODUCT_API_FIELD_UNAVAILABLE_ROOT_CAUSE_V1",
+  "baseline_main": "a268e1dfb056fe702a0dd31974d8ddf451775dbd",
+  "evidence": {
+    "diagnostic_commit": "f610859a77b6e8f6ffb1e13b06dd26d42a12800f",
+    "railway_deployment": "8634a34a-877b-4888-bf91-defce7567c04",
+    "captured_at": "2026-10-04T16:53:55.011943601Z",
+    "read_only": true,
+    "production_mutation": false,
+    "diagnostic_service_deleted": true
+  },
+  "scope": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "allowed_field_ids": [
+      "field_kbs_mcse_t4r1"
+    ]
+  },
+  "overview": {
+    "total_fields": 1,
+    "current_fields": 0,
+    "limited_fields": 0,
+    "unavailable_fields": 1
+  },
+  "fields": [
+    {
+      "field_ref": "field_kbs_mcse_t4r1",
+      "module": "FIELD_CURRENT_CONDITION",
+      "status": "UNAVAILABLE",
+      "reason_code": "MCFT_CURRENT_RUNTIME_NOT_ESTABLISHED",
+      "reason_detail": "No exact active MCFT Runtime scope exists for this field in the caller tenant/project/group scope; Product API cannot select a current field state.",
+      "source_ref": null,
+      "projection_ref": "product-projection:field_summary:sha256:6df57e58673223c6068813b7336e75cdc1084f1434c2b74eda101600931fc8f8",
+      "evidence_ref": [],
+      "backend_path": [
+        "public.field_index_v1",
+        "public.twin_active_lineage_index_v1",
+        "PostgresMcftFieldTwinS4ReadApiV1",
+        "public.twin_state_history_projection_v1",
+        "PostgresCustomerProductProjectionBuilderV1"
+      ],
+      "machine_evidence": {
+        "active_runtime_scope_count": 0,
+        "active_runtime_scopes": [],
+        "history_inventory": null
+      },
+      "cause_class": "UPSTREAM_AUTHORITY_UNAVAILABLE",
+      "repair_required": false,
+      "allowed_this_round": false,
+      "required_adjudication": "UPSTREAM_FIELD_STATE_AUTHORITY_OR_RUNTIME_ESTABLISHMENT"
+    }
+  ],
+  "secondary_limitations": [
+    "FIELD_DISPLAY_NAME_UNAVAILABLE",
+    "FIELD_FARM_DISPLAY_NOT_PROJECTED_WAVE02",
+    "FIELD_CROP_DISPLAY_NOT_PROJECTED_WAVE02",
+    "FIELD_CROP_STAGE_NOT_PROJECTED_WAVE02",
+    "FIELD_SEASON_DISPLAY_NOT_PROJECTED_WAVE02",
+    "FIELD_GEOMETRY_NOT_PROJECTED_WAVE02"
+  ],
+  "adjudication": {
+    "product_api_transport_failure": false,
+    "product_database_connectivity_failure": false,
+    "keep_current_condition_unavailable": true,
+    "forbidden_shortcuts": [
+      "NO_SYNTHETIC_MCFT_RUNTIME",
+      "NO_LATEST_HISTORY_SUBSTITUTION",
+      "NO_CURRENT_STATE_FOR_HISTORICAL_BASIS",
+      "NO_PRODUCT_AUTHORITY_INVENTION"
+    ]
+  }
+}
