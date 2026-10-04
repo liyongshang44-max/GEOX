@@ -106,7 +106,7 @@ jobs:
       - name: Run fresh persistent lifecycle qualification
         if: github.event_name != 'pull_request' || (github.event_name == 'pull_request' && github.head_ref == 'qualification/mcft-cap09-current-crop-refresh-20261004-v1' && github.event.pull_request.base.sha == 'a268e1dfb056fe702a0dd31974d8ddf451775dbd')
         env:
-          MCFT_SUBJECT_SHA: ${{ github.sha }}
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
 
       - name: Bind live lifecycle result to admitted current protected main
