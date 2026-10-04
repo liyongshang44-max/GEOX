@@ -448,7 +448,13 @@ function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority,
   const checks = {
     exact_checkout: delta.exact_checkout,
     check_id_match: decision.check_id === anchor.check_id,
-    requalification_state: decision.status === "REQUALIFY",
+    applicability_state_valid:
+      carryForwardMode === "GRADUATION"
+        ? decision.status === "REQUALIFY"
+        : (
+          carryForwardMode === "POST_GRADUATION_MAINTENANCE" &&
+          decision.status === "REQUIRED"
+        ),
     carry_forward_mode_recognized:
       carryForwardMode !== null,
     base_lineage_valid:
@@ -598,7 +604,13 @@ function validatePhase5T0GraduationCarryForwardV1(decision, head, base, authorit
   const checks = {
     exact_checkout: delta.exact_checkout,
     check_id_match: decision.check_id === anchor.check_id,
-    requalification_state: decision.status === "REQUALIFY",
+    applicability_state_valid:
+      carryForwardMode === "GRADUATION"
+        ? decision.status === "REQUALIFY"
+        : (
+          carryForwardMode === "POST_GRADUATION_MAINTENANCE" &&
+          decision.status === "REQUIRED"
+        ),
     carry_forward_mode_recognized:
       carryForwardMode !== null,
     base_lineage_valid:
