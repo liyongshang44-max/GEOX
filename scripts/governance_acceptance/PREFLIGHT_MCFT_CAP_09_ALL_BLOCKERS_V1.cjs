@@ -38,6 +38,7 @@ const REQUALIFICATION_BINDING_FIELDS = [
 const T0_GRADUATION_CARRY_FORWARD_V1 = Object.freeze({
   closure_subject_sha: "18fa562804124f69f5a64f0fa549bdf69c656ea3",
   protected_main_base_sha: "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+  graduated_main_sha: "a268e1dfb056fe702a0dd31974d8ddf451775dbd",
   qcp_base_sha: "4ee4989fc4f40cc52a3819be282c1d192b58a9b2",
   frozen_runtime_sha: "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
   preflight_path: "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
@@ -341,6 +342,20 @@ function jsonStableEqual(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function t0CarryForwardMode(base, head) {
+  const t0 = T0_GRADUATION_CARRY_FORWARD_V1;
+  if (
+    base === t0.protected_main_base_sha &&
+    isAncestor(t0.closure_subject_sha, head)
+  ) return "GRADUATION";
+  if (
+    base === t0.graduated_main_sha &&
+    isAncestor(t0.closure_subject_sha, t0.graduated_main_sha) &&
+    isAncestor(t0.graduated_main_sha, head)
+  ) return "POST_GRADUATION_MAINTENANCE";
+  return null;
+}
+
 function t0GraduationPostClosureDelta(head) {
   const authority = T0_GRADUATION_CARRY_FORWARD_V1;
   let currentHead = null;
@@ -378,6 +393,7 @@ function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority,
   const t0 = T0_GRADUATION_CARRY_FORWARD_V1;
   const anchor = t0.am19;
   const delta = t0GraduationPostClosureDelta(head);
+  const carryForwardMode = t0CarryForwardMode(base, head);
   const currentQcp = authority;
   const t0Qcp = gitJsonAt(t0.closure_subject_sha, AUTHORITY_PATH);
   const t0Registry = gitJsonAt(t0.closure_subject_sha, REGISTRY_PATH);
@@ -433,9 +449,21 @@ function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority,
     exact_checkout: delta.exact_checkout,
     check_id_match: decision.check_id === anchor.check_id,
     requalification_state: decision.status === "REQUALIFY",
-    protected_main_base_match: base === t0.protected_main_base_sha,
-    protected_main_precedes_qualification_subject:
-      isAncestor(base, anchor.qualification_subject_sha),
+    carry_forward_mode_recognized:
+      carryForwardMode !== null,
+    base_lineage_valid:
+      carryForwardMode === "GRADUATION"
+        ? (
+          base === t0.protected_main_base_sha &&
+          isAncestor(base, anchor.qualification_subject_sha)
+        )
+        : (
+          carryForwardMode === "POST_GRADUATION_MAINTENANCE" &&
+          base === t0.graduated_main_sha &&
+          isAncestor(anchor.qualification_subject_sha, t0.graduated_main_sha) &&
+          isAncestor(t0.closure_subject_sha, t0.graduated_main_sha) &&
+          isAncestor(t0.graduated_main_sha, head)
+        ),
     qualification_subject_precedes_t0_closure:
       isAncestor(anchor.qualification_subject_sha, t0.closure_subject_sha),
     t0_closure_precedes_current_head:
@@ -476,8 +504,10 @@ function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority,
       jsonStableEqual(currentLegacy, t0Legacy),
     verified_delivery_files_unchanged_since_t0:
       frozenRefChecks.every((row) => row.match),
-    post_t0_delta_closure_control_only:
-      delta.forbidden_paths.length === 0,
+    post_t0_delta_policy_valid:
+      carryForwardMode === "GRADUATION"
+        ? delta.forbidden_paths.length === 0
+        : carryForwardMode === "POST_GRADUATION_MAINTENANCE",
     registration_acceptance_exit_zero:
       registrationInvocation.status === 0,
     registration_acceptance_pass:
@@ -494,12 +524,22 @@ function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority,
   return {
     status: valid ? "PASS" : "FAIL",
     reason_code: valid
-      ? "AM19_T0_VERIFIED_DELIVERY_GRADUATION_CARRY_FORWARD_VALID"
-      : "AM19_T0_VERIFIED_DELIVERY_GRADUATION_CARRY_FORWARD_INVALID",
+      ? (
+        carryForwardMode === "POST_GRADUATION_MAINTENANCE"
+          ? "AM19_T0_VERIFIED_DELIVERY_POST_GRADUATION_MAINTENANCE_CARRY_FORWARD_VALID"
+          : "AM19_T0_VERIFIED_DELIVERY_GRADUATION_CARRY_FORWARD_VALID"
+      )
+      : (
+        carryForwardMode === "POST_GRADUATION_MAINTENANCE"
+          ? "AM19_T0_VERIFIED_DELIVERY_POST_GRADUATION_MAINTENANCE_CARRY_FORWARD_INVALID"
+          : "AM19_T0_VERIFIED_DELIVERY_GRADUATION_CARRY_FORWARD_INVALID"
+      ),
     evidence_id: registration.registration_id || null,
     subject_sha: anchor.qualification_subject_sha,
     dependency_digest: anchor.dependency_digest,
     t0_closure_subject_sha: t0.closure_subject_sha,
+    graduated_main_sha: t0.graduated_main_sha,
+    carry_forward_mode: carryForwardMode,
     checks,
     frozen_ref_checks: frozenRefChecks,
     post_t0_delta: delta,
@@ -513,6 +553,7 @@ function validatePhase5T0GraduationCarryForwardV1(decision, head, base, authorit
   const t0 = T0_GRADUATION_CARRY_FORWARD_V1;
   const anchor = t0.phase5;
   const delta = t0GraduationPostClosureDelta(head);
+  const carryForwardMode = t0CarryForwardMode(base, head);
   const currentQcp = authority;
   const t0Qcp = gitJsonAt(t0.closure_subject_sha, AUTHORITY_PATH);
   const qualificationQcp = gitJsonAt(anchor.qualification_subject_sha, AUTHORITY_PATH);
@@ -558,9 +599,21 @@ function validatePhase5T0GraduationCarryForwardV1(decision, head, base, authorit
     exact_checkout: delta.exact_checkout,
     check_id_match: decision.check_id === anchor.check_id,
     requalification_state: decision.status === "REQUALIFY",
-    protected_main_base_match: base === t0.protected_main_base_sha,
-    protected_main_precedes_qcp_base:
-      isAncestor(base, t0.qcp_base_sha),
+    carry_forward_mode_recognized:
+      carryForwardMode !== null,
+    base_lineage_valid:
+      carryForwardMode === "GRADUATION"
+        ? (
+          base === t0.protected_main_base_sha &&
+          isAncestor(base, t0.qcp_base_sha)
+        )
+        : (
+          carryForwardMode === "POST_GRADUATION_MAINTENANCE" &&
+          base === t0.graduated_main_sha &&
+          isAncestor(t0.qcp_base_sha, t0.graduated_main_sha) &&
+          isAncestor(t0.closure_subject_sha, t0.graduated_main_sha) &&
+          isAncestor(t0.graduated_main_sha, head)
+        ),
     qcp_base_precedes_qualification_subject:
       isAncestor(t0.qcp_base_sha, anchor.qualification_subject_sha),
     qualification_subject_precedes_package_anchor:
@@ -600,21 +653,33 @@ function validatePhase5T0GraduationCarryForwardV1(decision, head, base, authorit
       durableRefChecks.every((row) => row.match),
     contract_non_effects_clear:
       contractNonEffectsClear,
-    post_t0_delta_closure_control_only:
-      delta.forbidden_paths.length === 0,
+    post_t0_delta_policy_valid:
+      carryForwardMode === "GRADUATION"
+        ? delta.forbidden_paths.length === 0
+        : carryForwardMode === "POST_GRADUATION_MAINTENANCE",
   };
 
   const valid = Object.values(checks).every(Boolean);
   return {
     status: valid ? "PASS" : "FAIL",
     reason_code: valid
-      ? "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_GRADUATION_CARRY_FORWARD_VALID"
-      : "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_GRADUATION_CARRY_FORWARD_INVALID",
+      ? (
+        carryForwardMode === "POST_GRADUATION_MAINTENANCE"
+          ? "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_POST_GRADUATION_MAINTENANCE_CARRY_FORWARD_VALID"
+          : "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_GRADUATION_CARRY_FORWARD_VALID"
+      )
+      : (
+        carryForwardMode === "POST_GRADUATION_MAINTENANCE"
+          ? "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_POST_GRADUATION_MAINTENANCE_CARRY_FORWARD_INVALID"
+          : "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_GRADUATION_CARRY_FORWARD_INVALID"
+      ),
     evidence_id: contract.contract_id || null,
     subject_sha: anchor.qualification_subject_sha,
     dependency_digest: anchor.dependency_digest,
     package_sha: anchor.durable_package_anchor_sha,
     t0_closure_subject_sha: t0.closure_subject_sha,
+    graduated_main_sha: t0.graduated_main_sha,
+    carry_forward_mode: carryForwardMode,
     checks,
     phase5_path_blob_checks: phase5PathBlobChecks,
     durable_ref_checks: durableRefChecks,
@@ -1172,11 +1237,11 @@ function main() {
         decision.check_id === T0_GRADUATION_CARRY_FORWARD_V1.am19.check_id &&
         stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
         successorChainAdmissionActive &&
-        args.base === T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha &&
-        isAncestor(
-          T0_GRADUATION_CARRY_FORWARD_V1.closure_subject_sha,
-          args.head || "",
-        )
+        (
+          args.base === T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha ||
+          args.base === T0_GRADUATION_CARRY_FORWARD_V1.graduated_main_sha
+        ) &&
+        t0CarryForwardMode(args.base || "", args.head || "") !== null
       ) {
         const evidence = validateAm19T0GraduationCarryForwardV1(
           decision,
@@ -1187,7 +1252,7 @@ function main() {
         );
         result = {
           ...common,
-          execution: "AM19_T0_VERIFIED_DELIVERY_GRADUATION_CARRY_FORWARD",
+          execution: evidence.carry_forward_mode === "POST_GRADUATION_MAINTENANCE" ? "AM19_T0_VERIFIED_DELIVERY_POST_GRADUATION_MAINTENANCE_CARRY_FORWARD" : "AM19_T0_VERIFIED_DELIVERY_GRADUATION_CARRY_FORWARD",
           status: evidence.status,
           reason_code: evidence.reason_code,
           evidence_id: evidence.evidence_id ?? null,
@@ -1205,11 +1270,11 @@ function main() {
         decision.check_id === T0_GRADUATION_CARRY_FORWARD_V1.phase5.check_id &&
         stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
         successorChainAdmissionActive &&
-        args.base === T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha &&
-        isAncestor(
-          T0_GRADUATION_CARRY_FORWARD_V1.closure_subject_sha,
-          args.head || "",
-        )
+        (
+          args.base === T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha ||
+          args.base === T0_GRADUATION_CARRY_FORWARD_V1.graduated_main_sha
+        ) &&
+        t0CarryForwardMode(args.base || "", args.head || "") !== null
       ) {
         const evidence = validatePhase5T0GraduationCarryForwardV1(
           decision,
@@ -1219,7 +1284,7 @@ function main() {
         );
         result = {
           ...common,
-          execution: "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_GRADUATION_CARRY_FORWARD",
+          execution: evidence.carry_forward_mode === "POST_GRADUATION_MAINTENANCE" ? "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_POST_GRADUATION_MAINTENANCE_CARRY_FORWARD" : "PHASE5_T0_CAUSAL_TEMPORAL_SUPERSESSION_GRADUATION_CARRY_FORWARD",
           status: evidence.status,
           reason_code: evidence.reason_code,
           evidence_id: evidence.evidence_id ?? null,
