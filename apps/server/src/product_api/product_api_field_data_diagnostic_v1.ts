@@ -205,7 +205,7 @@ async function main(): Promise<void> {
   const builder = new PostgresCustomerProductProjectionBuilderV1(pool);
 
   try {
-    const diagnostics = [];
+    const diagnostics: Record<string, unknown>[] = [];
     for (const token of tokenSource.tokens) {
       const scope: CustomerProductReadScopeV1 = {
         tenant_id: token.tenant_id,
@@ -217,7 +217,7 @@ async function main(): Promise<void> {
 
       const overview = await builder.buildCustomerOverviewV1(scope);
       const summaries = await builder.buildFieldSummariesV1(scope);
-      const fields = [];
+      const fields: Record<string, unknown>[] = [];
 
       for (const summary of summaries) {
         const workspace = await builder.buildFieldWorkspaceV1(scope, summary.field_ref);
