@@ -61,7 +61,7 @@ jobs:
             git fetch --no-tags origin main
             test "$(git rev-parse origin/main)" = '${{ github.event.pull_request.base.sha }}'
 
-            MODE=CURRENT_MAIN_REQUALIFICATION_PR
+            MODE=CURRENT_CROP_REFRESH_REQUALIFICATION_PR
 
           elif [ '${{ github.base_ref }}' = 'main' ] && \
                [ '${{ github.head_ref }}' = 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' ]; then
@@ -106,12 +106,16 @@ jobs:
           test ! -e "$OUT"
           grep -Eq 'GRADUATION_AUTHORITY_NOT_PRESENT_ON_PROTECTED_MAIN|AMENDMENT03_NOT_PRESENT_ON_PROTECTED_MAIN'             acceptance-output/bio-stage-effectiveness-negative.stderr
       - name: Prove current protected-main effectiveness read-only
-        if: env.MCFT_CAP09_REQUAL_MODE == 'CURRENT_MAIN_REQUALIFICATION_PR'
+        if: env.MCFT_CAP09_REQUAL_MODE == 'CURRENT_MAIN_REQUALIFICATION_PR' || env.MCFT_CAP09_REQUAL_MODE == 'CURRENT_CROP_REFRESH_REQUALIFICATION_PR'
         shell: bash
         run: |
           set -euo pipefail
 
-          SUBJECT='${{ github.event.pull_request.head.sha }}'
+          if [ "$MCFT_CAP09_REQUAL_MODE" = "CURRENT_CROP_REFRESH_REQUALIFICATION_PR" ]; then
+            SUBJECT='${{ github.event.pull_request.base.sha }}'
+          else
+            SUBJECT='${{ github.event.pull_request.head.sha }}'
+          fi
           OUT=acceptance-output/MCFT_CAP09_BIOLOGICAL_STAGE_EFFECTIVENESS_CURRENT_MAIN_RESULT.json
 
           mkdir -p acceptance-output
