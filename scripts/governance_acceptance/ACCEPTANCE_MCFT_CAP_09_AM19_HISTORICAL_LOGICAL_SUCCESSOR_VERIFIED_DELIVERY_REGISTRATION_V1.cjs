@@ -43,6 +43,128 @@ function readJsonPath(file) {
   return JSON.parse(fs.readFileSync(path.resolve(ROOT, file), 'utf8'));
 }
 
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function assertAppendOnlyPrefix(historical, current, code) {
+  assert.equal(Array.isArray(historical), true, `${code}:HISTORICAL_ARRAY_REQUIRED`);
+  assert.equal(Array.isArray(current), true, `${code}:CURRENT_ARRAY_REQUIRED`);
+  assert.ok(current.length >= historical.length, `${code}:HISTORICAL_ITEMS_REMOVED`);
+  assert.deepEqual(
+    current.slice(0, historical.length),
+    historical,
+    `${code}:HISTORICAL_PREFIX_MUTATED`,
+  );
+}
+
+function verifyRegistryBoundary(registry) {
+  const historicalRegistry = JSON.parse(
+    git('cat-file', '-p', EXPECTED.registryBlob),
+  );
+
+  const historicalTop = cloneJson(historicalRegistry);
+  const currentTop = cloneJson(registry);
+
+  delete historicalTop.requalification_evidence;
+  delete currentTop.requalification_evidence;
+
+  assert.deepEqual(
+    currentTop,
+    historicalTop,
+    'REGISTRATION_NON_REQUALIFICATION_REGISTRY_DRIFT',
+  );
+
+  assert.deepEqual(
+    registry.entries || [],
+    historicalRegistry.entries || [],
+    'REGISTRATION_LEGACY_ENTRY_SET_DRIFT',
+  );
+
+  assert.equal(
+    (registry.entries || []).some(
+      (entry) => entry.subject_sha === EXPECTED.subject,
+    ),
+    false,
+    'REGISTRATION_CURRENT_SUCCESSOR_LEGACY_REGISTRY_INSERT_FORBIDDEN',
+  );
+
+  const historicalRq = cloneJson(
+    historicalRegistry.requalification_evidence || {},
+  );
+  const currentRq = cloneJson(
+    registry.requalification_evidence || {},
+  );
+
+  const historicalRqEntries = historicalRq.entries || [];
+  const currentRqEntries = currentRq.entries || [];
+
+  assertAppendOnlyPrefix(
+    historicalRqEntries,
+    currentRqEntries,
+    'REGISTRATION_REQUALIFICATION_EVIDENCE',
+  );
+
+  const historicalAnchorEntries =
+    historicalRq.durable_anchors?.entries || [];
+  const currentAnchorEntries =
+    currentRq.durable_anchors?.entries || [];
+
+  assertAppendOnlyPrefix(
+    historicalAnchorEntries,
+    currentAnchorEntries,
+    'REGISTRATION_REQUALIFICATION_DURABLE_ANCHORS',
+  );
+
+  const historicalPredecessors =
+    historicalRq.durable_anchors?.rules?.governed_successor_predecessors || [];
+  const currentPredecessors =
+    currentRq.durable_anchors?.rules?.governed_successor_predecessors || [];
+
+  assertAppendOnlyPrefix(
+    historicalPredecessors,
+    currentPredecessors,
+    'REGISTRATION_GOVERNED_SUCCESSOR_PREDECESSORS',
+  );
+
+  delete historicalRq.entries;
+  delete currentRq.entries;
+
+  if (historicalRq.durable_anchors) {
+    delete historicalRq.durable_anchors.entries;
+    if (historicalRq.durable_anchors.rules) {
+      delete historicalRq.durable_anchors.rules.governed_successor_predecessors;
+    }
+  }
+
+  if (currentRq.durable_anchors) {
+    delete currentRq.durable_anchors.entries;
+    if (currentRq.durable_anchors.rules) {
+      delete currentRq.durable_anchors.rules.governed_successor_predecessors;
+    }
+  }
+
+  assert.deepEqual(
+    currentRq,
+    historicalRq,
+    'REGISTRATION_REQUALIFICATION_NON_APPEND_DRIFT',
+  );
+
+  return {
+    historicalRegistryBlob: EXPECTED.registryBlob,
+    currentRegistryBlob: git('rev-parse', `HEAD:${REGISTRY_REF}`),
+    legacyEntriesPreserved: true,
+    currentSuccessorInsertedIntoLegacyEntries: false,
+    requalificationEvidenceAppendOnly: true,
+    requalificationEvidenceAddedCount:
+      currentRqEntries.length - historicalRqEntries.length,
+    durableAnchorAddedCount:
+      currentAnchorEntries.length - historicalAnchorEntries.length,
+    governedSuccessorPredecessorAddedCount:
+      currentPredecessors.length - historicalPredecessors.length,
+  };
+}
+
 function git(...args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', windowsHide: true }).trim();
 }
@@ -137,7 +259,7 @@ function verifyQcpAndRegistry(reg, args) {
   assert.equal(qcp.authority_id, 'MCFT_CAP09_CHECK_APPLICABILITY_V1', 'REGISTRATION_QCP_AUTHORITY_REQUIRED');
   assert.equal(qcp.frozen_successor_subject_sha, EXPECTED.frozenQcpSubject, 'REGISTRATION_QCP_FROZEN_SUBJECT_DRIFT');
   assert.equal(registry.registry_id, 'MCFT_CAP09_QUALIFICATION_EVIDENCE_REGISTRY_V1', 'REGISTRATION_REGISTRY_ID_REQUIRED');
-  assert.equal(git('rev-parse', `HEAD:${REGISTRY_REF}`), EXPECTED.registryBlob, 'REGISTRATION_REGISTRY_BLOB_DRIFT');
+  const registryBoundary = verifyRegistryBoundary(registry);
 
   const legacy = (registry.entries || []).find((entry) => entry.evidence_id === EXPECTED.legacyEvidenceId);
   assert(legacy, 'REGISTRATION_LEGACY_ENTRY_REQUIRED');
@@ -158,7 +280,13 @@ function verifyQcpAndRegistry(reg, args) {
   assert.equal(v13Paths.includes(REGISTRATION_REF), false, 'REGISTRATION_V13_RESOLVER_CIRCULARITY_FORBIDDEN');
   assert.equal(v13Paths.includes(ACCEPTANCE_REF), false, 'REGISTRATION_V13_RESOLVER_ACCEPTANCE_CIRCULARITY_FORBIDDEN');
 
-  return { qcp, registry, qcpRegistered: basisPresent, controlPlanePathCount: paths.length };
+  return {
+    qcp,
+    registry,
+    qcpRegistered: basisPresent,
+    controlPlanePathCount: paths.length,
+    registryBoundary,
+  };
 }
 
 function verifyLocalDelivery(args) {
@@ -231,7 +359,21 @@ function adjudicateLegacyAm19(reg, qcpProof, args) {
   assert.equal(reg.closure_delivery.repository_inputs_verified, true, 'AM19_CLOSURE_ADJUDICATION_DELIVERY_REPOSITORY_INPUTS_REQUIRED');
   assert.equal(reg.closure_delivery.latest_run_fallback_used, false, 'AM19_CLOSURE_ADJUDICATION_DELIVERY_FALLBACK_FORBIDDEN');
   assert.equal(qcpProof.qcpRegistered, true, 'AM19_CLOSURE_ADJUDICATION_QCP_OWNERSHIP_REQUIRED');
-  assert.equal(git('rev-parse', `HEAD:${REGISTRY_REF}`), EXPECTED.registryBlob, 'AM19_CLOSURE_ADJUDICATION_LEGACY_REGISTRY_BLOB_DRIFT');
+  assert.equal(
+    qcpProof.registryBoundary.legacyEntriesPreserved,
+    true,
+    'AM19_CLOSURE_ADJUDICATION_LEGACY_REGISTRY_BOUNDARY_REQUIRED',
+  );
+  assert.equal(
+    qcpProof.registryBoundary.currentSuccessorInsertedIntoLegacyEntries,
+    false,
+    'AM19_CLOSURE_ADJUDICATION_CURRENT_SUCCESSOR_LEGACY_INSERT_FORBIDDEN',
+  );
+  assert.equal(
+    qcpProof.registryBoundary.requalificationEvidenceAppendOnly,
+    true,
+    'AM19_CLOSURE_ADJUDICATION_REQUALIFICATION_APPEND_ONLY_REQUIRED',
+  );
   assert.equal((qcpProof.registry.entries || []).some((entry) => entry.subject_sha === EXPECTED.subject), false, 'AM19_CLOSURE_ADJUDICATION_CURRENT_SUCCESSOR_LEGACY_INSERT_FORBIDDEN');
 
   for (const key of ['runtime_mutated', 'production_mutation', 'blocker_semantics_modified', 'qcp_semantics_modified', 'closure_subject_mutated', 'supersedes_github_lane']) {
@@ -264,7 +406,10 @@ function adjudicateLegacyAm19(reg, qcpProof, args) {
     delivery_id: EXPECTED.deliveryId,
     delivery_package_digest: EXPECTED.deliveryPackageDigest,
     qcp_central_ownership_registered: true,
-    legacy_registry_blob_unchanged: true,
+    legacy_registry_boundary_preserved: true,
+    legacy_registry_historical_blob_sha: EXPECTED.registryBlob,
+    legacy_registry_current_blob_sha: qcpProof.registryBoundary.currentRegistryBlob,
+    requalification_evidence_append_only: true,
     current_successor_inserted_into_legacy_registry: false,
     raw_blocker_count: rawBlockers.length,
     admitted_blocker_count: 1,
@@ -312,7 +457,10 @@ function main() {
     qcp_central_ownership_registered: qcpProof.qcpRegistered,
     control_plane_path_count: qcpProof.controlPlanePathCount,
     qcp_frozen_successor_subject_unchanged: true,
-    legacy_registry_blob_unchanged: true,
+    legacy_registry_boundary_preserved: true,
+    legacy_registry_historical_blob_sha: EXPECTED.registryBlob,
+    legacy_registry_current_blob_sha: qcpProof.registryBoundary.currentRegistryBlob,
+    requalification_evidence_append_only: true,
     current_successor_inserted_into_legacy_registry: false,
     v13_harness_dependency_set_modified: false,
     qcp_check_decision_semantics_modified: false,
