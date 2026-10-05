@@ -2523,6 +2523,106 @@
         "artifact_absence_reason": "RUN_LEVEL_EXACT_SUBJECT_GRADUATION_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "919ccc51269c1f9a4eb89516b18deec24eb9b55348590103c85e1fb4549cccc4"
+      },
+      {
+        "evidence_id": "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_REQUAL_ABFE6658_R6_CURRENT_MAIN_V1",
+        "check_id": "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "exact-current-main-r6-requalification-pr-carrier",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+        "workflow_name": "MCFT CAP-09 T4R1 Current Crop Authority Composition",
+        "workflow_path": ".github/workflows/mcft-cap-09-t4r1-current-crop-authority-composition-v1.yml",
+        "run_id": 37288619319,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:db77c078cf443f17f70481accae0b9d65209e1a738a7e349a63e58fa9d1fdb0f",
+        "artifact_absence_reason": "RUN_LEVEL_EXACT_CURRENT_MAIN_REQUALIFICATION_PR_CARRIER_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "fb00a5c30070bc97428b63026b8390e244825d6f408e95ea943d007b28209984"
+      },
+      {
+        "evidence_id": "A18_BIOLOGICAL_STAGE_CONTEXT_V4_REQUAL_ABFE6658_R6_CURRENT_MAIN_V1",
+        "check_id": "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "exact-current-main-r6-requalification-pr-carrier",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+        "workflow_name": "MCFT CAP-09 A18 Biological Stage Context V4",
+        "workflow_path": ".github/workflows/mcft-cap-09-a18-biological-stage-context-v4.yml",
+        "run_id": 37288619370,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:e56b0bbe5c977623c0d437a00f4ecd2bfe67e3553c9f5cdd4cc6f67ca424beff",
+        "artifact_absence_reason": "RUN_LEVEL_EXACT_CURRENT_MAIN_REQUALIFICATION_PR_CARRIER_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "72096a533f0d7450ed3a2ad10030fc6866898078154667b889a920bb34a26a4f"
+      },
+      {
+        "evidence_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_REQUAL_ABFE6658_R6_CURRENT_MAIN_V1",
+        "check_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "exact-current-main-r6-requalification-pr-carrier",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+        "workflow_name": "MCFT CAP-09 Twin Composition V2 Stage Authority",
+        "workflow_path": ".github/workflows/mcft-cap-09-twin-composition-v2-stage-authority.yml",
+        "run_id": 37288619209,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:cfe454c7785dd5676ae9ddb06fea832b957d3d08192909aa8be5bafc9d2ee415",
+        "artifact_absence_reason": "RUN_LEVEL_EXACT_CURRENT_MAIN_REQUALIFICATION_PR_CARRIER_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "074aaaf01078bc72a4fd43b190910cadfcc019de33a31563eb49d3398a612388"
+      },
+      {
+        "evidence_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING_REQUAL_ABFE6658_R6_CURRENT_MAIN_V1",
+        "check_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "exact-current-main-r6-requalification-pr-carrier",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+        "workflow_name": "MCFT CAP-09 Production Twin Process V2 Routing",
+        "workflow_path": ".github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml",
+        "run_id": 37288619337,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:23e667cd71eda8a907a29976830775b3f2ab38e2255ec83d6a60239e119466fd",
+        "artifact_absence_reason": "RUN_LEVEL_EXACT_CURRENT_MAIN_REQUALIFICATION_PR_CARRIER_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "33b5ec99805ce94666194eee2d6f73a4305313f9044c4e53e964e77b469ba26f"
+      },
+      {
+        "evidence_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_REQUAL_ABFE6658_R6_CURRENT_MAIN_V1",
+        "check_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "exact-current-main-r6-requalification-pr-carrier",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+        "workflow_name": "MCFT CAP-09 Biological Stage Effectiveness Graduation",
+        "workflow_path": ".github/workflows/mcft-cap-09-biological-stage-effectiveness-graduation-v1.yml",
+        "run_id": 37288619234,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:2015ba5297698a0bddba1f44a8d0738bd86aa65fef07fc3541e80cf73883d021",
+        "artifact_absence_reason": "RUN_LEVEL_EXACT_CURRENT_MAIN_REQUALIFICATION_PR_CARRIER_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "450fd3ff58188cef4f6f0a6b5cb70fb2d088f54f88014dbef461fc599480353b"
       }
     ],
     "durable_anchors": {
@@ -4093,6 +4193,76 @@
             "base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
             "created_at": "2026-10-04T12:12:15Z",
             "updated_at": "2026-10-04T12:13:32Z"
+          }
+        },
+        {
+          "evidence_id": "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_REQUAL_ABFE6658_R6_CURRENT_MAIN_V1",
+          "run_id": 37288619319,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 27,
+            "workflow_path": ".github/workflows/mcft-cap-09-t4r1-current-crop-authority-composition-v1.yml",
+            "workflow_name": "MCFT CAP-09 T4R1 Current Crop Authority Composition",
+            "head_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+            "base_sha": "cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4",
+            "created_at": "2026-10-05T09:13:30Z",
+            "updated_at": "2026-10-05T09:14:25Z"
+          }
+        },
+        {
+          "evidence_id": "A18_BIOLOGICAL_STAGE_CONTEXT_V4_REQUAL_ABFE6658_R6_CURRENT_MAIN_V1",
+          "run_id": 37288619370,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 14,
+            "workflow_path": ".github/workflows/mcft-cap-09-a18-biological-stage-context-v4.yml",
+            "workflow_name": "MCFT CAP-09 A18 Biological Stage Context V4",
+            "head_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+            "base_sha": "cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4",
+            "created_at": "2026-10-05T09:13:30Z",
+            "updated_at": "2026-10-05T09:15:50Z"
+          }
+        },
+        {
+          "evidence_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_REQUAL_ABFE6658_R6_CURRENT_MAIN_V1",
+          "run_id": 37288619209,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 43,
+            "workflow_path": ".github/workflows/mcft-cap-09-twin-composition-v2-stage-authority.yml",
+            "workflow_name": "MCFT CAP-09 Twin Composition V2 Stage Authority",
+            "head_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+            "base_sha": "cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4",
+            "created_at": "2026-10-05T09:13:30Z",
+            "updated_at": "2026-10-05T09:14:09Z"
+          }
+        },
+        {
+          "evidence_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING_REQUAL_ABFE6658_R6_CURRENT_MAIN_V1",
+          "run_id": 37288619337,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 185,
+            "workflow_path": ".github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml",
+            "workflow_name": "MCFT CAP-09 Production Twin Process V2 Routing",
+            "head_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+            "base_sha": "cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4",
+            "created_at": "2026-10-05T09:13:30Z",
+            "updated_at": "2026-10-05T09:14:29Z"
+          }
+        },
+        {
+          "evidence_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_REQUAL_ABFE6658_R6_CURRENT_MAIN_V1",
+          "run_id": 37288619234,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 22,
+            "workflow_path": ".github/workflows/mcft-cap-09-biological-stage-effectiveness-graduation-v1.yml",
+            "workflow_name": "MCFT CAP-09 Biological Stage Effectiveness Graduation",
+            "head_sha": "abfe66583219a8b3f6bd14e0260a17062ea67cce",
+            "base_sha": "cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4",
+            "created_at": "2026-10-05T09:13:30Z",
+            "updated_at": "2026-10-05T09:13:45Z"
           }
         }
       ],

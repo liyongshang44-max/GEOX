@@ -177,7 +177,70 @@ function assertCheckContract(authority) {
   }
 }
 
+function acceptT0SuccessorDependencyPreservation() {
+  const {
+    t0SuccessorDependencyDelta,
+    validateAm19T0GraduationCarryForwardV1,
+    validatePhase5T0GraduationCarryForwardV1,
+  } = require("./PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs");
+  const authority = readJson(AUTHORITY_PATH);
+  const registry = readJson(REGISTRY_PATH);
+  const head = cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim();
+  const closure = "18fa562804124f69f5a64f0fa549bdf69c656ea3";
+  if (cp.spawnSync("git", ["merge-base", "--is-ancestor", closure, head], { cwd: ROOT }).status !== 0) {
+    return { status: "NOT_APPLICABLE", reason: "PRE_T0_CLOSURE_SUBJECT" };
+  }
+  const am19 = {
+    check_id: "LEGACY_AM19_PERSISTENT_24T", status: "REQUIRED",
+    reason_code: "APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE",
+    dependency_digest: "sha256:2ec59117bc25b8848fed8acaeccfe0f20a20fcc0db87ecb7258722bc320263f0",
+  };
+  const phase5 = {
+    check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS", status: "REQUIRED",
+    reason_code: "APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE",
+    dependency_digest: "sha256:058d42929efedbbc7f55bf6ca4c2380260731e1c652f27226e86e3f832518965",
+  };
+  const a = validateAm19T0GraduationCarryForwardV1(am19, head, head, authority, registry, true);
+  const b = validatePhase5T0GraduationCarryForwardV1(phase5, head, head, authority, true);
+  assert.equal(a.status, "PASS", JSON.stringify(a.checks));
+  assert.equal(b.status, "PASS", JSON.stringify(b.checks));
+  assert.equal(a.post_t0_delta.path_count, 99);
+  assert.equal(b.post_t0_delta.path_count, 56);
+  assert(a.post_t0_delta.file_checks.every((row) => row.match));
+  assert(b.post_t0_delta.file_checks.every((row) => row.match));
+
+  const wrongDigest = validateAm19T0GraduationCarryForwardV1(
+    { ...am19, dependency_digest: "sha256:" + "0".repeat(64) }, head, head, authority, registry, true);
+  assert.equal(wrongDigest.status, "FAIL");
+  assert.equal(wrongDigest.checks.dependency_digest_match, false);
+  const changedAuthority = structuredClone(authority);
+  changedAuthority.checks.find((row) => row.check_id === phase5.check_id).authority_ref = "changed-contract";
+  const wrongContract = validatePhase5T0GraduationCarryForwardV1(phase5, head, head, changedAuthority, true);
+  assert.equal(wrongContract.status, "FAIL");
+  assert.equal(wrongContract.checks.current_check_matches_t0, false);
+
+  const missingAuthority = structuredClone(authority);
+  missingAuthority.dependency_resolvers[am19.check_id].additional_exact_paths.push("missing-t0-dependency.txt");
+  const missing = t0SuccessorDependencyDelta(head, head, missingAuthority, am19.check_id);
+  assert(missing.forbidden_paths.includes("missing-t0-dependency.txt"));
+  const unsupportedAuthority = structuredClone(authority);
+  unsupportedAuthority.dependency_resolvers[phase5.check_id].kind = "UNKNOWN";
+  assert(t0SuccessorDependencyDelta(head, head, unsupportedAuthority, phase5.check_id)
+    .forbidden_paths.includes("UNSUPPORTED_T0_DEPENDENCY_RESOLVER"));
+  const oldBase = t0SuccessorDependencyDelta(head, "8f63c498bd48978e2dd525ad57b6b8fdb7ada560", authority, am19.check_id);
+  assert.equal(oldBase.base_descends_from_t0, false);
+  const nonexistentHead = t0SuccessorDependencyDelta("0".repeat(40), head, authority, phase5.check_id);
+  assert.equal(nonexistentHead.exact_checkout, false);
+  assert.equal(nonexistentHead.base_precedes_head, false);
+  assert(nonexistentHead.forbidden_paths.length > 0);
+  return { status: "PASS", am19_complete_dependency_files: 99, phase5_complete_dependency_files: 56,
+    wrong_digest_rejected: true, changed_contract_rejected: true, missing_dependency_rejected: true,
+    unsupported_resolver_rejected: true, pre_closure_base_rejected: true, wrong_checkout_rejected: true,
+    historical_qualification_rerun: false, other_check_qualification_preserved: false };
+}
+
 function main() {
+  const t0SuccessorDependencyPreservation = acceptT0SuccessorDependencyPreservation();
   const authority = readJson(AUTHORITY_PATH);
   const registry = readJson(REGISTRY_PATH);
   assert.equal(authority.authority_id, "MCFT_CAP09_CHECK_APPLICABILITY_V1");
@@ -1057,6 +1120,7 @@ function main() {
   const proof = {
     status: "PASS",
     acceptance_id: "MCFT_CAP09_CHECK_APPLICABILITY_V1",
+    t0_successor_dependency_preservation: t0SuccessorDependencyPreservation,
     frozen_successor_subject_sha: authority.frozen_successor_subject_sha,
     resolver_count: Object.keys(resolved.resolved).length,
     prepared_applicability_context_reused_for_same_subject: true,
@@ -1096,7 +1160,11 @@ function main() {
 }
 
 try {
-  main();
+  if (process.argv.includes("--t0-successor-selftest")) {
+    process.stdout.write(JSON.stringify(acceptT0SuccessorDependencyPreservation()) + "\n");
+  } else {
+    main();
+  }
 } catch (error) {
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify({ status: "FAIL", error: error instanceof Error ? error.message : String(error) }, null, 2) + "\n");
