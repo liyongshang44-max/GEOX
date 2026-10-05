@@ -56,6 +56,17 @@ jobs:
             MODE=CURRENT_MAIN_REQUALIFICATION_PR
 
           elif [ '${{ github.base_ref }}' = 'main' ] && \
+               [ '${{ github.head_ref }}' = 'fix/mcft-cap09-r6-current-crop-composition-v1' ]; then
+
+            test '${{ github.event.pull_request.base.sha }}' = '80ab7aaf7b76cf2a931c5a9e99276ce9fb1d5992'
+            test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
+
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = '80ab7aaf7b76cf2a931c5a9e99276ce9fb1d5992'
+
+            MODE=CURRENT_CROP_STAGE_PROGRESSION_PR
+
+          elif [ '${{ github.base_ref }}' = 'main' ] && \
                [ '${{ github.head_ref }}' = 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' ]; then
 
             test '${{ github.event.pull_request.base.sha }}' = 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
