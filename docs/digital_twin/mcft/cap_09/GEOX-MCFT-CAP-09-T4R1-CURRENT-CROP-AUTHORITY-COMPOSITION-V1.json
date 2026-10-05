@@ -40,7 +40,11 @@
     "qualified_predecessor_head": "ffc9d03533670d2f47ace71d170602d8768ec1bc",
     "required_epistemic_class": "THERMAL_MODEL_DERIVED",
     "required_observed_claim": false,
-    "expected_current_candidate": "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE"
+    "allowed_current_candidates": [
+      "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
+      "R6_OR_LATER_MODEL_ESTIMATE"
+    ],
+    "r6_or_later_requires_independent_active_lifecycle": true
   },
   "water_use_axis": {
     "expected_singleton_stage": "LATE",
@@ -66,7 +70,8 @@
     "future_observation_use_forbidden": true,
     "provider_silence_as_lifecycle_evidence_forbidden": true,
     "result_if_all_axes_pass": "CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED",
-    "result_if_any_axis_fails": "CURRENT_CROP_CONTEXT_AUTHORITY_UNRESOLVED"
+    "result_if_any_axis_fails": "CURRENT_CROP_CONTEXT_AUTHORITY_UNRESOLVED",
+    "natural_season_stage_progression_compatibility": "R5_TO_R6_OR_LATER_WITH_INDEPENDENT_ACTIVE_LIFECYCLE"
   },
   "non_effects": {
     "runtime_config_write_authorized": false,
@@ -79,5 +84,6 @@
     "a0_authorized": false,
     "o00_o23_authorized": false,
     "mcft_cap09_completed": false
-  }
+  },
+  "current_main_progression_compatibility_base_sha": "80ab7aaf7b76cf2a931c5a9e99276ce9fb1d5992"
 }

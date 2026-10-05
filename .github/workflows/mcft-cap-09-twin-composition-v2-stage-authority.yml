@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23')) && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-r6-current-crop-composition-v1' && github.event.pull_request.base.sha == '80ab7aaf7b76cf2a931c5a9e99276ce9fb1d5992')) && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -54,6 +54,17 @@ jobs:
             test "$(git rev-parse origin/main)" = "$SUBJECT"
 
             MODE=CURRENT_MAIN_REQUALIFICATION_PR
+
+          elif [ '${{ github.base_ref }}' = 'main' ] && \
+               [ '${{ github.head_ref }}' = 'fix/mcft-cap09-r6-current-crop-composition-v1' ]; then
+
+            test '${{ github.event.pull_request.base.sha }}' = '80ab7aaf7b76cf2a931c5a9e99276ce9fb1d5992'
+            test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
+
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = '80ab7aaf7b76cf2a931c5a9e99276ce9fb1d5992'
+
+            MODE=CURRENT_CROP_STAGE_PROGRESSION_PR
 
           elif [ '${{ github.base_ref }}' = 'main' ] && \
                [ '${{ github.head_ref }}' = 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' ]; then
