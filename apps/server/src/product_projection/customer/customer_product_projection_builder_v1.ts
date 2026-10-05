@@ -71,6 +71,15 @@ type RuntimeScopeRowV1 = {
   updated_at: string;
 };
 
+type FieldGeometryRowV1 = {
+  geojson: unknown;
+  updated_ts_ms: number | null;
+};
+
+type FieldGeometryResolutionV1 =
+  | { status: "AVAILABLE"; row: FieldGeometryRowV1; reason_codes: readonly string[] }
+  | { status: "PARTIAL" | "UNAVAILABLE"; row: FieldGeometryRowV1 | null; reason_codes: readonly string[] };
+
 type StateProjectionRowV1 = {
   canonical_payload: unknown;
   logical_time: string;
@@ -174,6 +183,37 @@ function identityDigestV1(row: FieldIdentityRowV1, scope: CustomerProductReadSco
   }) as SemanticHashTextV1;
 }
 
+function customerSafeGeometryV1(value: unknown): Record<string, unknown> | null {
+  const geometry = parseJsonRecordV1(value);
+  if (!geometry) return null;
+  const type = String(geometry.type ?? "").trim();
+  return ["Polygon", "MultiPolygon", "Feature", "FeatureCollection"].includes(type) ? geometry : null;
+}
+
+function geometryExactRefV1(
+  row: FieldGeometryRowV1,
+  scope: CustomerProductReadScopeV1,
+  fieldId: string,
+): string {
+  return `field_polygon_v1:${scope.tenant_id}:${scope.project_id}:${scope.group_id}:${fieldId}:updated:${row.updated_ts_ms ?? "UNVERSIONED"}`;
+}
+
+function geometryDigestV1(
+  row: FieldGeometryRowV1,
+  scope: CustomerProductReadScopeV1,
+  fieldId: string,
+): SemanticHashTextV1 {
+  return semanticHashV1({
+    source: "public.field_polygon_v1",
+    tenant_id: scope.tenant_id,
+    project_id: scope.project_id,
+    group_id: scope.group_id,
+    field_id: fieldId,
+    geojson: row.geojson,
+    updated_ts_ms: row.updated_ts_ms,
+  }) as SemanticHashTextV1;
+}
+
 function projectionIdV1(input: {
   projection_type: string;
   subject_scope: Record<string, unknown>;
@@ -214,6 +254,12 @@ const PRODUCT_LIMITATION_DETAILS_V1: Readonly<Record<string, string>> = Object.f
     "Wave-02 does not bind season display metadata into FieldSummaryProjectionV1.",
   FIELD_GEOMETRY_NOT_PROJECTED_WAVE02:
     "Wave-02 does not bind field geometry into the canonical Product projection.",
+  FIELD_GEOMETRY_SOURCE_UNAVAILABLE:
+    "No field_polygon_v1 geometry row exists for this customer-scoped field.",
+  FIELD_GEOMETRY_SOURCE_INVALID:
+    "The field_polygon_v1 row exists but does not contain supported customer-safe GeoJSON geometry.",
+  FIELD_GEOMETRY_SOURCE_AMBIGUOUS:
+    "More than one field_polygon_v1 row exists for the customer-scoped field; Product API will not choose one without an explicit source rule.",
   ATTENTION_QUEUE_BUILDER_NOT_IMPLEMENTED:
     "Attention projection is intentionally unavailable in Wave-02; unavailable does not mean no attention is required.",
   RECENT_CHANGES_BUILDER_NOT_IMPLEMENTED:
@@ -507,6 +553,37 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     };
   }
 
+  private async geometryForFieldV1(
+    scope: CustomerProductReadScopeV1,
+    fieldId: string,
+  ): Promise<FieldGeometryResolutionV1> {
+    const result = await this.pool.query(
+      `SELECT polygon_geojson_json AS geojson,
+              updated_ts_ms
+         FROM public.field_polygon_v1
+        WHERE tenant_id = $1
+          AND field_id = $2
+        ORDER BY updated_ts_ms DESC NULLS LAST
+        LIMIT 2`,
+      [scope.tenant_id, fieldId],
+    );
+    if (result.rows.length === 0) {
+      return { status: "UNAVAILABLE", row: null, reason_codes: ["FIELD_GEOMETRY_SOURCE_UNAVAILABLE"] };
+    }
+    if (result.rows.length !== 1) {
+      return { status: "PARTIAL", row: null, reason_codes: ["FIELD_GEOMETRY_SOURCE_AMBIGUOUS"] };
+    }
+    const raw = result.rows[0] as Record<string, unknown>;
+    const row: FieldGeometryRowV1 = {
+      geojson: raw.geojson,
+      updated_ts_ms: Number.isFinite(Number(raw.updated_ts_ms)) ? Number(raw.updated_ts_ms) : null,
+    };
+    if (!customerSafeGeometryV1(row.geojson)) {
+      return { status: "PARTIAL", row, reason_codes: ["FIELD_GEOMETRY_SOURCE_INVALID"] };
+    }
+    return { status: "AVAILABLE", row, reason_codes: [] };
+  }
+
   private async runtimeScopeForFieldV1(
     scope: CustomerProductReadScopeV1,
     fieldId: string,
@@ -659,6 +736,7 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     scope: CustomerProductReadScopeV1;
     row: FieldIdentityRowV1;
     resolution: FieldRuntimeResolutionV1;
+    geometry: FieldGeometryResolutionV1;
     generated_at: string;
   }): FieldSummaryProjectionV1 {
     const identityRefKey = fieldRefKeyV1(input.row.field_id, "identity");
@@ -686,11 +764,34 @@ export class PostgresCustomerProductProjectionBuilderV1 {
       "FIELD_CROP_DISPLAY_NOT_PROJECTED_WAVE02",
       "FIELD_CROP_STAGE_NOT_PROJECTED_WAVE02",
       "FIELD_SEASON_DISPLAY_NOT_PROJECTED_WAVE02",
-      "FIELD_GEOMETRY_NOT_PROJECTED_WAVE02",
       "ATTENTION_QUEUE_BUILDER_NOT_IMPLEMENTED",
       "OPERATION_PROJECTION_NOT_IMPLEMENTED",
     ]);
     if (!input.row.field_name) limitationCodes.add("FIELD_DISPLAY_NAME_UNAVAILABLE");
+
+    let geometryRefKey: string | null = null;
+    if (input.geometry.row) {
+      geometryRefKey = fieldRefKeyV1(input.row.field_id, "geometry");
+      nonAuthorityRefs.push({
+        ref_key: geometryRefKey,
+        ref_class: "OTHER_NON_AUTHORITY",
+        object_kind: "field_polygon_v1",
+        exact_ref: geometryExactRefV1(input.geometry.row, input.scope, input.row.field_id),
+        source_fact_ref: null,
+      });
+      digests.push({
+        source_ref_key: geometryRefKey,
+        digest: geometryDigestV1(input.geometry.row, input.scope, input.row.field_id),
+        digest_kind: "PRODUCT_SOURCE_ROW_DIGEST",
+      });
+      proofs.push({
+        ref_key: geometryRefKey,
+        binding_id: "GEOX_FIELD_POLYGON_V1",
+        observed_object_kind: "field_polygon_v1",
+        source_path: "public.field_polygon_v1",
+      });
+    }
+    input.geometry.reason_codes.forEach((reason) => limitationCodes.add(reason));
 
     let currentCondition: FieldCurrentConditionProjectionV1;
     let exactStateTime: string | null = null;
@@ -789,6 +890,9 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     };
     assertProductProjectionSourceBindingsV1(envelope, proofSet);
     assertSourceRoleV1(proofSet, identityRefKey, "FIELD_IDENTITY");
+    if (geometryRefKey) {
+      assertSourceRoleV1(proofSet, geometryRefKey, "FIELD_GEOMETRY");
+    }
     if (exactStateRefKey) {
       assertSourceRoleV1(proofSet, exactStateRefKey, "FIELD_CURRENT_STATE");
       assertSourceRoleV1(
@@ -811,7 +915,7 @@ export class PostgresCustomerProductProjectionBuilderV1 {
         reason_codes: ["ATTENTION_QUEUE_BUILDER_NOT_IMPLEMENTED"],
       },
       recent_operation: null,
-      geometry_availability: "UNAVAILABLE",
+      geometry_availability: input.geometry.status,
       capability_refs: [],
       limitation_reason_codes: uniqueSortedV1([...limitationCodes]),
     };
@@ -824,8 +928,11 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     const rows = await this.listFieldRowsV1(scope);
     const out: FieldSummaryProjectionV1[] = [];
     for (const row of rows) {
-      const resolution = await this.resolveRuntimeV1(scope, row.field_id);
-      out.push(this.buildFieldSummaryFromResolvedV1({ scope, row, resolution, generated_at: generatedAt }));
+      const [resolution, geometry] = await Promise.all([
+        this.resolveRuntimeV1(scope, row.field_id),
+        this.geometryForFieldV1(scope, row.field_id),
+      ]);
+      out.push(this.buildFieldSummaryFromResolvedV1({ scope, row, resolution, geometry, generated_at: generatedAt }));
     }
     return out;
   }
@@ -838,11 +945,15 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     if (!fieldId) throw new CustomerProductProjectionReadErrorV1("PRODUCT_FIELD_NOT_FOUND", 404);
     const row = await this.oneFieldRowV1(scope, fieldId);
     if (!row) throw new CustomerProductProjectionReadErrorV1("PRODUCT_FIELD_NOT_FOUND", 404);
-    const resolution = await this.resolveRuntimeV1(scope, fieldId);
+    const [resolution, geometry] = await Promise.all([
+      this.resolveRuntimeV1(scope, fieldId),
+      this.geometryForFieldV1(scope, fieldId),
+    ]);
     return this.buildFieldSummaryFromResolvedV1({
       scope,
       row,
       resolution,
+      geometry,
       generated_at: safeIsoNowV1(this.now),
     });
   }
