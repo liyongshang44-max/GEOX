@@ -11,7 +11,7 @@ const authorityPath="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT
 const acceptancePath="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1.cjs";
 const composerPath="scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs";
 const legacyPaths=[workflowPath,authorityPath,acceptancePath,composerPath].sort();
-const progressionPaths=[authorityPath,acceptancePath,composerPath].sort();
+const progressionPaths=[workflowPath,authorityPath,acceptancePath,composerPath].sort();
 
 function fail(c,d){throw new Error(d?c+":"+d:c);}
 function eq(a,b,c){if(a!==b)fail(c,"expected="+JSON.stringify(b)+" actual="+JSON.stringify(a));}
@@ -35,7 +35,7 @@ if(currentMainMode){
   mode="CURRENT_MAIN_NATURAL_SEASON_STAGE_PROGRESSION";
   exactBase=CURRENT_MAIN_PROGRESSION_BASE;
   changed=currentMainChanged;
-  eq(JSON.stringify(changed),JSON.stringify(progressionPaths),"CURRENT_CROP_PROGRESSION_EXACT_THREE_FILE_BOUNDARY_REQUIRED");
+  eq(JSON.stringify(changed),JSON.stringify(progressionPaths),"CURRENT_CROP_PROGRESSION_EXACT_FOUR_FILE_BOUNDARY_REQUIRED");
 }else{
   mode="HISTORICAL_COMPOSITION";
   exactBase=LEGACY_BASE;
