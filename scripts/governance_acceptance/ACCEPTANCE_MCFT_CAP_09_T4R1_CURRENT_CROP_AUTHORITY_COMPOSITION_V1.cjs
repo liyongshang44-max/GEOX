@@ -100,13 +100,8 @@ eq(policyAdmits({stage:allowed[1],lifecycle:"ACTIVE",water:"LATE",kc:0.7}),false
 for(const [k,v] of Object.entries(a.non_effects))eq(v,false,"CURRENT_CROP_COMPOSITION_NON_EFFECT:"+k);
 
 const wf=fs.readFileSync(workflowPath,"utf8");
-for(const forbidden of ["pull_request_target","docker compose up","FORMAL_DATABASE_URL","GEOX_MCFT_CAP09_S6_DATABASE_URL"]){
+for(const forbidden of ["workflow_dispatch:","schedule:","pull_request_target","docker compose up","FORMAL_DATABASE_URL","GEOX_MCFT_CAP09_S6_DATABASE_URL"]){
   if(wf.includes(forbidden))fail("CURRENT_CROP_COMPOSITION_FORBIDDEN_WORKFLOW_CAPABILITY",forbidden);
-}
-if(mode==="HISTORICAL_COMPOSITION"){
-  for(const forbidden of ["workflow_dispatch:","schedule:"]){
-    if(wf.includes(forbidden))fail("CURRENT_CROP_COMPOSITION_FORBIDDEN_HISTORICAL_WORKFLOW_CAPABILITY",forbidden);
-  }
 }
 
 console.log(JSON.stringify({
