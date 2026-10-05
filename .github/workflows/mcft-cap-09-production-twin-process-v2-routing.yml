@@ -1,3 +1,4 @@
+# current-crop-refresh qualification routing: exact PR head + live protected-main base
 name: MCFT CAP-09 Production Twin Process V2 Routing
 
 on:
@@ -29,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-v2-qualification-equivalence-v1' && github.event.pull_request.base.sha == '8f63c498bd48978e2dd525ad57b6b8fdb7ada560') || (github.base_ref == 'main' && github.head_ref == 'integration/mcft-cap09-qualified-runtime-infra-v1' && github.event.pull_request.base.sha == '8f63c498bd48978e2dd525ad57b6b8fdb7ada560')) && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23') || (github.base_ref == 'main' && startsWith(github.head_ref, 'qualification/mcft-cap09-current-crop-refresh-')) || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-v2-qualification-equivalence-v1' && github.event.pull_request.base.sha == '8f63c498bd48978e2dd525ad57b6b8fdb7ada560') || (github.base_ref == 'main' && github.head_ref == 'integration/mcft-cap09-qualified-runtime-infra-v1' && github.event.pull_request.base.sha == '8f63c498bd48978e2dd525ad57b6b8fdb7ada560')) && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -50,6 +51,18 @@ jobs:
 
             git fetch --no-tags origin main
             test "$(git rev-parse origin/main)" = "$SUBJECT"
+
+            MODE=CURRENT_MAIN_REQUALIFICATION_PR
+
+          elif [ '${{ github.base_ref }}' = 'main' ] && \
+               [[ '${{ github.head_ref }}' == qualification/mcft-cap09-current-crop-refresh-* ]]; then
+
+            SUBJECT='${{ github.event.pull_request.head.sha }}'
+
+            test "$(git rev-parse HEAD)" = "$SUBJECT"
+
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = '${{ github.event.pull_request.base.sha }}'
 
             MODE=CURRENT_MAIN_REQUALIFICATION_PR
 
