@@ -39,7 +39,26 @@ eq(stage.scope?.hybrid_product_code,authority.scope.hybrid_product_code,"CURRENT
 eq(stage.epistemic_class,authority.biological_stage_axis.required_epistemic_class,"CURRENT_CROP_STAGE_EPISTEMIC_CLASS");
 eq(stage.observed_biological_stage_claimed,false,"CURRENT_CROP_DERIVED_STAGE_MUST_NOT_CLAIM_OBSERVED");
 eq(stage.lifecycle_authority_established_by_thermal_model,false,"CURRENT_CROP_THERMAL_LIFECYCLE_INFERENCE_FORBIDDEN");
-eq(stage.resolved_biological_stage,authority.biological_stage_axis.expected_current_candidate,"CURRENT_CROP_BIOLOGICAL_STAGE_UNRESOLVED");
+const CANONICAL_CURRENT_BIOLOGICAL_STAGES=[
+  "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
+  "R6_OR_LATER_MODEL_ESTIMATE"
+];
+eq(
+  JSON.stringify(authority.biological_stage_axis.allowed_current_candidates),
+  JSON.stringify(CANONICAL_CURRENT_BIOLOGICAL_STAGES),
+  "CURRENT_CROP_BIOLOGICAL_STAGE_POLICY_DRIFT"
+);
+eq(
+  authority.biological_stage_axis.r6_or_later_requires_independent_active_lifecycle,
+  true,
+  "CURRENT_CROP_R6_INDEPENDENT_LIFECYCLE_GUARD_REQUIRED"
+);
+if(!CANONICAL_CURRENT_BIOLOGICAL_STAGES.includes(stage.resolved_biological_stage)){
+  fail(
+    "CURRENT_CROP_BIOLOGICAL_STAGE_UNRESOLVED",
+    "allowed="+JSON.stringify(CANONICAL_CURRENT_BIOLOGICAL_STAGES)+" actual="+JSON.stringify(stage.resolved_biological_stage)
+  );
+}
 eq(stage.resolved_water_use_stage,authority.water_use_axis.expected_singleton_stage,"CURRENT_CROP_WATER_USE_STAGE_UNRESOLVED");
 
 const kc=stage.candidate_crop_model_parameter_authority;
