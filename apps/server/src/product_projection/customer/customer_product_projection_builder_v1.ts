@@ -187,7 +187,68 @@ function projectionIdV1(input: {
   })}`;
 }
 
-function limitationV1(reasonCode: string, sourceRefKey: string | null = null, detail: string | null = null): ProductProjectionLimitationV1 {
+const PRODUCT_LIMITATION_DETAILS_V1: Readonly<Record<string, string>> = Object.freeze({
+  MCFT_CURRENT_RUNTIME_NOT_ESTABLISHED:
+    "No exact active MCFT Runtime scope exists for this field in the caller tenant/project/group scope; Product API cannot select a current field state.",
+  FIELD_LEVEL_RUNTIME_SCOPE_AMBIGUOUS_NO_AGGREGATION_AUTHORITY:
+    "More than one active MCFT Runtime season/zone scope exists for this field; Product API is not authorized to choose or aggregate one.",
+  MCFT_CURRENT_RUNTIME_EXACT_GRAPH_UNAVAILABLE:
+    "The selected MCFT Runtime does not expose a complete exact graph with posterior state and active lineage required by the Product projection.",
+  MCFT_CURRENT_STATE_CUSTOMER_PROJECTION_FIELDS_UNAVAILABLE:
+    "The exact MCFT state exists but does not contain the source-backed root-zone water fields required by the current Product contract.",
+  MCFT_RUNTIME_NOT_ESTABLISHED:
+    "The canonical MCFT read surface reports that the requested Runtime is not established.",
+  MCFT_EXACT_RESOURCE_NOT_FOUND:
+    "The canonical MCFT read surface cannot resolve the exact resource selected by the governed Runtime scope.",
+  MCFT_READ_SURFACE_UNAVAILABLE:
+    "The canonical MCFT read surface is unavailable without a more specific governed failure code.",
+  FIELD_DISPLAY_NAME_UNAVAILABLE:
+    "The field_index_v1 row exists but neither field_name nor name contains a customer display value.",
+  FIELD_FARM_DISPLAY_NOT_PROJECTED_WAVE02:
+    "Wave-02 does not bind farm display metadata into FieldSummaryProjectionV1.",
+  FIELD_CROP_DISPLAY_NOT_PROJECTED_WAVE02:
+    "Wave-02 does not bind crop display metadata into FieldSummaryProjectionV1.",
+  FIELD_CROP_STAGE_NOT_PROJECTED_WAVE02:
+    "Wave-02 does not bind crop-stage display metadata into FieldSummaryProjectionV1.",
+  FIELD_SEASON_DISPLAY_NOT_PROJECTED_WAVE02:
+    "Wave-02 does not bind season display metadata into FieldSummaryProjectionV1.",
+  FIELD_GEOMETRY_NOT_PROJECTED_WAVE02:
+    "Wave-02 does not bind field geometry into the canonical Product projection.",
+  ATTENTION_QUEUE_BUILDER_NOT_IMPLEMENTED:
+    "Attention projection is intentionally unavailable in Wave-02; unavailable does not mean no attention is required.",
+  RECENT_CHANGES_BUILDER_NOT_IMPLEMENTED:
+    "Recent-change projection is not implemented in the frozen Wave-02 field workspace.",
+  ACTION_CASE_BUILDER_NOT_IMPLEMENTED:
+    "Governed Action Case composition is not implemented in the frozen Wave-02 field workspace.",
+  OPERATION_PROJECTION_NOT_IMPLEMENTED:
+    "Canonical Product operation projection is not implemented in Wave-02; legacy Customer API operation DTOs are not a permitted source.",
+  FIELD_EVIDENCE_ARTIFACT_SUMMARY_NOT_PROJECTED_WAVE02:
+    "Wave-02 does not project a customer evidence-artifact summary for the field condition.",
+  EXECUTION_EVIDENCE_PROJECTION_NOT_IMPLEMENTED:
+    "Canonical execution-evidence projection is not implemented in the frozen Wave-02 field workspace.",
+  OUTCOME_PROJECTION_NOT_IMPLEMENTED:
+    "Canonical Outcome projection is not implemented in the frozen Wave-02 field workspace.",
+  CAPABILITY_PROJECTION_NOT_BOUND_WAVE02:
+    "CapabilityAvailabilityProjectionV1 is not bound into the Wave-02 customer field workspace.",
+  HISTORY_PROJECTION_NOT_IMPLEMENTED:
+    "Canonical customer business History projection is not implemented in Wave-02; current state must not substitute for missing historical basis.",
+  REPORT_PROJECTION_NOT_IMPLEMENTED:
+    "Canonical Product report projection is not implemented in Wave-02; legacy report DTOs are not a permitted source.",
+  MCFT_WATER_STRESS_NOT_ESTABLISHED:
+    "The MCFT source explicitly reports water_stress_state as NOT_ESTABLISHED; Product API does not infer a stress classification.",
+  MCFT_CONFIDENCE_NOT_ESTABLISHED:
+    "The MCFT source explicitly reports confidence as NOT_ESTABLISHED; Product API preserves that state without inference.",
+});
+
+function limitationDetailV1(reasonCode: string): string | null {
+  return PRODUCT_LIMITATION_DETAILS_V1[reasonCode] ?? null;
+}
+
+function limitationV1(
+  reasonCode: string,
+  sourceRefKey: string | null = null,
+  detail: string | null = limitationDetailV1(reasonCode),
+): ProductProjectionLimitationV1 {
   return { reason_code: reasonCode, source_ref_key: sourceRefKey, detail };
 }
 

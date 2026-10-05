@@ -165,6 +165,13 @@ test("field without an established MCFT runtime remains visible but condition is
   assert.equal(projection.reporting_state.state, "UNAVAILABLE");
   assert.equal(projection.current_condition.status, "UNAVAILABLE");
   assert.ok(projection.limitation_reason_codes.includes("MCFT_CURRENT_RUNTIME_NOT_ESTABLISHED"));
+  const limitation = projection.envelope.limitations.find(
+    (item) => item.reason_code === "MCFT_CURRENT_RUNTIME_NOT_ESTABLISHED",
+  );
+  assert.equal(
+    limitation?.detail,
+    "No exact active MCFT Runtime scope exists for this field in the caller tenant/project/group scope; Product API cannot select a current field state.",
+  );
 });
 
 test("workspace keeps not-yet-productized domains explicitly unavailable", async () => {
@@ -180,6 +187,14 @@ test("workspace keeps not-yet-productized domains explicitly unavailable", async
   assert.equal(projection.recent_operations.status, "UNAVAILABLE");
   assert.equal(projection.observed_outcomes.status, "UNAVAILABLE");
   assert.equal(projection.history_summary.status, "UNAVAILABLE");
+  assert.equal(
+    projection.envelope.limitations.find((item) => item.reason_code === "HISTORY_PROJECTION_NOT_IMPLEMENTED")?.detail,
+    "Canonical customer business History projection is not implemented in Wave-02; current state must not substitute for missing historical basis.",
+  );
+  assert.equal(
+    projection.envelope.limitations.find((item) => item.reason_code === "OPERATION_PROJECTION_NOT_IMPLEMENTED")?.detail,
+    "Canonical Product operation projection is not implemented in Wave-02; legacy Customer API operation DTOs are not a permitted source.",
+  );
 });
 
 test("overview counts reporting state from canonical field summaries and does not synthesize attention", async () => {
