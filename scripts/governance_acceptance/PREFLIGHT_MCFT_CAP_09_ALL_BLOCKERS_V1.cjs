@@ -11,6 +11,7 @@ const {
   REGISTRY_PATH,
   planApplicability,
   evidenceIsStructurallyValid,
+  buildImportClosure,
 } = require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs");
 
 const ROOT = path.resolve(__dirname, "../..");
@@ -374,10 +375,54 @@ function t0GraduationPostClosureDelta(head) {
   };
 }
 
-function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority, registry) {
+// A successor-chain proof admits QCP evaluation only. Each closed T0 check
+// still needs its own unchanged resolver, check contract, complete file surface,
+// dependency digest and durable evidence. This never preserves other checks.
+function t0SuccessorDependencyDelta(head, base, authority, checkId) {
+  const t0 = T0_GRADUATION_CARRY_FORWARD_V1;
+  const resolver = authority.dependency_resolvers?.[checkId];
+  let paths = [], missing = [];
+  if (resolver?.kind === "EXACT_PATH_SET") {
+    paths = resolver.paths || [];
+  } else if (resolver?.kind === "IMPORT_CLOSURE") {
+    const closure = buildImportClosure(ROOT, resolver.roots || []);
+    paths = [...new Set([...closure.paths, ...(resolver.additional_exact_paths || [])])].sort();
+    missing = closure.missing;
+  } else {
+    missing = ["UNSUPPORTED_T0_DEPENDENCY_RESOLVER"];
+  }
+  const fileChecks = paths.map((rel) => ({
+    path: rel,
+    closure_blob_sha: gitBlobAt(t0.closure_subject_sha, rel),
+    current_blob_sha: gitBlobAt(head, rel),
+    worktree_matches_head: (() => {
+      try {
+        const committed = cp.execFileSync("git", ["show", `${head}:${rel}`], { cwd: ROOT });
+        return committed.equals(fs.readFileSync(path.join(ROOT, rel)));
+      } catch { return false; }
+    })(),
+  })).map((row) => ({ ...row, match: row.closure_blob_sha !== null &&
+    row.closure_blob_sha === row.current_blob_sha && row.worktree_matches_head }));
+  let exactCheckout = false;
+  try { exactCheckout = cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim() === head; } catch {}
+  return {
+    mode: "T0_CHECK_SCOPED_DEPENDENCY_PRESERVATION",
+    exact_checkout: exactCheckout,
+    base_descends_from_t0: isAncestor(t0.closure_subject_sha, base),
+    base_precedes_head: isAncestor(base, head),
+    path_count: fileChecks.length,
+    file_checks: fileChecks,
+    missing_paths: missing,
+    forbidden_paths: [...missing, ...fileChecks.filter((row) => !row.match).map((row) => row.path)],
+  };
+}
+
+function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority, registry, successorDependencyScope = false) {
   const t0 = T0_GRADUATION_CARRY_FORWARD_V1;
   const anchor = t0.am19;
-  const delta = t0GraduationPostClosureDelta(head);
+  const delta = successorDependencyScope
+    ? t0SuccessorDependencyDelta(head, base, authority, anchor.check_id)
+    : t0GraduationPostClosureDelta(head);
   const currentQcp = authority;
   const t0Qcp = gitJsonAt(t0.closure_subject_sha, AUTHORITY_PATH);
   const t0Registry = gitJsonAt(t0.closure_subject_sha, REGISTRY_PATH);
@@ -432,10 +477,14 @@ function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority,
   const checks = {
     exact_checkout: delta.exact_checkout,
     check_id_match: decision.check_id === anchor.check_id,
-    requalification_state: decision.status === "REQUALIFY",
-    protected_main_base_match: base === t0.protected_main_base_sha,
+    requalification_state: decision.status === "REQUALIFY" ||
+      (successorDependencyScope && decision.status === "REQUIRED" &&
+       decision.reason_code === "APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE"),
+    protected_main_base_match: successorDependencyScope
+      ? delta.base_descends_from_t0 && delta.base_precedes_head
+      : base === t0.protected_main_base_sha,
     protected_main_precedes_qualification_subject:
-      isAncestor(base, anchor.qualification_subject_sha),
+      isAncestor(t0.protected_main_base_sha, anchor.qualification_subject_sha),
     qualification_subject_precedes_t0_closure:
       isAncestor(anchor.qualification_subject_sha, t0.closure_subject_sha),
     t0_closure_precedes_current_head:
@@ -476,8 +525,12 @@ function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority,
       jsonStableEqual(currentLegacy, t0Legacy),
     verified_delivery_files_unchanged_since_t0:
       frozenRefChecks.every((row) => row.match),
-    post_t0_delta_closure_control_only:
-      delta.forbidden_paths.length === 0,
+    ...(successorDependencyScope ? {
+      post_t0_complete_check_surface_preserved:
+        delta.path_count > 0 && delta.forbidden_paths.length === 0,
+    } : {
+      post_t0_delta_closure_control_only: delta.forbidden_paths.length === 0,
+    }),
     registration_acceptance_exit_zero:
       registrationInvocation.status === 0,
     registration_acceptance_pass:
@@ -509,10 +562,12 @@ function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority,
   };
 }
 
-function validatePhase5T0GraduationCarryForwardV1(decision, head, base, authority) {
+function validatePhase5T0GraduationCarryForwardV1(decision, head, base, authority, successorDependencyScope = false) {
   const t0 = T0_GRADUATION_CARRY_FORWARD_V1;
   const anchor = t0.phase5;
-  const delta = t0GraduationPostClosureDelta(head);
+  const delta = successorDependencyScope
+    ? t0SuccessorDependencyDelta(head, base, authority, anchor.check_id)
+    : t0GraduationPostClosureDelta(head);
   const currentQcp = authority;
   const t0Qcp = gitJsonAt(t0.closure_subject_sha, AUTHORITY_PATH);
   const qualificationQcp = gitJsonAt(anchor.qualification_subject_sha, AUTHORITY_PATH);
@@ -557,10 +612,14 @@ function validatePhase5T0GraduationCarryForwardV1(decision, head, base, authorit
   const checks = {
     exact_checkout: delta.exact_checkout,
     check_id_match: decision.check_id === anchor.check_id,
-    requalification_state: decision.status === "REQUALIFY",
-    protected_main_base_match: base === t0.protected_main_base_sha,
+    requalification_state: decision.status === "REQUALIFY" ||
+      (successorDependencyScope && decision.status === "REQUIRED" &&
+       decision.reason_code === "APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE"),
+    protected_main_base_match: successorDependencyScope
+      ? delta.base_descends_from_t0 && delta.base_precedes_head
+      : base === t0.protected_main_base_sha,
     protected_main_precedes_qcp_base:
-      isAncestor(base, t0.qcp_base_sha),
+      isAncestor(t0.protected_main_base_sha, t0.qcp_base_sha),
     qcp_base_precedes_qualification_subject:
       isAncestor(t0.qcp_base_sha, anchor.qualification_subject_sha),
     qualification_subject_precedes_package_anchor:
@@ -600,8 +659,12 @@ function validatePhase5T0GraduationCarryForwardV1(decision, head, base, authorit
       durableRefChecks.every((row) => row.match),
     contract_non_effects_clear:
       contractNonEffectsClear,
-    post_t0_delta_closure_control_only:
-      delta.forbidden_paths.length === 0,
+    ...(successorDependencyScope ? {
+      post_t0_complete_check_surface_preserved:
+        delta.path_count > 0 && delta.forbidden_paths.length === 0,
+    } : {
+      post_t0_delta_closure_control_only: delta.forbidden_paths.length === 0,
+    }),
   };
 
   const valid = Object.values(checks).every(Boolean);
@@ -1172,7 +1235,8 @@ function main() {
         decision.check_id === T0_GRADUATION_CARRY_FORWARD_V1.am19.check_id &&
         stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
         successorChainAdmissionActive &&
-        args.base === T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha &&
+        (args.base === T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha ||
+         isAncestor(T0_GRADUATION_CARRY_FORWARD_V1.closure_subject_sha, args.base || "")) &&
         isAncestor(
           T0_GRADUATION_CARRY_FORWARD_V1.closure_subject_sha,
           args.head || "",
@@ -1184,6 +1248,7 @@ function main() {
           args.base || "",
           authority,
           registry,
+          args.base !== T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha,
         );
         result = {
           ...common,
@@ -1205,7 +1270,8 @@ function main() {
         decision.check_id === T0_GRADUATION_CARRY_FORWARD_V1.phase5.check_id &&
         stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
         successorChainAdmissionActive &&
-        args.base === T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha &&
+        (args.base === T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha ||
+         isAncestor(T0_GRADUATION_CARRY_FORWARD_V1.closure_subject_sha, args.base || "")) &&
         isAncestor(
           T0_GRADUATION_CARRY_FORWARD_V1.closure_subject_sha,
           args.head || "",
@@ -1216,6 +1282,7 @@ function main() {
           args.head || "",
           args.base || "",
           authority,
+          args.base !== T0_GRADUATION_CARRY_FORWARD_V1.protected_main_base_sha,
         );
         result = {
           ...common,
@@ -1672,6 +1739,9 @@ function main() {
 }
 
 module.exports = {
+  t0SuccessorDependencyDelta,
+  validateAm19T0GraduationCarryForwardV1,
+  validatePhase5T0GraduationCarryForwardV1,
   resolveRequalificationEvidence,
   expectedRequalificationBinding,
   validateExactRunAnchor,
