@@ -133,7 +133,7 @@ export async function runMcftCap09FormalV5TwinRuntimeProcessV1(input?:{
     "MCFT_CAP09_FORMAL_V5_TWIN_CURRENT_CROP_INVALID",
   );
 
-  const databaseUrl=req(env,"GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL");
+  const databaseUrl=req(env,"GEOX_MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_DATABASE_URL");
   if(databaseName(databaseUrl)!==MCFT_CAP09_FORMAL_V5_DATABASE_V1){
     throw new Error("MCFT_CAP09_FORMAL_V5_TWIN_DATABASE_URL_MISMATCH");
   }
