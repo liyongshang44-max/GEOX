@@ -57,8 +57,25 @@ $WindowRoot = Join-Path $FormalRoot "final-window-20261009"
 New-Item -ItemType Directory -Force $WindowRoot | Out-Null
 
 $CandidateDir = Join-Path $WindowRoot "rolling-candidate"
+$ArtifactZip = Join-Path $WindowRoot "rolling-candidate-artifact.zip"
 $RequestPath = Join-Path $WindowRoot "current-crop-refresh-request-20261009.json"
 $ContinuityPath = Join-Path $FormalRoot "post-arm-authority-continuity-v1.json"
+$BootstrapContinuityPath = Join-Path $FormalRoot "post-arm-authority-continuity-bootstrap-v1.json"
+
+# IMPORTANT: current successful re-arm artifacts. Do not use runner defaults.
+$ArmPath = Join-Path $FormalRoot "arm-rearm-0e4cd036-v1.json"
+$SchemaProofPath = Join-Path $FormalRoot "schema-acl-revalidation-0e4cd036-v1.json"
+$PromotionPath = Join-Path $FormalRoot "a0-production-replay-promotion-v1.json"
+$ManifestPath = Join-Path $FormalRoot "formal-window-manifest-v1.json"
+$BootstrapPath = Join-Path $FormalRoot "a0-bootstrap-v1.json"
+
+$ExpectedArmIdentity = "sha256:cadbe9c5e228f95621625e26b82117f6ca9edb799221667ce5ce192069d1f9e5"
+$ExpectedRuntimeImageId = "sha256:52b82bd8237511bf3e0e8ba20b90b6a91c83d719f6926252951938ebbf42f222"
+
+$OwnerEvidenceDir = Join-Path $FormalRoot "pre-arm-evidence-0e4cd036"
+$OwnerAttestationPath = Join-Path $OwnerEvidenceDir "MCFT_CAP_09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_V1_RESULT.json"
+$OwnerLiveProofPath = Join-Path $OwnerEvidenceDir "MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json"
+$OwnerWorktree = Join-Path $WindowRoot "owner-arm-subject-worktree"
 ```
 
 Never place downloaded candidate evidence under repository `acceptance-output/**`.
@@ -173,18 +190,58 @@ if ($RunJson.event -ne "workflow_dispatch") { throw "CANDIDATE_RUN_EVENT_MISMATC
 if ($RunJson.conclusion -ne "success") { throw "CANDIDATE_RUN_NOT_SUCCESS:$($RunJson.conclusion)" }
 ```
 
-Download the ephemeral artifact outside the repository:
+Preserve the exact GitHub artifact ZIP as immutable qualification evidence.
+Do not rely only on `gh run download`, because the Oct-06 governed authority
+also embedded the exact artifact archive, artifact id, archive digest, and
+per-file digests.
 
 ```powershell
 Remove-Item -Recurse -Force $CandidateDir -ErrorAction SilentlyContinue
+Remove-Item -Force $ArtifactZip -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $CandidateDir | Out-Null
 
 $ArtifactName = "mcft-cap09-t4r1-rolling-current-crop-candidate-$Subject"
-gh run download $RunId --repo $Repo --name $ArtifactName --dir $CandidateDir
+$ArtifactList = gh api "repos/$Repo/actions/runs/$RunId/artifacts?per_page=100" | ConvertFrom-Json
+$ArtifactRows = @($ArtifactList.artifacts | Where-Object {
+  $_.name -eq $ArtifactName -and $_.expired -eq $false
+})
+if ($ArtifactRows.Count -ne 1) {
+  throw "CANDIDATE_ARTIFACT_CARDINALITY:$($ArtifactRows.Count)"
+}
+$ArtifactId = [int64]$ArtifactRows[0].id
 
-$Candidate = Join-Path $CandidateDir "MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json"
-if (-not (Test-Path $Candidate)) { throw "CANDIDATE_COMPOSITION_ARTIFACT_MISSING" }
+# Capture raw ZIP bytes without PowerShell native-output redirection ambiguity.
+$env:MCFT_ARTIFACT_API = "repos/$Repo/actions/artifacts/$ArtifactId/zip"
+$env:MCFT_ARTIFACT_ZIP = $ArtifactZip
+node -e @'
+const cp=require("node:child_process"),fs=require("node:fs");
+const b=cp.execFileSync("gh",["api",process.env.MCFT_ARTIFACT_API],{
+  encoding:null,maxBuffer:64*1024*1024
+});
+if(!Buffer.isBuffer(b)||b.length===0)throw new Error("ARTIFACT_ZIP_EMPTY");
+fs.writeFileSync(process.env.MCFT_ARTIFACT_ZIP,b,{flag:"wx"});
+'@
 
+Expand-Archive -LiteralPath $ArtifactZip -DestinationPath $CandidateDir -Force
+$ArtifactSha = "sha256:" + ((Get-FileHash $ArtifactZip -Algorithm SHA256).Hash.ToLower())
+
+$RequiredEvidenceFiles = @(
+  "MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json",
+  "MCFT_CAP09_T4R1_PROTECTED_MAIN_SUCCESSOR_CHAIN_RESULT.json",
+  "MCFT_CAP09_T4R1_ROLLING_THERMAL_SNAPSHOT_OVERLAY_PROOF.json",
+  "MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json",
+  "MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_GOVERNANCE_RESULT.json",
+  "MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json"
+)
+
+$EvidencePaths = @{}
+foreach ($Name in $RequiredEvidenceFiles) {
+  $Matches = @(Get-ChildItem -Path $CandidateDir -Recurse -File -Filter $Name)
+  if ($Matches.Count -ne 1) { throw "CANDIDATE_EVIDENCE_FILE_CARDINALITY:$Name:$($Matches.Count)" }
+  $EvidencePaths[$Name] = $Matches[0].FullName
+}
+
+$Candidate = $EvidencePaths["MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json"]
 $C = Get-Content $Candidate -Raw | ConvertFrom-Json
 if ($C.status -ne "PASS") { throw "CANDIDATE_STATUS_NOT_PASS" }
 if ($C.qualification_outcome -ne "CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED") {
@@ -267,9 +324,40 @@ git switch --detach $Subject
 git switch -c $Branch
 
 node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs --candidate $Candidate --architecture-effectiveness $Cert --refresh-request $RequestPath --subject $Subject --out $TargetAuthority
+
+# The builder creates the governed effective authority core. Reproduce the
+# already-proven #3656 envelope exactly: embed refresh_request + immutable
+# qualification_evidence archive metadata before calculating registry digest.
+$A = Get-Content $TargetAuthority -Raw | ConvertFrom-Json
+$EmbeddedRequest = Get-Content $RequestPath -Raw | ConvertFrom-Json
+$RequestSha = "sha256:" + ((Get-FileHash $RequestPath -Algorithm SHA256).Hash.ToLower())
+if ($A.graduation.refresh_request_sha256 -ne $RequestSha) {
+  throw "AUTHORITY_REFRESH_REQUEST_DIGEST_MISMATCH"
+}
+
+$FileMap = [ordered]@{}
+foreach ($Name in $RequiredEvidenceFiles) {
+  $FileMap[$Name] = [ordered]@{
+    sha256 = "sha256:" + ((Get-FileHash $EvidencePaths[$Name] -Algorithm SHA256).Hash.ToLower())
+  }
+}
+$QualificationEvidence = [ordered]@{
+  run_id = $RunId
+  run_url = "https://github.com/$Repo/actions/runs/$RunId"
+  artifact_id = $ArtifactId
+  artifact_sha256 = $ArtifactSha
+  subject_sha = $Subject
+  files = $FileMap
+  archive_encoding = "base64"
+  archive_bytes = [Convert]::ToBase64String([IO.File]::ReadAllBytes($ArtifactZip))
+}
+
+$A | Add-Member -NotePropertyName refresh_request -NotePropertyValue $EmbeddedRequest -Force
+$A | Add-Member -NotePropertyName qualification_evidence -NotePropertyValue $QualificationEvidence -Force
+$A | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8NoBOM $TargetAuthority
 ```
 
-Validate the result before touching the registry:
+Validate the final envelope before touching the registry:
 
 ```powershell
 $A = Get-Content $TargetAuthority -Raw | ConvertFrom-Json
@@ -281,6 +369,20 @@ if ($A.biological_stage.authority_valid_until -ne "2026-10-10T10:00:00.000Z") {
 }
 if ($A.architecture_effective -ne $true -or $A.runtime_consumption_authorized -ne $true) {
   throw "EFFECTIVE_AUTHORITY_NOT_GRADUATED"
+}
+if ($A.refresh_request.request_id -ne "GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-2026-10-09T04Z-V1") {
+  throw "EFFECTIVE_AUTHORITY_REFRESH_REQUEST_NOT_EMBEDDED"
+}
+if ([int64]$A.qualification_evidence.run_id -ne $RunId -or
+    [int64]$A.qualification_evidence.artifact_id -ne $ArtifactId -or
+    $A.qualification_evidence.artifact_sha256 -ne $ArtifactSha -or
+    $A.qualification_evidence.subject_sha -ne $Subject -or
+    $A.qualification_evidence.archive_encoding -ne "base64" -or
+    [string]::IsNullOrWhiteSpace([string]$A.qualification_evidence.archive_bytes)) {
+  throw "EFFECTIVE_AUTHORITY_QUALIFICATION_EVIDENCE_ENVELOPE_INVALID"
+}
+if (@($A.qualification_evidence.files.PSObject.Properties.Name | Sort-Object).Count -ne 6) {
+  throw "EFFECTIVE_AUTHORITY_QUALIFICATION_EVIDENCE_FILE_COUNT_NOT_6"
 }
 foreach ($k in @(
   "runtime_config_write_authorized","database_write_authorized","scheduler_write_authorized",
@@ -362,9 +464,28 @@ git push -u origin $Branch
 $PrUrl = gh pr create --repo $Repo --base main --head $Branch --title "docs(mcft-cap09): append Oct 09 final-window current-crop authority" --body "Formal-v5 post-arm authority-only advancement. Exactly one immutable authority artifact + exact-single registry append. No Runtime/QCP/workflow/database change."
 
 $PrNumber = [int](($PrUrl -split "/")[-1])
-gh pr checks $PrNumber --repo $Repo --watch
 
-$Pr = gh pr view $PrNumber --repo $Repo --json state,isDraft,mergeable,headRefOid,baseRefOid,files | ConvertFrom-Json
+# main-strict-delivery-v1 has no merge queue and only permits merge commits.
+# All eight required contexts must have an explicit SUCCESS on this exact head.
+gh pr checks $PrNumber --repo $Repo --required --watch --fail-fast
+
+$RequiredChecks = @(
+  "acceptance",
+  "build-test",
+  "mcft-delivery-policy-v2-contract",
+  "mcft-candidate-integrity-pr-selftest",
+  "mcft-release-lane-pr-selftest",
+  "mcft-main-ruleset-readiness-v1",
+  "mcft-candidate-integrity-enforce-current-pr",
+  "mcft-release-lane-enforce-current-pr"
+)
+$CheckRuns = (gh api "repos/$Repo/commits/$AuthorityCommit/check-runs?per_page=100" | ConvertFrom-Json).check_runs
+foreach ($Name in $RequiredChecks) {
+  $Succeeded = @($CheckRuns | Where-Object { $_.name -eq $Name -and $_.conclusion -eq "success" })
+  if ($Succeeded.Count -lt 1) { throw "REQUIRED_CHECK_NOT_SUCCESS:$Name" }
+}
+
+$Pr = gh pr view $PrNumber --repo $Repo --json state,isDraft,mergeable,mergeStateStatus,headRefOid,baseRefOid,files | ConvertFrom-Json
 if ($Pr.headRefOid -ne $AuthorityCommit) { throw "AUTHORITY_PR_HEAD_MOVED" }
 if ($Pr.baseRefOid -ne $Subject) { throw "AUTHORITY_PR_BASE_MOVED" }
 if (@($Pr.files).Count -ne 2) { throw "AUTHORITY_PR_NOT_EXACT_TWO_FILES" }
@@ -476,16 +597,91 @@ $TotalRows = [int64](& $Psql $FormalUrl -X -At -v ON_ERROR_STOP=1 -c "SELECT COA
 if ($TotalRows -ne 0) { throw "FORMAL_PRE_A0_ROWS_NOT_ZERO:$TotalRows" }
 ```
 
-### 5.3 Production exact-one live owner proof
+### 5.3 Current arm/schema proof identity
 
-Use the official live verifier. It is observational; it must not become an
-owner-mutating replacement action.
+The A0 runners' built-in defaults still point to the historical
+`arm-v1.json` and `schema-acl-v1.json`. They MUST NOT be used for this
+re-armed epoch.
 
 ```powershell
-node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs --live
+foreach ($Path in @($ArmPath,$SchemaProofPath)) {
+  if (-not (Test-Path $Path)) { throw "CURRENT_FORMAL_PROOF_MISSING:$Path" }
+}
+$ArmProof = Get-Content $ArmPath -Raw | ConvertFrom-Json
+if ($ArmProof.status -ne "PASS" -or $ArmProof.subject_sha -ne $ArmSubject) {
+  throw "CURRENT_REARM_PROOF_SUBJECT_INVALID"
+}
+if ($ArmProof.arm_identity_hash -ne $ExpectedArmIdentity) {
+  throw "CURRENT_REARM_IDENTITY_MISMATCH:$($ArmProof.arm_identity_hash)"
+}
+if ($ArmProof.a0 -ne $A0 -or $ArmProof.o00 -ne $O00 -or $ArmProof.o23 -ne $O23) {
+  throw "CURRENT_REARM_EPOCH_MISMATCH"
+}
+if ($ArmProof.formal_v5_arm -ne $true -or $ArmProof.a0_bootstrap -ne $false -or $ArmProof.o00_started -ne $false) {
+  throw "CURRENT_REARM_STAGE_INVALID"
+}
 
-$OwnerProof = Get-Content "acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json" -Raw | ConvertFrom-Json
-if ($OwnerProof.status -ne "PASS") { throw "LIVE_OWNER_PROOF_NOT_PASS" }
+$SchemaProof = Get-Content $SchemaProofPath -Raw | ConvertFrom-Json
+if ($SchemaProof.schema_version -ne "geox_mcft_cap09_formal_v5_schema_acl_materialization_v1" -or
+    @("PASS","PASS_ALREADY_MATERIALIZED_IDEMPOTENT") -notcontains $SchemaProof.status -or
+    $SchemaProof.subject_sha -ne $ArmSubject -or
+    [int]$SchemaProof.public_table_count -ne 29 -or
+    [int]$SchemaProof.public_routine_count -ne 2 -or
+    $SchemaProof.all_table_rows_zero -ne $true) {
+  throw "CURRENT_SCHEMA_ACL_REVALIDATION_PROOF_INVALID"
+}
+```
+
+### 5.4 Production exact-one live owner proof
+
+Do not depend on the old temporary attestation path from the earlier arm. Build
+a fresh read-only artifact attestation in a detached worktree at the immutable
+Runtime subject, then use that attestation for the live T1/T2 proof. This does
+not restart containers or mutate the database.
+
+```powershell
+New-Item -ItemType Directory -Force $OwnerEvidenceDir | Out-Null
+git worktree prune
+if (Test-Path $OwnerWorktree) {
+  throw "OWNER_ATTESTATION_WORKTREE_ALREADY_EXISTS:$OwnerWorktree"
+}
+git worktree add --detach $OwnerWorktree $ArmSubject
+
+try {
+  Push-Location $OwnerWorktree
+
+  if (@(git status --porcelain).Count -ne 0) { throw "OWNER_ATTESTATION_WORKTREE_DIRTY" }
+  if ((git rev-parse HEAD).Trim() -ne $ArmSubject) { throw "OWNER_ATTESTATION_HEAD_MISMATCH" }
+
+  $env:GEOX_DEPLOYMENT_SUBJECT_COMMIT = $ArmSubject
+  $env:GEOX_MCFT_CAP09_RUNTIME_IMAGE_TAG = "geox-mcft-cap09-runtime:$ArmSubject"
+
+  node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs --attest-image
+  $AttestLocal = "acceptance-output/MCFT_CAP_09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_V1_RESULT.json"
+  $Attest = Get-Content $AttestLocal -Raw | ConvertFrom-Json
+  if ($Attest.status -ne "PASS" -or
+      $Attest.subject_main_sha -ne $ArmSubject -or
+      $Attest.authorized_image_id -ne $ExpectedRuntimeImageId) {
+    throw "OWNER_FRESH_ARTIFACT_ATTESTATION_INVALID"
+  }
+  Copy-Item $AttestLocal $OwnerAttestationPath -Force
+
+  $env:GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH = $OwnerAttestationPath
+  node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs --live
+
+  $OwnerLocal = "acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json"
+  $OwnerProof = Get-Content $OwnerLocal -Raw | ConvertFrom-Json
+  if ($OwnerProof.status -ne "PASS" -or
+      $OwnerProof.subject_main_sha -ne $ArmSubject -or
+      $OwnerProof.authorized_image_id -ne $ExpectedRuntimeImageId) {
+    throw "LIVE_OWNER_PROOF_NOT_PASS"
+  }
+  Copy-Item $OwnerLocal $OwnerLiveProofPath -Force
+}
+finally {
+  Pop-Location
+  git worktree remove --force $OwnerWorktree
+}
 ```
 
 Required result:
@@ -497,7 +693,7 @@ same exact deployment subject/image
 lease renewal observed
 ```
 
-### 5.4 Production pre-A0 state is still empty for the target scope
+### 5.5 Production pre-A0 state is still empty for the target scope
 
 Read-only against the Twin production database:
 
@@ -513,9 +709,45 @@ if ($Active -ne 0) { throw "PRODUCTION_PRE_A0_ACTIVE_LINEAGE_NOT_ZERO:$Active" }
 if ($LatestState -ne 0) { throw "PRODUCTION_PRE_A0_LATEST_STATE_NOT_ZERO:$LatestState" }
 ```
 
-### 5.5 Exact main/continuity re-read
+### 5.6 Post-adoption main / continuity re-read
 
-Repeat Section 1 and Section 4 immediately before A0.
+Do **not** repeat the pre-adoption `main == ArmSubject` assertion after the
+authority-only merge. A legal post-arm authority adoption intentionally moves
+protected main.
+
+Immediately before A0:
+
+```powershell
+$MainBeforeA0 = (gh api "repos/$Repo/git/ref/heads/main" --jq ".object.sha").Trim()
+if ($MainBeforeA0 -ne $PostAuthorityMain) {
+  throw "POST_AUTHORITY_MAIN_MOVED_AGAIN:$PostAuthorityMain:$MainBeforeA0"
+}
+
+$P3658 = gh pr view 3658 --repo $Repo --json state,isDraft,mergedAt | ConvertFrom-Json
+$P3659 = gh pr view 3659 --repo $Repo --json state,isDraft,mergedAt | ConvertFrom-Json
+if ($P3658.state -ne "OPEN" -or -not $P3658.isDraft -or $null -ne $P3658.mergedAt) {
+  throw "PR3658_WINDOW_ISOLATION_VIOLATION"
+}
+if ($P3659.state -ne "OPEN" -or -not $P3659.isDraft -or $null -ne $P3659.mergedAt) {
+  throw "PR3659_WINDOW_ISOLATION_VIOLATION"
+}
+
+git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+if ((git rev-parse HEAD).Trim() -ne $PostAuthorityMain -or
+    (git rev-parse origin/main).Trim() -ne $PostAuthorityMain -or
+    @(git status --porcelain).Count -ne 0) {
+  throw "A0_CURRENT_MAIN_CHECKOUT_INVALID"
+}
+
+node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs --arm-subject=$ArmSubject --logical-time=$A0 --out=$ContinuityPath
+$Continuity = Get-Content $ContinuityPath -Raw | ConvertFrom-Json
+if ($Continuity.status -ne "PASS" -or
+    $Continuity.arm_runtime_semantic_subject_sha -ne $ArmSubject -or
+    $Continuity.authority_continuity_head_sha -ne $PostAuthorityMain -or
+    $Continuity.selected_current_crop_authority_ref -ne $TargetAuthority) {
+  throw "A0_POST_ARM_CONTINUITY_INVALID"
+}
+```
 
 ---
 
@@ -580,15 +812,15 @@ if ($Now -ge [datetime]::Parse($O00).ToUniversalTime()) { throw "A0_WINDOW_MISSE
 
 node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs --arm-subject=$ArmSubject --logical-time=$A0 --out=$ContinuityPath
 
-pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts --operator-authorized
+pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts --operator-authorized --arm=$ArmPath --schema-proof=$SchemaProofPath --continuity-proof=$ContinuityPath --out=$PromotionPath
 
-$Promotion = Get-Content (Join-Path $FormalRoot "a0-production-replay-promotion-v1.json") -Raw | ConvertFrom-Json
+$Promotion = Get-Content $PromotionPath -Raw | ConvertFrom-Json
 if ($Promotion.status -ne "PASS") { throw "A0_REPLAY_PROMOTION_NOT_PASS" }
 if ([int]$Promotion.formal_fact_count -ne 3) { throw "A0_REPLAY_PROMOTION_FACT_COUNT_NOT_3" }
 
-pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP_V1.ts --operator-authorized
+pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP_V1.ts --operator-authorized --arm=$ArmPath --schema-proof=$SchemaProofPath --promotion-proof=$PromotionPath --continuity-proof=$BootstrapContinuityPath --manifest-out=$ManifestPath --out=$BootstrapPath
 
-$Bootstrap = Get-Content (Join-Path $FormalRoot "a0-bootstrap-v1.json") -Raw | ConvertFrom-Json
+$Bootstrap = Get-Content $BootstrapPath -Raw | ConvertFrom-Json
 if ($Bootstrap.status -ne "PASS") { throw "A0_BOOTSTRAP_NOT_PASS" }
 if ($Bootstrap.formal_a0_bootstrapped -ne $true) { throw "A0_BOOTSTRAP_FLAG_FALSE" }
 if ($Bootstrap.formal_o00_started -ne $false) { throw "A0_BOOTSTRAP_PREMATURE_O00" }
@@ -653,9 +885,13 @@ materialized zero state                  PASS
 exact-one preformal owners               PASS
 fresh candidate rehearsal                PASS
 candidate -> authority builder            READY
+qualification evidence envelope            FIXED / now mirrors #3656 shape
 registry exact-single append pattern      PROVEN by #3656
+main ruleset / required checks             VERIFIED / 8 exact contexts
 post-arm continuity verifier              READY
-A0 replay/bootstrap executors             READY
+current re-arm/schema proof paths          FIXED / explicit, no stale defaults
+fresh owner attestation/live proof         FIXED / detached arm-subject worktree
+A0 replay/bootstrap executors             READY with explicit artifact paths
 V5 active production route                FIRST-RED / NOT PROVEN
 A0                                        HOLD
 O00-O23                                   HOLD
