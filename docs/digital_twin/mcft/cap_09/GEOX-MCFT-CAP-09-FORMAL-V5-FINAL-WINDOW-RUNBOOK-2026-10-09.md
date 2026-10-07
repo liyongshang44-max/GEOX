@@ -243,9 +243,9 @@ $RequiredEvidenceFiles = @(
 
 $EvidencePaths = @{}
 foreach ($Name in $RequiredEvidenceFiles) {
-  $Matches = @(Get-ChildItem -Path $CandidateDir -Recurse -File -Filter $Name)
-  if ($Matches.Count -ne 1) { throw "CANDIDATE_EVIDENCE_FILE_CARDINALITY:$Name:$($Matches.Count)" }
-  $EvidencePaths[$Name] = $Matches[0].FullName
+  $EvidenceMatches = @(Get-ChildItem -Path $CandidateDir -Recurse -File -Filter $Name)
+  if ($EvidenceMatches.Count -ne 1) { throw "CANDIDATE_EVIDENCE_FILE_CARDINALITY:$Name:$($EvidenceMatches.Count)" }
+  $EvidencePaths[$Name] = $EvidenceMatches[0].FullName
 }
 
 $Candidate = $EvidencePaths["MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json"]
@@ -501,9 +501,11 @@ foreach ($Name in $RequiredChecks) {
 }
 
 $Pr = gh pr view $PrNumber --repo $Repo --json state,isDraft,mergeable,mergeStateStatus,headRefOid,baseRefOid,files | ConvertFrom-Json
+if ($Pr.state -ne "OPEN" -or $Pr.isDraft -eq $true) { throw "AUTHORITY_PR_NOT_READY_OPEN" }
 if ($Pr.headRefOid -ne $AuthorityCommit) { throw "AUTHORITY_PR_HEAD_MOVED" }
 if ($Pr.baseRefOid -ne $Subject) { throw "AUTHORITY_PR_BASE_MOVED" }
 if (@($Pr.files).Count -ne 2) { throw "AUTHORITY_PR_NOT_EXACT_TWO_FILES" }
+if ($Pr.mergeable -ne "MERGEABLE") { throw "AUTHORITY_PR_NOT_MERGEABLE:$($Pr.mergeable)" }
 
 # OPERATOR AUTHORIZATION REQUIRED HERE.
 # This is the only merge planned inside the final window.
@@ -520,6 +522,14 @@ git switch main
 git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
 git reset --hard origin/main
 if (@(git status --porcelain).Count -ne 0) { throw "POST_ADOPTION_WORKTREE_NOT_CLEAN" }
+
+$MergeShape = @((git rev-list --parents -n 1 $PostAuthorityMain).Trim() -split "\s+")
+if ($MergeShape.Count -ne 3 -or
+    $MergeShape[0] -ne $PostAuthorityMain -or
+    $MergeShape[1] -ne $Subject -or
+    $MergeShape[2] -ne $AuthorityCommit) {
+  throw "AUTHORITY_ADOPTION_MERGE_SHAPE_INVALID:$($MergeShape -join ':')"
+}
 ```
 
 ---
