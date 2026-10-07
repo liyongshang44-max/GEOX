@@ -30,6 +30,7 @@ import {
 import {
   PostgresPersistentSequentialSchedulerAdapterV1,
   type PersistentSequentialSchedulerClockAuthorityV1,
+  type TwinRuntimeSchedulerOwnershipLeaseClaimV1,
 } from "./postgres_persistent_sequential_scheduler_adapter_v1.js";
 import {
   PostgresTwinRuntimeSuccessorViabilityV1,
@@ -272,4 +273,67 @@ export function composeMcftCap09FormalV5TwinRuntimeV1(
     next_tick_repository: nextTickRepository,
     forecast_scenario_repository: forecastScenarioRepository,
   };
+}
+
+// ACTIVE lifecycle admission after proven A0. No slot claim, tick or authority projection
+// is written here. The frozen V5 gate requires this cursor before its first claim;
+// the frozen adapter's normal cursor initializer otherwise lives inside claimDueSlot.
+export async function initializeMcftCap09FormalV5ActiveCursorV1(input: {
+  pool: Pool;
+  manifest: ExternalFormalV4Am19WindowManifestV2;
+  claim: TwinRuntimeSchedulerOwnershipLeaseClaimV1;
+}): Promise<"CREATED" | "EXISTING"> {
+  const keys = ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const;
+  if (!keys.every(key => input.claim.scope[key] === input.manifest.scope[key])) {
+    throw new Error("FORMAL_V5_ACTIVE_CURSOR_LEASE_SCOPE_MISMATCH");
+  }
+  const scopeValues = keys.map(key => input.manifest.scope[key]);
+  const client = await input.pool.connect();
+  try {
+    await client.query("BEGIN");
+    const lease = await client.query<{lease_owner: string; fencing_token: string; valid: boolean}>(`
+      SELECT lease_owner, fencing_token::text, expires_at > transaction_timestamp() AS valid
+        FROM public.twin_runtime_lease_v1
+       WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+       FOR UPDATE`, scopeValues);
+    if (lease.rows.length !== 1 || lease.rows[0].lease_owner !== input.claim.lease_owner
+        || lease.rows[0].fencing_token !== input.claim.fencing_token.toString() || !lease.rows[0].valid) {
+      throw new Error("FORMAL_V5_ACTIVE_CURSOR_CURRENT_FENCING_REQUIRED");
+    }
+    const readCursor = () => client.query<{schedule_start_logical_time: Date; next_slot_index: number;
+      next_slot_id: string | null; next_logical_time: Date | null}>(`
+      SELECT schedule_start_logical_time, next_slot_index, next_slot_id, next_logical_time
+        FROM public.twin_shadow_online_scheduler_cursor_v1
+       WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+       FOR UPDATE`, scopeValues);
+    let cursor = await readCursor();
+    let status: "CREATED" | "EXISTING" = "EXISTING";
+    if (cursor.rows.length === 0) {
+      const slots = await client.query(`SELECT 1 FROM public.twin_shadow_online_scheduler_slot_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 LIMIT 1`, scopeValues);
+      if (slots.rows.length !== 0) throw new Error("FORMAL_V5_ACTIVE_CURSOR_ORPHAN_SLOTS_FORBIDDEN");
+      const inserted = await client.query(`INSERT INTO public.twin_shadow_online_scheduler_cursor_v1
+        (tenant_id,project_id,group_id,field_id,season_id,zone_id,
+         schedule_start_logical_time,next_slot_index,next_slot_id,next_logical_time)
+        VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,0,'O00',$7::timestamptz)
+        ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id) DO NOTHING
+        RETURNING next_slot_index`, [...scopeValues, input.manifest.o00_logical_time]);
+      status = inserted.rows.length === 1 ? "CREATED" : "EXISTING";
+      cursor = await readCursor();
+    }
+    const row = cursor.rows[0];
+    const index = row?.next_slot_index;
+    const pin = Number.isInteger(index) && index >= 0 && index < 24 ? input.manifest.slots[index] : null;
+    if (cursor.rows.length !== 1 || !row || !Number.isInteger(index) || index < 0 || index > 24
+        || new Date(row.schedule_start_logical_time).toISOString() !== input.manifest.o00_logical_time
+        || row.next_slot_id !== (pin?.slot_id ?? null)
+        || (row.next_logical_time === null ? null : new Date(row.next_logical_time).toISOString()) !== (pin?.logical_time ?? null)) {
+      throw new Error("FORMAL_V5_ACTIVE_CURSOR_MANIFEST_CONFLICT");
+    }
+    await client.query("COMMIT");
+    return status;
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {client.release();}
 }

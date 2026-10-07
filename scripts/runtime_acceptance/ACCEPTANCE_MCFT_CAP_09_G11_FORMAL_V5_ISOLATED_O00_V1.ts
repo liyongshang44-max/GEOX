@@ -36,6 +36,7 @@ import type {
 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
 import {
   composeMcftCap09FormalV5TwinRuntimeV1,
+  initializeMcftCap09FormalV5ActiveCursorV1,
 } from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_composition_v1.js";
 import {
   EXTERNAL_FORMAL_V5_AM19_RUNNER_ID_V2,
@@ -279,6 +280,25 @@ async function main(){
       "G11_BOOTSTRAP_OWNER_RELEASE_REQUIRED",
     );
 
+    const activeLease = await composition.scheduler.acquireOrRenewOwnershipLease({
+      lease_owner: "g11-formal-v5-active", lease_duration_seconds: LEASE_SECONDS,
+    });
+    assert.ok(activeLease);
+    assert.ok(activeLease.fencing_token > bootstrapLease.fencing_token);
+    await assert.rejects(
+      initializeMcftCap09FormalV5ActiveCursorV1({pool, manifest: built.manifest, claim: {...activeLease, fencing_token: bootstrapLease.fencing_token}}),
+      /FORMAL_V5_ACTIVE_CURSOR_CURRENT_FENCING_REQUIRED/,
+    );
+    assert.equal(await initializeMcftCap09FormalV5ActiveCursorV1({pool, manifest: built.manifest, claim: activeLease}), "CREATED");
+    assert.equal(await initializeMcftCap09FormalV5ActiveCursorV1({pool, manifest: built.manifest, claim: activeLease}), "EXISTING");
+    await assert.rejects(
+      initializeMcftCap09FormalV5ActiveCursorV1({pool, manifest: {...built.manifest, o00_logical_time: addHours(O00, 1)}, claim: activeLease}),
+      /FORMAL_V5_ACTIVE_CURSOR_MANIFEST_CONFLICT/,
+    );
+    const preclaimSlots = await pool.query("SELECT count(*)::int AS count FROM twin_shadow_online_scheduler_slot_v1");
+    assert.equal(preclaimSlots.rows[0].count, 0, "G11_CURSOR_INITIALIZATION_MUST_NOT_CLAIM_SLOT");
+    await composition.scheduler.releaseOwnershipLease({claim: activeLease});
+
     const result=await composition.runner.executeOneDueSlot({
       through_logical_time:O00,
       observer_started_at:O00,
@@ -317,6 +337,11 @@ async function main(){
       o00_terminal_status:result.status,
       o00_scheduler_slot_persisted:true,
       new_fencing_token_after_bootstrap:true,
+      active_startup_cursor_initialized_under_fencing:true,
+      stale_cursor_initializer_fencing_rejected:true,
+      conflicting_cursor_epoch_rejected:true,
+      cursor_initialization_does_not_claim_slot:true,
+      existing_cursor_preserved:true,
       provider_request_count:0,
       r2_request_count:0,
       scheduler_semantics_rewritten:false,

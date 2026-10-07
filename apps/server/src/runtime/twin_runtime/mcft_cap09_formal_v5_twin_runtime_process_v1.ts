@@ -36,6 +36,7 @@ import type {
 } from "./external_formal_v4_amendment19_runner_v2.js";
 import {
   composeMcftCap09FormalV5TwinRuntimeV1,
+  initializeMcftCap09FormalV5ActiveCursorV1,
 } from "./mcft_cap09_formal_v5_twin_runtime_composition_v1.js";
 import {
   readMcftCap09TwinRuntimeProcessConfigV1,
@@ -293,7 +294,11 @@ export async function runMcftCap09FormalV5TwinRuntimeProcessV1(input?: {
       await composition.scheduler.releaseOwnershipLease({ claim: firstClaim });
       throw new Error("FORMAL_V5_TWIN_NEW_FENCING_TOKEN_REQUIRED");
     }
-    await composition.scheduler.releaseOwnershipLease({ claim: firstClaim });
+    try {
+      await initializeMcftCap09FormalV5ActiveCursorV1({pool, manifest, claim: firstClaim});
+    } finally {
+      await composition.scheduler.releaseOwnershipLease({ claim: firstClaim });
+    }
 
     await composition.host.run({
       lease_owner: config.lease_owner,
