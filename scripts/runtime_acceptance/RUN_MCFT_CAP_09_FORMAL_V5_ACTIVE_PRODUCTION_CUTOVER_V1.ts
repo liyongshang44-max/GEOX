@@ -23,6 +23,7 @@ const ACTIVE_COMPOSE="docker-compose.mcft-cap09-formal-v5-active.yml";
 const PREFORMAL_COMPOSE="docker-compose.mcft-cap09-production-preformal.yml";
 const TWIN_SERVICE="geox-mcft-cap09-twin-runtime-v1";
 const FORCING_SERVICE="geox-mcft-cap09-formal-v5-forcing-runtime-v1";
+const FORMAL_DB="geox_mcft_cap09_s6_formal_t4r1_24h_v5";
 
 function arg(name:string):string|null{
   const row=process.argv.slice(2).find((value)=>value.startsWith(name+"="));
@@ -121,9 +122,17 @@ async function main():Promise<void>{
   assert.equal(bootstrap.authority_continuity_head_sha,head);
   execFileSync("git",["merge-base","--is-ancestor",arm.subject_sha,head],{cwd:ROOT,stdio:"ignore"});
 
-  const dbUrl=reqEnv("GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL");
-  const pool=new Pool({connectionString:dbUrl,max:1,application_name:"mcft-cap09-formal-v5-active-cutover"});
+  const operationalTwinUrl=reqEnv("GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL");
+  const formalTwinUrl=reqEnv("GEOX_MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_DATABASE_URL");
+  const formalEvidenceUrl=reqEnv("GEOX_MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_DATABASE_URL");
+  const pool=new Pool({connectionString:operationalTwinUrl,max:1,application_name:"mcft-cap09-formal-v5-active-cutover-operational"});
+  const formalPool=new Pool({connectionString:formalTwinUrl,max:1,application_name:"mcft-cap09-formal-v5-active-cutover-formal"});
+  const evidencePool=new Pool({connectionString:formalEvidenceUrl,max:1,application_name:"mcft-cap09-formal-v5-active-cutover-evidence"});
   try{
+    const twinIdentity=(await formalPool.query<{db:string;u:string}>("SELECT current_database()::text AS db,current_user::text AS u")).rows[0];
+    const evidenceIdentity=(await evidencePool.query<{db:string;u:string}>("SELECT current_database()::text AS db,current_user::text AS u")).rows[0];
+    assert.deepEqual(twinIdentity,{db:FORMAL_DB,u:"geox_mcft_cap09_twin_runtime_login_v1"});
+    assert.deepEqual(evidenceIdentity,{db:FORMAL_DB,u:"geox_mcft_cap09_evidence_runtime_login_v1"});
     const before=await readLiveTwinLease(pool,MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1);
     if(before.length!==1)throw new Error("FORMAL_V5_ACTIVE_CUTOVER_EXACT_ONE_PREFORMAL_TWIN_OWNER_REQUIRED");
     const prior=before[0];
@@ -219,7 +228,7 @@ async function main():Promise<void>{
     writeImmutableOrMatch(path.resolve(arg("--cutover-out")||DEFAULT_CUTOVER_OUT),proof);
     console.log(JSON.stringify(proof,null,2));
   }finally{
-    await pool.end();
+    await Promise.allSettled([pool.end(),formalPool.end(),evidencePool.end()]);
   }
 }
 
