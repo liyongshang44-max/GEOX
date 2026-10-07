@@ -1,0 +1,581 @@
+﻿{
+    "field_id":  "781068d5-f9ff-452e-8901-a5df247d0424",
+    "organization_id":  "9593400",
+    "target":  {
+                   "@type":  "FieldOperationMeasurement",
+                   "measurementName":  "ApplicationRateTarget",
+                   "measurementCategory":  "Target",
+                   "varietyTotals":  [
+
+                                     ],
+                   "applicationProductTotals":  [
+                                                    {
+                                                        "@type":  "ApplicationProductTotal",
+                                                        "productId":  "90db0c20",
+                                                        "name":  "RoundUp",
+                                                        "area":  {
+                                                                     "@type":  "EventMeasurement",
+                                                                     "value":  4.8196219888800265,
+                                                                     "unitId":  "ha",
+                                                                     "variableRepresentation":  "vrTaskArea"
+                                                                 },
+                                                        "averageSpeed":  {
+                                                                             "@type":  "EventMeasurement",
+                                                                             "value":  24.13521382629922,
+                                                                             "unitId":  "km1hr-1",
+                                                                             "variableRepresentation":  "vrVehicleSpeed"
+                                                                         },
+                                                        "totalMaterial":  {
+                                                                              "@type":  "EventMeasurement",
+                                                                              "value":  582.7427610445322,
+                                                                              "unitId":  "l",
+                                                                              "variableRepresentation":  "vrTotalQuantityTargetVolume"
+                                                                          },
+                                                        "averageMaterial":  {
+                                                                                "@type":  "EventMeasurement",
+                                                                                "value":  120.9104702379268,
+                                                                                "unitId":  "l1ha-1",
+                                                                                "variableRepresentation":  "vrAppRateVolumeTarget"
+                                                                            },
+                                                        "productTotals":  [
+                                                                              {
+                                                                                  "@type":  "ProductTotal",
+                                                                                  "productId":  "77421064-447c-4a2b-8dda-141d37cccf78",
+                                                                                  "name":  "RoundUp",
+                                                                                  "brand":  "---",
+                                                                                  "carrier":  false,
+                                                                                  "totalMaterial":  {
+                                                                                                        "@type":  "EventMeasurement",
+                                                                                                        "value":  582.7427610445322,
+                                                                                                        "unitId":  "l",
+                                                                                                        "variableRepresentation":  "vrTotalQuantityTargetVolume"
+                                                                                                    },
+                                                                                  "averageMaterial":  {
+                                                                                                          "@type":  "EventMeasurement",
+                                                                                                          "value":  120.9104702379268,
+                                                                                                          "unitId":  "l1ha-1",
+                                                                                                          "variableRepresentation":  "vrAppRateVolumeTarget"
+                                                                                                      }
+                                                                              }
+                                                                          ]
+                                                    }
+                                                ],
+                   "links":  [
+                                 {
+                                     "@type":  "Link",
+                                     "rel":  "self",
+                                     "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationRateTarget"
+                                 },
+                                 {
+                                     "@type":  "Link",
+                                     "rel":  "mapImage",
+                                     "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationRateTarget"
+                                 },
+                                 {
+                                     "@type":  "Link",
+                                     "rel":  "organization",
+                                     "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400"
+                                 },
+                                 {
+                                     "@type":  "Link",
+                                     "rel":  "field",
+                                     "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400/fields/781068d5-f9ff-452e-8901-a5df247d0424"
+                                 },
+                                 {
+                                     "@type":  "Link",
+                                     "rel":  "fieldOperation",
+                                     "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5"
+                                 }
+                             ]
+               },
+    "measurement_types":  {
+                              "links":  [
+                                            {
+                                                "@type":  "Link",
+                                                "rel":  "self",
+                                                "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes"
+                                            }
+                                        ],
+                              "total":  3,
+                              "values":  [
+                                             {
+                                                 "@type":  "FieldOperationMeasurement",
+                                                 "measurementName":  "ApplicationRateResult",
+                                                 "measurementCategory":  "Result",
+                                                 "varietyTotals":  [
+
+                                                                   ],
+                                                 "applicationProductTotals":  [
+                                                                                  {
+                                                                                      "@type":  "ApplicationProductTotal",
+                                                                                      "productId":  "90db0c20",
+                                                                                      "name":  "RoundUp",
+                                                                                      "area":  {
+                                                                                                   "@type":  "EventMeasurement",
+                                                                                                   "value":  4.82,
+                                                                                                   "unitId":  "ha",
+                                                                                                   "variableRepresentation":  "vrTaskArea"
+                                                                                               },
+                                                                                      "averageSpeed":  {
+                                                                                                           "@type":  "EventMeasurement",
+                                                                                                           "value":  24.1,
+                                                                                                           "unitId":  "km1hr-1",
+                                                                                                           "variableRepresentation":  "vrVehicleSpeed"
+                                                                                                       },
+                                                                                      "totalMaterial":  {
+                                                                                                            "@type":  "EventMeasurement",
+                                                                                                            "value":  590.9,
+                                                                                                            "unitId":  "l",
+                                                                                                            "variableRepresentation":  "vrTotalQuantityAppliedVolume"
+                                                                                                        },
+                                                                                      "averageMaterial":  {
+                                                                                                              "@type":  "EventMeasurement",
+                                                                                                              "value":  122.6,
+                                                                                                              "unitId":  "l1ha-1",
+                                                                                                              "variableRepresentation":  "vrAppRateVolumeMeasured"
+                                                                                                          },
+                                                                                      "appliedArea":  {
+                                                                                                          "@type":  "EventMeasurement",
+                                                                                                          "value":  4.82,
+                                                                                                          "unitId":  "ha",
+                                                                                                          "variableRepresentation":  "vrAppliedArea"
+                                                                                                      },
+                                                                                      "productTotals":  [
+                                                                                                            {
+                                                                                                                "@type":  "ProductTotal",
+                                                                                                                "productId":  "77421064-447c-4a2b-8dda-141d37cccf78",
+                                                                                                                "name":  "RoundUp",
+                                                                                                                "brand":  "---",
+                                                                                                                "carrier":  false,
+                                                                                                                "totalMaterial":  {
+                                                                                                                                      "@type":  "EventMeasurement",
+                                                                                                                                      "value":  590.9,
+                                                                                                                                      "unitId":  "l",
+                                                                                                                                      "variableRepresentation":  "vrTotalQuantityAppliedVolume"
+                                                                                                                                  },
+                                                                                                                "averageMaterial":  {
+                                                                                                                                        "@type":  "EventMeasurement",
+                                                                                                                                        "value":  122.6,
+                                                                                                                                        "unitId":  "l1ha-1",
+                                                                                                                                        "variableRepresentation":  "vrAppRateVolumeMeasured"
+                                                                                                                                    }
+                                                                                                            }
+                                                                                                        ]
+                                                                                  }
+                                                                              ],
+                                                 "links":  [
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "self",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationRateResult"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "mapImage",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationRateResult"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "organization",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "field",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400/fields/781068d5-f9ff-452e-8901-a5df247d0424"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "fieldOperation",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5"
+                                                               }
+                                                           ]
+                                             },
+                                             {
+                                                 "@type":  "FieldOperationMeasurement",
+                                                 "measurementName":  "ApplicationSpeedResult",
+                                                 "measurementCategory":  "Result",
+                                                 "varietyTotals":  [
+
+                                                                   ],
+                                                 "applicationProductTotals":  [
+                                                                                  {
+                                                                                      "@type":  "ApplicationProductTotal",
+                                                                                      "productId":  "90db0c20",
+                                                                                      "name":  "RoundUp",
+                                                                                      "area":  {
+                                                                                                   "@type":  "EventMeasurement",
+                                                                                                   "value":  4.82,
+                                                                                                   "unitId":  "ha",
+                                                                                                   "variableRepresentation":  "vrTaskArea"
+                                                                                               },
+                                                                                      "averageSpeed":  {
+                                                                                                           "@type":  "EventMeasurement",
+                                                                                                           "value":  24.1,
+                                                                                                           "unitId":  "km1hr-1",
+                                                                                                           "variableRepresentation":  "vrVehicleSpeed"
+                                                                                                       },
+                                                                                      "totalMaterial":  {
+                                                                                                            "@type":  "EventMeasurement",
+                                                                                                            "value":  590.9,
+                                                                                                            "unitId":  "l",
+                                                                                                            "variableRepresentation":  "vrTotalQuantityAppliedVolume"
+                                                                                                        },
+                                                                                      "averageMaterial":  {
+                                                                                                              "@type":  "EventMeasurement",
+                                                                                                              "value":  122.6,
+                                                                                                              "unitId":  "l1ha-1",
+                                                                                                              "variableRepresentation":  "vrAppRateVolumeMeasured"
+                                                                                                          },
+                                                                                      "appliedArea":  {
+                                                                                                          "@type":  "EventMeasurement",
+                                                                                                          "value":  4.82,
+                                                                                                          "unitId":  "ha",
+                                                                                                          "variableRepresentation":  "vrAppliedArea"
+                                                                                                      },
+                                                                                      "productTotals":  [
+                                                                                                            {
+                                                                                                                "@type":  "ProductTotal",
+                                                                                                                "productId":  "77421064-447c-4a2b-8dda-141d37cccf78",
+                                                                                                                "name":  "RoundUp",
+                                                                                                                "brand":  "---",
+                                                                                                                "carrier":  false,
+                                                                                                                "totalMaterial":  {
+                                                                                                                                      "@type":  "EventMeasurement",
+                                                                                                                                      "value":  590.9,
+                                                                                                                                      "unitId":  "l",
+                                                                                                                                      "variableRepresentation":  "vrTotalQuantityAppliedVolume"
+                                                                                                                                  },
+                                                                                                                "averageMaterial":  {
+                                                                                                                                        "@type":  "EventMeasurement",
+                                                                                                                                        "value":  122.6,
+                                                                                                                                        "unitId":  "l1ha-1",
+                                                                                                                                        "variableRepresentation":  "vrAppRateVolumeMeasured"
+                                                                                                                                    }
+                                                                                                            }
+                                                                                                        ]
+                                                                                  }
+                                                                              ],
+                                                 "links":  [
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "self",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationSpeedResult"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "mapImage",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationSpeedResult"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "organization",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "field",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400/fields/781068d5-f9ff-452e-8901-a5df247d0424"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "fieldOperation",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5"
+                                                               }
+                                                           ]
+                                             },
+                                             {
+                                                 "@type":  "FieldOperationMeasurement",
+                                                 "measurementName":  "ApplicationRateTarget",
+                                                 "measurementCategory":  "Target",
+                                                 "varietyTotals":  [
+
+                                                                   ],
+                                                 "applicationProductTotals":  [
+                                                                                  {
+                                                                                      "@type":  "ApplicationProductTotal",
+                                                                                      "productId":  "90db0c20",
+                                                                                      "name":  "RoundUp",
+                                                                                      "area":  {
+                                                                                                   "@type":  "EventMeasurement",
+                                                                                                   "value":  4.82,
+                                                                                                   "unitId":  "ha",
+                                                                                                   "variableRepresentation":  "vrTaskArea"
+                                                                                               },
+                                                                                      "averageSpeed":  {
+                                                                                                           "@type":  "EventMeasurement",
+                                                                                                           "value":  24.1,
+                                                                                                           "unitId":  "km1hr-1",
+                                                                                                           "variableRepresentation":  "vrVehicleSpeed"
+                                                                                                       },
+                                                                                      "totalMaterial":  {
+                                                                                                            "@type":  "EventMeasurement",
+                                                                                                            "value":  583.0,
+                                                                                                            "unitId":  "l",
+                                                                                                            "variableRepresentation":  "vrTotalQuantityTargetVolume"
+                                                                                                        },
+                                                                                      "averageMaterial":  {
+                                                                                                              "@type":  "EventMeasurement",
+                                                                                                              "value":  120.91,
+                                                                                                              "unitId":  "l1ha-1",
+                                                                                                              "variableRepresentation":  "vrAppRateVolumeTarget"
+                                                                                                          },
+                                                                                      "productTotals":  [
+                                                                                                            {
+                                                                                                                "@type":  "ProductTotal",
+                                                                                                                "productId":  "77421064-447c-4a2b-8dda-141d37cccf78",
+                                                                                                                "name":  "RoundUp",
+                                                                                                                "brand":  "---",
+                                                                                                                "carrier":  false,
+                                                                                                                "totalMaterial":  {
+                                                                                                                                      "@type":  "EventMeasurement",
+                                                                                                                                      "value":  583.0,
+                                                                                                                                      "unitId":  "l",
+                                                                                                                                      "variableRepresentation":  "vrTotalQuantityTargetVolume"
+                                                                                                                                  },
+                                                                                                                "averageMaterial":  {
+                                                                                                                                        "@type":  "EventMeasurement",
+                                                                                                                                        "value":  120.91,
+                                                                                                                                        "unitId":  "l1ha-1",
+                                                                                                                                        "variableRepresentation":  "vrAppRateVolumeTarget"
+                                                                                                                                    }
+                                                                                                            }
+                                                                                                        ]
+                                                                                  }
+                                                                              ],
+                                                 "links":  [
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "self",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationRateTarget"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "mapImage",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationRateTarget"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "organization",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "field",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400/fields/781068d5-f9ff-452e-8901-a5df247d0424"
+                                                               },
+                                                               {
+                                                                   "@type":  "Link",
+                                                                   "rel":  "fieldOperation",
+                                                                   "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5"
+                                                               }
+                                                           ]
+                                             }
+                                         ]
+                          },
+    "result":  {
+                   "@type":  "FieldOperationMeasurement",
+                   "measurementName":  "ApplicationRateResult",
+                   "measurementCategory":  "Result",
+                   "varietyTotals":  [
+
+                                     ],
+                   "applicationProductTotals":  [
+                                                    {
+                                                        "@type":  "ApplicationProductTotal",
+                                                        "productId":  "90db0c20",
+                                                        "name":  "RoundUp",
+                                                        "area":  {
+                                                                     "@type":  "EventMeasurement",
+                                                                     "value":  4.8196219888800265,
+                                                                     "unitId":  "ha",
+                                                                     "variableRepresentation":  "vrTaskArea"
+                                                                 },
+                                                        "averageSpeed":  {
+                                                                             "@type":  "EventMeasurement",
+                                                                             "value":  24.13521382629922,
+                                                                             "unitId":  "km1hr-1",
+                                                                             "variableRepresentation":  "vrVehicleSpeed"
+                                                                         },
+                                                        "totalMaterial":  {
+                                                                              "@type":  "EventMeasurement",
+                                                                              "value":  590.9000000000001,
+                                                                              "unitId":  "l",
+                                                                              "variableRepresentation":  "vrTotalQuantityAppliedVolume"
+                                                                          },
+                                                        "averageMaterial":  {
+                                                                                "@type":  "EventMeasurement",
+                                                                                "value":  122.60297620090243,
+                                                                                "unitId":  "l1ha-1",
+                                                                                "variableRepresentation":  "vrAppRateVolumeMeasured"
+                                                                            },
+                                                        "appliedArea":  {
+                                                                            "@type":  "EventMeasurement",
+                                                                            "value":  4.819621988879995,
+                                                                            "unitId":  "ha",
+                                                                            "variableRepresentation":  "vrAppliedArea"
+                                                                        },
+                                                        "productTotals":  [
+                                                                              {
+                                                                                  "@type":  "ProductTotal",
+                                                                                  "productId":  "77421064-447c-4a2b-8dda-141d37cccf78",
+                                                                                  "name":  "RoundUp",
+                                                                                  "brand":  "---",
+                                                                                  "carrier":  false,
+                                                                                  "totalMaterial":  {
+                                                                                                        "@type":  "EventMeasurement",
+                                                                                                        "value":  590.9000000000001,
+                                                                                                        "unitId":  "l",
+                                                                                                        "variableRepresentation":  "vrTotalQuantityAppliedVolume"
+                                                                                                    },
+                                                                                  "averageMaterial":  {
+                                                                                                          "@type":  "EventMeasurement",
+                                                                                                          "value":  122.60297620090243,
+                                                                                                          "unitId":  "l1ha-1",
+                                                                                                          "variableRepresentation":  "vrAppRateVolumeMeasured"
+                                                                                                      }
+                                                                              }
+                                                                          ]
+                                                    }
+                                                ],
+                   "links":  [
+                                 {
+                                     "@type":  "Link",
+                                     "rel":  "self",
+                                     "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationRateResult"
+                                 },
+                                 {
+                                     "@type":  "Link",
+                                     "rel":  "mapImage",
+                                     "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationRateResult"
+                                 },
+                                 {
+                                     "@type":  "Link",
+                                     "rel":  "organization",
+                                     "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400"
+                                 },
+                                 {
+                                     "@type":  "Link",
+                                     "rel":  "field",
+                                     "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400/fields/781068d5-f9ff-452e-8901-a5df247d0424"
+                                 },
+                                 {
+                                     "@type":  "Link",
+                                     "rel":  "fieldOperation",
+                                     "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5"
+                                 }
+                             ]
+               },
+    "captured_at":  "2026-08-27T18:19:56.7493146Z",
+    "operation":  {
+                      "@type":  "FieldOperation",
+                      "fieldOperationType":  "application",
+                      "adaptMachineType":  "unknown",
+                      "cropSeason":  "2017",
+                      "modifiedTime":  "2026-08-27T18:15:09.970Z",
+                      "startDate":  "2017-11-29T16:10:44.175Z",
+                      "endDate":  "2017-11-29T16:16:04.784Z",
+                      "products":  [
+                                       {
+                                           "@type":  "Product",
+                                           "guid":  "77421064-447c-4a2b-8dda-141d37cccf78",
+                                           "productType":  "CHEMICAL",
+                                           "productId":  "90db0c20",
+                                           "name":  "RoundUp",
+                                           "tankMix":  false
+                                       }
+                                   ],
+                      "fieldOperationMachines":  [
+                                                     {
+                                                         "@type":  "FieldOperationMachine",
+                                                         "name":  "Sprayer",
+                                                         "vin":  "1N04045RJC0000106",
+                                                         "GUID":  "75967f0e-96c6-83e4-6bec-d6b5c868720b",
+                                                         "erid":  "75967f0e-96c6-83e4-6bec-d6b5c868720b",
+                                                         "operators":  [
+                                                                           {
+                                                                               "@type":  "Operator",
+                                                                               "name":  ""
+                                                                           }
+                                                                       ]
+                                                     }
+                                                 ],
+                      "orgId":  9593400,
+                      "tasks":  [
+
+                                ],
+                      "id":  "fa05d132-67f2-4587-aa84-e91bc981edc5",
+                      "links":  [
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "field",
+                                        "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400/fields/781068d5-f9ff-452e-8901-a5df247d0424"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "organization",
+                                        "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "self",
+                                        "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "client",
+                                        "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400/clients/139b2e1b-3c74-4edd-9d63-4e37c2952a82"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "farm",
+                                        "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400/farms/fe57ae46-6093-45ce-b7b2-52e0bf177ee7"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "shapeFileAsync",
+                                        "uri":  "https://sandboxapi.deere.com/platform/fieldOps/fa05d132-67f2-4587-aa84-e91bc981edc5"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "fieldOperationWorkNotes",
+                                        "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/workNotes"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "applicationRateResult",
+                                        "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationRateResult"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "applicationRateTarget",
+                                        "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationRateTarget"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "elevationResult",
+                                        "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ElevationResult"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "fuelRateResult",
+                                        "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/FuelRateResult"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "applicationSpeedResult",
+                                        "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes/ApplicationSpeedResult"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "measurementTypes",
+                                        "uri":  "https://sandboxapi.deere.com/platform/fieldOperations/fa05d132-67f2-4587-aa84-e91bc981edc5/measurementTypes"
+                                    },
+                                    {
+                                        "@type":  "Link",
+                                        "rel":  "operators",
+                                        "uri":  "https://sandboxapi.deere.com/platform/organizations/9593400/operators?operatorGuids"
+                                    }
+                                ]
+                  }
+}
