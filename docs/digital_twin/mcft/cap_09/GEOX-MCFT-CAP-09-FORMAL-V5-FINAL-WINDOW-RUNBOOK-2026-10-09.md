@@ -38,7 +38,7 @@ PowerShell, from a clean GEOX repository:
 
 ```powershell
 $ErrorActionPreference = "Stop"
-$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$Utf8NoBom = New-Object System.Text.UTF8Encoding -ArgumentList $false
 
 foreach ($Tool in @("git","gh","node","pnpm","psql","docker")) {
   if ($null -eq (Get-Command $Tool -ErrorAction SilentlyContinue)) {
