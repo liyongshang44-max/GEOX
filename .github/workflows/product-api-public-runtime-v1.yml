@@ -14,6 +14,9 @@ on:
       - "docker/product-api.Dockerfile"
       - "docs/product_projection/GEOX-PRODUCT-API-PUBLIC-DEPLOYMENT-V1.md"
       - "scripts/governance_acceptance/ACCEPTANCE_PRODUCT_API_PUBLIC_RUNTIME_V1.cjs"
+      - "scripts/governance_acceptance/ACCEPTANCE_PRODUCT_FORMAL_V5_READONLY_ACL_V1.cjs"
+      - "scripts/product_acceptance/RUN_PRODUCT_FORMAL_V5_READONLY_ACL_PROVISIONING_V1.ts"
+      - "scripts/product_acceptance/VERIFY_PRODUCT_FORMAL_V5_READONLY_ACL_V1.ts"
       - ".github/workflows/product-api-public-runtime-v1.yml"
   workflow_dispatch:
 
