@@ -101,8 +101,8 @@ export async function runMcftCap09FormalV5TwinRuntimeProcessV1(input?:{
     throw new Error("MCFT_CAP09_FORMAL_V5_TWIN_DATABASE_PROOF_MISMATCH");
   }
 
-  const manifestPath=String(proof.manifest_path??"").trim();
-  if(!manifestPath||!fs.existsSync(manifestPath)){
+  const manifestPath=req(env,"GEOX_MCFT_CAP09_FORMAL_V5_MANIFEST_PATH");
+  if(!fs.existsSync(manifestPath)){
     throw new Error("MCFT_CAP09_FORMAL_V5_TWIN_MANIFEST_REQUIRED");
   }
   const manifest=json(
@@ -121,9 +121,11 @@ export async function runMcftCap09FormalV5TwinRuntimeProcessV1(input?:{
   if(digest(currentCropPath)!==proof.current_crop_authority_sha256){
     throw new Error("MCFT_CAP09_FORMAL_V5_TWIN_CURRENT_CROP_DIGEST_MISMATCH");
   }
-  if(String(proof.current_crop_authority_ref??"")!==String(
-    env.GEOX_MCFT_CAP09_FORMAL_V5_CURRENT_CROP_AUTHORITY_REF??proof.current_crop_authority_ref,
-  )){
+  const currentCropRef=req(
+    env,
+    "GEOX_MCFT_CAP09_FORMAL_V5_CURRENT_CROP_AUTHORITY_REF",
+  );
+  if(String(proof.current_crop_authority_ref??"")!==currentCropRef){
     throw new Error("MCFT_CAP09_FORMAL_V5_TWIN_CURRENT_CROP_REF_MISMATCH");
   }
   const currentCrop=json(
