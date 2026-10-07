@@ -101,7 +101,9 @@ DDL/DML and command SQL are rejected in-process.
 
 The builder performs no SQL-level cross-database join. It reads field identity from the identity pool and reads MCFT lineage/state through the Formal-v5 pool, then composes only by the already-governed tenant/project/group/field/season/zone keys and exact MCFT refs.
 
-CAP-07 snapshot composition independently executes `REPEATABLE READ READ ONLY` transactions against the MCFT read pool.
+Formal-v5 does not contain the CAP-07 visibility tables required by the complete S4 read adapter. Therefore the public Product runtime must not label a Formal-v5 read as `COMPLETE_EXACT_GRAPH` and must not instantiate the CAP-07 S4 adapter against Formal-v5. Instead, `PostgresFormalV5ProductCurrentRuntimeResolverV1` resolves only the exact active-lineage and posterior-state authority refs needed by the Product projection, validates INITIAL or LINEAGE_PROMOTION authority chains against canonical `facts`, and cross-checks the exact state pointer/hash/source fact before the builder reads `twin_state_history_projection_v1` by that exact ref.
+
+The Formal-v5 resolver executes its exact-ref resolution inside `REPEATABLE READ READ ONLY`. The shared/full GEOX server keeps the existing CAP-07 S4 path unchanged.
 
 These application-layer controls are defense in depth only. They do not replace the required database-layer read-only credential/endpoint.
 
