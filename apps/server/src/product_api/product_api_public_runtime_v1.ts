@@ -9,6 +9,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { Pool } from "pg";
 
 import { PostgresCustomerProductProjectionBuilderV1 } from "../product_projection/customer/customer_product_projection_builder_v1.js";
+import { PostgresFormalV5ProductCurrentRuntimeResolverV1 } from "../product_projection/customer/formal_v5_product_current_runtime_resolver_v1.js";
 import { registerProductV1Routes } from "../routes/product_v1.js";
 
 export const PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1 =
@@ -285,6 +286,7 @@ export function createProductApiPublicAppV1(
 
   const builder = new PostgresCustomerProductProjectionBuilderV1(pool, {
     mcftPool: formalPool,
+    runtimeResolver: new PostgresFormalV5ProductCurrentRuntimeResolverV1(formalPool),
   });
   registerProductV1Routes(app, pool, { builder });
 
