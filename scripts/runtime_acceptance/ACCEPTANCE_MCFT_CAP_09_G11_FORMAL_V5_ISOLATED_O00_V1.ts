@@ -285,7 +285,7 @@ async function main(){
       lease_owner:"g11-formal-v5-active",
       lease_duration_seconds:LEASE_SECONDS,
     });
-    assert.ok(result.status==="COMPLETED"||result.status==="DEGRADED",`G11_O00_NOT_TERMINAL_SUCCESS:${result.status}`);
+    assert.ok(result.status==="COMPLETED"||result.status==="DEGRADED",`G11_O00_NOT_TERMINAL_SUCCESS:${JSON.stringify(result)}`);
     if(result.status!=="COMPLETED"&&result.status!=="DEGRADED")throw new Error("G11_O00_TERMINAL_SUCCESS_REQUIRED");
     assert.equal(result.slot_id,"O00");
     assert.equal(result.logical_time,O00);
