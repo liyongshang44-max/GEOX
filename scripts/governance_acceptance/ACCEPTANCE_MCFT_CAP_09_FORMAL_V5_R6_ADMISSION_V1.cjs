@@ -15,6 +15,7 @@ const EXPECTED_CHANGED=[
   "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v5.ts",
   "apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_composition_v1.ts",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs",
   "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts",
@@ -78,6 +79,15 @@ for(const value of [
 ])marker(composition,value,"R6_ADMISSION_ACTIVE_COMPOSITION_REQUIRED");
 absent(composition,"materializeMcftCap09TwinCropContextV2","R6_ADMISSION_ACTIVE_V2_MATERIALIZER_FORBIDDEN");
 
+const am21=read("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs");
+for(const value of [
+  "R6_MANIFEST_PREDECESSOR_BLOB",
+  "R6_MANIFEST_SUCCESSOR_BLOB",
+  "AM21_R6_SUCCESSOR_EXACT_BOUNDARY_REQUIRED",
+  "r6_manifest_successor_mode:r6ManifestSuccessorMode",
+  "historical_manifest_freeze_relaxed:false",
+])marker(am21,value,"R6_ADMISSION_AM21_COMPATIBILITY_REQUIRED");
+
 const proof={
   schema_version:"geox_mcft_cap09_formal_v5_r6_admission_v1",
   status:"PASS",
@@ -91,6 +101,7 @@ const proof={
   persistent_tick_semantics_unchanged:true,
   formal_v5_manifest_path_preserved:true,
   formal_v5_active_composition_only_rebound_to_a18_v5:true,
+  amendment21_r6_manifest_successor_admission_governed:true,
   allowed_biological_authorities:[
     "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
     "R6_OR_LATER_MODEL_ESTIMATE",
