@@ -22,7 +22,8 @@ try {
   });
 
   check("ONLY_CANONICAL_PRODUCT_ROUTE_REGISTRATION", () => {
-    assert.match(runtime, /registerProductV1Routes\(app, pool\)/);
+    assert.match(runtime, /new PostgresCustomerProductProjectionBuilderV1\(pool,\s*\{\s*mcftPool:\s*formalPool/);
+    assert.match(runtime, /registerProductV1Routes\(app, pool, \{ builder \}\)/);
     for (const forbidden of [
       "registerCompatibilityModules",
       "registerAdminModule",
@@ -34,6 +35,8 @@ try {
 
   check("PRODUCT_SPECIFIC_DATABASE_CREDENTIAL_ONLY", () => {
     assert.match(runtime, /GEOX_PRODUCT_DATABASE_URL/);
+    assert.match(runtime, /GEOX_PRODUCT_FORMAL_V5_DATABASE_URL/);
+    assert.match(runtime, /PRODUCT_API_DUAL_DATABASES_REQUIRED/);
     assert.equal(/process\.env\.?DATABASE_URL/.test(runtime), false);
     for (const forbiddenRole of [
       "geox_runtime_v1",
@@ -93,6 +96,9 @@ try {
   check("HEALTH_AND_READINESS_SPLIT", () => {
     assert.match(runtime, /app\.get\("\/health"/);
     assert.match(runtime, /app\.get\("\/ready"/);
+    assert.match(runtime, /identity_database_connectivity/);
+    assert.match(runtime, /formal_database_connectivity/);
+    assert.match(runtime, /PRODUCT_DATABASE_NOT_READ_ONLY/);
     assert.match(runtime, /PRODUCT_DATABASE_NOT_READY/);
   });
 
@@ -102,6 +108,7 @@ try {
       "database schema",
       "database grants in this PR",
       "GEOX_PRODUCT_DATABASE_URL",
+      "GEOX_PRODUCT_FORMAL_V5_DATABASE_URL",
       "GEOX_PRODUCT_API_TOKENS_JSON",
       "GEOX_PRODUCT_ALLOWED_ORIGINS",
       "docker/product-api.Dockerfile",
