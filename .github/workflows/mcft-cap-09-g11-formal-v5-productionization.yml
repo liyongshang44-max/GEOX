@@ -82,10 +82,10 @@ jobs:
       - name: Prove G11 dist entrypoints exist
         run: |
           set -euo pipefail
-          test -f apps/server/dist/runtime/mcft_cap09_formal_v5_twin_runtime.js
-          test -f apps/server/dist/runtime/mcft_cap09_formal_v5_forcing_runtime.js
-          grep -Fq 'runMcftCap09FormalV5TwinRuntimeProcessV1' apps/server/dist/runtime/mcft_cap09_formal_v5_twin_runtime.js
-          grep -Fq 'runMcftCap09FormalV5ForcingRuntimeProcessV1' apps/server/dist/runtime/mcft_cap09_formal_v5_forcing_runtime.js
+          test -f apps/server/dist/apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_process_v1.js
+          test -f apps/server/dist/apps/server/src/external_evidence/mcft_cap09_formal_v5_forcing_runtime_process_v1.js
+          grep -Fq 'runMcftCap09FormalV5TwinRuntimeProcessV1' apps/server/dist/apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_process_v1.js
+          grep -Fq 'runMcftCap09FormalV5ForcingRuntimeProcessV1' apps/server/dist/apps/server/src/external_evidence/mcft_cap09_formal_v5_forcing_runtime_process_v1.js
 
       - name: Prove isolated production-equivalent A0 to O00 V5 path
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_FORMAL_V5_ISOLATED_O00_V1.ts
