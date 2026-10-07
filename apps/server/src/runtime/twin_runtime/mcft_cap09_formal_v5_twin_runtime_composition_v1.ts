@@ -230,7 +230,7 @@ export function composeMcftCap09FormalV5TwinRuntimeV1(
         result.status === "NOT_READY_PRECLAIM"
         && result.reason === "NEXT_TICK_FORCING_NOT_VIABLE"
       ) {
-        if (!/^O(?:0\\d|1\\d|2[0-3])$/.test(result.slot_id)) {
+        if (!/^O(?:0\d|1\d|2[0-3])$/.test(result.slot_id)) {
           throw new Error("FORMAL_V5_TWIN_HOST_SLOT_ID_INVALID:" + result.slot_id);
         }
         return {
