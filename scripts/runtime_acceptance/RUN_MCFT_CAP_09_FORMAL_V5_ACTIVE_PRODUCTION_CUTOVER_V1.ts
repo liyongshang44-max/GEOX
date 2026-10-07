@@ -8,6 +8,9 @@ import { execFileSync } from "node:child_process";
 import { Pool } from "pg";
 
 import {
+  MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
+} from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
+import {
   MCFT_CAP09_FORMAL_V5_ACTIVE_ACTIVATION_AUTHORITY_ID_V1,
   validateMcftCap09FormalV5ActiveActivationAuthorityV1,
 } from "../../apps/server/src/runtime/mcft_cap09_formal_v5_active_activation_authority_v1.js";
@@ -121,7 +124,7 @@ async function main():Promise<void>{
   const dbUrl=reqEnv("GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL");
   const pool=new Pool({connectionString:dbUrl,max:1,application_name:"mcft-cap09-formal-v5-active-cutover"});
   try{
-    const before=await readLiveTwinLease(pool,arm.scope);
+    const before=await readLiveTwinLease(pool,MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1);
     if(before.length!==1)throw new Error("FORMAL_V5_ACTIVE_CUTOVER_EXACT_ONE_PREFORMAL_TWIN_OWNER_REQUIRED");
     const prior=before[0];
     const previousFence=BigInt(prior.fencing_token);
@@ -134,7 +137,7 @@ async function main():Promise<void>{
       subject_sha:arm.subject_sha,
       authority_continuity_head_sha:head,
       epoch_id:arm.epoch_id,
-      scope:arm.scope,
+      scope:{...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1},
       a0:arm.a0,
       o00:arm.o00,
       o23:arm.o23,
@@ -171,10 +174,10 @@ async function main():Promise<void>{
     };
 
     docker(["compose","-f",PREFORMAL_COMPOSE,"stop",TWIN_SERVICE],childEnv);
-    await waitNoLiveTwinLease(pool,arm.scope,60_000);
+    await waitNoLiveTwinLease(pool,MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,60_000);
 
     docker(["compose","-f",ACTIVE_COMPOSE,"up","-d","--no-build",FORCING_SERVICE,TWIN_SERVICE],childEnv);
-    const after=await waitNewTwinLease(pool,arm.scope,previousFence,60_000);
+    const after=await waitNewTwinLease(pool,MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,previousFence,60_000);
 
     const twinId=docker(["compose","-f",ACTIVE_COMPOSE,"ps","-q",TWIN_SERVICE],childEnv);
     const forcingId=docker(["compose","-f",ACTIVE_COMPOSE,"ps","-q",FORCING_SERVICE],childEnv);
