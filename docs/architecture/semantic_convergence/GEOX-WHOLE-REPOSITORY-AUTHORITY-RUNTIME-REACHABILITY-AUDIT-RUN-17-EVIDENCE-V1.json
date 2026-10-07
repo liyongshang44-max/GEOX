@@ -1,0 +1,83 @@
+{
+  "schema_version": "geox_whole_repository_authority_runtime_reachability_audit_run_evidence_v1",
+  "audit_method": "GEOX-WHOLE-REPOSITORY-AUTHORITY-RUNTIME-REACHABILITY-AUDIT-V2",
+  "audit_subject_sha": "1f26aaa92538199fb5f4ae31d6845d4afb4a260a",
+  "baseline_protected_main": "0c71e55843c659cce402a1457d481e412cdc203c",
+  "github_workflow_run_id": 35582857440,
+  "github_workflow_job_id": 106279436944,
+  "github_artifact": {
+    "id": 10631041113,
+    "name": "whole-repo-authority-runtime-reachability-v2-1f26aaa92538199fb5f4ae31d6845d4afb4a260a",
+    "digest": "sha256:3cd5a079ffd5cda93afb8c8bba70706f80bc94237cc81ef7c793dc4508385f5e",
+    "size_in_bytes": 66928,
+    "expired": false
+  },
+  "method_acceptance": "PASS",
+  "audit_execution": "PASS",
+  "audit_closure": "FAIL",
+  "counts": {
+    "execution_roots": 795,
+    "bline_surfaces": 306,
+    "mcft_capabilities": 10,
+    "wired_and_proven": 299,
+    "intentionally_disconnected": 13,
+    "semantically_incompatible": 1,
+    "unwired_defect": 3
+  },
+  "predecessor_whole_repo_audit": "PASS",
+  "mandatory_mcft_reconciliation": [
+    {
+      "id": "M-01",
+      "disposition": "UNWIRED_DEFECT",
+      "subject": "CAP05_FORECAST_RESIDUAL_EXECUTION_OWNER_AND_RUNTIME_REACHABILITY"
+    },
+    {
+      "id": "M-02",
+      "disposition": "SEMANTICALLY_INCOMPATIBLE",
+      "subject": "CAP09_100MM_PRODUCER_VS_CAP05_RESIDUAL_CONSUMER_SEMANTIC_COMPATIBILITY"
+    },
+    {
+      "id": "M-03",
+      "disposition": "UNWIRED_DEFECT",
+      "subject": "REAL_CLOCK_REHEARSAL_V1_VS_PRODUCTION_V2_EXACT_PATH_EQUIVALENCE"
+    },
+    {
+      "id": "M-04",
+      "disposition": "WIRED_AND_PROVEN",
+      "subject": "CAP06_CONTROLLED_CALIBRATION_SHADOW_EXECUTION_OWNERSHIP"
+    },
+    {
+      "id": "M-05",
+      "disposition": "WIRED_AND_PROVEN",
+      "subject": "CAP07_FIELD_TWIN_READ_SURFACE_RUNTIME_REACHABILITY"
+    },
+    {
+      "id": "M-06",
+      "disposition": "WIRED_AND_PROVEN",
+      "subject": "CAP08_REPLAY_DECISION_ACTION_EXECUTION_BOUNDARY"
+    },
+    {
+      "id": "M-07",
+      "disposition": "WIRED_AND_PROVEN",
+      "subject": "CAP09_PRODUCTION_ROOT_EXACTNESS"
+    }
+  ],
+  "closure_blockers": [
+    "BLINE:RES-110:config/judge/ruleset_v1.json:UNWIRED_DEFECT",
+    "M-01:CAP05_FORECAST_RESIDUAL_EXECUTION_OWNER_AND_RUNTIME_REACHABILITY:UNWIRED_DEFECT",
+    "M-03:REAL_CLOCK_REHEARSAL_V1_VS_PRODUCTION_V2_EXACT_PATH_EQUIVALENCE:UNWIRED_DEFECT",
+    "M-02:CAP09_100MM_PRODUCER_VS_CAP05_RESIDUAL_CONSUMER_SEMANTIC_COMPATIBILITY:SEMANTICALLY_INCOMPATIBLE"
+  ],
+  "non_effects": {
+    "product_semantic_delta": 0,
+    "runtime_wiring_delta": 0,
+    "rehearsal_resource_use": false,
+    "rehearsal_database_mutation": false,
+    "rehearsal_restart": false,
+    "formal_store_mutation": false,
+    "formal_rearm": false,
+    "protected_main_advanced": false
+  },
+  "repair_authorized_by_this_record": false,
+  "interpretation": "Audit execution itself succeeded. Closure is intentionally fail-closed because four classified blockers remain. Repairs belong to independent Draft repair branches/PRs."
+}

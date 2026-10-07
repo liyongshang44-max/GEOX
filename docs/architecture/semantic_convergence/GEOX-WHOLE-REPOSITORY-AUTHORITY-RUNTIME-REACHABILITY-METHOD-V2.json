@@ -1,0 +1,268 @@
+{
+  "schema_version": "geox_whole_repository_authority_runtime_reachability_audit_method_v2",
+  "status": "METHOD_ACTIVE_AUDIT_EXECUTED_CLOSURE_PENDING",
+  "baseline_protected_main": "0c71e55843c659cce402a1457d481e412cdc203c",
+  "purpose": "Extend the existing whole-repository residual-authority audit with capability-level runtime reachability, producer-consumer semantic compatibility, and qualification-production equivalence without changing product semantics.",
+  "predecessor_mechanisms": [
+    "GEOX-BLINE-RESIDUAL-AUTHORITY-AUDIT-V1",
+    "GEOX-BLINE-RESIDUAL-AUTHORITY-INVENTORY-V1",
+    "BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY",
+    "MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH",
+    "GEOX_MCFT_VERTICAL_CAPABILITY_LINE_MATRIX",
+    "EXACT_HEAD_SUCCESSOR_POSTMERGE_QUALIFICATION_GATES"
+  ],
+  "scan_scope": {
+    "model": "WHOLE_REPOSITORY",
+    "roots": [
+      "apps/server/src",
+      "apps/server/db/migrations",
+      "apps/server/scripts",
+      "apps/executor/src",
+      "apps/judge/src",
+      "apps/telemetry-ingest/src",
+      "apps/web/src",
+      "packages",
+      "scripts",
+      ".github/workflows",
+      "docker",
+      "docker-compose*.yml",
+      "package.json",
+      "apps/*/package.json",
+      "docs/architecture",
+      "docs/digital_twin"
+    ],
+    "mcft_mutation_allowed": false,
+    "mcft_audit_discovery_allowed": true,
+    "business_behavior_change": false
+  },
+  "execution_root_classes": [
+    "PRODUCTION_ONLINE",
+    "PRODUCTION_BATCH",
+    "HTTP_SERVER",
+    "BACKGROUND_WORKER",
+    "CONTROLLED_REPLAY",
+    "QUALIFICATION",
+    "OPERATOR_TRIGGERED",
+    "DATABASE_BOOTSTRAP",
+    "GOVERNANCE_ONLY",
+    "HISTORICAL_INACTIVE"
+  ],
+  "required_capability_dimensions": [
+    "capability_id",
+    "lifecycle_authority_ref",
+    "current_status",
+    "execution_class",
+    "expected_execution_owner",
+    "expected_execution_roots",
+    "canonical_inputs",
+    "canonical_outputs",
+    "transaction_families",
+    "static_reachability",
+    "runtime_reachability_proof",
+    "producer_contracts",
+    "consumer_contracts",
+    "semantic_compatibility",
+    "qualification_path",
+    "production_path",
+    "qualification_production_equivalence",
+    "intentional_disconnect_authority",
+    "final_disposition"
+  ],
+  "lifecycle_authority_rule": {
+    "aggregate_matrix_is_not_automatically_current": true,
+    "current_lifecycle_artifact_required": true,
+    "disagreement_failure_code": "CAPABILITY_STATUS_AUTHORITY_CONFLICT"
+  },
+  "static_reachability_edges": [
+    "ESM_IMPORT",
+    "CJS_REQUIRE",
+    "DYNAMIC_IMPORT_LITERAL",
+    "MODULE_REGISTRATION",
+    "ROUTE_REGISTRATION",
+    "PACKAGE_SCRIPT",
+    "DOCKER_COMMAND",
+    "COMPOSE_COMMAND",
+    "GITHUB_WORKFLOW_COMMAND",
+    "SPAWN",
+    "EXEC",
+    "FORK",
+    "SHELL",
+    "GENERATED_DIST_ENTRY"
+  ],
+  "semantic_compatibility_dimensions": [
+    "canonical_object_type",
+    "schema_version",
+    "semantic_family",
+    "unit",
+    "measurement_depth",
+    "observation_operator_id",
+    "spatial_support",
+    "field_equivalence",
+    "root_zone_equivalence",
+    "scope_identity",
+    "logical_time",
+    "as_of",
+    "observed_at",
+    "available_at_or_available_to_runtime_at",
+    "runtime_config_ref_hash",
+    "authority_class",
+    "lineage_ref_hash",
+    "transaction_preconditions"
+  ],
+  "terminal_dispositions": [
+    "WIRED_AND_PROVEN",
+    "INTENTIONALLY_DISCONNECTED",
+    "SEMANTICALLY_INCOMPATIBLE",
+    "UNWIRED_DEFECT"
+  ],
+  "unclassified_discovery_is_failure": true,
+  "unclassified_failure_code": "UNADJUDICATED_DISCOVERY",
+  "required_outputs": [
+    "all_execution_roots",
+    "all_complete_or_effective_capabilities",
+    "expected_execution_owner_per_capability",
+    "static_reachability",
+    "runtime_reachability_proof",
+    "producer_consumer_semantic_compatibility",
+    "orphan_capability_list",
+    "dead_wiring_list",
+    "qualification_production_divergence_list",
+    "explicit_intentional_disconnected_list",
+    "execution_root_ownership_matrix",
+    "authority_capable_source_reverse_reachability",
+    "unresolved_active_imports",
+    "unparsed_active_root_commands",
+    "semantic_identity_family_conflicts",
+    "fresh_exact_head_evidence_binding"
+  ],
+  "mandatory_mcft_reconciliation": [
+    {
+      "id": "M-01",
+      "subject": "CAP05_FORECAST_RESIDUAL_EXECUTION_OWNER_AND_RUNTIME_REACHABILITY",
+      "repair_authorized": false
+    },
+    {
+      "id": "M-02",
+      "subject": "CAP09_100MM_PRODUCER_VS_CAP05_RESIDUAL_CONSUMER_SEMANTIC_COMPATIBILITY",
+      "repair_authorized": false
+    },
+    {
+      "id": "M-03",
+      "subject": "REAL_CLOCK_REHEARSAL_V1_VS_PRODUCTION_V2_EXACT_PATH_EQUIVALENCE",
+      "repair_authorized": false
+    },
+    {
+      "id": "M-04",
+      "subject": "CAP06_CONTROLLED_CALIBRATION_SHADOW_EXECUTION_OWNERSHIP",
+      "repair_authorized": false
+    },
+    {
+      "id": "M-05",
+      "subject": "CAP07_FIELD_TWIN_READ_SURFACE_RUNTIME_REACHABILITY",
+      "repair_authorized": false
+    },
+    {
+      "id": "M-06",
+      "subject": "CAP08_REPLAY_DECISION_ACTION_EXECUTION_BOUNDARY",
+      "repair_authorized": false
+    },
+    {
+      "id": "M-07",
+      "subject": "CAP09_PRODUCTION_ROOT_EXACTNESS",
+      "repair_authorized": false
+    }
+  ],
+  "fail_closed_codes": [
+    "UNREGISTERED_AUTHORITY_CAPABLE_PATH",
+    "UNREGISTERED_EXECUTION_ROOT",
+    "UNREGISTERED_COMPLETE_CAPABILITY",
+    "CAPABILITY_STATUS_AUTHORITY_CONFLICT",
+    "EXPECTED_OWNER_MISSING",
+    "EXPECTED_ROOT_MISSING",
+    "UNADJUDICATED_DISCOVERY",
+    "SEMANTIC_EDGE_UNCHECKED",
+    "QUALIFICATION_PRODUCTION_EQUIVALENCE_UNCHECKED",
+    "RUNTIME_PROOF_REQUIRED_BUT_MISSING",
+    "UNOWNED_EXECUTION_ROOT",
+    "ORPHAN_AUTHORITY_CAPABLE_SOURCE",
+    "STALE_AUDIT_EVIDENCE_SUBJECT",
+    "UNRESOLVED_ACTIVE_IMPORT",
+    "UNPARSED_ACTIVE_ROOT_COMMAND"
+  ],
+  "non_effects": {
+    "product_semantics_changed": false,
+    "runtime_wiring_repair_authorized": false,
+    "observation_operator_change_authorized": false,
+    "cap05_contract_expansion_authorized": false,
+    "cap06_activation_authorized": false,
+    "model_activation_authorized": false,
+    "production_database_mutation_authorized": false,
+    "production_raw_namespace_mutation_authorized": false,
+    "formal_v5_arm_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "stage_1b_closure_authorized": false,
+    "mcft_cap09_completion_authorized": false,
+    "bline_reopen_authorized": false,
+    "adr_change_authorized": false
+  },
+  "execution_safety_boundary": {
+    "allowed": [
+      "CONTINUE_PR_3617_AUDIT_CLOSURE",
+      "INDEPENDENT_REPAIR_BRANCH",
+      "DRAFT_REPAIR_PR",
+      "GITHUB_HOSTED_ISOLATED_CI",
+      "STATIC_GOVERNANCE_ACCEPTANCE",
+      "ISOLATED_POSTGRESQL_ACCEPTANCE",
+      "CONTRACT_DESIGN_AND_CODE_IMPLEMENTATION"
+    ],
+    "forbidden": [
+      "MERGE_PR_3617",
+      "MERGE_REPAIR_PR",
+      "ADVANCE_PROTECTED_MAIN",
+      "LOCAL_WORKTREE_SWITCH_RESET_PULL_TO_REPAIR_BRANCH",
+      "REBUILD_CURRENT_REHEARSAL_IMAGE",
+      "RECREATE_CURRENT_REHEARSAL_PROJECT",
+      "MUTATE_REHEARSAL_POSTGRESQL",
+      "CLEANUP_REHEARSAL",
+      "RESTART_REHEARSAL_UNLESS_SELF_FAILURE",
+      "MUTATE_FORMAL_STORE",
+      "REARM_FORMAL_STORE"
+    ],
+    "isolated_ci_must_not_use_rehearsal_resources": true,
+    "isolated_postgresql_must_be_disposable": true
+  },
+  "completeness_invariants": {
+    "invariant_1_execution_root_ownership": {
+      "rule": "EVERY_DISCOVERED_EXECUTION_ROOT_MUST_MAP_TO_AT_LEAST_ONE_REGISTERED_CAPABILITY_OR_EXPLICIT_NON_PRODUCT_EXECUTION_CLASS",
+      "failure_code": "UNOWNED_EXECUTION_ROOT"
+    },
+    "invariant_2_effective_capability_reachability": {
+      "rule": "EVERY_COMPLETE_OR_EFFECTIVE_CAPABILITY_MUST_HAVE_EXPECTED_OWNER_EXPECTED_ROOT_STATIC_REACHABILITY_AND_REQUIRED_RUNTIME_PROOF",
+      "failure_codes": [
+        "EXPECTED_OWNER_MISSING",
+        "EXPECTED_ROOT_MISSING",
+        "RUNTIME_PROOF_REQUIRED_BUT_MISSING"
+      ]
+    },
+    "invariant_3_semantic_edge_adjudication": {
+      "rule": "EVERY_DECLARED_OR_DISCOVERED_ACTIVE_PRODUCER_CONSUMER_SEMANTIC_EDGE_MUST_BE ADJUDICATED",
+      "failure_code": "SEMANTIC_EDGE_UNCHECKED"
+    },
+    "invariant_4_reverse_orphan_discovery": {
+      "rule": "EVERY_AUTHORITY_OR_EXECUTION_CAPABLE_SOURCE_MUST_BE_REACHABLE_FROM_A_CURRENT_EXECUTION_ROOT_OR_EXPLICITLY_HISTORICAL_QUALIFICATION_ONLY_OR_INTENTIONALLY_DISCONNECTED",
+      "failure_code": "ORPHAN_AUTHORITY_CAPABLE_SOURCE"
+    },
+    "invariant_5_exact_head_freshness": {
+      "rule": "FINAL_AUDIT_EVIDENCE_SUBJECT_SHA_MUST_EQUAL_CURRENT_AUDIT_BRANCH_HEAD",
+      "failure_code": "STALE_AUDIT_EVIDENCE_SUBJECT"
+    },
+    "invariant_6_graph_parse_completeness": {
+      "rule": "UNRESOLVED_LOCAL_IMPORT_OR_UNPARSED_ACTIVE_ROOT_COMMAND_MAY_NOT_BE_SILENTLY_IGNORED",
+      "failure_codes": [
+        "UNRESOLVED_ACTIVE_IMPORT",
+        "UNPARSED_ACTIVE_ROOT_COMMAND"
+      ]
+    }
+  }
+}
