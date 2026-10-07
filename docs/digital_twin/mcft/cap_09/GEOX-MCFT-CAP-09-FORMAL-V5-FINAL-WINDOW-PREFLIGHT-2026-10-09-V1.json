@@ -1,0 +1,227 @@
+{
+  "schema_version": "geox_mcft_cap09_formal_v5_final_window_preflight_v1",
+  "checklist_id": "GEOX-MCFT-CAP-09-FORMAL-V5-FINAL-WINDOW-PREFLIGHT-2026-10-09",
+  "status": "PREPARED_WITH_FIRST_RED",
+  "effective": false,
+  "design_base_protected_main": "0e4cd036fdbebfe8118d6b7c1978572859d5a652",
+  "target_epoch": {
+    "fresh_stage_authority_boundary": "2026-10-09T04:00:00.000Z",
+    "a0": "2026-10-09T05:00:00.000Z",
+    "o00": "2026-10-09T06:00:00.000Z",
+    "o23": "2026-10-10T05:00:00.000Z"
+  },
+  "current_read_only_observations": {
+    "protected_main": {
+      "expected": "0e4cd036fdbebfe8118d6b7c1978572859d5a652",
+      "observed": "0e4cd036fdbebfe8118d6b7c1978572859d5a652",
+      "status": "PASS"
+    },
+    "pr_3658": {
+      "expected": "DRAFT_OPEN_UNMERGED",
+      "observed": "DRAFT_OPEN_UNMERGED",
+      "head_sha": "63abeaa591708d0ddc6c54b7c2c6b60f6ae5c0b7",
+      "status": "PASS"
+    },
+    "pr_3659": {
+      "expected": "DRAFT_OPEN_UNMERGED",
+      "observed": "DRAFT_OPEN_UNMERGED",
+      "head_sha": "fbcd75a621fd0bc2d9bf2863d5cb0c1d94748379",
+      "status": "PASS"
+    },
+    "handoff_pr_3298": {
+      "expected": "DRAFT_OPEN_UNMERGED",
+      "observed": "DRAFT_OPEN_UNMERGED",
+      "head_sha": "cdfee22878b01dcd710cecbb624baeaf1a942413",
+      "status": "PASS"
+    },
+    "rolling_candidate_rehearsal": {
+      "run_id": 37576322963,
+      "head_sha": "0e4cd036fdbebfe8118d6b7c1978572859d5a652",
+      "event": "workflow_dispatch",
+      "conclusion": "SUCCESS",
+      "status": "PASS"
+    },
+    "formal_store_last_proven": {
+      "public_base_tables": 29,
+      "public_routines": 2,
+      "total_rows": 0,
+      "status": "PASS_FROM_CURRENT_HANDOFF_MACHINE_EVIDENCE"
+    },
+    "live_owner_last_proven": {
+      "evidence_exact_one": true,
+      "twin_exact_one": true,
+      "status": "PASS_FROM_CURRENT_HANDOFF_MACHINE_EVIDENCE"
+    }
+  },
+  "ordered_gates": [
+    {
+      "id": "G00",
+      "name": "PROTECTED_MAIN_STILL_ARM_SUBJECT",
+      "mode": "READ_ONLY",
+      "required": "PASS",
+      "current": "PASS"
+    },
+    {
+      "id": "G01",
+      "name": "PR3658_DRAFT_OPEN_UNMERGED",
+      "mode": "READ_ONLY",
+      "required": "PASS",
+      "current": "PASS"
+    },
+    {
+      "id": "G02",
+      "name": "PR3659_DRAFT_OPEN_UNMERGED",
+      "mode": "READ_ONLY",
+      "required": "PASS",
+      "current": "PASS"
+    },
+    {
+      "id": "G03",
+      "name": "FRESH_04Z_ROLLING_CANDIDATE",
+      "mode": "FUTURE_QUALIFICATION",
+      "required": "PASS",
+      "current": "PENDING_REAL_CLOCK"
+    },
+    {
+      "id": "G04",
+      "name": "EFFECTIVE_AUTHORITY_MATERIALIZATION",
+      "mode": "FUTURE_AUTHORITY_ONLY_BRANCH",
+      "required": "PASS",
+      "current": "PENDING_G03"
+    },
+    {
+      "id": "G05",
+      "name": "REGISTRY_EXACT_SINGLE_APPEND",
+      "mode": "FUTURE_AUTHORITY_ONLY_BRANCH",
+      "required": "PASS",
+      "current": "PENDING_G04"
+    },
+    {
+      "id": "G06",
+      "name": "AUTHORITY_ONLY_PROTECTED_MAIN_ADOPTION",
+      "mode": "FUTURE_GOVERNED_MERGE",
+      "required": "PASS",
+      "current": "PENDING_G05"
+    },
+    {
+      "id": "G07",
+      "name": "POST_ARM_FIRST_PARENT_CONTINUITY",
+      "mode": "READ_ONLY",
+      "required": "PASS",
+      "current": "PENDING_G06"
+    },
+    {
+      "id": "G08",
+      "name": "FORMAL_DB_29_TABLE_2_ROUTINE_ZERO_STATE",
+      "mode": "READ_ONLY",
+      "required": "PASS",
+      "current": "LAST_PROVEN_PASS_RECHECK_REQUIRED"
+    },
+    {
+      "id": "G09",
+      "name": "EXACT_ONE_LIVE_OWNER_PER_RUNTIME_ROLE",
+      "mode": "READ_ONLY",
+      "required": "PASS",
+      "current": "LAST_PROVEN_PASS_RECHECK_REQUIRED"
+    },
+    {
+      "id": "G10",
+      "name": "PRODUCTION_TARGET_SCOPE_ACTIVE_LINEAGE_AND_LATEST_STATE_ZERO",
+      "mode": "READ_ONLY",
+      "required": "PASS",
+      "current": "LAST_PROVEN_PASS_RECHECK_REQUIRED"
+    },
+    {
+      "id": "G11",
+      "name": "FORMAL_V5_ACTIVE_PRODUCTION_PROCESS_ROUTE",
+      "mode": "STATIC_EXACT_MAIN_AUDIT",
+      "required": "PASS",
+      "current": "FIRST_RED_NOT_PROVEN",
+      "evidence": [
+        "docker-compose.mcft-cap09-production.yml -> mcft_cap09_twin_runtime_v2.js",
+        "mcft_cap09_twin_runtime_process_v2.ts -> ExternalFormalV4Amendment19RunnerV2",
+        "Formal-v5 activation seam frontier = FORMAL_V5_ACTIVATION_SUCCESSOR_NOT_YET_PRODUCTIZED",
+        "required successor = THIN_V5_STAGE_AWARE_RUNNER_AND_DEDICATED_PRODUCTION_PROCESS_COMPOSITION",
+        "ExternalFormalV5Amendment19RunnerV2 exists only as runner/acceptance surface; no effectful production binding found",
+        "mcft_cap09_v13_forcing_production_process_v1.ts factory has no discovered production invocation"
+      ],
+      "consequence": "A0_AND_O00_HOLD"
+    },
+    {
+      "id": "G12",
+      "name": "A0_PRODUCTION_REPLAY_PROMOTION",
+      "mode": "EFFECTFUL_ONE_SHOT",
+      "required": "PASS",
+      "current": "HOLD_G11"
+    },
+    {
+      "id": "G13",
+      "name": "A0_BOOTSTRAP",
+      "mode": "EFFECTFUL_ONE_SHOT",
+      "required": "PASS",
+      "current": "HOLD_G11"
+    },
+    {
+      "id": "G14",
+      "name": "V13_FORCING_PROCESS_ACTIVE_NON_GITHUB",
+      "mode": "EFFECTFUL_PRODUCTION_RUNTIME",
+      "required": "PASS",
+      "current": "HOLD_G11"
+    },
+    {
+      "id": "G15",
+      "name": "TWIN_FORMAL_V5_ACTIVE_CUTOVER_NEW_FENCE",
+      "mode": "EFFECTFUL_PRODUCTION_RUNTIME",
+      "required": "PASS",
+      "current": "HOLD_G11"
+    },
+    {
+      "id": "G16",
+      "name": "O00_O23_REAL_UTC_24T",
+      "mode": "EFFECTFUL_PRODUCTION_RUNTIME",
+      "required": "PASS",
+      "current": "HOLD_G11"
+    },
+    {
+      "id": "G17",
+      "name": "AUTOMATIC_FINAL_READBACK",
+      "mode": "READ_ONLY_AFTER_RUN",
+      "required": "PASS",
+      "current": "PENDING_G16"
+    },
+    {
+      "id": "G18",
+      "name": "FINAL_READ_ONLY_COMPLETION_ADJUDICATION",
+      "mode": "READ_ONLY_GOVERNANCE",
+      "required": "PASS",
+      "current": "PENDING_G17"
+    },
+    {
+      "id": "G19",
+      "name": "CAP09_CLOSURE",
+      "mode": "GOVERNED_CLOSURE",
+      "required": "PASS",
+      "current": "PENDING_G18"
+    }
+  ],
+  "hard_stops": [
+    "ANY_UNRELATED_PROTECTED_MAIN_CHANGE_AFTER_ARM",
+    "CANDIDATE_NOT_EXACT_2026_10_09_04Z",
+    "AUTHORITY_VALIDITY_DOES_NOT_COVER_O23",
+    "REGISTRY_HISTORY_REWRITE_OR_MULTI_APPEND",
+    "FORMAL_DB_NOT_EXACT_29_TABLE_2_ROUTINE_ZERO_STATE_PRE_A0",
+    "NOT_EXACT_ONE_LIVE_OWNER_PER_RUNTIME_ROLE",
+    "FORMAL_V5_ACTIVE_PRODUCTION_ROUTE_NOT_MACHINE_PROVEN",
+    "A0_PARTIAL_MUTATION_FAILURE",
+    "O00_WINDOW_MISSED"
+  ],
+  "preparation_non_effects": {
+    "merge_performed": false,
+    "deploy_performed": false,
+    "runtime_changed": false,
+    "database_schema_changed": false,
+    "database_rows_changed": false,
+    "a0_executed": false,
+    "o00_started": false
+  }
+}
