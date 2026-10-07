@@ -12,9 +12,6 @@ import { setTimeout as sleep } from "node:timers/promises";
 import budgetAuthorityJson from "../../../../docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json" with { type: "json" };
 
 import {
-  loadFormalDurableRawStoreBindingV1,
-} from "./formal_durable_raw_store_binding_v1.js";
-import {
   createMcftCap09V13ForcingProductionProcessV1,
 } from "./mcft_cap09_v13_forcing_production_process_v1.js";
 import type {
@@ -36,7 +33,6 @@ export const MCFT_CAP09_FORMAL_V5_FORCING_RUNTIME_PROCESS_CONTRACT_V1 = {
   factory: "createMcftCap09V13ForcingProductionProcessV1",
   controller: "ExternalFormalForcingAutonomousControllerServiceV1",
   timing_budget: "FROZEN_FORMAL_FORCING_ACQUISITION_BUDGET_AUTHORITY_V1",
-  raw_store_binding: "MCFT_CAP09_FORMAL_DURABLE_RAW_STORE_BINDING_V1",
   activation_authority_required: true,
   auto_start_without_activation_authority: false,
   provider_semantics_rewritten: false,
@@ -102,7 +98,18 @@ export async function runMcftCap09FormalV5ForcingRuntimeProcessV1(
     throw new Error("FORMAL_V5_FORCING_FROZEN_BUDGET_REQUIRED");
   }
 
-  const formalRaw = loadFormalDurableRawStoreBindingV1(process.env);
+  const databaseUrl = req(
+    env,
+    "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL",
+    "FORMAL_V5_FORCING_DATABASE_URL_REQUIRED",
+  );
+  const databaseName = new URL(databaseUrl).pathname.replace(/^\//, "");
+  if (databaseName !== "geox_mcft_cap09_s6_formal_t4r1_24h_v5") {
+    throw new Error("FORMAL_V5_FORCING_FORMAL_DATABASE_REQUIRED:" + databaseName);
+  }
+  if (req(env,"GEOX_MCFT_CAP09_EVIDENCE_S3_BUCKET","FORMAL_V5_FORCING_RAW_BUCKET_REQUIRED") !== "geox-mcft-cap09-formal-raw-v1") {
+    throw new Error("FORMAL_V5_FORCING_FORMAL_RAW_BUCKET_REQUIRED");
+  }
   const hostname = String(env.HOSTNAME ?? os.hostname()).trim();
   if (!hostname) throw new Error("FORMAL_V5_FORCING_HOSTNAME_REQUIRED");
 
@@ -115,24 +122,7 @@ export async function runMcftCap09FormalV5ForcingRuntimeProcessV1(
       last_required_base: addHours(activation.o23, -1),
       qualified_budget: budgetDocument.qualified_budget,
     },
-    runtime_credentials: {
-      database_url: req(
-        env,
-        "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL",
-        "FORMAL_V5_FORCING_DATABASE_URL_REQUIRED",
-      ),
-      s3_endpoint: formalRaw.adapter_config.endpoint,
-      s3_bucket: formalRaw.adapter_config.bucket,
-      s3_region: formalRaw.adapter_config.region,
-      s3_access_key_id: formalRaw.adapter_config.access_key_id,
-      s3_secret_access_key: formalRaw.adapter_config.secret_access_key,
-      s3_allow_insecure_http_for_test: false,
-      controller_owner: "formal-v5-forcing-controller#instance:" + hostname,
-      producer_owner: "formal-v5-forcing-producer#instance:" + hostname,
-      controller_lease_duration_seconds: 300,
-      producer_lease_duration_seconds: 300,
-      heartbeat_interval_ms: 30_000,
-    },
+    env,
   });
 
   const stop = createMcftCap09ProcessStopV1();
