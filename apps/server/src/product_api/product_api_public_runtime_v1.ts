@@ -110,13 +110,16 @@ function queryTextV1(value: unknown): string {
   return "";
 }
 
-function assertTopLevelReadQueryV1(sql: string): void {
-  const normalized = sql
+function normalizedSqlV1(sql: string): string {
+  return sql
     .replace(/\/\*[\s\S]*?\*\//g, " ")
     .replace(/--[^\r\n]*/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
 
+function assertTopLevelReadQueryV1(sql: string): void {
+  const normalized = normalizedSqlV1(sql);
   if (!normalized) throw new Error("PRODUCT_API_SQL_EMPTY");
   if (SQL_WRITE_OR_DDL_V1.test(normalized)) {
     throw new Error("PRODUCT_API_SQL_WRITE_FORBIDDEN");
@@ -124,6 +127,18 @@ function assertTopLevelReadQueryV1(sql: string): void {
   if (!/^(SELECT|WITH|SHOW)\b/i.test(normalized)) {
     throw new Error("PRODUCT_API_SQL_NON_READ_STATEMENT_FORBIDDEN");
   }
+}
+
+function assertConnectedClientReadQueryV1(sql: string): void {
+  const normalized = normalizedSqlV1(sql);
+  if (!normalized) throw new Error("PRODUCT_API_SQL_EMPTY");
+  if (SQL_WRITE_OR_DDL_V1.test(normalized)) {
+    throw new Error("PRODUCT_API_SQL_WRITE_FORBIDDEN");
+  }
+  if (/^(SELECT|WITH|SHOW)\b/i.test(normalized)) return;
+  if (/^(BEGIN|COMMIT|ROLLBACK)$/i.test(normalized)) return;
+  if (/^SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY$/i.test(normalized)) return;
+  throw new Error("PRODUCT_API_SQL_NON_READ_STATEMENT_FORBIDDEN");
 }
 
 export function createProductApiReadOnlyPoolV1(
@@ -145,6 +160,15 @@ export function createProductApiReadOnlyPoolV1(
     assertTopLevelReadQueryV1(sql);
     return rawQuery(...args);
   };
+
+  pool.on("connect", (client) => {
+    const rawClientQuery = client.query.bind(client) as (...args: any[]) => any;
+    (client as any).query = (...args: any[]) => {
+      const sql = queryTextV1(args[0]);
+      assertConnectedClientReadQueryV1(sql);
+      return rawClientQuery(...args);
+    };
+  });
 
   return pool;
 }
