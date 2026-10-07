@@ -1,3 +1,29 @@
+> [!CAUTION]
+> **SUPERSEDED — DO NOT EXECUTE**
+>
+> This dated 2026-10-09 runbook is retained only as historical preparation evidence.
+> It must not be used for A0, O00, container cutover, final readback, or CAP-09
+> closure.
+>
+> The execution topology changed after this draft was frozen:
+>
+> - G11 Formal-v5 ACTIVE productionization is qualified on Draft #3661 but is not merged;
+> - R6 Formal-v5 consumer admission is prequalified on Draft #3662 and must be
+>   rebuilt from protected main after G11 lands;
+> - G12 Formal-v5 final readback/watchdog is prequalified on Draft #3663;
+> - G13 Formal-v5 completion candidate/adjudication is prequalified on Draft #3664;
+> - the original 2026-10-09 epoch is no longer a protected execution target.
+>
+> A replacement operator runbook may be generated only after G11 → R6 → G12 →
+> G13 are sequentially adopted through protected-main governance and the final
+> exact main is frozen. It must use a fresh owner/image attestation, same-UTC-hour
+> owner-cutover + arm, the epoch selector's actual output, fresh H5/arm/schema-ACL
+> revalidation, fresh current-crop authority continuity, G11 ACTIVE cutover,
+> G12 hourly watchdog/final readback, and G13 final adjudication.
+>
+> **Do not reuse any hard-coded SHA, artifact path, A0/O00/O23 time, or G11 HOLD
+> conclusion below.**
+
 # GEOX MCFT CAP-09 — Formal-v5 Final Real-Clock Window Operator Runbook
 
 Status: **PREPARED / OFF-MAIN / NON-EFFECTFUL**
