@@ -7,6 +7,10 @@ on:
       - "apps/server/src/product_api_public_server_v1.ts"
       - "apps/server/src/product_projection/customer/customer_product_projection_builder_v1.ts"
       - "apps/server/src/product_projection/customer/customer_product_projection_builder_v1.test.ts"
+      - "apps/server/src/product_projection/customer/customer_product_current_runtime_resolver_v1.ts"
+      - "apps/server/src/product_projection/customer/formal_v5_product_current_runtime_resolver_v1.ts"
+      - "apps/server/src/product_projection/customer/formal_v5_product_current_runtime_resolver_v1.test.ts"
+      - "apps/server/src/product_projection/contracts/product_projection_source_binding_registry_v1.ts"
       - "docker/product-api.Dockerfile"
       - "docs/product_projection/GEOX-PRODUCT-API-PUBLIC-DEPLOYMENT-V1.md"
       - "scripts/governance_acceptance/ACCEPTANCE_PRODUCT_API_PUBLIC_RUNTIME_V1.cjs"
@@ -36,6 +40,8 @@ jobs:
         run: node --import tsx --test apps/server/src/product_api/product_api_public_runtime_v1.test.ts
       - name: Product dual-read builder tests
         run: node --import tsx --test apps/server/src/product_projection/customer/customer_product_projection_builder_v1.test.ts
+      - name: Formal-v5 Product exact resolver tests
+        run: node --import tsx --test apps/server/src/product_projection/customer/formal_v5_product_current_runtime_resolver_v1.test.ts
       - name: Public runtime governance acceptance
         run: node scripts/governance_acceptance/ACCEPTANCE_PRODUCT_API_PUBLIC_RUNTIME_V1.cjs
       - name: Build dedicated Product API image
