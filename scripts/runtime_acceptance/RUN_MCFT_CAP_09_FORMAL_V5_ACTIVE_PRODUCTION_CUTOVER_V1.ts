@@ -136,7 +136,7 @@ async function main():Promise<void>{
     const before=await readLiveTwinLease(pool,MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1);
     if(before.length!==1)throw new Error("FORMAL_V5_ACTIVE_CUTOVER_EXACT_ONE_PREFORMAL_TWIN_OWNER_REQUIRED");
     const prior=before[0];
-    const previousFence=BigInt(prior.fencing_token);
+    const bootstrapFence=BigInt(bootstrap.lease_fencing_token);
 
     const activation=validateMcftCap09FormalV5ActiveActivationAuthorityV1({
       schema_version:"geox_mcft_cap09_formal_v5_active_activation_authority_v1",
@@ -183,18 +183,28 @@ async function main():Promise<void>{
       GEOX_MCFT_CAP09_PRODUCTION_FORMAL_WINDOW_MANIFEST_PATH:path.resolve(bootstrap.manifest_path),
     };
 
+    docker(["compose","-f",ACTIVE_COMPOSE,"up","-d","--no-build",FORCING_SERVICE],childEnv);
+    const forcingId=docker(["compose","-f",ACTIVE_COMPOSE,"ps","-q",FORCING_SERVICE],childEnv);
+    if(!forcingId)throw new Error("FORMAL_V5_ACTIVE_CUTOVER_FORCING_CONTAINER_REQUIRED");
+
+    await waitNoLiveTwinLease(formalPool,MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,600_000);
+
     docker(["compose","-f",PREFORMAL_COMPOSE,"stop",TWIN_SERVICE],childEnv);
     await waitNoLiveTwinLease(pool,MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,60_000);
 
-    docker(["compose","-f",ACTIVE_COMPOSE,"up","-d","--no-build",FORCING_SERVICE,TWIN_SERVICE],childEnv);
-    const after=await waitNewTwinLease(pool,MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,previousFence,60_000);
+    docker(["compose","-f",ACTIVE_COMPOSE,"up","-d","--no-build",TWIN_SERVICE],childEnv);
+    const after=await waitNewTwinLease(formalPool,MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,bootstrapFence,60_000);
+    if((await readLiveTwinLease(pool,MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1)).length!==0){
+      throw new Error("FORMAL_V5_ACTIVE_CUTOVER_OPERATIONAL_TWIN_OWNER_REAPPEARED");
+    }
 
     const twinId=docker(["compose","-f",ACTIVE_COMPOSE,"ps","-q",TWIN_SERVICE],childEnv);
-    const forcingId=docker(["compose","-f",ACTIVE_COMPOSE,"ps","-q",FORCING_SERVICE],childEnv);
-    if(!twinId||!forcingId)throw new Error("FORMAL_V5_ACTIVE_CUTOVER_CONTAINERS_REQUIRED");
+    if(!twinId)throw new Error("FORMAL_V5_ACTIVE_CUTOVER_TWIN_CONTAINER_REQUIRED");
     const twinImage=docker(["inspect",twinId,"--format","{{.Image}}"],childEnv);
     const forcingImage=docker(["inspect",forcingId,"--format","{{.Image}}"],childEnv);
-    if(twinImage!==forcingImage)throw new Error("FORMAL_V5_ACTIVE_CUTOVER_IMAGE_IDENTITY_MISMATCH");
+    const expectedImage=docker(["image","inspect",`geox-mcft-cap09-runtime:${arm.subject_sha}`,"--format","{{.Id}}"],childEnv);
+    assert.equal(twinImage,expectedImage,"FORMAL_V5_ACTIVE_CUTOVER_TWIN_IMAGE_MISMATCH");
+    assert.equal(forcingImage,expectedImage,"FORMAL_V5_ACTIVE_CUTOVER_FORCING_IMAGE_MISMATCH");
 
     const proof={
       schema_version:"geox_mcft_cap09_formal_v5_active_cutover_result_v1",
@@ -211,10 +221,17 @@ async function main():Promise<void>{
       no_live_twin_owner_observed_between_stop_and_start:true,
       new_twin_lease_owner:after.lease_owner,
       new_twin_fencing_token:BigInt(after.fencing_token).toString(),
-      new_fencing_token_strictly_greater:true,
+      new_fencing_token_strictly_greater_than_a0_bootstrap:true,
+      operational_preformal_owner_released:true,
+      operational_live_twin_owner_after_cutover:0,
+      formal_a0_bootstrap_lease_expired_before_active_claim:true,
+      no_cross_store_double_twin_owner_window:true,
       twin_container_id:twinId,
       forcing_container_id:forcingId,
-      exact_same_runtime_image_id:twinImage,
+      exact_runtime_image_id:expectedImage,
+      formal_database_name:FORMAL_DB,
+      twin_formal_database_principal:twinIdentity?.u,
+      evidence_formal_database_principal:evidenceIdentity?.u,
       formal_v5_active:true,
       v13_forcing_process_active:true,
       scheduler_semantics_rewritten:false,
