@@ -314,3 +314,43 @@ test("dual-read builder keeps field identity on identity pool and MCFT lineage/s
   assert.ok(mcftQueries.some((sql) => sql.includes("FROM public.twin_state_history_projection_v1")));
 });
 
+test("Formal-v5 exact resolver refs keep MCFT authority bindings without claiming S4", async () => {
+  const backing = fakePool();
+  const builder = new PostgresCustomerProductProjectionBuilderV1(backing, {
+    mcftPool: backing,
+    runtimeResolver: {
+      async resolveCurrentRuntimeV1() {
+        return {
+          source_profile: "MCFT_FORMAL_V5_EXACT" as const,
+          active_lineage: {
+            object_ref: "lineage-a",
+            object_type: "twin_runtime_lineage_v1",
+            object_hash: "sha256:lineage-a" as any,
+            source_fact_ref: "fact-lineage-a",
+          },
+          posterior_state: {
+            object_ref: "state-a",
+            object_type: "twin_state_estimate_v1",
+            object_hash: "sha256:state-a" as any,
+            source_fact_ref: "fact-state-a",
+          },
+        };
+      },
+    },
+    now: () => "2026-09-23T00:05:00.000Z",
+  });
+
+  const projection = await builder.buildFieldSummaryV1(scope, "field-a");
+  assert.equal(projection.current_condition.status, "AVAILABLE");
+
+  const stateRef = projection.envelope.source_authority_refs.find(
+    (item) => item.exact_ref === "state-a",
+  );
+  const lineageRef = projection.envelope.source_authority_refs.find(
+    (item) => item.exact_ref === "lineage-a",
+  );
+  assert.equal(stateRef?.authority_domain, "MCFT");
+  assert.equal(lineageRef?.authority_domain, "MCFT");
+  assert.equal(projection.envelope.authority_ceiling, "NON_AUTHORITATIVE_PRODUCT_PROJECTION_ONLY");
+});
+
