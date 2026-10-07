@@ -317,6 +317,27 @@
         "correction": "Require eight named status contexts with explicit success and merge commit method",
         "severity": "HIGH",
         "status": "FIXED_IN_DRAFT_RUNBOOK"
+      },
+      {
+        "id": "SA06",
+        "defect": "PowerShell 5.1 does not support Set-Content -Encoding utf8NoBOM",
+        "correction": "Use System.Text.UTF8Encoding(false) with File.WriteAllText for request/authority canonical files",
+        "severity": "HIGH",
+        "status": "FIXED_IN_DRAFT_RUNBOOK"
+      },
+      {
+        "id": "SA07",
+        "defect": "ErrorActionPreference=Stop does not fail closed on non-zero native git/gh/node/pnpm exits in Windows PowerShell 5.1",
+        "correction": "Add Assert-NativeExit after critical native commands and reject pre-existing A0 output artifacts",
+        "severity": "CRITICAL",
+        "status": "FIXED_IN_DRAFT_RUNBOOK"
+      },
+      {
+        "id": "SA08",
+        "defect": "Repeated runbook tail appeared during iterative document editing",
+        "correction": "Truncated to one linear Section 0 through Section 10 execution chain and re-read heading cardinality",
+        "severity": "DOCUMENT_INTEGRITY",
+        "status": "FIXED_IN_DRAFT_RUNBOOK"
       }
     ],
     "unresolved_first_red": {
@@ -324,6 +345,16 @@
       "name": "FORMAL_V5_ACTIVE_PRODUCTION_PROCESS_ROUTE",
       "status": "FIRST_RED_NOT_PROVEN",
       "consequence": "A0_AND_O00_HOLD"
+    },
+    "powershell_compatibility": {
+      "minimum_target": "WINDOWS_POWERSHELL_5_1_COMPATIBLE_COMMAND_SURFACE",
+      "utf8_no_bom_writer": ".NET System.Text.UTF8Encoding(false)",
+      "native_exit_code_fail_closed": true,
+      "stale_a0_output_rejection": true
+    },
+    "runbook_structure": {
+      "section_0_through_10_exactly_once": true,
+      "duplicated_tail": false
     }
   }
 }
