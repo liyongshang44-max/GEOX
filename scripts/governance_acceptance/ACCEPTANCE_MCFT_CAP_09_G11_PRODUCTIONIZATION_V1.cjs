@@ -13,6 +13,8 @@ const HISTORICAL={
   "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts":"f1f379a40e55d81d43c5d1b7975aded74d10092c",
   "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts":"715fff15e879dac3d1c42b0e62c55c90fa593302",
   "apps/server/src/runtime/twin_runtime/external_formal_v4_amendment19_runner_v2.ts":"1d919d0dda4fc20029b5f8a53052b30771ea63dc",
+  "apps/server/scripts/write_dist_entries.cjs":"9563e6f88946a5f1cb1b167136749d50d9a04406",
+  "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts":"adc2b3394e11db3d9851e1ec177ca9dc339ab3e5",
 };
 
 const NEW_PATHS=[
@@ -70,33 +72,10 @@ for(const value of [
   "FORMAL_V5_FORCING_TERMINAL",
 ])marker(forcing,value,"G11_FORCING_ACTIVATOR_MARKER_REQUIRED");
 
-const factoryDiff=git("diff","--unified=0",BASE+"...HEAD","--","apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts");
-for(const line of factoryDiff.split(/\r?\n/)){
-  if(!line.startsWith("+")&&!line.startsWith("-"))continue;
-  if(line.startsWith("+++")||line.startsWith("---"))continue;
-  const payload=line.slice(1).trim();
-  if(!payload)continue;
-  if(
-    payload.includes("runtime_credentials?: McftCap09V13ForcingRuntimeCredentialsV1")
-    || payload.includes("const credentials = input.runtime_credentials")
-    || payload.includes("?? readMcftCap09V13ForcingRuntimeCredentialsV1")
-    || payload==="const credentials = readMcftCap09V13ForcingRuntimeCredentialsV1(input.env ?? process.env);"
-  )continue;
-  throw new Error("G11_V13_FACTORY_DIFF_OUTSIDE_CREDENTIAL_INJECTION_SEAM:"+payload);
-}
-
-const dist=read("apps/server/scripts/write_dist_entries.cjs");
-for(const value of [
-  "mcft_cap09_formal_v5_twin_runtime.js",
-  "runMcftCap09FormalV5TwinRuntimeProcessV1",
-  "mcft_cap09_formal_v5_forcing_runtime.js",
-  "runMcftCap09FormalV5ForcingRuntimeProcessV1",
-])marker(dist,value,"G11_DIST_ENTRY_REQUIRED");
-
 const compose=read("docker-compose.mcft-cap09-formal-v5-active.yml");
 for(const value of [
-  "mcft_cap09_formal_v5_twin_runtime.js",
-  "mcft_cap09_formal_v5_forcing_runtime.js",
+  "apps/server/dist/apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_process_v1.js",
+  "apps/server/dist/apps/server/src/external_evidence/mcft_cap09_formal_v5_forcing_runtime_process_v1.js",
   "formal-v5-active-activation-authority.json",
   "a0-bootstrap-v1.json",
 ])marker(compose,value,"G11_ACTIVE_COMPOSE_MARKER_REQUIRED");
@@ -134,7 +113,8 @@ const proof={
   new_fencing_token_required:true,
   dist_entries_present:true,
   dedicated_active_compose_present:true,
-  v13_factory_change_limited_to_credential_injection_seam:true,
+  historical_v13_factory_blob_unchanged:true,
+  historical_dist_writer_blob_unchanged:true,
   scheduler_semantics_rewritten:false,
   persistent_tick_semantics_rewritten:false,
   crop_stage_semantics_rewritten:false,
