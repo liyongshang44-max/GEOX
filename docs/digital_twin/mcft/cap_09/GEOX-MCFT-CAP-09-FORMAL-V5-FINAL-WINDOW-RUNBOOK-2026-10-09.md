@@ -45,6 +45,11 @@ foreach ($Tool in @("git","gh","node","pnpm","psql","docker")) {
     throw "REQUIRED_TOOL_NOT_FOUND:$Tool"
   }
 }
+function Assert-NativeExit([string]$Step) {
+  if ($global:LASTEXITCODE -ne 0) {
+    throw ("NATIVE_COMMAND_FAILED:{0}:EXIT_{1}" -f $Step,$global:LASTEXITCODE)
+  }
+}
 
 $Repo = "liyongshang44-max/GEOX"
 $ArmSubject = "0e4cd036fdbebfe8118d6b7c1978572859d5a652"
@@ -97,6 +102,7 @@ materialization step.
 
 ```powershell
 $RemoteMain = (gh api "repos/$Repo/git/ref/heads/main" --jq ".object.sha").Trim()
+Assert-NativeExit "READ_REMOTE_MAIN"
 $RemoteMain
 if ($RemoteMain -ne $ArmSubject) {
   throw "PRE_WINDOW_MAIN_DRIFT:$RemoteMain"
@@ -135,7 +141,9 @@ if (@(git status --porcelain).Count -ne 0) {
 }
 
 git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+Assert-NativeExit "FETCH_ORIGIN_MAIN"
 $LocalOriginMain = (git rev-parse origin/main).Trim()
+Assert-NativeExit "REV_PARSE_ORIGIN_MAIN"
 if ($LocalOriginMain -ne $RemoteMain) {
   throw "LOCAL_ORIGIN_MAIN_NOT_REMOTE_MAIN:$LocalOriginMain:$RemoteMain"
 }
@@ -168,6 +176,7 @@ $Subject = (gh api "repos/$Repo/git/ref/heads/main" --jq ".object.sha").Trim()
 if ($Subject -ne $ArmSubject) { throw "CANDIDATE_SUBJECT_DRIFT:$Subject" }
 
 gh workflow run mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml --repo $Repo --ref main
+Assert-NativeExit "DISPATCH_FRESH_04Z_CANDIDATE"
 
 $Run = $null
 for ($i = 0; $i -lt 30 -and $null -eq $Run; $i++) {
@@ -186,6 +195,7 @@ if ($null -eq $Run) { throw "FRESH_CANDIDATE_RUN_NOT_RESOLVED" }
 $RunId = [int64]$Run.databaseId
 "RUN_ID=$RunId SUBJECT=$Subject"
 gh run watch $RunId --repo $Repo --exit-status
+Assert-NativeExit "WATCH_FRESH_04Z_CANDIDATE"
 ```
 
 Then re-read the exact run, never infer SUCCESS from a neighboring run:
@@ -342,7 +352,9 @@ $Branch = "qualification/mcft-cap09-current-crop-refresh-20261009-final-v1"
 git switch --detach $Subject
 git switch -c $Branch
 
+if (Test-Path $TargetAuthority) { throw "TARGET_AUTHORITY_ALREADY_EXISTS_BEFORE_BUILD:$TargetAuthority" }
 node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs --candidate $Candidate --architecture-effectiveness $Cert --refresh-request $RequestPath --subject $Subject --out $TargetAuthority
+Assert-NativeExit "BUILD_EFFECTIVE_CURRENT_CROP_AUTHORITY"
 
 # The builder creates the governed effective authority core. Reproduce the
 # already-proven #3656 envelope exactly: embed refresh_request + immutable
@@ -470,9 +482,13 @@ Commit only those two paths:
 
 ```powershell
 git add -- $Registry $TargetAuthority
+Assert-NativeExit "GIT_ADD_AUTHORITY_SURFACE"
 git diff --cached --name-status
+Assert-NativeExit "GIT_DIFF_CACHED_AUTHORITY_SURFACE"
 git commit -m "docs(mcft-cap09): append Oct 09 final-window current-crop authority"
+Assert-NativeExit "COMMIT_AUTHORITY_SURFACE"
 $AuthorityCommit = (git rev-parse HEAD).Trim()
+Assert-NativeExit "READ_AUTHORITY_COMMIT"
 ```
 
 ### 3.4 Future effect: protected-main authority-only adoption
@@ -483,14 +499,17 @@ The final window requires this authority-only commit to be adopted before A0.
 
 ```powershell
 git push -u origin $Branch
+Assert-NativeExit "PUSH_AUTHORITY_BRANCH"
 
 $PrUrl = gh pr create --repo $Repo --base main --head $Branch --title "docs(mcft-cap09): append Oct 09 final-window current-crop authority" --body "Formal-v5 post-arm authority-only advancement. Exactly one immutable authority artifact + exact-single registry append. No Runtime/QCP/workflow/database change."
 
+Assert-NativeExit "CREATE_AUTHORITY_PR"
 $PrNumber = [int](($PrUrl -split "/")[-1])
 
 # main-strict-delivery-v1 has no merge queue and only permits merge commits.
 # All eight required contexts must have an explicit SUCCESS on this exact head.
 gh pr checks $PrNumber --repo $Repo --required --watch --fail-fast
+Assert-NativeExit "AUTHORITY_PR_REQUIRED_CHECKS"
 
 $RequiredChecks = @(
   "acceptance",
@@ -518,6 +537,7 @@ if ($Pr.mergeable -ne "MERGEABLE") { throw "AUTHORITY_PR_NOT_MERGEABLE:$($Pr.mer
 # OPERATOR AUTHORIZATION REQUIRED HERE.
 # This is the only merge planned inside the final window.
 gh pr merge $PrNumber --repo $Repo --merge --match-head-commit $AuthorityCommit
+Assert-NativeExit "MERGE_AUTHORITY_PR"
 ```
 
 After adoption, re-read protected main and never assume the merge completed:
@@ -548,6 +568,7 @@ This gate is mandatory after the authority-only main movement and again at A0.
 
 ```powershell
 node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs --arm-subject=$ArmSubject --logical-time=$A0 --out=$ContinuityPath
+Assert-NativeExit "POST_ARM_AUTHORITY_CONTINUITY"
 
 $Continuity = Get-Content $ContinuityPath -Raw | ConvertFrom-Json
 if ($Continuity.status -ne "PASS") { throw "POST_ARM_CONTINUITY_NOT_PASS" }
@@ -693,6 +714,7 @@ try {
   $env:GEOX_MCFT_CAP09_RUNTIME_IMAGE_TAG = "geox-mcft-cap09-runtime:$ArmSubject"
 
   node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs --attest-image
+  Assert-NativeExit "OWNER_RUNTIME_IMAGE_ATTESTATION"
   $AttestLocal = "acceptance-output/MCFT_CAP_09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_V1_RESULT.json"
   $Attest = Get-Content $AttestLocal -Raw | ConvertFrom-Json
   if ($Attest.status -ne "PASS" -or
@@ -704,6 +726,7 @@ try {
 
   $env:GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH = $OwnerAttestationPath
   node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs --live
+  Assert-NativeExit "OWNER_LIVE_T1_T2_PROOF"
 
   $OwnerLocal = "acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json"
   $OwnerProof = Get-Content $OwnerLocal -Raw | ConvertFrom-Json
@@ -776,6 +799,7 @@ if ((git rev-parse HEAD).Trim() -ne $PostAuthorityMain -or
 }
 
 node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs --arm-subject=$ArmSubject --logical-time=$A0 --out=$ContinuityPath
+Assert-NativeExit "POST_ARM_AUTHORITY_CONTINUITY"
 $Continuity = Get-Content $ContinuityPath -Raw | ConvertFrom-Json
 if ($Continuity.status -ne "PASS" -or
     $Continuity.arm_runtime_semantic_subject_sha -ne $ArmSubject -or
@@ -847,14 +871,21 @@ if ($Now -lt [datetime]::Parse($A0).ToUniversalTime()) { throw "A0_NOT_REACHED" 
 if ($Now -ge [datetime]::Parse($O00).ToUniversalTime()) { throw "A0_WINDOW_MISSED" }
 
 node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs --arm-subject=$ArmSubject --logical-time=$A0 --out=$ContinuityPath
+Assert-NativeExit "POST_ARM_AUTHORITY_CONTINUITY"
+
+foreach ($Unexpected in @($PromotionPath,$BootstrapContinuityPath,$ManifestPath,$BootstrapPath)) {
+  if (Test-Path $Unexpected) { throw "PRE_A0_OUTPUT_ALREADY_EXISTS:$Unexpected" }
+}
 
 pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts --operator-authorized --arm=$ArmPath --schema-proof=$SchemaProofPath --continuity-proof=$ContinuityPath --out=$PromotionPath
+Assert-NativeExit "A0_PRODUCTION_REPLAY_PROMOTION"
 
 $Promotion = Get-Content $PromotionPath -Raw | ConvertFrom-Json
 if ($Promotion.status -ne "PASS") { throw "A0_REPLAY_PROMOTION_NOT_PASS" }
 if ([int]$Promotion.formal_fact_count -ne 3) { throw "A0_REPLAY_PROMOTION_FACT_COUNT_NOT_3" }
 
 pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP_V1.ts --operator-authorized --arm=$ArmPath --schema-proof=$SchemaProofPath --promotion-proof=$PromotionPath --continuity-proof=$BootstrapContinuityPath --manifest-out=$ManifestPath --out=$BootstrapPath
+Assert-NativeExit "A0_BOOTSTRAP"
 
 $Bootstrap = Get-Content $BootstrapPath -Raw | ConvertFrom-Json
 if ($Bootstrap.status -ne "PASS") { throw "A0_BOOTSTRAP_NOT_PASS" }
@@ -1262,6 +1293,7 @@ This gate is mandatory after the authority-only main movement and again at A0.
 
 ```powershell
 node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs --arm-subject=$ArmSubject --logical-time=$A0 --out=$ContinuityPath
+Assert-NativeExit "POST_ARM_AUTHORITY_CONTINUITY"
 
 $Continuity = Get-Content $ContinuityPath -Raw | ConvertFrom-Json
 if ($Continuity.status -ne "PASS") { throw "POST_ARM_CONTINUITY_NOT_PASS" }
@@ -1490,6 +1522,7 @@ if ((git rev-parse HEAD).Trim() -ne $PostAuthorityMain -or
 }
 
 node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs --arm-subject=$ArmSubject --logical-time=$A0 --out=$ContinuityPath
+Assert-NativeExit "POST_ARM_AUTHORITY_CONTINUITY"
 $Continuity = Get-Content $ContinuityPath -Raw | ConvertFrom-Json
 if ($Continuity.status -ne "PASS" -or
     $Continuity.arm_runtime_semantic_subject_sha -ne $ArmSubject -or
@@ -1561,6 +1594,7 @@ if ($Now -lt [datetime]::Parse($A0).ToUniversalTime()) { throw "A0_NOT_REACHED" 
 if ($Now -ge [datetime]::Parse($O00).ToUniversalTime()) { throw "A0_WINDOW_MISSED" }
 
 node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs --arm-subject=$ArmSubject --logical-time=$A0 --out=$ContinuityPath
+Assert-NativeExit "POST_ARM_AUTHORITY_CONTINUITY"
 
 pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts --operator-authorized --arm=$ArmPath --schema-proof=$SchemaProofPath --continuity-proof=$ContinuityPath --out=$PromotionPath
 
