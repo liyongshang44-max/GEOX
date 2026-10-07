@@ -355,6 +355,41 @@
     "runbook_structure": {
       "section_0_through_10_exactly_once": true,
       "duplicated_tail": false
+    },
+    "draft_pr_ci_classification": {
+      "pr": 3660,
+      "dependency_closure": {
+        "conclusion": "FAIL",
+        "failed_step": "Generate central applicability plan",
+        "planner_status": "FAIL",
+        "authority_errors": 0,
+        "resolver_errors": 0,
+        "unknown_changed_paths": [
+          "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-FINAL-WINDOW-PREFLIGHT-2026-10-09-V1.json",
+          "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-FINAL-WINDOW-RUNBOOK-2026-10-09.md",
+          "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-POST-CLOSURE-S0-PR-RETIREMENT-CHECKLIST-V1.md"
+        ],
+        "classification": "PREPARATION_DOC_PATHS_NOT_REGISTERED_IN_QCP",
+        "new_runtime_or_authority_defect": false,
+        "qcp_registry_change_to_green_draft_authorized": false,
+        "disposition": "KNOWN_DRAFT_ONLY_RED_DO_NOT_FIX_BY_CHANGING_QCP"
+      }
+    },
+    "g11_historical_successor_search": {
+      "searched_prs": [
+        3600,
+        3356,
+        3376,
+        3632,
+        3635
+      ],
+      "result": "NO_EXISTING_UNMERGED_FORMAL_V5_ACTIVE_PRODUCTION_ENTRYPOINT_FOUND",
+      "pr_3600": "ACTUAL_ARM_MANIFEST_BUNDLE_ONLY",
+      "pr_3356": "SEMANTIC_CLOSURE_QCP_ONLY",
+      "pr_3376": "V13_PRODUCTION_FOUNDATION_NOT_V5_ACTIVE_ENTRYPOINT",
+      "pr_3632": "FDG_HARDENING_ONLY",
+      "pr_3635": "QUALIFICATION_INTEGRATION_HARDENING_ONLY",
+      "g11_remains": "FIRST_RED_NOT_PROVEN"
     }
   }
 }
