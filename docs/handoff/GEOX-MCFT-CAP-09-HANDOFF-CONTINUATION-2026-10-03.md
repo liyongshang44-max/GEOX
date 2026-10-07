@@ -1,3 +1,643 @@
+# 2026-10-07 ACTIVE CHECKPOINT — FORMAL-v5 ARMED / POST-ARM REVALIDATED / FINAL REAL-CLOCK WINDOW PREP
+
+Status: **T0 CLOSED / EXACT-MAIN OWNER CUTOVER PASS / FORMAL-v5 ARMED / POST-ARM SCHEMA+ACL PASS / ROLLING CANDIDATE REHEARSAL PASS / A0 NOT EXECUTED / FINAL WINDOW PENDING**
+
+Timestamp: **2026-10-07 13:33 +08:00**
+
+Repository: `liyongshang44-max/GEOX`
+
+This checkpoint is a pure prepend to the existing active continuation. Historical content below remains preserved and authoritative for its own time. Where older checkpoints conflict with this section, this checkpoint is the current takeover frontier.
+
+## 0. EXACTLY TWO CURRENT HANDOFFS — DO NOT CREATE A THIRD
+
+There are **exactly two current MCFT CAP-09 handoff documents**. Every successor engineer / conversation must read both before changing MCFT code, governance, evidence, Formal state, production state, or qualification state.
+
+1. Historical canonical archive — frozen / do not rewrite:
+
+`docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md`
+
+2. Current active continuation — this file:
+
+`docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-10-03.md`
+
+Do **not** create a third current handoff. Older continuation files remain historical provenance only.
+
+Mandatory takeover order:
+
+```text
+MCFT / Digital Twin master task
+→ MCFT CAP-09 task / acceptance / governance / qualification documents
+→ historical canonical handoff (2026-08-27)
+→ active continuation (2026-10-03, newest checkpoint first)
+→ current protected-main / QCP / Formal / production evidence
+```
+
+## 1. CURRENT TASK — WHAT WE ARE DOING NOW
+
+MCFT-9 is no longer in Runtime feature development and no longer in T0 blocker convergence.
+
+The active task is now:
+
+**finish CAP-09 by executing the already-qualified Formal-v5 real-clock evidence epoch on the exact armed subject, without changing Runtime semantics, without reopening T0, and without allowing unrelated main changes to invalidate the arm.**
+
+The remaining execution chain is:
+
+```text
+fresh 2026-10-09 04:00Z DT02/A18 current-crop authority
+    ↓
+effective authority materialization
+    ↓
+registry exact single append
+    ↓
+protected-main adoption of authority surface only
+    ↓
+post-arm authority continuity verification
+    ↓
+A0 at 2026-10-09 05:00Z
+    ↓
+O00 at 2026-10-09 06:00Z
+    ↓
+O00–O23 actual 24h
+    ↓
+final adjudication
+    ↓
+CAP-09 closure
+```
+
+No new MCFT capability should be added unless a new machine-proven blocker requires a separately adjudicated change.
+
+## 2. CURRENT EXACT IDENTITIES / FROZEN EXECUTION PINS
+
+Protected main, independently re-read on 2026-10-07:
+
+`0e4cd036fdbebfe8118d6b7c1978572859d5a652`
+
+Exact tree:
+
+`74cb1cac306061b41520370e65dc326f3de98d3a`
+
+Current main commit is PR #3656 merge:
+
+`docs(mcft-cap09): append Oct 06 current-crop authority`
+
+Authorized exact-main production Runtime image id:
+
+`sha256:52b82bd8237511bf3e0e8ba20b90b6a91c83d719f6926252951938ebbf42f222`
+
+Formal-v5 database:
+
+`geox_mcft_cap09_s6_formal_t4r1_24h_v5`
+
+Current Formal-v5 epoch:
+
+```text
+A0  = 2026-10-09T05:00:00.000Z
+O00 = 2026-10-09T06:00:00.000Z
+O23 = 2026-10-10T05:00:00.000Z
+```
+
+Current arm subject:
+
+`0e4cd036fdbebfe8118d6b7c1978572859d5a652`
+
+Current arm identity hash observed after re-arm:
+
+`sha256:cadbe9c5e228f95621625e26b82117f6ca9edb799221667ce5ce192069d1f9e5`
+
+Current effective current-crop authority already on main:
+
+`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-10-06T04Z-V1.json`
+
+Digest:
+
+`sha256:38dea2ee39f00d17782ce7578909bc0838649341abf0f25fa388ac77b7d7c2de`
+
+Its authority window:
+
+```text
+authority_as_of       = 2026-10-06T04:00:00.000Z
+authority_valid_until = 2026-10-07T10:00:00.000Z
+```
+
+This Oct-06 authority was sufficient for owner cutover / preformal operation, but it is **not** valid for the final A0/O00–O23 epoch. A fresh successor authority at the 2026-10-09 04:00Z boundary is still required.
+
+Frozen Runtime historical qualification authority remains:
+
+`3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a`
+
+Do not mutate it.
+
+## 3. WHAT HAS BEEN COMPLETED — CURRENT MACHINE-PROVEN STATE
+
+### 3.1 T0 blocker convergence remains ZERO / CLOSED
+
+The 2026-10-04 checkpoint remains authoritative:
+
+- Phase5 closure: PASS
+- AM19 closure: PASS by final read-only adjudication
+- final adjudicated blocker count: 0
+- remaining blockers: 0
+- do not rerun historical 24T merely to recreate superseded premises
+
+No later work in this checkpoint reopens T0.
+
+### 3.2 Oct-06 current-crop authority was materialized and adopted
+
+The Oct-06 rolling candidate was converted into a governed effective authority and registry append.
+
+PR #3656 was merged to protected main, producing current main:
+
+`0e4cd036fdbebfe8118d6b7c1978572859d5a652`
+
+The registry entry count advanced from 13 to 14, with an exact single-authority append and no production effect during materialization.
+
+### 3.3 Exact-main Runtime image build and owner cutover are PASS
+
+Exact-main runtime image build passed, including network-none content checks for Node / Python / ecCodes.
+
+Production owner cutover subsequently passed on exact subject `0e4cd036...`.
+
+Observed owner-cutover facts:
+
+- Evidence runtime process started and became effective owner
+- Twin runtime process started and became effective owner
+- Twin remained in `PRE_FORMAL_OWNER_STANDBY`
+- exact-one owner per runtime role was later independently re-read from production
+- owner heartbeats continued to advance
+- A0 remained false
+- O00 remained false
+
+The prior stale production containers on old image `0c71e558...` were explicitly stopped before the exact-main cutover.
+
+### 3.4 Formal-v5 arm is PASS
+
+Formal-v5 was explicitly armed for the current exact-main subject.
+
+The selected epoch is:
+
+```text
+A0  = 2026-10-09 05:00Z
+O00 = 2026-10-09 06:00Z
+O23 = 2026-10-10 05:00Z
+```
+
+Arm did not execute A0 or O00.
+
+### 3.5 Post-arm schema/ACL revalidation is PASS and CLOSED
+
+Official runner:
+
+`scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MATERIALIZATION_V1.ts`
+
+Final result:
+
+```text
+status                           = PASS_ALREADY_MATERIALIZED_IDEMPOTENT
+subject_sha                      = 0e4cd036fdbebfe8118d6b7c1978572859d5a652
+database_name                    = geox_mcft_cap09_s6_formal_t4r1_24h_v5
+public_table_count               = 29
+public_routine_count             = 2
+all_table_rows_zero              = true
+schema_materialization_performed = false
+acl_materialization_performed    = false
+formal_v5_arm                    = true
+a0_bootstrap                     = false
+o00_started                      = false
+provider_request_count           = 0
+```
+
+Runtime routines were still split correctly:
+
+- `mcft_cap09_twin_runtime_append_fact_v1` → Twin exec true / Evidence exec false
+- `mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1` → Evidence exec true / Twin exec false
+
+This gate is closed. Do not rerun it merely for reassurance unless a new governed change invalidates it.
+
+### 3.6 Independent remote readback after post-arm revalidation remained clean
+
+After the official local revalidation:
+
+- protected main still `0e4cd036...`
+- Formal-v5 still exactly 29 public base tables
+- Formal-v5 still exactly 2 public routines
+- Formal-v5 total rows still 0
+- Evidence live owner count = exact one
+- Twin live owner count = exact one
+- production current T4R1 active-lineage row count = 0
+- production current T4R1 latest-state row count = 0
+
+That zero product/state condition is expected before A0.
+
+### 3.7 Final-window rolling candidate rehearsal is PASS
+
+Latest manual rehearsal:
+
+- workflow: `.github/workflows/mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml`
+- GitHub run id: `37576322963`
+- event: `workflow_dispatch`
+- exact head: `0e4cd036fdbebfe8118d6b7c1978572859d5a652`
+- conclusion: **SUCCESS**
+- candidate job id: `112645926788`
+- duration: about 1m8s
+
+All candidate steps passed, including:
+
+- exact qualification subject checkout
+- deterministic rolling snapshot contract
+- protected-main effectiveness adjudicator syntax
+- rolling snapshot overlay
+- thermal scientific probe
+- lifecycle qualification dependencies
+- protected-main successor-chain effectiveness
+- fresh persistent lifecycle qualification
+- admitted-main lifecycle binding
+- ephemeral fresh current-crop candidate composition
+- candidate-only authority ceiling
+- evidence artifact upload
+
+This rehearsal proves that the final-window candidate path currently runs end-to-end on the exact armed main.
+
+**Important:** this 2026-10-07 rehearsal candidate is not the final 2026-10-09 effective authority and must never be promoted as a substitute for the required fresh 04:00Z authority.
+
+GitHub runner annotations about Node.js 20 deprecation / forced Node 24 and future Ubuntu image migration were warnings only; they did not fail the run.
+
+## 4. CURRENT BLOCKER / WHY A0 CANNOT START YET
+
+There is no current engineering blocker in Runtime, schema, ACL, owner cutover, or candidate generation.
+
+The remaining gate is a **real-clock authority boundary**.
+
+The final epoch requires a fresh DT02/A18 stage authority generated at the eligible local-day boundary:
+
+`2026-10-09T04:00:00.000Z`
+
+The arm requires future stage-authority coverage from A0 through O23 inclusive. The older Oct-06 authority expires before the epoch and cannot be reused.
+
+Therefore:
+
+- do not start A0 early
+- do not reinterpret the 2026-10-07 rehearsal artifact as the final authority
+- do not shift A0 merely to avoid the authority boundary without a new formal adjudication
+
+### Critical scheduler fact
+
+The ordinary rolling current-crop cron is approximately `05:17Z`.
+
+That is too late for:
+
+`A0 = 05:00Z`
+
+Therefore the final 2026-10-09 stage refresh **must use manual `workflow_dispatch` immediately after the 04:00Z boundary**. Do not wait for the daily cron.
+
+## 5. FINAL-WINDOW EXECUTION PLAN — NEXT OPERATOR MUST FOLLOW THIS ORDER
+
+### 5.1 Before 2026-10-09 04:00Z
+
+Do not make new Runtime changes.
+
+Keep protected main frozen at the armed subject except for the separately governed current-crop authority/registry advancement that will be required at the fresh boundary.
+
+Confirm immediately before the window:
+
+- protected main exact SHA
+- #3658 remains unmerged
+- production Evidence/Twin exact-one live owner
+- Formal-v5 29 tables / 2 routines / 0 rows
+- Formal-v5 arm artifact still binds the intended epoch
+- local Git worktree clean
+- `gh`, Node, pnpm, tsx, Docker, and psql availability
+
+### 5.2 At / immediately after 2026-10-09 04:00Z
+
+1. Resolve protected main exactly.
+2. Manually dispatch:
+   `mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml`
+3. Capture the exact returned run id; do not select an arbitrary latest run.
+4. Verify run `head_sha == protected main`.
+5. Wait for candidate SUCCESS.
+6. Download the immutable candidate artifact and compute / retain its SHA-256.
+7. Build the governed current-crop refresh request for the fresh 04:00Z authority.
+8. Materialize the new effective current-crop authority using the existing builder.
+9. Require the materialization to prove:
+   - fresh authority subject exact-match
+   - stage authority as-of = the eligible 04:00Z boundary
+   - validity covers the final epoch through O23
+   - candidate artifact remains candidate-only until materialized
+   - no production effect
+10. Require exact current-crop diff scope:
+    - one new immutable effective-current-crop authority JSON
+    - one append to `GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json`
+11. Run registry-preservation acceptance in single-authority-append mode.
+12. Commit/push only that governed authority surface on a qualification branch.
+13. Any protected-main adoption / PR merge is a separate authorization gate.
+14. After adoption, rebind local exact-main to the new protected main.
+15. Run post-arm authority continuity verification.
+16. Re-read:
+    - Formal arm still valid
+    - Formal store still 29 / 2 / 0
+    - Evidence/Twin exact-one owners
+    - no unintended production effect before A0
+
+Do **not** allow unrelated code, Product, ADR, B-Line, workflow, or governance changes into protected main during this arm-continuity window.
+
+### 5.3 At 2026-10-09 05:00Z — A0
+
+A0 still requires an explicit production execution authorization.
+
+Only after:
+
+- fresh effective authority is on protected main
+- registry append is accepted
+- post-arm continuity PASS
+- exact-one owners PASS
+- Formal-v5 store / schema / ACL readback PASS
+
+may A0 be executed.
+
+A0 must not be inferred from arm or from candidate success.
+
+### 5.4 At 2026-10-09 06:00Z — O00
+
+O00/O00–O23 execution remains a distinct gate.
+
+After A0 succeeds and the governed runtime is ready, begin O00 and continue through O23.
+
+Do not restart historical qualification or substitute accelerated evidence for the required final actual 24h.
+
+### 5.5 After O23 at 2026-10-10 05:00Z
+
+Run the final actual-24h adjudication.
+
+CAP-09 completion may only be claimed after the final adjudicator proves the required evidence and closure conditions.
+
+## 6. PRODUCT / PORTAL SIDE WORK IS PAUSED DURING MCFT FINAL WINDOW
+
+A separate Product dual-read PR exists:
+
+PR #3658
+
+Latest qualified Product branch head observed during this conversation:
+
+`63abeaa591708d0ddc6c54b7c2c6b60f6ae5c0b7`
+
+It is intentionally:
+
+`Draft / Open / Unmerged`
+
+Its Product CI passed, and Formal-v5 Product readonly ACL grants were separately installed and independently verified.
+
+Those Product grants are eight direct non-grantable SELECT privileges:
+
+Two existing Product principals × four tables:
+
+- `facts`
+- `twin_active_lineage_index_v1`
+- `twin_state_latest_index_v1`
+- `twin_state_history_projection_v1`
+
+The official MCFT post-arm schema/ACL revalidation passed **after** these Product SELECT grants existed; do not revoke them as an MCFT “fix” absent new machine evidence.
+
+Product deployment was not completed because an isolated Railway acceptance project hit a platform resource-provision limit.
+
+**Do not merge or deploy #3658 during the armed MCFT final window.**
+
+The Product line is not the current MCFT frontier.
+
+## 7. PITFALLS ALREADY HIT — DO NOT REPEAT THEM
+
+### 7.1 Do not use broad `gh run list` output as if it were a single run
+
+An earlier dispatcher captured multiple historical run ids / SHAs and then falsely reported a subject mismatch.
+
+Rule:
+
+- capture the exact run id created by `gh workflow run`, or
+- retrieve one exact run and assert cardinality,
+- then verify its `headSha` explicitly.
+
+The successful rehearsal run is a good reference pattern:
+`37576322963`.
+
+### 7.2 Local `git fetch` can exhaust memory
+
+A previous fetch failed with:
+
+`fatal: Out of memory, malloc failed (tried to allocate 524288000 bytes)`
+
+When only protected-main identity is needed, prefer a remote API / `gh api` lookup or a minimal targeted fetch instead of a broad repository refresh.
+
+Still require an exact subject check before any governed local operation.
+
+### 7.3 Explicit branch refspec may be required
+
+A normal fetch of a precreated qualification branch did not create the expected remote-tracking ref.
+
+Working pattern:
+
+```text
+git fetch origin +refs/heads/<branch>:refs/remotes/origin/<branch>
+```
+
+Do not assume `origin/<branch>` exists merely because FETCH_HEAD succeeded.
+
+### 7.4 `git switch --track` can fail on a manually materialized remote ref
+
+The safe fallback used successfully was:
+
+```text
+git switch -c <branch> refs/remotes/origin/<branch>
+```
+
+then verify exact HEAD and clean worktree.
+
+### 7.5 Do not delete the checkout directory while PowerShell is inside it
+
+A prior `Remove-Item -Recurse -Force` failed because the working directory itself was in use.
+
+Move to another directory first, or reuse the existing exact-clean proof checkout.
+
+### 7.6 Docker Desktop can appear alive while the Linux engine pipe is dead
+
+Observed symptoms included:
+
+- `docker version` hanging
+- stale `docker.exe` clients
+- `dockerDesktopLinuxEngine` named pipe timeout
+- WSL `0x8007274c`
+- production containers trapped in restart loops
+
+Recovery used:
+
+- kill stale docker CLI clients
+- confirm named-pipe failure
+- restart Docker Desktop when explicitly authorized
+- verify client/server version before proceeding
+
+Do not confuse Docker Desktop GUI presence with a healthy Linux engine.
+
+### 7.7 Old production containers must be fenced and stopped before exact-main cutover
+
+The old `0c71e558...` containers were still restart-looping after Docker restart.
+
+They were explicitly identity-validated and stopped before the new image / owner cutover.
+
+Do not leave an old owner candidate running during a new exact-main cutover.
+
+### 7.8 PowerShell strict-mode array `.Count` pitfalls
+
+An empty scalar/null result caused:
+
+`property Count not found`
+
+Always force potentially empty command output into an array:
+
+```powershell
+$Ids = @( ... ) | Where-Object { $_ }
+```
+
+before reading `.Count`.
+
+### 7.9 `git restore` does not remove an untracked generated directory
+
+An untracked `acceptance-output/` made the worktree dirty; `git restore acceptance-output` failed because the path was not tracked.
+
+Classify first. If generated/untracked-only:
+
+- archive if needed
+- remove the untracked generated files explicitly
+- re-check `git status --porcelain`
+
+Never delete unknown dirty state blindly.
+
+### 7.10 `psql` is installed but not on the default PATH
+
+On this operator host:
+
+`D:\pdsl\bin\psql.exe`
+
+Use:
+
+```powershell
+$env:Path = "D:\pdsl\bin;$env:Path"
+```
+
+before relying on `psql`.
+
+### 7.11 Neon pooler rejects some `PGOPTIONS` startup parameters
+
+The Neon pooler rejected:
+
+`statement_timeout` inside startup `options`.
+
+Do not use that `PGOPTIONS` combination against the pooler.
+
+Use the governed direct/unpooled binding where required, or remove unsupported startup options.
+
+Do not print credentials into logs or handoff text.
+
+### 7.12 Environment bindings are process-local and can disappear between PowerShell sessions
+
+Formal DB URL and Runtime DB/S3 bindings were repeatedly found missing in a new shell.
+
+Before every production-sensitive command:
+
+- verify required env names are SET
+- recover from governed local evidence / stopped container inspection only when allowed
+- never infer localhost fallback is correct
+- never print secret values
+
+### 7.13 `tsx` may be absent in a clean proof checkout
+
+Post-arm schema/ACL initially failed because `tsx` was not installed.
+
+Working recovery:
+
+```text
+pnpm install --frozen-lockfile --prod=false
+node_modules\.bin\tsx.cmd
+```
+
+Then ensure tracked worktree remains clean.
+
+Do not globally install an arbitrary tsx version to bypass the repository lockfile.
+
+### 7.14 Non-MCFT scripts under `scripts/runtime_acceptance/**` can falsely trigger MCFT applicability
+
+Product ACL scripts were initially placed under `scripts/runtime_acceptance/**`, which caused EA5E2 / central applicability to see Product-only paths as unknown MCFT changed paths.
+
+They were moved to:
+
+`scripts/product_acceptance/**`
+
+Do not put unrelated Product tooling under MCFT runtime-acceptance path ownership.
+
+### 7.15 The current daily rolling cron is too late for this epoch
+
+Normal cron around `05:17Z` is later than A0 `05:00Z`.
+
+For this final epoch, manual dispatch after `04:00Z` is mandatory.
+
+### 7.16 Candidate is not authority
+
+A successful rolling candidate artifact has:
+
+- no production effect
+- no Formal-v5 authorization
+- no A0 authorization
+- no O00 authorization
+
+It only becomes consumable current-crop authority after governed materialization + registry append + protected-main adoption + continuity checks.
+
+### 7.17 Do not reopen Phase5 / AM19 historical closure
+
+Historical raw FAIL records remain for provenance.
+
+They are not present blockers after the governed supersession / verified-delivery closure.
+
+Do not rerun historical 24T merely because an old raw artifact still says FAIL.
+
+## 8. WHAT THE NEXT OPERATOR MUST NOT DO
+
+Do not:
+
+- create a third current handoff
+- modify frozen Runtime
+- add new MCFT capability to “speed up” the final epoch
+- rerun old 24T as a substitute for the final actual 24h
+- merge Product PR #3658 during the armed window
+- allow unrelated protected-main changes before final continuity
+- treat rehearsal run `37576322963` as the final authority
+- wait for the 05:17Z cron on 2026-10-09
+- start A0 without the fresh 04:00Z authority
+- infer A0 authorization from Formal-v5 arm
+- infer O00 authorization from A0
+- claim CAP-09 completion before final O23 adjudication
+
+## 9. TAKEOVER SNAPSHOT
+
+```text
+T0 blocker convergence                  CLOSED / ZERO
+protected main                          0e4cd036fdbebfe8118d6b7c1978572859d5a652
+exact runtime image                     sha256:52b82bd8237511bf3e0e8ba20b90b6a91c83d719f6926252951938ebbf42f222
+production Evidence owner               PASS / exact-one
+production Twin owner                   PASS / exact-one
+Formal-v5 arm                           PASS
+post-arm schema/ACL revalidation        PASS_ALREADY_MATERIALIZED_IDEMPOTENT
+Formal-v5 store                         29 tables / 2 routines / 0 rows
+A0                                      NOT EXECUTED
+O00                                     NOT EXECUTED
+current final-window rehearsal          PASS
+rehearsal run                           37576322963
+rehearsal exact head                    0e4cd036fdbebfe8118d6b7c1978572859d5a652
+next hard boundary                      2026-10-09T04:00:00Z
+next required action                    fresh candidate → effective authority → registry single append → continuity
+CAP-09 completed                        false
+```
+
+The next engineer should treat the system as **ready for the final real-clock authority window, not ready for early A0**.
+
+---
+
 # 2026-10-04 REMOTE CLOSURE PUSH CONFIRMATION — EXACTLY TWO CURRENT HANDOFFS
 
 Status: **REMOTE ENGINEERING CLOSURE HEAD CONFIRMED / TWO-HANDOFF MODEL FROZEN**
