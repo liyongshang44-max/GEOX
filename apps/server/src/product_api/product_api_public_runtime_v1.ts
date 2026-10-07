@@ -8,6 +8,7 @@ import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
 import { Pool } from "pg";
 
+import { PostgresCustomerProductProjectionBuilderV1 } from "../product_projection/customer/customer_product_projection_builder_v1.js";
 import { registerProductV1Routes } from "../routes/product_v1.js";
 
 export const PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1 =
@@ -124,11 +125,14 @@ function assertTopLevelReadQueryV1(sql: string): void {
   }
 }
 
-export function createProductApiReadOnlyPoolV1(databaseUrl: string): Pool {
+export function createProductApiReadOnlyPoolV1(
+  databaseUrl: string,
+  applicationName = "geox-product-api-public-v1",
+): Pool {
   parseProductDatabaseUrlV1(databaseUrl);
   const pool = new Pool({
     connectionString: databaseUrl,
-    application_name: "geox-product-api-public-v1",
+    application_name: applicationName,
     max: Number(process.env.GEOX_PRODUCT_DB_POOL_MAX ?? "8"),
     idleTimeoutMillis: Number(process.env.GEOX_PRODUCT_DB_IDLE_TIMEOUT_MS ?? "30000"),
     connectionTimeoutMillis: Number(process.env.GEOX_PRODUCT_DB_CONNECT_TIMEOUT_MS ?? "10000"),
@@ -148,13 +152,23 @@ export type ProductApiPublicRuntimeConfigV1 = {
   host: string;
   port: number;
   databaseUrl: string;
+  formalDatabaseUrl: string;
   allowedOrigins: string[];
   tokenSourceJson: string;
 };
 
 export function resolveProductApiPublicRuntimeConfigV1(): ProductApiPublicRuntimeConfigV1 {
   const databaseUrl = nonEmptyEnvV1("GEOX_PRODUCT_DATABASE_URL");
-  parseProductDatabaseUrlV1(databaseUrl);
+  const identityDatabase = parseProductDatabaseUrlV1(databaseUrl);
+
+  const formalDatabaseUrl = nonEmptyEnvV1("GEOX_PRODUCT_FORMAL_V5_DATABASE_URL");
+  const formalDatabase = parseProductDatabaseUrlV1(formalDatabaseUrl);
+
+  const identityKey = `${identityDatabase.hostname}:${identityDatabase.port || "5432"}${identityDatabase.pathname}`;
+  const formalKey = `${formalDatabase.hostname}:${formalDatabase.port || "5432"}${formalDatabase.pathname}`;
+  if (identityKey === formalKey) {
+    throw new Error("PRODUCT_API_DUAL_DATABASES_REQUIRED");
+  }
 
   const tokenSourceJson = parseProductTokenSourceV1(
     nonEmptyEnvV1("GEOX_PRODUCT_API_TOKENS_JSON"),
@@ -179,6 +193,7 @@ export function resolveProductApiPublicRuntimeConfigV1(): ProductApiPublicRuntim
     host: String(process.env.HOST ?? "0.0.0.0"),
     port,
     databaseUrl,
+    formalDatabaseUrl,
     allowedOrigins,
     tokenSourceJson,
   };
@@ -186,7 +201,7 @@ export function resolveProductApiPublicRuntimeConfigV1(): ProductApiPublicRuntim
 
 export function createProductApiPublicAppV1(
   config: ProductApiPublicRuntimeConfigV1,
-): { app: FastifyInstance; pool: Pool } {
+): { app: FastifyInstance; pool: Pool; formalPool: Pool } {
   // The existing auth module consumes GEOX_TOKENS_JSON. Public Product Runtime accepts only
   // the narrower GEOX_PRODUCT_API_TOKENS_JSON source and mirrors it in-process after validation.
   process.env.GEOX_RUNTIME_ENV = "production";
@@ -212,7 +227,14 @@ export function createProductApiPublicAppV1(
     },
   });
 
-  const pool = createProductApiReadOnlyPoolV1(config.databaseUrl);
+  const pool = createProductApiReadOnlyPoolV1(
+    config.databaseUrl,
+    "geox-product-api-public-identity-v1",
+  );
+  const formalPool = createProductApiReadOnlyPoolV1(
+    config.formalDatabaseUrl,
+    "geox-product-api-public-formal-v5-v1",
+  );
 
   app.get("/health", async () => ({
     ok: true,
@@ -223,18 +245,36 @@ export function createProductApiPublicAppV1(
 
   app.get("/ready", async (_request, reply) => {
     try {
-      const result = await pool.query<{ transaction_read_only: string }>(
-        "SELECT pg_catalog.current_setting('transaction_read_only') AS transaction_read_only",
-      );
+      const [identityResult, formalResult] = await Promise.all([
+        pool.query<{ transaction_read_only: string }>(
+          "SELECT pg_catalog.current_setting('transaction_read_only') AS transaction_read_only",
+        ),
+        formalPool.query<{ transaction_read_only: string }>(
+          "SELECT pg_catalog.current_setting('transaction_read_only') AS transaction_read_only",
+        ),
+      ]);
+      const identityReadOnly = identityResult.rows[0]?.transaction_read_only === "on";
+      const formalReadOnly = formalResult.rows[0]?.transaction_read_only === "on";
+      if (!identityReadOnly || !formalReadOnly) {
+        return reply.code(503).send({
+          ok: false,
+          schema_version: PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1,
+          error: "PRODUCT_DATABASE_NOT_READ_ONLY",
+          identity_session_default_read_only: identityReadOnly,
+          formal_session_default_read_only: formalReadOnly,
+        });
+      }
       return reply.code(200).send({
         ok: true,
         schema_version: PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1,
-        database_connectivity: "READY",
-        session_default_read_only: result.rows[0]?.transaction_read_only === "on",
+        identity_database_connectivity: "READY",
+        formal_database_connectivity: "READY",
+        identity_session_default_read_only: true,
+        formal_session_default_read_only: true,
         authority_ceiling: "NON_AUTHORITATIVE_PRODUCT_PROJECTION_ONLY",
       });
     } catch (error) {
-      app.log.error({ err: error }, "Product API database readiness failed");
+      app.log.error({ err: error }, "Product API dual-database readiness failed");
       return reply.code(503).send({
         ok: false,
         schema_version: PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1,
@@ -243,7 +283,10 @@ export function createProductApiPublicAppV1(
     }
   });
 
-  registerProductV1Routes(app, pool);
+  const builder = new PostgresCustomerProductProjectionBuilderV1(pool, {
+    mcftPool: formalPool,
+  });
+  registerProductV1Routes(app, pool, { builder });
 
   app.setNotFoundHandler((_request, reply) => {
     reply.code(404).send({
@@ -252,12 +295,12 @@ export function createProductApiPublicAppV1(
     });
   });
 
-  return { app, pool };
+  return { app, pool, formalPool };
 }
 
 export async function runProductApiPublicRuntimeV1(): Promise<void> {
   const config = resolveProductApiPublicRuntimeConfigV1();
-  const { app, pool } = createProductApiPublicAppV1(config);
+  const { app, pool, formalPool } = createProductApiPublicAppV1(config);
 
   let closing = false;
   const shutdown = async (signal: string) => {
@@ -265,7 +308,10 @@ export async function runProductApiPublicRuntimeV1(): Promise<void> {
     closing = true;
     app.log.info({ signal }, "Product API public runtime shutting down");
     await app.close().catch(() => undefined);
-    await pool.end().catch(() => undefined);
+    await Promise.all([
+      pool.end().catch(() => undefined),
+      formalPool.end().catch(() => undefined),
+    ]);
   };
 
   process.once("SIGTERM", () => void shutdown("SIGTERM"));
