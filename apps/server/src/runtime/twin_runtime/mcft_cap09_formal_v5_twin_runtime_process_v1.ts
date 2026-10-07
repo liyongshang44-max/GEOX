@@ -150,6 +150,9 @@ export async function runMcftCap09FormalV5TwinRuntimeProcessV1(input?: {
     throw new Error("FORMAL_V5_TWIN_A0_BOOTSTRAP_BINDING_INVALID");
   }
 
+  if (activation.current_crop_authority_ref !== String(bootstrap.current_crop_authority_ref ?? "")) {
+    throw new Error("FORMAL_V5_TWIN_CURRENT_CROP_REF_MISMATCH");
+  }
   const currentCrop = json(
     currentCropPath,
     "FORMAL_V5_TWIN_CURRENT_CROP_AUTHORITY_INVALID",
@@ -158,7 +161,7 @@ export async function runMcftCap09FormalV5TwinRuntimeProcessV1(input?: {
   if (
     currentCrop.architecture_effective !== true
     || currentCrop.runtime_consumption_authorized !== true
-    || String(biologicalStage?.authority_valid_until ?? "") < activation.o23
+    || Date.parse(String(biologicalStage?.authority_valid_until ?? "")) < Date.parse(activation.o23)
   ) {
     throw new Error("FORMAL_V5_TWIN_CURRENT_CROP_NOT_VALID_THROUGH_O23");
   }
@@ -232,7 +235,7 @@ export async function runMcftCap09FormalV5TwinRuntimeProcessV1(input?: {
   try {
     await assertMcftCap09ServicePrincipalV1(pool, "TWIN_RUNTIME");
 
-    const previousFence = BigInt(activation.previous_twin_fencing_token);
+    const previousFence = BigInt(activation.a0_bootstrap_twin_fencing_token);
     const liveBefore = await pool.query<{
       lease_owner: string;
       fencing_token: string | number | bigint;
@@ -253,7 +256,7 @@ export async function runMcftCap09FormalV5TwinRuntimeProcessV1(input?: {
       ],
     );
     if (liveBefore.rows.length !== 0) {
-      throw new Error("FORMAL_V5_TWIN_PREVIOUS_OWNER_NOT_RELEASED");
+      throw new Error("FORMAL_V5_TWIN_FORMAL_BOOTSTRAP_LEASE_NOT_EXPIRED");
     }
 
     const composition = composeMcftCap09FormalV5TwinRuntimeV1({
