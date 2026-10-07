@@ -12,6 +12,7 @@ on:
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_composition_v1.ts'
       - 'scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts'
       - 'scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
@@ -81,6 +82,18 @@ jobs:
       - name: Prove Formal-v5 manifest R5 and R6 admission contracts
         run: pnpm exec tsx --test scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts
 
+      - name: Requalify Amendment-21 under exact R6 manifest successor
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$base_sha" ]; then
+            base_sha="$(git merge-base HEAD origin/main)"
+          fi
+          MCFT_BASE_SHA="$base_sha" \
+          MCFT_SUBJECT_SHA="$(git rev-parse HEAD)" \
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs
+
       - name: Preserve Amendment-21 late-season handoff regression
         run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_LATE_SEASON_EPOCH_STAGE_HANDOFF_V1.cjs
 
@@ -94,6 +107,7 @@ jobs:
           name: mcft-cap09-formal-v5-r6-admission-${{ github.sha }}
           path: |
             acceptance-output/MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_AMENDMENT21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_G11_PRODUCTIONIZATION_GOVERNANCE_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_G11_FORMAL_V5_ISOLATED_O00_RESULT.json
           if-no-files-found: warn
