@@ -8,6 +8,7 @@
 import type { Pool } from "pg";
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_json_v1.js";
 import type {
+  FieldTwinCanonicalObjectRefV1,
   FieldTwinScopeV1,
   MinimalFieldTwinRuntimeReadModelV1,
   SemanticHashTextV1,
@@ -32,6 +33,10 @@ import {
   type ProductProjectionSourceBindingProofSetV1,
   type ProductProjectionSourceRoleV1,
 } from "../contracts/product_projection_source_binding_registry_v1.js";
+import type {
+  CustomerProductCurrentRuntimeRefsV1,
+  CustomerProductCurrentRuntimeResolverV1,
+} from "./customer_product_current_runtime_resolver_v1.js";
 import {
   CUSTOMER_PRODUCT_PROJECTION_DERIVATION_VERSION_V1,
   assertCustomerOverviewProjectionV1,
@@ -80,7 +85,7 @@ type StateProjectionRowV1 = {
 
 type ExactFieldRuntimeV1 = {
   scope: FieldTwinScopeV1;
-  runtime: MinimalFieldTwinRuntimeReadModelV1;
+  runtime: CustomerProductCurrentRuntimeRefsV1;
   state: StateProjectionRowV1;
 };
 
@@ -102,6 +107,7 @@ export class CustomerProductProjectionReadErrorV1 extends Error {
 export type CustomerProductProjectionBuilderOptionsV1 = {
   readApi?: McftFieldTwinReadApiV1;
   mcftPool?: Pool;
+  runtimeResolver?: CustomerProductCurrentRuntimeResolverV1;
   now?: () => string;
 };
 
@@ -432,6 +438,7 @@ function mapMcftReadFailureV1(error: unknown): { status: "LIMITED" | "UNAVAILABL
 export class PostgresCustomerProductProjectionBuilderV1 {
   private readonly readApi: McftFieldTwinReadApiV1;
   private readonly mcftPool: Pool;
+  private readonly runtimeResolver: CustomerProductCurrentRuntimeResolverV1 | null;
   private readonly now: () => string;
 
   constructor(
@@ -440,6 +447,7 @@ export class PostgresCustomerProductProjectionBuilderV1 {
   ) {
     this.mcftPool = options.mcftPool ?? pool;
     this.readApi = options.readApi ?? new PostgresMcftFieldTwinS4ReadApiV1(this.mcftPool);
+    this.runtimeResolver = options.runtimeResolver ?? null;
     this.now = options.now ?? (() => new Date().toISOString());
   }
 
@@ -559,12 +567,8 @@ export class PostgresCustomerProductProjectionBuilderV1 {
 
   private async exactStateProjectionRowV1(
     exactScope: FieldTwinScopeV1,
-    runtime: MinimalFieldTwinRuntimeReadModelV1,
+    stateRef: FieldTwinCanonicalObjectRefV1,
   ): Promise<StateProjectionRowV1> {
-    const stateRef = runtime.posterior_state;
-    if (!stateRef) {
-      throw new CustomerProductProjectionReadErrorV1("MCFT_CURRENT_STATE_REF_MISSING", 409);
-    }
     const result = await this.mcftPool.query<StateProjectionRowV1>(
       `SELECT canonical_payload, logical_time, determinism_hash, source_fact_id
          FROM public.twin_state_history_projection_v1
@@ -625,21 +629,34 @@ export class PostgresCustomerProductProjectionBuilderV1 {
       return { status: "LIMITED", value: null, reason_codes: runtimeScope.reason_codes };
     }
     try {
-      const body = await this.readApi.readRuntime({ scope: runtimeScope.scope });
-      const runtime = body as unknown as MinimalFieldTwinRuntimeReadModelV1;
-      if (
-        runtime.schema_version !== "minimal_field_twin_runtime_read_model_v1"
-        || runtime.root_graph_status !== "COMPLETE_EXACT_GRAPH"
-        || !runtime.posterior_state
-        || !runtime.active_lineage
-      ) {
-        return {
-          status: "LIMITED",
-          value: null,
-          reason_codes: ["MCFT_CURRENT_RUNTIME_EXACT_GRAPH_UNAVAILABLE"],
+      let runtime: CustomerProductCurrentRuntimeRefsV1;
+      if (this.runtimeResolver) {
+        runtime = await this.runtimeResolver.resolveCurrentRuntimeV1(runtimeScope.scope);
+      } else {
+        const body = await this.readApi.readRuntime({ scope: runtimeScope.scope });
+        const s4 = body as unknown as MinimalFieldTwinRuntimeReadModelV1;
+        if (
+          s4.schema_version !== "minimal_field_twin_runtime_read_model_v1"
+          || s4.root_graph_status !== "COMPLETE_EXACT_GRAPH"
+          || !s4.posterior_state
+          || !s4.active_lineage
+        ) {
+          return {
+            status: "LIMITED",
+            value: null,
+            reason_codes: ["MCFT_CURRENT_RUNTIME_EXACT_GRAPH_UNAVAILABLE"],
+          };
+        }
+        runtime = {
+          source_profile: "MCFT_CAP07_S4",
+          active_lineage: s4.active_lineage,
+          posterior_state: s4.posterior_state,
         };
       }
-      const state = await this.exactStateProjectionRowV1(runtimeScope.scope, runtime);
+      const state = await this.exactStateProjectionRowV1(
+        runtimeScope.scope,
+        runtime.posterior_state,
+      );
       if (!rootZoneWaterFromStateV1(parseJsonRecordV1(state.canonical_payload) ?? {})) {
         return {
           status: "LIMITED",
@@ -727,18 +744,23 @@ export class PostgresCustomerProductProjectionBuilderV1 {
         { source_ref_key: stateRefKey, digest: stateRef.object_hash, digest_kind: "MCFT_DETERMINISM_HASH" },
         { source_ref_key: lineageRefKey, digest: lineageRef.object_hash, digest_kind: "MCFT_DETERMINISM_HASH" },
       );
+      const formalV5Exact = runtime.source_profile === "MCFT_FORMAL_V5_EXACT";
       proofs.push(
         {
           ref_key: stateRefKey,
-          binding_id: "MCFT_RUNTIME_POSTERIOR_STATE_V1",
+          binding_id: formalV5Exact
+            ? "MCFT_FORMAL_V5_POSTERIOR_STATE_V1"
+            : "MCFT_RUNTIME_POSTERIOR_STATE_V1",
           observed_object_kind: stateRef.object_type,
-          source_path: "posterior_state",
+          source_path: formalV5Exact ? "formal_v5.posterior_state" : "posterior_state",
         },
         {
           ref_key: lineageRefKey,
-          binding_id: "MCFT_RUNTIME_ACTIVE_LINEAGE_V1",
+          binding_id: formalV5Exact
+            ? "MCFT_FORMAL_V5_ACTIVE_LINEAGE_V1"
+            : "MCFT_RUNTIME_ACTIVE_LINEAGE_V1",
           observed_object_kind: lineageRef.object_type,
-          source_path: "active_lineage",
+          source_path: formalV5Exact ? "formal_v5.active_lineage" : "active_lineage",
         },
       );
       const water = rootZoneWaterFromStateV1(parseJsonRecordV1(state.canonical_payload) ?? {});
