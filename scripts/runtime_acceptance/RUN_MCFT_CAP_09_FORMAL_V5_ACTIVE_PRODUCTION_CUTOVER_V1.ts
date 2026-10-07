@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 
 import { Pool } from "pg";
@@ -15,7 +16,7 @@ import {
   validateMcftCap09FormalV5ActiveActivationAuthorityV1,
 } from "../../apps/server/src/runtime/mcft_cap09_formal_v5_active_activation_authority_v1.js";
 
-const ROOT=path.resolve(import.meta.dirname,"../..");
+const ROOT=fileURLToPath(new URL("../../",import.meta.url));
 const BASE_DIR=path.join(os.homedir(),".geox","mcft-cap09","formal-v5");
 const DEFAULT_OUT=path.join(BASE_DIR,"formal-v5-active-activation-authority-v1.json");
 const DEFAULT_CUTOVER_OUT=path.join(BASE_DIR,"formal-v5-active-cutover-v1.json");
