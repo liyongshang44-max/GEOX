@@ -1,0 +1,246 @@
+// MCFT-CAP-09 G11 productionization-only Formal-v5 Twin composition.
+//
+// This is a thin successor of Composition V2. It intentionally reuses the same
+// scheduler, persistence, evidence, tick and stage materialization components.
+// The only runner change is the already-qualified V5 viability-gated wrapper.
+
+import type { Pool } from "pg";
+
+import {
+  PostgresForecastScenarioRecoveryRepositoryV1,
+} from "../../persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.js";
+import {
+  PostgresMcftCap09TwinCanonicalFactWriterV1,
+} from "../../persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.js";
+import {
+  PostgresNextTickRepositoryV1,
+} from "../../persistence/twin_runtime/postgres_next_tick_repository_v1.js";
+import {
+  PostgresRuntimeRepositoryV1,
+} from "../../persistence/twin_runtime/postgres_runtime_repository_v1.js";
+import type {
+  Cap04ForecastScenarioPersistencePortV1,
+} from "./forecast_scenario_persistence_ports_v1.js";
+import {
+  PrepareNextTickInputServiceV1,
+} from "./next_tick_input_service_v1.js";
+import {
+  PostgresExternalFormalAmendment19EvidenceSourceV1,
+} from "./postgres_external_formal_amendment19_evidence_source_v1.js";
+import {
+  PostgresPersistentSequentialSchedulerAdapterV1,
+  type PersistentSequentialSchedulerClockAuthorityV1,
+} from "./postgres_persistent_sequential_scheduler_adapter_v1.js";
+import {
+  PostgresTwinRuntimeSuccessorViabilityV1,
+} from "./postgres_twin_runtime_successor_viability_v1.js";
+import {
+  PostgresExternalFormalNextTickViabilityV1,
+} from "./postgres_external_formal_next_tick_viability_v1.js";
+import {
+  ExternalFormalV3Amendment19PersistentTickServiceV1,
+} from "./external_formal_v3_amendment19_persistent_tick_service_v1.js";
+import {
+  ExternalFormalV5Amendment19RunnerV2,
+} from "./external_formal_v5_amendment19_runner_v2.js";
+import type {
+  ExternalFormalV4Am19WindowManifestV2,
+} from "./external_formal_v4_amendment19_runner_v2.js";
+import {
+  createStaticMcftCap09CurrentCropAuthorityResolverV1,
+  type McftCap09CurrentCropAuthorityResolverPortV1,
+} from "./mcft_cap09_current_crop_authority_resolver_v1.js";
+import {
+  materializeMcftCap09TwinCropContextV2,
+} from "./mcft_cap09_twin_runtime_composition_v2.js";
+import {
+  MCFT_CAP09_TWIN_RUNTIME_HOST_CONTRACT_V1,
+  PostgresTwinRuntimeDatabaseClockV1,
+  TwinRuntimeHostV1,
+  type TwinRuntimeDatabaseClockPortV1,
+  type TwinRuntimeHostFailureClassifierV1,
+  type TwinRuntimeHostHealthPortV1,
+  type TwinRuntimeHostStopPortV1,
+  type TwinRuntimeHostWaitPortV1,
+} from "./mcft_cap09_twin_runtime_host_v1.js";
+
+export const MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_COMPOSITION_ID_V1 =
+  "MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_COMPOSITION_V1" as const;
+
+export const MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_COMPOSITION_CONTRACT_V1 = {
+  composition_id: MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_COMPOSITION_ID_V1,
+  activation_mode: "FORMAL_V5_ACTIVE",
+  predecessor_composition: "MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_V2",
+  host_id: MCFT_CAP09_TWIN_RUNTIME_HOST_CONTRACT_V1.host_id,
+  scheduler: "PostgresPersistentSequentialSchedulerAdapterV1",
+  runtime_repository: "PostgresRuntimeRepositoryV1",
+  evidence_source: "PostgresExternalFormalAmendment19EvidenceSourceV1",
+  persistent_tick_service: "ExternalFormalV3Amendment19PersistentTickServiceV1",
+  crop_context_materializer: "materializeMcftCap09TwinCropContextV2",
+  one_slot_runner: "ExternalFormalV5Amendment19RunnerV2",
+  preclaim_viability: "PostgresExternalFormalNextTickViabilityV1",
+  post_terminal_runtime_viability: "PostgresTwinRuntimeSuccessorViabilityV1",
+  provider_request_allowed: false,
+  raw_r2_fallback_allowed: false,
+  scheduler_semantics_rewritten: false,
+  persistent_tick_semantics_rewritten: false,
+  stage_materialization_semantics_rewritten: false,
+  revision_semantics_rewritten: false,
+  database_schema_changed: false,
+  historical_v2_rewritten: false,
+} as const;
+
+type JsonRecordV1 = Record<string, unknown>;
+
+export type ComposeMcftCap09FormalV5TwinRuntimeInputV1 = {
+  pool: Pool;
+  manifest: ExternalFormalV4Am19WindowManifestV2;
+  subject_sha: string;
+  epoch_id: string;
+  crop_authority: JsonRecordV1;
+  configuration_matrix: JsonRecordV1;
+  current_crop_authority: JsonRecordV1;
+  biological_stage_architecture_effectiveness: JsonRecordV1;
+  current_crop_authority_resolver?: McftCap09CurrentCropAuthorityResolverPortV1;
+  wait: TwinRuntimeHostWaitPortV1;
+  health: TwinRuntimeHostHealthPortV1;
+  stop: TwinRuntimeHostStopPortV1;
+  failure_classifier: TwinRuntimeHostFailureClassifierV1;
+  database_clock?: TwinRuntimeDatabaseClockPortV1;
+  scheduler_clock_authority?: PersistentSequentialSchedulerClockAuthorityV1;
+};
+
+function cap04PersistencePortV1(
+  repository: PostgresForecastScenarioRecoveryRepositoryV1,
+): Cap04ForecastScenarioPersistencePortV1 {
+  return {
+    lookupARecordSet: repository.lookupARecordSet.bind(repository),
+    commitARecordSet: repository.commitARecordSet.bind(repository),
+    readARecordSet: repository.readARecordSet.bind(repository),
+    lookupScenarioSet: repository.lookupScenarioSet.bind(repository),
+    commitScenarioSet: repository.commitScenarioSet.bind(repository),
+    readScenarioSet: repository.readScenarioSet.bind(repository),
+    readScenarioSetBySourceForecast:
+      repository.readScenarioSetBySourceForecast.bind(repository),
+    detectPendingScenario: repository.detectPendingScenario.bind(repository),
+    rebuildForecastProjections:
+      repository.rebuildForecastProjections.bind(repository),
+    rebuildScenarioProjections:
+      repository.rebuildScenarioProjections.bind(repository),
+  };
+}
+
+export function composeMcftCap09FormalV5TwinRuntimeV1(
+  input: ComposeMcftCap09FormalV5TwinRuntimeInputV1,
+) {
+  if (!/^[0-9a-f]{40}$/.test(input.subject_sha)) {
+    throw new Error("FORMAL_V5_TWIN_COMPOSITION_SUBJECT_INVALID");
+  }
+  if (!input.epoch_id.trim()) {
+    throw new Error("FORMAL_V5_TWIN_COMPOSITION_EPOCH_REQUIRED");
+  }
+
+  const runtimeRepository = new PostgresRuntimeRepositoryV1(input.pool);
+  const nextTickRepository = new PostgresNextTickRepositoryV1(input.pool);
+  const forecastScenarioRepository =
+    new PostgresForecastScenarioRecoveryRepositoryV1(
+      input.pool,
+      new PostgresMcftCap09TwinCanonicalFactWriterV1(),
+    );
+  const evidenceSource =
+    new PostgresExternalFormalAmendment19EvidenceSourceV1(input.pool);
+
+  const scheduler = new PostgresPersistentSequentialSchedulerAdapterV1(
+    input.pool,
+    {
+      scope: input.manifest.scope,
+      schedule_start_logical_time: input.manifest.o00_logical_time,
+    },
+    input.scheduler_clock_authority ?? { mode: "SYSTEM_DATABASE_UTC" },
+  );
+
+  const tickService = new ExternalFormalV3Amendment19PersistentTickServiceV1(
+    new PrepareNextTickInputServiceV1(nextTickRepository),
+    evidenceSource,
+    runtimeRepository,
+    cap04PersistencePortV1(forecastScenarioRepository),
+  );
+
+  const currentCropAuthorityResolver =
+    input.current_crop_authority_resolver
+    ?? createStaticMcftCap09CurrentCropAuthorityResolverV1(
+      input.current_crop_authority,
+    );
+
+  const materializer = {
+    materialize(materializeInput: {
+      logical_time: string;
+      expected_identity_hash: string;
+    }) {
+      return materializeMcftCap09TwinCropContextV2(
+        {
+          crop_authority: input.crop_authority,
+          configuration_matrix: input.configuration_matrix,
+          biological_stage_architecture_effectiveness:
+            input.biological_stage_architecture_effectiveness,
+          current_crop_authority_resolver: currentCropAuthorityResolver,
+        },
+        materializeInput,
+      );
+    },
+  };
+
+  const forcingViability = new PostgresExternalFormalNextTickViabilityV1(
+    input.pool,
+    {
+      scope: input.manifest.scope,
+      epoch_id: input.epoch_id,
+      subject_sha: input.subject_sha,
+      o00_logical_time: input.manifest.o00_logical_time,
+    },
+  );
+
+  const runner = new ExternalFormalV5Amendment19RunnerV2(
+    input.manifest,
+    scheduler,
+    runtimeRepository,
+    materializer,
+    evidenceSource,
+    tickService,
+    forcingViability,
+  );
+
+  const successorViability = new PostgresTwinRuntimeSuccessorViabilityV1(
+    input.pool,
+    {
+      scope: input.manifest.scope,
+      schedule_start_logical_time: input.manifest.o00_logical_time,
+    },
+  );
+
+  const host = new TwinRuntimeHostV1({
+    database_clock:
+      input.database_clock ?? new PostgresTwinRuntimeDatabaseClockV1(input.pool),
+    scheduler_ownership: scheduler,
+    one_due_slot: runner,
+    successor_viability: successorViability,
+    wait: input.wait,
+    health: input.health,
+    stop: input.stop,
+    failure_classifier: input.failure_classifier,
+  });
+
+  return {
+    composition_id: MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_COMPOSITION_ID_V1,
+    contract: MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_COMPOSITION_CONTRACT_V1,
+    host,
+    runner,
+    scheduler,
+    forcing_viability: forcingViability,
+    successor_viability: successorViability,
+    evidence_source: evidenceSource,
+    runtime_repository: runtimeRepository,
+    next_tick_repository: nextTickRepository,
+    forecast_scenario_repository: forecastScenarioRepository,
+  };
+}
