@@ -278,3 +278,39 @@ test("validator rejects CURRENT reporting when current condition is unavailable"
     /FIELD_CURRENT_REPORTING_REQUIRES_AVAILABLE_CONDITION/,
   );
 });
+
+test("dual-read builder keeps field identity on identity pool and MCFT lineage/state on MCFT pool", async () => {
+  const backing = fakePool();
+  const identityQueries: string[] = [];
+  const mcftQueries: string[] = [];
+
+  const identityPool = {
+    query: async (sql: string, params: unknown[]) => {
+      identityQueries.push(sql);
+      assert.match(sql, /FROM public\.field_index_v1/);
+      return (backing.query as any)(sql, params);
+    },
+  } as unknown as Pool;
+
+  const mcftPool = {
+    query: async (sql: string, params: unknown[]) => {
+      mcftQueries.push(sql);
+      assert.doesNotMatch(sql, /FROM public\.field_index_v1/);
+      return (backing.query as any)(sql, params);
+    },
+  } as unknown as Pool;
+
+  const builder = new PostgresCustomerProductProjectionBuilderV1(identityPool, {
+    mcftPool,
+    readApi: new FakeReadApi(),
+    now: () => "2026-09-23T00:05:00.000Z",
+  });
+
+  const projection = await builder.buildFieldSummaryV1(scope, "field-a");
+  assert.equal(projection.current_condition.status, "AVAILABLE");
+  assert.ok(identityQueries.length >= 1);
+  assert.ok(identityQueries.every((sql) => sql.includes("FROM public.field_index_v1")));
+  assert.ok(mcftQueries.some((sql) => sql.includes("FROM public.twin_active_lineage_index_v1")));
+  assert.ok(mcftQueries.some((sql) => sql.includes("FROM public.twin_state_history_projection_v1")));
+});
+
