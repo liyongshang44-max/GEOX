@@ -30,7 +30,7 @@ and composes only:
 - CORS;
 - Product API authentication;
 - the canonical `registerProductV1Routes`;
-- a PostgreSQL read pool;
+- two PostgreSQL read pools: an identity pool and a Formal-v5 MCFT read pool;
 - `/health`;
 - `/ready`.
 
@@ -54,11 +54,12 @@ Therefore the public Product API runtime does not intentionally expose:
 
 ## 2. Database credential boundary
 
-The public runtime accepts only:
+The public runtime accepts exactly two Product-specific database bindings:
 
-`GEOX_PRODUCT_DATABASE_URL`
+- `GEOX_PRODUCT_DATABASE_URL` for field identity / Product scope data;
+- `GEOX_PRODUCT_FORMAL_V5_DATABASE_URL` for MCFT Formal-v5 lineage, state, and exact-reference reads.
 
-It does not accept `DATABASE_URL` as an implicit fallback.
+The two bindings must resolve to distinct PostgreSQL databases. The runtime does not accept `DATABASE_URL` as an implicit fallback.
 
 Known Runtime/writer identities are rejected, including:
 
@@ -71,12 +72,17 @@ Known Runtime/writer identities are rejected, including:
 
 The URL must use PostgreSQL and TLS with `sslmode=require` or `verify-full`.
 
-The intended production database is the already-bound Neon PostgreSQL project/database:
+The intended identity database is the already-bound Neon PostgreSQL project/database:
 
 - Neon project: `delicate-glade-62464340`;
 - branch: `br-cold-dust-a6j6aymz`;
-- endpoint family: `ep-odd-poetry-a6peeo8g.us-west-2.aws.neon.tech`;
 - database: `geox_mcft_cap09_production_runtime_v1`.
+
+The intended MCFT authority-read database is:
+
+- database: `geox_mcft_cap09_s6_formal_t4r1_24h_v5`.
+
+The identity database remains the source of `public.field_index_v1`. The Formal-v5 database is never a replacement for the identity database.
 
 This document does not contain or mint a password.
 
@@ -89,11 +95,13 @@ Using an MCFT Evidence/Twin writer URL for Product API deployment is forbidden.
 
 ## 3. Query boundary
 
-Top-level Product builder queries through the public pool are rejected unless they are read statements.
+Top-level Product builder queries through both public pools are rejected unless they are read statements.
 
 DDL/DML and command SQL are rejected in-process.
 
-CAP-07 snapshot composition independently executes `REPEATABLE READ READ ONLY` transactions.
+The builder performs no SQL-level cross-database join. It reads field identity from the identity pool and reads MCFT lineage/state through the Formal-v5 pool, then composes only by the already-governed tenant/project/group/field/season/zone keys and exact MCFT refs.
+
+CAP-07 snapshot composition independently executes `REPEATABLE READ READ ONLY` transactions against the MCFT read pool.
 
 These application-layer controls are defense in depth only. They do not replace the required database-layer read-only credential/endpoint.
 
@@ -135,7 +143,7 @@ proves only that the public Product API process is alive.
 
 `GET /ready`
 
-proves database connectivity and reports whether the session default is read-only.
+proves connectivity to both the identity database and the Formal-v5 database and requires both sessions to report the default transaction mode as read-only.
 
 Railway production health checking should target `/ready`.
 
@@ -158,6 +166,7 @@ The image builds the server package but starts only the Product API public entry
 Required:
 
 - `GEOX_PRODUCT_DATABASE_URL`;
+- `GEOX_PRODUCT_FORMAL_V5_DATABASE_URL`;
 - `GEOX_PRODUCT_API_TOKENS_JSON`;
 - `GEOX_PRODUCT_ALLOWED_ORIGINS`.
 
@@ -214,9 +223,9 @@ This deployment does not modify:
 - database schema;
 - database grants in this PR.
 
-The Product API reads the same PostgreSQL facts/projections but owns no MCFT write authority.
+The Product API preserves two source planes: `field_index_v1` remains on the production identity database, while MCFT lineage/state/exact-reference reads are taken from the Formal-v5 database. The Product API owns no MCFT write authority and does not move or copy authority-bearing records between the databases.
 
-Provisioning a new database role or read-only compute endpoint is a separate operational action and must be treated as a database dependency change when adjudicating MCFT exact-current-main qualification.
+Provisioning or extending the Product read-only principal on Formal-v5 is a separate operational action. It is not performed by this code PR and must be separately authorized and adjudicated as a database ACL dependency change. Evidence/Twin Runtime credentials remain forbidden for Product API deployment.
 
 ## 11. Sites handoff
 
@@ -233,6 +242,7 @@ No Sites code change should be required beyond configuration if `ApiProductDataS
 
 This artifact does not claim:
 
+- the Formal-v5 Product read-only SELECT grants have been provisioned;
 - a Product database credential has been provisioned;
 - Railway deployment has succeeded;
 - `api.geox.ink` DNS is configured;
