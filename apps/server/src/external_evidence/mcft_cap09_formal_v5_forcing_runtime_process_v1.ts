@@ -120,7 +120,7 @@ export async function runMcftCap09FormalV5ForcingRuntimeProcessV1(
       "formal-v5-forcing-producer#instance:" + hostname,
   };
 
-  const process = await createMcftCap09V13ForcingProductionProcessV1({
+  const runtimeProcess = await createMcftCap09V13ForcingProductionProcessV1({
     authority: {
       scope: activation.scope,
       subject_sha: activation.subject_sha,
@@ -135,7 +135,7 @@ export async function runMcftCap09FormalV5ForcingRuntimeProcessV1(
   const stop = createMcftCap09ProcessStopV1();
   try {
     while (!stop.stopRequested()) {
-      const result = await process.runOnce();
+      const result = await runtimeProcess.runOnce();
       process.stdout.write(JSON.stringify({
         runtime_role: "EVIDENCE_RUNTIME",
         process_id: MCFT_CAP09_FORMAL_V5_FORCING_RUNTIME_PROCESS_ID_V1,
@@ -158,6 +158,6 @@ export async function runMcftCap09FormalV5ForcingRuntimeProcessV1(
     }
   } finally {
     stop.dispose();
-    await process.close();
+    await runtimeProcess.close();
   }
 }
