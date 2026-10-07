@@ -1,0 +1,114 @@
+name: geox-mcft-cap09-production-v1
+
+# G11 Formal-v5 ACTIVE successor. This file intentionally does not define the
+# existing Evidence owner service. It replaces only the Twin service after the
+# preformal owner is stopped, and adds the governed V13 forcing process.
+services:
+  geox-mcft-cap09-twin-runtime-v1:
+    image: geox-mcft-cap09-runtime:${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?required}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p /var/log/geox/mcft-cap09/twin &&
+        exec node apps/server/dist/runtime/mcft_cap09_formal_v5_twin_runtime.js
+        >> /var/log/geox/mcft-cap09/twin/runtime.log 2>&1
+    environment:
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?required}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_SERVICE_ID: local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-twin-runtime-v1
+      GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH: /run/geox/mcft-cap09/runtime-start-authority.json
+      GEOX_MCFT_CAP09_FORMAL_V5_ACTIVE_ACTIVATION_AUTHORITY_PATH: /run/geox/mcft-cap09/formal-v5-active-activation-authority.json
+      GEOX_MCFT_CAP09_FORMAL_V5_A0_BOOTSTRAP_PROOF_PATH: /run/geox/mcft-cap09/a0-bootstrap-v1.json
+      GEOX_MCFT_CAP09_FORMAL_V5_CURRENT_CROP_AUTHORITY_PATH: /run/geox/mcft-cap09/current-crop-authority.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL: ${GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL:?required}
+      GEOX_MCFT_CAP09_TENANT_ID: ${GEOX_MCFT_CAP09_TENANT_ID:?required}
+      GEOX_MCFT_CAP09_PROJECT_ID: ${GEOX_MCFT_CAP09_PROJECT_ID:?required}
+      GEOX_MCFT_CAP09_GROUP_ID: ${GEOX_MCFT_CAP09_GROUP_ID:?required}
+      GEOX_MCFT_CAP09_FIELD_ID: ${GEOX_MCFT_CAP09_FIELD_ID:?required}
+      GEOX_MCFT_CAP09_SEASON_ID: ${GEOX_MCFT_CAP09_SEASON_ID:?required}
+      GEOX_MCFT_CAP09_ZONE_ID: ${GEOX_MCFT_CAP09_ZONE_ID:?required}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_MANIFEST_PATH: /run/geox/mcft-cap09/formal-window-manifest.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CROP_AUTHORITY_PATH: /run/geox/mcft-cap09/crop-authority.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH: /run/geox/mcft-cap09/configuration-matrix.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CURRENT_CROP_AUTHORITY_PATH: /run/geox/mcft-cap09/current-crop-authority.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH: /run/geox/mcft-cap09/biological-stage-architecture-effectiveness.json
+    volumes:
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH:?required}
+        target: /run/geox/mcft-cap09/runtime-start-authority.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_FORMAL_V5_ACTIVE_ACTIVATION_AUTHORITY_PATH:?required}
+        target: /run/geox/mcft-cap09/formal-v5-active-activation-authority.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_FORMAL_V5_A0_BOOTSTRAP_PROOF_PATH:?required}
+        target: /run/geox/mcft-cap09/a0-bootstrap-v1.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_FORMAL_WINDOW_MANIFEST_PATH:?required}
+        target: /run/geox/mcft-cap09/formal-window-manifest.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_CROP_AUTHORITY_PATH:?required}
+        target: /run/geox/mcft-cap09/crop-authority.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_CONFIGURATION_MATRIX_PATH:?required}
+        target: /run/geox/mcft-cap09/configuration-matrix.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_FORMAL_V5_CURRENT_CROP_AUTHORITY_PATH:?required}
+        target: /run/geox/mcft-cap09/current-crop-authority.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH:?required}
+        target: /run/geox/mcft-cap09/biological-stage-architecture-effectiveness.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_DURABLE_LOG_ROOT:?required}/twin
+        target: /var/log/geox/mcft-cap09/twin
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  geox-mcft-cap09-formal-v5-forcing-runtime-v1:
+    image: geox-mcft-cap09-runtime:${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?required}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p /var/log/geox/mcft-cap09/forcing &&
+        exec node apps/server/dist/runtime/mcft_cap09_formal_v5_forcing_runtime.js
+        >> /var/log/geox/mcft-cap09/forcing/runtime.log 2>&1
+    environment:
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?required}
+      GEOX_MCFT_CAP09_FORMAL_V5_ACTIVE_ACTIVATION_AUTHORITY_PATH: /run/geox/mcft-cap09/formal-v5-active-activation-authority.json
+      GEOX_MCFT_CAP09_FORMAL_V5_A0_BOOTSTRAP_PROOF_PATH: /run/geox/mcft-cap09/a0-bootstrap-v1.json
+      GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL: ${GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL:?required}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT: ${GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT:?required}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET: ${GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET:?required}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION: ${GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION:?required}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID: ${GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID:?required}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY: ${GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:?required}
+    volumes:
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_FORMAL_V5_ACTIVE_ACTIVATION_AUTHORITY_PATH:?required}
+        target: /run/geox/mcft-cap09/formal-v5-active-activation-authority.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_FORMAL_V5_A0_BOOTSTRAP_PROOF_PATH:?required}
+        target: /run/geox/mcft-cap09/a0-bootstrap-v1.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_DURABLE_LOG_ROOT:?required}/forcing
+        target: /var/log/geox/mcft-cap09/forcing
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
