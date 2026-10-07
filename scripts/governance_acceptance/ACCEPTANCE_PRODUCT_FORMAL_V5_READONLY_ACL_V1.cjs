@@ -8,8 +8,8 @@ const path = require("node:path");
 const ROOT = process.cwd();
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
-const runner = read("scripts/runtime_acceptance/RUN_PRODUCT_FORMAL_V5_READONLY_ACL_PROVISIONING_V1.ts");
-const verifier = read("scripts/runtime_acceptance/VERIFY_PRODUCT_FORMAL_V5_READONLY_ACL_V1.ts");
+const runner = read("scripts/product_acceptance/RUN_PRODUCT_FORMAL_V5_READONLY_ACL_PROVISIONING_V1.ts");
+const verifier = read("scripts/product_acceptance/VERIFY_PRODUCT_FORMAL_V5_READONLY_ACL_V1.ts");
 
 const requiredTables = [
   "facts",
