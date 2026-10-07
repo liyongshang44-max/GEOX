@@ -45,7 +45,7 @@ import {
 } from "./mcft_cap09_formal_v5_manifest_from_stage_authority_v1.js";
 
 const ROOT=fileURLToPath(new URL("../../",import.meta.url));
-const URL=process.env.G11_DATABASE_URL??"postgres://postgres:postgres@127.0.0.1:55432/g11";
+const DATABASE_URL=process.env.G11_DATABASE_URL??"postgres://postgres:postgres@127.0.0.1:55432/g11";
 const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_G11_FORMAL_V5_ISOLATED_O00_RESULT.json");
 const EVIDENCE_SOURCE="mcft_cap09_external_formal_evidence_v1";
 const SUBJECT="1".repeat(40);
@@ -179,7 +179,13 @@ async function applySchema(pool:Pool):Promise<void>{
   for(const rel of files)await pool.query(fs.readFileSync(path.join(ROOT,rel),"utf8"));
 }
 async function main(){
-  const pool=new Pool({connectionString:URL,max:8,application_name:"mcft-cap09-g11-isolated-o00"});
+  const databaseTarget = new URL(DATABASE_URL);
+  assert.ok(
+    ["127.0.0.1", "localhost", "[::1]"].includes(databaseTarget.hostname)
+      && databaseTarget.pathname === "/g11",
+    "G11_ISOLATED_DATABASE_REQUIRED",
+  );
+  const pool=new Pool({connectionString:DATABASE_URL,max:8,application_name:"mcft-cap09-g11-isolated-o00"});
   try{
     await applySchema(pool);
 
