@@ -22,8 +22,9 @@ export type McftCap09FormalV5ActiveActivationAuthorityV1 = {
   bootstrap_result_sha256: string;
   current_crop_authority_ref: string;
   current_crop_authority_sha256: string;
-  previous_twin_lease_owner: string;
-  previous_twin_fencing_token: string;
+  preformal_twin_lease_owner: string;
+  a0_bootstrap_twin_lease_owner: string;
+  a0_bootstrap_twin_fencing_token: string;
   twin_activation_authorized: true;
   forcing_activation_authorized: true;
   provider_semantics_rewritten: false;
@@ -128,12 +129,12 @@ export function validateMcftCap09FormalV5ActiveActivationAuthorityV1(
     }
   }
 
-  const previousFence = requiredText(
-    row.previous_twin_fencing_token,
-    "FORMAL_V5_ACTIVE_AUTHORITY_PREVIOUS_FENCE_REQUIRED",
+  const bootstrapFence = requiredText(
+    row.a0_bootstrap_twin_fencing_token,
+    "FORMAL_V5_ACTIVE_AUTHORITY_BOOTSTRAP_FENCE_REQUIRED",
   );
-  if (!/^\d+$/.test(previousFence) || BigInt(previousFence) <= 0n) {
-    throw new Error("FORMAL_V5_ACTIVE_AUTHORITY_PREVIOUS_FENCE_INVALID");
+  if (!/^\d+$/.test(bootstrapFence) || BigInt(bootstrapFence) <= 0n) {
+    throw new Error("FORMAL_V5_ACTIVE_AUTHORITY_BOOTSTRAP_FENCE_INVALID");
   }
 
   return {
@@ -162,11 +163,15 @@ export function validateMcftCap09FormalV5ActiveActivationAuthorityV1(
       row.current_crop_authority_sha256,
       "FORMAL_V5_ACTIVE_AUTHORITY_CURRENT_CROP_DIGEST_INVALID",
     ),
-    previous_twin_lease_owner: requiredText(
-      row.previous_twin_lease_owner,
-      "FORMAL_V5_ACTIVE_AUTHORITY_PREVIOUS_OWNER_REQUIRED",
+    preformal_twin_lease_owner: requiredText(
+      row.preformal_twin_lease_owner,
+      "FORMAL_V5_ACTIVE_AUTHORITY_PREFORMAL_OWNER_REQUIRED",
     ),
-    previous_twin_fencing_token: previousFence,
+    a0_bootstrap_twin_lease_owner: requiredText(
+      row.a0_bootstrap_twin_lease_owner,
+      "FORMAL_V5_ACTIVE_AUTHORITY_BOOTSTRAP_OWNER_REQUIRED",
+    ),
+    a0_bootstrap_twin_fencing_token: bootstrapFence,
     twin_activation_authorized: true,
     forcing_activation_authorized: true,
     provider_semantics_rewritten: false,
