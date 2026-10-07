@@ -112,6 +112,13 @@ export async function runMcftCap09FormalV5ForcingRuntimeProcessV1(
   }
   const hostname = String(env.HOSTNAME ?? os.hostname()).trim();
   if (!hostname) throw new Error("FORMAL_V5_FORCING_HOSTNAME_REQUIRED");
+  const factoryEnv: EnvironmentV1 = {
+    ...env,
+    GEOX_MCFT_CAP09_V13_CONTROLLER_OWNER:
+      "formal-v5-forcing-controller#instance:" + hostname,
+    GEOX_MCFT_CAP09_V13_PRODUCER_OWNER:
+      "formal-v5-forcing-producer#instance:" + hostname,
+  };
 
   const process = await createMcftCap09V13ForcingProductionProcessV1({
     authority: {
@@ -122,7 +129,7 @@ export async function runMcftCap09FormalV5ForcingRuntimeProcessV1(
       last_required_base: addHours(activation.o23, -1),
       qualified_budget: budgetDocument.qualified_budget,
     },
-    env,
+    env: factoryEnv,
   });
 
   const stop = createMcftCap09ProcessStopV1();
