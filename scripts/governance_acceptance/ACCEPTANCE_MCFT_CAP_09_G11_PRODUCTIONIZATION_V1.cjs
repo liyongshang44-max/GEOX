@@ -55,6 +55,7 @@ for(const marker of [
 const twinProcess=read("apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_process_v1.ts");
 for(const marker of [
   "FORMAL_V5_ACTIVE",
+  "void runMcftCap09FormalV5TwinRuntimeProcessV1().catch",
   "composeMcftCap09FormalV5TwinRuntimeV1",
   "FORMAL_V5_TWIN_FORMAL_BOOTSTRAP_LEASE_NOT_EXPIRED",
   "FORMAL_V5_TWIN_NEW_FENCING_TOKEN_REQUIRED",
@@ -66,6 +67,7 @@ assert.equal(twinProcess.includes("ExternalFormalV4Amendment19RunnerV2"),false,"
 const forcing=read("apps/server/src/external_evidence/mcft_cap09_formal_v5_forcing_runtime_process_v1.ts");
 for(const marker of [
   "createMcftCap09V13ForcingProductionProcessV1",
+  "void runMcftCap09FormalV5ForcingRuntimeProcessV1().catch",
   "FORMAL_V5_ACTIVE",
   "FORMAL_V5_FORCING_FORMAL_DATABASE_REQUIRED",
   "FORMAL_V5_FORCING_FORMAL_RAW_BUCKET_REQUIRED",

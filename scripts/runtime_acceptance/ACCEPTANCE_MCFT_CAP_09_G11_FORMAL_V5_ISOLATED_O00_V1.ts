@@ -240,11 +240,7 @@ async function main(){
     });
     assert.equal(boot.hourly_runtime_config_count,24);
     assert.equal(boot.scheduler_slot_write_count,0);
-    await pool.query(
-      `UPDATE twin_runtime_lease_v1 SET expires_at=transaction_timestamp()-interval '1 second'
-        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
-      Object.values(MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1),
-    );
+
 
     for(const row of [soilRecord(O00,2),...currentPair(O00,2)])await insertFact(pool,row);
 
@@ -272,6 +268,17 @@ async function main(){
     assert.equal(composition.contract.one_slot_runner,"ExternalFormalV5Amendment19RunnerV2");
     assert.equal(composition.runner.constructor.name,"ExternalFormalV5Amendment19RunnerV2");
 
+    const bootstrapLease = await composition.scheduler.acquireOrRenewOwnershipLease({
+      lease_owner: "g11-a0-bootstrap",
+      lease_duration_seconds: LEASE_SECONDS,
+    });
+    assert.ok(bootstrapLease, "G11_BOOTSTRAP_OWNER_LEASE_REQUIRED");
+    assert.equal(
+      await composition.scheduler.releaseOwnershipLease({claim: bootstrapLease}),
+      "RELEASED",
+      "G11_BOOTSTRAP_OWNER_RELEASE_REQUIRED",
+    );
+
     const result=await composition.runner.executeOneDueSlot({
       through_logical_time:O00,
       observer_started_at:O00,
@@ -293,7 +300,7 @@ async function main(){
     assert.equal(slot.length,1);
     assert.equal(slot[0].slot_id,"O00");
     assert.ok(["COMPLETED","DEGRADED"].includes(String(slot[0].state)));
-    assert.ok(BigInt(slot[0].fencing_token)>1n);
+    assert.ok(BigInt(slot[0].fencing_token)>bootstrapLease.fencing_token);
 
     const proof={
       schema_version:"geox_mcft_cap09_g11_formal_v5_isolated_o00_v1",

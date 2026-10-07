@@ -87,6 +87,23 @@ jobs:
           grep -Fq 'runMcftCap09FormalV5TwinRuntimeProcessV1' apps/server/dist/apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_process_v1.js
           grep -Fq 'runMcftCap09FormalV5ForcingRuntimeProcessV1' apps/server/dist/apps/server/src/external_evidence/mcft_cap09_formal_v5_forcing_runtime_process_v1.js
 
+      - name: Prove built ACTIVE processes execute and fail closed before database access
+        shell: node {0}
+        run: |
+          const assert = require('node:assert/strict');
+          const {spawnSync} = require('node:child_process');
+          const env = {...process.env};
+          delete env.GEOX_DEPLOYMENT_SUBJECT_COMMIT;
+          for (const [file, reason] of [
+            ['runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_process_v1.js', 'FORMAL_V5_TWIN_DEPLOYMENT_SUBJECT_REQUIRED'],
+            ['external_evidence/mcft_cap09_formal_v5_forcing_runtime_process_v1.js', 'FORMAL_V5_FORCING_DEPLOYMENT_SUBJECT_REQUIRED'],
+          ]) {
+            const result = spawnSync(process.execPath, ['apps/server/dist/apps/server/src/' + file], {env, encoding: 'utf8', timeout: 15000});
+            assert.equal(result.error, undefined, `G11_DIST_STARTUP_ERROR:${file}`);
+            assert.equal(result.status, 1, `G11_DIST_MUST_EXECUTE_FAIL_CLOSED:${file}`);
+            assert.ok(result.stderr.includes(reason), `G11_DIST_STARTUP_GATE_REQUIRED:${file}:${result.stderr}`);
+          }
+
       - name: Prove isolated production-equivalent A0 to O00 V5 path
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_FORMAL_V5_ISOLATED_O00_V1.ts
 

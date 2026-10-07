@@ -6,6 +6,8 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import productionAcquisitionHorizonAuthorityJson from "../../../../../docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json" with { type: "json" };
 
@@ -305,4 +307,12 @@ export async function runMcftCap09FormalV5TwinRuntimeProcessV1(input?: {
       poolErrorGuard.dispose();
     }
   }
+}
+
+// Imports remain inert. The compose command executes this dist file directly.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  void runMcftCap09FormalV5TwinRuntimeProcessV1().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
 }
