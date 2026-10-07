@@ -197,6 +197,7 @@ export async function assertMcftCap09V13ForcingProductionDatabaseAuthorityV1(
 export async function createMcftCap09V13ForcingProductionProcessV1(input: {
   authority: McftCap09V13ForcingGovernedAuthorityV1;
   env?: EnvironmentV1;
+  runtime_credentials?: McftCap09V13ForcingRuntimeCredentialsV1;
   clock?: () => Date;
   work_item_config?: {
     fetch_impl?: typeof fetch;
@@ -206,7 +207,8 @@ export async function createMcftCap09V13ForcingProductionProcessV1(input: {
     gfs_timeout_ms?: number;
   };
 }) {
-  const credentials = readMcftCap09V13ForcingRuntimeCredentialsV1(input.env ?? process.env);
+  const credentials = input.runtime_credentials
+    ?? readMcftCap09V13ForcingRuntimeCredentialsV1(input.env ?? process.env);
   const pool = createDatabasePool(credentials.database_url);
   try {
     await assertMcftCap09ServicePrincipalV1(pool, "EVIDENCE_RUNTIME");
