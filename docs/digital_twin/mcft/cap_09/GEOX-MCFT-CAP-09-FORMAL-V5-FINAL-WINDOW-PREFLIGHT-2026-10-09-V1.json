@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_formal_v5_final_window_preflight_v1",
   "checklist_id": "GEOX-MCFT-CAP-09-FORMAL-V5-FINAL-WINDOW-PREFLIGHT-2026-10-09",
-  "status": "PREPARED_WITH_FIRST_RED",
+  "status": "PREPARED_WITH_FIRST_RED_AND_COMMAND_LEVEL_SELF_AUDIT",
   "effective": false,
   "design_base_protected_main": "0e4cd036fdbebfe8118d6b7c1978572859d5a652",
   "target_epoch": {
@@ -51,6 +51,32 @@
       "evidence_exact_one": true,
       "twin_exact_one": true,
       "status": "PASS_FROM_CURRENT_HANDOFF_MACHINE_EVIDENCE"
+    },
+    "current_formal_artifacts": {
+      "rearm_artifact_path": "~/.geox/mcft-cap09/formal-v5/arm-rearm-0e4cd036-v1.json",
+      "expected_arm_identity_hash": "sha256:cadbe9c5e228f95621625e26b82117f6ca9edb799221667ce5ce192069d1f9e5",
+      "schema_acl_revalidation_path": "~/.geox/mcft-cap09/formal-v5/schema-acl-revalidation-0e4cd036-v1.json",
+      "expected_runtime_image_id": "sha256:52b82bd8237511bf3e0e8ba20b90b6a91c83d719f6926252951938ebbf42f222",
+      "default_arm_v1_must_not_be_used_for_a0": true,
+      "default_schema_acl_v1_must_not_be_used_for_a0": true,
+      "status": "EXPLICIT_PATH_BINDING_REQUIRED"
+    },
+    "main_ruleset": {
+      "name": "main-strict-delivery-v1",
+      "strict_required_status_checks": true,
+      "merge_queue_present": false,
+      "allowed_merge_method": "merge",
+      "required_contexts": [
+        "acceptance",
+        "build-test",
+        "mcft-delivery-policy-v2-contract",
+        "mcft-candidate-integrity-pr-selftest",
+        "mcft-release-lane-pr-selftest",
+        "mcft-main-ruleset-readiness-v1",
+        "mcft-candidate-integrity-enforce-current-pr",
+        "mcft-release-lane-enforce-current-pr"
+      ],
+      "observed_oct06_authority_pr_acceptance_seconds": 444
     }
   },
   "ordered_gates": [
@@ -84,10 +110,21 @@
     },
     {
       "id": "G04",
-      "name": "EFFECTIVE_AUTHORITY_MATERIALIZATION",
+      "name": "EFFECTIVE_AUTHORITY_MATERIALIZATION_WITH_IMMUTABLE_QUALIFICATION_EVIDENCE_ENVELOPE",
       "mode": "FUTURE_AUTHORITY_ONLY_BRANCH",
       "required": "PASS",
-      "current": "PENDING_G03"
+      "current": "PENDING_G03",
+      "required_evidence_shape": [
+        "embedded_refresh_request",
+        "run_id",
+        "run_url",
+        "artifact_id",
+        "artifact_sha256",
+        "subject_sha",
+        "exact_six_file_sha256_map",
+        "archive_encoding_base64",
+        "archive_bytes_exact_zip"
+      ]
     },
     {
       "id": "G05",
@@ -101,7 +138,19 @@
       "name": "AUTHORITY_ONLY_PROTECTED_MAIN_ADOPTION",
       "mode": "FUTURE_GOVERNED_MERGE",
       "required": "PASS",
-      "current": "PENDING_G05"
+      "current": "PENDING_G05",
+      "required_status_contexts": [
+        "acceptance",
+        "build-test",
+        "mcft-delivery-policy-v2-contract",
+        "mcft-candidate-integrity-pr-selftest",
+        "mcft-release-lane-pr-selftest",
+        "mcft-main-ruleset-readiness-v1",
+        "mcft-candidate-integrity-enforce-current-pr",
+        "mcft-release-lane-enforce-current-pr"
+      ],
+      "merge_method": "merge",
+      "merge_queue": false
     },
     {
       "id": "G07",
@@ -122,7 +171,10 @@
       "name": "EXACT_ONE_LIVE_OWNER_PER_RUNTIME_ROLE",
       "mode": "READ_ONLY",
       "required": "PASS",
-      "current": "LAST_PROVEN_PASS_RECHECK_REQUIRED"
+      "current": "LAST_PROVEN_PASS_RECHECK_REQUIRED",
+      "attestation_mode": "FRESH_DETACHED_ARM_SUBJECT_ATTEST_IMAGE_THEN_LIVE_T1_T2",
+      "runtime_subject": "0e4cd036fdbebfe8118d6b7c1978572859d5a652",
+      "expected_runtime_image_id": "sha256:52b82bd8237511bf3e0e8ba20b90b6a91c83d719f6926252951938ebbf42f222"
     },
     {
       "id": "G10",
@@ -207,8 +259,11 @@
   "hard_stops": [
     "ANY_UNRELATED_PROTECTED_MAIN_CHANGE_AFTER_ARM",
     "CANDIDATE_NOT_EXACT_2026_10_09_04Z",
+    "QUALIFICATION_ARTIFACT_ZIP_OR_EXACT_SIX_FILE_DIGEST_ENVELOPE_MISSING",
     "AUTHORITY_VALIDITY_DOES_NOT_COVER_O23",
     "REGISTRY_HISTORY_REWRITE_OR_MULTI_APPEND",
+    "ANY_REQUIRED_MAIN_RULESET_CHECK_NOT_SUCCESS",
+    "CURRENT_REARM_OR_SCHEMA_ACL_PROOF_PATH_MISSING_OR_STALE",
     "FORMAL_DB_NOT_EXACT_29_TABLE_2_ROUTINE_ZERO_STATE_PRE_A0",
     "NOT_EXACT_ONE_LIVE_OWNER_PER_RUNTIME_ROLE",
     "FORMAL_V5_ACTIVE_PRODUCTION_ROUTE_NOT_MACHINE_PROVEN",
@@ -223,5 +278,52 @@
     "database_rows_changed": false,
     "a0_executed": false,
     "o00_started": false
+  },
+  "command_level_self_audit": {
+    "audited_against_exact_main": "0e4cd036fdbebfe8118d6b7c1978572859d5a652",
+    "completed_on": "2026-10-07",
+    "defects_found_and_fixed_in_runbook": [
+      {
+        "id": "SA01",
+        "defect": "A0 runners default to stale arm-v1.json and schema-acl-v1.json",
+        "correction": "Explicitly bind arm-rearm-0e4cd036-v1.json and schema-acl-revalidation-0e4cd036-v1.json for promotion/bootstrap",
+        "severity": "CRITICAL",
+        "status": "FIXED_IN_DRAFT_RUNBOOK"
+      },
+      {
+        "id": "SA02",
+        "defect": "Pre-adoption main==arm-subject assertion was incorrectly reused after legal authority-only main advancement",
+        "correction": "Split pre-adoption arm-subject freeze from post-adoption captured-main freeze; continuity remains anchored to arm subject",
+        "severity": "CRITICAL",
+        "status": "FIXED_IN_DRAFT_RUNBOOK"
+      },
+      {
+        "id": "SA03",
+        "defect": "Original materialization recipe omitted immutable qualification_evidence envelope present in proven Oct-06 authority",
+        "correction": "Preserve exact artifact ZIP, artifact id/digest, six per-file digests, run metadata, embedded request, and base64 archive before registry digest",
+        "severity": "CRITICAL",
+        "status": "FIXED_IN_DRAFT_RUNBOOK"
+      },
+      {
+        "id": "SA04",
+        "defect": "Live owner proof could have depended on an earlier temporary artifact-attestation path",
+        "correction": "Create fresh arm-subject artifact attestation in detached worktree, archive it durably, then run live T1/T2 proof against current containers",
+        "severity": "HIGH",
+        "status": "FIXED_IN_DRAFT_RUNBOOK"
+      },
+      {
+        "id": "SA05",
+        "defect": "PR check step did not explicitly enforce the exact main ruleset contexts",
+        "correction": "Require eight named status contexts with explicit success and merge commit method",
+        "severity": "HIGH",
+        "status": "FIXED_IN_DRAFT_RUNBOOK"
+      }
+    ],
+    "unresolved_first_red": {
+      "id": "G11",
+      "name": "FORMAL_V5_ACTIVE_PRODUCTION_PROCESS_ROUTE",
+      "status": "FIRST_RED_NOT_PROVEN",
+      "consequence": "A0_AND_O00_HOLD"
+    }
   }
 }
