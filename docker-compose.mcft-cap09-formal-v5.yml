@@ -1,0 +1,51 @@
+name: geox-mcft-cap09-formal-v5-v1
+
+services:
+  geox-mcft-cap09-formal-v5-twin-runtime-v1:
+    image: geox-mcft-cap09-runtime:${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+    build:
+      context: .
+      dockerfile: docker/mcft-cap09-runtime.Dockerfile
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p /var/log/geox/mcft-cap09/formal-v5-twin &&
+        exec node apps/server/dist/runtime/mcft_cap09_formal_v5_twin_runtime.js
+        >> /var/log/geox/mcft-cap09/formal-v5-twin/runtime.log 2>&1
+    environment:
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?required}
+      GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL: ${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:?required}
+      GEOX_MCFT_CAP09_FORMAL_V5_TWIN_SERVICE_ID: ${GEOX_MCFT_CAP09_FORMAL_V5_TWIN_SERVICE_ID:?required}
+      GEOX_MCFT_CAP09_FORMAL_V5_A0_BOOTSTRAP_PROOF_PATH: /run/geox/mcft-cap09/formal-v5/a0-bootstrap-result.json
+      GEOX_MCFT_CAP09_FORMAL_V5_MANIFEST_PATH: /run/geox/mcft-cap09/formal-v5/formal-window-manifest.json
+      GEOX_MCFT_CAP09_FORMAL_V5_CURRENT_CROP_AUTHORITY_PATH: /run/geox/mcft-cap09/formal-v5/current-crop-authority.json
+      GEOX_MCFT_CAP09_FORMAL_V5_CURRENT_CROP_AUTHORITY_REF: ${GEOX_MCFT_CAP09_FORMAL_V5_CURRENT_CROP_AUTHORITY_REF:?required}
+      GEOX_MCFT_CAP09_FORMAL_V5_TWIN_LEASE_DURATION_SECONDS: ${GEOX_MCFT_CAP09_FORMAL_V5_TWIN_LEASE_DURATION_SECONDS:-300}
+      GEOX_MCFT_CAP09_FORMAL_V5_TWIN_IDLE_POLL_MS: ${GEOX_MCFT_CAP09_FORMAL_V5_TWIN_IDLE_POLL_MS:-5000}
+      GEOX_MCFT_CAP09_FORMAL_V5_TWIN_NOT_READY_POLL_MS: ${GEOX_MCFT_CAP09_FORMAL_V5_TWIN_NOT_READY_POLL_MS:-5000}
+      GEOX_MCFT_CAP09_FORMAL_V5_TWIN_TERMINAL_POLL_MS: ${GEOX_MCFT_CAP09_FORMAL_V5_TWIN_TERMINAL_POLL_MS:-1000}
+      GEOX_MCFT_CAP09_FORMAL_V5_TWIN_RETRY_BASE_MS: ${GEOX_MCFT_CAP09_FORMAL_V5_TWIN_RETRY_BASE_MS:-1000}
+      GEOX_MCFT_CAP09_FORMAL_V5_TWIN_RETRY_MAXIMUM_MS: ${GEOX_MCFT_CAP09_FORMAL_V5_TWIN_RETRY_MAXIMUM_MS:-30000}
+    volumes:
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_FORMAL_V5_A0_BOOTSTRAP_PROOF_PATH:?required}
+        target: /run/geox/mcft-cap09/formal-v5/a0-bootstrap-result.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_FORMAL_V5_MANIFEST_PATH:?required}
+        target: /run/geox/mcft-cap09/formal-v5/formal-window-manifest.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_FORMAL_V5_CURRENT_CROP_AUTHORITY_PATH:?required}
+        target: /run/geox/mcft-cap09/formal-v5/current-crop-authority.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_DURABLE_LOG_ROOT:?required}/formal-v5-twin
+        target: /var/log/geox/mcft-cap09/formal-v5-twin
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
