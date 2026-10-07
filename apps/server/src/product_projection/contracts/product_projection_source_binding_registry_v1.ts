@@ -59,6 +59,7 @@ export const PRODUCT_PROJECTION_SOURCE_ROLES_V1 = [
   "CAPABILITY_OPERATIONAL_ELIGIBILITY_BASIS",
   "ATTENTION_AUTHORITY_SOURCE",
   "FIELD_IDENTITY",
+  "FIELD_GEOMETRY",
   "FIELD_CURRENT_STATE",
   "FIELD_CURRENT_RUNTIME_LINEAGE",
 ] as const;
@@ -120,6 +121,17 @@ export const PRODUCT_PROJECTION_SOURCE_BINDINGS_V1 = Object.freeze([
     source_contract_version: "v1",
     allowed_source_paths: ["public.field_index_v1"],
     allowed_product_roles: ["FIELD_IDENTITY"],
+  }),
+  nonAuthorityRegistration({
+    binding_id: "GEOX_FIELD_POLYGON_V1",
+    source_system: "GEOX_PLATFORM",
+    non_authority_ref_class: "OTHER_NON_AUTHORITY",
+    object_kind_mode: "EXACT",
+    allowed_object_kinds: ["field_polygon_v1"],
+    source_contract: "public.field_polygon_v1 customer-safe geometry presence",
+    source_contract_version: "v1",
+    allowed_source_paths: ["public.field_polygon_v1"],
+    allowed_product_roles: ["FIELD_GEOMETRY"],
   }),
   authorityRegistration({
     binding_id: "MCFT_RUNTIME_ACTIVE_LINEAGE_V1",
