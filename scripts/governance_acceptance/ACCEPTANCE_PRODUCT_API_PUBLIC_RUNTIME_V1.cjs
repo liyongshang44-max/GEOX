@@ -80,6 +80,10 @@ try {
     assert.match(runtime, /PRODUCT_API_SQL_WRITE_FORBIDDEN/);
     assert.match(runtime, /PRODUCT_API_SQL_NON_READ_STATEMENT_FORBIDDEN/);
     assert.match(runtime, /SQL_WRITE_OR_DDL_V1/);
+    assert.match(runtime, /pool\.on\("connect"/);
+    assert.match(runtime, /assertConnectedClientReadQueryV1/);
+    assert.match(runtime, /SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY/);
+    assert.doesNotMatch(runtime, /SET ROLE|SET SESSION AUTHORIZATION/);
   });
 
   check("PRODUCT_ONLY_TOKEN_SOURCE", () => {
