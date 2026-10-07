@@ -985,6 +985,37 @@
         ".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml",
         "scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_V5_EPOCH_CLOCK_SELECTOR_V1.cjs"
       ]
+    },
+    "FORMAL_V5_G11_PRODUCTIONIZATION_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-g11-formal-v5-productionization.yml",
+        "apps/server/scripts/write_dist_entries.cjs",
+        "apps/server/src/external_evidence/formal_durable_raw_store_binding_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_formal_v5_forcing_runtime_process_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts",
+        "apps/server/src/runtime/mcft_cap09_formal_v5_active_activation_authority_v1.ts",
+        "apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts",
+        "apps/server/src/runtime/mcft_cap09_production_service_identity_v1.ts",
+        "apps/server/src/runtime/mcft_cap09_twin_preformal_owner_runtime_v1.ts",
+        "apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts",
+        "apps/server/src/runtime/twin_runtime/external_formal_v5_viability_gated_scheduler_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_composition_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_process_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_preformal_owner_standby_v1.ts",
+        "docker-compose.mcft-cap09-formal-v5-active.yml",
+        "docker-compose.mcft-cap09-production-preformal.yml",
+        "docker/mcft-cap09-runtime.Dockerfile",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_FORMAL_V5_ISOLATED_O00_V1.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_ACTIVE_PRODUCTION_CUTOVER_V1.ts"
+      ]
     }
   },
   "checks": [
@@ -1968,6 +1999,36 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs"
+    },
+    {
+      "check_id": "FORMAL_V5_G11_PRODUCTIONIZATION",
+      "owner": "MCFT_CAP09_FORMAL_V5_G11_PRODUCTIONIZATION",
+      "generation_scope": [
+        "FORMAL_V5",
+        "G11_PRODUCTIONIZATION_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json"
+      ],
+      "resolver_ids": [
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_G11_MUST_REQUALIFY_EXACT_HEAD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-g11-formal-v5-productionization.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD_ZERO_PRODUCTION_EFFECT",
+      "fail_policy": "FAIL_CLOSED_NO_ACTIVE_V5_CUTOVER_OR_A0_UNTIL_G11_QUALIFIED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs"
     }
   ],
   "non_effects": {
