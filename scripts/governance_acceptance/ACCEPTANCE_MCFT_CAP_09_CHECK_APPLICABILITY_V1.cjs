@@ -1117,6 +1117,21 @@ function main() {
   assert.equal(byId(formalV5, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUIRED");
   assert.equal(byId(formalV5, "FORMAL_V5_ACTIVATION").status, "REQUIRED");
 
+  // ACTIVE route changes are activation dependencies, even when frozen V13/V2 code is unchanged.
+  for (const rel of [
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_process_v1.ts",
+    "apps/server/src/external_evidence/mcft_cap09_formal_v5_forcing_runtime_process_v1.ts",
+    "docker-compose.mcft-cap09-formal-v5-active.yml",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_ACTIVE_PRODUCTION_CUTOVER_V1.ts",
+  ]) {
+    const changedRoute = plan(authority, registry, [rel], "POST_GRADUATION_FORMAL_V5_ACTIVATION");
+    assert.equal(changedRoute.status, "PASS", `G11_ACTIVATION_PLAN_INVALID:${rel}`);
+    const activation = byId(changedRoute, "FORMAL_V5_ACTIVATION");
+    assert.equal(activation.status, "REQUALIFY", `G11_ROUTE_MUST_REQUALIFY_ACTIVATION:${rel}`);
+    assert.equal(activation.reason_code, "GOVERNED_DEPENDENCY_CHANGED");
+    assert.ok(activation.changed_dependencies.includes(rel));
+  }
+
   const proof = {
     status: "PASS",
     acceptance_id: "MCFT_CAP09_CHECK_APPLICABILITY_V1",
