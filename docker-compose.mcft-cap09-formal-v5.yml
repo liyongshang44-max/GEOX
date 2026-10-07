@@ -49,3 +49,48 @@ services:
     tmpfs: ["/tmp"]
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
+
+  geox-mcft-cap09-formal-v5-forcing-runtime-v1:
+    image: geox-mcft-cap09-runtime:${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+    build:
+      context: .
+      dockerfile: docker/mcft-cap09-runtime.Dockerfile
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p /var/log/geox/mcft-cap09/formal-v5-forcing &&
+        exec node apps/server/dist/runtime/mcft_cap09_formal_v5_forcing_runtime.js
+        >> /var/log/geox/mcft-cap09/formal-v5-forcing/runtime.log 2>&1
+    environment:
+      GEOX_MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_DATABASE_URL: ${GEOX_MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_DATABASE_URL:?required}
+      GEOX_MCFT_CAP09_FORMAL_V5_A0_BOOTSTRAP_PROOF_PATH: /run/geox/mcft-cap09/formal-v5/a0-bootstrap-result.json
+      GEOX_MCFT_CAP09_FORMAL_V5_MANIFEST_PATH: /run/geox/mcft-cap09/formal-v5/formal-window-manifest.json
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT: ${GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT:?required}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET: ${GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET:?required}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION: ${GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION:?required}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID: ${GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID:?required}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY: ${GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:?required}
+      GEOX_MCFT_CAP09_FORMAL_RAW_S3_ALLOW_INSECURE_HTTP_FOR_TEST: ${GEOX_MCFT_CAP09_FORMAL_RAW_S3_ALLOW_INSECURE_HTTP_FOR_TEST:-0}
+      GEOX_MCFT_CAP09_FORMAL_V5_FORCING_CONTROLLER_LEASE_SECONDS: ${GEOX_MCFT_CAP09_FORMAL_V5_FORCING_CONTROLLER_LEASE_SECONDS:-300}
+      GEOX_MCFT_CAP09_FORMAL_V5_FORCING_PRODUCER_LEASE_SECONDS: ${GEOX_MCFT_CAP09_FORMAL_V5_FORCING_PRODUCER_LEASE_SECONDS:-300}
+      GEOX_MCFT_CAP09_FORMAL_V5_FORCING_HEARTBEAT_INTERVAL_MS: ${GEOX_MCFT_CAP09_FORMAL_V5_FORCING_HEARTBEAT_INTERVAL_MS:-30000}
+    volumes:
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_FORMAL_V5_A0_BOOTSTRAP_PROOF_PATH:?required}
+        target: /run/geox/mcft-cap09/formal-v5/a0-bootstrap-result.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_FORMAL_V5_MANIFEST_PATH:?required}
+        target: /run/geox/mcft-cap09/formal-v5/formal-window-manifest.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_DURABLE_LOG_ROOT:?required}/formal-v5-forcing
+        target: /var/log/geox/mcft-cap09/formal-v5-forcing
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
