@@ -7,7 +7,7 @@ const fs=require("node:fs");
 const path=require("node:path");
 
 const ROOT=path.resolve(__dirname,"../..");
-const BASE="fe5a7da7b0549fbe31c6b617c1ee91c7f2ee33f3";
+const BASE="53a28bc4f77499687d6a3e1988845bba6384c790";
 
 const EXPECTED_CHANGED=[
   ".github/workflows/mcft-cap-09-formal-v5-r6-admission.yml",
