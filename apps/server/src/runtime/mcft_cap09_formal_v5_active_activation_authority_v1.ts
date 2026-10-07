@@ -20,6 +20,8 @@ export type McftCap09FormalV5ActiveActivationAuthorityV1 = {
   manifest_ref: string;
   manifest_hash: string;
   bootstrap_result_sha256: string;
+  current_crop_authority_ref: string;
+  current_crop_authority_sha256: string;
   previous_twin_lease_owner: string;
   previous_twin_fencing_token: string;
   twin_activation_authorized: true;
@@ -151,6 +153,14 @@ export function validateMcftCap09FormalV5ActiveActivationAuthorityV1(
     bootstrap_result_sha256: digest(
       row.bootstrap_result_sha256,
       "FORMAL_V5_ACTIVE_AUTHORITY_BOOTSTRAP_DIGEST_INVALID",
+    ),
+    current_crop_authority_ref: requiredText(
+      row.current_crop_authority_ref,
+      "FORMAL_V5_ACTIVE_AUTHORITY_CURRENT_CROP_REF_REQUIRED",
+    ),
+    current_crop_authority_sha256: digest(
+      row.current_crop_authority_sha256,
+      "FORMAL_V5_ACTIVE_AUTHORITY_CURRENT_CROP_DIGEST_INVALID",
     ),
     previous_twin_lease_owner: requiredText(
       row.previous_twin_lease_owner,
