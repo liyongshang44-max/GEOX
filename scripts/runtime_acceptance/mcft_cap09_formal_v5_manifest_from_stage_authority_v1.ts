@@ -11,9 +11,12 @@ import {
 } from "../../apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.js";
 import {
   MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V4,
-  materializeExternalFormalA18CropContextV4,
   type MaterializedExternalFormalA18CropContextV4,
 } from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.js";
+import {
+  MCFT_CAP09_FORMAL_V5_ADMISSIBLE_LATE_BIOLOGICAL_STAGES_V1,
+  materializeExternalFormalA18CropContextV5,
+} from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v5.js";
 import type {
   ExternalFormalV4Am19WindowManifestV2,
 } from "../../apps/server/src/runtime/twin_runtime/external_formal_v4_amendment19_runner_v2.js";
@@ -166,7 +169,10 @@ function currentCropFields(value:JsonRecordV1,arm:McftCap09FormalV5ArmV1):{
   const biological=record(value.biological_stage,"FORMAL_V5_MANIFEST_BIOLOGICAL_STAGE_REQUIRED");
   if(
     biological.epistemic_class!=="THERMAL_MODEL_DERIVED"
-    || biological.resolved_biological_stage!=="R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE"
+    || !MCFT_CAP09_FORMAL_V5_ADMISSIBLE_LATE_BIOLOGICAL_STAGES_V1.includes(
+      biological.resolved_biological_stage as
+        (typeof MCFT_CAP09_FORMAL_V5_ADMISSIBLE_LATE_BIOLOGICAL_STAGES_V1)[number],
+    )
     || biological.observed_biological_stage_claimed!==false
   )throw new Error("FORMAL_V5_MANIFEST_BIOLOGICAL_STAGE_INVALID");
   const authorityAsOf=canonicalHour(biological.authority_as_of,"FORMAL_V5_MANIFEST_STAGE_AUTHORITY_AS_OF_INVALID");
@@ -255,7 +261,7 @@ export function buildMcftCap09FormalV5ManifestFromStageAuthorityV1(input:{
     bootstrapCrop?.context_hash,
     "FORMAL_V5_MANIFEST_A0_CROP_CONTEXT_HASH_REQUIRED",
   );
-  const a0Materialization=materializeExternalFormalA18CropContextV4({
+  const a0Materialization=materializeExternalFormalA18CropContextV5({
     logical_time:arm.a0,
     expected_identity_hash:bootstrapExpected,
     crop_authority:input.crop_authority,
@@ -270,7 +276,7 @@ export function buildMcftCap09FormalV5ManifestFromStageAuthorityV1(input:{
   materializationHash(a0Materialization);
 
   const slotMaterializations=bundle.hourly_crop_pins.map((pin)=>{
-    const materialized=materializeExternalFormalA18CropContextV4({
+    const materialized=materializeExternalFormalA18CropContextV5({
       logical_time:pin.logical_time,
       expected_identity_hash:pin.crop_stage_context_hash,
       crop_authority:input.crop_authority,
