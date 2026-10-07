@@ -178,6 +178,16 @@ async function applySchema(pool:Pool):Promise<void>{
     "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
   ];
   for(const rel of files)await pool.query(fs.readFileSync(path.join(ROOT,rel),"utf8"));
+  // Reuse the existing Formal-v5 fenced writer, including its NOLOGIN owner,
+  // rather than substituting a test-only direct facts write path.
+  await pool.query(`DO $role$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='geox_mcft_cap09_twin_runtime_v1') THEN
+      CREATE ROLE geox_mcft_cap09_twin_runtime_v1
+        NOLOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+    END IF;
+  END $role$;`);
+  await pool.query(fs.readFileSync(path.join(ROOT,
+    "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql"),"utf8"));
 }
 async function main(){
   const databaseTarget = new URL(DATABASE_URL);
