@@ -1025,6 +1025,7 @@
         "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v5.ts",
         "apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_composition_v1.ts",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs",
         "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts",
@@ -2061,7 +2062,8 @@
       ],
       "resolver_ids": [
         "FORMAL_V5_R6_STAGE_ADMISSION_V1",
-        "FORMAL_V5_G11_PRODUCTIONIZATION_V1"
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1",
+        "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1"
       ],
       "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_R6_ADMISSION_MUST_REQUALIFY_EXACT_HEAD",
       "execution_workflow": ".github/workflows/mcft-cap-09-formal-v5-r6-admission.yml",
@@ -2070,7 +2072,8 @@
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
         "FORMAL_V5_R6_STAGE_ADMISSION_V1",
-        "FORMAL_V5_G11_PRODUCTIONIZATION_V1"
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1",
+        "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",
