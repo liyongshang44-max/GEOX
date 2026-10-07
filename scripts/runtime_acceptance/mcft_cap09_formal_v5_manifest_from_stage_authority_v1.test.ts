@@ -197,3 +197,81 @@ test("H6 rejects manifest ref not frozen by V5 arm identity",()=>{
     /FORMAL_V5_MANIFEST_ARM_REF_INVALID/,
   );
 });
+
+test("H6 admits R6-or-later when independent lifecycle stays ACTIVE and water-use remains LATE",()=>{
+  const r6=currentCrop({
+    biological_stage:{
+      epistemic_class:"THERMAL_MODEL_DERIVED",
+      resolved_biological_stage:"R6_OR_LATER_MODEL_ESTIMATE",
+      observed_biological_stage_claimed:false,
+      authority_as_of:"2099-09-03T04:00:00.000Z",
+      forward_stability_hours:30,
+      authority_valid_until:"2099-09-04T10:00:00.000Z",
+    },
+  });
+  const built=buildMcftCap09FormalV5ManifestFromStageAuthorityV1({
+    arm:arm(),
+    crop_authority:CROP,
+    configuration_matrix:MATRIX,
+    current_crop_authority:r6,
+    biological_stage_architecture_effectiveness:architecture,
+    expected_subject_sha:SUBJECT,
+  });
+  assert.equal(built.prewindow_a0_materialization.stage_code,"LATE");
+  assert.equal(built.prewindow_a0_materialization.kc,0.6);
+  assert.equal(built.slot_materializations.length,24);
+  for(const materialized of built.slot_materializations){
+    assert.equal(materialized.stage_code,"LATE");
+    assert.equal(materialized.kc,0.6);
+    assert.equal(materialized.lifecycle_requires_separate_validation,true);
+  }
+});
+
+test("H6 R6 admission does not bypass independent lifecycle authority",()=>{
+  const r6=currentCrop({
+    lifecycle:{
+      domain_state:"TERMINATED",
+      authority_status:"RESOLVED",
+      authority_validity:"VALID",
+      authority_mode:"GOVERNED_PERSISTENT_STATE",
+      active_consumable_candidate:true,
+      horizon_end_utc:"2099-11-24T03:59:59.999Z",
+    },
+    biological_stage:{
+      epistemic_class:"THERMAL_MODEL_DERIVED",
+      resolved_biological_stage:"R6_OR_LATER_MODEL_ESTIMATE",
+      observed_biological_stage_claimed:false,
+      authority_as_of:"2099-09-03T04:00:00.000Z",
+      forward_stability_hours:30,
+      authority_valid_until:"2099-09-04T10:00:00.000Z",
+    },
+  });
+  assert.throws(
+    ()=>buildMcftCap09FormalV5ManifestFromStageAuthorityV1({
+      arm:arm(),crop_authority:CROP,configuration_matrix:MATRIX,
+      current_crop_authority:r6,biological_stage_architecture_effectiveness:architecture,
+    }),
+    /FORMAL_V5_MANIFEST_CURRENT_CROP_LIFECYCLE_INVALID/,
+  );
+});
+
+test("H6 still rejects PRE_R5 biological authority even when water-use is forced LATE",()=>{
+  const bad=currentCrop({
+    biological_stage:{
+      epistemic_class:"THERMAL_MODEL_DERIVED",
+      resolved_biological_stage:"PRE_R5_MODEL_ESTIMATE",
+      observed_biological_stage_claimed:false,
+      authority_as_of:"2099-09-03T04:00:00.000Z",
+      forward_stability_hours:30,
+      authority_valid_until:"2099-09-04T10:00:00.000Z",
+    },
+  });
+  assert.throws(
+    ()=>buildMcftCap09FormalV5ManifestFromStageAuthorityV1({
+      arm:arm(),crop_authority:CROP,configuration_matrix:MATRIX,
+      current_crop_authority:bad,biological_stage_architecture_effectiveness:architecture,
+    }),
+    /FORMAL_V5_MANIFEST_BIOLOGICAL_STAGE_INVALID/,
+  );
+});
+

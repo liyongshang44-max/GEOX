@@ -52,8 +52,8 @@ import {
   type McftCap09CurrentCropAuthorityResolverPortV1,
 } from "./mcft_cap09_current_crop_authority_resolver_v1.js";
 import {
-  materializeMcftCap09TwinCropContextV2,
-} from "./mcft_cap09_twin_runtime_composition_v2.js";
+  materializeExternalFormalA18CropContextV5,
+} from "./external_formal_a18_crop_context_v5.js";
 import {
   MCFT_CAP09_TWIN_RUNTIME_HOST_CONTRACT_V1,
   PostgresTwinRuntimeDatabaseClockV1,
@@ -82,7 +82,7 @@ export const MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_COMPOSITION_CONTRACT_V1 = {
   runtime_repository: "PostgresRuntimeRepositoryV1",
   evidence_source: "PostgresExternalFormalAmendment19EvidenceSourceV1",
   persistent_tick_service: "ExternalFormalV3Amendment19PersistentTickServiceV1",
-  crop_context_materializer: "materializeMcftCap09TwinCropContextV2",
+  crop_context_materializer: "materializeExternalFormalA18CropContextV5",
   one_slot_runner: "ExternalFormalV5Amendment19RunnerV2",
   preclaim_viability: "PostgresExternalFormalNextTickViabilityV1",
   post_terminal_runtime_viability: "PostgresTwinRuntimeSuccessorViabilityV1",
@@ -183,16 +183,19 @@ export function composeMcftCap09FormalV5TwinRuntimeV1(
       logical_time: string;
       expected_identity_hash: string;
     }) {
-      return materializeMcftCap09TwinCropContextV2(
-        {
-          crop_authority: input.crop_authority,
-          configuration_matrix: input.configuration_matrix,
-          biological_stage_architecture_effectiveness:
-            input.biological_stage_architecture_effectiveness,
-          current_crop_authority_resolver: currentCropAuthorityResolver,
-        },
-        materializeInput,
-      );
+      const currentCropAuthority = currentCropAuthorityResolver.resolve({
+        logical_time: materializeInput.logical_time,
+      });
+      return materializeExternalFormalA18CropContextV5({
+        logical_time: materializeInput.logical_time,
+        expected_identity_hash: materializeInput.expected_identity_hash,
+        crop_authority: input.crop_authority,
+        configuration_matrix: input.configuration_matrix,
+        current_crop_authority: currentCropAuthority,
+        biological_stage_architecture_effectiveness:
+          input.biological_stage_architecture_effectiveness,
+        activation_mode: "PRODUCTION_EFFECTIVE",
+      });
     },
   };
 

@@ -1016,6 +1016,20 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_FORMAL_V5_ISOLATED_O00_V1.ts",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_ACTIVE_PRODUCTION_CUTOVER_V1.ts"
       ]
+    },
+    "FORMAL_V5_R6_STAGE_ADMISSION_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-formal-v5-r6-admission.yml",
+        "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v5.test.ts",
+        "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v5.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_composition_v1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs",
+        "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts",
+        "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts"
+      ]
     }
   },
   "checks": [
@@ -2031,6 +2045,39 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs"
+    },
+    {
+      "check_id": "FORMAL_V5_R6_STAGE_ADMISSION",
+      "owner": "MCFT_CAP09_FORMAL_V5_R6_STAGE_ADMISSION",
+      "generation_scope": [
+        "FORMAL_V5",
+        "R6_ADMISSION_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json"
+      ],
+      "resolver_ids": [
+        "FORMAL_V5_R6_STAGE_ADMISSION_V1",
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_R6_ADMISSION_MUST_REQUALIFY_EXACT_HEAD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-formal-v5-r6-admission.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD_ZERO_PRODUCTION_EFFECT",
+      "fail_policy": "FAIL_CLOSED_NO_FRESH_FORMAL_V5_ARM_OR_A0_UNTIL_R6_ADMISSION_QUALIFIED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "FORMAL_V5_R6_STAGE_ADMISSION_V1",
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs"
     }
   ],
   "non_effects": {
