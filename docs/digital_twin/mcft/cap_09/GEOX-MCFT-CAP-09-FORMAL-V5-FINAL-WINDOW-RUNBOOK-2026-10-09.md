@@ -239,6 +239,7 @@ const b=cp.execFileSync("gh",["api",process.env.MCFT_ARTIFACT_API],{
 if(!Buffer.isBuffer(b)||b.length===0)throw new Error("ARTIFACT_ZIP_EMPTY");
 fs.writeFileSync(process.env.MCFT_ARTIFACT_ZIP,b,{flag:"wx"});
 '@
+Assert-NativeExit "DOWNLOAD_EXACT_ARTIFACT_ZIP"
 
 Expand-Archive -LiteralPath $ArtifactZip -DestinationPath $CandidateDir -Force
 $ArtifactSha = "sha256:" + ((Get-FileHash $ArtifactZip -Algorithm SHA256).Hash.ToLower())
@@ -350,7 +351,9 @@ At the final window, only after Section 2 PASS:
 $Branch = "qualification/mcft-cap09-current-crop-refresh-20261009-final-v1"
 
 git switch --detach $Subject
+Assert-NativeExit "SWITCH_TO_AUTHORITY_BASE"
 git switch -c $Branch
+Assert-NativeExit "CREATE_AUTHORITY_BRANCH"
 
 if (Test-Path $TargetAuthority) { throw "TARGET_AUTHORITY_ALREADY_EXISTS_BEFORE_BUILD:$TargetAuthority" }
 node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs --candidate $Candidate --architecture-effectiveness $Cert --refresh-request $RequestPath --subject $Subject --out $TargetAuthority
@@ -463,6 +466,7 @@ if(r.entries.length!==before.entries.length+1) throw new Error("REGISTRY_APPEND_
 if(JSON.stringify(r.entries.slice(0,-1))!==JSON.stringify(before.entries)) throw new Error("REGISTRY_HISTORY_REWRITE_FORBIDDEN");
 fs.writeFileSync(p,JSON.stringify(r,null,2)+"\n");
 '@
+Assert-NativeExit "REGISTRY_EXACT_SINGLE_APPEND"
 ```
 
 Verify exact changed paths, including untracked files:
@@ -547,9 +551,14 @@ $PostAuthorityMain = (gh api "repos/$Repo/git/ref/heads/main" --jq ".object.sha"
 if ($PostAuthorityMain -eq $Subject) { throw "AUTHORITY_ADOPTION_NOT_VISIBLE_ON_MAIN" }
 
 git switch main
+Assert-NativeExit "SWITCH_TO_MAIN_AFTER_AUTHORITY_ADOPTION"
 git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+Assert-NativeExit "FETCH_POST_AUTHORITY_MAIN"
 git reset --hard origin/main
-if (@(git status --porcelain).Count -ne 0) { throw "POST_ADOPTION_WORKTREE_NOT_CLEAN" }
+Assert-NativeExit "RESET_TO_POST_AUTHORITY_MAIN"
+$PostAdoptionStatus = @(git status --porcelain)
+Assert-NativeExit "STATUS_POST_AUTHORITY_MAIN"
+if ($PostAdoptionStatus.Count -ne 0) { throw "POST_ADOPTION_WORKTREE_NOT_CLEAN" }
 
 $MergeShape = @((git rev-list --parents -n 1 $PostAuthorityMain).Trim() -split "\s+")
 if ($MergeShape.Count -ne 3 -or
@@ -699,10 +708,12 @@ not restart containers or mutate the database.
 ```powershell
 New-Item -ItemType Directory -Force $OwnerEvidenceDir | Out-Null
 git worktree prune
+Assert-NativeExit "PRUNE_OWNER_ATTESTATION_WORKTREES"
 if (Test-Path $OwnerWorktree) {
   throw "OWNER_ATTESTATION_WORKTREE_ALREADY_EXISTS:$OwnerWorktree"
 }
 git worktree add --detach $OwnerWorktree $ArmSubject
+Assert-NativeExit "ADD_OWNER_ATTESTATION_WORKTREE"
 
 try {
   Push-Location $OwnerWorktree
@@ -740,6 +751,7 @@ try {
 finally {
   Pop-Location
   git worktree remove --force $OwnerWorktree
+  Assert-NativeExit "REMOVE_OWNER_ATTESTATION_WORKTREE"
 }
 ```
 
@@ -792,6 +804,7 @@ if ($P3659.state -ne "OPEN" -or -not $P3659.isDraft -or $null -ne $P3659.mergedA
 }
 
 git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+Assert-NativeExit "FETCH_MAIN_IMMEDIATELY_BEFORE_A0"
 if ((git rev-parse HEAD).Trim() -ne $PostAuthorityMain -or
     (git rev-parse origin/main).Trim() -ne $PostAuthorityMain -or
     @(git status --porcelain).Count -ne 0) {
