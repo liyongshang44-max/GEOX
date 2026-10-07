@@ -151,6 +151,32 @@ test("H6 builds exact V5 A0 + O00-O23 manifest from A0-effective stage authority
   }
 });
 
+test("H6 accepts governed R6 authority while preserving LATE exact pins",()=>{
+  const r6=currentCrop({
+    biological_stage:{
+      epistemic_class:"THERMAL_MODEL_DERIVED",
+      resolved_biological_stage:"R6_OR_LATER_MODEL_ESTIMATE",
+      observed_biological_stage_claimed:false,
+      authority_as_of:"2099-09-03T04:00:00.000Z",
+      forward_stability_hours:30,
+      authority_valid_until:"2099-09-04T10:00:00.000Z",
+    },
+  });
+  const built=buildMcftCap09FormalV5ManifestFromStageAuthorityV1({
+    arm:arm(),
+    crop_authority:CROP,
+    configuration_matrix:MATRIX,
+    current_crop_authority:r6,
+    biological_stage_architecture_effectiveness:architecture,
+    expected_subject_sha:SUBJECT,
+  });
+  assert.equal(built.prewindow_a0_materialization.stage_code,"LATE");
+  assert.equal(built.prewindow_a0_materialization.kc,0.6);
+  assert.equal(built.manifest.slots.length,24);
+  assert.ok(built.slot_materializations.every((row)=>row.stage_code==="LATE"));
+  assert.ok(built.slot_materializations.every((row)=>row.kc===0.6));
+});
+
 test("H6 rejects stage authority graduated after A0",()=>{
   const bad=currentCrop({
     graduation:{
