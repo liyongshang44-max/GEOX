@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { Pool } from "pg";
 
@@ -43,7 +44,7 @@ import {
   buildMcftCap09FormalV5ManifestFromStageAuthorityV1,
 } from "./mcft_cap09_formal_v5_manifest_from_stage_authority_v1.js";
 
-const ROOT=path.resolve(import.meta.dirname,"../..");
+const ROOT=fileURLToPath(new URL("../../",import.meta.url));
 const URL=process.env.G11_DATABASE_URL??"postgres://postgres:postgres@127.0.0.1:55432/g11";
 const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_G11_FORMAL_V5_ISOLATED_O00_RESULT.json");
 const EVIDENCE_SOURCE="mcft_cap09_external_formal_evidence_v1";
