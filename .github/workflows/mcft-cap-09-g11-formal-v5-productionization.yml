@@ -1,0 +1,103 @@
+name: mcft-cap-09-g11-formal-v5-productionization
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-g11-formal-v5-productionization.yml'
+      - 'apps/server/src/runtime/mcft_cap09_formal_v5_active_activation_authority_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_composition_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_process_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_formal_v5_forcing_runtime_process_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts'
+      - 'apps/server/scripts/write_dist_entries.cjs'
+      - 'docker-compose.mcft-cap09-formal-v5-active.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_ACTIVE_PRODUCTION_CUTOVER_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_FORMAL_V5_ISOLATED_O00_V1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-g11-productionization-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  g11:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: g11
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d g11"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      G11_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/g11
+    steps:
+      - name: Checkout exact G11 subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove productionization-only change boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs
+
+      - name: Reprove V5 viability-before-claim semantics
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts
+
+      - name: Typecheck server and G11 process graph
+        run: pnpm run typecheck:server
+
+      - name: Build production dist entries
+        run: pnpm run build:server
+
+      - name: Prove G11 dist entrypoints exist
+        run: |
+          set -euo pipefail
+          test -f apps/server/dist/runtime/mcft_cap09_formal_v5_twin_runtime.js
+          test -f apps/server/dist/runtime/mcft_cap09_formal_v5_forcing_runtime.js
+          grep -Fq 'runMcftCap09FormalV5TwinRuntimeProcessV1' apps/server/dist/runtime/mcft_cap09_formal_v5_twin_runtime.js
+          grep -Fq 'runMcftCap09FormalV5ForcingRuntimeProcessV1' apps/server/dist/runtime/mcft_cap09_formal_v5_forcing_runtime.js
+
+      - name: Prove isolated production-equivalent A0 to O00 V5 path
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_FORMAL_V5_ISOLATED_O00_V1.ts
+
+      - name: Upload G11 qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-g11-productionization-${{ github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_G11_PRODUCTIONIZATION_GOVERNANCE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2_RESULT.json
+            acceptance-output/MCFT_CAP_09_G11_FORMAL_V5_ISOLATED_O00_RESULT.json
+          if-no-files-found: warn
+          retention-days: 14
