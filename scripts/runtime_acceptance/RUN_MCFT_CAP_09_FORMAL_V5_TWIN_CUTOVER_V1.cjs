@@ -134,7 +134,7 @@ async function main(){
 
   const prodTwinUrl=requiredEnv("GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL");
   const prodEvidenceUrl=requiredEnv("GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL");
-  const formalUrl=requiredEnv("GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL");
+  const formalUrl=requiredEnv("GEOX_MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_DATABASE_URL");
   req(dbName(formalUrl)===FORMAL_DB,"FORMAL_V5_TWIN_CUTOVER_FORMAL_DATABASE_URL_MISMATCH");
 
   const twinPool=new Pool({connectionString:prodTwinUrl,max:1,application_name:"mcft-cap09-formal-v5-cutover-prod-twin-read"});
