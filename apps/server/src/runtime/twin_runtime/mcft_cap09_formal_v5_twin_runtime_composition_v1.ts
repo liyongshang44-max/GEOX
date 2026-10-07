@@ -62,7 +62,12 @@ import {
   type TwinRuntimeHostHealthPortV1,
   type TwinRuntimeHostStopPortV1,
   type TwinRuntimeHostWaitPortV1,
+  type TwinRuntimeOneDueSlotPortV1,
+  type TwinRuntimeOneDueSlotResultV1,
 } from "./mcft_cap09_twin_runtime_host_v1.js";
+import type {
+  ShadowOnlineSlotIdV1,
+} from "./ports.js";
 
 export const MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_COMPOSITION_ID_V1 =
   "MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_COMPOSITION_V1" as const;
@@ -218,11 +223,35 @@ export function composeMcftCap09FormalV5TwinRuntimeV1(
     },
   );
 
+  const hostRunner: TwinRuntimeOneDueSlotPortV1 = {
+    async executeOneDueSlot(hostInput): Promise<TwinRuntimeOneDueSlotResultV1> {
+      const result = await runner.executeOneDueSlot(hostInput);
+      if (
+        result.status === "NOT_READY_PRECLAIM"
+        && result.reason === "NEXT_TICK_FORCING_NOT_VIABLE"
+      ) {
+        if (!/^O(?:0\\d|1\\d|2[0-3])$/.test(result.slot_id)) {
+          throw new Error("FORMAL_V5_TWIN_HOST_SLOT_ID_INVALID:" + result.slot_id);
+        }
+        return {
+          status: "NOT_READY_PRECLAIM",
+          slot_id: result.slot_id as ShadowOnlineSlotIdV1,
+          logical_time: result.logical_time,
+          reason: result.reason,
+          detail: result.detail,
+          provider_request_count: 0,
+          r2_request_count: 0,
+        };
+      }
+      return result;
+    },
+  };
+
   const host = new TwinRuntimeHostV1({
     database_clock:
       input.database_clock ?? new PostgresTwinRuntimeDatabaseClockV1(input.pool),
     scheduler_ownership: scheduler,
-    one_due_slot: runner,
+    one_due_slot: hostRunner,
     successor_viability: successorViability,
     wait: input.wait,
     health: input.health,
