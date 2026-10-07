@@ -109,6 +109,21 @@ try {
     ]) assert.ok(doc.includes(required), required);
   });
 
+  check("PRODUCTION_DEPENDENCY_RECONCILIATION_RECORDED_FAIL_CLOSED", () => {
+    for (const required of [
+      "Production dependency reconciliation — 2026-09-23",
+      "field_index_v1_product_scope_idx",
+      "field_kbs_mcse_t4r1",
+      "active Twin lineage count = 0",
+      "Twin state-history count = 0",
+      "current field condition remains explicitly `UNAVAILABLE`",
+      "geox_product_readonly_login_v1",
+      "does not yet have a usable password credential",
+      "trial has expired",
+      "No legacy Land-OS Railway project or service may be repurposed",
+    ]) assert.ok(doc.includes(required), required);
+  });
+
   console.log(JSON.stringify({
     schema_version: "geox_product_api_public_runtime_acceptance_v1",
     status: "PASS",
@@ -117,6 +132,8 @@ try {
     database_schema_change: false,
     database_acl_change: false,
     mcft_runtime_change: false,
+    production_dependency_reconciliation_recorded: true,
+    production_dependency_reconciliation_replayed_by_this_pr: false,
     public_runtime_role: "PRODUCT_API_PUBLIC_READ_ONLY",
   }, null, 2));
 } catch (error) {
