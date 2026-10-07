@@ -52,7 +52,7 @@ for(const marker of [
   "revision_semantics_rewritten: false",
 ])has(composition,marker,"G11_COMPOSITION_MARKER_REQUIRED");
 
-const process=read("apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_process_v1.ts");
+const twinProcess=read("apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_process_v1.ts");
 for(const marker of [
   "FORMAL_V5_ACTIVE",
   "composeMcftCap09FormalV5TwinRuntimeV1",
@@ -60,8 +60,8 @@ for(const marker of [
   "FORMAL_V5_TWIN_NEW_FENCING_TOKEN_REQUIRED",
   "a0_bootstrap_twin_fencing_token",
   "assertMcftCap09ServicePrincipalV1(pool, \"TWIN_RUNTIME\")",
-])has(process,marker,"G11_TWIN_PROCESS_MARKER_REQUIRED");
-assert.equal(process.includes("ExternalFormalV4Amendment19RunnerV2"),false,"G11_ACTIVE_TWIN_DIRECT_V4_BINDING_FORBIDDEN");
+])has(twinProcess,marker,"G11_TWIN_PROCESS_MARKER_REQUIRED");
+assert.equal(twinProcess.includes("ExternalFormalV4Amendment19RunnerV2"),false,"G11_ACTIVE_TWIN_DIRECT_V4_BINDING_FORBIDDEN");
 
 const forcing=read("apps/server/src/external_evidence/mcft_cap09_formal_v5_forcing_runtime_process_v1.ts");
 for(const marker of [
