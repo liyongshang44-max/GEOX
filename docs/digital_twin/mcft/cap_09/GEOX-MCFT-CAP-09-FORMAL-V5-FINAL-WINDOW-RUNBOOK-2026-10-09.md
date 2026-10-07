@@ -553,7 +553,10 @@ $RequiredEnv = @(
   "GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET",
   "GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION",
   "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID",
-  "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY"
+  "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY",
+  # live owner readback-only dependencies
+  "GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL",
+  "GEOX_MCFT_CAP09_DURABLE_LOG_ROOT"
 )
 foreach ($n in $RequiredEnv) {
   if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($n))) {
