@@ -18,7 +18,7 @@ services:
         >> /var/log/geox/mcft-cap09/formal-v5-twin/runtime.log 2>&1
     environment:
       GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?required}
-      GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL: ${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:?required}
+      GEOX_MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_DATABASE_URL: ${GEOX_MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_DATABASE_URL:?required}
       GEOX_MCFT_CAP09_FORMAL_V5_TWIN_SERVICE_ID: ${GEOX_MCFT_CAP09_FORMAL_V5_TWIN_SERVICE_ID:?required}
       GEOX_MCFT_CAP09_FORMAL_V5_A0_BOOTSTRAP_PROOF_PATH: /run/geox/mcft-cap09/formal-v5/a0-bootstrap-result.json
       GEOX_MCFT_CAP09_FORMAL_V5_MANIFEST_PATH: /run/geox/mcft-cap09/formal-v5/formal-window-manifest.json
