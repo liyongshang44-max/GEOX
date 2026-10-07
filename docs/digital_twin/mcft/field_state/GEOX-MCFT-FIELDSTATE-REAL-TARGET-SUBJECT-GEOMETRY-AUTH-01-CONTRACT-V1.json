@@ -1,0 +1,343 @@
+{
+  "schema_version": "geox_mcft_fieldstate_real_target_subject_geometry_auth_01_contract_v1",
+  "frontier_id": "MCFT-FIELDSTATE-REAL-TARGET-SUBJECT-GEOMETRY-AUTH-01",
+  "phase": "PHASE_A_ACQUISITION_CONTRACT_QUALIFICATION_SUBSTRATE",
+  "authoritative_successor_base": "a56b419f6ddfc3ce2f2d957b0422bb8b4bd9d45c",
+  "authorization": {
+    "phase_a": "AUTHORIZED",
+    "phase_b_real_world_source_acquisition": "NOT_SOFTWARE_AUTHORIZED",
+    "runtime_implementation_change": "NOT_AUTHORIZED",
+    "twin_state_estimate_v1_change": "NOT_AUTHORIZED",
+    "soil_hydraulic_configuration_replacement": "NOT_AUTHORIZED",
+    "production_runtime": "NOT_AUTHORIZED",
+    "production_owner": "NOT_AUTHORIZED",
+    "formal_v5": "NOT_ARMED",
+    "A0": "NOT_AUTHORIZED",
+    "O00_O23": "NOT_STARTED",
+    "adr": "UNTOUCHED",
+    "b_line_semantics": "UNTOUCHED"
+  },
+  "purpose": "Machine-executable qualification contract for deciding whether external real-world evidence is sufficient to establish a real agricultural target and its field/zone geometry authority without manufacturing real-world facts.",
+  "authority_model": {
+    "components": [
+      {
+        "authority_id": "REAL_TARGET_SUBJECT_IDENTITY_AUTHORITY",
+        "separate_from": [
+          "FIELD_GEOMETRY_AUTHORITY",
+          "ZONE_GEOMETRY_AUTHORITY"
+        ],
+        "status": "ABSENT"
+      },
+      {
+        "authority_id": "FIELD_GEOMETRY_AUTHORITY",
+        "object_class": "AGRONOMIC_FIELD",
+        "status": "ABSENT"
+      },
+      {
+        "authority_id": "ZONE_GEOMETRY_AUTHORITY",
+        "object_class": "MANAGEMENT_ZONE",
+        "status": "ABSENT"
+      },
+      {
+        "authority_id": "FIELD_ZONE_MAPPING_AUTHORITY",
+        "relationship": "AGRONOMIC_FIELD_CONTAINS_OR_MAPS_MANAGEMENT_ZONE",
+        "status": "ABSENT"
+      },
+      {
+        "authority_id": "AGRONOMIC_APPLICABILITY_BINDING",
+        "scope_axes": [
+          "field",
+          "zone",
+          "crop",
+          "season",
+          "effective_interval"
+        ],
+        "status": "ABSENT"
+      }
+    ],
+    "separation_rules": [
+      "a polygon does not establish subject identity",
+      "subject identity does not establish geometry",
+      "field geometry does not establish management-zone geometry",
+      "legal parcel identity or geometry does not automatically establish agronomic field identity or geometry",
+      "agronomic field identity or geometry does not automatically establish management-zone identity or geometry"
+    ],
+    "object_taxonomy": {
+      "LEGAL_PARCEL": "distinct legal/cadastral object; may map to an agronomic field but is not equivalent by default",
+      "AGRONOMIC_FIELD": "operational agricultural field subject",
+      "MANAGEMENT_ZONE": "agronomic management subdivision; must have independent identity/geometry or governed derivation/mapping"
+    }
+  },
+  "authority_envelope": {
+    "required_subject_fields": [
+      "real_target_subject_identity",
+      "field_identity",
+      "zone_identity",
+      "crop",
+      "season"
+    ],
+    "required_geometry_fields": [
+      "field_geometry",
+      "zone_geometry",
+      "field_zone_relationship",
+      "geometry_coordinate_reference_system",
+      "geometry_interpretation_semantics",
+      "geometry_object_class",
+      "geometry_method",
+      "geometry_uncertainty_or_confidence",
+      "geometry_content_hash"
+    ],
+    "required_temporal_fields": [
+      "effective_from",
+      "effective_until",
+      "available_at"
+    ],
+    "required_provenance_fields": [
+      "source_provenance",
+      "source_authority_or_issuer",
+      "measurement_survey_or_derivation_method",
+      "immutable_authority_refs_or_hashes"
+    ],
+    "required_governance_fields": [
+      "supersession_semantics",
+      "uncertainty_or_confidence"
+    ],
+    "version_selection_rule": {
+      "question": "which geometry was effective at the relevant logical time?",
+      "selection_basis": [
+        "exact subject/relationship scope",
+        "effective_from",
+        "effective_until",
+        "available_at",
+        "supersession_semantics"
+      ],
+      "must_resolve_to": "EXACTLY_ONE_APPLICABLE_AUTHORITY_OR_FAIL_CLOSED",
+      "current_polygon_only_storage": "FORBIDDEN"
+    }
+  },
+  "source_admissibility": {
+    "single_source_class_gate": "FORBIDDEN",
+    "potential_source_classes": [
+      "GOVERNED_FARM_OR_ENTERPRISE_FIELD_REGISTRY",
+      "SURVEYED_GEOMETRY",
+      "AUTHORITATIVE_GIS_BOUNDARY",
+      "QUALIFIED_OPERATOR_PROVIDED_FIELD_DEFINITION_WITH_GOVERNED_PROVENANCE",
+      "MANAGEMENT_ZONE_PRESCRIPTION_OR_AGRONOMIC_MAPPING_SOURCE",
+      "OTHER_TARGET_SPECIFIC_AUTHORITATIVE_SOURCE"
+    ],
+    "decision_basis": [
+      "COMPLETE_AUTHORITY_ENVELOPE",
+      "EXACT_TARGET_BINDING",
+      "PROVENANCE",
+      "TEMPORAL_VALIDITY",
+      "GEOMETRY_SEMANTICS"
+    ],
+    "source_label_alone_sufficient": false
+  },
+  "mcft_authority_boundary": {
+    "may": [
+      "validate",
+      "bind",
+      "version",
+      "hash",
+      "preserve provenance",
+      "qualify",
+      "fail closed"
+    ],
+    "may_not": [
+      "invent land ownership",
+      "invent legal parcel identity",
+      "invent customer organization ownership",
+      "invent field boundary",
+      "invent zone boundary",
+      "invent crop or season facts",
+      "invent field-zone relation",
+      "silently geocode missing geometry",
+      "silently extrapolate missing geometry"
+    ]
+  },
+  "prohibited_shortcuts": [
+    {
+      "shortcut": "field_c8_demo -> relabel as real field",
+      "reject_code": "SYNTHETIC_FIELD_RELABEL_FORBIDDEN"
+    },
+    {
+      "shortcut": "zone_mcft_c8_water_001 -> relabel as real zone",
+      "reject_code": "SYNTHETIC_ZONE_RELABEL_FORBIDDEN"
+    },
+    {
+      "shortcut": "sensor coordinates -> infer entire field boundary",
+      "reject_code": "SENSOR_POINT_TO_FIELD_GEOMETRY_FORBIDDEN"
+    },
+    {
+      "shortcut": "one GPS point -> establish field geometry",
+      "reject_code": "SINGLE_POINT_GEOMETRY_FORBIDDEN"
+    },
+    {
+      "shortcut": "acreage alone -> establish geometry",
+      "reject_code": "AREA_ONLY_GEOMETRY_FORBIDDEN"
+    },
+    {
+      "shortcut": "field name or farm nickname -> establish unique subject identity",
+      "reject_code": "DISPLAY_NAME_IDENTITY_FORBIDDEN"
+    },
+    {
+      "shortcut": "soil sample coordinates -> establish field-zone mapping",
+      "reject_code": "SOIL_SAMPLE_MAPPING_FORBIDDEN"
+    },
+    {
+      "shortcut": "real laboratory soil data + synthetic demo target -> qualified real target",
+      "reject_code": "LAB_PLUS_SYNTHETIC_TARGET_PROMOTION_FORBIDDEN"
+    },
+    {
+      "shortcut": "property parcel boundary -> automatically equal agronomic field boundary",
+      "reject_code": "PARCEL_FIELD_EQUIVALENCE_FORBIDDEN"
+    },
+    {
+      "shortcut": "field boundary -> automatically equal management zone boundary",
+      "reject_code": "FIELD_ZONE_EQUIVALENCE_FORBIDDEN"
+    }
+  ],
+  "dependency_gate": {
+    "blocking_gap": "GAP_REAL_TARGET_SUBJECT_GEOMETRY_AUTHORITY",
+    "required_before_target_parameter_frontiers": [
+      "REAL_TARGET_SUBJECT_AUTHORITY_QUALIFIED",
+      "REAL_TARGET_FIELD_GEOMETRY_AUTHORITY_QUALIFIED",
+      "REAL_TARGET_ZONE_GEOMETRY_AUTHORITY_QUALIFIED",
+      "FIELD_ZONE_MAPPING_QUALIFIED",
+      "AGRONOMIC_APPLICABILITY_BINDING_QUALIFIED"
+    ],
+    "blocked_until_prerequisites_qualify": [
+      "GAP_ROOT_ZONE_DEPTH_TARGET_STAGE_AWARE",
+      "GAP_SOIL_WATER_RETENTION_TARGET_PROFILE",
+      "GAP_DRAINAGE_TARGET_CHARACTERIZATION",
+      "GAP_RUNOFF_TARGET_CHARACTERIZATION"
+    ],
+    "soil_lab_report_bypass": "FORBIDDEN"
+  },
+  "controlled_synthetic_world": {
+    "status": "PRESERVED",
+    "scope_class": "CONTROLLED_SYNTHETIC_REPLAY_PROXY",
+    "field_id": "field_c8_demo",
+    "zone_id": "zone_mcft_c8_water_001",
+    "reality_binding_ref": "docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING.json",
+    "geometry_fixture_ref": "fixtures/mcft/reality_binding/MCFT_C8_GOVERNED_ZONE_V1.geojson",
+    "must_not_be_promoted_to_real_target": true
+  },
+  "bounded_repository_audit": {
+    "audit_scope": "repository evidence relevant to MCFT target/geometry identity on authoritative successor base",
+    "examined_refs": [
+      "docs/digital_twin/mcft/GEOX-MCFT-00-CANDIDATE-ADJUDICATION.md",
+      "docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING.json",
+      "fixtures/mcft/reality_binding/MCFT_C8_GOVERNED_ZONE_V1.geojson",
+      "docs/digital_twin/mcft/field_state/GEOX-MCFT-FIELDSTATE-TARGET-PARAM-AUTH-01-INVENTORY-V1.json"
+    ],
+    "existing_real_target_source_candidate": "NOT_DISCOVERED_IN_BOUNDED_REPOSITORY_AUDIT",
+    "promotion_performed": false,
+    "notes": [
+      "legacy C8 polygons are already rejected as MCFT geometry authority",
+      "current governed MCFT zone geometry is controlled synthetic and explicitly not surveyed",
+      "field_c8_demo identity reuse does not confer geometry or live-field truth"
+    ]
+  },
+  "terminal_state": {
+    "acquisition_contract": "READY_FOR_MACHINE_QUALIFICATION",
+    "software_qualification_substrate": "READY",
+    "real_target_subject_authority": "ABSENT",
+    "real_target_field_geometry_authority": "ABSENT",
+    "real_target_zone_geometry_authority": "ABSENT",
+    "field_zone_mapping_authority": "ABSENT",
+    "agronomic_applicability_binding": "ABSENT",
+    "real_world_source": "NOT_YET_ACQUIRED",
+    "real_world_source_acquisition": "REQUIRED",
+    "next_owner": "REAL_WORLD_DATA_OR_FIELD_ONBOARDING"
+  },
+  "candidate_evaluation_contract": {
+    "mode": "READ_ONLY_FAIL_CLOSED",
+    "qualification_result_values": [
+      "QUALIFIED",
+      "REJECTED"
+    ],
+    "required_candidate_paths": [
+      "subject.real_target_subject_identity",
+      "subject.field_identity",
+      "subject.zone_identity",
+      "subject.crop",
+      "subject.season",
+      "field_geometry.geometry",
+      "field_geometry.geometry_type",
+      "field_geometry.coordinate_reference_system",
+      "field_geometry.interpretation_semantics",
+      "field_geometry.source_object_class",
+      "field_geometry.asserted_object_class",
+      "field_geometry.measurement_survey_or_derivation_method",
+      "field_geometry.uncertainty_or_confidence",
+      "field_geometry.content_hash",
+      "zone_geometry.geometry",
+      "zone_geometry.geometry_type",
+      "zone_geometry.coordinate_reference_system",
+      "zone_geometry.interpretation_semantics",
+      "zone_geometry.source_object_class",
+      "zone_geometry.asserted_object_class",
+      "zone_geometry.measurement_survey_or_derivation_method",
+      "zone_geometry.uncertainty_or_confidence",
+      "zone_geometry.content_hash",
+      "field_zone_mapping.relationship",
+      "field_zone_mapping.source_provenance",
+      "field_zone_mapping.source_authority_or_issuer",
+      "field_zone_mapping.measurement_survey_or_derivation_method",
+      "field_zone_mapping.uncertainty_or_confidence",
+      "field_zone_mapping.immutable_authority_ref_or_hash",
+      "applicability.field",
+      "applicability.zone",
+      "applicability.crop",
+      "applicability.season",
+      "temporal.effective_from",
+      "temporal.effective_until",
+      "temporal.available_at",
+      "provenance.source_provenance",
+      "provenance.source_authority_or_issuer",
+      "provenance.immutable_authority_refs_or_hashes",
+      "governance.supersession_semantics",
+      "governance.uncertainty_or_confidence"
+    ],
+    "geometry_type_allowlist": [
+      "Polygon",
+      "MultiPolygon"
+    ],
+    "required_asserted_object_classes": {
+      "field_geometry": "AGRONOMIC_FIELD",
+      "zone_geometry": "MANAGEMENT_ZONE"
+    },
+    "conditional_mapping_requirements": [
+      {
+        "when": "field_geometry.source_object_class == LEGAL_PARCEL",
+        "require": "field_geometry.parcel_to_agronomic_field_mapping_authority_ref"
+      },
+      {
+        "when": "zone_geometry.source_object_class == AGRONOMIC_FIELD",
+        "require": "zone_geometry.field_to_management_zone_derivation_authority_ref"
+      }
+    ],
+    "forbidden_derivation_methods": [
+      "SENSOR_COORDINATE_INFERENCE",
+      "SINGLE_GPS_POINT",
+      "AREA_ONLY",
+      "FIELD_NAME_ONLY",
+      "FARM_NICKNAME_ONLY",
+      "SOIL_SAMPLE_COORDINATE_INFERENCE",
+      "SILENT_GEOCODE",
+      "SILENT_EXTRAPOLATION"
+    ],
+    "synthetic_identity_rejections": {
+      "field_identity": [
+        "field_c8_demo"
+      ],
+      "zone_identity": [
+        "zone_mcft_c8_water_001"
+      ]
+    },
+    "logical_time_rule": "candidate temporal validity and available_at must make every authority component applicable and known at the relevant logical time; otherwise reject",
+    "source_class_rule": "source_class label is informational and MUST NOT bypass envelope checks"
+  }
+}
