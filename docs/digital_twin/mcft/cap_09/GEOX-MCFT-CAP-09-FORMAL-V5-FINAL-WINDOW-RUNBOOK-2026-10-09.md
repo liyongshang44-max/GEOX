@@ -38,6 +38,13 @@ PowerShell, from a clean GEOX repository:
 
 ```powershell
 $ErrorActionPreference = "Stop"
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+foreach ($Tool in @("git","gh","node","pnpm","psql","docker")) {
+  if ($null -eq (Get-Command $Tool -ErrorAction SilentlyContinue)) {
+    throw "REQUIRED_TOOL_NOT_FOUND:$Tool"
+  }
+}
 
 $Repo = "liyongshang44-max/GEOX"
 $ArmSubject = "0e4cd036fdbebfe8118d6b7c1978572859d5a652"
@@ -308,7 +315,11 @@ $Req.target_artifact.ref = $TargetAuthority
 $Req.target_artifact.must_be_immutable = $true
 $Req.target_artifact.must_not_replace_running_preformal_mount = $true
 
-$Req | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8NoBOM $RequestPath
+[IO.File]::WriteAllText(
+  [IO.Path]::GetFullPath($RequestPath),
+  ($Req | ConvertTo-Json -Depth 100) + "`n",
+  $Utf8NoBom
+)
 ```
 
 ### 3.2 Future effect: create an authority-only branch
@@ -354,7 +365,11 @@ $QualificationEvidence = [ordered]@{
 
 $A | Add-Member -NotePropertyName refresh_request -NotePropertyValue $EmbeddedRequest -Force
 $A | Add-Member -NotePropertyName qualification_evidence -NotePropertyValue $QualificationEvidence -Force
-$A | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8NoBOM $TargetAuthority
+[IO.File]::WriteAllText(
+  [IO.Path]::GetFullPath($TargetAuthority),
+  ($A | ConvertTo-Json -Depth 100) + "`n",
+  $Utf8NoBom
+)
 ```
 
 Validate the final envelope before touching the registry:
