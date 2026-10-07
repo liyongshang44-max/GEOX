@@ -227,11 +227,15 @@ async function main(){
 
     const runtimeRepo=new PostgresRuntimeRepositoryV1(pool);
     const nextRepo=new PostgresNextTickRepositoryV1(pool);
+    // Production promotion persists the raw A0 evidence before bootstrap. O00
+    // selects its causal current interval from those same persisted records.
+    const a0Evidence=[soilRecord(A0,1),...currentPair(A0,1)];
+    for(const row of a0Evidence)await insertFact(pool,row);
     const bootstrap=new ExternalFormalBootstrapPersistenceServiceV1({
       runtime_config_repository:runtimeRepo,
       bootstrap_persistence:runtimeRepo,
       authority_snapshot_repository:nextRepo,
-      evidence_source:new MemoryEvidenceSource([soilRecord(A0,1),...currentPair(A0,1)]),
+      evidence_source:new MemoryEvidenceSource(a0Evidence),
     });
     const boot=await bootstrap.execute({
       bundle:built.bundle.persistence_bundle,
