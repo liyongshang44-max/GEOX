@@ -278,3 +278,55 @@ test("validator rejects CURRENT reporting when current condition is unavailable"
     /FIELD_CURRENT_REPORTING_REQUIRES_AVAILABLE_CONDITION/,
   );
 });
+
+function splitPool(source: Pool, kind: "identity" | "mcft"): Pool {
+  return { query: async (sql: string, params: unknown[]) => {
+    assert.equal(sql.includes("FROM public.field_index_v1"), kind === "identity",
+      `cross-store query on ${kind}: ${sql}`);
+    return source.query(sql, params);
+  } } as unknown as Pool;
+}
+
+test("separate MCFT store supplies runtime and exact state while identity stays in Product store", async () => {
+  const builder = new PostgresCustomerProductProjectionBuilderV1(splitPool(fakePool({runtimeScopeCount: 0}), "identity"), {
+    mcftPool: splitPool(fakePool(), "mcft"),
+    readApi: new FakeReadApi(),
+  });
+  const summary = await builder.buildFieldSummaryV1(scope, "field-a");
+  assert.equal(summary.identity.display_name, "North Field 07");
+  assert.equal(summary.current_condition.status, "AVAILABLE");
+  assert.equal(summary.current_condition.root_zone_water?.available_water_fraction, 0.61);
+  assert.ok(summary.envelope.source_authority_refs.some(ref => ref.exact_ref === "state-a"));
+  const workspace = await builder.buildFieldWorkspaceV1(scope, "field-a");
+  assert.equal(workspace.current_condition.status, "AVAILABLE");
+});
+
+test("empty configured MCFT store does not fall back to Product-store lineage", async () => {
+  const builder = new PostgresCustomerProductProjectionBuilderV1(splitPool(fakePool(), "identity"), {
+    mcftPool: splitPool(fakePool({runtimeScopeCount: 0}), "mcft"),
+    readApi: new FakeReadApi(),
+  });
+  const summary = await builder.buildFieldSummaryV1(scope, "field-a");
+  assert.equal(summary.current_condition.status, "UNAVAILABLE");
+  assert.ok(summary.limitation_reason_codes.includes("MCFT_CURRENT_RUNTIME_NOT_ESTABLISHED"));
+});
+
+test("default canonical S4 reader opens its snapshot on the configured MCFT store", async () => {
+  let opened = false;
+  const identity = splitPool(fakePool(), "identity");
+  (identity as any).connect = () => {throw new Error("IDENTITY_SNAPSHOT_FORBIDDEN");};
+  const mcft = splitPool(fakePool(), "mcft");
+  (mcft as any).connect = async () => {
+    opened = true;
+    return {release() {}, async query(sql: string) {
+      if (sql.includes("transaction_timestamp")) return {rows: [{response_started_at: "2026-09-23T00:05:00.000Z", transaction_read_only: "on", transaction_isolation: "repeatable read"}]};
+      if (sql.includes("twin_fact_visibility_epoch_v1")) throw new Error("FORMAL_VISIBILITY_SCHEMA_ABSENT");
+      return {rows: []};
+    }};
+  };
+  const builder = new PostgresCustomerProductProjectionBuilderV1(identity, {mcftPool: mcft});
+  const summary = await builder.buildFieldSummaryV1(scope, "field-a");
+  assert.equal(opened, true);
+  assert.equal(summary.current_condition.status, "UNAVAILABLE");
+  assert.ok(summary.limitation_reason_codes.includes("MCFT_READ_SURFACE_UNAVAILABLE"));
+});
