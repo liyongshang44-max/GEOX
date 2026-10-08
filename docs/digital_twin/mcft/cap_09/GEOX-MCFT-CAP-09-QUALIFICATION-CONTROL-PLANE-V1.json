@@ -2183,7 +2183,7 @@
     "mode": "STRUCTURAL_FIRST_PARENT_MERGE_TREE_EQUIVALENCE_WITH_CURRENT_QCP",
     "anchor_base_sha": "b689938f6161d01dec06a1ce4ce6f24420c4b3a0",
     "acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs",
-    "max_successor_hops": 64,
+    "max_successor_hops": 256,
     "first_parent_continuity_required": true,
     "exact_two_parent_merge_required": true,
     "merge_tree_equals_candidate_tree_required": true,
