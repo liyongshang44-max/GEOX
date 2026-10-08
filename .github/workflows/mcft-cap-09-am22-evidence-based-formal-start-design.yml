@@ -1,0 +1,59 @@
+name: mcft-cap-09-am22-evidence-based-formal-start-design
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/mcft-cap-09-am22-evidence-based-formal-start-design.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-22-EVIDENCE-BASED-FORMAL-START-ADMISSION-CANDIDATE.md'
+      - 'scripts/governance_acceptance/DESIGN_MCFT_CAP_09_EVIDENCE_BASED_FORMAL_START_SELECTOR_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_BASED_START_PROPOSAL_V1.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-am22-design-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  design-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact proposal head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Prove fail-closed evidence-based candidate and unchanged live contract
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_BASED_START_PROPOSAL_V1.cjs
+
+      - name: Verify design selector is not a production entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          if node scripts/governance_acceptance/DESIGN_MCFT_CAP_09_EVIDENCE_BASED_FORMAL_START_SELECTOR_V1.cjs >/tmp/am22-direct.out 2>&1; then
+            echo "AM22_DIRECT_PRODUCTION_INVOCATION_MUST_FAIL" >&2
+            exit 1
+          fi
+          grep -Fq 'AM22_DESIGN_ONLY_NOT_A_PRODUCTION_ENTRYPOINT' /tmp/am22-direct.out
+          echo 'AM22 design selector non-effectful direct entrypoint: PASS'
+
+      - name: Verify no production secrets or runtime permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_TWIN_RUNTIME_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_EVIDENCE_RUNTIME_DATABASE_URL:-}"
+          echo 'AM22 workflow has no production DB credentials: PASS'
