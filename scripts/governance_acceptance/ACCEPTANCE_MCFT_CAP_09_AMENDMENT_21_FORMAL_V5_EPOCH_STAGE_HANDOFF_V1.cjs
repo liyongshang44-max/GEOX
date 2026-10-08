@@ -96,7 +96,7 @@ function marker(text,value,code){assert.ok(text.includes(value),code+":"+value);
 function notMarker(text,value,code){assert.equal(text.includes(value),false,code+":"+value);}
 
 const head=git("rev-parse","HEAD");
-const baseEnv=String(process.env.MCFT_BASE_SHA||"").trim();
+let baseEnv=String(process.env.MCFT_BASE_SHA||"").trim();
 const subjectEnv=String(process.env.MCFT_SUBJECT_SHA||process.env.SUBJECT_SHA||"").trim();
 if(subjectEnv)assert.equal(head,subjectEnv,"AM21_EXACT_SUBJECT_REQUIRED");
 
@@ -111,6 +111,10 @@ function currentMainSuccessorBase(){
     const sha=String(event.pull_request?.base?.sha||"").trim();
     return /^[0-9a-f]{40}$/.test(sha)?sha:null;
   }catch{return null;}
+}
+
+if(!baseEnv){
+  baseEnv=currentMainSuccessorBase()||"";
 }
 
 assert.equal(git("merge-base",INITIAL_BASE,head),INITIAL_BASE,"AM21_INITIAL_BASE_MUST_BE_ANCESTOR");
