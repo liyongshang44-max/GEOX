@@ -22,6 +22,9 @@ jobs:
       - run: corepack enable && corepack prepare pnpm@9.15.4 --activate
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @geox/contracts build
+      - run: pnpm --filter @geox/control-kernel build
+      - run: pnpm --filter @geox/device-skills build
+      - run: pnpm --filter @geox/skill-registry build
       - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_CLOCK_V2.cjs
       - run: node --import tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_HANDOFF_V2.ts
       - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_CANDIDATE_ARTIFACT_BINDING_V2.cjs
