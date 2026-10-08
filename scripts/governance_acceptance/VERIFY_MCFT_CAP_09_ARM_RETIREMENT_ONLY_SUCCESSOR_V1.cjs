@@ -65,4 +65,13 @@ function verifyRetirementOnlySuccessor() {
   return {baseline: BASE, changedPaths: [...new Set([...historical.changedPaths, ...changes.map(x => x.rel)])], qualification_scope: "RETIREMENT_ONLY_RUNTIME_UNCHANGED", old_arm_carry_forward_authorized: false, production_runtime_start_authorized: false, a0_authorized: false, mcft_cap09_completed: false};
 }
 module.exports = {verifyRetirementOnlySuccessor, PATHS};
-if (require.main === module) console.log(JSON.stringify(verifyRetirementOnlySuccessor(), null, 2));
+if (require.main === module) {
+  const policy = path.join(ROOT, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json");
+  if (fs.existsSync(policy)) {
+    // Do not call this a retirement-only current delta. Preserve the guard
+    // through the separately bounded, explicitly inactive AM22 qualification.
+    const successor = require("./VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs").verifyPrequalificationOnlySuccessor();
+    assert.equal(successor.qualification_scope, "AM22_DISABLED_COMPONENT_PREQUALIFICATION_ONLY");
+    console.log(JSON.stringify({status:"PASS",qualification_scope:"RETIREMENT_GUARD_PRESERVATION_UNDER_INACTIVE_AM22_QUALIFICATION",retirement_only_current_delta:false,real_host_retirement:false,old_arm_carry_forward_authorized:false,production_runtime_start_authorized:false,a0_authorized:false,mcft_cap09_completed:false},null,2));
+  } else console.log(JSON.stringify(verifyRetirementOnlySuccessor(), null, 2));
+}

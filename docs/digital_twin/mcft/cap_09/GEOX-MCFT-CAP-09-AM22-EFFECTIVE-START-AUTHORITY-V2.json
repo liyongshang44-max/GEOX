@@ -1,0 +1,16 @@
+{
+  "schema_version": "geox_mcft_cap09_am22_effective_start_authority_v2",
+  "authority_id": "MCFT_CAP09_AM22_EFFECTIVE_START_AUTHORITY_V2",
+  "status": "PREQUALIFICATION_ONLY_NOT_EFFECTIVE",
+  "qualified_predecessor": "1ffec9696db3eb598a36f0d2e1b7b9839363c320",
+  "retired_arm_identity": "sha256:8826cccdbb9aebd8c5e563119fdd3f52772f77cd9d12c718270655c3f03e940f",
+  "host_retirement_receipt_sha256": "sha256:fcd39ed82ad8d471a4348b52451d12547a5d4d8a51e39b156e69567a67032167",
+  "fixed_governance_lead_retirement_target": true,
+  "complete_pre_a0_measurement_qualified": false,
+  "new_handoff_arm_a0_chain_qualified": false,
+  "isolated_postgres_v2_a0_o00_qualified": false,
+  "production_start_authorized": false,
+  "formal_v5_arm_authorized": false,
+  "a0_authorized": false,
+  "mcft_cap09_completed": false
+}

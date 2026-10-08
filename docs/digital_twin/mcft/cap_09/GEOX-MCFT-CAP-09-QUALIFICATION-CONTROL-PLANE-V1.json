@@ -1054,6 +1054,33 @@
         "scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_COMPLETION_CANDIDATE_V1.cjs"
       ]
     },
+    "AM22_PREQUALIFICATION_ONLY_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-am22-admission-v2-prequalification.yml",
+        "apps/server/src/runtime/mcft_cap09_am22_effective_start_guard_v2.ts",
+        "apps/server/src/runtime/mcft_cap09_am22_evidence_owner_entry_v2.ts",
+        "apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v2.ts",
+        "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v2.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-ADMISSION-V2-PREQUALIFICATION.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_COMPLETION_ADJUDICATION_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_FINAL_READBACK_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ARM_RETIREMENT_ONLY_SUCCESSOR_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_CANDIDATE_ARTIFACT_BINDING_V2.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_CLOCK_RUNTIME_ISOLATED_O00_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_CLOCK_V2.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_HANDOFF_V2.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_PREQUALIFICATION_BOUNDARY_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_AM22_EVIDENCE_CLOCK_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_AM22_PREPARATION_ENVELOPE_V1.cjs",
+        "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CANDIDATE_V2.cjs"
+      ]
+    },
     "FORMAL_ARM_RETIREMENT_ONLY_V1": {
       "kind": "EXACT_PATH_SET",
       "paths": [
@@ -2218,6 +2245,34 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ARM_RETIREMENT_ONLY_SUCCESSOR_V1.cjs"
+    },
+    {
+      "check_id": "AM22_PREQUALIFICATION_ONLY",
+      "owner": "MCFT_CAP09_AM22_PREQUALIFICATION_ONLY",
+      "generation_scope": [
+        "FORMAL_V5",
+        "AM22_PREQUALIFICATION_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json"
+      ],
+      "resolver_ids": [
+        "AM22_PREQUALIFICATION_ONLY_V1"
+      ],
+      "historical_evidence_policy": "NO_FORMAL_START_OR_ARM_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-am22-admission-v2-prequalification.yml",
+      "execution_workflow_status": "QUALIFICATION_ONLY_NO_PRODUCTION_CREDENTIALS",
+      "fail_policy": "FAIL_CLOSED_EXACT_PREQUALIFICATION_BOUNDARY_AND_DISABLED_PRODUCTION_REQUIRED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "AM22_PREQUALIFICATION_ONLY_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs"
     }
   ],
   "non_effects": {
