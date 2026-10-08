@@ -38,7 +38,34 @@ function absent(text,value,code){assert.equal(text.includes(value),false,code+":
 
 assert.equal(git("merge-base",BASE,"HEAD"),BASE,"R6_ADMISSION_BASE_NOT_ANCESTOR");
 const changed=git("diff","--name-only",BASE+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
-assert.deepEqual(changed,EXPECTED_CHANGED,"R6_ADMISSION_CHANGED_PATH_BOUNDARY");
+const MERGED_R6="dd7529ffd08bead343e312c73b72d7039a7c12e7";
+const readOnlySuccessor=git("merge-base",MERGED_R6,"HEAD")===MERGED_R6;
+if(!readOnlySuccessor){
+  assert.deepEqual(changed,EXPECTED_CHANGED,"R6_ADMISSION_CHANGED_PATH_BOUNDARY");
+}else{
+  // Once R6 is merged, requalification proves its exact consumer unchanged
+  // alongside a bounded read-only closure successor; it must not require the
+  // whole descendant tree to remain the original ten-path R6 patch forever.
+  const allowed=new Set([
+    ".github/workflows/mcft-cap-09-formal-v5-final-readback-v1.yml",
+    ".github/workflows/mcft-cap-09-formal-v5-completion-adjudication-v1.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_FINAL_READBACK_V1.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_COMPLETION_ADJUDICATION_V1.cjs",
+    "scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_COMPLETION_CANDIDATE_V1.cjs",
+    "scripts/governance_acceptance/ADJUDICATE_MCFT_CAP_09_FORMAL_V5_COMPLETION_V1.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_FINAL_READBACK_SCHEMA_V1.ts",
+    "scripts/runtime_acceptance/READBACK_MCFT_CAP_09_FORMAL_V5_ACTIVE_WATCHDOG_V1.ts",
+    "scripts/runtime_acceptance/READBACK_MCFT_CAP_09_FORMAL_V5_FINAL_V1.ts",
+    "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_DOWNSTREAM_ZERO_V1.ts",
+  ]);
+  const delta=git("diff","--name-only",MERGED_R6+"...HEAD").split(/\r?\n/).filter(Boolean);
+  for(const rel of delta)assert.ok(allowed.has(rel),"R6_READ_ONLY_SUCCESSOR_PATH_FORBIDDEN:"+rel);
+  for(const rel of EXPECTED_CHANGED.filter(rel=>rel!=="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"&&rel!=="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs")){
+    assert.equal(git("rev-parse","HEAD:"+rel),git("rev-parse",MERGED_R6+":"+rel),"R6_MERGED_CONSUMER_CHANGED:"+rel);
+  }
+}
 
 for(const [rel,blob] of Object.entries(FROZEN)){
   assert.equal(git("rev-parse","HEAD:"+rel),blob,"R6_ADMISSION_FROZEN_SURFACE_CHANGED:"+rel);
@@ -92,6 +119,8 @@ const proof={
   schema_version:"geox_mcft_cap09_formal_v5_r6_admission_v1",
   status:"PASS",
   exact_predecessor:BASE,
+  merged_r6_read_only_successor_mode:readOnlySuccessor,
+  merged_r6_consumer_unchanged:readOnlySuccessor,
   changed_path_count:changed.length,
   historical_a18_v4_unchanged:true,
   historical_twin_v2_process_unchanged:true,
