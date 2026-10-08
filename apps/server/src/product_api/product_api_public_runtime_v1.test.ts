@@ -8,6 +8,8 @@ import {
 
 const KEYS = [
   "GEOX_PRODUCT_DATABASE_URL",
+  "GEOX_PRODUCT_FORMAL_READ_MODE",
+  "GEOX_PRODUCT_FORMAL_DATABASE_URL",
   "GEOX_PRODUCT_API_TOKENS_JSON",
   "GEOX_PRODUCT_ALLOWED_ORIGINS",
   "GEOX_RUNTIME_ENV",
@@ -146,6 +148,37 @@ test("isolated public Product app exposes health but no legacy/admin surface", a
     } finally {
       await app.close();
       await pool.end();
+    }
+  });
+});
+
+test("Formal split-source cannot silently activate without explicit mode and exact credential", async () => {
+  const identity = "postgresql://geox_product_readonly_login_v1:testpass@ep-odd-poetry-a6peeo8g.us-west-2.aws.neon.tech/geox_mcft_cap09_production_runtime_v1?sslmode=require";
+  const formal = "postgresql://geox_product_readonly_login_v1:testpass@ep-odd-poetry-a6peeo8g.us-west-2.aws.neon.tech/geox_mcft_cap09_s6_formal_t4r1_24h_v5?sslmode=require";
+  await withEnv({...BASE_ENV,GEOX_PRODUCT_FORMAL_DATABASE_URL:formal}, () => {
+    assert.throws(()=>resolveProductApiPublicRuntimeConfigV1(),/DATABASE_URL_NOT_ADMITTED/);
+  });
+  await withEnv({...BASE_ENV,GEOX_PRODUCT_FORMAL_READ_MODE:"FORMAL_V5_RESEARCH_EXACT_SCOPE_V1"}, () => {
+    assert.throws(()=>resolveProductApiPublicRuntimeConfigV1(),/DATABASE_URL_REQUIRED/);
+  });
+  await withEnv({
+    ...BASE_ENV,GEOX_PRODUCT_DATABASE_URL:identity,
+    GEOX_PRODUCT_FORMAL_READ_MODE:"FORMAL_V5_RESEARCH_EXACT_SCOPE_V1",
+    GEOX_PRODUCT_FORMAL_DATABASE_URL:formal,
+  }, async () => {
+    const config=resolveProductApiPublicRuntimeConfigV1();
+    assert.equal(config.formalReadMode,"FORMAL_V5_RESEARCH_EXACT_SCOPE_V1");
+    const {app,pool,canonicalPool}=createProductApiPublicAppV1(config);
+    assert.ok(canonicalPool);
+    try{
+      await app.ready();
+      const health=await app.inject({method:"GET",url:"/health"});
+      assert.equal(health.statusCode,200);
+      assert.equal(health.json().authority_ceiling,"NON_AUTHORITATIVE_PRODUCT_PROJECTION_ONLY");
+      const denied=await app.inject({method:"GET",url:"/api/product/v1/fields"});
+      assert.equal(denied.statusCode,401);
+    }finally{
+      await app.close();await pool.end();await canonicalPool?.end();
     }
   });
 });
