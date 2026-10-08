@@ -534,12 +534,12 @@ function main() {
 // Post-closure preparation may append qualified crop authority without changing
 // the qualified Runtime. This is a separate, read-only proof, not an exemption
 // from the structural chain or current QCP qualification above.
-function verifyFormalV5AuthorityContinuity() {
+function verifyFormalV5AuthorityContinuity(headRef = "HEAD") {
   const assert = require("node:assert/strict");
   const crypto = require("node:crypto");
   const zlib = require("node:zlib");
   const baseline = "f97bb9b9f29dc276c382e8d02c4644aa9ae2ca0b";
-  const head = git(["rev-parse", "HEAD"]);
+  const head = git(["rev-parse", headRef]);
   if (head === baseline || !isAncestor(baseline, head)) return null;
   const registryRel = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json";
   const prefix = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-";

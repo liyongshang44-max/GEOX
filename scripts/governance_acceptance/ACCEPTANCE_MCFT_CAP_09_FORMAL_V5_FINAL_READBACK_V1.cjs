@@ -7,7 +7,9 @@ const fs=require("node:fs");
 const path=require("node:path");
 
 const ROOT=path.resolve(__dirname,"../..");
-const authorityContinuity=require("./ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs").verifyFormalV5AuthorityContinuity();
+// Revocation-only successors requalify unchanged consumers without carrying an old ARM.
+const authorityContinuity=require("./VERIFY_MCFT_CAP_09_ARM_RETIREMENT_ONLY_SUCCESSOR_V1.cjs").verifyRetirementOnlySuccessor()
+  ?? require("./ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs").verifyFormalV5AuthorityContinuity();
 const BASE="dd7529ffd08bead343e312c73b72d7039a7c12e7";
 
 const EXPECTED_CHANGED=[
