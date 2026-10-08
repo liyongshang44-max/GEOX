@@ -8,6 +8,7 @@ const BASE="1ffec9696db3eb598a36f0d2e1b7b9839363c320";
 const POLICY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json";
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const CHAIN="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs";
+const RETIRE="scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ARM_RETIREMENT_ONLY_SUCCESSOR_V1.cjs";
 const CHECKERS=["R6_ADMISSION","FINAL_READBACK","COMPLETION_ADJUDICATION"].map(x=>"scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_"+x+"_V1.cjs");
 const PATHS=[
   ".github/workflows/mcft-cap-09-am22-admission-v2-prequalification.yml",
@@ -16,7 +17,7 @@ const PATHS=[
   "apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v2.ts",
   "apps/server/src/runtime/mcft_cap09_formal_v5_evidence_runtime_handoff_authority_v2.ts",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-ADMISSION-V2-PREQUALIFICATION.md",
-  POLICY,QCP,CHAIN,...CHECKERS,
+  POLICY,QCP,CHAIN,RETIRE,...CHECKERS,
   "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs",
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_CANDIDATE_ARTIFACT_BINDING_V2.cjs",
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_CLOCK_RUNTIME_ISOLATED_O00_V1.ts",
@@ -33,7 +34,7 @@ const CHECK={check_id:"AM22_PREQUALIFICATION_ONLY",owner:"MCFT_CAP09_AM22_PREQUA
 function validateBoundary(changes,policy,before,after){
   for(const {status,rel} of changes){
     assert.ok(PATHS.includes(rel)&&["A","M"].includes(status),"AM22_PREQUALIFICATION_UNKNOWN_OR_DESTRUCTIVE_PATH:"+rel);
-    assert.equal(status,rel===QCP||rel===CHAIN||CHECKERS.includes(rel)?"M":"A","AM22_PREQUALIFICATION_EXISTING_SURFACE_CHANGED:"+rel);
+    assert.equal(status,rel===QCP||rel===CHAIN||rel===RETIRE||CHECKERS.includes(rel)?"M":"A","AM22_PREQUALIFICATION_EXISTING_SURFACE_CHANGED:"+rel);
   }
   assert.equal(policy.schema_version,"geox_mcft_cap09_am22_effective_start_authority_v2");
   assert.equal(policy.authority_id,"MCFT_CAP09_AM22_EFFECTIVE_START_AUTHORITY_V2");
@@ -62,6 +63,8 @@ function verifyPrequalificationOnlySuccessor(){
   for(const rel of CHECKERS)assert.equal(read(rel),cp.execFileSync("git",["show",BASE+":"+rel],{cwd:ROOT,encoding:"utf8"}).replace(PRIOR_CALL,NEW_CALL),"AM22_PREQUALIFICATION_EXISTING_CHECKER_REWRITE:"+rel);
   const expectedChain=cp.execFileSync("git",["show",BASE+":"+CHAIN],{cwd:ROOT,encoding:"utf8"}).replace('function verifyFormalV5AuthorityContinuity(headRef = "HEAD") {','function verifyFormalV5AuthorityContinuity(headRef = "HEAD", historicalReplay = false) {').replace('  const protectedMain = git(["rev-parse", "origin/main"]);','  const observedProtectedMain = git(["rev-parse", "origin/main"]);\n  if (historicalReplay) {\n    assert.notEqual(headRef, "HEAD", "FORMAL_V5_HISTORICAL_REPLAY_EXPLICIT_HEAD_REQUIRED");\n    assert.ok(isAncestor(head, observedProtectedMain), "FORMAL_V5_HISTORICAL_REPLAY_NOT_ADOPTED_BY_CURRENT_MAIN");\n  }\n  const protectedMain = historicalReplay ? head : observedProtectedMain;');
   assert.equal(read(CHAIN),expectedChain,"AM22_PREQUALIFICATION_CHAIN_REPLAY_REWRITE_FORBIDDEN");
+  const retirementCli='if (require.main === module) {\n  const policy = path.join(ROOT, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json");\n  if (fs.existsSync(policy)) {\n    // Do not call this a retirement-only current delta. Preserve the guard\n    // through the separately bounded, explicitly inactive AM22 qualification.\n    const successor = require("./VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs").verifyPrequalificationOnlySuccessor();\n    assert.equal(successor.qualification_scope, "AM22_DISABLED_COMPONENT_PREQUALIFICATION_ONLY");\n    console.log(JSON.stringify({status:"PASS",qualification_scope:"RETIREMENT_GUARD_PRESERVATION_UNDER_INACTIVE_AM22_QUALIFICATION",retirement_only_current_delta:false,real_host_retirement:false,old_arm_carry_forward_authorized:false,production_runtime_start_authorized:false,a0_authorized:false,mcft_cap09_completed:false},null,2));\n  } else console.log(JSON.stringify(verifyRetirementOnlySuccessor(), null, 2));\n}';
+  assert.equal(read(RETIRE),cp.execFileSync("git",["show",BASE+":"+RETIRE],{cwd:ROOT,encoding:"utf8"}).replace('if (require.main === module) console.log(JSON.stringify(verifyRetirementOnlySuccessor(), null, 2));',retirementCli),"AM22_PREQUALIFICATION_RETIREMENT_BODY_CHANGED");
   // The V2 owner changes only its names and handoff port; producer/fencing code
   // is unchanged. The process entry is separately disabled by checked-in policy.
   const ownerV1="apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v1.ts";
@@ -73,5 +76,5 @@ function verifyPrequalificationOnlySuccessor(){
   const retiredPaths=require("./VERIFY_MCFT_CAP_09_ARM_RETIREMENT_ONLY_SUCCESSOR_V1.cjs").PATHS;
   return {status:"PASS",baseline:BASE,changedPaths:[...new Set([...historical.changedPaths,...retiredPaths,...changes.map(x=>x.rel)])],qualification_scope:"AM22_DISABLED_COMPONENT_PREQUALIFICATION_ONLY",old_arm_carry_forward_authorized:false,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,mcft_cap09_completed:false};
 }
-module.exports={verifyPrequalificationOnlySuccessor,validateBoundary,PATHS,CHECK,CHECKERS,PRIOR_CALL,NEW_CALL,POLICY,QCP,CHAIN,BASE};
+module.exports={verifyPrequalificationOnlySuccessor,validateBoundary,PATHS,CHECK,CHECKERS,PRIOR_CALL,NEW_CALL,POLICY,QCP,CHAIN,RETIRE,BASE};
 if(require.main===module)console.log(JSON.stringify(verifyPrequalificationOnlySuccessor(),null,2));
