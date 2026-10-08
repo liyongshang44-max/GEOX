@@ -1,0 +1,22 @@
+# Explicit overlay; retain the existing project, services and lease identities.
+# The V2 entry refuses all effects while checked-in AM22 production policy is inactive.
+services:
+  geox-mcft-cap09-evidence-runtime-v1:
+    image: ${GEOX_MCFT_CAP09_AM22_EXECUTION_IMAGE_ID:?required}
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p /var/log/geox/mcft-cap09/evidence &&
+        exec node --import tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_EVIDENCE_OWNER_ENTRY_V2.cjs
+        >> /var/log/geox/mcft-cap09/evidence/runtime.log 2>&1
+    environment:
+      GEOX_MCFT_CAP09_AM22_EXECUTION_QUALIFICATION_PATH: /run/geox/mcft-cap09/am22-execution-qualification.json
+      GEOX_MCFT_CAP09_AM22_EXECUTION_IMAGE_ID: ${GEOX_MCFT_CAP09_AM22_EXECUTION_IMAGE_ID:?required}
+    volumes:
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_AM22_EXECUTION_QUALIFICATION_PATH:?required}
+        target: /run/geox/mcft-cap09/am22-execution-qualification.json
+        read_only: true
+  geox-mcft-cap09-twin-runtime-v1:
+    image: ${GEOX_MCFT_CAP09_AM22_EXECUTION_IMAGE_ID:?required}

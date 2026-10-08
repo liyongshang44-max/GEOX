@@ -4,7 +4,9 @@ const fs=require("node:fs");
 const path=require("node:path");
 const {validateBoundary,PATHS,CHECKERS,QCP,POLICY,CHAIN,RETIRE}=require("../governance_acceptance/VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs");
 const root=path.resolve(__dirname,"../..");
-const current=JSON.parse(fs.readFileSync(path.join(root,QCP),"utf8"));
+// Replay the already-adopted component boundary, separately from the new engineering successor.
+const cp=require("node:child_process");
+const current=JSON.parse(cp.execFileSync("git",["show","648c1499f23c9c5d11483b0b797c8700e398349d:"+QCP],{cwd:root,encoding:"utf8"}));
 const prior=structuredClone(current);prior.checks.pop();delete prior.dependency_resolvers.AM22_PREQUALIFICATION_ONLY_V1;
 const policy=JSON.parse(fs.readFileSync(path.join(root,POLICY),"utf8"));
 const changes=PATHS.map(rel=>({rel,status:rel===QCP||rel===CHAIN||rel===RETIRE||CHECKERS.includes(rel)?"M":"A"}));

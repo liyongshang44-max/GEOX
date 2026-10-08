@@ -1101,6 +1101,27 @@
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_ACTIVE_PRODUCTION_CUTOVER_V2.cjs",
         "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_ARM_RETIREMENT_V1.cjs"
       ]
+    },
+    "AM22_START_CHAIN_ENGINEERING_ONLY_V2": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-am22-start-chain-v2-engineering.yml",
+        "docker-compose.mcft-cap09-production-preformal-am22-v2.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-START-CHAIN-V2-ENGINEERING.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ARM_RETIREMENT_ONLY_SUCCESSOR_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_PREQUALIFICATION_BOUNDARY_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_START_CHAIN_ISOLATED_O00_V2.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_START_CHAIN_V2.cjs",
+        "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_AM22_EXECUTION_QUALIFICATION_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_AM22_START_CHAIN_V2.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_CUTOVER_ARM_A0_V2.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_EVIDENCE_OWNER_ENTRY_V2.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V2.cjs"
+      ]
     }
   },
   "checks": [
@@ -2273,6 +2294,35 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs"
+    },
+    {
+      "check_id": "AM22_START_CHAIN_ENGINEERING_ONLY",
+      "owner": "MCFT_CAP09_AM22_START_CHAIN_ENGINEERING",
+      "generation_scope": [
+        "FORMAL_V5",
+        "AM22_START_CHAIN_ENGINEERING_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-START-CHAIN-V2-ENGINEERING.md"
+      ],
+      "resolver_ids": [
+        "AM22_START_CHAIN_ENGINEERING_ONLY_V2"
+      ],
+      "historical_evidence_policy": "NO_FORMAL_START_OR_ARM_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-am22-start-chain-v2-engineering.yml",
+      "execution_workflow_status": "QUALIFICATION_ONLY_NO_PRODUCTION_CREDENTIALS",
+      "fail_policy": "FAIL_CLOSED_EXACT_ENGINEERING_BOUNDARY_AND_DISABLED_PRODUCTION_REQUIRED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "AM22_START_CHAIN_ENGINEERING_ONLY_V2"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs"
     }
   ],
   "non_effects": {
