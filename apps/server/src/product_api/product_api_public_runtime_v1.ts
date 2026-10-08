@@ -285,7 +285,12 @@ export function createProductApiPublicAppV1(
     }
   });
 
-  registerProductV1Routes(app, pool, { builder });
+  if (canonicalPool) {
+    registerProductV1Routes(app, pool, { builder });
+  } else {
+    // Preserve the exact frozen Wave-02 single-DB route-registration surface.
+    registerProductV1Routes(app, pool);
+  }
 
   app.setNotFoundHandler((_request, reply) => {
     reply.code(404).send({
