@@ -1,0 +1,37 @@
+name: MCFT CAP-09 AM22 admission V2 prequalification
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-am22-admission-v2-prequalification.yml'
+      - '**/*AM22*V2*'
+      - '**/*AM22*V1*'
+      - 'apps/server/src/runtime/*_v2.ts'
+permissions:
+  contents: read
+jobs:
+  unit-prequalification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - run: corepack enable && corepack prepare pnpm@9.15.4 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @geox/contracts build
+      - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_CLOCK_V2.cjs
+      - run: node --import tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_HANDOFF_V2.ts
+      - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_CANDIDATE_ARTIFACT_BINDING_V2.cjs
+      - run: pnpm exec tsc --noEmit -p apps/server/tsconfig.json
+      - name: Reject production entry before any external effect
+        shell: bash
+        run: |
+          set +e
+          node --import tsx apps/server/src/runtime/mcft_cap09_am22_evidence_owner_entry_v2.ts > /tmp/am22-entry.txt 2>&1
+          result=$?
+          set -e
+          test "$result" -ne 0
+          grep -q 'AM22_EFFECTIVE_PRODUCTION_QUALIFICATION_REQUIRED' /tmp/am22-entry.txt
