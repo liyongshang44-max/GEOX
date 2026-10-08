@@ -49,3 +49,30 @@ check(()=>assert.throws(()=>gov.validateBoundary(changes,{...p,production_start_
 check(()=>{const altered=structuredClone(after);altered.checks[0].owner="changed";assert.throws(()=>gov.validateBoundary(changes,p,before,altered),/PREDECESSOR_QCP_CHANGED/);});
 check(()=>{const altered=structuredClone(after);altered.dependency_resolvers.AM22_START_CHAIN_ENGINEERING_ONLY_V2.paths.push("unknown.ts");assert.throws(()=>gov.validateBoundary(changes,p,before,altered),/RESOLVER_CHANGED/);});
 console.log(JSON.stringify({status:"PASS",cases,unit_fixtures_only:true,real_host_cutover:false,real_host_full_preparation_measurement:false,production_database_write_count:0,service_stop_count:0,a0_execution:false}));
+// The adopted 36-case engineering boundary above remains intact. These cases
+// separately qualify only the private-repository current-main transport fix.
+const transportBefore=fs.readFileSync(path.join(__dirname,"../../",gov.TRANSPORT_WORKFLOW),"utf8").replace(gov.TRANSPORT_AFTER,gov.TRANSPORT_BEFORE);
+const transportAfter=transportBefore.replace(gov.TRANSPORT_BEFORE,gov.TRANSPORT_AFTER);
+const transportChanges=gov.TRANSPORT_PATHS.map(rel=>({rel,status:"M"}));
+let transportCases=0;const transportCheck=fn=>{fn();transportCases++;};
+transportCheck(()=>gov.validateTransportBoundary(transportChanges,transportBefore,transportAfter));
+transportCheck(()=>assert.throws(()=>gov.validateTransportBoundary([...transportChanges,{rel:gov.POLICY,status:"M"}],transportBefore,transportAfter),/UNKNOWN_PATH/));
+transportCheck(()=>assert.throws(()=>gov.validateTransportBoundary(transportChanges.map(x=>({...x,status:"D"})),transportBefore,transportAfter),/EXISTING_PATH_ONLY/));
+transportCheck(()=>assert.throws(()=>gov.validateTransportBoundary(transportChanges,transportBefore,transportAfter.replace("17 5 * * *","0 0 * * *")),/ONLY_AUTHENTICATED_MAIN_READ_ALLOWED/));
+transportCheck(()=>assert.throws(()=>gov.validateTransportBoundary(transportChanges,transportBefore,transportAfter.replace("persist-credentials: false","persist-credentials: true")),/ONLY_AUTHENTICATED_MAIN_READ_ALLOWED/));
+transportCheck(()=>assert.throws(()=>gov.validateTransportBoundary(transportChanges,transportBefore,transportAfter.replace("architecture_effective!==false","architecture_effective!==true")),/ONLY_AUTHENTICATED_MAIN_READ_ALLOWED/));
+if(process.platform!=="win32"){
+ const shellDir=fs.mkdtempSync(path.join(os.tmpdir(),"am22-main-read-"));
+ try{
+  const subjectSha="a".repeat(40),otherSha="b".repeat(40),marker=path.join(shellDir,"adjudicator-called");
+  const workflowScript=transportAfter.split("      - name: Adjudicate current protected-main successor-chain effectiveness\n")[1].split("      - name: Run fresh persistent lifecycle qualification\n")[0].split("        run: |\n")[1].split(/\r?\n/).map(x=>x.startsWith("          ")?x.slice(10):x).join("\n").replaceAll("${{ github.sha }}",subjectSha);
+  const commands={gh:'#!/bin/sh\nif [ "$TEST_API_FAIL" = "1" ]; then exit 1; fi\nprintf "%s\\n" "$TEST_API_SHA"\n',git:'#!/bin/sh\nif [ "$3" = "origin/main" ]; then printf "%s\\n" "$TEST_CHECKOUT_SHA"; else printf "%s\\n" "$TEST_HEAD_SHA"; fi\n',node:'#!/bin/sh\nprintf "CALLED\\n" > "$TEST_MARKER"\n'};
+  for(const [name,body] of Object.entries(commands))fs.writeFileSync(path.join(shellDir,name),body,{mode:0o700});
+  for(const scenario of [{pass:true},{pass:false,TEST_API_SHA:otherSha},{pass:false,TEST_HEAD_SHA:otherSha},{pass:false,TEST_API_FAIL:"1"}])transportCheck(()=>{
+   fs.rmSync(marker,{force:true});
+   const result=cp.spawnSync("bash",["-c",workflowScript],{encoding:"utf8",env:{...process.env,PATH:shellDir+path.delimiter+process.env.PATH,GITHUB_REPOSITORY:"fixture/private-repo",TEST_MARKER:marker,TEST_API_SHA:subjectSha,TEST_CHECKOUT_SHA:subjectSha,TEST_HEAD_SHA:subjectSha,...scenario}});
+   if(scenario.pass){assert.equal(result.status,0,result.stderr);assert.ok(fs.existsSync(marker));}else{assert.notEqual(result.status,0);assert.ok(!fs.existsSync(marker));}
+  });
+ }finally{fs.rmSync(shellDir,{recursive:true,force:true});}
+}
+console.log(JSON.stringify({status:"PASS",transport_cases:transportCases,scope:"AUTHENTICATED_MAIN_READ_ONLY",fresh_authority_generated:false,production_effect:false}));
