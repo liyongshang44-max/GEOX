@@ -278,9 +278,12 @@ try{
   let started=false;
   try{
     try{fs.rmSync(artifactAttestationPath,{force:true});}catch{}
-    exec("docker",["compose","-f",COMPOSE_REL,"-f",COMPOSE_V2_REL,"build","geox-mcft-cap09-evidence-runtime-v1"],{env});
+    // The detached certificate qualifies an already-built immutable image.
+    // Rebuilding here could change its identity after admission.
+    const actualImage=exec("docker",["image","inspect","--format","{{.Id}}",env.GEOX_MCFT_CAP09_RUNTIME_IMAGE_TAG],{env}).trim();
+    if(actualImage!==am22Candidate.image_id) fail("AM22_CUTOVER_QUALIFIED_IMAGE_CHANGED");
     exec(process.execPath,[VERIFY_REL,"--attest-image"],{env});
-    exec("docker",["compose","-f",COMPOSE_REL,"-f",COMPOSE_V2_REL,"up","-d","--no-build","geox-mcft-cap09-evidence-runtime-v1","geox-mcft-cap09-twin-runtime-v1"],{env});
+    exec("docker",["compose","-f",COMPOSE_REL,"-f",COMPOSE_V2_REL,"up","-d","--no-build","--pull","never","geox-mcft-cap09-evidence-runtime-v1","geox-mcft-cap09-twin-runtime-v1"],{env});
     started=true;
     const deadline=Date.now()+180_000;
     let lastError="";

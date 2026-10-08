@@ -53,6 +53,7 @@ function validateBoundary(changes,policy,before,after){
 }
 function git(...args){return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8"}).trim();}
 function verifyPrequalificationOnlySuccessor(){
+  if(fs.existsSync(path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-START-CHAIN-V2-ENGINEERING.md"))) return require("./VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs").verifyEngineeringOnly();
   if(!fs.existsSync(path.join(ROOT,POLICY)))return null;
   assert.equal(git("merge-base",BASE,"HEAD"),BASE,"AM22_PREQUALIFICATION_BASE_NOT_ANCESTOR");
   assert.equal(git("merge-base",BASE,"origin/main"),BASE,"AM22_PREQUALIFICATION_BASE_NOT_ADOPTED_BY_CURRENT_MAIN");

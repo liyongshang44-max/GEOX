@@ -33,7 +33,19 @@ check(()=>assert.throws(()=>verifyOwnerBinding({...owner,authorized_image_id:"sh
 check(()=>assert.throws(()=>verifyOwnerBinding({...owner,evidence_runtime:{...role,renewal:{...role.renewal,same_effective_owner:false}}},binding),/LIVE_OWNER_RENEWAL_REQUIRED/));
 check(()=>assert.deepEqual(preparationCommands("input","rearm","out").map(x=>path.basename(x.file)),["RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V2.cjs","ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V2.cjs","RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MATERIALIZATION_V1.ts"]));
 check(()=>assert.deepEqual(a0Commands("out").map(x=>path.basename(x.file)),["RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V2.cjs","RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP_V2.cjs"]));
+check(()=>{const source=fs.readFileSync(path.join(__dirname,"RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V2.cjs"),"utf8");assert.ok(!source.includes('"build","geox-mcft-cap09-evidence-runtime-v1"'));assert.ok(!source.includes('"down"'));assert.match(source,/"--pull","never"/);});
 for(const file of ["RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V2.cjs","ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V2.cjs","RUN_MCFT_CAP_09_AM22_CUTOVER_ARM_A0_V2.cjs","RUN_MCFT_CAP_09_AM22_EVIDENCE_OWNER_ENTRY_V2.cjs"]){check(()=>{const result=cp.spawnSync(process.execPath,[path.join(__dirname,file)],{encoding:"utf8"});assert.notEqual(result.status,0);assert.match(result.stderr,/EFFECTIVE_PRODUCTION_QUALIFICATION_REQUIRED/);});}
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"am22-chain-unit-"));
 try{fs.writeFileSync(path.join(tmp,"unit.started.json"),"{}");check(()=>assert.throws(()=>runStep({file:path.join(tmp,"unit.cjs"),args:[]},tmp,100),/PARTIAL_OR_PRIOR_OPERATION/));}finally{fs.rmSync(tmp,{recursive:true,force:true});}
+const gov=require("../governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs");
+const after=JSON.parse(fs.readFileSync(path.join(__dirname,"../../",gov.QCP),"utf8"));
+const before=structuredClone(after);before.checks.pop();delete before.dependency_resolvers.AM22_START_CHAIN_ENGINEERING_ONLY_V2;
+const p=JSON.parse(fs.readFileSync(path.join(__dirname,"../../",gov.POLICY),"utf8"));
+const mutable=[gov.QCP,gov.PRIOR,gov.RETIRE,gov.BOUNDARY],changes=gov.PATHS.map(rel=>({rel,status:mutable.includes(rel)?"M":"A"}));
+check(()=>gov.validateBoundary(changes,p,before,after));
+check(()=>assert.throws(()=>gov.validateBoundary([...changes,{rel:"unknown/provider.ts",status:"A"}],p,before,after),/UNKNOWN_PATH/));
+check(()=>assert.throws(()=>gov.validateBoundary([...changes,{rel:gov.POLICY,status:"M"}],p,before,after),/UNKNOWN_PATH/));
+check(()=>assert.throws(()=>gov.validateBoundary(changes,{...p,production_start_authorized:true},before,after),/AUTHORITY_ESCALATION/));
+check(()=>{const altered=structuredClone(after);altered.checks[0].owner="changed";assert.throws(()=>gov.validateBoundary(changes,p,before,altered),/PREDECESSOR_QCP_CHANGED/);});
+check(()=>{const altered=structuredClone(after);altered.dependency_resolvers.AM22_START_CHAIN_ENGINEERING_ONLY_V2.paths.push("unknown.ts");assert.throws(()=>gov.validateBoundary(changes,p,before,altered),/RESOLVER_CHANGED/);});
 console.log(JSON.stringify({status:"PASS",cases,unit_fixtures_only:true,real_host_cutover:false,real_host_full_preparation_measurement:false,production_database_write_count:0,service_stop_count:0,a0_execution:false}));

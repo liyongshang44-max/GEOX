@@ -41,6 +41,8 @@ jobs:
         run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_START_CHAIN_V2.cjs
       - name: Preserve revoked identity guard
         run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_ARM_RETIREMENT_V1.cjs
+      - name: Qualify exact inactive engineering successor boundary
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs
       - name: New V2 ARM DTO through real isolated PostgreSQL A0 and O00
         env:
           AM22_ISOLATED_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/am22_o00
