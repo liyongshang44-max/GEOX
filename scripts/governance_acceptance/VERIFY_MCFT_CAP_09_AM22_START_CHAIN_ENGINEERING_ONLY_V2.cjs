@@ -30,6 +30,7 @@ function validateBoundary(changes,policy,before,after){
  assert.deepEqual(normalized,before,"AM22_CHAIN_PREDECESSOR_QCP_CHANGED");
 }
 function verifyEngineeringOnly(){
+ const transport=verifyFreshAuthorityTransportOnly();if(transport)return transport;
  if(!fs.existsSync(path.join(ROOT,DOC)))return null;
  assert.equal(git("merge-base",BASE,"HEAD"),BASE,"AM22_CHAIN_BASE_NOT_ANCESTOR");
  assert.equal(git("merge-base",BASE,"origin/main"),BASE,"AM22_CHAIN_BASE_NOT_ADOPTED");
@@ -45,5 +46,56 @@ function verifyEngineeringOnly(){
  const historical=require("./ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs").verifyFormalV5AuthorityContinuity("a60aa6858662ce87b989ff752c50969f21ad4619",true);
  return {status:"PASS",baseline:BASE,changedPaths:[...new Set([...historical.changedPaths,...require("./VERIFY_MCFT_CAP_09_ARM_RETIREMENT_ONLY_SUCCESSOR_V1.cjs").PATHS,...require("./VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs").PATHS,...changes.map(x=>x.rel)])],qualification_scope:"AM22_DISABLED_START_CHAIN_ENGINEERING_ONLY",old_arm_carry_forward_authorized:false,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,mcft_cap09_completed:false};
 }
-module.exports={BASE,DOC,POLICY,QCP,PRIOR,RETIRE,BOUNDARY,PATHS,CHECK,ROUTE,RETIRE_BEFORE,RETIRE_AFTER,BOUNDARY_BEFORE,BOUNDARY_AFTER,validateBoundary,verifyEngineeringOnly};
+// BEGIN FRESH_AUTHORITY_TRANSPORT_ONLY
+const TRANSPORT_BASE="e9198c90bcb61fc7fd4a6131348233bc1a365388";
+const TRANSPORT_WORKFLOW=".github/workflows/mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml";
+const TRANSPORT_SELF="scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs";
+const TRANSPORT_TEST="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_START_CHAIN_V2.cjs";
+const TRANSPORT_PATHS=[TRANSPORT_WORKFLOW,TRANSPORT_SELF,TRANSPORT_TEST].sort();
+const TRANSPORT_BEFORE=`        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse origin/main)"
+          subject="$(git rev-parse HEAD)"`;
+const TRANSPORT_AFTER=`        shell: bash
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          set -euo pipefail
+          current_main="$(gh api "repos/\${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          checkout_main="$(git rev-parse origin/main)"
+          if [ "$checkout_main" != "$current_main" ]; then
+            echo "T4R1_ROLLING_CHECKOUT_MAIN_STALE:\${checkout_main}:\${current_main}" >&2
+            exit 1
+          fi
+          subject="$(git rev-parse HEAD)"`;
+function validateTransportBoundary(changes,before,after){
+ for(const x of changes){assert.ok(TRANSPORT_PATHS.includes(x.rel),"AM22_TRANSPORT_UNKNOWN_PATH:"+x.rel);assert.equal(x.status,"M","AM22_TRANSPORT_EXISTING_PATH_ONLY");}
+ assert.equal(before.split(TRANSPORT_BEFORE).length,2,"AM22_TRANSPORT_EXACT_PREDECESSOR_BLOCK_REQUIRED");
+ assert.equal(after,before.replace(TRANSPORT_BEFORE,TRANSPORT_AFTER),"AM22_TRANSPORT_ONLY_AUTHENTICATED_MAIN_READ_ALLOWED");
+}
+function verifyFreshAuthorityTransportOnly(){
+ if(cp.spawnSync("git",["merge-base","--is-ancestor",TRANSPORT_BASE,"HEAD"],{cwd:ROOT}).status!==0)return null;
+ const at=rel=>cp.execFileSync("git",["show",TRANSPORT_BASE+":"+rel],{cwd:ROOT,encoding:"utf8"});
+ const read=rel=>fs.readFileSync(path.join(ROOT,rel),"utf8");
+ if(read(TRANSPORT_WORKFLOW)===at(TRANSPORT_WORKFLOW))return null;
+ assert.equal(git("merge-base",TRANSPORT_BASE,"origin/main"),TRANSPORT_BASE,"AM22_TRANSPORT_BASE_NOT_ADOPTED");
+ assert.equal(git("status","--porcelain","--untracked-files=normal"),"","AM22_TRANSPORT_DIRTY_SOURCE");
+ const changes=git("diff","--name-status",TRANSPORT_BASE,"HEAD").split(/\r?\n/).filter(Boolean).map(x=>{const [status,rel]=x.split("\t");return {status,rel};});
+ validateTransportBoundary(changes,at(TRANSPORT_WORKFLOW),read(TRANSPORT_WORKFLOW));
+ assert.equal(read(POLICY),at(POLICY),"AM22_TRANSPORT_PRODUCTION_POLICY_CHANGED");
+ assert.equal(read(QCP),at(QCP),"AM22_TRANSPORT_QCP_CHANGED");
+ const route=' const transport=verifyFreshAuthorityTransportOnly();if(transport)return transport;\n';
+ const exported=',TRANSPORT_BASE,TRANSPORT_WORKFLOW,TRANSPORT_PATHS,TRANSPORT_BEFORE,TRANSPORT_AFTER,validateTransportBoundary,verifyFreshAuthorityTransportOnly';
+ const normalized=read(TRANSPORT_SELF).replace(route,"").replace(/\/\/ BEGIN FRESH_AUTHORITY_TRANSPORT_ONLY[\s\S]*?\/\/ END FRESH_AUTHORITY_TRANSPORT_ONLY\n/,"").replace(exported,"");
+ assert.equal(normalized,at(TRANSPORT_SELF),"AM22_TRANSPORT_PREDECESSOR_CHECKER_CHANGED");
+ assert.ok(read(TRANSPORT_TEST).startsWith(at(TRANSPORT_TEST)),"AM22_TRANSPORT_PREDECESSOR_NEGATIVES_CHANGED");
+ for(const file of [TRANSPORT_TEST,"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_ARM_RETIREMENT_V1.cjs"])cp.execFileSync(process.execPath,[path.join(ROOT,file)],{cwd:ROOT,stdio:"pipe"});
+ const historical=require("./ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs").verifyFormalV5AuthorityContinuity("a60aa6858662ce87b989ff752c50969f21ad4619",true);
+ const adopted=git("diff","--name-only","a60aa6858662ce87b989ff752c50969f21ad4619",TRANSPORT_BASE).split(/\r?\n/).filter(Boolean);
+ return {status:"PASS",baseline:TRANSPORT_BASE,changedPaths:[...new Set([...historical.changedPaths,...adopted,...changes.map(x=>x.rel)])],qualification_scope:"AM22_DISABLED_START_CHAIN_ENGINEERING_ONLY",current_delta_scope:"FRESH_AUTHORITY_AUTHENTICATED_MAIN_READ_ONLY",fresh_authority_generated:false,old_arm_carry_forward_authorized:false,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,mcft_cap09_completed:false};
+}
+// END FRESH_AUTHORITY_TRANSPORT_ONLY
+module.exports={BASE,DOC,POLICY,QCP,PRIOR,RETIRE,BOUNDARY,PATHS,CHECK,ROUTE,RETIRE_BEFORE,RETIRE_AFTER,BOUNDARY_BEFORE,BOUNDARY_AFTER,validateBoundary,verifyEngineeringOnly,TRANSPORT_BASE,TRANSPORT_WORKFLOW,TRANSPORT_PATHS,TRANSPORT_BEFORE,TRANSPORT_AFTER,validateTransportBoundary,verifyFreshAuthorityTransportOnly};
 if(require.main===module)console.log(JSON.stringify(verifyEngineeringOnly(),null,2));

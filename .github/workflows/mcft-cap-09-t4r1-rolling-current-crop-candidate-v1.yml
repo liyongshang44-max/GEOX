@@ -83,10 +83,16 @@ jobs:
       - name: Adjudicate current protected-main successor-chain effectiveness
         if: github.event_name != 'pull_request'
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git fetch --no-tags origin main
-          current_main="$(git rev-parse origin/main)"
+          current_main="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          checkout_main="$(git rev-parse origin/main)"
+          if [ "$checkout_main" != "$current_main" ]; then
+            echo "T4R1_ROLLING_CHECKOUT_MAIN_STALE:${checkout_main}:${current_main}" >&2
+            exit 1
+          fi
           subject="$(git rev-parse HEAD)"
           if [ "$subject" != "${{ github.sha }}" ] || [ "$subject" != "$current_main" ]; then
             echo "T4R1_ROLLING_CURRENT_MAIN_RACE:${subject}:${current_main}:${{ github.sha }}" >&2
