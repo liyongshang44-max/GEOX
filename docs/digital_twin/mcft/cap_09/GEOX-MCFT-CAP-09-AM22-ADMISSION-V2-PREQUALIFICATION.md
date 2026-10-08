@@ -22,6 +22,8 @@ The read-only candidate verifier binds envelope, measurement trace, qualificatio
 
 ## Evidence limits
 
-Local prequalification: clock 18 cases; V2 handoff 14 cases; candidate artifact binding 7 cases; server typecheck. These are deterministic unit tests, not fresh host H5, actual preparation timing, live DB permission verification, or PostgreSQL A0→O00 execution.
+Local prequalification: clock 18 cases; V2 handoff 16 cases including direct-export rejection; candidate artifact binding 7 cases; prequalification boundary 19 cases; server typecheck. Historical replay is explicit and proves adoption by current main; its tests also prove the default current-main admission still rejects the old head.
+
+The dedicated workflow additionally runs the selected clock through the existing bootstrap persistence service and ACTIVE O00 composition in a localhost-only `am22_o00` PostgreSQL database. Its preparation envelope and forcing remain controlled fixtures. This tests the clock-to-Runtime port, not the complete production startup chain, live owner cutover, private S3 visibility, actual preparation timing or fresh host H5. The harness rejects production database names before creating a pool.
 
 The policy remains PREQUALIFICATION_ONLY_NOT_EFFECTIVE. Every production/ARM/A0/completion authority flag remains false. No host command to stop services, alter databases or launch A0 is part of this change.
