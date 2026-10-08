@@ -23,7 +23,7 @@ The canonical receipt is in `%USERPROFILE%\.geox\mcft-cap09\formal-v5\arm-retire
 
 ## Startup enforcement
 
-Promotion, bootstrap and ACTIVE cutover call the guard before Git fetch, SQL, object writes or service operations. The guard unconditionally rejects this source-pinned old identity and its subject/epoch tuple, including renamed archive copies. Deleting a host receipt cannot revive it. Any host receipt for another identity blocks that identity, even if malformed. A `NOT_RETIRED` result is not startup authorization; all existing authority, temporal, lease, schema and ACL gates still apply. Future Amendment-22 entrypoints must reuse the same guard before effects.
+The independent V2 promotion, bootstrap and ACTIVE cutover entrypoints call the guard before Git fetch, SQL, object writes or service operations. The guard unconditionally rejects this source-pinned old identity and its subject/epoch tuple, including renamed archive copies. Deleting a host receipt cannot revive it. Any host receipt for another identity blocks that identity, even if malformed. A `NOT_RETIRED` result is not startup authorization; all existing authority, temporal, lease, schema and ACL gates still apply. Future Amendment-22 entrypoints must reuse the same guard before effects.
 
 The updated entrypoints require the successor governance chain and protected-main qualification before production use. The host tool may run independently to execute the already authorized retirement while keeping the existing clean main checkout. The current old binary rejects the replacement marker via its existing ARM-schema checks; older binaries are not retroactively changed and must not be invoked with audit copies. New source guards enforce identity rejection even for those copies.
 
@@ -33,6 +33,12 @@ This is a local-host read-only observation plus explicit operator withdrawal, no
 
 ## Verification
 
-`node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_ARM_RETIREMENT_V1.cjs --entrypoints` covers old-identity rejection, identity relabel rejection, malformed retirement markers, receipt tampering, schema/table effects, active writer markers, owner changes, stale proof, exact audit-byte preservation, idempotent publication and recovery after marker loss. The three real TS CLI entrypoints reject an archived old identity before external operations. Bootstrap's existing selftest remains passing.
+`node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_ARM_RETIREMENT_V1.cjs --entrypoints` covers old-identity rejection, identity relabel rejection, malformed retirement markers, receipt tampering, schema/table effects, active writer markers, owner changes, stale proof, exact audit-byte preservation, idempotent publication and recovery after marker loss. The three real CJS V2 CLI entrypoints reject an archived old identity before external operations. Bootstrap's existing selftest remains passing.
 
 Local validation: 33 acceptance cases PASS; bootstrap selftest PASS; `git diff --check` PASS. Full server typecheck could not complete in this workspace because installed dependencies omit `@fastify/cors`; no full typecheck PASS or real Windows-host retirement is claimed.
+
+## 2026-10-08 host execution checkpoint
+
+Operator-supplied tool output reports `RETIRED` and independent verification `PASS`. Receipt semantic digest: `sha256:fcd39ed82ad8d471a4348b52451d12547a5d4d8a51e39b156e69567a67032167`. Database UTC: `2026-10-08T12:50:30.327Z`. Original ARM bytes preserved; old identity rejected; database writes and service stops both zero; existing Evidence/Twin preserved. This records the received host result, not a reconstruction or remote verification of the complete receipt. Successor production admission must read and validate the original host receipt and archives.
+
+Governance repair preserves AM21-frozen V1 launcher blobs exactly and adds separate V2 revocation wrappers. These wrappers forward non-retired inputs through all unchanged V1 gates; they do not remove the 36-hour policy or grant Amendment-22 production admission. A bounded retirement-only qualification rechecks unchanged R6/G12/G13 consumers and rejects any change outside its exact path set.

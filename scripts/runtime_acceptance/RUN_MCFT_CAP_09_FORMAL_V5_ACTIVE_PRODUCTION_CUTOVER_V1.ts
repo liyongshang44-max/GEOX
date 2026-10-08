@@ -95,9 +95,6 @@ async function main():Promise<void>{
   if(process.env.GITHUB_ACTIONS||process.env.CI)throw new Error("FORMAL_V5_ACTIVE_CUTOVER_LOCAL_HOST_ONLY");
   if(!has("--operator-authorized"))throw new Error("FORMAL_V5_ACTIVE_CUTOVER_OPERATOR_AUTHORIZATION_REQUIRED");
 
-  // Reject retired identities before network access, SQL, object writes, or service changes.
-  execFileSync(process.execPath,[path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_ARM_RETIREMENT_GUARD_V1.cjs"),"--arm="+path.resolve(arg("--arm")??"")],{cwd:ROOT,stdio:"inherit"});
-
   git("fetch","--no-tags","origin","main");
   const head=git("rev-parse","HEAD");
   const origin=git("rev-parse","origin/main");

@@ -70,7 +70,7 @@ try {
       check(() => {
         let rejected = false;
         try {
-          require("node:child_process").execFileSync(process.execPath, ["--import", "tsx", path.join(__dirname, "RUN_MCFT_CAP_09_FORMAL_V5_" + name + "_V1.ts"), "--operator-authorized", "--arm=" + archive], { cwd: root, env, stdio: ["ignore", "pipe", "pipe"], timeout: 30000 });
+          require("node:child_process").execFileSync(process.execPath, [path.join(__dirname, "RUN_MCFT_CAP_09_FORMAL_V5_" + name + "_V2.cjs"), "--operator-authorized", "--arm=" + archive], { cwd: root, env, stdio: ["ignore", "pipe", "pipe"], timeout: 30000 });
         } catch (e) { rejected = e.status !== 0 && String(e.stderr).includes("FORMAL_ARM_RETIRED_OPERATOR_NO_GO"); }
         assert.equal(rejected, true, name + ":MUST_REJECT_BEFORE_EXTERNAL_ACTIONS");
       });
