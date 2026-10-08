@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { requireEffectiveAm22StartPolicyV2 } from "./mcft_cap09_am22_effective_start_guard_v2.js";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { createDatabasePool } from "../infra/database.js";
@@ -34,6 +35,7 @@ function mode():typeof NON_OWNER_STANDBY_MODE|typeof OWNER_CUTOVER_MODE{
 }
 
 export async function runMcftCap09EvidenceNonOwnerStandbyV2():Promise<void>{
+ requireEffectiveAm22StartPolicyV2();
  function standbyHeartbeat(subject:string,r2HeadStatus:number):void{
   process.stdout.write(JSON.stringify({
    runtime_role:"EVIDENCE_RUNTIME",mode:NON_OWNER_STANDBY_MODE,status:"HEALTHY_NON_OWNER_STANDBY",
@@ -75,6 +77,7 @@ export async function runMcftCap09EvidenceNonOwnerStandbyV2():Promise<void>{
 }
 
 export async function runMcftCap09EvidencePreFormalOwnerRuntimeV2():Promise<void>{
+ requireEffectiveAm22StartPolicyV2();
  if(mode()===NON_OWNER_STANDBY_MODE){await runMcftCap09EvidenceNonOwnerStandbyV2();return;}
  const s=scope(); const subject=req("GEOX_DEPLOYMENT_SUBJECT_COMMIT");
  const runtimePath=req("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH");

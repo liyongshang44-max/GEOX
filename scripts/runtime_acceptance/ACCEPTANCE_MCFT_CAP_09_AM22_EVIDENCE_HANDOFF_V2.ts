@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { runMcftCap09EvidenceNonOwnerStandbyV2, runMcftCap09EvidencePreFormalOwnerRuntimeV2 } from "../../apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v2.js";
 
 import {
   evaluateProductionGfsTargetDueV1,
@@ -102,4 +103,7 @@ negative(x=>x.a0_authorized=true,/SCOPE_DRIFT/);
 negative(x=>x.formal_database_mutation_authorized=true,/SCOPE_DRIFT/);
 negative(x=>(x.stage_authority_refresh_clock_eligibility as any).future_authority_identity_frozen=true,/STAGE_CADENCE/);
 negative(x=>x.selected_current_crop_authority_sha256="bad",/CURRENT_STAGE_DIGEST/);
-console.log(JSON.stringify({status:"PASS",cases,unit_fixtures_only:true,evidence_producer_semantics_changed:false,production_start_authorized:false}));
+Promise.all([
+  assert.rejects(runMcftCap09EvidenceNonOwnerStandbyV2(),/AM22_EFFECTIVE_PRODUCTION_QUALIFICATION_REQUIRED/),
+  assert.rejects(runMcftCap09EvidencePreFormalOwnerRuntimeV2(),/AM22_EFFECTIVE_PRODUCTION_QUALIFICATION_REQUIRED/),
+]).then(()=>console.log(JSON.stringify({status:"PASS",cases:cases+2,unit_fixtures_only:true,direct_owner_exports_fail_closed:true,evidence_producer_semantics_changed:false,production_start_authorized:false}))).catch(error=>{console.error(error);process.exitCode=1;});

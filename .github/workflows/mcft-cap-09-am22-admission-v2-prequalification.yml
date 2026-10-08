@@ -16,6 +16,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20.11.1'
@@ -28,6 +30,8 @@ jobs:
       - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_CLOCK_V2.cjs
       - run: node --import tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_HANDOFF_V2.ts
       - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_CANDIDATE_ARTIFACT_BINDING_V2.cjs
+      - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_PREQUALIFICATION_BOUNDARY_V1.cjs
+      - run: node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs
       - run: pnpm exec tsc --noEmit -p apps/server/tsconfig.json
       - name: Reject production entry before any external effect
         shell: bash

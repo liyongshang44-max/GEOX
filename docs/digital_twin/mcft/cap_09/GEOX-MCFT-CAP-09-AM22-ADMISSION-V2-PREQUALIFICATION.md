@@ -14,7 +14,7 @@ The read-only candidate verifier binds envelope, measurement trace, qualificatio
 
 ## Qualification still required
 
-- Adopt Amendment-22 through the protected governance chain. Register this exact successor in QCP and qualify its R6/G12/G13 continuity; do not apply the retirement-only exception to new runtime paths.
+- Adopt Amendment-22 through the protected governance chain. This disabled-component successor now has its own exact-path QCP registration and bounded R6/G12/G13 continuity check; it does not use the retirement-only exception for new runtime paths. Passing these checks qualifies only inactive components, not a new production startup policy.
 - Obtain a real complete pre-A0 preparation trace, independently qualify its timeout and bind the resulting artifacts to exact main/image/host/profile. No such measurement is currently available to this change.
 - Wire the V2 owner cutover, fresh H5, schema/ACL/pristine proof, causal seed visibility, ARM issuance, promotion and fresh A0 prewrite checks; prove them with isolated PostgreSQL A0→O00. The candidate verifier is not a production orchestrator.
 - Obtain fresh current-crop authority covering the selected A0 through O23. The adopted 2026-10-08T04Z authority expires at 2026-10-09T10Z; an A0 selected tonight cannot fit a full 24T inside that validity. No future snapshot is assumed present and no validity is extended.
