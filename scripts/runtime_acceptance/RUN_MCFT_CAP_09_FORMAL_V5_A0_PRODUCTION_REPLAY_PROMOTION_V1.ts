@@ -299,6 +299,9 @@ async function main():Promise<void>{
   if(process.env.GITHUB_ACTIONS||process.env.CI)throw new Error("FORMAL_V5_A0_REPLAY_LOCAL_NON_GITHUB_HOST_ONLY");
   if(!process.argv.includes("--operator-authorized"))throw new Error("FORMAL_V5_A0_REPLAY_OPERATOR_AUTHORIZATION_REQUIRED");
 
+  // Reject retired identities before network access, SQL, object writes, or service changes.
+  execFileSync(process.execPath,[path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_FORMAL_ARM_RETIREMENT_GUARD_V1.cjs"),"--arm="+path.resolve(arg("--arm")||DEFAULT_ARM)],{cwd:ROOT,stdio:"inherit"});
+
   execFileSync("git",["fetch","--no-tags","origin","main"],{cwd:ROOT,stdio:"ignore"});
   const authorityContinuityHead=execFileSync("git",["rev-parse","HEAD"],{cwd:ROOT,encoding:"utf8"}).trim();
   const currentMain=execFileSync("git",["rev-parse","origin/main"],{cwd:ROOT,encoding:"utf8"}).trim();
