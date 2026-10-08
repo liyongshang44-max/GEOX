@@ -12,6 +12,9 @@ const check = (name, fn) => { fn(); checks.push({ name, status: "PASS" }); };
 
 try {
   const runtime = read("apps/server/src/product_api/product_api_public_runtime_v1.ts");
+  const builder = read("apps/server/src/product_projection/customer/customer_product_projection_builder_v1.ts");
+  const formalResolver = read("apps/server/src/product_projection/customer/formal_v5_product_current_runtime_resolver_v1.ts");
+  const sourceRegistry = read("apps/server/src/product_projection/contracts/product_projection_source_binding_registry_v1.ts");
   const entry = read("apps/server/src/product_api_public_server_v1.ts");
   const dockerfile = read("docker/product-api.Dockerfile");
   const doc = read("docs/product_projection/GEOX-PRODUCT-API-PUBLIC-DEPLOYMENT-V1.md");
@@ -22,7 +25,8 @@ try {
   });
 
   check("ONLY_CANONICAL_PRODUCT_ROUTE_REGISTRATION", () => {
-    assert.match(runtime, /registerProductV1Routes\(app, pool\)/);
+    assert.match(runtime, /new PostgresCustomerProductProjectionBuilderV1\(pool,\s*\{\s*mcftPool:\s*formalPool,\s*runtimeResolver:\s*new PostgresFormalV5ProductCurrentRuntimeResolverV1\(formalPool\)/);
+    assert.match(runtime, /registerProductV1Routes\(app, pool, \{ builder \}\)/);
     for (const forbidden of [
       "registerCompatibilityModules",
       "registerAdminModule",
@@ -34,6 +38,8 @@ try {
 
   check("PRODUCT_SPECIFIC_DATABASE_CREDENTIAL_ONLY", () => {
     assert.match(runtime, /GEOX_PRODUCT_DATABASE_URL/);
+    assert.match(runtime, /GEOX_PRODUCT_FORMAL_V5_DATABASE_URL/);
+    assert.match(runtime, /PRODUCT_API_DUAL_DATABASES_REQUIRED/);
     assert.equal(/process\.env\.?DATABASE_URL/.test(runtime), false);
     for (const forbiddenRole of [
       "geox_runtime_v1",
@@ -46,10 +52,38 @@ try {
     assert.match(runtime, /PRODUCT_API_DATABASE_SSL_REQUIRED/);
   });
 
+  check("FORMAL_V5_EXACT_READ_SURFACE_IS_NARROW", () => {
+    for (const required of [
+      "public.twin_active_lineage_index_v1",
+      "public.twin_state_latest_index_v1",
+      "public.facts",
+    ]) assert.ok(formalResolver.includes(required), required);
+
+    assert.match(builder, /this\.mcftPool\.query<StateProjectionRowV1>/);
+    assert.match(builder, /public\.twin_state_history_projection_v1/);
+
+    for (const forbidden of [
+      "twin_fact_visibility_epoch_v1",
+      "twin_fact_visibility_index_v1",
+      "PostgresMcftFieldTwinS4ReadApiV1(formalPool)",
+      "COMPLETE_EXACT_GRAPH",
+    ]) assert.equal(formalResolver.includes(forbidden), false, forbidden);
+
+    assert.match(formalResolver, /REPEATABLE READ READ ONLY/);
+    assert.match(formalResolver, /ActiveLineageAuthorityValidatorV1/);
+    assert.match(formalResolver, /LINEAGE_PROMOTION/);
+    assert.match(sourceRegistry, /MCFT_FORMAL_V5_ACTIVE_LINEAGE_V1/);
+    assert.match(sourceRegistry, /MCFT_FORMAL_V5_POSTERIOR_STATE_V1/);
+  });
+
   check("QUERY_GUARD_FORBIDS_DDL_DML", () => {
     assert.match(runtime, /PRODUCT_API_SQL_WRITE_FORBIDDEN/);
     assert.match(runtime, /PRODUCT_API_SQL_NON_READ_STATEMENT_FORBIDDEN/);
     assert.match(runtime, /SQL_WRITE_OR_DDL_V1/);
+    assert.match(runtime, /pool\.on\("connect"/);
+    assert.match(runtime, /assertConnectedClientReadQueryV1/);
+    assert.match(runtime, /SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY/);
+    assert.doesNotMatch(runtime, /SET ROLE|SET SESSION AUTHORIZATION/);
   });
 
   check("PRODUCT_ONLY_TOKEN_SOURCE", () => {
@@ -93,6 +127,9 @@ try {
   check("HEALTH_AND_READINESS_SPLIT", () => {
     assert.match(runtime, /app\.get\("\/health"/);
     assert.match(runtime, /app\.get\("\/ready"/);
+    assert.match(runtime, /identity_database_connectivity/);
+    assert.match(runtime, /formal_database_connectivity/);
+    assert.match(runtime, /PRODUCT_DATABASE_NOT_READ_ONLY/);
     assert.match(runtime, /PRODUCT_DATABASE_NOT_READY/);
   });
 
@@ -102,6 +139,7 @@ try {
       "database schema",
       "database grants in this PR",
       "GEOX_PRODUCT_DATABASE_URL",
+      "GEOX_PRODUCT_FORMAL_V5_DATABASE_URL",
       "GEOX_PRODUCT_API_TOKENS_JSON",
       "GEOX_PRODUCT_ALLOWED_ORIGINS",
       "docker/product-api.Dockerfile",
