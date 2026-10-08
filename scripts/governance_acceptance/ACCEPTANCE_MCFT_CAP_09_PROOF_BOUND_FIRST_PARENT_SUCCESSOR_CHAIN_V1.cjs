@@ -534,7 +534,7 @@ function main() {
 // Post-closure preparation may append qualified crop authority without changing
 // the qualified Runtime. This is a separate, read-only proof, not an exemption
 // from the structural chain or current QCP qualification above.
-function verifyFormalV5AuthorityContinuity(headRef = "HEAD") {
+function verifyFormalV5AuthorityContinuity(headRef = "HEAD", historicalReplay = false) {
   const assert = require("node:assert/strict");
   const crypto = require("node:crypto");
   const zlib = require("node:zlib");
@@ -573,7 +573,12 @@ function verifyFormalV5AuthorityContinuity(headRef = "HEAD") {
   const appended = newEntries.slice(oldEntries.length);
   assert.equal(appended.length, added.length, "FORMAL_V5_AUTHORITY_REGISTRY_APPEND_COUNT");
   assert.deepEqual(appended.map(x => x.authority_ref).sort(), added.sort(), "FORMAL_V5_AUTHORITY_REGISTRY_APPEND_REFS");
-  const protectedMain = git(["rev-parse", "origin/main"]);
+  const observedProtectedMain = git(["rev-parse", "origin/main"]);
+  if (historicalReplay) {
+    assert.notEqual(headRef, "HEAD", "FORMAL_V5_HISTORICAL_REPLAY_EXPLICIT_HEAD_REQUIRED");
+    assert.ok(isAncestor(head, observedProtectedMain), "FORMAL_V5_HISTORICAL_REPLAY_NOT_ADOPTED_BY_CURRENT_MAIN");
+  }
+  const protectedMain = historicalReplay ? head : observedProtectedMain;
   assert.ok(isAncestor(protectedMain, head), "FORMAL_V5_AUTHORITY_BASE_NOT_CURRENT_MAIN_ANCESTOR");
   for (const commit of lines(git(["rev-list", "--first-parent", baseline + ".." + protectedMain]))) {
     for (const row of lines(git(["diff", "--name-status", commit + "^1", commit]))) {
