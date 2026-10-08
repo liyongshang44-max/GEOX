@@ -39,7 +39,26 @@ function forbid(text,pattern,code){assert.equal(pattern.test(text),false,code+":
 
 assert.equal(git("merge-base",BASE,"HEAD"),BASE,"G12_BASE_NOT_ANCESTOR");
 const changed=git("diff","--name-only",BASE+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
-assert.deepEqual(changed,EXPECTED_CHANGED,"G12_EXACT_CHANGED_PATH_BOUNDARY");
+const QUALIFIED_G12="8d78cb4808c39166b085d723d36bcc724cb050b0";
+const completionSuccessor=git("rev-parse","HEAD")!==QUALIFIED_G12
+  &&git("merge-base",QUALIFIED_G12,"HEAD")===QUALIFIED_G12;
+if(!completionSuccessor){
+  assert.deepEqual(changed,EXPECTED_CHANGED,"G12_EXACT_CHANGED_PATH_BOUNDARY");
+}else{
+  const allowed=new Set([
+    ".github/workflows/mcft-cap-09-formal-v5-completion-adjudication-v1.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_COMPLETION_ADJUDICATION_V1.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_FINAL_READBACK_V1.cjs",
+    "scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_COMPLETION_CANDIDATE_V1.cjs",
+    "scripts/governance_acceptance/ADJUDICATE_MCFT_CAP_09_FORMAL_V5_COMPLETION_V1.cjs",
+  ]);
+  const delta=git("diff","--name-only",QUALIFIED_G12+"...HEAD").split(/\r?\n/).filter(Boolean);
+  for(const rel of delta)assert.ok(allowed.has(rel),"G12_COMPLETION_SUCCESSOR_PATH_FORBIDDEN:"+rel);
+  for(const rel of EXPECTED_CHANGED.filter(rel=>rel!=="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"&&rel!=="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_FINAL_READBACK_V1.cjs")){
+    assert.equal(git("rev-parse","HEAD:"+rel),git("rev-parse",QUALIFIED_G12+":"+rel),"G12_QUALIFIED_READBACK_CHANGED:"+rel);
+  }
+}
 
 for(const [rel,blob] of Object.entries(FROZEN)){
   assert.equal(git("rev-parse","HEAD:"+rel),blob,"G12_FROZEN_RUNTIME_SURFACE_CHANGED:"+rel);
@@ -113,6 +132,7 @@ const proof={
   schema_version:"geox_mcft_cap09_formal_v5_final_readback_governance_v1",
   status:"PASS",
   exact_predecessor:BASE,
+  read_only_completion_successor_mode:completionSuccessor,
   changed_path_count:changed.length,
   frozen_runtime_surface_unchanged:true,
   g11_active_route_unchanged:true,

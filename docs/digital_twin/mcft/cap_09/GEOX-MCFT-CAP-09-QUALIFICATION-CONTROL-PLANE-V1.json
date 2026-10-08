@@ -1043,6 +1043,16 @@
         "scripts/runtime_acceptance/READBACK_MCFT_CAP_09_FORMAL_V5_FINAL_V1.ts",
         "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_DOWNSTREAM_ZERO_V1.ts"
       ]
+    },
+    "FORMAL_V5_COMPLETION_ADJUDICATION_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-formal-v5-completion-adjudication-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_COMPLETION_ADJUDICATION_V1.cjs",
+        "scripts/governance_acceptance/ADJUDICATE_MCFT_CAP_09_FORMAL_V5_COMPLETION_V1.cjs",
+        "scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_COMPLETION_CANDIDATE_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -2127,6 +2137,37 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_FINAL_READBACK_V1.cjs"
+    },
+    {
+      "check_id": "FORMAL_V5_COMPLETION_ADJUDICATION",
+      "owner": "MCFT_CAP09_FORMAL_V5_COMPLETION_ADJUDICATION",
+      "generation_scope": [
+        "FORMAL_V5",
+        "FINAL_CLOSURE_ADJUDICATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json"
+      ],
+      "resolver_ids": [
+        "FORMAL_V5_COMPLETION_ADJUDICATION_V1",
+        "FORMAL_V5_FINAL_READBACK_V1"
+      ],
+      "historical_evidence_policy": "NO_V4_COMPLETION_OR_GITHUB_HOURLY_LEDGER_CARRY_FORWARD_FRESH_V5_EVIDENCE_ONLY",
+      "execution_workflow": ".github/workflows/mcft-cap-09-formal-v5-completion-adjudication-v1.yml",
+      "execution_workflow_status": "SELFTEST_ONLY_REAL_ADJUDICATION_REQUIRES_LOCAL_EXPLICIT_OPERATOR_AUTHORIZATION",
+      "fail_policy": "FAIL_CLOSED_NO_CAP09_CLOSURE_CLAIM_UNTIL_V5_COMPLETION_ADJUDICATION_QUALIFIED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "FORMAL_V5_COMPLETION_ADJUDICATION_V1",
+        "FORMAL_V5_FINAL_READBACK_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_COMPLETION_ADJUDICATION_V1.cjs"
     }
   ],
   "non_effects": {
