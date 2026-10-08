@@ -7,6 +7,7 @@ const fs=require("node:fs");
 const path=require("node:path");
 
 const ROOT=path.resolve(__dirname,"../..");
+const authorityContinuity=require("./ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs").verifyFormalV5AuthorityContinuity();
 const BASE="db1747f4111dcd61f09b81ec3b7c1b237ecc7484";
 
 const EXPECTED_CHANGED=[
@@ -35,7 +36,7 @@ function absent(text,marker,code){assert.equal(text.includes(marker),false,code+
 
 assert.equal(git("merge-base",BASE,"HEAD"),BASE,"G13_BASE_NOT_ANCESTOR");
 const changed=git("diff","--name-only",BASE+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
-assert.deepEqual(changed,EXPECTED_CHANGED,"G13_EXACT_CHANGED_PATH_BOUNDARY");
+assert.deepEqual(changed.filter(rel=>EXPECTED_CHANGED.includes(rel)||!authorityContinuity?.changedPaths.includes(rel)),EXPECTED_CHANGED,"G13_EXACT_CHANGED_PATH_BOUNDARY");
 
 for(const [rel,blob] of Object.entries(FROZEN)){
   assert.equal(git("rev-parse","HEAD:"+rel),blob,"G13_FROZEN_G12_OR_RUNTIME_SURFACE_CHANGED:"+rel);
