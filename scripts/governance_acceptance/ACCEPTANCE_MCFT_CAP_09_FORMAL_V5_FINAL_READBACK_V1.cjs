@@ -13,6 +13,7 @@ const EXPECTED_CHANGED=[
   ".github/workflows/mcft-cap-09-formal-v5-final-readback-v1.yml",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_FINAL_READBACK_V1.cjs",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs",
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_FINAL_READBACK_SCHEMA_V1.ts",
   "scripts/runtime_acceptance/READBACK_MCFT_CAP_09_FORMAL_V5_ACTIVE_WATCHDOG_V1.ts",
   "scripts/runtime_acceptance/READBACK_MCFT_CAP_09_FORMAL_V5_FINAL_V1.ts",
