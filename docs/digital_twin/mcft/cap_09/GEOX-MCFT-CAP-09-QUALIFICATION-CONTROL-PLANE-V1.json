@@ -1053,6 +1053,17 @@
         "scripts/governance_acceptance/ADJUDICATE_MCFT_CAP_09_FORMAL_V5_COMPLETION_V1.cjs",
         "scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_COMPLETION_CANDIDATE_V1.cjs"
       ]
+    },
+    "AM22_EVIDENCE_BASED_FORMAL_START_DESIGN_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-am22-evidence-based-formal-start-design.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-FAST-TRACK-ARM-ABANDONMENT-DECISION-2026-10-08.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-22-EVIDENCE-BASED-FORMAL-START-ADMISSION-CANDIDATE.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_BASED_START_PROPOSAL_V1.cjs",
+        "scripts/governance_acceptance/DESIGN_MCFT_CAP_09_EVIDENCE_BASED_FORMAL_START_SELECTOR_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -2168,6 +2179,33 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_COMPLETION_ADJUDICATION_V1.cjs"
+    },
+    {
+      "check_id": "AM22_EVIDENCE_BASED_FORMAL_START_DESIGN",
+      "owner": "MCFT_CAP09_AM22_EVIDENCE_BASED_START_DESIGN",
+      "generation_scope": [
+        "FORMAL_V5",
+        "DESIGN_ONLY_NO_PRODUCTION_ADMISSION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-22-EVIDENCE-BASED-FORMAL-START-ADMISSION-CANDIDATE.md"
+      ],
+      "resolver_ids": [
+        "AM22_EVIDENCE_BASED_FORMAL_START_DESIGN_V1"
+      ],
+      "historical_evidence_policy": "DESIGN_ONLY_SYNTHETIC_PROOF_NOT_FORMAL_PRODUCTION_START_AUTHORITY",
+      "execution_workflow": ".github/workflows/mcft-cap-09-am22-evidence-based-formal-start-design.yml",
+      "execution_workflow_status": "DESIGN_ONLY_SELFTEST_NO_PRODUCTION_EFFECT",
+      "fail_policy": "FAIL_CLOSED_NOT_EFFECTIVE_CURRENT_ARM_UNCHANGED_NO_A0_OR_O00_AUTHORIZED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "AM22_EVIDENCE_BASED_FORMAL_START_DESIGN_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_BASED_START_PROPOSAL_V1.cjs"
     }
   ],
   "non_effects": {
