@@ -161,7 +161,7 @@ if(baseEnv){
 const frozenBase=baseEnv||INITIAL_BASE;
 const manifestBaseBlob=git("rev-parse",frozenBase+":"+FORMAL_V5_MANIFEST);
 const manifestHeadBlob=git("rev-parse","HEAD:"+FORMAL_V5_MANIFEST);
-const currentSuccessorBase=currentMainSuccessorBase();
+const currentSuccessorBase=currentMainSuccessorBase()||baseEnv||null;
 const r6ManifestSuccessorMode=
   baseEnv!=="" &&
   baseEnv===currentSuccessorBase &&
