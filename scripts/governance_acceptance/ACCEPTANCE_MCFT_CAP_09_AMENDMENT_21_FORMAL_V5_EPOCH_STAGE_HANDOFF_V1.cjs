@@ -16,6 +16,11 @@ const MATERIALIZED_ZERO_REARM_BASE="cf2f3370fa82dbac35ffeba7c351edfd840e3565";
 const REARM_PROOF_RETENTION_BASE="df03f0a45c0aa556b447adda13004e57beacdc11";
 const AMENDMENT="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md";
 const AMENDMENT_BLOB="b79e52620865a36d83cdbb0d95e6cccf1fed1ad3";
+const FORMAL_V5_MANIFEST="scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts";
+const R6_MANIFEST_PREDECESSOR_BLOB="6a017cdfb9f2f896484d805a93f8df7c708068fc";
+const R6_MANIFEST_SUCCESSOR_BLOB="f9203efee8f8fb238cbf8f01cc39c53ed628f0f8";
+const R6_ACCEPTANCE="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs";
+const R6_WORKFLOW=".github/workflows/mcft-cap-09-formal-v5-r6-admission.yml";
 const H6="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json";
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const ARM="scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs";
@@ -67,10 +72,23 @@ const FROZEN=[
   "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts",
   "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.ts",
   "apps/server/src/runtime/twin_runtime/external_formal_v4_amendment19_runner_v2.ts",
-  "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts",
+  FORMAL_V5_MANIFEST,
   "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP_V1.ts",
   "docker-compose.mcft-cap09-production.yml",
 ];
+
+const R6_SUCCESSOR_EXACT_FILES=[
+  ".github/workflows/mcft-cap-09-formal-v5-r6-admission.yml",
+  "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v5.test.ts",
+  "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v5.ts",
+  "apps/server/src/runtime/twin_runtime/mcft_cap09_formal_v5_twin_runtime_composition_v1.ts",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs",
+  "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts",
+  FORMAL_V5_MANIFEST,
+].sort();
 
 function git(...args){return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8"}).trim();}
 function read(rel){return fs.readFileSync(path.join(ROOT,rel),"utf8");}
@@ -78,7 +96,7 @@ function marker(text,value,code){assert.ok(text.includes(value),code+":"+value);
 function notMarker(text,value,code){assert.equal(text.includes(value),false,code+":"+value);}
 
 const head=git("rev-parse","HEAD");
-const baseEnv=String(process.env.MCFT_BASE_SHA||"").trim();
+let baseEnv=String(process.env.MCFT_BASE_SHA||"").trim();
 const subjectEnv=String(process.env.MCFT_SUBJECT_SHA||process.env.SUBJECT_SHA||"").trim();
 if(subjectEnv)assert.equal(head,subjectEnv,"AM21_EXACT_SUBJECT_REQUIRED");
 
@@ -93,6 +111,10 @@ function currentMainSuccessorBase(){
     const sha=String(event.pull_request?.base?.sha||"").trim();
     return /^[0-9a-f]{40}$/.test(sha)?sha:null;
   }catch{return null;}
+}
+
+if(!baseEnv){
+  baseEnv=currentMainSuccessorBase()||"";
 }
 
 assert.equal(git("merge-base",INITIAL_BASE,head),INITIAL_BASE,"AM21_INITIAL_BASE_MUST_BE_ANCESTOR");
@@ -141,7 +163,29 @@ if(baseEnv){
 }
 
 const frozenBase=baseEnv||INITIAL_BASE;
-for(const rel of FROZEN){
+const manifestBaseBlob=git("rev-parse",frozenBase+":"+FORMAL_V5_MANIFEST);
+const manifestHeadBlob=git("rev-parse","HEAD:"+FORMAL_V5_MANIFEST);
+const currentSuccessorBase=currentMainSuccessorBase()||baseEnv||null;
+const r6ManifestSuccessorMode=
+  baseEnv!=="" &&
+  baseEnv===currentSuccessorBase &&
+  manifestBaseBlob===R6_MANIFEST_PREDECESSOR_BLOB &&
+  manifestHeadBlob===R6_MANIFEST_SUCCESSOR_BLOB;
+
+if(r6ManifestSuccessorMode){
+  const changed=git("diff","--name-only",baseEnv+"..."+head).split(/\r?\n/).filter(Boolean).sort();
+  assert.deepEqual(changed,R6_SUCCESSOR_EXACT_FILES,"AM21_R6_SUCCESSOR_EXACT_BOUNDARY_REQUIRED");
+  assert.equal(git("rev-parse","HEAD:"+R6_ACCEPTANCE).length,40,"AM21_R6_ACCEPTANCE_BLOB_REQUIRED");
+  assert.equal(git("rev-parse","HEAD:"+R6_WORKFLOW).length,40,"AM21_R6_WORKFLOW_BLOB_REQUIRED");
+}else{
+  assert.equal(
+    manifestHeadBlob,
+    manifestBaseBlob,
+    "AM21_FROZEN_PREDECESSOR_REWRITE_FORBIDDEN:"+FORMAL_V5_MANIFEST,
+  );
+}
+
+for(const rel of FROZEN.filter((value)=>value!==FORMAL_V5_MANIFEST)){
   assert.equal(
     git("rev-parse","HEAD:"+rel),
     git("rev-parse",frozenBase+":"+rel),
@@ -248,6 +292,16 @@ for(const value of [
 const qcp=JSON.parse(read(QCP));
 const resolver=qcp.dependency_resolvers?.FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1;
 assert.ok(resolver,"AM21_QCP_RESOLVER_REQUIRED");
+if(r6ManifestSuccessorMode){
+  const r6Resolver=qcp.dependency_resolvers?.FORMAL_V5_R6_STAGE_ADMISSION_V1;
+  assert.ok(r6Resolver,"AM21_R6_QCP_RESOLVER_REQUIRED");
+  for(const rel of [FORMAL_V5_MANIFEST,SELF]){
+    assert.ok(r6Resolver.paths.includes(rel),"AM21_R6_QCP_PATH_REQUIRED:"+rel);
+  }
+  const r6Check=(qcp.checks||[]).find((row)=>row.check_id==="FORMAL_V5_R6_STAGE_ADMISSION");
+  assert.ok(r6Check,"AM21_R6_QCP_CHECK_REQUIRED");
+  assert.ok(r6Check.resolver_ids.includes("FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1"),"AM21_R6_QCP_AM21_DEPENDENCY_REQUIRED");
+}
 assert.equal(resolver.kind,"EXACT_PATH_SET");
 for(const rel of [AMENDMENT,H6,ARM,EPOCH_SELECTOR,REGRESSION,SELF,WORKFLOW]){
   assert.ok(resolver.paths.includes(rel),"AM21_QCP_PATH_REQUIRED:"+rel);
@@ -278,6 +332,11 @@ const proof={
   subject_head_sha:head,
   exact_boundary_enforced:baseEnv!==""&&baseEnv!==SUCCESSOR_COMPATIBILITY_BASE,
   successor_compatibility_mode:baseEnv===SUCCESSOR_COMPATIBILITY_BASE,
+  r6_manifest_successor_mode:r6ManifestSuccessorMode,
+  r6_manifest_predecessor_blob:manifestBaseBlob,
+  r6_manifest_subject_blob:manifestHeadBlob,
+  historical_manifest_freeze_relaxed:false,
+  r6_manifest_successor_exact_boundary_required:true,
   shared_epoch_clock_selector:EPOCH_SELECTOR,
   historical_v4_rewritten:false,
   amendment06_clock_semantics_rewritten:false,
