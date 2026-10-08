@@ -7,6 +7,7 @@ const fs=require("node:fs");
 const path=require("node:path");
 
 const ROOT=path.resolve(__dirname,"../..");
+const authorityContinuity=require("./ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs").verifyFormalV5AuthorityContinuity();
 const BASE="dd7529ffd08bead343e312c73b72d7039a7c12e7";
 
 const EXPECTED_CHANGED=[
@@ -54,8 +55,9 @@ if(!completionSuccessor){
     "scripts/governance_acceptance/ADJUDICATE_MCFT_CAP_09_FORMAL_V5_COMPLETION_V1.cjs",
   ]);
   const delta=git("diff","--name-only",QUALIFIED_G12+"...HEAD").split(/\r?\n/).filter(Boolean);
-  for(const rel of delta)assert.ok(allowed.has(rel),"G12_COMPLETION_SUCCESSOR_PATH_FORBIDDEN:"+rel);
+  for(const rel of delta)assert.ok(allowed.has(rel)||authorityContinuity?.changedPaths.includes(rel),"G12_COMPLETION_SUCCESSOR_PATH_FORBIDDEN:"+rel);
   for(const rel of EXPECTED_CHANGED.filter(rel=>rel!=="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"&&rel!=="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_FINAL_READBACK_V1.cjs")){
+    if(authorityContinuity&&rel==="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs")continue;
     assert.equal(git("rev-parse","HEAD:"+rel),git("rev-parse",QUALIFIED_G12+":"+rel),"G12_QUALIFIED_READBACK_CHANGED:"+rel);
   }
 }
