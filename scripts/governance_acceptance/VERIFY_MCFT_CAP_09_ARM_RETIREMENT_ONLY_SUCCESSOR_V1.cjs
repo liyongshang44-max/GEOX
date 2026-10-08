@@ -27,7 +27,11 @@ function git(...args) { return cp.execFileSync("git", args, {cwd: ROOT, encoding
 function verifyRetirementOnlySuccessor() {
   if (git("rev-parse", "HEAD") === BASE) return null;
   assert.equal(git("merge-base", BASE, "HEAD"), BASE, "ARM_RETIREMENT_BASE_NOT_ANCESTOR");
-  assert.equal(git("status", "--porcelain"), "", "ARM_RETIREMENT_DIRTY_QUALIFICATION_FORBIDDEN");
+  // QCP diagnostics write reports before invoking subsequent qualifiers.
+  // Only that untracked output directory is excluded; tracked mutations and
+  // all other untracked source paths still reject qualification.
+  const sourceDirty = git("status", "--porcelain", "--untracked-files=normal").split(/\r?\n/).filter(x => x && x !== "?? acceptance-output/");
+  assert.deepEqual(sourceDirty, [], "ARM_RETIREMENT_DIRTY_QUALIFICATION_FORBIDDEN");
   const changes = git("diff", "--name-status", BASE, "HEAD").split(/\r?\n/).filter(Boolean).map(row => { const [status, rel] = row.split("\t"); return {status, rel}; });
   const allowed = new Set(PATHS);
   for (const {status, rel} of changes) {
