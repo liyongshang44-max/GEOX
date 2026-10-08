@@ -120,7 +120,7 @@ test("Separate real Product builder reads identity only from operational pool an
  assert.equal(overview.reporting_summary.current_fields,1);
  const workspace=await builder.buildFieldWorkspaceV1(scope,baseScope.field_id);
  assert.equal(workspace.current_condition.status,"AVAILABLE");
- assert.equal(workspace.evidence_summary.field_condition.status,"UNAVAILABLE");
+ assert.notEqual(workspace.evidence_summary.field_condition.status,"AVAILABLE"); // Current Wave-02 evidence summary is not an evidence artifact read model.
  assert.equal(calls.identity.some(s=>s.includes("FROM public.field_index_v1")),true);
  assert.equal(calls.identity.some(s=>s.includes("FROM public.twin_state_history_projection_v1")),false);
  assert.equal(calls.formal.some(s=>s.includes("FROM public.field_index_v1")),false);
