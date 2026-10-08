@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-am22-evidence-based-formal-start-design.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-22-EVIDENCE-BASED-FORMAL-START-ADMISSION-CANDIDATE.md'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-FAST-TRACK-ARM-ABANDONMENT-DECISION-2026-10-08.md'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
       - 'scripts/governance_acceptance/DESIGN_MCFT_CAP_09_EVIDENCE_BASED_FORMAL_START_SELECTOR_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_BASED_START_PROPOSAL_V1.cjs'
