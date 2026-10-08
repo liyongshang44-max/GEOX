@@ -260,11 +260,12 @@ export function createProductApiPublicAppV1(
       if (canonicalPool) {
         const checked = await verifyProductFormalV5ReadinessV1(pool, canonicalPool);
         if (checked.status !== "PASS_PRECONDITIONS_ONLY") {
+          // Public readiness must not disclose relation names or ACL metadata.
+          app.log.warn({ reason_codes: checked.reason_codes }, "Product Formal read-only source blocked");
           return reply.code(503).send({
             ok: false,
             schema_version: PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1,
             error: "PRODUCT_FORMAL_V5_CANONICAL_READ_NOT_READY",
-            reason_codes: checked.reason_codes,
           });
         }
       }
