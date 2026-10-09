@@ -27,17 +27,16 @@ try{
  const combinedWindow=h.selectA0({source_now:"2026-10-09T04:20:00.000Z",budget_ms:combinedPolicy.selection_policy.combined_minimum_lead_ms,stage});
  assert.equal(combinedWindow.a0,"2026-10-09T06:00:00.000Z");
  assert.throws(()=>h.selectA0({source_now:"2026-10-09T04:05:00.000Z",budget_ms:599999,stage}),/AM22_GFS_BOOTSTRAP_BUDGET_TOO_SMALL/);
- const base={target_logical_time:window.a0,selected_cycle:"2026-10-09T00:00:00.000Z",raw_source_sha256:"sha256:"+"a".repeat(64),available_to_runtime_at:"2026-10-09T04:20:00.000Z",ingested_at:"2026-10-09T04:21:00.000Z",observed_database_now:"2026-10-09T04:22:00.000Z"};
- const pair=h.validateGfsPairRows([
-  {...base,fact_id:"fact_external_evidence_"+"1".repeat(64),record_type:"future_weather_assumption_v1"},
-  {...base,fact_id:"fact_external_evidence_"+"2".repeat(64),record_type:"future_et0_assumption_v1"},
- ],window.a0);
- assert.equal(pair.selected_cycle,"2026-10-09T00:00:00.000Z");
- assert.throws(()=>h.validateGfsPairRows([{...base,fact_id:"fact_external_evidence_"+"1".repeat(64),record_type:"future_weather_assumption_v1"}],window.a0),/AM22_GFS_BOOTSTRAP_EXACT_PAIR_REQUIRED/);
- assert.throws(()=>h.validateGfsPairRows([
-  {...base,fact_id:"fact_external_evidence_"+"1".repeat(64),record_type:"future_weather_assumption_v1"},
-  {...base,fact_id:"fact_external_evidence_"+"2".repeat(64),record_type:"future_et0_assumption_v1",raw_source_sha256:"sha256:"+"b".repeat(64)},
- ],window.a0),/AM22_GFS_BOOTSTRAP_SAME_RAW_BUNDLE_REQUIRED/);
+ const cycle="2026-10-09T00:00:00.000Z",cycleKey="20261009t000000z",targetKey="20261009t050000z";
+ const base={target_logical_time:window.a0,selected_cycle:cycle,valid_from:window.a0,issued_at:cycle,raw_source_sha256:"sha256:"+"a".repeat(64),available_to_runtime_at:"2026-10-09T04:20:00.000Z",ingested_at:"2026-10-09T04:21:00.000Z",observed_database_now:"2026-10-09T04:22:00.000Z"};
+ const weather={...base,fact_id:"fact_external_evidence_"+"1".repeat(64),record_type:"future_weather_assumption_v1",payload_record_type:"future_weather_assumption_v1",binding_id:"noaa_ncep_gfs_pgrb2_kbs_nearest_72h_v1",origin_source_kind:"NOAA_NCEP_NOMADS_GFS",origin_source_id:"gfs_"+cycleKey+"_pgrb2_0p25_kbs",source_record_id:"gfs_future_weather_"+cycleKey+"_"+targetKey};
+ const et0={...base,fact_id:"fact_external_evidence_"+"2".repeat(64),record_type:"future_et0_assumption_v1",payload_record_type:"future_et0_assumption_v1",binding_id:"noaa_ncep_gfs_asce_short_reference_et_same_cycle_72h_v1",origin_source_kind:"NOAA_NCEP_NOMADS_GFS_DERIVED",origin_source_id:"gfs_"+cycleKey+"_asce_short_reference_et0_kbs",source_record_id:"gfs_future_et0_"+cycleKey+"_"+targetKey};
+ const pair=h.validateGfsPairRows([weather,et0],window.a0);
+ assert.equal(pair.selected_cycle,cycle);
+ assert.throws(()=>h.validateGfsPairRows([weather],window.a0),/AM22_GFS_BOOTSTRAP_EXACT_PAIR_REQUIRED/);
+ assert.throws(()=>h.validateGfsPairRows([weather,{...et0,raw_source_sha256:"sha256:"+"b".repeat(64)}],window.a0),/AM22_GFS_BOOTSTRAP_SAME_RAW_BUNDLE_REQUIRED/);
+ assert.throws(()=>h.validateGfsPairRows([weather,{...et0,selected_cycle:"2026-10-09T06:00:00.000Z",issued_at:"2026-10-09T06:00:00.000Z"}],window.a0),/AM22_GFS_BOOTSTRAP_ET0_ORIGIN_ID_MISMATCH|AM22_GFS_BOOTSTRAP_SAME_CYCLE_REQUIRED/);
+ assert.throws(()=>h.validateGfsPairRows([weather,{...weather,fact_id:"fact_external_evidence_"+"3".repeat(64)}],window.a0),/AM22_GFS_BOOTSTRAP_DUPLICATE_ROLE_FORBIDDEN|AM22_GFS_BOOTSTRAP_WEATHER_ET0_PAIR_REQUIRED/);
 
  const wrapper=read("apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.ts");
  assert.match(wrapper,/readMcftCap09OwnerCutoverAuthorityV1/);
