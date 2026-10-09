@@ -57,6 +57,8 @@ async function main(){
    exec("git",["fetch","--no-tags","origin","main"]);assert.equal(exec("git",["rev-parse","HEAD"]),input.subject_sha);assert.equal(exec("git",["rev-parse","origin/main"]),input.subject_sha);assert.equal(exec("git",["status","--porcelain"]),"");
    assert.equal(fs.readFileSync(path.join(os.homedir(),".geox/mcft-cap09/local-host-id-v1"),"utf8").trim(),LEGACY.host);
    assert.equal(exec("docker",["image","inspect","--format","{{.Id}}","geox-mcft-cap09-runtime:"+input.subject_sha]),input.image_id);
+   const imageProfile=exec("docker",["run","--rm","--pull=never","--network=none","--read-only","--cap-drop=ALL","--security-opt=no-new-privileges","--entrypoint=node",input.image_id,"-e","process.stdout.write(require('/app/scripts/runtime_acceptance/MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.cjs').profileDigest())"]);
+   assert.equal(imageProfile,binding.preparation_profile_sha256,"AM22_MEASUREMENT_IMAGE_PROFILE_MISMATCH");
    preserved=beforeOwners();assert.equal(preserved.split(/\r?\n/).length,2,"AM22_MEASUREMENT_EXACT_TWO_PRESERVED_OWNERS_REQUIRED");
    const attestationPath=env("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH"),attestation=json(attestationPath);assert.equal(attestation.status,"PASS");
    exec(process.execPath,[rel("scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs"),"--live"],{...process.env,GEOX_DEPLOYMENT_SUBJECT_COMMIT:attestation.subject_main_sha});
