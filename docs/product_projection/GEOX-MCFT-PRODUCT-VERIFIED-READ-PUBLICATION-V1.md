@@ -56,12 +56,12 @@ Publication-state result `PUBLISHED_UNQUALIFIED_24T` is **not** a qualified CAP0
 | Path | Implementation |
 |---|---|
 | `apps/server/src/product_projection/publication/mcft_verified_field_state_publication_v1.ts` | Pure signed capsule schema, pinning, signature and cause/time validation |
-| `apps/server/src/product_projection/publication/postgres_mcft_verified_publication_v1.ts` | Strict publisher role + append-only idempotent sink + distinct read-only signed source reader |
-| `apps/server/db/migrations/2026_10_09_product_mcft_verified_publication_v1.sql` | Independently provisioned schema in operational DB with exact P0 scope, no writes into Formal-v5 |
+| `scripts/product_publication/postgres_mcft_verified_publication_v1.ts` | Strict publisher role + append-only idempotent sink + distinct read-only signed source reader |
+| `scripts/product_publication/sql/2026_10_09_product_mcft_verified_publication_v1.sql` | Independently provisioned schema in operational DB with exact P0 scope, no writes into Formal-v5 |
 | `scripts/product_acceptance/ACCEPTANCE_PRODUCT_MCFT_VERIFIED_PUBLICATION_ISOLATED_DB_V1.ts` | Real locally isolated PostgreSQL test with ephemeral Ed25519 issuer, replay and negative cases |
 | `.github/workflows/product-mcft-verified-publication-v1.yml` | Postgres16 runner and typecheck with no live production creds |
 
-Migration is not linked into startup or general migrations; any deployment requires explicit operator approval and an independently qualified zero-impact materialization contract. The PR is **Draft / Unmerged / no production effect**.
+Migration is stored outside the automatic startup migration scanner and is not linked into general migrations; any deployment requires explicit operator approval and an independently qualified zero-impact materialization contract. The PR is **Draft / Unmerged / no production effect**.
 
 ## 4. Physical evidence and current blocker (read-only audit 2026-10-08T16:53Z)
 
