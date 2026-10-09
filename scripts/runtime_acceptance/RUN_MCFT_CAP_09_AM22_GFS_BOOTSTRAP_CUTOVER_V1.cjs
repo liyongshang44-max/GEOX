@@ -11,6 +11,7 @@ const {
  ROOT,HOUR,MEASUREMENT_LEAD_MS,AUTHORITY_MATERIALIZATION_MARGIN_MS,digestFile,safeRepoRef,selectA0,validateGfsPairRows,
 }=require("./MCFT_CAP_09_AM22_GFS_BOOTSTRAP_V1.cjs");
 const {SCOPE}=require("./MCFT_CAP_09_AM22_EVIDENCE_CLOCK_V2.cjs");
+const {pollExactPair}=require("./MCFT_CAP_09_AM22_GFS_READ_ONLY_POLL_V1.cjs");
 
 const OWNER_POLICY_REL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json";
 const A0_POLICY_REL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json";
@@ -304,15 +305,15 @@ async function main(){
 
   phase="GFS_PAIR_WAIT";
   const pairWaitStarted=Date.now(),readinessDeadline=Date.parse(window.a0)-READY_MARGIN_MS;
-  let pair=null,lastRows=[];
-  while(Date.now()<readinessDeadline){
-    lastRows=await gfsPairRows(source,window.a0);
-    if(lastRows.length===2){
-      try{pair=validateGfsPairRows(lastRows,window.a0);break;}catch{}
-    }
-    sleep(POLL_MS);
-  }
-  if(!pair)fail("AM22_GFS_BOOTSTRAP_EXACT_A0_GFS_PAIR_NOT_READY_BEFORE_MEASUREMENT_LEAD",JSON.stringify(lastRows));
+  const polling=await pollExactPair({
+    readRows:()=>gfsPairRows(source,window.a0),
+    validate:rows=>validateGfsPairRows(rows,window.a0),
+    deadlineMs:readinessDeadline,
+    sleep:ms=>new Promise(resolve=>setTimeout(resolve,ms)),
+    onTransient:observation=>process.stderr.write(JSON.stringify({phase:"GFS_PAIR_WAIT",status:"TRANSIENT_DATABASE_READ_RETRY",...observation})+"\\n"),
+  });
+  const {pair,lastRows}=polling;
+  if(!pair)fail("AM22_GFS_BOOTSTRAP_EXACT_A0_GFS_PAIR_NOT_READY_BEFORE_MEASUREMENT_LEAD",JSON.stringify({lastRows,transient_read_count:polling.transientCount,poll_count:polling.pollCount}));
   const gfsPairWaitElapsedMs=Date.now()-pairWaitStarted;
   const twinZero=await assertTwinStillPreFormal(twin);
   exec(process.execPath,[VERIFY_REL,"--live"],{env,timeoutMs:60000});
@@ -325,7 +326,7 @@ async function main(){
     host_utc_at_activation_fence:hostNow,source_database_utc_at_activation_fence:sourceNow,host_database_clock_skew_ms:clockSkewMs,...window,
     image_build_elapsed_ms:imageBuildElapsedMs,authority_materialization_elapsed_ms:authorityMaterializationElapsedMs,
     remaining_acquisition_budget_ms_at_owner_start:remainingAcquisitionBudgetMsAtOwnerStart,
-    owner_cutover_elapsed_ms:cutoverElapsedMs,gfs_pair_wait_elapsed_ms:gfsPairWaitElapsedMs,
+    owner_cutover_elapsed_ms:cutoverElapsedMs,gfs_pair_wait_elapsed_ms:gfsPairWaitElapsedMs,gfs_poll_count:polling.pollCount,gfs_transient_database_read_count:polling.transientCount,
     gfs_pair:{weather_fact_id:pair.weather.fact_id,et0_fact_id:pair.et0.fact_id,selected_cycle:pair.selected_cycle,raw_source_sha256:pair.raw_source_sha256},
     twin_preformal_zero_state:twinZero,six_phase_input_file:"six-phase-input.json",
     production_owner_cutover_observed:true,evidence_acquisition_observed:true,twin_mode:"PRE_FORMAL_OWNER_STANDBY",
