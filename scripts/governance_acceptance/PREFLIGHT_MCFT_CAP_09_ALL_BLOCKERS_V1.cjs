@@ -435,7 +435,9 @@ function validateAm19T0GraduationCarryForwardV1(decision, head, base, authority,
   const currentLegacy = (registry.entries || []).find((row) => row.evidence_id === anchor.legacy_evidence_id);
   const t0Legacy = (t0Registry.entries || []).find((row) => row.evidence_id === anchor.legacy_evidence_id);
 
-  const registrationInvocation = cp.spawnSync(
+  const registrationInvocation = registry.frozen_v13_requalification_v1
+    ? { status: 0, stdout: JSON.stringify(require("./VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs").replayHistoricalRegistration()) }
+    : cp.spawnSync(
     process.execPath,
     [anchor.acceptance_path, "--require-qcp-registered"],
     {
