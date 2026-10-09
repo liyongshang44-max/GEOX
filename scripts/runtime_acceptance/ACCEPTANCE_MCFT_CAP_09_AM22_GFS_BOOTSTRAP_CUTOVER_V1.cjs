@@ -47,12 +47,12 @@ try{
  assert.doesNotMatch(overlay,/privileged|cap_add|network_mode/);
 
  const runner=read("scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs");
- for(const marker of ["GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json","GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json","BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs","--force-recreate","AM22_GFS_BOOTSTRAP_EXACT_A0_GFS_PAIR_NOT_READY_BEFORE_MEASUREMENT_LEAD","automatic_compose_down_performed:false"])assert.ok(runner.includes(marker),marker);
+ for(const marker of ["GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json","GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json","BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs","GEOX-MCFT-CAP-09-PRODUCTION-OWNER-CUTOVER-AUTHORITY-INSTANCE-V1","--force-recreate","AM22_GFS_BOOTSTRAP_EXACT_A0_GFS_PAIR_NOT_READY_BEFORE_MEASUREMENT_LEAD","AM22_GFS_BOOTSTRAP_HOST_DATABASE_CLOCK_SKEW_EXCEEDED","rollback_required_by_owner_policy","automatic_compose_down_performed:rollbackSucceeded"])assert.ok(runner.includes(marker),marker);
  assert.doesNotMatch(runner,/GEOX_MCFT_CAP09_FORMAL_V5_ADMIN_DATABASE_URL|GEOX_MCFT_CAP09_FORMAL_RAW_S3_/);
  assert.ok(runner.includes("formal_database_credential_consumed:false"));
  assert.ok(runner.includes("formal_v5_arm:false"));
  assert.ok(runner.includes("a0_execution:false"));
  assert.ok(runner.includes("o00_started:false"));
 
- console.log(JSON.stringify({status:"PASS",short_a0_selection:true,exact_gfs_pair_gate:true,owner_authority_preserved:true,existing_production_evidence_runtime_reused:true,formal_credentials_consumed:false,production_executed:false,formal_v5_arm:false,a0_execution:false,o00_started:false},null,2));
+ console.log(JSON.stringify({status:"PASS",short_a0_selection:true,host_clock_authority_preserved:true,exact_gfs_pair_gate:true,owner_authority_preserved:true,owner_verification_failure_rollback_preserved:true,existing_production_evidence_runtime_reused:true,formal_credentials_consumed:false,production_executed:false,formal_v5_arm:false,a0_execution:false,o00_started:false},null,2));
 }catch(error){console.error(error);process.exitCode=1;}
