@@ -1137,6 +1137,21 @@
         "scripts/runtime_acceptance/MCFT_CAP_09_AM22_PREWRITE_PROBE_V2.ts",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.ts"
       ]
+    },
+    "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-am22-start-chain-v2-engineering.yml",
+        "apps/server/scripts/write_dist_entries.cjs",
+        "apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.ts",
+        "docker-compose.mcft-cap09-am22-gfs-bootstrap-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-CUTOVER-V1.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_AM22_GFS_BOOTSTRAP_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -2360,6 +2375,36 @@
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
         "AM22_HOST_MEASUREMENT_ONLY_V2"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs"
+    },
+    {
+      "check_id": "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY",
+      "owner": "MCFT_CAP09_AM22_GFS_BOOTSTRAP",
+      "generation_scope": [
+        "FORMAL_V5",
+        "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-CUTOVER-V1.md"
+      ],
+      "resolver_ids": [
+        "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1"
+      ],
+      "historical_evidence_policy": "NO_36H_HANDOFF_OR_FORMAL_EFFECT_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-am22-start-chain-v2-engineering.yml",
+      "execution_workflow_status": "QUALIFICATION_ONLY_NO_PRODUCTION_CREDENTIALS",
+      "fail_policy": "FAIL_CLOSED_EXACT_PATH_AND_EXISTING_AUTHORITY_REUSE_REQUIRED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",
