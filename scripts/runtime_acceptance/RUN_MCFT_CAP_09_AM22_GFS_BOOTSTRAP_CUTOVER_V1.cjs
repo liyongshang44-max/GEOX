@@ -67,6 +67,13 @@ async function gfsPairRows(pool,a0){
  const rows=(await pool.query(`
 SELECT fact_id,
        record_json->>'type' AS record_type,
+       record_json#>>'{payload,record_type}' AS payload_record_type,
+       record_json#>>'{payload,binding_id}' AS binding_id,
+       record_json#>>'{payload,origin_source_kind}' AS origin_source_kind,
+       record_json#>>'{payload,origin_source_id}' AS origin_source_id,
+       record_json#>>'{payload,source_record_id}' AS source_record_id,
+       record_json#>>'{payload,role_time,valid_from}' AS valid_from,
+       record_json#>>'{payload,role_time,issued_at}' AS issued_at,
        record_json#>>'{payload,source_payload,target_logical_time}' AS target_logical_time,
        record_json#>>'{payload,source_payload,selected_cycle}' AS selected_cycle,
        record_json#>>'{payload,quality,raw_source_sha256}' AS raw_source_sha256,
@@ -75,9 +82,20 @@ SELECT fact_id,
 FROM public.facts
 WHERE source='mcft_cap09_external_formal_evidence_v1'
   AND record_json->>'type' IN ('future_weather_assumption_v1','future_et0_assumption_v1')
+  AND (
+    (record_json->>'type'='future_weather_assumption_v1' AND record_json#>>'{payload,origin_source_kind}'='NOAA_NCEP_NOMADS_GFS')
+    OR
+    (record_json->>'type'='future_et0_assumption_v1' AND record_json#>>'{payload,origin_source_kind}'='NOAA_NCEP_NOMADS_GFS_DERIVED')
+  )
+  AND record_json#>>'{payload,tenant_id}'=$2
+  AND record_json#>>'{payload,project_id}'=$3
+  AND record_json#>>'{payload,group_id}'=$4
+  AND record_json#>>'{payload,field_id}'=$5
+  AND record_json#>>'{payload,season_id}'=$6
+  AND record_json#>>'{payload,zone_id}'=$7
   AND record_json#>>'{payload,source_payload,target_logical_time}'=$1
-ORDER BY record_json->>'type',fact_id
-`,[a0])).rows;
+ORDER BY fact_id
+`,[a0,SCOPE.tenant_id,SCOPE.project_id,SCOPE.group_id,SCOPE.field_id,SCOPE.season_id,SCOPE.zone_id])).rows;
  return rows.map(r=>({...r,observed_database_now:now}));
 }
 async function assertTwinStillPreFormal(pool){
