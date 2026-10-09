@@ -25,7 +25,7 @@ The only new runtime wrapper validates the existing owner-cutover authority and 
 
 The local runner is effectful only when explicitly invoked with `--operator-authorized`. It requires clean exact protected main and the exact current host binding. It reads the operational database clock, uses the frozen forcing-acquisition budget to select the next whole-hour A0, and requires the latest effective registry authority to cover A0 through O23.
 
-It then:
+It first uses local operator-host UTC, as required by the existing pre-Formal A0 planning authority, and fail-closes if the operational database clock differs by more than 60 seconds. It then:
 
 1. writes local runtime-start and owner-cutover authority instances whose later authority ceiling remains false;
 2. builds and attests the exact-main Runtime image and records the build duration;
@@ -36,7 +36,7 @@ It then:
 7. proves the Twin remains pre-Formal with zero state/scheduler rows;
 8. emits `six-phase-input.json` for the existing six-phase measurement.
 
-On failure after cutover, the runner does not automatically run Compose down. It writes a fail receipt and leaves reconciliation explicit. This avoids turning an uncertain partial cutover into an unrecorded second mutation.
+If exact-one owner verification fails, the runner follows the existing owner-cutover authority and performs the required dual-service Compose rollback attempt before failing. After owner verification has passed, a later GFS-seed failure does not silently perform a second owner mutation; it writes a fail receipt and leaves reconciliation explicit. The receipt records whether rollback was required, attempted and successful.
 
 ## Hard nonclaims
 
