@@ -141,8 +141,7 @@ async function main(){
  assert.ok(process.argv.includes("--operator-authorized"),"AM22_GFS_BOOTSTRAP_EXPLICIT_OPERATOR_AUTHORIZATION_REQUIRED");
  const stageArg=arg("--stage-ref"),outArg=arg("--out");
  assert.ok(stageArg&&outArg,"AM22_GFS_BOOTSTRAP_STAGE_AND_OUTPUT_REQUIRED");
- const stageRef=safeRepoRef(stageArg);
- const out=path.resolve(outArg);
+ const stageRef=safeRepoRef(stageArg),out=path.resolve(outArg);
  assert.ok(!fs.existsSync(out),"AM22_GFS_BOOTSTRAP_DISTINCT_OUTPUT_REQUIRED");
 
  git("fetch","--no-tags","origin","main");
@@ -150,34 +149,24 @@ async function main(){
  assert.equal(head,mainHead,"AM22_GFS_BOOTSTRAP_HEAD_MUST_EQUAL_CURRENT_PROTECTED_MAIN");
  assert.equal(git("status","--porcelain"),"","AM22_GFS_BOOTSTRAP_WORKTREE_MUST_BE_CLEAN");
 
- const ownerPolicy=read(OWNER_POLICY_REL),a0Policy=read(A0_POLICY_REL),registry=read(REGISTRY_REL),budget=read(BUDGET_REL);
- const selectedBudget=requirePolicies(ownerPolicy,a0Policy,budget);
+ const ownerPolicy=read(OWNER_POLICY_REL),a0Policy=read(A0_POLICY_REL),bootstrapA0Policy=read(BOOTSTRAP_A0_POLICY_REL),registry=read(REGISTRY_REL),budget=read(BUDGET_REL);
+ const timing=requirePolicies(ownerPolicy,a0Policy,bootstrapA0Policy,budget);
  const hostId=fs.readFileSync(HOST_ID_FILE,"utf8").trim().toLowerCase();
  assert.equal(hostId,String(ownerPolicy.execution_host?.exact_host_id??"").toLowerCase(),"AM22_GFS_BOOTSTRAP_HOST_ID_MISMATCH");
+ const stage=JSON.parse(fs.readFileSync(stageRef.resolved,"utf8"));
 
- const evidenceUrl=reqEnv("GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL");
- const twinUrl=reqEnv("GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL");
- const source=readOnlyPool(evidenceUrl,"geox_mcft_cap09_production_runtime_v1");
- const twin=readOnlyPool(twinUrl,"geox_mcft_cap09_production_runtime_v1");
- let started=false,ownerVerified=false,rollbackAttempted=false,rollbackSucceeded=false,phase="PRECHECK",imageId="",cutoverElapsedMs=0;
+ const evidenceUrl=reqEnv("GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL"),twinUrl=reqEnv("GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL");
+ const source=readOnlyPool(evidenceUrl,"geox_mcft_cap09_production_runtime_v1"),twin=readOnlyPool(twinUrl,"geox_mcft_cap09_production_runtime_v1");
+ let started=false,ownerVerified=false,rollbackAttempted=false,rollbackSucceeded=false,phase="PRECHECK",imageId="",cutoverElapsedMs=0,imageBuildElapsedMs=0;
+ let hostNow=null,sourceNow=null,clockSkewMs=null,window=null,authorityMaterializationElapsedMs=null,remainingAcquisitionBudgetMsAtOwnerStart=null;
  try{
-  const sourceNow=await databaseNow(source),hostNow=new Date().toISOString();
-  const clockSkewMs=Math.abs(Date.parse(hostNow)-Date.parse(sourceNow));
-  assert.ok(clockSkewMs<=MAX_HOST_DB_CLOCK_SKEW_MS,"AM22_GFS_BOOTSTRAP_HOST_DATABASE_CLOCK_SKEW_EXCEEDED");
-  const stage=JSON.parse(fs.readFileSync(stageRef.resolved,"utf8"));
-  const window=selectA0({source_now:hostNow,budget_ms:selectedBudget,stage});
-  const latest=latestRegistryEntry(registry,hostNow,window.o23);
-  assert.equal(latest.authority_ref,stageRef.ref,"AM22_GFS_BOOTSTRAP_LATEST_EFFECTIVE_STAGE_REQUIRED");
-  assert.equal(latest.authority_sha256,digestFile(stageRef.resolved),"AM22_GFS_BOOTSTRAP_STAGE_DIGEST_MISMATCH");
-  assert.equal(latest.authority_as_of,stage.biological_stage.authority_as_of);
-  assert.equal(latest.authority_valid_until,stage.biological_stage.authority_valid_until);
-
   fs.mkdirSync(out,{recursive:true});
   immutable(path.join(out,"started.json"),{
     schema_version:"geox_mcft_cap09_am22_gfs_bootstrap_cutover_started_v1",status:"STARTED",
     subject_sha:head,host_id:hostId,stage_ref:stageRef.ref,stage_sha256:digestFile(stageRef.resolved),
-    host_utc_at_planning:hostNow,source_database_utc_at_planning:sourceNow,host_database_clock_skew_ms:clockSkewMs,...window,
-    authority_basis:[OWNER_POLICY_REL,A0_POLICY_REL],formal_v5_arm:false,a0_execution:false,o00_started:false,
+    image_build_and_attestation_before_a0_planning:true,a0_planning_pending:true,
+    authority_basis:[OWNER_POLICY_REL,A0_POLICY_REL,BOOTSTRAP_A0_POLICY_REL],
+    formal_v5_arm:false,a0_execution:false,o00_started:false,
   });
 
   const runtimeRoot=path.join(out,"runtime");
@@ -187,8 +176,43 @@ async function main(){
   const unusedHandoffPath=path.join(runtimeRoot,"unused-formal-handoff.json");
   const artifactAttestationPath=path.join(ROOT,ATTEST_REL);
   fs.mkdirSync(runtimeRoot,{recursive:true});
+  const env=composeEnv({head,stageRef:stageRef.ref,runtimeAuthorityPath,ownerAuthorityPath,unusedHandoffPath,artifactAttestationPath});
+  fs.mkdirSync(path.join(env.GEOX_MCFT_CAP09_DURABLE_LOG_ROOT,"evidence"),{recursive:true});
+  fs.mkdirSync(path.join(env.GEOX_MCFT_CAP09_DURABLE_LOG_ROOT,"twin"),{recursive:true});
+
+  phase="IMAGE_BUILD_AND_ATTESTATION";
+  const imageStarted=Date.now();
+  exec("docker",["compose","-f",COMPOSE_REL,"-f",OVERLAY_REL,"build",EVIDENCE_SERVICE],{env});
+  imageBuildElapsedMs=Date.now()-imageStarted;
+  imageId=exec("docker",["image","inspect","--format","{{.Id}}",`geox-mcft-cap09-runtime:${head}`],{env});
+  assert.match(imageId,/^sha256:[a-f0-9]{64}$/,"AM22_GFS_BOOTSTRAP_IMAGE_ID_INVALID");
+  try{fs.rmSync(artifactAttestationPath,{force:true});}catch{}
+  exec(process.execPath,[VERIFY_REL,"--attest-image"],{env});
+
+  phase="A0_PLANNING_AND_AUTHORITY_MATERIALIZATION";
+  sourceNow=await databaseNow(source);hostNow=new Date().toISOString();
+  clockSkewMs=Math.abs(Date.parse(hostNow)-Date.parse(sourceNow));
+  assert.ok(clockSkewMs<=MAX_HOST_DB_CLOCK_SKEW_MS,"AM22_GFS_BOOTSTRAP_HOST_DATABASE_CLOCK_SKEW_EXCEEDED");
+  window=selectA0({source_now:hostNow,budget_ms:timing.combined_minimum_lead_ms,stage});
+  const latest=latestRegistryEntry(registry,hostNow,window.o23);
+  assert.equal(latest.authority_ref,stageRef.ref,"AM22_GFS_BOOTSTRAP_LATEST_EFFECTIVE_STAGE_REQUIRED");
+  assert.equal(latest.authority_sha256,digestFile(stageRef.resolved),"AM22_GFS_BOOTSTRAP_STAGE_DIGEST_MISMATCH");
+  assert.equal(latest.authority_as_of,stage.biological_stage.authority_as_of);
+  assert.equal(latest.authority_valid_until,stage.biological_stage.authority_valid_until);
+
+  immutable(path.join(out,"planning.json"),{
+    schema_version:"geox_mcft_cap09_am22_gfs_bootstrap_planning_v1",status:"PASS",
+    host_utc_at_activation_fence:hostNow,source_database_utc_at_activation_fence:sourceNow,host_database_clock_skew_ms:clockSkewMs,
+    ...window,selected_acquisition_budget_ms:timing.selected_acquisition_budget_ms,
+    required_six_phase_measurement_lead_ms:MEASUREMENT_LEAD_MS,
+    authority_materialization_margin_ms:timing.authority_materialization_margin_ms,
+    combined_minimum_lead_ms:timing.combined_minimum_lead_ms,
+    image_id:imageId,image_build_elapsed_ms:imageBuildElapsedMs,
+    formal_v5_arm:false,a0_execution:false,o00_started:false,
+  });
+
   const activationFence=hostNow;
-  const ownerAuthority={
+  write(ownerAuthorityPath,{
     schema_version:"geox_mcft_cap09_production_owner_cutover_authority_instance_v1",
     authority_id:"GEOX-MCFT-CAP-09-PRODUCTION-OWNER-CUTOVER-AUTHORITY-INSTANCE-V1",
     status:"AUTHORIZED",armed:true,
@@ -203,23 +227,21 @@ async function main(){
     evidence_owner_activation_authorized:true,twin_owner_activation_authorized:true,
     non_github_hosting_binding_authorized:true,production_login_provisioning_authorized:false,
     formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false,
-  };
-  write(ownerAuthorityPath,ownerAuthority);
-  const runtimeArm={
+  });
+  write(runtimeArmPath,{
     schema_version:"geox_mcft_cap09_production_runtime_start_arm_v1",armed:true,
     activation_step:"POST_EFFECTIVENESS_DUAL_KEY_LOCAL_OWNER_CUTOVER",runtime_mode:"OWNER_CUTOVER",
     exact_deployment_subject_sha:head,
     authority_ref:`local-operator://${hostId}/mcft-cap09/am22-gfs-bootstrap/runtime-start-arm/${head}/${window.a0}`,
     live_activation_authority_ref:OWNER_POLICY_REL,live_activation_authority_sha256:digestFile(path.join(ROOT,OWNER_POLICY_REL)),
-    formal_a0_authority_ref:A0_POLICY_REL,formal_a0_authority_sha256:digestFile(path.join(ROOT,A0_POLICY_REL)),
+    formal_a0_authority_ref:BOOTSTRAP_A0_POLICY_REL,formal_a0_authority_sha256:digestFile(path.join(ROOT,BOOTSTRAP_A0_POLICY_REL)),
     current_crop_authority_ref:stageRef.ref,current_crop_authority_sha256:digestFile(stageRef.resolved),
     biological_stage_architecture_effectiveness_ref:STAGE_CERT_REL,biological_stage_architecture_effectiveness_sha256:digestFile(path.join(ROOT,STAGE_CERT_REL)),
     scope:SCOPE,activation_fence_time:activationFence,formal_a0_logical_time:window.a0,
     runtime_process_start_authorized:true,evidence_runtime_start_authorized:true,twin_runtime_start_authorized:true,
     production_owner_activation_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false,
     execution_requested:true,current_status:"AM22_GFS_BOOTSTRAP_OWNER_CUTOVER_ARMED",
-  };
-  write(runtimeArmPath,runtimeArm);
+  });
   exec(process.execPath,[BUILDER_REL,"--arm",runtimeArmPath,"--out",runtimeAuthorityPath]);
   write(unusedHandoffPath,{
     schema_version:"geox_mcft_cap09_am22_gfs_bootstrap_unused_formal_handoff_v1",
@@ -227,18 +249,10 @@ async function main(){
     formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false,
   });
 
-  const env=composeEnv({head,stageRef:stageRef.ref,runtimeAuthorityPath,ownerAuthorityPath,unusedHandoffPath,artifactAttestationPath});
-  fs.mkdirSync(path.join(env.GEOX_MCFT_CAP09_DURABLE_LOG_ROOT,"evidence"),{recursive:true});
-  fs.mkdirSync(path.join(env.GEOX_MCFT_CAP09_DURABLE_LOG_ROOT,"twin"),{recursive:true});
-
-  phase="IMAGE_BUILD";
-  const imageStarted=Date.now();
-  exec("docker",["compose","-f",COMPOSE_REL,"-f",OVERLAY_REL,"build",EVIDENCE_SERVICE],{env});
-  const imageBuildElapsedMs=Date.now()-imageStarted;
-  imageId=exec("docker",["image","inspect","--format","{{.Id}}",`geox-mcft-cap09-runtime:${head}`],{env});
-  assert.match(imageId,/^sha256:[a-f0-9]{64}$/,"AM22_GFS_BOOTSTRAP_IMAGE_ID_INVALID");
-  try{fs.rmSync(artifactAttestationPath,{force:true});}catch{}
-  exec(process.execPath,[VERIFY_REL,"--attest-image"],{env});
+  authorityMaterializationElapsedMs=Date.now()-Date.parse(activationFence);
+  assert.ok(authorityMaterializationElapsedMs<=timing.authority_materialization_margin_ms,"AM22_GFS_BOOTSTRAP_AUTHORITY_MATERIALIZATION_MARGIN_EXCEEDED");
+  remainingAcquisitionBudgetMsAtOwnerStart=Date.parse(window.a0)-MEASUREMENT_LEAD_MS-Date.now();
+  assert.ok(remainingAcquisitionBudgetMsAtOwnerStart>=timing.selected_acquisition_budget_ms,"AM22_GFS_BOOTSTRAP_FULL_ACQUISITION_BUDGET_NOT_PRESERVED_AT_OWNER_START");
 
   phase="OWNER_CUTOVER";
   const cutoverStarted=Date.now();
@@ -288,11 +302,12 @@ async function main(){
   immutable(path.join(out,"result.json"),{
     schema_version:"geox_mcft_cap09_am22_gfs_bootstrap_cutover_result_v1",
     status:"PASS",subject_sha:head,host_id:hostId,image_id:imageId,stage_ref:stageRef.ref,stage_sha256:digestFile(stageRef.resolved),
-    host_utc_at_planning:hostNow,source_database_utc_at_planning:sourceNow,host_database_clock_skew_ms:clockSkewMs,...window,
-    image_build_elapsed_ms:imageBuildElapsedMs,owner_cutover_elapsed_ms:cutoverElapsedMs,gfs_pair_wait_elapsed_ms:gfsPairWaitElapsedMs,
+    host_utc_at_activation_fence:hostNow,source_database_utc_at_activation_fence:sourceNow,host_database_clock_skew_ms:clockSkewMs,...window,
+    image_build_elapsed_ms:imageBuildElapsedMs,authority_materialization_elapsed_ms:authorityMaterializationElapsedMs,
+    remaining_acquisition_budget_ms_at_owner_start:remainingAcquisitionBudgetMsAtOwnerStart,
+    owner_cutover_elapsed_ms:cutoverElapsedMs,gfs_pair_wait_elapsed_ms:gfsPairWaitElapsedMs,
     gfs_pair:{weather_fact_id:pair.weather.fact_id,et0_fact_id:pair.et0.fact_id,selected_cycle:pair.selected_cycle,raw_source_sha256:pair.raw_source_sha256},
-    twin_preformal_zero_state:twinZero,
-    six_phase_input_file:"six-phase-input.json",
+    twin_preformal_zero_state:twinZero,six_phase_input_file:"six-phase-input.json",
     production_owner_cutover_observed:true,evidence_acquisition_observed:true,twin_mode:"PRE_FORMAL_OWNER_STANDBY",
     formal_database_credential_consumed:false,formal_database_mutation:false,formal_raw_write:false,
     formal_v5_arm:false,a0_execution:false,o00_started:false,mcft_cap09_completed:false,
@@ -303,7 +318,11 @@ async function main(){
     try{immutable(path.join(out,"failed.json"),{
       schema_version:"geox_mcft_cap09_am22_gfs_bootstrap_cutover_failed_v1",status:"FAIL",phase,
       terminal_error:String(error instanceof Error?error.message:error).slice(0,4000),
-      production_owners_may_have_changed:started,image_id:imageId||null,owner_verified:ownerVerified,owner_cutover_elapsed_ms:cutoverElapsedMs||null,
+      production_owners_may_have_changed:started,image_id:imageId||null,owner_verified:ownerVerified,
+      host_utc_at_activation_fence:hostNow,source_database_utc_at_activation_fence:sourceNow,host_database_clock_skew_ms:clockSkewMs,
+      planned_window:window,authority_materialization_elapsed_ms:authorityMaterializationElapsedMs,
+      remaining_acquisition_budget_ms_at_owner_start:remainingAcquisitionBudgetMsAtOwnerStart,
+      owner_cutover_elapsed_ms:cutoverElapsedMs||null,
       rollback_required_by_owner_policy:started&&!ownerVerified,rollback_attempted:rollbackAttempted,rollback_succeeded:rollbackSucceeded,
       automatic_compose_down_performed:rollbackSucceeded,operator_reconciliation_required:started,
       formal_v5_arm:false,a0_execution:false,o00_started:false,mcft_cap09_completed:false,
