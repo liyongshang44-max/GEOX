@@ -1,0 +1,56 @@
+name: product-mcft-verified-publication-v1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/product-mcft-verified-publication-v1.yml'
+      - 'apps/server/src/product_projection/publication/**'
+      - 'apps/server/db/migrations/2026_10_09_product_mcft_verified_publication_v1.sql'
+      - 'scripts/product_acceptance/ACCEPTANCE_PRODUCT_MCFT_VERIFIED_PUBLICATION_ISOLATED_DB_V1.ts'
+      - 'docs/product_projection/GEOX-MCFT-PRODUCT-VERIFIED-READ-PUBLICATION-V1.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-product-read-store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_mcft_cap09_production_runtime_v1
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_mcft_cap09_production_runtime_v1"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - run: corepack enable && corepack prepare pnpm@9.15.4 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Product publication TypeScript gate
+        run: pnpm --filter @geox/server typecheck
+      - name: REAL isolated PostgreSQL attestation, append, read and tamper tests
+        env:
+          CI_PRODUCT_PUBLICATION_TEST: 'true'
+          CI_PRODUCT_PUBLICATION_POSTGRES_ADMIN_URL: postgres://postgres:postgres@127.0.0.1:5432/geox_mcft_cap09_production_runtime_v1
+        run: node --import tsx scripts/product_acceptance/ACCEPTANCE_PRODUCT_MCFT_VERIFIED_PUBLICATION_ISOLATED_DB_V1.ts
+      - name: Verify no production effect credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${GEOX_PRODUCT_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_PUBLICATION_SIGNING_PRIVATE_KEY:-}"
+          echo 'PRODUCT_PUBLICATION_NO_PRODUCTION_CREDENTIALS=PASS'
