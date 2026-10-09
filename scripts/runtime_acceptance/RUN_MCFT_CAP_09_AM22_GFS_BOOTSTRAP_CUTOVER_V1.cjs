@@ -142,6 +142,8 @@ async function main(){
  const stageArg=arg("--stage-ref"),outArg=arg("--out");
  assert.ok(stageArg&&outArg,"AM22_GFS_BOOTSTRAP_STAGE_AND_OUTPUT_REQUIRED");
  const stageRef=safeRepoRef(stageArg),out=path.resolve(outArg);
+ const outRelative=path.relative(ROOT,out);
+ assert.ok(outRelative.startsWith(".."+path.sep)||path.isAbsolute(outRelative),"AM22_GFS_BOOTSTRAP_OUTPUT_MUST_BE_OUTSIDE_REPOSITORY");
  assert.ok(!fs.existsSync(out),"AM22_GFS_BOOTSTRAP_DISTINCT_OUTPUT_REQUIRED");
 
  git("fetch","--no-tags","origin","main");
