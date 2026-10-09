@@ -30,6 +30,7 @@ function validateBoundary(changes,policy,before,after){
  assert.deepEqual(normalized,before,"AM22_CHAIN_PREDECESSOR_QCP_CHANGED");
 }
 function verifyEngineeringOnly(){
+ const keyCandidate=verifyExecutionKeyAdoptionOnly();if(keyCandidate)return keyCandidate;
  const transport=verifyFreshAuthorityTransportOnly();if(transport)return transport;
  if(!fs.existsSync(path.join(ROOT,DOC)))return null;
  assert.equal(git("merge-base",BASE,"HEAD"),BASE,"AM22_CHAIN_BASE_NOT_ANCESTOR");
@@ -97,5 +98,44 @@ function verifyFreshAuthorityTransportOnly(){
  return {status:"PASS",baseline:TRANSPORT_BASE,changedPaths:[...new Set([...historical.changedPaths,...adopted,...changes.map(x=>x.rel)])],qualification_scope:"AM22_DISABLED_START_CHAIN_ENGINEERING_ONLY",current_delta_scope:"FRESH_AUTHORITY_AUTHENTICATED_MAIN_READ_ONLY",fresh_authority_generated:false,old_arm_carry_forward_authorized:false,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,mcft_cap09_completed:false};
 }
 // END FRESH_AUTHORITY_TRANSPORT_ONLY
-module.exports={BASE,DOC,POLICY,QCP,PRIOR,RETIRE,BOUNDARY,PATHS,CHECK,ROUTE,RETIRE_BEFORE,RETIRE_AFTER,BOUNDARY_BEFORE,BOUNDARY_AFTER,validateBoundary,verifyEngineeringOnly,TRANSPORT_BASE,TRANSPORT_WORKFLOW,TRANSPORT_PATHS,TRANSPORT_BEFORE,TRANSPORT_AFTER,validateTransportBoundary,verifyFreshAuthorityTransportOnly};
+// BEGIN EXECUTION_KEY_ADOPTION_ONLY
+const KEY_BASE="0bc5e350bdf2b095c63c2021c05ca3d95a26f105";
+const KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAdYYE2KRxxslK7wD7ZoRcv3bA4QE/r79jzNdBJWbSAzQ=\n-----END PUBLIC KEY-----\n";
+const KEY_DIGEST="sha256:8b2e4dfb37d11d9e4a6f21e1ed215c4ab2e81420c10e60e39eb200e6abbe1c49";
+const KEY_PATHS=[POLICY,TRANSPORT_SELF,TRANSPORT_TEST,BOUNDARY].sort();
+const KEY_BOUNDARY_BEFORE='const policy=JSON.parse(fs.readFileSync(path.join(root,POLICY),"utf8"));';
+const KEY_BOUNDARY_AFTER='const policy=JSON.parse(cp.execFileSync("git",["show","'+BASE+':"+POLICY],{cwd:root,encoding:"utf8"}));';
+function validateKeyBoundary(changes,before,after){
+ assert.deepEqual(changes.map(x=>x.rel).sort(),KEY_PATHS,"AM22_KEY_EXACT_PATH_SET_REQUIRED");
+ for(const x of changes)assert.equal(x.status,"M","AM22_KEY_EXISTING_PATH_ONLY");
+ assert.deepEqual(after,{...before,execution_qualification_rule:"DETACHED_ED25519_EXACT_MAIN_HOST_IMAGE_EVIDENCE_V2",execution_qualification_signing_public_key_pem:KEY_PEM},"AM22_KEY_TRUST_FIELDS_ONLY");
+ assert.equal(before.status,"PREQUALIFICATION_ONLY_NOT_EFFECTIVE");
+ for(const k of ["complete_pre_a0_measurement_qualified","new_handoff_arm_a0_chain_qualified","isolated_postgres_v2_a0_o00_qualified","production_start_authorized","formal_v5_arm_authorized","a0_authorized","mcft_cap09_completed"])assert.equal(after[k],false,"AM22_KEY_AUTHORITY_ESCALATION:"+k);
+ const crypto=require("node:crypto"),key=crypto.createPublicKey(after.execution_qualification_signing_public_key_pem);
+ assert.equal(key.asymmetricKeyType,"ed25519");
+ assert.equal("sha256:"+crypto.createHash("sha256").update(key.export({type:"spki",format:"der"})).digest("hex"),KEY_DIGEST,"AM22_KEY_PUBLIC_FINGERPRINT_MISMATCH");
+}
+function verifyExecutionKeyAdoptionOnly(){
+ if(cp.spawnSync("git",["merge-base","--is-ancestor",KEY_BASE,"HEAD"],{cwd:ROOT}).status!==0)return null;
+ const at=rel=>cp.execFileSync("git",["show",KEY_BASE+":"+rel],{cwd:ROOT,encoding:"utf8"});
+ const read=rel=>fs.readFileSync(path.join(ROOT,rel),"utf8");
+ if(read(POLICY)===at(POLICY))return null;
+ assert.equal(git("merge-base",KEY_BASE,"origin/main"),KEY_BASE,"AM22_KEY_BASE_NOT_ADOPTED");
+ assert.equal(git("status","--porcelain","--untracked-files=normal"),"","AM22_KEY_DIRTY_SOURCE");
+ const changes=git("diff","--name-status",KEY_BASE,"HEAD").split(/\r?\n/).filter(Boolean).map(x=>{const [status,rel]=x.split("\t");return {status,rel};});
+ validateKeyBoundary(changes,JSON.parse(at(POLICY)),JSON.parse(read(POLICY)));
+ assert.equal(read(QCP),at(QCP),"AM22_KEY_QCP_CHANGED");
+ const route=' const keyCandidate=verifyExecutionKeyAdoptionOnly();if(keyCandidate)return keyCandidate;\n';
+ const exported=',KEY_BASE,KEY_PEM,KEY_DIGEST,KEY_PATHS,KEY_BOUNDARY_BEFORE,KEY_BOUNDARY_AFTER,validateKeyBoundary,verifyExecutionKeyAdoptionOnly';
+ const normalized=read(TRANSPORT_SELF).replace(route,"").replace(/\/\/ BEGIN EXECUTION_KEY_ADOPTION_ONLY[\s\S]*?\/\/ END EXECUTION_KEY_ADOPTION_ONLY\n/,"").replace(exported,"");
+ assert.equal(normalized,at(TRANSPORT_SELF),"AM22_KEY_PREDECESSOR_CHECKER_CHANGED");
+ assert.equal(read(BOUNDARY),at(BOUNDARY).replace(KEY_BOUNDARY_BEFORE,KEY_BOUNDARY_AFTER),"AM22_KEY_COMPONENT_NEGATIVES_CHANGED");
+ assert.ok(read(TRANSPORT_TEST).startsWith(at(TRANSPORT_TEST)),"AM22_KEY_ENGINEERING_NEGATIVES_CHANGED");
+ for(const file of [TRANSPORT_TEST,BOUNDARY,"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_ARM_RETIREMENT_V1.cjs"])cp.execFileSync(process.execPath,[path.join(ROOT,file)],{cwd:ROOT,stdio:"pipe"});
+ const historical=require("./ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs").verifyFormalV5AuthorityContinuity("a60aa6858662ce87b989ff752c50969f21ad4619",true);
+ const adopted=git("diff","--name-only","a60aa6858662ce87b989ff752c50969f21ad4619",KEY_BASE).split(/\r?\n/).filter(Boolean);
+ return {status:"PASS",baseline:KEY_BASE,changedPaths:[...new Set([...historical.changedPaths,...adopted,...changes.map(x=>x.rel)])],qualification_scope:"AM22_DISABLED_START_CHAIN_ENGINEERING_ONLY",current_delta_scope:"EXECUTION_TRUST_KEY_ADOPTION_ONLY",key_adoption_candidate_qualified:true,public_key_sha256:KEY_DIGEST,complete_host_measurement_proven:false,fresh_authority_generated:false,old_arm_carry_forward_authorized:false,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,mcft_cap09_completed:false};
+}
+// END EXECUTION_KEY_ADOPTION_ONLY
+module.exports={BASE,DOC,POLICY,QCP,PRIOR,RETIRE,BOUNDARY,PATHS,CHECK,ROUTE,RETIRE_BEFORE,RETIRE_AFTER,BOUNDARY_BEFORE,BOUNDARY_AFTER,validateBoundary,verifyEngineeringOnly,TRANSPORT_BASE,TRANSPORT_WORKFLOW,TRANSPORT_PATHS,TRANSPORT_BEFORE,TRANSPORT_AFTER,validateTransportBoundary,verifyFreshAuthorityTransportOnly,KEY_BASE,KEY_PEM,KEY_DIGEST,KEY_PATHS,KEY_BOUNDARY_BEFORE,KEY_BOUNDARY_AFTER,validateKeyBoundary,verifyExecutionKeyAdoptionOnly};
 if(require.main===module)console.log(JSON.stringify(verifyEngineeringOnly(),null,2));

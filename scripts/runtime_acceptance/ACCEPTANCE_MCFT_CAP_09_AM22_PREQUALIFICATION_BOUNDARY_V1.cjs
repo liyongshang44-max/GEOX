@@ -8,7 +8,7 @@ const root=path.resolve(__dirname,"../..");
 const cp=require("node:child_process");
 const current=JSON.parse(cp.execFileSync("git",["show","648c1499f23c9c5d11483b0b797c8700e398349d:"+QCP],{cwd:root,encoding:"utf8"}));
 const prior=structuredClone(current);prior.checks.pop();delete prior.dependency_resolvers.AM22_PREQUALIFICATION_ONLY_V1;
-const policy=JSON.parse(fs.readFileSync(path.join(root,POLICY),"utf8"));
+const policy=JSON.parse(cp.execFileSync("git",["show","648c1499f23c9c5d11483b0b797c8700e398349d:"+POLICY],{cwd:root,encoding:"utf8"}));
 const changes=PATHS.map(rel=>({rel,status:rel===QCP||rel===CHAIN||rel===RETIRE||CHECKERS.includes(rel)?"M":"A"}));
 let cases=0;
 function test(change,pattern){const input=structuredClone({changes,policy,before:prior,after:current});change(input);assert.throws(()=>validateBoundary(input.changes,input.policy,input.before,input.after),pattern);cases++;}
