@@ -19,6 +19,13 @@ try{
  const stage=fixtureStage();
  const window=h.selectA0({source_now:"2026-10-09T04:05:00.000Z",budget_ms:2081804,stage});
  assert.deepEqual(window,{a0:"2026-10-09T05:00:00.000Z",o00:"2026-10-09T06:00:00.000Z",o23:"2026-10-10T05:00:00.000Z",all_25_contexts_covered:true,window_selected_for_measurement_only:true});
+ const combinedPolicy=JSON.parse(read("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json"));
+ assert.equal(combinedPolicy.selection_policy.selected_acquisition_budget_ms,2081804);
+ assert.equal(combinedPolicy.selection_policy.required_six_phase_measurement_lead_ms,h.MEASUREMENT_LEAD_MS);
+ assert.equal(combinedPolicy.selection_policy.required_authority_materialization_to_owner_start_margin_ms,h.AUTHORITY_MATERIALIZATION_MARGIN_MS);
+ assert.equal(combinedPolicy.selection_policy.combined_minimum_lead_ms,2081804+h.MEASUREMENT_LEAD_MS+h.AUTHORITY_MATERIALIZATION_MARGIN_MS);
+ const combinedWindow=h.selectA0({source_now:"2026-10-09T04:20:00.000Z",budget_ms:combinedPolicy.selection_policy.combined_minimum_lead_ms,stage});
+ assert.equal(combinedWindow.a0,"2026-10-09T06:00:00.000Z");
  assert.throws(()=>h.selectA0({source_now:"2026-10-09T04:05:00.000Z",budget_ms:599999,stage}),/AM22_GFS_BOOTSTRAP_BUDGET_TOO_SMALL/);
  const base={target_logical_time:window.a0,selected_cycle:"2026-10-09T00:00:00.000Z",raw_source_sha256:"sha256:"+"a".repeat(64),available_to_runtime_at:"2026-10-09T04:20:00.000Z",ingested_at:"2026-10-09T04:21:00.000Z",observed_database_now:"2026-10-09T04:22:00.000Z"};
  const pair=h.validateGfsPairRows([
@@ -37,6 +44,7 @@ try{
  assert.match(wrapper,/parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1/);
  assert.match(wrapper,/runtime_mode:MCFT_CAP09_OWNER_CUTOVER_MODE_V1/);
  assert.match(wrapper,/runMcftCap09ProductionEvidenceRuntimeV1\(\{\s*runtime_start_authority:raw/);
+ assert.match(wrapper,/baseRuntimeAuthority\.host_id!==ownerAuthority\.host_id/);
  assert.doesNotMatch(wrapper,/FormalV5EvidenceRuntimeHandoff/);
  assert.doesNotMatch(wrapper,/requireEffectiveAm22StartPolicyV2/);
 
@@ -47,12 +55,14 @@ try{
  assert.doesNotMatch(overlay,/privileged|cap_add|network_mode/);
 
  const runner=read("scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs");
- for(const marker of ["GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json","GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json","BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs","GEOX-MCFT-CAP-09-PRODUCTION-OWNER-CUTOVER-AUTHORITY-INSTANCE-V1","--force-recreate","AM22_GFS_BOOTSTRAP_EXACT_A0_GFS_PAIR_NOT_READY_BEFORE_MEASUREMENT_LEAD","AM22_GFS_BOOTSTRAP_HOST_DATABASE_CLOCK_SKEW_EXCEEDED","rollback_required_by_owner_policy","automatic_compose_down_performed:rollbackSucceeded"])assert.ok(runner.includes(marker),marker);
+ for(const marker of ["GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json","GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json","GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json","BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs","GEOX-MCFT-CAP-09-PRODUCTION-OWNER-CUTOVER-AUTHORITY-INSTANCE-V1","IMAGE_BUILD_AND_ATTESTATION","A0_PLANNING_AND_AUTHORITY_MATERIALIZATION","AM22_GFS_BOOTSTRAP_AUTHORITY_MATERIALIZATION_MARGIN_EXCEEDED","AM22_GFS_BOOTSTRAP_FULL_ACQUISITION_BUDGET_NOT_PRESERVED_AT_OWNER_START","--force-recreate","AM22_GFS_BOOTSTRAP_EXACT_A0_GFS_PAIR_NOT_READY_BEFORE_MEASUREMENT_LEAD","AM22_GFS_BOOTSTRAP_HOST_DATABASE_CLOCK_SKEW_EXCEEDED","rollback_required_by_owner_policy","automatic_compose_down_performed:rollbackSucceeded"])assert.ok(runner.includes(marker),marker);
+ assert.ok(runner.indexOf('phase="IMAGE_BUILD_AND_ATTESTATION"')<runner.indexOf('phase="A0_PLANNING_AND_AUTHORITY_MATERIALIZATION"'));
+ assert.match(runner,/formal_a0_authority_ref:BOOTSTRAP_A0_POLICY_REL/);
  assert.doesNotMatch(runner,/GEOX_MCFT_CAP09_FORMAL_V5_ADMIN_DATABASE_URL|GEOX_MCFT_CAP09_FORMAL_RAW_S3_/);
  assert.ok(runner.includes("formal_database_credential_consumed:false"));
  assert.ok(runner.includes("formal_v5_arm:false"));
  assert.ok(runner.includes("a0_execution:false"));
  assert.ok(runner.includes("o00_started:false"));
 
- console.log(JSON.stringify({status:"PASS",short_a0_selection:true,host_clock_authority_preserved:true,exact_gfs_pair_gate:true,owner_authority_preserved:true,owner_verification_failure_rollback_preserved:true,existing_production_evidence_runtime_reused:true,formal_credentials_consumed:false,production_executed:false,formal_v5_arm:false,a0_execution:false,o00_started:false},null,2));
+ console.log(JSON.stringify({status:"PASS",short_a0_selection:true,combined_acquisition_measurement_lead:true,image_attestation_precedes_a0_planning:true,host_clock_authority_preserved:true,exact_gfs_pair_gate:true,owner_authority_preserved:true,owner_verification_failure_rollback_preserved:true,existing_production_evidence_runtime_reused:true,formal_credentials_consumed:false,production_executed:false,formal_v5_arm:false,a0_execution:false,o00_started:false},null,2));
 }catch(error){console.error(error);process.exitCode=1;}
