@@ -12,5 +12,7 @@
   "production_start_authorized": false,
   "formal_v5_arm_authorized": false,
   "a0_authorized": false,
-  "mcft_cap09_completed": false
+  "mcft_cap09_completed": false,
+  "execution_qualification_rule": "DETACHED_ED25519_EXACT_MAIN_HOST_IMAGE_EVIDENCE_V2",
+  "execution_qualification_signing_public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAdYYE2KRxxslK7wD7ZoRcv3bA4QE/r79jzNdBJWbSAzQ=\n-----END PUBLIC KEY-----\n"
 }

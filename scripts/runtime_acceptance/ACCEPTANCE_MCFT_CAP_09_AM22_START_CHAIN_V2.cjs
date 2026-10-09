@@ -76,3 +76,18 @@ if(process.platform!=="win32"){
  }finally{fs.rmSync(shellDir,{recursive:true,force:true});}
 }
 console.log(JSON.stringify({status:"PASS",transport_cases:transportCases,scope:"AUTHENTICATED_MAIN_READ_ONLY",fresh_authority_generated:false,production_effect:false}));
+// Public trust-key adoption is independent of host qualification and authority activation.
+const keyBefore=JSON.parse(cp.execFileSync("git",["show",gov.KEY_BASE+":"+gov.POLICY],{cwd:path.resolve(__dirname,"../.."),encoding:"utf8"}));
+const keyAfter={...keyBefore,execution_qualification_rule:"DETACHED_ED25519_EXACT_MAIN_HOST_IMAGE_EVIDENCE_V2",execution_qualification_signing_public_key_pem:gov.KEY_PEM};
+const keyChanges=gov.KEY_PATHS.map(rel=>({rel,status:"M"}));
+let keyCases=0;const keyCheck=fn=>{fn();keyCases++;};
+keyCheck(()=>gov.validateKeyBoundary(keyChanges,keyBefore,keyAfter));
+keyCheck(()=>assert.throws(()=>gov.validateKeyBoundary([...keyChanges,{rel:"apps/server/src/unknown.ts",status:"M"}],keyBefore,keyAfter),/EXACT_PATH_SET_REQUIRED/));
+keyCheck(()=>assert.throws(()=>gov.validateKeyBoundary(keyChanges.slice(1),keyBefore,keyAfter),/EXACT_PATH_SET_REQUIRED/));
+keyCheck(()=>assert.throws(()=>gov.validateKeyBoundary(keyChanges.map(x=>({...x,status:"D"})),keyBefore,keyAfter),/EXISTING_PATH_ONLY/));
+for(const field of ["complete_pre_a0_measurement_qualified","new_handoff_arm_a0_chain_qualified","isolated_postgres_v2_a0_o00_qualified","production_start_authorized","formal_v5_arm_authorized","a0_authorized","mcft_cap09_completed"])keyCheck(()=>assert.throws(()=>gov.validateKeyBoundary(keyChanges,keyBefore,{...keyAfter,[field]:true}),/TRUST_FIELDS_ONLY/));
+for(const mutated of [{...keyAfter,status:"EFFECTIVE_ON_PROTECTED_MAIN"},{...keyAfter,extra_authorization:true},{...keyAfter,execution_qualification_rule:"CALLER_SUPPLIED_KEY"},{...keyAfter,execution_qualification_signing_public_key_pem:pair.publicKey.export({type:"spki",format:"pem"})}])keyCheck(()=>assert.throws(()=>gov.validateKeyBoundary(keyChanges,keyBefore,mutated),/TRUST_FIELDS_ONLY/));
+keyCheck(()=>assert.throws(()=>verifyExecutionQualification(keyAfter,cert,"2026-10-08T05:30:00.000Z"),/SIGNATURE_INVALID/));
+keyCheck(()=>assert.deepEqual(p,keyAfter));
+keyCheck(()=>assert.throws(()=>effectivePolicy(),/EFFECTIVE_PRODUCTION_QUALIFICATION_REQUIRED/));
+console.log(JSON.stringify({status:"PASS",key_adoption_cases:keyCases,public_key_sha256:gov.KEY_DIGEST,host_private_key_accessed:false,execution_certificate_issued:false,production_effect:false}));
