@@ -12,13 +12,15 @@
     "clock_authority": "LOCAL_OPERATOR_HOST_UTC_IMMEDIATELY_BEFORE_OWNER_CUTOVER_AUTHORITY_MATERIALIZATION",
     "selected_acquisition_budget_ms": 2081804,
     "required_six_phase_measurement_lead_ms": 600000,
-    "combined_minimum_lead_ms": 2681804,
-    "rule": "EARLIEST_WHOLE_UTC_HOUR_AT_OR_AFTER_ACTIVATION_FENCE_PLUS_ACQUISITION_BUDGET_PLUS_SIX_PHASE_MEASUREMENT_LEAD",
+    "combined_minimum_lead_ms": 2801804,
+    "rule": "EARLIEST_WHOLE_UTC_HOUR_AT_OR_AFTER_ACTIVATION_FENCE_PLUS_ACQUISITION_BUDGET_PLUS_SIX_PHASE_MEASUREMENT_LEAD_PLUS_AUTHORITY_MATERIALIZATION_MARGIN",
     "image_build_and_artifact_attestation_must_complete_before_activation_fence": true,
     "owner_cutover_must_follow_authority_materialization_without_REBUILD": true,
     "exact_a0_gfs_pair_required_before_a0_minus_measurement_lead": true,
     "must_not_exceed_current_crop_stage_authority_valid_until": true,
-    "must_cover_o23_within_current_crop_stage_authority_validity": true
+    "must_cover_o23_within_current_crop_stage_authority_validity": true,
+    "required_authority_materialization_to_owner_start_margin_ms": 120000,
+    "owner_cutover_must_start_within_authority_materialization_margin": true
   },
   "authority_ceiling": {
     "runtime_evidence_target_planning_authorized": true,
