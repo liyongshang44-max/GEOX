@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import fs from "node:fs";
 import {
   runMcftCap09ProductionEvidenceRuntimeV1,
@@ -49,5 +50,13 @@ export async function runMcftCap09Am22GfsBootstrapEvidenceOwnerV1():Promise<void
   }
   await runMcftCap09ProductionEvidenceRuntimeV1({
     runtime_start_authority:raw,
+  });
+}
+
+// The canonical server compiler emits this module; no shared dist launcher changes.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  void runMcftCap09Am22GfsBootstrapEvidenceOwnerV1().catch(error => {
+    console.error(`FATAL: MCFT-CAP-09 AM22 GFS bootstrap Evidence owner crashed: ${error instanceof Error ? error.stack ?? error.message : String(error)}`);
+    process.exitCode = 1;
   });
 }

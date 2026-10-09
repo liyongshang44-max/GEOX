@@ -3,6 +3,7 @@
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process");
 const h=require("./MCFT_CAP_09_AM22_GFS_BOOTSTRAP_V1.cjs");
 const ROOT=h.ROOT;
+const g=require("../governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs");
 const read=rel=>fs.readFileSync(path.join(ROOT,rel),"utf8");
 
 function fixtureStage(){
@@ -48,9 +49,10 @@ try{
  assert.doesNotMatch(wrapper,/requireEffectiveAm22StartPolicyV2/);
 
  const packaging=read("apps/server/scripts/write_dist_entries.cjs");
- assert.match(packaging,/mcft_cap09_am22_gfs_bootstrap_evidence_owner\.js/);
+ assert.equal(packaging,cp.execFileSync("git",["show",g.BOOTSTRAP_BASE+":apps/server/scripts/write_dist_entries.cjs"],{cwd:ROOT,encoding:"utf8"}));
  const overlay=read("docker-compose.mcft-cap09-am22-gfs-bootstrap-v1.yml");
- assert.match(overlay,/mcft_cap09_am22_gfs_bootstrap_evidence_owner\.js/);
+ assert.match(overlay,/dist\/apps\/server\/src\/runtime\/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1\.js/);
+ assert.match(wrapper,/import\.meta\.url === pathToFileURL\(process\.argv\[1\]\)\.href/);
  assert.doesNotMatch(overlay,/privileged|cap_add|network_mode/);
 
  const runner=read("scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs");
