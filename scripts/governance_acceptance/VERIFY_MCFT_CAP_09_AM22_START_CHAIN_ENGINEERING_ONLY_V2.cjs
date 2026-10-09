@@ -246,7 +246,8 @@ function verifyGfsBootstrapOnly(){
  assert.equal(combined.authority_basis?.pre_formal_a0_planning_authority_ref,BOOTSTRAP_A0_POLICY,"AM22_GFS_BOOTSTRAP_BASE_A0_POLICY_REF_REQUIRED");
  assert.equal(combined.selection_policy?.selected_acquisition_budget_ms,2081804,"AM22_GFS_BOOTSTRAP_ACQUISITION_BUDGET_REQUIRED");
  assert.equal(combined.selection_policy?.required_six_phase_measurement_lead_ms,600000,"AM22_GFS_BOOTSTRAP_MEASUREMENT_LEAD_REQUIRED");
- assert.equal(combined.selection_policy?.combined_minimum_lead_ms,2681804,"AM22_GFS_BOOTSTRAP_COMBINED_LEAD_REQUIRED");
+ assert.equal(combined.selection_policy?.required_authority_materialization_to_owner_start_margin_ms,120000,"AM22_GFS_BOOTSTRAP_MATERIALIZATION_MARGIN_REQUIRED");
+ assert.equal(combined.selection_policy?.combined_minimum_lead_ms,2801804,"AM22_GFS_BOOTSTRAP_COMBINED_LEAD_REQUIRED");
  assert.equal(combined.authority_ceiling?.production_owner_cutover_authorized_by_this_authority,false);
  assert.equal(combined.authority_ceiling?.formal_v5_arm_authorized,false);assert.equal(combined.authority_ceiling?.a0_execution_authorized,false);assert.equal(combined.authority_ceiling?.o00_execution_authorized,false);
 
