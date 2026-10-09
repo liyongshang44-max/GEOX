@@ -19,7 +19,7 @@ function boundLegacySource(rel){
  assert.equal(current,original.replace(prior,bridge),"RECOVERY_LEGACY_FROZEN_BODY_CHANGED:"+rel);
  assert.ok(current.includes('const FROZEN='),"RECOVERY_LEGACY_FROZEN_HASHES_REQUIRED:"+rel);
  assert.ok(current.includes("authorityContinuity?.changedPaths.includes(rel)"),"RECOVERY_LEGACY_SUCCESSOR_PATH_PROOF_REQUIRED:"+rel);
- assert.ok(current.includes("git(\"rev-parse\",\"HEAD:"+rel), "RECOVERY_LEGACY_FROZEN_BLOB_CHECK_REQUIRED:"+rel);
+ assert.ok(current.includes('git("rev-parse","HEAD:"+rel)'), "RECOVERY_LEGACY_FROZEN_BLOB_CHECK_REQUIRED:"+rel);
  // An unauthorized whitelist expansion or altered stage/readback/approval assertion changes the body.
  assert.notEqual(current,original,"RECOVERY_LEGACY_SUCCESSOR_BINDING_REQUIRED:"+rel);
 }
