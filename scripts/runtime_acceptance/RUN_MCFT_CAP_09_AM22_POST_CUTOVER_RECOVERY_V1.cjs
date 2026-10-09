@@ -3,7 +3,7 @@
 // AM22 recovery qualification only: no Docker mutation, no provider calls, no Formal effects.
 const assert=require("node:assert/strict");
 const fs=require("node:fs"),path=require("node:path"),os=require("node:os"),cp=require("node:child_process");
-const {Pool}=require("pg");
+// Resolve the DB driver only for real operator execution; pure governance tests require no DB client.
 const {ROOT,safeRepoRef,digestFile,selectA0}=require("./MCFT_CAP_09_AM22_GFS_BOOTSTRAP_V1.cjs");
 const {SCOPE}=require("./MCFT_CAP_09_AM22_EVIDENCE_CLOCK_V2.cjs");
 const REGISTRY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json";
@@ -95,6 +95,7 @@ async function main(){
   const proof=load(path.join(ROOT,PROOF));
   phase="TWIN_ZERO_STATE";
   const containers=JSON.parse(native("docker",["inspect",...SERVICES]));
+  const {Pool}=require("pg");
   const pool=new Pool({connectionString:env.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL,max:1,options:"-c default_transaction_read_only=on -c statement_timeout=15000",connectionTimeoutMillis:15000,query_timeout:20000});
   const tables=["twin_state_history_projection_v1","twin_state_latest_index_v1","twin_shadow_online_scheduler_cursor_v1","twin_shadow_online_scheduler_slot_v1"];
   const twinCounts={};
