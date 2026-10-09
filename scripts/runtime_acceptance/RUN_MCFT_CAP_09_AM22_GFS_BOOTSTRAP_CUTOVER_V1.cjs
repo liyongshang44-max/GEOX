@@ -8,7 +8,7 @@ const path=require("node:path");
 const cp=require("node:child_process");
 const {Pool}=require("pg");
 const {
- ROOT,HOUR,MEASUREMENT_LEAD_MS,digestFile,safeRepoRef,selectA0,validateGfsPairRows,
+ ROOT,HOUR,MEASUREMENT_LEAD_MS,AUTHORITY_MATERIALIZATION_MARGIN_MS,digestFile,safeRepoRef,selectA0,validateGfsPairRows,
 }=require("./MCFT_CAP_09_AM22_GFS_BOOTSTRAP_V1.cjs");
 const {SCOPE}=require("./MCFT_CAP_09_AM22_EVIDENCE_CLOCK_V2.cjs");
 
@@ -109,12 +109,13 @@ function requirePolicies(ownerPolicy,a0Policy,bootstrapA0Policy,budget){
  assert.equal(bootstrapA0Policy.authority_basis?.forcing_acquisition_budget_ref,BUDGET_REL);
  assert.equal(Number(bootstrapA0Policy.selection_policy?.selected_acquisition_budget_ms),selected);
  assert.equal(Number(bootstrapA0Policy.selection_policy?.required_six_phase_measurement_lead_ms),MEASUREMENT_LEAD_MS);
- const combined=selected+MEASUREMENT_LEAD_MS;
+ assert.equal(Number(bootstrapA0Policy.selection_policy?.required_authority_materialization_to_owner_start_margin_ms),AUTHORITY_MATERIALIZATION_MARGIN_MS);
+ const combined=selected+MEASUREMENT_LEAD_MS+AUTHORITY_MATERIALIZATION_MARGIN_MS;
  assert.equal(Number(bootstrapA0Policy.selection_policy?.combined_minimum_lead_ms),combined,"AM22_GFS_BOOTSTRAP_COMBINED_LEAD_MISMATCH");
  assert.equal(bootstrapA0Policy.selection_policy?.image_build_and_artifact_attestation_must_complete_before_activation_fence,true);
  assert.equal(bootstrapA0Policy.authority_ceiling?.production_owner_cutover_authorized_by_this_authority,false);
  for(const key of ["formal_v5_arm_authorized","a0_execution_authorized","o00_execution_authorized","mcft_cap09_completed"])assert.equal(bootstrapA0Policy.authority_ceiling?.[key],false,"AM22_GFS_BOOTSTRAP_COMBINED_A0_POLICY_CEILING_DRIFT:"+key);
- return {selected_acquisition_budget_ms:selected,combined_minimum_lead_ms:combined};
+ return {selected_acquisition_budget_ms:selected,combined_minimum_lead_ms:combined,authority_materialization_margin_ms:AUTHORITY_MATERIALIZATION_MARGIN_MS};
 }
 function composeEnv({head,stageRef,runtimeAuthorityPath,ownerAuthorityPath,unusedHandoffPath,artifactAttestationPath}){
  const env={...process.env,
