@@ -1009,6 +1009,12 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
     };
     return { entry, checks, valid: Object.values(checks).every(Boolean) };
   });
+  const frozenSection = registry.frozen_v13_requalification_v1;
+  if (frozenSection && fs.existsSync(path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs"))) {
+    const fresh = require("./VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs").resolveFreshEvidence(decision, frozenSection, stage, head);
+    if (fresh.status === "PASS") return fresh;
+    if (fresh.reason_code !== "NO_VALID_REQUALIFICATION_EVIDENCE") return fresh;
+  }
   const valid = adjudications.filter((row) => row.valid);
   if (valid.length !== 1) {
     return {

@@ -1,0 +1,135 @@
+name: MCFT CAP-09 Frozen V13 isolated requalification
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/*FROZEN-V13*'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-*.json'
+      - 'scripts/governance_acceptance/*FROZEN_V13*'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
+permissions:
+  contents: read
+jobs:
+  qualification-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_V1.cjs
+      - run: node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs
+  isolated:
+    name: ${{ matrix.check }}
+    needs: qualification-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - V13_AUTONOMOUS_FORCING_FOUNDATION
+          - V13_HOLISTIC_SCHEMA
+          - V13_NEXT_TICK_VIABILITY
+          - EA5C1_DURABLE_RAW_RESTRICTED_INGRESS
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_isolated_qualification
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_isolated_qualification"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_isolated_qualification
+      EA5C1_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_isolated_qualification
+      EA5C1_S3_ENDPOINT: http://127.0.0.1:9000
+      EA5C1_S3_BUCKET: geox-mcft-cap09-formal-raw-v1
+      EA5C1_S3_ACCESS_KEY: minioadmin
+      EA5C1_S3_SECRET_KEY: minioadmin123
+      CHECK_ID: ${{ matrix.check }}
+      MCFT_CAP09_V13_FOUNDATION_DESTRUCTIVE_ACCEPTANCE: '1'
+      MCFT_CAP09_V13_HOLISTIC_SCHEMA_DESTRUCTIVE_ACCEPTANCE: '1'
+      MCFT_CAP09_V13_VIABILITY_DESTRUCTIVE_ACCEPTANCE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Reject production credentials and non-local test stores
+        shell: node {0}
+        run: |
+          const assert=require('node:assert/strict');
+          for(const [name,value] of Object.entries(process.env))
+            if(/^GEOX_MCFTCAP09_|^GEOX_MCFT_CAP09_/.test(name)) assert(!value,'PRODUCTION_ENVIRONMENT_FORBIDDEN:'+name);
+          for(const name of ['DATABASE_URL','EA5C1_DATABASE_URL']) {
+            const u=new URL(process.env[name]);
+            assert.equal(u.hostname,'127.0.0.1');
+            assert.equal(u.pathname,'/mcft_cap09_isolated_qualification');
+            assert.equal(u.username,'postgres');
+          }
+          assert.equal(process.env.EA5C1_S3_ENDPOINT,'http://127.0.0.1:9000');
+      - run: pnpm install --frozen-lockfile
+      - name: Start private isolated object store
+        if: matrix.check == 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name frozen-v13-minio -p 127.0.0.1:9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin123 \
+            ghcr.io/datalens-tech/minio:25.09@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/ready >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/ready >/dev/null
+          docker run --rm --network host --entrypoint /bin/sh \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 \
+            -c 'mc alias set isolated http://127.0.0.1:9000 minioadmin minioadmin123 && mc mb isolated/geox-mcft-cap09-formal-raw-v1 && mc anonymous set private isolated/geox-mcft-cap09-formal-raw-v1'
+      - name: Run unchanged real PostgreSQL and private-store acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          case "$CHECK_ID" in
+            V13_AUTONOMOUS_FORCING_FOUNDATION)
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.ts ;;
+            V13_HOLISTIC_SCHEMA)
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES.ts ;;
+            V13_NEXT_TICK_VIABILITY)
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY.ts ;;
+            EA5C1_DURABLE_RAW_RESTRICTED_INGRESS)
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts | tee acceptance-output/FROZEN_EA5C1_SUCCESSOR.log
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts | tee acceptance-output/FROZEN_EA5C1_RETENTION.log
+              test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:9000/geox-mcft-cap09-formal-raw-v1/)" = 403 ;;
+            *) exit 1 ;;
+          esac
+      - name: Record exact-head qualification proof
+        run: node scripts/governance_acceptance/RECORD_MCFT_CAP_09_FROZEN_V13_ISOLATED_EVIDENCE_V1.cjs "$CHECK_ID"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frozen-v13-${{ matrix.check }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+      - name: Remove isolated object store
+        if: always() && matrix.check == 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'
+        run: docker rm -f frozen-v13-minio || true

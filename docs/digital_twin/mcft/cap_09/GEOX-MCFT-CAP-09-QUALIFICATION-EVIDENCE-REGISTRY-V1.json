@@ -4345,5 +4345,9 @@
       "a0_bootstrap": false,
       "o00_started": false
     }
+  },
+  "frozen_v13_requalification_v1": {
+    "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json",
+    "entries": []
   }
 }
