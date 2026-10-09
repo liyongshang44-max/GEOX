@@ -53,7 +53,7 @@ function verifySuccessor(){
  const stripped=structuredClone(after);stripped.checks=before.checks;delete stripped.dependency_resolvers.FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1;assert.deepEqual(stripped,before,"QCP_RESOLVERS_CHANGED");
  const registry=read(E),priorRegistry=JSON.parse(git("show",BASE+":"+E));delete registry.frozen_v13_requalification_v1;assert.deepEqual(registry,priorRegistry,"HISTORICAL_REGISTRY_CHANGED");
  const predecessor=replay(BASE,D);assert.equal(predecessor.status,"PASS");const migration=verifyMigration();
- return {status:"PASS",baseline:BASE,changedPaths:[...new Set([...predecessor.changedPaths,...EXPECTED.exact_successor_paths])],migration,qualification_scope:"FROZEN_RUNTIME_ISOLATED_REQUALIFICATION_ONLY",production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false};
+ return {status:"PASS",baseline:BASE,changedPaths:[...new Set([...predecessor.changedPaths,...EXPECTED.exact_successor_paths])],migration,qualification_scope:predecessor.qualification_scope,frozen_requalification_scope:"FROZEN_RUNTIME_ISOLATED_REQUALIFICATION_ONLY",production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false};
 }
 function resolveFreshEvidence(decision,section,stage,head){
  if(!EXPECTED.isolated_checks.includes(decision.check_id))return {status:"FAIL",reason_code:"NO_VALID_REQUALIFICATION_EVIDENCE"};
