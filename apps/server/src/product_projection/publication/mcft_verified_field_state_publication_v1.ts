@@ -117,7 +117,10 @@ export function verifyMcftFieldStatePublicationV1(
   const trustedScope=obj(p.allowed_scope,"TRUST_SCOPE_INVALID");
   keys(trustedScope,["tenant_id","project_id","group_id","field_id","season_id","zone_id"],"TRUST_SCOPE_SHAPE_INVALID");
   if(!exactScope(trustedScope as PublishedResearchScopeV1)) fail("TRUST_SCOPE_NOT_RESEARCH");
-  const publicKey=str(p.public_key_pem,"PUBLIC_KEY_REQUIRED");
+  const publicKey=typeof p.public_key_pem==="string" ? p.public_key_pem : "";
+  if(publicKey.length<80 || publicKey.length>4096 ||
+     !publicKey.trim().startsWith("-----BEGIN PUBLIC KEY-----") ||
+     !publicKey.trim().endsWith("-----END PUBLIC KEY-----")) fail("PUBLIC_KEY_REQUIRED");
   let key;
   try { key=createPublicKey(publicKey); } catch { return fail("PUBLIC_KEY_INVALID"); }
   if(key.asymmetricKeyType!=="ed25519") fail("SIGNING_ALGORITHM_NOT_ED25519");
