@@ -1204,6 +1204,7 @@
       "kind": "EXACT_PATH_SET",
       "paths": [
         ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json",
