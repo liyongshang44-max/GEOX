@@ -10,10 +10,11 @@ The older V1 Evidence handoff does not solve this. It selects its Evidence epoch
 
 ## Bounded solution
 
-This seam does **not** add a new evidence provider, target policy, retry semantic, database writer, Twin kernel, scheduler semantic, schema, or authority domain. It reuses the already-authorized:
+This seam does **not** add a new evidence provider, retry semantic, database writer, Twin kernel, scheduler semantic, schema, or effect-authority domain. It reuses the already-authorized:
 
 - production local owner-cutover authority;
 - pre-Formal A0 Evidence target-planning authority;
+- a derived AM22 timing-only planning authority that composes the frozen acquisition budget, the adopted six-phase 10-minute measurement lead, and the adopted 120-second safety margin without granting any production-owner, Formal, A0 or O00 effect authority;
 - runtime-start authority builder;
 - production Evidence process and its existing GFS planner/provider/lease/fencing path;
 - Twin pre-Formal owner standby;
@@ -23,18 +24,19 @@ The only new runtime wrapper validates the existing owner-cutover authority and 
 
 ## Operator sequence
 
-The local runner is effectful only when explicitly invoked with `--operator-authorized`. It requires clean exact protected main and the exact current host binding. It reads the operational database clock, uses the frozen forcing-acquisition budget to select the next whole-hour A0, and requires the latest effective registry authority to cover A0 through O23.
+The local runner is effectful only when explicitly invoked with `--operator-authorized`. It requires clean exact protected main and the exact current host binding. It first builds and attests the exact-main image. Only after that does it take the local host UTC activation fence, cross-check it against the operational database clock, and select the earliest whole-hour A0 at or after the combined lead: 2,081,804 ms frozen forcing-acquisition budget + 600,000 ms six-phase measurement lead + 120,000 ms adopted safety/materialization margin = 2,801,804 ms. The latest effective registry authority must cover A0 through O23.
 
-It first uses local operator-host UTC, as required by the existing pre-Formal A0 planning authority, and fail-closes if the operational database clock differs by more than 60 seconds. It then:
+It uses local operator-host UTC, as required by the existing pre-Formal A0 planning authority, and fail-closes if the operational database clock differs by more than 60 seconds. It then:
 
-1. writes local runtime-start and owner-cutover authority instances whose later authority ceiling remains false;
-2. builds and attests the exact-main Runtime image and records the build duration;
-3. recreates the existing Evidence and Twin pre-Formal owner services with the same project/service identities;
-4. measures the live dual-owner cutover;
-5. waits only until A0 minus the six-phase minimum lead for the exact A0 weather + ET0 pair;
-6. requires same selected GFS cycle and same retained raw bundle;
-7. proves the Twin remains pre-Formal with zero state/scheduler rows;
-8. emits `six-phase-input.json` for the existing six-phase measurement.
+1. builds and attests the exact-main Runtime image and records the build duration before choosing A0;
+2. selects A0 using the combined 2,801,804 ms lead and writes local runtime-start and owner-cutover authority instances whose later authority ceiling remains false;
+3. requires authority materialization to finish within the adopted 120,000 ms margin and directly proves that at owner start the full 2,081,804 ms acquisition budget still remains before `A0 - 10min`;
+4. recreates the existing Evidence and Twin pre-Formal owner services with the same project/service identities;
+5. measures the live dual-owner cutover;
+6. waits only until A0 minus the six-phase minimum lead for the exact A0 weather + ET0 pair;
+7. requires same selected GFS cycle and same retained raw bundle;
+8. proves the Twin remains pre-Formal with zero state/scheduler rows;
+9. emits `six-phase-input.json` for the existing six-phase measurement.
 
 If exact-one owner verification fails, the runner follows the existing owner-cutover authority and performs the required dual-service Compose rollback attempt before failing. After owner verification has passed, a later GFS-seed failure does not silently perform a second owner mutation; it writes a fail receipt and leaves reconciliation explicit. The receipt records whether rollback was required, attempted and successful.
 
