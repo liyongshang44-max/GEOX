@@ -8,6 +8,8 @@ on:
       - 'scripts/runtime_acceptance/*AM22*V2*'
       - 'scripts/runtime_acceptance/*CUTOVER_V2.cjs'
       - 'scripts/runtime_acceptance/*ARM_V2.cjs'
+      - 'scripts/runtime_acceptance/*HOST_MEASUREMENT_V2*'
+      - 'scripts/runtime_acceptance/*PREWRITE_PROBE_V2*'
 permissions:
   contents: read
 jobs:
@@ -39,6 +41,10 @@ jobs:
       - run: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build
       - name: New chain boundary tests and inactive effect rejection
         run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_START_CHAIN_V2.cjs
+      - name: Host measurement negatives and prewrite entry typecheck
+        run: |
+          node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.cjs
+          pnpm exec tsc --noEmit --module ESNext --moduleResolution Bundler --target ES2022 --esModuleInterop --skipLibCheck scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.ts scripts/runtime_acceptance/MCFT_CAP_09_AM22_PREWRITE_PROBE_V2.ts
       - name: Preserve revoked identity guard
         run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_ARM_RETIREMENT_V1.cjs
       - name: Qualify exact inactive engineering successor boundary

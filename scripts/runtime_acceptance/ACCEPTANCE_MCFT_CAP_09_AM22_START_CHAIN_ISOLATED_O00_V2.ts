@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Pool } from "pg";
+import {probePrewrite} from "./MCFT_CAP_09_AM22_PREWRITE_PROBE_V2.js";
 
 import {
   ASSIMILATED_CONTINUATION_OBSERVATION_QUANTITY_KIND_V1,
@@ -243,6 +244,10 @@ async function main(){
     // selects its causal current interval from those same persisted records.
     const a0Evidence=[soilRecord(A0,1),...currentPair(A0,1)];
     for(const row of a0Evidence)await insertFact(pool,row);
+    const prewrite=await probePrewrite(pool,built.bundle.persistence_bundle,new MemoryEvidenceSource(a0Evidence),A0);
+    assert.equal(prewrite.bootstrap_commit_called,false);
+    assert.equal(prewrite.isolated_lease_released,true);
+    assert.equal(prewrite.a0_execution,false);
     const bootstrap=new ExternalFormalBootstrapPersistenceServiceV1({
       runtime_config_repository:runtimeRepo,
       bootstrap_persistence:runtimeRepo,
