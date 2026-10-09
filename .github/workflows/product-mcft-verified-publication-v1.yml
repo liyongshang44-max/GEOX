@@ -5,7 +5,8 @@ on:
     paths:
       - '.github/workflows/product-mcft-verified-publication-v1.yml'
       - 'apps/server/src/product_projection/publication/**'
-      - 'apps/server/db/migrations/2026_10_09_product_mcft_verified_publication_v1.sql'
+      - 'scripts/product_publication/**'
+      - 'scripts/product_publication/sql/2026_10_09_product_mcft_verified_publication_v1.sql'
       - 'scripts/product_acceptance/ACCEPTANCE_PRODUCT_MCFT_VERIFIED_PUBLICATION_ISOLATED_DB_V1.ts'
       - 'docs/product_projection/GEOX-MCFT-PRODUCT-VERIFIED-READ-PUBLICATION-V1.md'
   workflow_dispatch:
