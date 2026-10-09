@@ -1,3 +1,103 @@
+# 2026-10-09 ACTIVE CHECKPOINT — AM22 SIX-PHASE ADOPTED / MCFT START + VERIFIED PRODUCT PUBLICATION
+
+Timestamp: **2026-10-09 11:36 Beijing / 03:36Z** (repository checkpoint, not a claim of host state at future execution).
+
+**Status:** #3677 SIX-PHASE ENGINEERING MERGED; REAL WINDOWS HOST SIX-PHASE MEASUREMENT NOT YET CAPTURED; COMPLETE PRODUCTION PRE-A0 ENVELOPE NOT QUALIFIED; AM22 PREQUALIFICATION_ONLY_NOT_EFFECTIVE; NEW FORMAL ARM/A0 NOT AUTHORIZED; PRODUCT #3676 SIGNED PUBLICATION ISOLATED CI PASS BUT DRAFT; ACTUAL PRODUCT/SITE REAL DATA NOT ESTABLISHED; CAP-09 24T NOT COMPLETE.
+
+This is a PREPEND to the existing active continuation. The old 2026-10-07/10-04/10-03 and previous checkpoints remain verbatim below. Old pinned heads, ARMs and epochs are historical, not authorization to execute today.
+
+## 0. EXACTLY TWO CURRENT HANDOFFS — DO NOT MAKE A THIRD
+
+Every takeover must first read the MCFT/Digital Twin master task, CAP-09 task and qualification contract, then these **two** handoffs in order:
+
+1. Historical canonical handoff (read-only history):
+   docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+2. Current active continuation (THIS file, read newest checkpoint first):
+   docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-10-03.md
+
+Handoff PR **#3298** remains **Draft/Open/Unmerged**, on branch docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier. Never create a third file, merge the handoff PR, or overwrite old checkpoints.
+
+## 1. DUAL-TRACK MISSION — DO NOT FORCE PRODUCT TO WAIT FOR O23
+
+**Joint objective:** legally start MCFT at the earliest viable actual UTC time; continuously collect real evidence and persist verifiable Posterior State; complete O00–O23 actual 24T independently; show the FIRST real, correctly scoped, independently verified field-state in Product API and GEOX Site when the publication controls pass. Do not wait for G12/G13 merely to publish a qualified non-authoritative read, but never claim final CAP-09 closure early.
+
+**LANE A / MCFT start and 24T:** fresh 25-context R6/DT02/A18 effective stage authority and exact single registry append → protected-main adoption → real Windows six-phase durations → independent production owner cutover and Formal raw PUT/redecode/retention/promotion measurement → fully qualified pre-A0 envelope → effective AM22 start authority → exact-main H5/owner/new arm/schema/ACL → future actual-UTC A0 and durable O00 → complete O23 and final G12/G13. Keep Evidence/Twin exact-one owner, fencing, unchanged frozen Runtime semantics and no synthetic data.
+
+**LANE B / Product publication to Site:** exact six-key plus canonical source/lineage/posterior/evidence and causal-visibility verified readback → independently governed, purpose-separated signed publication → append-only customer-safe ledger in a new schema of existing Product operational DB (NO third physical DB, NO Formal 29-table mutation) → scope-authenticated Product API adapter → real C01/C02/C03 Site smoke showing root-zone water/time/provenance and qualification-pending status. Next: Evidence, 72h Forecast, History, Crop Stage, Data Health. Replay Scenarios and ADR/B-Line decision/approval/receipt/Outcome need their own authority.
+
+**Join point:** the first legally persisted and independently read-back MCFT Posterior State. Work on the Product publication adapter and authorization proceeds in parallel NOW.
+
+## 2. PROTECTED MAIN / AUTHORITY RE-READ (2026-10-09)
+
+- Protected main **84afa1f2fd14618860780275809a6a473761beca**, independently checked after #3677 merge.
+- PR **#3677 MERGED at 2026-10-09 11:14 Beijing**: CAP-09 AM22 six-phase host collection + isolated A0 prewrite acceptance; 10 changed files including workflow, QCP, runtime acceptance, runbook. Main runbook:
+  docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-SIX-PHASE-HOST-MEASUREMENT-V2.md
+  Entrypoints: scripts/runtime_acceptance/MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.cjs and RUN_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.ts.
+- Previous **#3672 MERGED** introduced inactive AM22 start-chain V2 engineering ports, not permission to start. The #3677 collector executes, on real authorized Windows/Docker host: exact head/image/owner T1/T2 checks; adopted 25-context stage and physically visible GFS/KBS raw; preparation manifest; formal 29-table/2-routine schema/ACL readback + isolated schema; isolated fencing/lease; real-input isolated A0 prewrite (NOT commit). It deliberately does **NOT** stop production owners, perform Formal raw PUT, commit Formal A0, qualify full production-equivalence, issue a certificate or authorize ARM.
+- On current main, docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json says: status **PREQUALIFICATION_ONLY_NOT_EFFECTIVE**; complete_pre_a0_measurement_qualified=false; new_handoff_arm_a0_chain_qualified=false; isolated_postgres_v2_a0_o00_qualified=false; production_start_authorized=false; formal_v5_arm_authorized=false; a0_authorized=false; mcft_cap09_completed=false. It includes historical retired-arm identity/receipt, which is NOT a successor live ARM.
+- On the same main, the effective current-crop registry has **15 entries**, latest as-of **2026-10-08T04:00:00.000Z**, valid-until **2026-10-09T10:00:00.000Z**. The **2026-10-09 04Z / Beijing 12:00** rolling candidate cannot be called effective before actual workflow run SUCCESS, independent R6/lifecycle and all 25 contexts, effective materialization, registry exact one append, protected-main graduation/readback.
+- If new 04Z authority is adopted with 30h validity to 2026-10-10 10Z, latest theoretical full-24h-covered A0 is **2026-10-09 10Z / Beijing 18:00**. That is a CONDITIONAL coverage bound, NOT an approved appointment. If host measurements or governance miss it, change to next lawful future epoch; never backdate.
+- The 2026-10-07 handoff old 10/09 A0 and historical ARM/image belong to an older exact main. No old ARM reuse, no 36h timer shortcut, no manual A0 to make Site display values.
+
+## 3. WHAT PRODUCT GROUP DELIVERED (ENGINEERING VS PRODUCTION)
+
+- **PR #3671 Draft/Open/Unmerged:** 84-capability data authority catalog, 10 site/operator views and 10 gated workstreams:
+  docs/product_projection/GEOX-MCFT-DATA-CAPABILITY-TO-PRODUCT-SITE-MAPPING-V1-2026-10-08.md
+  It is the backlog/map, not proof the modules are connected.
+- **PR #3674 Draft/Open/Unmerged:** earlier opt-in, default-OFF direct dual-Neon-DB read experiment with exact KBS scope and Product read-only ACL checks. It found insufficient CAP-07 physical graph visibility/ACL; do not merge it blindly alongside #3676. Decide explicit supersession/retirement.
+- **PR #3676 Draft/Open/Unmerged, head c32a051edfe5681d20bf37e6a9b1d29b9139648e:** independently signed MCFT→Product publication contract, strict six-key/source/runtime/lineage/posterior/time/ref/hash, pinned exact-graph receipt + verifier-contract digest, purpose-separated Ed25519 key, append-only/idempotent Product database ledger and re-verification at read, conflicting revisions fail-closed. Separate publication schema only in existing operational database geox_mcft_cap09_production_runtime_v1, NOT new third DB and NOT Formal-v5 modification.
+- Exact #3676 checks recorded **14 SUCCESS / 0 FAILURE** (remaining checks may be skipped/neutral). Isolated PostgreSQL16 real DB tests cover signatures, replay/idempotency, insert/read and denied update/delete, and synthetic negative cases. This proves mechanism, not that an actual MCFT graph/state was published.
+- Cross-lane acceptance comments, already posted:
+  #3677 — https://github.com/liyongshang44-max/GEOX/pull/3677#issuecomment-6073713196
+  #3676 — https://github.com/liyongshang44-max/GEOX/pull/3676#issuecomment-6073712535
+- Last independent Neon readback (2026-10-09 **02:57Z**, historical snapshot, NOT a future/live guarantee): formal + operational DB active lineage/state history/latest state all **0**; new publication schema absent; Formal 29-table store unchanged. Earlier CAP-07 fact-visibility index/epoch physically missing, Product read credentials did not cover a complete canonical graph. A separately qualified canonical-source verifier is a hard blocker; signer signature alone cannot invent source truth.
+- Current Product API has three customer GETs: /api/product/v1/overview, /api/product/v1/fields, /api/product/v1/fields/:fieldRef. Signed publication **is not yet connected** to a Product read adapter, authenticated customer token, C01/C02/C03 real Site smoke; no live attestor/key, no deployed publication schema or genuine receipt. Railway Product API observed SLEEPING earlier; deployment, /ready and Site data must be proven independently.
+
+## 4. PRESENT BLOCKER LEDGER / REQUIRED EVIDENCE
+
+| ID | Owner | Current | Closure evidence |
+| --- | --- | --- | --- |
+| MCFT-1 | Fresh authority | BLOCKED | New 04Z source-supported DT02/A18/R6/25 context, independent persistent lifecycle, effective materialization, registry exact-one append and main adoption |
+| MCFT-2 | Windows host | BLOCKED | #3677 real six-phase run on current image/owner, actual timings and immutable output readback |
+| MCFT-3 | Owner + Formal raw | BLOCKED | Independently measured real production cutover + Formal raw PUT/redecode/retention/promotion. Six-phase trace alone is INCOMPLETE envelope |
+| MCFT-4 | Governance | BLOCKED | Effective AM22 V2 + exact-main H5/fencing/new arm/schema/ACL and actual future A0 GO; current PREQUALIFICATION_ONLY not effective |
+| MCFT-5 | Runtime/24T | NOT STARTED | Real durable A0→O00 then O00–O23 physical ticks and separate G12/G13/CAP-09 closure |
+| PUB-1 | MCFT read authority | BLOCKED | Authentic scope/lineage/posterior/source fact refs/hashes, cutoff, visible_at and independently pinned exact graph verifier + per-state receipt |
+| PUB-2 | Security/DB | BLOCKED | Trusted separate publisher signing key/custody, authorization of additive OPERATIONAL DB schema and publisher/reader least-privilege ACL; Formal DB unchanged |
+| PUB-3 | Product API | BLOCKED | Implement versioned signed-publication read adapter respecting customer token and exact six-key; time/qualification state honest |
+| PUB-4 | Site | BLOCKED | C01/C02/C03 verified live water+time+source after first real O00 state; other fields inaccessible, no synthetic claim |
+
+Neither MCFT 24T nor Product data are currently DONE. Maintain separate judgments for code/CI, real host timings, start authority, persisted A0/O00, authenticated Site and G12/G13 final.
+
+## 5. ORDER FOR NEXT ENGINEER (RUN BOTH LANES CONCURRENTLY)
+
+**MCFT first actions:** at/after 04Z obtain actual rolling candidate workflow run ID, actual exact-main/CI, required stage authority/25 contexts and visibility; adopt effective authority with an exact-one registry entry; recheck current protected main. Run #3677 Windows command-complete six-phase host measurement with real existing owners, qualifying image and retained source, in a newly isolated local DB without Formal effect. Separately time actual owner cutover and Formal raw PUT/redecode/retention/promotion. Only after complete envelope and effective AM22 start authorization do fresh exact-main owner/H5/arm/schema ACL and real A0→O00, then 24T/closure. If the window expires, move to a later actual-UTC window.
+
+**Product first actions:** keep #3676 Draft and its operational SQL out of production; qualify a real source exact-graph attestor, temporal visibility and immutable per-state receipt/verifier binding WITHOUT changing Formal 29 tables or using xmin. Authorize key custody, roles and separately governed additive operational DB schema. Implement PublishedFieldStateReadAdapterV1 under existing customer auth with accurate scope/availability; preserve C01/C02/C03 design. After actual posterior is independently read back, publish signed non-authoritative state and perform Product+Site auth/CORS/refresh smoke. Then add Evidence→Forecast→History→Crop Stage→Data Health; govern Scenario and ADR/B-Line separately. #3674 direct bridge should be explicitly retired or superseded, not silently deployed with #3676.
+
+**Exact exchange contract:** tenant, project, group, field, season, zone; protected main/runtime SHA; active lineage ref/hash; posterior ref/hash; source fact ref; per-state complete graph receipt; pinned verifier contract digest; logical UTC/visible_at/readback_as_of/certified_at; signed publisher identity. No future source leakage.
+
+## 6. HISTORICAL TRAPS AND ABSOLUTE NO-GO RULES
+
+1. Candidate != effective authority. Dispatch is not adoption; gh run list may contain multiple runs. Check real run ID, source evidence, registry digest, protected main.
+2. Six-phase measurement != production-envelope certificate. Missing production cutover and Formal raw PUT/redecode/retention/promotion are independently measured. Local prewrite != real A0.
+3. 30h expiry means A0+24h must fit; 18:00 Beijing bound is conditional. 05:17Z cron can miss an earlier A0; use actual UTC and DB clock after image build.
+4. Previous ARM/H5/image pinned to an older protected main. AM22 remains PREQUALIFICATION_ONLY_NOT_EFFECTIVE. Never recycle old ARM or clock or manually bootstrap.
+5. Formal-v5 store is frozen 29 tables/2 routines. No ad hoc mutation, DB schema rewrite, fake A0 or direct Site/MCFT writer credentials. Source visibility tables absent ≠ license to bypass CAP-07 graph.
+6. #3676 publisher under apps/server/src/product_projection/** tripped Wave-01 read-only contract; SQL under apps/server/db/migrations/** triggered unintended qualification DB migration. Host-only publisher lives in scripts/product_publication/ and optional SQL in scripts/product_publication/sql/.
+7. CI fixture Ed25519/isolated Postgres ≠ real signed MCFT truth or live Site. Purpose-specific trusted signer plus independently qualified graph and legitimate customer role are all needed. Do not claim G12/G13 PASS from a signed receipt.
+8. Old environmental failures: Git fetch OOM, qualification remote ref confusion, Docker Desktop/WSL engine half-alive, selecting stale production containers, PowerShell scalar .Count, untracked acceptance-output, psql at D:\pdsl\bin\psql.exe, Neon pooler PGOPTIONS, lost process env, missing tsx. Preserve T1/T2, image digest and secrets. Keep raw credentials out of GitHub logs.
+9. Scripts in runtime_acceptance/** may trigger unintended EA5E2. Do not mix Product+Runtime PRs; main drift requires fresh subject binding. Never weaken R6/G12/G13, QCP or continuity guards just to merge.
+10. KBS is DAILY ~24 hourly batch observations with publication/revision visibility; modelled root-zone water is not the 100mm point sensor. GFS same-cycle forcing and causal latest-visible revision matter. Confidence/stress/approval/dispatch cannot be fabricated by Site.
+11. No third handoff, no overwriting history, no merge/deploy of #3676/#3674/#3671/#3668/#3660 during unresolved start authority.
+
+## 7. SUCCESSOR TAKEOVER INSTRUCTION
+
+**Start by reading the two exact paths in section 0, then revalidate #3298, current main, #3677, #3676, #3674, #3671, AM22 authority JSON and registry, actual Windows six-phase host trace, owner/cutover/raw timings, current Neon publication/lineage tables and authenticated Product/Site.** Report each stage as repository CI vs host timing vs real Formal authority vs durable A0/O00 vs customer Site vs final 24T. Never mark any unmeasured/unpublished stage PASS. The active next step is to converge Lane A authority/timing while Lane B implements verified source→publication→Product adapter concurrently.
+
+
+---
+
 # 2026-10-07 ACTIVE CHECKPOINT — FORMAL-v5 ARMED / POST-ARM REVALIDATED / FINAL REAL-CLOCK WINDOW PREP
 
 Status: **T0 CLOSED / EXACT-MAIN OWNER CUTOVER PASS / FORMAL-v5 ARMED / POST-ARM SCHEMA+ACL PASS / ROLLING CANDIDATE REHEARSAL PASS / A0 NOT EXECUTED / FINAL WINDOW PENDING**
