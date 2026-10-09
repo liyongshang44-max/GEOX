@@ -1,7 +1,7 @@
 "use strict";
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
 const measurement=require("./MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.cjs");
-const ROOT=path.resolve(__dirname,"../.."),HOUR=3600000,MEASUREMENT_LEAD_MS=measurement.TIMEOUT_MS;
+const ROOT=path.resolve(__dirname,"../.."),HOUR=3600000,MEASUREMENT_LEAD_MS=measurement.TIMEOUT_MS,AUTHORITY_MATERIALIZATION_MARGIN_MS=measurement.SAFETY_MARGIN_MS;
 const digestFile=file=>"sha256:"+crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 const ceilHour=ms=>Math.ceil(ms/HOUR)*HOUR;
 function safeRepoRef(ref){
@@ -36,4 +36,4 @@ function validateGfsPairRows(rows,a0){
  assert.equal(weather.selected_cycle,et0.selected_cycle,"AM22_GFS_BOOTSTRAP_SAME_CYCLE_REQUIRED");
  return {weather,et0,raw_source_sha256:weather.raw_source_sha256,selected_cycle:weather.selected_cycle};
 }
-module.exports={ROOT,HOUR,MEASUREMENT_LEAD_MS,digestFile,ceilHour,safeRepoRef,selectA0,validateGfsPairRows};
+module.exports={ROOT,HOUR,MEASUREMENT_LEAD_MS,AUTHORITY_MATERIALIZATION_MARGIN_MS,digestFile,ceilHour,safeRepoRef,selectA0,validateGfsPairRows};
