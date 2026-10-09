@@ -40,7 +40,7 @@ function verifyRecoverySuccessor(){
  const recovery=JSON.parse(subprocess(TEST1)),poll=JSON.parse(subprocess(TEST2)),bridge=JSON.parse(subprocess(LEGACY_BRIDGE_TEST));
  assert.equal(recovery.status,"PASS");assert.equal(poll.status,"PASS");
  assert.equal(recovery.no_production_effects,true);assert.equal(poll.production_writes,0);assert.equal(bridge.status,"PASS");assert.equal(bridge.legacy_gate_count,3);assert.equal(bridge.frozen_consumer_assertions_preserved,true);
- const adoptedHistoricalPaths=git("diff","--name-only",ADOPTED_R6,BASE).split(/\\r?\\n/).filter(Boolean);
+ const adoptedHistoricalPaths=git("diff","--name-only",ADOPTED_R6,BASE).split(/\r?\n/).filter(Boolean);
  return {status:"PASS",baseline:BASE,adopted_historical_base:ADOPTED_R6,adopted_historical_head:BASE,adopted_historical_path_count:adoptedHistoricalPaths.length,changedPaths:[...new Set([...adoptedHistoricalPaths,...paths])],qualification_scope:"AM22_DISABLED_START_CHAIN_ENGINEERING_ONLY",current_delta_scope:"POST_CUTOVER_RECOVERY_AND_GFS_POLL_WITH_FROZEN_LEGACY_GATE_BRIDGE_ONLY",recovery_tests:recovery,poll_tests:poll,legacy_bridge_tests:bridge,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false,mcft_cap09_completed:false};
 }
 module.exports={BASE,QCP,paths,check,resolverId,verifyRecoverySuccessor};
