@@ -14,6 +14,7 @@ const {SCOPE}=require("./MCFT_CAP_09_AM22_EVIDENCE_CLOCK_V2.cjs");
 
 const OWNER_POLICY_REL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json";
 const A0_POLICY_REL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json";
+const BOOTSTRAP_A0_POLICY_REL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json";
 const REGISTRY_REL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json";
 const STAGE_CERT_REL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json";
 const BUDGET_REL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json";
@@ -88,20 +89,32 @@ async function assertTwinStillPreFormal(pool){
  }
  return counts;
 }
-function requirePolicies(ownerPolicy,a0Policy,budget){
+function requirePolicies(ownerPolicy,a0Policy,bootstrapA0Policy,budget){
  assert.equal(ownerPolicy.status,"AUTHORIZED_FOR_LOCAL_OPERATOR_MANAGED_DOCKER_CUTOVER","AM22_GFS_BOOTSTRAP_OWNER_POLICY_NOT_AUTHORIZED");
  assert.equal(ownerPolicy.cutover_contract?.dual_key_required,true);
  assert.equal(ownerPolicy.cutover_contract?.evidence_owner_activation_authorized,true);
  assert.equal(ownerPolicy.cutover_contract?.twin_owner_activation_authorized,true);
+ assert.equal(ownerPolicy.cutover_contract?.rollback_both_services_on_owner_verification_failure,true);
  assert.equal(ownerPolicy.cutover_contract?.twin_mode,"PRE_FORMAL_OWNER_STANDBY");
  for(const key of ["formal_v5_arm_authorized","a0_execution_authorized","o00_authorized"])assert.equal(ownerPolicy.later_authority_ceiling?.[key],false,"AM22_GFS_BOOTSTRAP_OWNER_POLICY_CEILING_DRIFT:"+key);
  assert.equal(a0Policy.status,"AUTHORIZED_FOR_RUNTIME_EVIDENCE_TARGET_PLANNING_ONLY","AM22_GFS_BOOTSTRAP_A0_PLANNING_POLICY_NOT_AUTHORIZED");
+ assert.equal(a0Policy.selection_policy?.clock_authority,"LOCAL_OPERATOR_HOST_UTC_AT_CUTOVER","AM22_GFS_BOOTSTRAP_BASE_CLOCK_AUTHORITY_CHANGED");
  assert.equal(a0Policy.authority_ceiling?.runtime_evidence_target_planning_authorized,true);
  for(const key of ["formal_v5_arm_authorized","a0_execution_authorized","o00_execution_authorized","mcft_cap09_completed"])assert.equal(a0Policy.authority_ceiling?.[key],false,"AM22_GFS_BOOTSTRAP_A0_POLICY_CEILING_DRIFT:"+key);
  const selected=Number(budget.qualified_budget?.selected_budget_ms);
- assert.ok(Number.isSafeInteger(selected)&&selected>=MEASUREMENT_LEAD_MS&&budget.timing_budget_qualified===true&&budget.timing_budget_frozen===true,"AM22_GFS_BOOTSTRAP_BUDGET_NOT_FROZEN");
+ assert.ok(Number.isSafeInteger(selected)&&budget.timing_budget_qualified===true&&budget.timing_budget_frozen===true,"AM22_GFS_BOOTSTRAP_BUDGET_NOT_FROZEN");
  assert.equal(selected,Number(a0Policy.selection_policy?.selected_budget_ms),"AM22_GFS_BOOTSTRAP_BUDGET_POLICY_MISMATCH");
- return selected;
+ assert.equal(bootstrapA0Policy.status,"AUTHORIZED_FOR_AM22_BOOTSTRAP_EVIDENCE_AND_MEASUREMENT_PLANNING_ONLY","AM22_GFS_BOOTSTRAP_COMBINED_A0_POLICY_NOT_AUTHORIZED");
+ assert.equal(bootstrapA0Policy.authority_basis?.pre_formal_a0_planning_authority_ref,A0_POLICY_REL);
+ assert.equal(bootstrapA0Policy.authority_basis?.forcing_acquisition_budget_ref,BUDGET_REL);
+ assert.equal(Number(bootstrapA0Policy.selection_policy?.selected_acquisition_budget_ms),selected);
+ assert.equal(Number(bootstrapA0Policy.selection_policy?.required_six_phase_measurement_lead_ms),MEASUREMENT_LEAD_MS);
+ const combined=selected+MEASUREMENT_LEAD_MS;
+ assert.equal(Number(bootstrapA0Policy.selection_policy?.combined_minimum_lead_ms),combined,"AM22_GFS_BOOTSTRAP_COMBINED_LEAD_MISMATCH");
+ assert.equal(bootstrapA0Policy.selection_policy?.image_build_and_artifact_attestation_must_complete_before_activation_fence,true);
+ assert.equal(bootstrapA0Policy.authority_ceiling?.production_owner_cutover_authorized_by_this_authority,false);
+ for(const key of ["formal_v5_arm_authorized","a0_execution_authorized","o00_execution_authorized","mcft_cap09_completed"])assert.equal(bootstrapA0Policy.authority_ceiling?.[key],false,"AM22_GFS_BOOTSTRAP_COMBINED_A0_POLICY_CEILING_DRIFT:"+key);
+ return {selected_acquisition_budget_ms:selected,combined_minimum_lead_ms:combined};
 }
 function composeEnv({head,stageRef,runtimeAuthorityPath,ownerAuthorityPath,unusedHandoffPath,artifactAttestationPath}){
  const env={...process.env,
