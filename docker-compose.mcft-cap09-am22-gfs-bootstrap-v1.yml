@@ -1,0 +1,9 @@
+services:
+  geox-mcft-cap09-evidence-runtime-v1:
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p /var/log/geox/mcft-cap09/evidence &&
+        exec node apps/server/dist/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner.js
+        >> /var/log/geox/mcft-cap09/evidence/runtime.log 2>&1
