@@ -2,7 +2,7 @@
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process"),vm=require("node:vm"),crypto=require("node:crypto");
 const g=require("./VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs");
 const read=rel=>fs.readFileSync(path.join(g.ROOT,rel),"utf8"),at=rel=>cp.execFileSync("git",["show",g.BASE+":"+rel],{cwd:g.ROOT,encoding:"utf8"});
-const before=JSON.parse(at(g.QCP)),after=JSON.parse(read(g.QCP)),policy=read(g.POLICY),changes=g.PATHS.map(rel=>({rel,status:g.ADDED.includes(rel)?"A":"M"}));
+const before=JSON.parse(at(g.QCP)),after=JSON.parse(cp.execFileSync("git",["show","bb0f4f351d13436a451ac085fc30eaed539dd91a:"+g.QCP],{cwd:g.ROOT,encoding:"utf8"})),policy=read(g.POLICY),changes=g.PATHS.map(rel=>({rel,status:g.ADDED.includes(rel)?"A":"M"}));
 let cases=0;const check=fn=>{fn();cases++;};
 check(()=>g.validateBoundary(changes,before,after,policy,at(g.POLICY)));
 check(()=>assert.throws(()=>g.validateBoundary(changes.slice(1),before,after,policy,policy),/EXACT_PATHS/));

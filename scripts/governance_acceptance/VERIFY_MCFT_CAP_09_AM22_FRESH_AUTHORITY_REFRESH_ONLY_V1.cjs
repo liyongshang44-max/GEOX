@@ -184,6 +184,7 @@ function validateBoundary(changes,before,after,rootPolicy,baselinePolicy){
  const normalized=structuredClone(after);normalized.checks.pop();delete normalized.dependency_resolvers.AM22_FRESH_AUTHORITY_APPEND_ONLY_V1;assert.deepEqual(normalized,before,"AM22_REFRESH_PREDECESSOR_QCP_CHANGED");
 }
 function verifyRefreshOnly(){
+ const bootstrap=require("./VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs").verifyGfsBootstrapOnly();if(bootstrap)return bootstrap;
  assert.ok(isAncestor(BASE,"HEAD")&&isAncestor(BASE,"origin/main"),"AM22_REFRESH_ADOPTED_BASE_REQUIRED");
  assert.deepEqual(lines(git(["status","--porcelain","--untracked-files=normal"])).filter(x=>x!=="?? acceptance-output/"),[],"AM22_REFRESH_DIRTY_SOURCE");
  const at=rel=>cp.execFileSync("git",["show",BASE+":"+rel],{cwd:ROOT,encoding:"utf8"}),read=rel=>fs.readFileSync(path.join(ROOT,rel),"utf8");
