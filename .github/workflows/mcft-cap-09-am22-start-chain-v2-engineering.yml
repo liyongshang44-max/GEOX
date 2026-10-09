@@ -46,6 +46,9 @@ jobs:
       - run: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build
       - name: New chain boundary tests and inactive effect rejection
         run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_START_CHAIN_V2.cjs
+      - name: Fresh authority append negatives
+        run: |
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs
       - name: Host measurement negatives and prewrite entry typecheck
         run: |
           node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.cjs

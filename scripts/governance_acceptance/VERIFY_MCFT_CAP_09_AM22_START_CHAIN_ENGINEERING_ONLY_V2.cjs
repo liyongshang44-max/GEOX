@@ -31,6 +31,7 @@ function validateBoundary(changes,policy,before,after){
 }
 function verifyEngineeringOnly(){
  const bootstrap=verifyGfsBootstrapOnly();if(bootstrap)return bootstrap;
+ if(fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs")))return require("./VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs").verifyRefreshOnly();
  const measurement=verifyHostMeasurementOnly();if(measurement)return measurement;
  const keyCandidate=verifyExecutionKeyAdoptionOnly();if(keyCandidate)return keyCandidate;
  const transport=verifyFreshAuthorityTransportOnly();if(transport)return transport;
@@ -157,15 +158,9 @@ function validateMeasurementBoundary(changes,before,after,policy,baselinePolicy)
  assert.deepEqual(changes.map(x=>x.rel).sort(),MEASUREMENT_PATHS,"AM22_MEASUREMENT_EXACT_PATHS_REQUIRED");
  for(const x of changes)assert.equal(x.status,MEASUREMENT_NEW.includes(x.rel)?"A":"M","AM22_MEASUREMENT_DESTRUCTIVE_OR_EXISTING_CHANGE");
  assert.deepEqual(policy,baselinePolicy,"AM22_MEASUREMENT_PRODUCTION_POLICY_CHANGED");
- const measurementView=structuredClone(after);
- if(measurementView.checks.length===before.checks.length+2&&measurementView.checks.at(-1)?.check_id==="AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY"){
-  assert.deepEqual(measurementView.checks.at(-1),BOOTSTRAP_CHECK,"AM22_MEASUREMENT_LATER_BOOTSTRAP_CHECK_CHANGED");
-  assert.deepEqual(measurementView.dependency_resolvers.AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1,{kind:"EXACT_PATH_SET",paths:BOOTSTRAP_PATHS},"AM22_MEASUREMENT_LATER_BOOTSTRAP_RESOLVER_CHANGED");
-  measurementView.checks.pop();delete measurementView.dependency_resolvers.AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1;
- }
- assert.equal(measurementView.checks.length,before.checks.length+1);assert.deepEqual(measurementView.checks.at(-1),MEASUREMENT_CHECK);
- assert.deepEqual(measurementView.dependency_resolvers.AM22_HOST_MEASUREMENT_ONLY_V2,{kind:"EXACT_PATH_SET",paths:MEASUREMENT_PATHS});
- const normalized=structuredClone(measurementView);normalized.checks.pop();delete normalized.dependency_resolvers.AM22_HOST_MEASUREMENT_ONLY_V2;assert.deepEqual(normalized,before,"AM22_MEASUREMENT_PREDECESSOR_QCP_CHANGED");
+ assert.equal(after.checks.length,before.checks.length+1);assert.deepEqual(after.checks.at(-1),MEASUREMENT_CHECK);
+ assert.deepEqual(after.dependency_resolvers.AM22_HOST_MEASUREMENT_ONLY_V2,{kind:"EXACT_PATH_SET",paths:MEASUREMENT_PATHS});
+ const normalized=structuredClone(after);normalized.checks.pop();delete normalized.dependency_resolvers.AM22_HOST_MEASUREMENT_ONLY_V2;assert.deepEqual(normalized,before,"AM22_MEASUREMENT_PREDECESSOR_QCP_CHANGED");
 }
 function verifyHostMeasurementOnly(){
  if(!fs.existsSync(path.join(ROOT,MEASUREMENT_DOC)))return null;
@@ -188,7 +183,7 @@ function verifyHostMeasurementOnly(){
 }
 // END HOST_MEASUREMENT_ONLY
 // BEGIN GFS_BOOTSTRAP_ORCHESTRATION_ONLY
-const BOOTSTRAP_BASE="84afa1f2fd14618860780275809a6a473761beca";
+const BOOTSTRAP_BASE="bb0f4f351d13436a451ac085fc30eaed539dd91a";
 const BOOTSTRAP_DOC="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-CUTOVER-V1.md";
 const BOOTSTRAP_OWNER_POLICY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json";
 const BOOTSTRAP_A0_POLICY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json";
@@ -201,7 +196,10 @@ const BOOTSTRAP_HELPER="scripts/runtime_acceptance/MCFT_CAP_09_AM22_GFS_BOOTSTRA
 const BOOTSTRAP_RUNNER="scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs";
 const BOOTSTRAP_ACCEPTANCE="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs";
 const BOOTSTRAP_NEW=[BOOTSTRAP_DOC,BOOTSTRAP_COMBINED_A0_POLICY,BOOTSTRAP_WRAPPER,BOOTSTRAP_OVERLAY,BOOTSTRAP_HELPER,BOOTSTRAP_RUNNER,BOOTSTRAP_ACCEPTANCE].sort();
-const BOOTSTRAP_PATHS=[BOOTSTRAP_WORKFLOW,...BOOTSTRAP_NEW,QCP,TRANSPORT_SELF].sort();
+const BOOTSTRAP_FRESH_CHECKER="scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs";
+const BOOTSTRAP_FRESH_TEST="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs";
+const BOOTSTRAP_PATHS=[BOOTSTRAP_WORKFLOW,...BOOTSTRAP_NEW,QCP,TRANSPORT_SELF,BOOTSTRAP_FRESH_CHECKER,BOOTSTRAP_FRESH_TEST].sort();
+const BOOTSTRAP_FRESH_ROUTE=' const bootstrap=require("./VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs").verifyGfsBootstrapOnly();if(bootstrap)return bootstrap;\n';
 const BOOTSTRAP_CHECK={
  check_id:"AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY",
  owner:"MCFT_CAP09_AM22_GFS_BOOTSTRAP",
@@ -221,8 +219,6 @@ const BOOTSTRAP_CHECK={
 const BOOTSTRAP_ROUTE=' const bootstrap=verifyGfsBootstrapOnly();if(bootstrap)return bootstrap;\n';
 const BOOTSTRAP_WORKFLOW_PATHS="      - 'scripts/runtime_acceptance/*AM22_GFS_BOOTSTRAP*'\n      - 'apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.ts'\n      - 'docker-compose.mcft-cap09-am22-gfs-bootstrap-v1.yml'\n      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-CUTOVER-V1.md'\n      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json'\n";
 const BOOTSTRAP_WORKFLOW_STEP="      - name: AM22 short-A0 GFS bootstrap orchestration boundary\n        run: |\n          node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs\n          pnpm exec tsc --noEmit --module ESNext --moduleResolution Bundler --target ES2022 --esModuleInterop --skipLibCheck apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.ts\n";
-const BOOTSTRAP_MEASUREMENT_BASELINE="function validateMeasurementBoundary(changes,before,after,policy,baselinePolicy){\n assert.deepEqual(changes.map(x=>x.rel).sort(),MEASUREMENT_PATHS,\"AM22_MEASUREMENT_EXACT_PATHS_REQUIRED\");\n for(const x of changes)assert.equal(x.status,MEASUREMENT_NEW.includes(x.rel)?\"A\":\"M\",\"AM22_MEASUREMENT_DESTRUCTIVE_OR_EXISTING_CHANGE\");\n assert.deepEqual(policy,baselinePolicy,\"AM22_MEASUREMENT_PRODUCTION_POLICY_CHANGED\");\n assert.equal(after.checks.length,before.checks.length+1);assert.deepEqual(after.checks.at(-1),MEASUREMENT_CHECK);\n assert.deepEqual(after.dependency_resolvers.AM22_HOST_MEASUREMENT_ONLY_V2,{kind:\"EXACT_PATH_SET\",paths:MEASUREMENT_PATHS});\n const normalized=structuredClone(after);normalized.checks.pop();delete normalized.dependency_resolvers.AM22_HOST_MEASUREMENT_ONLY_V2;assert.deepEqual(normalized,before,\"AM22_MEASUREMENT_PREDECESSOR_QCP_CHANGED\");\n}\n";
-const BOOTSTRAP_MEASUREMENT_AWARE="function validateMeasurementBoundary(changes,before,after,policy,baselinePolicy){\n assert.deepEqual(changes.map(x=>x.rel).sort(),MEASUREMENT_PATHS,\"AM22_MEASUREMENT_EXACT_PATHS_REQUIRED\");\n for(const x of changes)assert.equal(x.status,MEASUREMENT_NEW.includes(x.rel)?\"A\":\"M\",\"AM22_MEASUREMENT_DESTRUCTIVE_OR_EXISTING_CHANGE\");\n assert.deepEqual(policy,baselinePolicy,\"AM22_MEASUREMENT_PRODUCTION_POLICY_CHANGED\");\n const measurementView=structuredClone(after);\n if(measurementView.checks.length===before.checks.length+2&&measurementView.checks.at(-1)?.check_id===\"AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY\"){\n  assert.deepEqual(measurementView.checks.at(-1),BOOTSTRAP_CHECK,\"AM22_MEASUREMENT_LATER_BOOTSTRAP_CHECK_CHANGED\");\n  assert.deepEqual(measurementView.dependency_resolvers.AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1,{kind:\"EXACT_PATH_SET\",paths:BOOTSTRAP_PATHS},\"AM22_MEASUREMENT_LATER_BOOTSTRAP_RESOLVER_CHANGED\");\n  measurementView.checks.pop();delete measurementView.dependency_resolvers.AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1;\n }\n assert.equal(measurementView.checks.length,before.checks.length+1);assert.deepEqual(measurementView.checks.at(-1),MEASUREMENT_CHECK);\n assert.deepEqual(measurementView.dependency_resolvers.AM22_HOST_MEASUREMENT_ONLY_V2,{kind:\"EXACT_PATH_SET\",paths:MEASUREMENT_PATHS});\n const normalized=structuredClone(measurementView);normalized.checks.pop();delete normalized.dependency_resolvers.AM22_HOST_MEASUREMENT_ONLY_V2;assert.deepEqual(normalized,before,\"AM22_MEASUREMENT_PREDECESSOR_QCP_CHANGED\");\n}\n";
 function validateBootstrapBoundary(changes,before,after){
  assert.deepEqual(changes.map(x=>x.rel).sort(),BOOTSTRAP_PATHS,"AM22_GFS_BOOTSTRAP_EXACT_PATHS_REQUIRED");
  for(const x of changes)assert.equal(x.status,BOOTSTRAP_NEW.includes(x.rel)?"A":"M","AM22_GFS_BOOTSTRAP_DESTRUCTIVE_OR_EXISTING_PATH_CHANGE:"+x.rel);
@@ -257,7 +253,13 @@ function verifyGfsBootstrapOnly(){
  assert.equal(workflow.split(BOOTSTRAP_WORKFLOW_STEP).length,2,"AM22_GFS_BOOTSTRAP_WORKFLOW_STEP_EXACT_INSERT_REQUIRED");
  assert.equal(workflow.replace(BOOTSTRAP_WORKFLOW_PATHS,"").replace(BOOTSTRAP_WORKFLOW_STEP,""),at(BOOTSTRAP_WORKFLOW),"AM22_GFS_BOOTSTRAP_WORKFLOW_OTHER_CHANGE");
 
- const normalizedSelf=read(TRANSPORT_SELF).replace(BOOTSTRAP_MEASUREMENT_AWARE,BOOTSTRAP_MEASUREMENT_BASELINE).replace(BOOTSTRAP_ROUTE,"").replace(/\/\/ BEGIN GFS_BOOTSTRAP_ORCHESTRATION_ONLY[\s\S]*?\/\/ END GFS_BOOTSTRAP_ORCHESTRATION_ONLY\n/,"").replace(",BOOTSTRAP_BASE,BOOTSTRAP_DOC,BOOTSTRAP_OWNER_POLICY,BOOTSTRAP_A0_POLICY,BOOTSTRAP_COMBINED_A0_POLICY,BOOTSTRAP_PATHS,BOOTSTRAP_NEW,BOOTSTRAP_CHECK,validateBootstrapBoundary,verifyGfsBootstrapOnly","");
+ assert.equal(read(BOOTSTRAP_FRESH_CHECKER).replace(BOOTSTRAP_FRESH_ROUTE,""),at(BOOTSTRAP_FRESH_CHECKER),"AM22_GFS_BOOTSTRAP_FRESH_CHECKER_BODY_CHANGED");
+ const fixtureBefore='after=JSON.parse(read(g.QCP))';
+ const fixtureAfter='after=JSON.parse(cp.execFileSync("git",["show","bb0f4f351d13436a451ac085fc30eaed539dd91a:"+g.QCP],{cwd:g.ROOT,encoding:"utf8"}))';
+ assert.equal(read(BOOTSTRAP_FRESH_TEST).replace(fixtureAfter,fixtureBefore),at(BOOTSTRAP_FRESH_TEST),"AM22_GFS_BOOTSTRAP_FRESH_NEGATIVES_CHANGED");
+ for(const rel of ["docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-10-09T04Z-V1.json"])assert.equal(read(rel),at(rel),"AM22_GFS_BOOTSTRAP_ADOPTED_FRESH_AUTHORITY_CHANGED:"+rel);
+ const fresh=require("./VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs").verifyFormalV5AuthorityContinuity(BOOTSTRAP_BASE,true);assert.equal(fresh.authorityCount,1,"AM22_GFS_BOOTSTRAP_FRESH_AUTHORITY_REPLAY_REQUIRED");
+ const normalizedSelf=read(TRANSPORT_SELF).replace(BOOTSTRAP_ROUTE,"").replace(/\/\/ BEGIN GFS_BOOTSTRAP_ORCHESTRATION_ONLY[\s\S]*?\/\/ END GFS_BOOTSTRAP_ORCHESTRATION_ONLY\n/,"").replace(",BOOTSTRAP_BASE,BOOTSTRAP_DOC,BOOTSTRAP_OWNER_POLICY,BOOTSTRAP_A0_POLICY,BOOTSTRAP_COMBINED_A0_POLICY,BOOTSTRAP_PATHS,BOOTSTRAP_NEW,BOOTSTRAP_CHECK,validateBootstrapBoundary,verifyGfsBootstrapOnly","");
  assert.equal(normalizedSelf,at(TRANSPORT_SELF),"AM22_GFS_BOOTSTRAP_PREDECESSOR_CHECKER_CHANGED");
  cp.execFileSync(process.execPath,[path.join(ROOT,BOOTSTRAP_ACCEPTANCE)],{cwd:ROOT,stdio:"pipe"});
  const historical=require("./ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs").verifyFormalV5AuthorityContinuity("a60aa6858662ce87b989ff752c50969f21ad4619",true);
