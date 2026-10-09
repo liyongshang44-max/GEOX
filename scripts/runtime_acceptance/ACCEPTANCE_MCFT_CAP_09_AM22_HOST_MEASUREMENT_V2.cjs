@@ -13,7 +13,7 @@ check(()=>assert.throws(()=>m.stageCoverage({...stage,lifecycle:{...stage.lifecy
 check(()=>assert.throws(()=>m.stageCoverage({...stage,biological_stage:{...stage.biological_stage,authority_valid_until:"2026-10-10T10:00:00.000Z"}},"2026-10-08T06:00:00.000Z","2026-10-08T05:30:00.000Z")));
 async function main(){
  const gov=require("../governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs"),cp=require("node:child_process");
- const before=JSON.parse(cp.execFileSync("git",["show",gov.MEASUREMENT_BASE+":"+gov.QCP],{cwd:m.ROOT,encoding:"utf8"})),after=JSON.parse(fs.readFileSync(path.join(m.ROOT,gov.QCP),"utf8")),policy=JSON.parse(fs.readFileSync(path.join(m.ROOT,gov.POLICY),"utf8"));
+ const before=JSON.parse(cp.execFileSync("git",["show",gov.MEASUREMENT_BASE+":"+gov.QCP],{cwd:m.ROOT,encoding:"utf8"})),after=JSON.parse(cp.execFileSync("git",["show","84afa1f2fd14618860780275809a6a473761beca:"+gov.QCP],{cwd:m.ROOT,encoding:"utf8"})),policy=JSON.parse(fs.readFileSync(path.join(m.ROOT,gov.POLICY),"utf8"));
  const changes=gov.MEASUREMENT_PATHS.map(rel=>({rel,status:gov.MEASUREMENT_NEW.includes(rel)?"A":"M"}));
  check(()=>gov.validateMeasurementBoundary(changes,before,after,policy,policy));
  check(()=>assert.throws(()=>gov.validateMeasurementBoundary([...changes,{rel:"apps/server/src/runtime/unsafe.ts",status:"A"}],before,after,policy,policy),/EXACT_PATHS_REQUIRED/));

@@ -541,6 +541,17 @@ function verifyFormalV5AuthorityContinuity(headRef = "HEAD", historicalReplay = 
   const baseline = "f97bb9b9f29dc276c382e8d02c4644aa9ae2ca0b";
   const head = git(["rev-parse", headRef]);
   if (head === baseline || !isAncestor(baseline, head)) return null;
+  const observedProtectedMain = git(["rev-parse", "origin/main"]);
+  if (historicalReplay) {
+    assert.notEqual(headRef, "HEAD", "FORMAL_V5_HISTORICAL_REPLAY_EXPLICIT_HEAD_REQUIRED");
+    assert.ok(isAncestor(head, observedProtectedMain), "FORMAL_V5_HISTORICAL_REPLAY_NOT_ADOPTED_BY_CURRENT_MAIN");
+  }
+  const protectedMain = historicalReplay ? head : observedProtectedMain;
+  assert.ok(isAncestor(protectedMain, head), "FORMAL_V5_AUTHORITY_BASE_NOT_CURRENT_MAIN_ANCESTOR");
+  // Historical replay reads one immutable commit, never the current checkout.
+  const readEvidence = rel => historicalReplay
+    ? cp.execFileSync("git", ["show", head + ":" + rel], {cwd: ROOT, maxBuffer: 64 * 1024 * 1024})
+    : fs.readFileSync(path.join(ROOT, rel));
   const registryRel = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json";
   const prefix = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-";
   const governance = new Set([
@@ -565,7 +576,7 @@ function verifyFormalV5AuthorityContinuity(headRef = "HEAD", historicalReplay = 
     fail("FORMAL_V5_AUTHORITY_CONTINUITY_PATH_FORBIDDEN", {status, rel});
   }
   const before = JSON.parse(git(["show", baseline + ":" + registryRel]));
-  const after = JSON.parse(fs.readFileSync(path.join(ROOT, registryRel), "utf8"));
+  const after = JSON.parse(readEvidence(registryRel));
   const {entries: oldEntries, ...oldContract} = before;
   const {entries: newEntries, ...newContract} = after;
   assert.deepEqual(newContract, oldContract, "FORMAL_V5_AUTHORITY_REGISTRY_CONTRACT_CHANGED");
@@ -573,13 +584,6 @@ function verifyFormalV5AuthorityContinuity(headRef = "HEAD", historicalReplay = 
   const appended = newEntries.slice(oldEntries.length);
   assert.equal(appended.length, added.length, "FORMAL_V5_AUTHORITY_REGISTRY_APPEND_COUNT");
   assert.deepEqual(appended.map(x => x.authority_ref).sort(), added.sort(), "FORMAL_V5_AUTHORITY_REGISTRY_APPEND_REFS");
-  const observedProtectedMain = git(["rev-parse", "origin/main"]);
-  if (historicalReplay) {
-    assert.notEqual(headRef, "HEAD", "FORMAL_V5_HISTORICAL_REPLAY_EXPLICIT_HEAD_REQUIRED");
-    assert.ok(isAncestor(head, observedProtectedMain), "FORMAL_V5_HISTORICAL_REPLAY_NOT_ADOPTED_BY_CURRENT_MAIN");
-  }
-  const protectedMain = historicalReplay ? head : observedProtectedMain;
-  assert.ok(isAncestor(protectedMain, head), "FORMAL_V5_AUTHORITY_BASE_NOT_CURRENT_MAIN_ANCESTOR");
   for (const commit of lines(git(["rev-list", "--first-parent", baseline + ".." + protectedMain]))) {
     for (const row of lines(git(["diff", "--name-status", commit + "^1", commit]))) {
       const [status, rel] = row.split("\t");
@@ -600,7 +604,7 @@ function verifyFormalV5AuthorityContinuity(headRef = "HEAD", historicalReplay = 
     let protectedBlob = null;
     try { protectedBlob = git(["rev-parse", protectedMain + ":" + entry.authority_ref], {stdio: ["ignore", "pipe", "ignore"]}); } catch {}
     if (protectedBlob) assert.equal(git(["rev-parse", head + ":" + entry.authority_ref]), protectedBlob, "FORMAL_V5_AUTHORITY_ALREADY_ADOPTED_MUTATION");
-    const bytes = fs.readFileSync(path.join(ROOT, entry.authority_ref));
+    const bytes = readEvidence(entry.authority_ref);
     assert.equal(digest(bytes), entry.authority_sha256, "FORMAL_V5_AUTHORITY_DIGEST");
     const authority = JSON.parse(bytes);
     assert.deepEqual(authority.scope, expectedScope, "FORMAL_V5_AUTHORITY_EXACT_SCOPE");
@@ -676,9 +680,9 @@ function verifyFormalV5AuthorityContinuity(headRef = "HEAD", historicalReplay = 
     assert.equal(request.qualification_time, authority.refresh.qualification_time);
     const previous = request.previous_effective_current_crop_authority;
     assert.equal(previous.overwrite_forbidden, true);
-    assert.equal(digest(fs.readFileSync(path.join(ROOT, previous.ref))), previous.sha256);
+    assert.equal(digest(readEvidence(previous.ref)), previous.sha256);
     const certificate = request.architecture_effectiveness;
-    assert.equal(digest(fs.readFileSync(path.join(ROOT, certificate.ref))), certificate.sha256);
+    assert.equal(digest(readEvidence(certificate.ref)), certificate.sha256);
     assert.equal(certificate.sha256, authority.graduation.architecture_effectiveness_sha256);
     for (const key of ["database_write_authorized", "runtime_config_write_authorized", "scheduler_write_authorized", "formal_evidence_write_authorized", "production_runtime_start_authorized", "production_owner_activation_authorized", "formal_v5_authorized", "a0_authorized", "o00_o23_authorized", "mcft_cap09_completed"]) {
       assert.equal(authority[key], false, "FORMAL_V5_AUTHORITY_CEILING:" + key);

@@ -30,6 +30,7 @@ function validateBoundary(changes,policy,before,after){
  assert.deepEqual(normalized,before,"AM22_CHAIN_PREDECESSOR_QCP_CHANGED");
 }
 function verifyEngineeringOnly(){
+ if(fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs")))return require("./VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs").verifyRefreshOnly();
  const measurement=verifyHostMeasurementOnly();if(measurement)return measurement;
  const keyCandidate=verifyExecutionKeyAdoptionOnly();if(keyCandidate)return keyCandidate;
  const transport=verifyFreshAuthorityTransportOnly();if(transport)return transport;
