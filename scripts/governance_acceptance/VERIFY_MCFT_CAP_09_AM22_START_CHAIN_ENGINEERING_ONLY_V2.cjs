@@ -30,6 +30,7 @@ function validateBoundary(changes,policy,before,after){
  assert.deepEqual(normalized,before,"AM22_CHAIN_PREDECESSOR_QCP_CHANGED");
 }
 function verifyEngineeringOnly(){
+ const bootstrap=verifyGfsBootstrapOnly();if(bootstrap)return bootstrap;
  const measurement=verifyHostMeasurementOnly();if(measurement)return measurement;
  const keyCandidate=verifyExecutionKeyAdoptionOnly();if(keyCandidate)return keyCandidate;
  const transport=verifyFreshAuthorityTransportOnly();if(transport)return transport;
@@ -180,5 +181,77 @@ function verifyHostMeasurementOnly(){
  return {status:"PASS",baseline:MEASUREMENT_BASE,changedPaths:[...new Set([...historical.changedPaths,...adopted,...changes.map(x=>x.rel)])],qualification_scope:"AM22_DISABLED_START_CHAIN_ENGINEERING_ONLY",current_delta_scope:"SIX_PHASE_HOST_MEASUREMENT_ONLY",actual_host_measurement_completed:false,complete_production_pre_a0_qualified:false,fresh_authority_generated:false,old_arm_carry_forward_authorized:false,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,mcft_cap09_completed:false};
 }
 // END HOST_MEASUREMENT_ONLY
-module.exports={BASE,DOC,POLICY,QCP,PRIOR,RETIRE,BOUNDARY,PATHS,CHECK,ROUTE,RETIRE_BEFORE,RETIRE_AFTER,BOUNDARY_BEFORE,BOUNDARY_AFTER,validateBoundary,verifyEngineeringOnly,TRANSPORT_BASE,TRANSPORT_WORKFLOW,TRANSPORT_PATHS,TRANSPORT_BEFORE,TRANSPORT_AFTER,validateTransportBoundary,verifyFreshAuthorityTransportOnly,KEY_BASE,KEY_PEM,KEY_DIGEST,KEY_PATHS,KEY_BOUNDARY_BEFORE,KEY_BOUNDARY_AFTER,validateKeyBoundary,verifyExecutionKeyAdoptionOnly,MEASUREMENT_BASE,MEASUREMENT_DOC,MEASUREMENT_PATHS,MEASUREMENT_NEW,MEASUREMENT_CHECK,validateMeasurementBoundary,verifyHostMeasurementOnly};
+// BEGIN GFS_BOOTSTRAP_ORCHESTRATION_ONLY
+const BOOTSTRAP_BASE="84afa1f2fd14618860780275809a6a473761beca";
+const BOOTSTRAP_DOC="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-CUTOVER-V1.md";
+const BOOTSTRAP_OWNER_POLICY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json";
+const BOOTSTRAP_A0_POLICY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json";
+const BOOTSTRAP_WORKFLOW=".github/workflows/mcft-cap-09-am22-start-chain-v2-engineering.yml";
+const BOOTSTRAP_PACKAGING="apps/server/scripts/write_dist_entries.cjs";
+const BOOTSTRAP_WRAPPER="apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.ts";
+const BOOTSTRAP_OVERLAY="docker-compose.mcft-cap09-am22-gfs-bootstrap-v1.yml";
+const BOOTSTRAP_HELPER="scripts/runtime_acceptance/MCFT_CAP_09_AM22_GFS_BOOTSTRAP_V1.cjs";
+const BOOTSTRAP_RUNNER="scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs";
+const BOOTSTRAP_ACCEPTANCE="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs";
+const BOOTSTRAP_NEW=[BOOTSTRAP_DOC,BOOTSTRAP_WRAPPER,BOOTSTRAP_OVERLAY,BOOTSTRAP_HELPER,BOOTSTRAP_RUNNER,BOOTSTRAP_ACCEPTANCE].sort();
+const BOOTSTRAP_PATHS=[BOOTSTRAP_WORKFLOW,BOOTSTRAP_PACKAGING,...BOOTSTRAP_NEW,QCP,TRANSPORT_SELF].sort();
+const BOOTSTRAP_CHECK={
+ check_id:"AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY",
+ owner:"MCFT_CAP09_AM22_GFS_BOOTSTRAP",
+ generation_scope:["FORMAL_V5","AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY"],
+ authority_refs:[BOOTSTRAP_OWNER_POLICY,BOOTSTRAP_A0_POLICY,BOOTSTRAP_DOC],
+ resolver_ids:["AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1"],
+ historical_evidence_policy:"NO_36H_HANDOFF_OR_FORMAL_EFFECT_CARRY_FORWARD",
+ execution_workflow:BOOTSTRAP_WORKFLOW,
+ execution_workflow_status:"QUALIFICATION_ONLY_NO_PRODUCTION_CREDENTIALS",
+ fail_policy:"FAIL_CLOSED_EXACT_PATH_AND_EXISTING_AUTHORITY_REUSE_REQUIRED",
+ carry_forward_policy:"NONE",
+ requalification_triggers:["AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1"],
+ applicable_stages:["SUCCESSOR_SUBJECT_PRE_MERGE","POST_MERGE_V13_QUALIFICATION"],
+ carry_forward_evidence_id:null,
+ diagnostic_command:"node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs"
+};
+const BOOTSTRAP_ROUTE=' const bootstrap=verifyGfsBootstrapOnly();if(bootstrap)return bootstrap;\n';
+const BOOTSTRAP_WORKFLOW_PATHS="      - 'scripts/runtime_acceptance/*AM22_GFS_BOOTSTRAP*'\n      - 'apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.ts'\n      - 'docker-compose.mcft-cap09-am22-gfs-bootstrap-v1.yml'\n      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-CUTOVER-V1.md'\n      - 'apps/server/scripts/write_dist_entries.cjs'\n";
+const BOOTSTRAP_WORKFLOW_STEP="      - name: AM22 short-A0 GFS bootstrap orchestration boundary\n        run: |\n          node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs\n          pnpm exec tsc --noEmit --module ESNext --moduleResolution Bundler --target ES2022 --esModuleInterop --skipLibCheck apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.ts\n";
+function validateBootstrapBoundary(changes,before,after){
+ assert.deepEqual(changes.map(x=>x.rel).sort(),BOOTSTRAP_PATHS,"AM22_GFS_BOOTSTRAP_EXACT_PATHS_REQUIRED");
+ for(const x of changes)assert.equal(x.status,BOOTSTRAP_NEW.includes(x.rel)?"A":"M","AM22_GFS_BOOTSTRAP_DESTRUCTIVE_OR_EXISTING_PATH_CHANGE:"+x.rel);
+ assert.equal(after.checks.length,before.checks.length+1,"AM22_GFS_BOOTSTRAP_SINGLE_QCP_CHECK_REQUIRED");
+ assert.deepEqual(after.checks.at(-1),BOOTSTRAP_CHECK,"AM22_GFS_BOOTSTRAP_QCP_CHECK_CHANGED");
+ assert.deepEqual(after.dependency_resolvers.AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1,{kind:"EXACT_PATH_SET",paths:BOOTSTRAP_PATHS},"AM22_GFS_BOOTSTRAP_RESOLVER_CHANGED");
+ const normalized=structuredClone(after);normalized.checks.pop();delete normalized.dependency_resolvers.AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1;
+ assert.deepEqual(normalized,before,"AM22_GFS_BOOTSTRAP_PREDECESSOR_QCP_CHANGED");
+}
+function verifyGfsBootstrapOnly(){
+ if(!fs.existsSync(path.join(ROOT,BOOTSTRAP_DOC)))return null;
+ assert.equal(git("merge-base",BOOTSTRAP_BASE,"HEAD"),BOOTSTRAP_BASE,"AM22_GFS_BOOTSTRAP_BASE_NOT_ANCESTOR");
+ assert.equal(git("merge-base",BOOTSTRAP_BASE,"origin/main"),BOOTSTRAP_BASE,"AM22_GFS_BOOTSTRAP_BASE_NOT_ADOPTED");
+ assert.deepEqual(git("status","--porcelain","--untracked-files=normal").split(/\r?\n/).filter(x=>x&&x!=="?? acceptance-output/"),[],"AM22_GFS_BOOTSTRAP_DIRTY_SOURCE");
+ const at=rel=>cp.execFileSync("git",["show",BOOTSTRAP_BASE+":"+rel],{cwd:ROOT,encoding:"utf8"}),read=rel=>fs.readFileSync(path.join(ROOT,rel),"utf8");
+ const changes=git("diff","--name-status",BOOTSTRAP_BASE,"HEAD").split(/\r?\n/).filter(Boolean).map(x=>{const [status,rel]=x.split("\t");return {status,rel};});
+ validateBootstrapBoundary(changes,JSON.parse(at(QCP)),JSON.parse(read(QCP)));
+ for(const authority of [POLICY,BOOTSTRAP_OWNER_POLICY,BOOTSTRAP_A0_POLICY])assert.equal(read(authority),at(authority),"AM22_GFS_BOOTSTRAP_EXISTING_AUTHORITY_CHANGED:"+authority);
+
+ const packaging=read(BOOTSTRAP_PACKAGING);
+ const packagingPattern=/\n  \{\n    name: path\.join\("runtime", "mcft_cap09_am22_gfs_bootstrap_evidence_owner\.js"\),[\s\S]*?\n  \},\n/;
+ const packagingMatches=packaging.match(new RegExp(packagingPattern.source,"g"))??[];
+ assert.equal(packagingMatches.length,1,"AM22_GFS_BOOTSTRAP_PACKAGING_EXACT_INSERT_REQUIRED");
+ assert.match(packagingMatches[0],/runMcftCap09Am22GfsBootstrapEvidenceOwnerV1/);
+ assert.equal(packaging.replace(packagingPattern,"\n"),at(BOOTSTRAP_PACKAGING),"AM22_GFS_BOOTSTRAP_PACKAGING_OTHER_CHANGE");
+
+ const workflow=read(BOOTSTRAP_WORKFLOW);
+ assert.equal(workflow.split(BOOTSTRAP_WORKFLOW_PATHS).length,2,"AM22_GFS_BOOTSTRAP_WORKFLOW_PATHS_EXACT_INSERT_REQUIRED");
+ assert.equal(workflow.split(BOOTSTRAP_WORKFLOW_STEP).length,2,"AM22_GFS_BOOTSTRAP_WORKFLOW_STEP_EXACT_INSERT_REQUIRED");
+ assert.equal(workflow.replace(BOOTSTRAP_WORKFLOW_PATHS,"").replace(BOOTSTRAP_WORKFLOW_STEP,""),at(BOOTSTRAP_WORKFLOW),"AM22_GFS_BOOTSTRAP_WORKFLOW_OTHER_CHANGE");
+
+ const normalizedSelf=read(TRANSPORT_SELF).replace(BOOTSTRAP_ROUTE,"").replace(/\/\/ BEGIN GFS_BOOTSTRAP_ORCHESTRATION_ONLY[\s\S]*?\/\/ END GFS_BOOTSTRAP_ORCHESTRATION_ONLY\n/,"").replace(",BOOTSTRAP_BASE,BOOTSTRAP_DOC,BOOTSTRAP_OWNER_POLICY,BOOTSTRAP_A0_POLICY,BOOTSTRAP_PATHS,BOOTSTRAP_NEW,BOOTSTRAP_CHECK,validateBootstrapBoundary,verifyGfsBootstrapOnly","");
+ assert.equal(normalizedSelf,at(TRANSPORT_SELF),"AM22_GFS_BOOTSTRAP_PREDECESSOR_CHECKER_CHANGED");
+ cp.execFileSync(process.execPath,[path.join(ROOT,BOOTSTRAP_ACCEPTANCE)],{cwd:ROOT,stdio:"pipe"});
+ const historical=require("./ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs").verifyFormalV5AuthorityContinuity("a60aa6858662ce87b989ff752c50969f21ad4619",true);
+ const adopted=git("diff","--name-only","a60aa6858662ce87b989ff752c50969f21ad4619",BOOTSTRAP_BASE).split(/\r?\n/).filter(Boolean);
+ return {status:"PASS",baseline:BOOTSTRAP_BASE,changedPaths:[...new Set([...historical.changedPaths,...adopted,...changes.map(x=>x.rel)])],qualification_scope:"AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY",short_a0_bootstrap_port_qualified:true,production_execution_performed:false,existing_owner_cutover_authority_reused:true,existing_preformal_a0_planning_authority_reused:true,provider_semantics_changed:false,twin_runtime_semantics_changed:false,formal_database_credential_consumed:false,formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false,mcft_cap09_completed:false};
+}
+// END GFS_BOOTSTRAP_ORCHESTRATION_ONLY
+module.exports={BASE,DOC,POLICY,QCP,PRIOR,RETIRE,BOUNDARY,PATHS,CHECK,ROUTE,RETIRE_BEFORE,RETIRE_AFTER,BOUNDARY_BEFORE,BOUNDARY_AFTER,validateBoundary,verifyEngineeringOnly,TRANSPORT_BASE,TRANSPORT_WORKFLOW,TRANSPORT_PATHS,TRANSPORT_BEFORE,TRANSPORT_AFTER,validateTransportBoundary,verifyFreshAuthorityTransportOnly,KEY_BASE,KEY_PEM,KEY_DIGEST,KEY_PATHS,KEY_BOUNDARY_BEFORE,KEY_BOUNDARY_AFTER,validateKeyBoundary,verifyExecutionKeyAdoptionOnly,MEASUREMENT_BASE,MEASUREMENT_DOC,MEASUREMENT_PATHS,MEASUREMENT_NEW,MEASUREMENT_CHECK,validateMeasurementBoundary,verifyHostMeasurementOnly,BOOTSTRAP_BASE,BOOTSTRAP_DOC,BOOTSTRAP_OWNER_POLICY,BOOTSTRAP_A0_POLICY,BOOTSTRAP_PATHS,BOOTSTRAP_NEW,BOOTSTRAP_CHECK,validateBootstrapBoundary,verifyGfsBootstrapOnly};
 if(require.main===module)console.log(JSON.stringify(verifyEngineeringOnly(),null,2));
