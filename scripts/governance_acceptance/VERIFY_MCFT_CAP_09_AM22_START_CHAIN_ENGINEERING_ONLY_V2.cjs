@@ -229,6 +229,7 @@ function validateBootstrapBoundary(changes,before,after){
  assert.deepEqual(normalized,before,"AM22_GFS_BOOTSTRAP_PREDECESSOR_QCP_CHANGED");
 }
 function verifyGfsBootstrapOnly(){
+ if(fs.existsSync(path.join(ROOT,"scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_V1.cjs")))return require("./VERIFY_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_SUCCESSOR_V1.cjs").verifyRecoverySuccessor();
  if(!fs.existsSync(path.join(ROOT,BOOTSTRAP_DOC)))return null;
  assert.equal(git("merge-base",BOOTSTRAP_BASE,"HEAD"),BOOTSTRAP_BASE,"AM22_GFS_BOOTSTRAP_BASE_NOT_ANCESTOR");
  assert.equal(git("merge-base",BOOTSTRAP_BASE,"origin/main"),BOOTSTRAP_BASE,"AM22_GFS_BOOTSTRAP_BASE_NOT_ADOPTED");
