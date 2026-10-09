@@ -14,7 +14,7 @@ import {
 } from "../../apps/server/src/product_projection/publication/mcft_verified_field_state_publication_v1.js";
 import {
  appendVerifiedMcftPublicationV1,readVerifiedPublishedCurrentV1,
-} from "../../apps/server/src/product_projection/publication/postgres_mcft_verified_publication_v1.js";
+} from "../product_publication/postgres_mcft_verified_publication_v1.js";
 import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
 
 const dbName="geox_mcft_cap09_production_runtime_v1";
@@ -91,7 +91,7 @@ async function run(){
   await admin.query(`GRANT geox_mcft_publication_writer_v1 TO ${writerLogin}`);
   await admin.query(`GRANT geox_product_readonly_v1 TO ${readerLogin}`);
   await admin.query(`ALTER ROLE ${readerLogin} IN DATABASE ${dbName} SET default_transaction_read_only TO on`);
-  await admin.query(fs.readFileSync(path.resolve("apps/server/db/migrations/2026_10_09_product_mcft_verified_publication_v1.sql"),"utf8"));
+  await admin.query(fs.readFileSync(path.resolve("scripts/product_publication/sql/2026_10_09_product_mcft_verified_publication_v1.sql"),"utf8"));
   const base=`postgresql://127.0.0.1:5432/${dbName}`;
   writer=new Pool({connectionString:base.replace("postgresql://","postgresql://"+writerLogin+":publication-writer-ci-test@"),max:2});
   reader=new Pool({connectionString:base.replace("postgresql://","postgresql://"+readerLogin+":publication-reader-ci-test@"),max:2});
