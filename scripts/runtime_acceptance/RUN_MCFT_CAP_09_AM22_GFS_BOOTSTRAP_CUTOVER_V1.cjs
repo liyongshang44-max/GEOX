@@ -26,7 +26,7 @@ const HOST_ID_FILE=path.join(os.homedir(),".geox","mcft-cap09","local-host-id-v1
 const EVIDENCE_SERVICE="geox-mcft-cap09-evidence-runtime-v1";
 const TWIN_SERVICE="geox-mcft-cap09-twin-runtime-v1";
 const READY_MARGIN_MS=MEASUREMENT_LEAD_MS;
-const POLL_MS=15000;
+const POLL_MS=15000,MAX_HOST_DB_CLOCK_SKEW_MS=60000;
 
 function read(rel){return JSON.parse(fs.readFileSync(path.join(ROOT,rel),"utf8"));}
 function fail(code,detail){throw new Error(detail===undefined?code:code+":"+String(detail));}
@@ -145,12 +145,14 @@ async function main(){
  const twinUrl=reqEnv("GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL");
  const source=readOnlyPool(evidenceUrl,"geox_mcft_cap09_production_runtime_v1");
  const twin=readOnlyPool(twinUrl,"geox_mcft_cap09_production_runtime_v1");
- let started=false,phase="PRECHECK",imageId="",cutoverElapsedMs=0;
+ let started=false,ownerVerified=false,rollbackAttempted=false,rollbackSucceeded=false,phase="PRECHECK",imageId="",cutoverElapsedMs=0;
  try{
-  const sourceNow=await databaseNow(source);
+  const sourceNow=await databaseNow(source),hostNow=new Date().toISOString();
+  const clockSkewMs=Math.abs(Date.parse(hostNow)-Date.parse(sourceNow));
+  assert.ok(clockSkewMs<=MAX_HOST_DB_CLOCK_SKEW_MS,"AM22_GFS_BOOTSTRAP_HOST_DATABASE_CLOCK_SKEW_EXCEEDED");
   const stage=JSON.parse(fs.readFileSync(stageRef.resolved,"utf8"));
-  const window=selectA0({source_now:sourceNow,budget_ms:selectedBudget,stage});
-  const latest=latestRegistryEntry(registry,sourceNow,window.o23);
+  const window=selectA0({source_now:hostNow,budget_ms:selectedBudget,stage});
+  const latest=latestRegistryEntry(registry,hostNow,window.o23);
   assert.equal(latest.authority_ref,stageRef.ref,"AM22_GFS_BOOTSTRAP_LATEST_EFFECTIVE_STAGE_REQUIRED");
   assert.equal(latest.authority_sha256,digestFile(stageRef.resolved),"AM22_GFS_BOOTSTRAP_STAGE_DIGEST_MISMATCH");
   assert.equal(latest.authority_as_of,stage.biological_stage.authority_as_of);
@@ -160,7 +162,7 @@ async function main(){
   immutable(path.join(out,"started.json"),{
     schema_version:"geox_mcft_cap09_am22_gfs_bootstrap_cutover_started_v1",status:"STARTED",
     subject_sha:head,host_id:hostId,stage_ref:stageRef.ref,stage_sha256:digestFile(stageRef.resolved),
-    source_database_utc:sourceNow,...window,
+    host_utc_at_planning:hostNow,source_database_utc_at_planning:sourceNow,host_database_clock_skew_ms:clockSkewMs,...window,
     authority_basis:[OWNER_POLICY_REL,A0_POLICY_REL],formal_v5_arm:false,a0_execution:false,o00_started:false,
   });
 
@@ -171,19 +173,19 @@ async function main(){
   const unusedHandoffPath=path.join(runtimeRoot,"unused-formal-handoff.json");
   const artifactAttestationPath=path.join(ROOT,ATTEST_REL);
   fs.mkdirSync(runtimeRoot,{recursive:true});
-  const activationFence=sourceNow;
+  const activationFence=hostNow;
   const ownerAuthority={
     schema_version:"geox_mcft_cap09_production_owner_cutover_authority_instance_v1",
-    authority_id:"GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-OWNER-CUTOVER-AUTHORITY-INSTANCE-V1",
+    authority_id:"GEOX-MCFT-CAP-09-PRODUCTION-OWNER-CUTOVER-AUTHORITY-INSTANCE-V1",
     status:"AUTHORIZED",armed:true,
     authority_ref:`local-operator://${hostId}/mcft-cap09/am22-gfs-bootstrap/owner-cutover/${head}/${window.a0}`,
     policy_ref:OWNER_POLICY_REL,policy_sha256:digestFile(path.join(ROOT,OWNER_POLICY_REL)),
     deployment_subject_sha:head,host_id:hostId,scope:SCOPE,
     selected_current_crop_authority_ref:stageRef.ref,
     selected_current_crop_authority_sha256:digestFile(stageRef.resolved),
-    selected_current_crop_authority_as_of:stage.biological_stage.authority_as_of,
-    selected_current_crop_authority_valid_until:stage.biological_stage.authority_valid_until,
-    selected_current_crop_graduation_status:stage.graduation.status,
+    selected_current_crop_authority_as_of:latest.authority_as_of,
+    selected_current_crop_authority_valid_until:latest.authority_valid_until,
+    selected_current_crop_graduation_status:latest.graduation_status,
     evidence_owner_activation_authorized:true,twin_owner_activation_authorized:true,
     non_github_hosting_binding_authorized:true,production_login_provisioning_authorized:false,
     formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false,
@@ -239,7 +241,17 @@ async function main(){
       sleep(5000);
     }
   }
-  if(lastOwnerError)fail("AM22_GFS_BOOTSTRAP_OWNER_VERIFICATION_TIMEOUT",lastOwnerError.slice(-1200));
+  if(lastOwnerError){
+    rollbackAttempted=true;
+    try{
+      exec("docker",["compose","-f",COMPOSE_REL,"-f",OVERLAY_REL,"down"],{env,timeoutMs:120000});
+      rollbackSucceeded=true;
+    }catch(rollbackError){
+      fail("AM22_GFS_BOOTSTRAP_OWNER_VERIFICATION_AND_REQUIRED_ROLLBACK_FAILED",String(rollbackError?.stderr??rollbackError?.message??rollbackError).slice(-1200));
+    }
+    fail("AM22_GFS_BOOTSTRAP_OWNER_VERIFICATION_TIMEOUT",lastOwnerError.slice(-1200));
+  }
+  ownerVerified=true;
   cutoverElapsedMs=Date.now()-cutoverStarted;
 
   phase="GFS_PAIR_WAIT";
@@ -262,7 +274,7 @@ async function main(){
   immutable(path.join(out,"result.json"),{
     schema_version:"geox_mcft_cap09_am22_gfs_bootstrap_cutover_result_v1",
     status:"PASS",subject_sha:head,host_id:hostId,image_id:imageId,stage_ref:stageRef.ref,stage_sha256:digestFile(stageRef.resolved),
-    source_database_utc:sourceNow,...window,
+    host_utc_at_planning:hostNow,source_database_utc_at_planning:sourceNow,host_database_clock_skew_ms:clockSkewMs,...window,
     image_build_elapsed_ms:imageBuildElapsedMs,owner_cutover_elapsed_ms:cutoverElapsedMs,gfs_pair_wait_elapsed_ms:gfsPairWaitElapsedMs,
     gfs_pair:{weather_fact_id:pair.weather.fact_id,et0_fact_id:pair.et0.fact_id,selected_cycle:pair.selected_cycle,raw_source_sha256:pair.raw_source_sha256},
     twin_preformal_zero_state:twinZero,
@@ -277,8 +289,9 @@ async function main(){
     try{immutable(path.join(out,"failed.json"),{
       schema_version:"geox_mcft_cap09_am22_gfs_bootstrap_cutover_failed_v1",status:"FAIL",phase,
       terminal_error:String(error instanceof Error?error.message:error).slice(0,4000),
-      production_owners_may_have_changed:started,image_id:imageId||null,owner_cutover_elapsed_ms:cutoverElapsedMs||null,
-      automatic_compose_down_performed:false,operator_reconciliation_required:started,
+      production_owners_may_have_changed:started,image_id:imageId||null,owner_verified:ownerVerified,owner_cutover_elapsed_ms:cutoverElapsedMs||null,
+      rollback_required_by_owner_policy:started&&!ownerVerified,rollback_attempted:rollbackAttempted,rollback_succeeded:rollbackSucceeded,
+      automatic_compose_down_performed:rollbackSucceeded,operator_reconciliation_required:started,
       formal_v5_arm:false,a0_execution:false,o00_started:false,mcft_cap09_completed:false,
     });}catch{}
   }
