@@ -11,6 +11,7 @@ on:
       - 'scripts/runtime_acceptance/*HOST_MEASUREMENT_V2*'
       - 'scripts/runtime_acceptance/*PREWRITE_PROBE_V2*'
       - 'scripts/runtime_acceptance/*AM22_GFS_BOOTSTRAP*'
+      - 'scripts/runtime_acceptance/*AM22_GFS_READ_ONLY_POLL*'
       - 'apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.ts'
       - 'docker-compose.mcft-cap09-am22-gfs-bootstrap-v1.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-CUTOVER-V1.md'
@@ -56,6 +57,7 @@ jobs:
       - name: AM22 short-A0 GFS bootstrap orchestration boundary
         run: |
           node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs
+          node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_GFS_READ_ONLY_POLL_V1.cjs
           pnpm exec tsc --noEmit --module ESNext --moduleResolution Bundler --target ES2022 --esModuleInterop --skipLibCheck apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.ts
       - name: Preserve revoked identity guard
         run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_ARM_RETIREMENT_V1.cjs
