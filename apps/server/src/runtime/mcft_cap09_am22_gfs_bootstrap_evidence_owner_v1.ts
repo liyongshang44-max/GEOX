@@ -33,17 +33,20 @@ export async function runMcftCap09Am22GfsBootstrapEvidenceOwnerV1():Promise<void
   const runtimePath=req("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH");
   const ownerPath=req("GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH");
   const raw=JSON.parse(fs.readFileSync(runtimePath,"utf8"));
-  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
+  const baseRuntimeAuthority=parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
     deployment_subject_sha:subject,
     scope:s,
     runtime_mode:MCFT_CAP09_OWNER_CUTOVER_MODE_V1,
     admission_time_utc:String(raw?.activation_fence_time??""),
   });
-  readMcftCap09OwnerCutoverAuthorityV1({
+  const ownerAuthority=readMcftCap09OwnerCutoverAuthorityV1({
     authority_path:ownerPath,
     expected_deployment_subject_sha:subject,
     expected_scope:s,
   });
+  if(baseRuntimeAuthority.host_id!==ownerAuthority.host_id){
+    throw new Error("MCFT_CAP09_AM22_GFS_BOOTSTRAP_BASE_HOST_MISMATCH");
+  }
   await runMcftCap09ProductionEvidenceRuntimeV1({
     runtime_start_authority:raw,
   });
