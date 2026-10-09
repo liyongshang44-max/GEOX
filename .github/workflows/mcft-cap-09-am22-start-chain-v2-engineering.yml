@@ -14,6 +14,7 @@ on:
       - 'apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.ts'
       - 'docker-compose.mcft-cap09-am22-gfs-bootstrap-v1.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-CUTOVER-V1.md'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json'
       - 'apps/server/scripts/write_dist_entries.cjs'
 permissions:
   contents: read
