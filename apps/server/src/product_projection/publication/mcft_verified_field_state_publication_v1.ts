@@ -34,6 +34,7 @@ export type McftFieldStatePublicationStatementV1 = {
     posterior_state_hash: string;
     posterior_source_fact_ref: string;
     complete_exact_graph_receipt_sha256: string;
+    qualified_readback_verifier_digest: string;
     readback_status: "CAP07_COMPLETE_EXACT_GRAPH";
     logical_time: string;
     evidence_visible_at: string;
@@ -57,7 +58,7 @@ export type McftPublicationTrustPolicyV1 = {
   key_id: string;
   public_key_pem: string;
   runtime_subject_sha: string;
-  source_readback_receipt_digest: string;
+  qualified_readback_verifier_digest: string;
   authority_status: "EFFECTIVE_PUBLICATION_SIGNER_AUTHORITY";
   allowed_scope: PublishedResearchScopeV1;
 };
@@ -106,13 +107,13 @@ export function verifyMcftFieldStatePublicationV1(
 ): VerifiedMcftPublicationV1 {
   const now=time(databaseNowUtc,"DATABASE_TIME_INVALID");
   const p=obj(policy,"TRUST_POLICY_REQUIRED");
-  keys(p,["key_id","public_key_pem","runtime_subject_sha","source_readback_receipt_digest","authority_status","allowed_scope"],"TRUST_POLICY_SHAPE_INVALID");
+  keys(p,["key_id","public_key_pem","runtime_subject_sha","qualified_readback_verifier_digest","authority_status","allowed_scope"],"TRUST_POLICY_SHAPE_INVALID");
   if(p.authority_status!=="EFFECTIVE_PUBLICATION_SIGNER_AUTHORITY") fail("TRUST_AUTHORITY_NOT_EFFECTIVE");
   const keyId=str(p.key_id,"KEY_ID_INVALID");
   if(!/^[A-Za-z0-9_.:-]{4,96}$/.test(keyId)) fail("KEY_ID_INVALID");
   const subject=str(p.runtime_subject_sha,"TRUST_SUBJECT_INVALID");
   if(!/^[a-f0-9]{40}$/.test(subject)) fail("TRUST_SUBJECT_INVALID");
-  const trustedReceipt=digest(p.source_readback_receipt_digest,"TRUST_READBACK_DIGEST_INVALID");
+  const trustedVerifier=digest(p.qualified_readback_verifier_digest,"TRUST_VERIFIER_DIGEST_INVALID");
   const trustedScope=obj(p.allowed_scope,"TRUST_SCOPE_INVALID");
   keys(trustedScope,["tenant_id","project_id","group_id","field_id","season_id","zone_id"],"TRUST_SCOPE_SHAPE_INVALID");
   if(!exactScope(trustedScope as PublishedResearchScopeV1)) fail("TRUST_SCOPE_NOT_RESEARCH");
@@ -136,13 +137,14 @@ export function verifyMcftFieldStatePublicationV1(
   const source=obj(stmt.source,"SOURCE_REQUIRED");
   keys(source,["project_id","branch_id","database_name","runtime_subject_sha",
     "active_lineage_ref","active_lineage_hash","posterior_state_ref","posterior_state_hash",
-    "posterior_source_fact_ref","complete_exact_graph_receipt_sha256","readback_status",
+    "posterior_source_fact_ref","complete_exact_graph_receipt_sha256","qualified_readback_verifier_digest","readback_status",
     "logical_time","evidence_visible_at","readback_as_of"],"SOURCE_SHAPE_INVALID");
   if(source.project_id!=="delicate-glade-62464340" || source.branch_id!=="br-cold-dust-a6j6aymz"
     || source.database_name!==PRODUCT_MCFT_FORMAL_DATABASE_V1) fail("SOURCE_DATABASE_IDENTITY_MISMATCH");
   if(source.runtime_subject_sha!==subject) fail("SOURCE_RUNTIME_SUBJECT_MISMATCH");
   if(source.readback_status!=="CAP07_COMPLETE_EXACT_GRAPH") fail("SOURCE_GRAPH_NOT_QUALIFIED");
-  if(source.complete_exact_graph_receipt_sha256!==trustedReceipt) fail("SOURCE_READBACK_NOT_AUTHORIZED");
+  digest(source.complete_exact_graph_receipt_sha256,"SOURCE_READBACK_DIGEST_REQUIRED");
+  if(source.qualified_readback_verifier_digest!==trustedVerifier) fail("SOURCE_VERIFIER_CONTRACT_NOT_AUTHORIZED");
   str(source.active_lineage_ref,"LINEAGE_REF_MISSING");
   str(source.posterior_state_ref,"POSTERIOR_REF_MISSING");
   str(source.posterior_source_fact_ref,"SOURCE_FACT_REF_MISSING");
