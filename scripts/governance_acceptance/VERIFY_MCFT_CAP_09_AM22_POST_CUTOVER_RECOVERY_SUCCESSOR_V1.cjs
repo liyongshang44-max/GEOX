@@ -20,6 +20,8 @@ const resolverId="AM22_POST_CUTOVER_RECOVERY_SUCCESSOR_V1";
 const check={check_id:"AM22_POST_CUTOVER_RECOVERY_ENGINEERING_ONLY",owner:"MCFT_CAP09_AM22_POST_CUTOVER_RECOVERY",generation_scope:["FORMAL_V5","AM22_POST_CUTOVER_RECOVERY_ENGINEERING_ONLY"],authority_refs:["docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json"],resolver_ids:[resolverId],historical_evidence_policy:"NO_REUSE_OF_FAILED_BOOTSTRAP_AS_SUCCESS",execution_workflow:WORKFLOW,execution_workflow_status:"QUALIFICATION_ONLY_NO_PRODUCTION_CREDENTIALS",fail_policy:"FAIL_CLOSED_EXACT_SUCCESSOR_PATHS_AND_NO_PRODUCTION_EFFECT",carry_forward_policy:"NONE",requalification_triggers:[resolverId],applicable_stages:["SUCCESSOR_SUBJECT_PRE_MERGE","POST_MERGE_V13_QUALIFICATION"],carry_forward_evidence_id:null,diagnostic_command:"node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_SUCCESSOR_V1.cjs"};
 const git=(...args)=>cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8"}).trim();
 function verifyRecoverySuccessor(){
+ if(fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_GFS_DIAGNOSTIC_SUCCESSOR_V1.cjs")))return require("./VERIFY_MCFT_CAP_09_AM22_GFS_DIAGNOSTIC_SUCCESSOR_V1.cjs").verifyDiagnosticSuccessor();
+
  assert.equal(git("merge-base",BASE,"HEAD"),BASE,"RECOVERY_BASE_NOT_ANCESTOR");
  assert.equal(git("merge-base",BASE,"origin/main"),BASE,"RECOVERY_BASE_NOT_ADOPTED");
  assert.equal(git("merge-base",ADOPTED_R6,BASE),ADOPTED_R6,"RECOVERY_HISTORICAL_ANCHOR_NOT_ADOPTED");

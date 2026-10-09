@@ -1186,6 +1186,19 @@
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_V1.cjs"
       ]
+    },
+    "AM22_GFS_PROGRESS_DIAGNOSTIC_SUCCESSOR_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-am22-gfs-progress-diagnostic-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-PROGRESS-DIAGNOSTIC-V1.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_GFS_DIAGNOSTIC_SUCCESSOR_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_SUCCESSOR_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_GFS_PROGRESS_DIAGNOSTIC_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_AM22_GFS_PROGRESS_DIAGNOSTIC_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_GFS_PROGRESS_DIAGNOSTIC_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -2505,6 +2518,34 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_SUCCESSOR_V1.cjs"
+    },
+    {
+      "check_id": "AM22_GFS_PROGRESS_DIAGNOSTIC_ENGINEERING_ONLY",
+      "owner": "MCFT_CAP09_AM22_GFS_DIAGNOSTIC",
+      "generation_scope": [
+        "FORMAL_V5",
+        "AM22_GFS_PROGRESS_DIAGNOSTIC_ENGINEERING_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-PROGRESS-DIAGNOSTIC-V1.md"
+      ],
+      "resolver_ids": [
+        "AM22_GFS_PROGRESS_DIAGNOSTIC_SUCCESSOR_V1"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_ADOPTED_RECOVERY_REPLAY_NO_LIVE_SUCCESS_REUSE",
+      "execution_workflow": ".github/workflows/mcft-cap-09-am22-gfs-progress-diagnostic-v1.yml",
+      "execution_workflow_status": "QUALIFICATION_ONLY_NO_PRODUCTION_CREDENTIALS",
+      "fail_policy": "FAIL_CLOSED_EXACT_DIAGNOSTIC_PATHS_AND_READ_ONLY_EFFECTS",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "AM22_GFS_PROGRESS_DIAGNOSTIC_SUCCESSOR_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_GFS_DIAGNOSTIC_SUCCESSOR_V1.cjs"
     }
   ],
   "non_effects": {
