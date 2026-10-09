@@ -38,7 +38,7 @@ for(const file of ["RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V2.cjs","AS
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"am22-chain-unit-"));
 try{fs.writeFileSync(path.join(tmp,"unit.started.json"),"{}");check(()=>assert.throws(()=>runStep({file:path.join(tmp,"unit.cjs"),args:[]},tmp,100),/PARTIAL_OR_PRIOR_OPERATION/));}finally{fs.rmSync(tmp,{recursive:true,force:true});}
 const gov=require("../governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs");
-const after=JSON.parse(fs.readFileSync(path.join(__dirname,"../../",gov.QCP),"utf8"));
+const after=JSON.parse(cp.execFileSync("git",["show","3609bbee463ddc639c10a9993c904175d89892b9:"+gov.QCP],{cwd:path.resolve(__dirname,"../.."),encoding:"utf8"}));
 const before=structuredClone(after);before.checks.pop();delete before.dependency_resolvers.AM22_START_CHAIN_ENGINEERING_ONLY_V2;
 const p=JSON.parse(fs.readFileSync(path.join(__dirname,"../../",gov.POLICY),"utf8"));
 const mutable=[gov.QCP,gov.PRIOR,gov.RETIRE,gov.BOUNDARY],changes=gov.PATHS.map(rel=>({rel,status:mutable.includes(rel)?"M":"A"}));

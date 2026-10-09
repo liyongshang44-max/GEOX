@@ -30,6 +30,7 @@ function validateBoundary(changes,policy,before,after){
  assert.deepEqual(normalized,before,"AM22_CHAIN_PREDECESSOR_QCP_CHANGED");
 }
 function verifyEngineeringOnly(){
+ const measurement=verifyHostMeasurementOnly();if(measurement)return measurement;
  const keyCandidate=verifyExecutionKeyAdoptionOnly();if(keyCandidate)return keyCandidate;
  const transport=verifyFreshAuthorityTransportOnly();if(transport)return transport;
  if(!fs.existsSync(path.join(ROOT,DOC)))return null;
@@ -137,5 +138,47 @@ function verifyExecutionKeyAdoptionOnly(){
  return {status:"PASS",baseline:KEY_BASE,changedPaths:[...new Set([...historical.changedPaths,...adopted,...changes.map(x=>x.rel)])],qualification_scope:"AM22_DISABLED_START_CHAIN_ENGINEERING_ONLY",current_delta_scope:"EXECUTION_TRUST_KEY_ADOPTION_ONLY",key_adoption_candidate_qualified:true,public_key_sha256:KEY_DIGEST,complete_host_measurement_proven:false,fresh_authority_generated:false,old_arm_carry_forward_authorized:false,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,mcft_cap09_completed:false};
 }
 // END EXECUTION_KEY_ADOPTION_ONLY
-module.exports={BASE,DOC,POLICY,QCP,PRIOR,RETIRE,BOUNDARY,PATHS,CHECK,ROUTE,RETIRE_BEFORE,RETIRE_AFTER,BOUNDARY_BEFORE,BOUNDARY_AFTER,validateBoundary,verifyEngineeringOnly,TRANSPORT_BASE,TRANSPORT_WORKFLOW,TRANSPORT_PATHS,TRANSPORT_BEFORE,TRANSPORT_AFTER,validateTransportBoundary,verifyFreshAuthorityTransportOnly,KEY_BASE,KEY_PEM,KEY_DIGEST,KEY_PATHS,KEY_BOUNDARY_BEFORE,KEY_BOUNDARY_AFTER,validateKeyBoundary,verifyExecutionKeyAdoptionOnly};
+// BEGIN HOST_MEASUREMENT_ONLY
+const MEASUREMENT_BASE="3609bbee463ddc639c10a9993c904175d89892b9";
+const MEASUREMENT_DOC="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-SIX-PHASE-HOST-MEASUREMENT-V2.md";
+const MEASUREMENT_WORKFLOW=".github/workflows/mcft-cap-09-am22-start-chain-v2-engineering.yml";
+const MEASUREMENT_ISOLATED="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_START_CHAIN_ISOLATED_O00_V2.ts";
+const MEASUREMENT_NEW=[MEASUREMENT_DOC,...["MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.cjs","RUN_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.ts","MCFT_CAP_09_AM22_PREWRITE_PROBE_V2.ts","ACCEPTANCE_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.cjs"].map(x=>"scripts/runtime_acceptance/"+x)];
+const MEASUREMENT_PATHS=[...MEASUREMENT_NEW,TRANSPORT_SELF,QCP,TRANSPORT_TEST,MEASUREMENT_WORKFLOW,MEASUREMENT_ISOLATED].sort();
+const MEASUREMENT_CHECK={...CHECK,check_id:"AM22_HOST_MEASUREMENT_ONLY",owner:"MCFT_CAP09_AM22_HOST_MEASUREMENT",generation_scope:["FORMAL_V5","AM22_HOST_MEASUREMENT_ONLY"],authority_refs:[POLICY,MEASUREMENT_DOC],resolver_ids:["AM22_HOST_MEASUREMENT_ONLY_V2"],fail_policy:"FAIL_CLOSED_MEASUREMENT_SCOPE_AND_DISABLED_PRODUCTION_REQUIRED",requalification_triggers:["AM22_HOST_MEASUREMENT_ONLY_V2"]};
+const MEASUREMENT_QCP_BEFORE='const after=JSON.parse(fs.readFileSync(path.join(__dirname,"../../",gov.QCP),"utf8"));';
+const MEASUREMENT_QCP_AFTER='const after=JSON.parse(cp.execFileSync("git",["show","'+MEASUREMENT_BASE+':"+gov.QCP],{cwd:path.resolve(__dirname,"../.."),encoding:"utf8"}));';
+const MEASUREMENT_PROBE_IMPORT='import {probePrewrite} from "./MCFT_CAP_09_AM22_PREWRITE_PROBE_V2.js";\n';
+const MEASUREMENT_PROBE_CALL='    const prewrite=await probePrewrite(pool,built.bundle.persistence_bundle,new MemoryEvidenceSource(a0Evidence),A0);\n    assert.equal(prewrite.bootstrap_commit_called,false);\n    assert.equal(prewrite.isolated_lease_released,true);\n    assert.equal(prewrite.a0_execution,false);\n';
+const MEASUREMENT_WORKFLOW_PATHS="      - 'scripts/runtime_acceptance/*HOST_MEASUREMENT_V2*'\n      - 'scripts/runtime_acceptance/*PREWRITE_PROBE_V2*'\n";
+const MEASUREMENT_WORKFLOW_STEP='      - name: Host measurement negatives and prewrite entry typecheck\n        run: |\n          node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.cjs\n          pnpm exec tsc --noEmit --module ESNext --moduleResolution Bundler --target ES2022 --esModuleInterop --skipLibCheck scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.ts scripts/runtime_acceptance/MCFT_CAP_09_AM22_PREWRITE_PROBE_V2.ts\n';
+function validateMeasurementBoundary(changes,before,after,policy,baselinePolicy){
+ assert.deepEqual(changes.map(x=>x.rel).sort(),MEASUREMENT_PATHS,"AM22_MEASUREMENT_EXACT_PATHS_REQUIRED");
+ for(const x of changes)assert.equal(x.status,MEASUREMENT_NEW.includes(x.rel)?"A":"M","AM22_MEASUREMENT_DESTRUCTIVE_OR_EXISTING_CHANGE");
+ assert.deepEqual(policy,baselinePolicy,"AM22_MEASUREMENT_PRODUCTION_POLICY_CHANGED");
+ assert.equal(after.checks.length,before.checks.length+1);assert.deepEqual(after.checks.at(-1),MEASUREMENT_CHECK);
+ assert.deepEqual(after.dependency_resolvers.AM22_HOST_MEASUREMENT_ONLY_V2,{kind:"EXACT_PATH_SET",paths:MEASUREMENT_PATHS});
+ const normalized=structuredClone(after);normalized.checks.pop();delete normalized.dependency_resolvers.AM22_HOST_MEASUREMENT_ONLY_V2;assert.deepEqual(normalized,before,"AM22_MEASUREMENT_PREDECESSOR_QCP_CHANGED");
+}
+function verifyHostMeasurementOnly(){
+ if(!fs.existsSync(path.join(ROOT,MEASUREMENT_DOC)))return null;
+ assert.equal(git("merge-base",MEASUREMENT_BASE,"HEAD"),MEASUREMENT_BASE);assert.equal(git("merge-base",MEASUREMENT_BASE,"origin/main"),MEASUREMENT_BASE);
+ assert.deepEqual(git("status","--porcelain","--untracked-files=normal").split(/\r?\n/).filter(x=>x&&x!=="?? acceptance-output/"),[],"AM22_MEASUREMENT_DIRTY_SOURCE");
+ const at=rel=>cp.execFileSync("git",["show",MEASUREMENT_BASE+":"+rel],{cwd:ROOT,encoding:"utf8"}),read=rel=>fs.readFileSync(path.join(ROOT,rel),"utf8");
+ const changes=git("diff","--name-status",MEASUREMENT_BASE,"HEAD").split(/\r?\n/).filter(Boolean).map(x=>{const [status,rel]=x.split("\t");return {status,rel};});
+ validateMeasurementBoundary(changes,JSON.parse(at(QCP)),JSON.parse(read(QCP)),JSON.parse(read(POLICY)),JSON.parse(at(POLICY)));
+ assert.equal(read(POLICY),at(POLICY));
+ const route=' const measurement=verifyHostMeasurementOnly();if(measurement)return measurement;\n';
+ const exported=',MEASUREMENT_BASE,MEASUREMENT_DOC,MEASUREMENT_PATHS,MEASUREMENT_NEW,MEASUREMENT_CHECK,validateMeasurementBoundary,verifyHostMeasurementOnly';
+ assert.equal(read(TRANSPORT_SELF).replace(route,"").replace(/\/\/ BEGIN HOST_MEASUREMENT_ONLY[\s\S]*?\/\/ END HOST_MEASUREMENT_ONLY\n/,"").replace(exported,""),at(TRANSPORT_SELF),"AM22_MEASUREMENT_PREDECESSOR_CHECKER_CHANGED");
+ assert.equal(read(MEASUREMENT_ISOLATED).replace(MEASUREMENT_PROBE_IMPORT,"").replace(MEASUREMENT_PROBE_CALL,""),at(MEASUREMENT_ISOLATED),"AM22_MEASUREMENT_ORIGINAL_PG_REGRESSION_CHANGED");
+ assert.equal(read(MEASUREMENT_WORKFLOW).replace(MEASUREMENT_WORKFLOW_PATHS,"").replace(MEASUREMENT_WORKFLOW_STEP,""),at(MEASUREMENT_WORKFLOW),"AM22_MEASUREMENT_WORKFLOW_SCOPE_CHANGED");
+ assert.equal(read(TRANSPORT_TEST).replace(MEASUREMENT_QCP_AFTER,MEASUREMENT_QCP_BEFORE),at(TRANSPORT_TEST),"AM22_MEASUREMENT_ORIGINAL_NEGATIVES_CHANGED");
+ for(const file of [TRANSPORT_TEST,"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.cjs"])cp.execFileSync(process.execPath,[path.join(ROOT,file)],{cwd:ROOT,stdio:"pipe"});
+ const historical=require("./ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs").verifyFormalV5AuthorityContinuity("a60aa6858662ce87b989ff752c50969f21ad4619",true);
+ const adopted=git("diff","--name-only","a60aa6858662ce87b989ff752c50969f21ad4619",MEASUREMENT_BASE).split(/\r?\n/).filter(Boolean);
+ return {status:"PASS",baseline:MEASUREMENT_BASE,changedPaths:[...new Set([...historical.changedPaths,...adopted,...changes.map(x=>x.rel)])],qualification_scope:"AM22_DISABLED_START_CHAIN_ENGINEERING_ONLY",current_delta_scope:"SIX_PHASE_HOST_MEASUREMENT_ONLY",actual_host_measurement_completed:false,complete_production_pre_a0_qualified:false,fresh_authority_generated:false,old_arm_carry_forward_authorized:false,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,mcft_cap09_completed:false};
+}
+// END HOST_MEASUREMENT_ONLY
+module.exports={BASE,DOC,POLICY,QCP,PRIOR,RETIRE,BOUNDARY,PATHS,CHECK,ROUTE,RETIRE_BEFORE,RETIRE_AFTER,BOUNDARY_BEFORE,BOUNDARY_AFTER,validateBoundary,verifyEngineeringOnly,TRANSPORT_BASE,TRANSPORT_WORKFLOW,TRANSPORT_PATHS,TRANSPORT_BEFORE,TRANSPORT_AFTER,validateTransportBoundary,verifyFreshAuthorityTransportOnly,KEY_BASE,KEY_PEM,KEY_DIGEST,KEY_PATHS,KEY_BOUNDARY_BEFORE,KEY_BOUNDARY_AFTER,validateKeyBoundary,verifyExecutionKeyAdoptionOnly,MEASUREMENT_BASE,MEASUREMENT_DOC,MEASUREMENT_PATHS,MEASUREMENT_NEW,MEASUREMENT_CHECK,validateMeasurementBoundary,verifyHostMeasurementOnly};
 if(require.main===module)console.log(JSON.stringify(verifyEngineeringOnly(),null,2));
