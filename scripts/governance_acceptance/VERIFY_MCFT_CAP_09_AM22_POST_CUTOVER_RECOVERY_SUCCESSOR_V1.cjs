@@ -3,6 +3,8 @@
 // New exact-main successor boundary; does not rewrite or requalify the adopted #3678 proof.
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process");
 const ROOT=path.resolve(__dirname,"../.."),BASE="3b46be1dda2406ffdcc869c55758f3393d69c716";
+// Frozen protected-main ancestry supplies already adopted historical paths; new paths are separately exact-gated.
+const ADOPTED_R6="dd7529ffd08bead343e312c73b72d7039a7c12e7";
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const SELF="scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs";
 const WORKFLOW=".github/workflows/mcft-cap-09-am22-start-chain-v2-engineering.yml";
@@ -20,6 +22,7 @@ const git=(...args)=>cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8"}).trim
 function verifyRecoverySuccessor(){
  assert.equal(git("merge-base",BASE,"HEAD"),BASE,"RECOVERY_BASE_NOT_ANCESTOR");
  assert.equal(git("merge-base",BASE,"origin/main"),BASE,"RECOVERY_BASE_NOT_ADOPTED");
+ assert.equal(git("merge-base",ADOPTED_R6,BASE),ADOPTED_R6,"RECOVERY_HISTORICAL_ANCHOR_NOT_ADOPTED");
  assert.deepEqual(git("status","--porcelain").split(/\r?\n/).filter(x=>x&&!x.startsWith("?? acceptance-output/")),[],"RECOVERY_DIRTY_SOURCE");
  const delta=git("diff","--name-status",BASE,"HEAD").split(/\r?\n/).filter(Boolean).map(x=>{const [status,rel]=x.split("\t");return {status,rel};});
  assert.deepEqual(delta.map(x=>x.rel).sort(),paths,"RECOVERY_SUCCESSOR_EXACT_PATH_SET_REQUIRED");
@@ -37,7 +40,8 @@ function verifyRecoverySuccessor(){
  const recovery=JSON.parse(subprocess(TEST1)),poll=JSON.parse(subprocess(TEST2)),bridge=JSON.parse(subprocess(LEGACY_BRIDGE_TEST));
  assert.equal(recovery.status,"PASS");assert.equal(poll.status,"PASS");
  assert.equal(recovery.no_production_effects,true);assert.equal(poll.production_writes,0);assert.equal(bridge.status,"PASS");assert.equal(bridge.legacy_gate_count,3);assert.equal(bridge.frozen_consumer_assertions_preserved,true);
- return {status:"PASS",baseline:BASE,changedPaths:paths,qualification_scope:"AM22_DISABLED_START_CHAIN_ENGINEERING_ONLY",current_delta_scope:"POST_CUTOVER_RECOVERY_AND_GFS_POLL_WITH_FROZEN_LEGACY_GATE_BRIDGE_ONLY",recovery_tests:recovery,poll_tests:poll,legacy_bridge_tests:bridge,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false,mcft_cap09_completed:false};
+ const adoptedHistoricalPaths=git("diff","--name-only",ADOPTED_R6,BASE).split(/\\r?\\n/).filter(Boolean);
+ return {status:"PASS",baseline:BASE,adopted_historical_base:ADOPTED_R6,adopted_historical_head:BASE,adopted_historical_path_count:adoptedHistoricalPaths.length,changedPaths:[...new Set([...adoptedHistoricalPaths,...paths])],qualification_scope:"AM22_DISABLED_START_CHAIN_ENGINEERING_ONLY",current_delta_scope:"POST_CUTOVER_RECOVERY_AND_GFS_POLL_WITH_FROZEN_LEGACY_GATE_BRIDGE_ONLY",recovery_tests:recovery,poll_tests:poll,legacy_bridge_tests:bridge,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false,mcft_cap09_completed:false};
 }
 module.exports={BASE,QCP,paths,check,resolverId,verifyRecoverySuccessor};
 if(require.main===module)console.log(JSON.stringify(verifyRecoverySuccessor(),null,2));
