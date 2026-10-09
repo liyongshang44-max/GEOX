@@ -15,7 +15,7 @@ const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-
 const REGISTRY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json";
 const AUTHORITY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-10-09T04Z-V1.json";
 const POLICY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json";
-const PATHS=[".github/workflows/mcft-cap-09-am22-start-chain-v2-engineering.yml","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-10-09T04Z-V1.json","scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs","scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs","scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.cjs"];
+const PATHS=[SELF_REL,".github/workflows/mcft-cap-09-am22-start-chain-v2-engineering.yml","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-10-09T04Z-V1.json","scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs","scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs","scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_HOST_MEASUREMENT_V2.cjs"].sort();
 const ADDED=["scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs","scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-10-09T04Z-V1.json"];
 const ROUTE=" if(fs.existsSync(path.join(ROOT,\"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs\")))return require(\"./VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs\").verifyRefreshOnly();\n";
 const STEP="      - name: Fresh authority append negatives\n        run: |\n          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs\n";
@@ -191,6 +191,18 @@ function verifyRefreshOnly(){
  validateBoundary(changes,JSON.parse(at(QCP)),JSON.parse(read(QCP)),read(POLICY),at(POLICY));
  assert.equal(read(GOV).replace(ROUTE,""),at(GOV),"AM22_REFRESH_MEASUREMENT_CHECKER_CHANGED");
  assert.equal(read(WORKFLOW).replace(STEP,""),at(WORKFLOW),"AM22_REFRESH_PREDECESSOR_WORKFLOW_CHANGED");
+ const replayBefore = at(SELF_REL);
+ const replayBlock = "  const observedProtectedMain = git([\"rev-parse\", \"origin/main\"]);\n  if (historicalReplay) {\n    assert.notEqual(headRef, \"HEAD\", \"FORMAL_V5_HISTORICAL_REPLAY_EXPLICIT_HEAD_REQUIRED\");\n    assert.ok(isAncestor(head, observedProtectedMain), \"FORMAL_V5_HISTORICAL_REPLAY_NOT_ADOPTED_BY_CURRENT_MAIN\");\n  }\n  const protectedMain = historicalReplay ? head : observedProtectedMain;\n  assert.ok(isAncestor(protectedMain, head), \"FORMAL_V5_AUTHORITY_BASE_NOT_CURRENT_MAIN_ANCESTOR\");\n";
+ const replayHelper = "  // Historical replay reads one immutable commit, never the current checkout.\n  const readEvidence = rel => historicalReplay\n    ? cp.execFileSync(\"git\", [\"show\", head + \":\" + rel], {cwd: ROOT, maxBuffer: 64 * 1024 * 1024})\n    : fs.readFileSync(path.join(ROOT, rel));\n";
+ const replayNeedle = "  const registryRel = \"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json\";";
+ let replayExpected = replayBefore.replace(replayBlock, "").replace(replayNeedle, replayBlock + replayHelper + replayNeedle);
+ for (const [before,after] of [
+  ['fs.readFileSync(path.join(ROOT, registryRel), "utf8")','readEvidence(registryRel)'],
+  ['fs.readFileSync(path.join(ROOT, entry.authority_ref))','readEvidence(entry.authority_ref)'],
+  ['fs.readFileSync(path.join(ROOT, previous.ref))','readEvidence(previous.ref)'],
+  ['fs.readFileSync(path.join(ROOT, certificate.ref))','readEvidence(certificate.ref)'],
+ ]) replayExpected = replayExpected.replace(before, after);
+ assert.equal(read(SELF_REL), replayExpected, "AM22_REFRESH_HISTORICAL_REPLAY_ONLY_CORRECTION_REQUIRED");
  const predecessor=at(SELF_REL);const start=predecessor.indexOf("function verifyFormalV5AuthorityContinuity(");const end=predecessor.indexOf("\nmodule.exports = {verifyFormalV5AuthorityContinuity};");
  const expected=predecessor.slice(start,end).trim().replace('const baseline = "f97bb9b9f29dc276c382e8d02c4644aa9ae2ca0b";','const baseline = BASE;').replace('if (governance.has(rel) && status === "M") continue;','if (PATHS.includes(rel) && status === (ADDED.includes(rel) ? "A" : "M") && rel !== AUTHORITY) continue;');
  assert.equal(verifyFormalV5AuthorityContinuity.toString(),expected,"AM22_REFRESH_FROZEN_ARCHIVE_VERIFIER_CHANGED");
