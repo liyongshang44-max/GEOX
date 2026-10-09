@@ -163,7 +163,7 @@ function validateMeasurementBoundary(changes,before,after,policy,baselinePolicy)
 function verifyHostMeasurementOnly(){
  if(!fs.existsSync(path.join(ROOT,MEASUREMENT_DOC)))return null;
  assert.equal(git("merge-base",MEASUREMENT_BASE,"HEAD"),MEASUREMENT_BASE);assert.equal(git("merge-base",MEASUREMENT_BASE,"origin/main"),MEASUREMENT_BASE);
- assert.equal(git("status","--porcelain","--untracked-files=normal"),"","AM22_MEASUREMENT_DIRTY_SOURCE");
+ assert.deepEqual(git("status","--porcelain","--untracked-files=normal").split(/\r?\n/).filter(x=>x&&x!=="?? acceptance-output/"),[],"AM22_MEASUREMENT_DIRTY_SOURCE");
  const at=rel=>cp.execFileSync("git",["show",MEASUREMENT_BASE+":"+rel],{cwd:ROOT,encoding:"utf8"}),read=rel=>fs.readFileSync(path.join(ROOT,rel),"utf8");
  const changes=git("diff","--name-status",MEASUREMENT_BASE,"HEAD").split(/\r?\n/).filter(Boolean).map(x=>{const [status,rel]=x.split("\t");return {status,rel};});
  validateMeasurementBoundary(changes,JSON.parse(at(QCP)),JSON.parse(read(QCP)),JSON.parse(read(POLICY)),JSON.parse(at(POLICY)));
