@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
+const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process");
 const h=require("./MCFT_CAP_09_AM22_GFS_BOOTSTRAP_V1.cjs");
 const ROOT=h.ROOT;
 const read=rel=>fs.readFileSync(path.join(ROOT,rel),"utf8");
@@ -55,6 +55,7 @@ try{
  assert.doesNotMatch(overlay,/privileged|cap_add|network_mode/);
 
  const runner=read("scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs");
+ cp.execFileSync(process.execPath,["--check",path.join(ROOT,"scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs")],{cwd:ROOT,stdio:"pipe"});
  for(const marker of ["GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json","GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json","GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json","BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs","GEOX-MCFT-CAP-09-PRODUCTION-OWNER-CUTOVER-AUTHORITY-INSTANCE-V1","IMAGE_BUILD_AND_ATTESTATION","A0_PLANNING_AND_AUTHORITY_MATERIALIZATION","AM22_GFS_BOOTSTRAP_AUTHORITY_MATERIALIZATION_MARGIN_EXCEEDED","AM22_GFS_BOOTSTRAP_FULL_ACQUISITION_BUDGET_NOT_PRESERVED_AT_OWNER_START","--force-recreate","AM22_GFS_BOOTSTRAP_EXACT_A0_GFS_PAIR_NOT_READY_BEFORE_MEASUREMENT_LEAD","AM22_GFS_BOOTSTRAP_HOST_DATABASE_CLOCK_SKEW_EXCEEDED","rollback_required_by_owner_policy","automatic_compose_down_performed:rollbackSucceeded"])assert.ok(runner.includes(marker),marker);
  assert.ok(runner.indexOf('phase="IMAGE_BUILD_AND_ATTESTATION"')<runner.indexOf('phase="A0_PLANNING_AND_AUTHORITY_MATERIALIZATION"'));
  assert.match(runner,/formal_a0_authority_ref:BOOTSTRAP_A0_POLICY_REL/);
