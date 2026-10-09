@@ -26,6 +26,9 @@ function boundLegacySource(rel){
 for(const rel of legacy)boundLegacySource(rel);
 const successor=read("scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_SUCCESSOR_V1.cjs");
 for(const rel of legacy)assert.equal(successor.includes('require("./'+path.basename(rel)+'")'),false,"RECOVERY_GOVERNANCE_RECURSIVE_IMPORT_FORBIDDEN:"+rel);
+assert.ok(successor.includes('const ADOPTED_R6="dd7529ffd08bead343e312c73b72d7039a7c12e7"'),"RECOVERY_FROZEN_HISTORY_ANCHOR_REQUIRED");
+assert.ok(successor.includes('git("merge-base",ADOPTED_R6,BASE)'),"RECOVERY_FROZEN_HISTORY_ANCESTRY_REQUIRED");
+assert.ok(successor.includes('git("diff","--name-only",ADOPTED_R6,BASE)'),"RECOVERY_HISTORIC_PATHS_MUST_BE_DERIVED_FROM_IMMUTABLE_MAIN");
 const before=JSON.parse(baseline(QCP)),after=JSON.parse(read(QCP));
 assert.equal(after.checks.length,before.checks.length+1,"RECOVERY_QCP_SINGLE_ADD_REQUIRED");
 assert.deepEqual(after.checks.slice(0,-1),before.checks,"RECOVERY_HISTORICAL_QCP_CHECKS_CHANGED");
