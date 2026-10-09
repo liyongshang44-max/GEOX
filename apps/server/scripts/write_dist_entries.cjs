@@ -68,6 +68,16 @@ runMcftCap09EvidencePreFormalOwnerRuntimeV1().catch((error) => {
 `,
   },
   {
+    name: path.join("runtime", "mcft_cap09_am22_gfs_bootstrap_evidence_owner.js"),
+    content: `import { runMcftCap09Am22GfsBootstrapEvidenceOwnerV1 } from "../apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.js";
+
+runMcftCap09Am22GfsBootstrapEvidenceOwnerV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 AM22 GFS bootstrap Evidence owner crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
     name: path.join("runtime", "mcft_cap09_twin_preformal_owner_runtime.js"),
     content: `import { runMcftCap09TwinPreFormalOwnerRuntimeV1 } from "../apps/server/src/runtime/mcft_cap09_twin_preformal_owner_runtime_v1.js";
 
