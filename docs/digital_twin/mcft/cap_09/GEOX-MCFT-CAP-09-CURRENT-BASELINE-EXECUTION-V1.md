@@ -2,6 +2,8 @@
 
 These entrypoints are disabled engineering deliverables, not current production or qualification authority. The checked-in ARM is false. CI performs boundary tests without credentials, provider calls or production execution. Existing 47 QCP checks and historical proofs remain unchanged; the added check covers engineering only.
 
+After the 2026-10-10 current-crop authority adoption, this successor is governed as an exact 17-path scope. The seventeenth path is the adopted-stage successor verifier itself, modified only to delegate descendant-PR validation to this stricter current-baseline verifier while preserving the adopted-main and historical replay checks.
+
 ## Recovery
 
 `RUN_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_V2.cjs` supports a separately authorized **new-window canonical rebootstrap**, not same-image resumption. It archives the failed receipt and complete Evidence log before invoking the existing governed bootstrap. It verifies append-only preservation afterward. It neither clears historical attempts nor authorizes Formal V5, A0 or O00.
