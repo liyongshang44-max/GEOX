@@ -1,0 +1,76 @@
+{
+  "schema_version": "geox_mcft_cap09_current_baseline_preparation_contract_v1",
+  "status": "PREPARATION_ONLY_NOT_EXECUTION_AUTHORITY",
+  "adopted_baseline": "962fde08f5415909e21ab3812754f0bb711b8b69",
+  "frozen_runtime": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+  "runtime_resolver": "V13_RUNTIME_SEMANTIC_CLOSURE",
+  "runtime_path_count": 108,
+  "deployment_observation": {
+    "evidence_class": "OPERATOR_DOCKER_INSPECT_NOT_BUILD_ATTESTATION",
+    "deployment_subject": "3b46be1dda2406ffdcc869c55758f3393d69c716",
+    "image_id": "sha256:b2eed3f3845ce4ba45627da028ecc7a04947dd03223698d65cebacf10c659456",
+    "image_tag": "geox-mcft-cap09-runtime:3b46be1dda2406ffdcc869c55758f3393d69c716",
+    "image_contents_attested": false,
+    "qualification_subject_equals_deployment_subject_required": false,
+    "qualification_subject_retagging_allowed": false,
+    "production_recovery_authorized": false
+  },
+  "preparation_paths": [
+    ".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-BASELINE-EXECUTION-V1.md",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-BASELINE-PREPARATION-CONTRACT-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs",
+    "scripts/governance_acceptance/PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs",
+    "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs",
+    "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+    "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts",
+    "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_ARM_V1.json",
+    "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_V2.cjs",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
+  ],
+  "preserved_artifacts": {
+    ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml": "34e95e231323a1bd74613e56dd7fcb007c95e1220e6711f5b8b06c888da87a4b",
+    ".github/workflows/mcft-cap-09-v13-exact-head-timing-measurement.yml": "0bf6c8edf1d95b1a523b22d144c6ebfe5a87f19cbb1a4404545542ccb78f89de",
+    "scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json": "b2d31e25921296584138ea5bf81ac8b8e3b9e682dfb0f9d5d1187a16bcc829b8",
+    "scripts/runtime_acceptance/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_ARM_V1.json": "a80608b01c7aa65d39a245de4ffcfce7c467210abe3c8d35e2e53b7c1def2711",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_V1.cjs": "a080a3915ca2c2ff85963af7560b83f680a835836dc86d7aca8c8c91d4f63309"
+  },
+  "qualification_requirements": {
+    "historical_arm_reuse_allowed": false,
+    "minimum_first_base_lead_hours_exclusive": 6,
+    "lead_applies_to": "QUALIFICATION_FIRST_BASE_TARGET_NOT_PROGRAM_START",
+    "current_subject_and_dependency_digest_binding_required": true,
+    "separate_isolated_database_and_object_storage_binding_required": true,
+    "producer_raw_retention_promotion_and_readback_required": true,
+    "timing_real_samples_and_controlled_delay_cases_required": true,
+    "successful_workflow_alone_closes_blockers": false,
+    "bucket_head_alone_qualifies_raw_ingress": false
+  },
+  "recovery_requirements": {
+    "failed_receipt_and_three_historical_attempts_preserved": true,
+    "deployed_subject_to_immutable_image_provenance_required": true,
+    "new_adopted_stage_and_all_25_context_coverage_required": true,
+    "evidence_running_alone_is_healthy": false,
+    "latest_evidence_health_max_age_seconds": 180,
+    "both_roles_live_fenced_lease_and_t1_t2_renewal_required": true,
+    "readiness_preflight_performs_recovery": false,
+    "independent_production_recovery_authorization_required": true
+  },
+  "authorization": {
+    "provider_requests": false,
+    "database_writes": false,
+    "object_storage_writes": false,
+    "container_restart_or_recreation": false,
+    "historical_attempt_reset": false,
+    "runtime_semantics_change": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0": false,
+    "o00": false
+  }
+}
