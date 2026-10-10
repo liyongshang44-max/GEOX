@@ -67,6 +67,8 @@ function historicalReplay() {
  }
 }
 function verifySuccessor(){
+ const budgetSuccessor=path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_HISTORY_REPLAY_BUDGET_SUCCESSOR_V1.cjs");
+ if(fs.existsSync(budgetSuccessor))return require("./VERIFY_MCFT_CAP_09_HISTORY_REPLAY_BUDGET_SUCCESSOR_V1.cjs").verifySuccessor();
  const head=git("rev-parse","HEAD"), main=git("rev-parse","origin/main");
  assert.equal(cp.spawnSync("git",["merge-base","--is-ancestor",BASE,head],
    {cwd:ROOT,timeout:60000}).status,0,"BUCKET_BASE_NOT_ANCESTOR");

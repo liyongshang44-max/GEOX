@@ -114,6 +114,66 @@ for(const bad of [
  {main_tree:"e".repeat(40)},
 ])assert.throws(()=>p.validateMainAdoption({...bucketMerged,...bad}));
 
+
+// Windows replay successor: exact scope and a single bounded process budget.
+const history = require("./VERIFY_MCFT_CAP_09_HISTORY_REPLAY_BUDGET_SUCCESSOR_V1.cjs");
+const budget = require("./MCFT_CAP_09_HISTORY_REPLAY_BUDGET_V1.cjs");
+const historyCandidate = {...adoption, main:history.BASE, head:"e".repeat(40),
+  parents:[bucketBase,"d".repeat(40)], head_descends_from_main:true,
+  successor_paths:history.PATHS};
+assert.equal(p.validateMainAdoption(historyCandidate), "PRE_MERGE_HISTORY_REPLAY_BUDGET_ENGINEERING_ONLY");
+const historyMerged = {...historyCandidate, main:"f".repeat(40), head:"f".repeat(40),
+  parents:[history.BASE,"e".repeat(40)], head_descends_from_main:false};
+assert.equal(p.validateMainAdoption(historyMerged), "POST_MERGE_HISTORY_REPLAY_BUDGET_ENGINEERING_ONLY");
+for (const state of [historyCandidate, historyMerged]) {
+  for (const bad of [{successor_paths:history.PATHS.slice(1)},
+    {successor_paths:[...history.PATHS,"scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_ISOLATED_QUALIFICATION_ARM_20261010_V1.json"]},
+    {main_tree:"e".repeat(40)}, {parents:["0".repeat(40),"e".repeat(40)]}]) {
+    assert.throws(() => p.validateMainAdoption({...state,...bad}));
+  }
+}
+assert.throws(() => p.validateMainAdoption({...historyCandidate,head_descends_from_main:false}));
+assert.throws(() => p.validateMainAdoption({...historyMerged,head:"e".repeat(40)}));
+const historicalScript = "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs";
+const opts = {timeout:240000,encoding:"utf8",env:{TEST_SENTINEL:"retained"}};
+const deadline = 10000 + budget.TOTAL_MS;
+const adjusted = budget.childOptions(process.execPath,[historicalScript],opts,deadline,10000);
+assert.equal(adjusted.timeout,budget.TOTAL_MS-2000);
+assert.equal(adjusted.env[budget.KEY],String(deadline-2000));
+assert.equal(adjusted.env.TEST_SENTINEL,"retained");
+assert.equal(opts.timeout,240000);
+assert.equal(opts.env[budget.KEY],undefined);
+assert.equal(budget.childOptions(process.execPath,[historicalScript],opts,deadline,20000).timeout,
+  adjusted.timeout-10000);
+assert.throws(() => budget.childOptions(process.execPath,[historicalScript],opts,10000,10000));
+assert.throws(() => budget.childOptions(process.execPath,[historicalScript],opts,deadline+1,10000));
+assert.throws(() => budget.childOptions(process.execPath,[historicalScript],opts,10001,10000));
+for (const [command,args,options] of [
+  ["git",["show","HEAD"],opts],
+  [process.execPath,["scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs"],opts],
+  [process.execPath,["-e","throw new Error('sentinel')"],opts],
+  [process.execPath,[historicalScript,"--extra"],opts],
+  [process.execPath,[historicalScript],{timeout:180000}],
+]) assert.equal(budget.childOptions(command,args,options,deadline,10000),options);
+assert.throws(() => budget.historicalEnvironment("/helper.cjs",10000,{NODE_OPTIONS:"--inspect"}));
+assert.throws(() => budget.historicalEnvironment("/helper.cjs",10000,{[budget.KEY]:"999"}));
+const fs = require("node:fs"), os = require("node:os");
+const fixture = fs.mkdtempSync(path.join(os.tmpdir(),"history-budget-test-"));
+try {
+  const dir = path.join(fixture,"scripts/governance_acceptance");
+  fs.mkdirSync(dir,{recursive:true});
+  const parent = path.join(dir,"VERIFY_MCFT_CAP_09_ISOLATED_PRODUCER_BUCKET_SEAM_SUCCESSOR_V1.cjs");
+  const child = path.join(dir,path.basename(historicalScript));
+  fs.writeFileSync(child,'process.stdout.write("SENTINEL_STDOUT");process.exit(7);');
+  fs.writeFileSync(parent, 'const cp=require("node:child_process"),assert=require("node:assert/strict");'+
+    'try { cp.execFileSync(process.execPath,['+JSON.stringify(child)+'],{timeout:240000,encoding:"utf8"});process.exit(99); }'+
+    'catch(e){assert.equal(e.status,7);assert.equal(e.stdout,"SENTINEL_STDOUT");console.log("ERROR_PROPAGATION_PASS");}');
+  const result = cp.spawnSync(process.execPath,[parent],{encoding:"utf8",timeout:10000,
+    env:budget.historicalEnvironment(path.resolve(__dirname,"MCFT_CAP_09_HISTORY_REPLAY_BUDGET_V1.cjs"))});
+  assert.equal(result.status,0,result.stderr);
+  assert.equal(result.stdout.trim(),"ERROR_PROPAGATION_PASS");
+} finally { fs.rmSync(fixture,{recursive:true,force:true}); }
+
 const source = p.verifySources();
 assert.equal(source.deployment_binding.frozen_source_runtime_matches_current_baseline, true);
 assert.equal(source.deployment_binding.image_contents_attested, false);
