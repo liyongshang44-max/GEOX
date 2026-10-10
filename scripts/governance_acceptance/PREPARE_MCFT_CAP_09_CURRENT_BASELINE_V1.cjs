@@ -60,7 +60,8 @@ function verifySources() {
     assert.equal(hash(fs.readFileSync(path.join(ROOT, p))), expected, "HISTORICAL_ARTIFACT_CHANGED:" + p);
   }
   const tracked = git(["diff", "--name-only", c.adopted_baseline]).split(/\r?\n/).filter(Boolean);
-  const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\r?\n/).filter(Boolean);
+  // Generated, untracked acceptance receipts are not source; tracked modifications remain checked.
+  const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\r?\n/).filter(p => p && !p.startsWith("acceptance-output/"));
   for (const p of [...tracked, ...untracked]) assert(c.preparation_paths.includes(p), "PREPARATION_SCOPE_EXCEEDED:" + p);
   return {contract: c, subject_sha: git(["rev-parse", "HEAD"]), frozen_runtime_paths_verified: paths.length,
     deployment_binding: verifyDeploymentBinding(c, paths)};
