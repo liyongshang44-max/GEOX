@@ -162,7 +162,7 @@ function verifySources() {
   const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\r?\n/).filter(p => p && !p.startsWith("acceptance-output/"));
   const newScope = ["PRE_MERGE_ISOLATED_BUCKET_SEAM_ENGINEERING_ONLY",
     "POST_MERGE_ISOLATED_BUCKET_SEAM_ENGINEERING_ONLY"].includes(adoption) ?
-    ISOLATED_BUCKET_SUCCESSOR_PATHS :
+    [...new Set([...ISOLATED_AUTHORIZATION_SUCCESSOR_PATHS, ...ISOLATED_BUCKET_SUCCESSOR_PATHS])] :
     ["PRE_MERGE_ISOLATED_QUALIFICATION_AUTHORIZATION",
       "POST_MERGE_ISOLATED_QUALIFICATION_AUTHORIZATION"].includes(adoption) ?
     ISOLATED_AUTHORIZATION_SUCCESSOR_PATHS : [];
