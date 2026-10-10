@@ -42,6 +42,18 @@ function verifyDeploymentBinding(c, paths) {
 }
 
 const ADOPTED_ENTRY_MAIN = "9625680d4bec137956d79960e0f9feaad4ebf6ab";
+const ISOLATED_AUTHORIZATION_BASE = "6c6f2d77301a852dbb2f52538df89e3098b5aee5";
+const ISOLATED_AUTHORIZATION_SUCCESSOR_PATHS = [
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ISOLATED-QUALIFICATION-ARM-AUTHORIZATION-20261010-V1.md",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs",
+  "scripts/governance_acceptance/PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs",
+  "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs",
+  "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_QUALIFICATION_AUTHORIZATION_SUCCESSOR_V1.cjs",
+  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_ISOLATED_QUALIFICATION_ARM_20261010_V1.json"
+];
 const ENGINEERING_SOURCE_GUARD_SUCCESSOR_PATHS = [
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs",
   "scripts/governance_acceptance/PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs",
@@ -56,10 +68,22 @@ function validateMainAdoption({
 }) {
   if (main === anchor) return "PRE_MERGE_ANCHOR";
   assert(Array.isArray(parents) && parents.length === 2, "EXACT_TWO_PARENT_ADOPTION_REQUIRED");
-  assert([anchor, ADOPTED_ENTRY_MAIN].includes(parents[0]), "FIRST_PARENT_BASE_CHANGED");
+  assert([anchor, ADOPTED_ENTRY_MAIN, ISOLATED_AUTHORIZATION_BASE].includes(parents[0]), "FIRST_PARENT_BASE_CHANGED");
   assert.match(parents[1], /^[a-f0-9]{40}$/);
   assert.match(candidate_tree, /^[a-f0-9]{40}$/);
   assert.equal(main_tree, candidate_tree, "MERGE_CANDIDATE_ZERO_DELTA_REQUIRED");
+  if (parents[0] === ISOLATED_AUTHORIZATION_BASE) {
+    assert.equal(head,main,"ISOLATED_AUTHORIZATION_NOT_ADOPTED");
+    assert.deepEqual(successor_paths,ISOLATED_AUTHORIZATION_SUCCESSOR_PATHS,
+      "ISOLATED_AUTHORIZATION_POST_MERGE_SCOPE_MISMATCH");
+    return "POST_MERGE_ISOLATED_QUALIFICATION_AUTHORIZATION";
+  }
+  if (main === ISOLATED_AUTHORIZATION_BASE && head !== main) {
+    assert.equal(head_descends_from_main,true,"AUTHORIZATION_BRANCH_MUST_DESCEND_EXACT_MAIN");
+    assert.deepEqual(successor_paths,ISOLATED_AUTHORIZATION_SUCCESSOR_PATHS,
+      "ISOLATED_AUTHORIZATION_PRE_MERGE_SCOPE_MISMATCH");
+    return "PRE_MERGE_ISOLATED_QUALIFICATION_AUTHORIZATION";
+  }
   if (parents[0] === ADOPTED_ENTRY_MAIN) {
     assert.equal(head, main, "SOURCE_GUARD_SUCCESSOR_MAIN_NOT_ADOPTED");
     assert.deepEqual(successor_paths, ENGINEERING_SOURCE_GUARD_SUCCESSOR_PATHS,
@@ -85,9 +109,12 @@ function verifySources() {
   const head = git(["rev-parse", "HEAD"]), main = git(["rev-parse", "origin/main"]);
   const parents = main === c.adopted_baseline ? [] : git(["show", "-s", "--format=%P", main]).split(" ");
   if (parents.length === 2) git(["merge-base", "--is-ancestor", c.adopted_baseline, parents[1]]);
-  const successorPaths = head===main && parents[0] !== ADOPTED_ENTRY_MAIN ? [] :
+  const adoptedParent = parents[0] === ISOLATED_AUTHORIZATION_BASE ?
+    ISOLATED_AUTHORIZATION_BASE : ADOPTED_ENTRY_MAIN;
+  const successorPaths = head===main &&
+    parents[0] !== ADOPTED_ENTRY_MAIN && parents[0] !== ISOLATED_AUTHORIZATION_BASE ? [] :
     git(["diff", "--name-only",
-      head===main ? ADOPTED_ENTRY_MAIN : main, head]).split(/\r?\n/).filter(Boolean).sort();
+      head===main ? adoptedParent : main, head]).split(/\r?\n/).filter(Boolean).sort();
   const descends = head===main ? false :
     cp.spawnSync("git", ["merge-base", "--is-ancestor", main, head],
       {cwd:ROOT, timeout:30000}).status === 0;
@@ -108,7 +135,12 @@ function verifySources() {
   const tracked = git(["diff", "--name-only", c.adopted_baseline]).split(/\r?\n/).filter(Boolean);
   // Generated, untracked acceptance receipts are not source; tracked modifications remain checked.
   const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\r?\n/).filter(p => p && !p.startsWith("acceptance-output/"));
-  for (const p of [...tracked, ...untracked]) assert(c.preparation_paths.includes(p), "PREPARATION_SCOPE_EXCEEDED:" + p);
+  const newScope = ["PRE_MERGE_ISOLATED_QUALIFICATION_AUTHORIZATION",
+    "POST_MERGE_ISOLATED_QUALIFICATION_AUTHORIZATION"].includes(adoption) ?
+    ISOLATED_AUTHORIZATION_SUCCESSOR_PATHS : [];
+  for (const p of [...tracked, ...untracked]) assert(
+    c.preparation_paths.includes(p) || newScope.includes(p),
+    "PREPARATION_SCOPE_EXCEEDED:" + p);
   return {contract: c, subject_sha: head, protected_main_adoption:adoption, frozen_runtime_paths_verified: paths.length,
     deployment_binding: verifyDeploymentBinding(c, paths)};
 }
