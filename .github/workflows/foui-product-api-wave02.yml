@@ -1,0 +1,40 @@
+name: foui-product-api-wave02
+
+on:
+  pull_request:
+    paths:
+      - "apps/server/src/product_projection/**"
+      - "apps/server/src/routes/product_v1.ts"
+      - "apps/server/src/routes/product_v1.test.ts"
+      - "apps/server/src/modules/product/**"
+      - "apps/server/src/modules/domain/registerDomainModules.ts"
+      - "docs/product_projection/GEOX-FOUI-PRODUCT-API-WAVE-02-V1.md"
+      - "scripts/governance_acceptance/ACCEPTANCE_FOUI_PRODUCT_API_WAVE_02_V1.cjs"
+      - ".github/workflows/foui-product-api-wave02.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wave02:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: Customer Product Projection tests
+        run: node --import tsx --test apps/server/src/product_projection/customer/customer_product_projection_builder_v1.test.ts
+      - name: Product API route tests
+        run: node --import tsx --test apps/server/src/routes/product_v1.test.ts
+      - name: Wave-02 governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_FOUI_PRODUCT_API_WAVE_02_V1.cjs

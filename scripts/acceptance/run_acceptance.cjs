@@ -4,6 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
+const { provisionDeviceIdentityFixture } = require('./p1_device_identity_fixture.cjs');
 
 const repoRoot = process.cwd();
 const outputDir = path.join(repoRoot, 'acceptance-output');
@@ -166,6 +167,20 @@ if (cli.list) {
 
 ensureOutputDir(outputDir);
 
+function resolveAcceptanceDatabaseUrl() {
+  const explicit = String(process.env.DATABASE_URL || '').trim();
+  if (explicit) return explicit;
+  const user = String(process.env.POSTGRES_USER || '').trim();
+  const password = String(process.env.POSTGRES_PASSWORD || '').trim();
+  const database = String(process.env.POSTGRES_DB || '').trim();
+  const host = String(process.env.POSTGRES_HOST || '127.0.0.1').trim();
+  const port = String(process.env.POSTGRES_PORT || '5433').trim();
+  if (!user || !password || !database || !host || !port) {
+    throw new Error('P1_SMOKE_ACCEPTANCE_DATABASE_CONFIG_REQUIRED');
+  }
+  return `postgres://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}`;
+}
+
 (async () => {
   const startedAt = new Date();
   const results = [];
@@ -175,6 +190,28 @@ ensureOutputDir(outputDir);
 
   for (const step of STEP_DEFINITIONS) {
     const envOverrides = {};
+    if (suiteId === 'legacy' && step.id === 'P1_SMOKE') {
+      const fixtureRun = Date.now().toString(36);
+      const deviceId = `dev_acceptance_p1_${fixtureRun}`;
+      const fieldId = `field_acceptance_p1_${fixtureRun}`;
+      const tenant = {
+        tenant_id: String(process.env.GEOX_TENANT_ID || process.env.TENANT_ID || 'tenantA').trim(),
+        project_id: String(process.env.GEOX_PROJECT_ID || process.env.PROJECT_ID || 'projectA').trim(),
+        group_id: String(process.env.GEOX_GROUP_ID || process.env.GROUP_ID || 'groupA').trim(),
+      };
+      const fixture = await provisionDeviceIdentityFixture({
+        databaseUrl: resolveAcceptanceDatabaseUrl(),
+        tenant,
+        deviceId,
+        fieldId,
+      });
+      envOverrides.GEOX_DEVICE_ID = deviceId;
+      envOverrides.GEOX_DEVICE_CREDENTIAL_SECRET = fixture.secret;
+      envOverrides.GEOX_TENANT_ID = tenant.tenant_id;
+      envOverrides.GEOX_PROJECT_ID = tenant.project_id;
+      envOverrides.GEOX_GROUP_ID = tenant.group_id;
+      console.log(`[acceptance] prepared isolated P1 device identity fixture device_id=${deviceId} field_id=${fieldId}`);
+    }
     if (suiteId === 'legacy' && step.id === 'P1_ACCEPTANCE_SMOKE') {
       if (!runtimeContext.operationPlanIdFromP1) {
         results.push({

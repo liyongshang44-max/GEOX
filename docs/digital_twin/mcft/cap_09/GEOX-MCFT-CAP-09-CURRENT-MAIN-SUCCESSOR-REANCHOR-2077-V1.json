@@ -1,0 +1,66 @@
+{
+  "schema_version": "GEOX_MCFT_CAP_09_CURRENT_MAIN_SUCCESSOR_REANCHOR_V1",
+  "status": "CANDIDATE_SUCCESSOR_REANCHOR",
+  "authority_ceiling": "QUALIFICATION_GOVERNANCE_ONLY",
+  "old_qualified_subject": "933ff8d491306a34f9886a2abb12d5b09402b12e",
+  "old_protected_main": "2144d63477176f939a0d40d39b96ca97522af8db",
+  "new_protected_main": "2077b3b1cdb0945496d9974a581d2c4934e94561",
+  "new_protected_main_tree": "6714a9767bb01bee92a85bc6e6c4cd90a300c8d4",
+  "successor_carrier": {
+    "commit": "8ca95143760725f1bdaee3fc13a1ee031f2aedac",
+    "tree": "9f9197dac901de3b8dde34133d562bc85f7642fb",
+    "parent_1_old_qualified_subject": "933ff8d491306a34f9886a2abb12d5b09402b12e",
+    "parent_2_new_protected_main": "2077b3b1cdb0945496d9974a581d2c4934e94561"
+  },
+  "protected_main_transition": {
+    "expected_exact_changed_paths": [
+      ".github/workflows/ci.yml"
+    ],
+    "mcft_semantic_overlap": [],
+    "classification": "CI_GOVERNANCE_ONLY_ZERO_MCFT_OVERLAP"
+  },
+  "qualified_payload_carry_forward": {
+    "old_subject": "933ff8d491306a34f9886a2abb12d5b09402b12e",
+    "paths": [
+      ".github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml",
+      ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+      "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json",
+      "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+      "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs",
+      "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
+    ],
+    "byte_identity_required": true
+  },
+  "bline_final_authority_preservation": {
+    "basis": "OLD_MAIN_TO_NEW_MAIN_EXACT_DELTA_IS_CI_YML_ONLY",
+    "explicit_authority_paths": [
+      "scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs",
+      "scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs",
+      "scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs",
+      "scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs",
+      "scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs"
+    ],
+    "byte_identity_required": true
+  },
+  "qualification_semantics": {
+    "mode": "BOUNDED_SUCCESSOR_REANCHOR",
+    "historical_required_qualification_rerun": false,
+    "qcp_redesign_authorized": false,
+    "historical_predecessor_allowlist_expansion_authorized": false,
+    "proof_files_added_after_carrier": [
+      "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-SUCCESSOR-REANCHOR-2077-V1.json",
+      "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_SUCCESSOR_REANCHOR_2077_V1.cjs",
+      ".github/workflows/mcft-cap-09-current-main-successor-reanchor-2077-v1.yml"
+    ]
+  },
+  "non_effects": {
+    "mcft_product_semantics_changed": false,
+    "bline_product_semantics_changed": false,
+    "production_owner_activation_authorized": false,
+    "production_runtime_activation_authorized": false,
+    "formal_v5_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "adr_semantic_change_authorized": false
+  }
+}

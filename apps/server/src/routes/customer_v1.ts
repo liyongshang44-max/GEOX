@@ -1,3 +1,13 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_P1_P2_CUSTOMER_API
+ *
+ * Existing compatibility consumers may continue to use this route family during migration.
+ * New post-FOUI product consumers MUST NOT add dependencies on /api/v1/customer/*.
+ * Canonical successor namespace for new product construction: /api/product/v1/*.
+ * See docs/frontend-productization/GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1.md.
+ *
+ * This annotation changes no runtime behavior and does not deauthorize existing consumers.
+ */
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import { enforceRouteRoleAuth } from "../auth/route_role_authz.js";

@@ -1,3 +1,8 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_CONSUMER_ADAPTER
+ * Historical Customer ROI compatibility adapter. Do not adopt its direct/fallback API strategy for new post-FOUI product work.
+ * New product consumers use governed /api/product/v1/* projections.
+ */
 import { apiRequestWithPolicy, withQuery } from "./client";
 
 export type CustomerRoiLedgerDataScope = "OFFICIAL_CUSTOMER_API" | "FALLBACK_EMBEDDED_REPORT" | "NO_ROI" | "ERROR_EMPTY";

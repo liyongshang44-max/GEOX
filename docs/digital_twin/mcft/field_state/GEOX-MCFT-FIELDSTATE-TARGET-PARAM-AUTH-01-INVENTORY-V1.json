@@ -1,0 +1,277 @@
+{
+  "schema_version": "geox_mcft_fieldstate_target_param_auth_01_inventory_v1",
+  "frontier_id": "MCFT-FIELDSTATE-TARGET-PARAM-AUTH-01",
+  "frontier_class": "FIELD_STATE_TARGET_PARAMETER_AUTHORITY_INVENTORY",
+  "phase": "FIRST_PHASE_AUTHORITY_INVENTORY_AND_CONTRACT",
+  "authoritative_successor_base": "ca56d60e3d927ccda5d1f28255e195575bf7a487",
+  "reopens": [],
+  "forbidden_reopens": ["#3514", "#3524", "QINF"],
+  "scope": {
+    "tenant_id": "tenantA",
+    "project_id": "projectA",
+    "group_id": "groupA",
+    "field_id": "field_c8_demo",
+    "zone_id": "zone_mcft_c8_water_001",
+    "crop_code": "corn",
+    "season_id": "season_2026_c8_corn",
+    "scope_class": "CONTROLLED_SYNTHETIC_SOFTWARE_PROXY"
+  },
+  "inventory_result": {
+    "path": "PATH_B",
+    "real_target_subject_authority": "ABSENT",
+    "real_target_geometry_authority": "ABSENT",
+    "real_target_parameter_authority": "ABSENT",
+    "source_acquisition_gap": "IDENTIFIED",
+    "software_authority_substrate": "READY",
+    "real_target_source": "NOT_YET_ACQUIRED",
+    "target_specific_binding_phase": "NOT_AUTHORIZED_UNTIL_REAL_SUBJECT_AND_PARAMETER_AUTHORITY_QUALIFY"
+  },
+  "target_subject_authority": {
+    "status": "ABSENT",
+    "current_software_proxy_scope_ref": "docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING.json",
+    "current_software_proxy_binding_id": "mcft_rb_bf1da664164a4fedda249bcb",
+    "current_reality_scope_class": "CONTROLLED_SYNTHETIC_REPLAY_PROXY",
+    "current_field_truth_mode": "CONTROLLED_REPLAY_FIELD_PROXY",
+    "current_geometry_truth_status": "CONTROLLED_SYNTHETIC",
+    "real_target_subject_identity_ref": null,
+    "real_target_field_id": null,
+    "real_target_zone_id": null,
+    "real_target_field_geometry_authority_ref": null,
+    "real_target_zone_geometry_authority_ref": null,
+    "real_target_field_zone_mapping_authority_ref": null,
+    "qualification_prerequisite": "MUST_QUALIFY_BEFORE_ANY_REAL_TARGET_PARAMETER_AUTHORITY",
+    "required_fields": [
+      "real_target_subject_identity",
+      "field",
+      "zone",
+      "crop",
+      "season",
+      "field_geometry_authority",
+      "zone_geometry_authority",
+      "field_zone_mapping",
+      "effective_from",
+      "effective_until",
+      "available_at",
+      "source_provenance",
+      "source_authority",
+      "uncertainty_or_confidence",
+      "exact_authority_refs"
+    ],
+    "prohibited_substitution": "CONTROLLED_SYNTHETIC_PROXY_MUST_NOT_BE_RELABELED_AS_REAL_TARGET"
+  },
+  "current_controlled_synthetic_authority": {
+    "reality_binding": {
+      "ref": "docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING.json",
+      "git_blob_sha": "a1f831fa07811099184a249301e1401442449e3f",
+      "determinism_hash": "sha256:bf1da664164a4fedda249bcb0e330c1af2083173a52bd704f01eac3ad277ba4f",
+      "binding_id": "mcft_rb_bf1da664164a4fedda249bcb",
+      "reality_scope_class": "CONTROLLED_SYNTHETIC_REPLAY_PROXY",
+      "field_truth_mode": "CONTROLLED_REPLAY_FIELD_PROXY"
+    },
+    "soil_hydraulic_configuration": {
+      "ref": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+      "git_blob_sha": "c04c6805ab79c715781b99f8fbcf997fae3a8c48",
+      "matrix_determinism_hash": "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5",
+      "binding_id": "soil_hydraulic_config_c8_v1",
+      "binding_determinism_hash": "sha256:3d6e3d8b52a9736ff6898487cacbbffdf71578cca693754ab34cb484e5bc3082",
+      "configuration_source_id": "mcft_soil_hydraulic_config_c8_v1",
+      "configuration_semantic_hash": "sha256:51498f4fe332fd0fc9a432e49c8845b4aca3012285f2d7965de2c44d4b92db14",
+      "provenance_class": "CONTROLLED_SYNTHETIC_GOVERNED_CONFIG",
+      "proof_scope": "GOVERNANCE_IDENTITY_ONLY",
+      "limitations": ["controlled synthetic", "not field-calibrated", "not real target truth"]
+    },
+    "rooting_context": {
+      "ref": "fixtures/mcft/water_state/configuration_context_source_v1.json",
+      "git_blob_sha": "49a80e708e091b0ac7fb1875a8635332301b0c92",
+      "context_class": "CONFIGURATION_DERIVED_CONTEXT",
+      "limitations": ["controlled synthetic configuration schedule", "not field-verified phenology", "effective model root depth capped by governed 300 mm root zone"]
+    }
+  },
+  "current_parameter_inventory": [
+    {
+      "parameter_id": "root_zone_depth_mm",
+      "current_value": 300,
+      "unit": "mm",
+      "current_truth_class": "CONTROLLED_SYNTHETIC",
+      "current_authority_ref": "soil_hydraulic_config_c8_v1",
+      "real_target_authority_ref": null,
+      "real_target_authority_status": "ABSENT",
+      "required_scope_axes": ["field", "zone", "crop", "season", "effective_interval", "rooting_or_biological_stage_where_relevant"],
+      "dynamic_scope_required": true,
+      "source_gap_id": "GAP_ROOT_ZONE_DEPTH_TARGET_STAGE_AWARE"
+    },
+    {
+      "parameter_id": "wilting_point_fraction",
+      "current_value": 0.12,
+      "unit": "fraction",
+      "current_truth_class": "CONTROLLED_SYNTHETIC",
+      "current_authority_ref": "soil_hydraulic_config_c8_v1",
+      "real_target_authority_ref": null,
+      "real_target_authority_status": "ABSENT",
+      "required_scope_axes": ["field", "zone", "season", "vertical_support", "effective_interval"],
+      "dynamic_scope_required": false,
+      "source_gap_id": "GAP_WILTING_POINT_TARGET_PROFILE"
+    },
+    {
+      "parameter_id": "field_capacity_fraction",
+      "current_value": 0.3,
+      "unit": "fraction",
+      "current_truth_class": "CONTROLLED_SYNTHETIC",
+      "current_authority_ref": "soil_hydraulic_config_c8_v1",
+      "real_target_authority_ref": null,
+      "real_target_authority_status": "ABSENT",
+      "required_scope_axes": ["field", "zone", "season", "vertical_support", "effective_interval"],
+      "dynamic_scope_required": false,
+      "source_gap_id": "GAP_FIELD_CAPACITY_TARGET_PROFILE"
+    },
+    {
+      "parameter_id": "saturation_fraction",
+      "current_value": 0.45,
+      "unit": "fraction",
+      "current_truth_class": "CONTROLLED_SYNTHETIC",
+      "current_authority_ref": "soil_hydraulic_config_c8_v1",
+      "real_target_authority_ref": null,
+      "real_target_authority_status": "ABSENT",
+      "required_scope_axes": ["field", "zone", "season", "vertical_support", "effective_interval"],
+      "dynamic_scope_required": false,
+      "source_gap_id": "GAP_SATURATION_TARGET_PROFILE"
+    },
+    {
+      "parameter_id": "drainage_coefficient_per_hour",
+      "current_value": 0.03,
+      "unit": "fraction_per_hour",
+      "current_truth_class": "CONTROLLED_SYNTHETIC",
+      "current_authority_ref": "soil_hydraulic_config_c8_v1",
+      "real_target_authority_ref": null,
+      "real_target_authority_status": "ABSENT",
+      "required_scope_axes": ["field", "zone", "season", "vertical_support", "effective_interval"],
+      "dynamic_scope_required": false,
+      "source_gap_id": "GAP_DRAINAGE_TARGET_CHARACTERIZATION"
+    },
+    {
+      "parameter_id": "runoff_fraction",
+      "current_value": 0.05,
+      "unit": "fraction",
+      "current_truth_class": "CONTROLLED_SYNTHETIC",
+      "current_authority_ref": "soil_hydraulic_config_c8_v1",
+      "real_target_authority_ref": null,
+      "real_target_authority_status": "ABSENT",
+      "required_scope_axes": ["field", "zone", "season", "effective_interval", "method_applicability"],
+      "dynamic_scope_required": false,
+      "source_gap_id": "GAP_RUNOFF_TARGET_CHARACTERIZATION"
+    }
+  ],
+  "target_parameter_authority_contract": {
+    "required_fields": [
+      "subject_identity",
+      "field",
+      "zone",
+      "crop",
+      "season",
+      "effective_biological_or_rooting_stage",
+      "effective_from",
+      "effective_until",
+      "available_at",
+      "value",
+      "unit",
+      "vertical_support",
+      "measurement_or_estimation_method",
+      "source_provenance",
+      "source_authority",
+      "calibration_or_validation_evidence",
+      "uncertainty_or_confidence",
+      "supersession_semantics",
+      "exact_authority_refs"
+    ],
+    "admissibility_decision_basis": "COMPLETE_AUTHORITY_ENVELOPE_NOT_SINGLE_STATUS_LABEL",
+    "field_calibrated_only_rule": "FORBIDDEN",
+    "qualification_dependencies": [
+      "REAL_TARGET_SUBJECT_AND_GEOMETRY_AUTHORITY_QUALIFIED",
+      "EXACT_PARAMETER_AUTHORITY_ENVELOPE_COMPLETE",
+      "EXACT_SCOPE_MATCH_WITHOUT_WIDENING"
+    ],
+    "potential_source_classes": [
+      "LABORATORY_MEASUREMENT",
+      "TARGET_SPECIFIC_CHARACTERIZATION",
+      "GOVERNED_TARGET_SPECIFIC_MODEL_ESTIMATE",
+      "FIELD_CALIBRATED_CONFIGURATION"
+    ],
+    "qualification_rules": [
+      "real target subject identity and geometry authority must qualify before any parameter authority can qualify",
+      "exact field and zone identity required; no cross-field or cross-zone reuse",
+      "crop and season applicability required where parameter semantics depend on crop/rooting",
+      "root-zone depth must carry an effective interval and stage/rooting applicability where relevant",
+      "available_at must not postdate the decision/logical time at which authority is consumed",
+      "vertical support must cover or explicitly map to the model support without silent widening",
+      "method, provenance, source authority, and uncertainty/confidence must be explicit",
+      "supersession must resolve deterministically to exactly one applicable authority per parameter",
+      "synthetic constants cannot be relabeled as target truth",
+      "qualified parameters must be referenced by exact immutable authority refs/hashes from runtime config and inherited by twin_state_estimate_v1 through runtime_config_ref/runtime_config_hash"
+    ]
+  },
+  "twin_state_binding_contract": {
+    "runtime_config_compile_ref": "apps/server/src/runtime/twin_runtime/runtime_config_compile_service_v1.ts",
+    "runtime_config_compile_git_blob_sha": "75f8570922214e57b189add9c14beecf41824558",
+    "continuation_config_ref": "apps/server/src/domain/twin_runtime/continuation_runtime_config_v1.ts",
+    "continuation_config_git_blob_sha": "ede903aa7ad7cd9de1f6482805442d9da4f5bf37",
+    "state_builder_ref": "apps/server/src/runtime/twin_runtime/assimilated_continuation_record_set_builder_v2.ts",
+    "state_builder_git_blob_sha": "bc8d669f2208ede188eb236b8a5220a411537645",
+    "current_binding": {
+      "configuration_matrix_hash": "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5",
+      "soil_hydraulic_binding_ref": "soil_hydraulic_config_c8_v1",
+      "soil_hydraulic_binding_hash": "sha256:3d6e3d8b52a9736ff6898487cacbbffdf71578cca693754ab34cb484e5bc3082",
+      "state_linkage": "twin_state_estimate_v1 inherits runtime_config_ref/runtime_config_hash; state calculations consume soil_hydraulic_snapshot"
+    },
+    "qualified_target_binding_required_before_replacement": true
+  },
+  "source_acquisition_order": [
+    "GAP_REAL_TARGET_SUBJECT_GEOMETRY_AUTHORITY",
+    "GAP_ROOT_ZONE_DEPTH_TARGET_STAGE_AWARE",
+    "GAP_SOIL_WATER_RETENTION_TARGET_PROFILE",
+    "GAP_DRAINAGE_TARGET_CHARACTERIZATION",
+    "GAP_RUNOFF_TARGET_CHARACTERIZATION"
+  ],
+  "source_acquisition_gaps": [
+    {
+      "gap_id": "GAP_REAL_TARGET_SUBJECT_GEOMETRY_AUTHORITY",
+      "blocking_class": "PREREQUISITE",
+      "needed": "real target subject identity and governed field/zone geometry authority with exact field-zone mapping, crop/season applicability, effective interval, available_at, provenance, source authority, uncertainty/confidence, and immutable authority refs; the current field_c8_demo / zone_mcft_c8_water_001 controlled-synthetic proxy cannot satisfy this gap"
+    },
+    {
+      "gap_id": "GAP_ROOT_ZONE_DEPTH_TARGET_STAGE_AWARE",
+      "needed": "target-specific effective rooting/root-zone depth authority for the exact qualified real field/zone/crop/season with effective interval and rooting/biological-stage applicability, method, provenance, and uncertainty"
+    },
+    {
+      "gap_id": "GAP_SOIL_WATER_RETENTION_TARGET_PROFILE",
+      "needed": "target-specific soil water-retention characterization sufficient to authority-bind wilting point, field capacity, and saturation over declared vertical support, from governed laboratory measurement, governed target characterization, or governed target-specific estimation with inputs/provenance/uncertainty"
+    },
+    {
+      "gap_id": "GAP_DRAINAGE_TARGET_CHARACTERIZATION",
+      "needed": "target-specific drainage parameter authority compatible with the current hourly water-balance model and declared vertical support"
+    },
+    {
+      "gap_id": "GAP_RUNOFF_TARGET_CHARACTERIZATION",
+      "needed": "target-specific runoff parameter authority or an explicitly governed target-applicable estimation method with provenance and uncertainty"
+    }
+  ],
+  "prohibited_shortcuts": [
+    "synthetic constant relabeling",
+    "synthetic proxy relabeling as real target",
+    "invented calibration",
+    "invented provenance",
+    "scope widening",
+    "cross-field authority reuse",
+    "cross-zone authority reuse"
+  ],
+  "authority_ceiling": {
+    "production_runtime": "NOT_AUTHORIZED",
+    "production_owner_acquisition_activation": "NOT_AUTHORIZED",
+    "formal_v5": "NOT_ARMED",
+    "A0": "NOT_AUTHORIZED",
+    "O00_O23": "NOT_STARTED",
+    "adr_semantic_modification": 0,
+    "b_line_semantic_modification": 0,
+    "adr_provider_implementation": 0,
+    "b_line_integration": 0
+  }
+}

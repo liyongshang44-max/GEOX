@@ -114,7 +114,22 @@
         "field.zone.read",
         "security.audit.read",
         "inspection.read",
-        "inspection.write"
+        "inspection.write",
+        "telemetry.write"
+      ]
+    },
+    {
+      "token": "internal_task_issuer_token_v1",
+      "token_id": "tok_internal_task_issuer_v1",
+      "actor_id": "svc_internal_task_issuer_v1",
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA",
+      "role": "operator",
+      "revoked": false,
+      "allowed_field_ids": [],
+      "scopes": [
+        "action.task.create"
       ]
     },
     {
@@ -131,7 +146,8 @@
         "action.read",
         "action.receipt.submit",
         "ao_act.receipt.write",
-        "field.zone.read"
+        "field.zone.read",
+        "action.task.dispatch"
       ]
     },
     {
@@ -186,7 +202,9 @@
       "role": "auditor",
       "revoked": false,
       "allowed_field_ids": [],
-      "scopes": ["inspection.read"]
+      "scopes": [
+        "inspection.read"
+      ]
     },
     {
       "token": "set-via-env-or-external-secret-file-pdi-writeonly",
@@ -198,7 +216,9 @@
       "role": "operator",
       "revoked": false,
       "allowed_field_ids": [],
-      "scopes": ["inspection.write"]
+      "scopes": [
+        "inspection.write"
+      ]
     },
     {
       "token": "revoked_token",

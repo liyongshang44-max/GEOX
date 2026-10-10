@@ -1,3 +1,8 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: PRE_FOUI_LEGACY_PROJECTION_ADAPTER
+ * Existing compatibility adapter for /api/v1/fields/portfolio.
+ * Do not use for new Customer Fields, Attention, or Field Workspace product construction; canonical successor is /api/product/v1/*.
+ */
 import { apiRequest, withQuery } from "./client";
 import type {
   FieldPortfolioItemV1,

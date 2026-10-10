@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 
 import { appendSkillRunFact, digestJson } from "../../domain/skill_registry/facts.js";
-import { projectSkillRegistryReadV1 } from "../../projections/skill_registry_read_v1.js";
+import { computeSkillRegistryReadRowsV1, projectSkillRegistryReadV1 } from "../../projections/skill_registry_read_v1.js";
 
 export type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
@@ -18,6 +18,7 @@ export type SkillRuntimeExecuteInput = TenantTriple & {
 };
 
 type SkillRunReadRow = {
+  fact_type: string;
   fact_id: string;
   skill_id: string;
   version: string;
@@ -35,7 +36,15 @@ function normalizeRunCategory(value: unknown): "AGRONOMY" | "OPS" | "CONTROL" | 
   return "OPS";
 }
 
-async function findSkillRunByRunId(pool: Pool, tenant: TenantTriple, skillRunId: string): Promise<SkillRunReadRow | null> {
+async function findSkillRunByRunIdReadOnly(pool: Pool, tenant: TenantTriple, skillRunId: string): Promise<SkillRunReadRow | null> {
+  const rows = await computeSkillRegistryReadRowsV1(pool, tenant) as SkillRunReadRow[];
+  const runRows = rows.filter((row) => row.fact_type === "skill_run_v1");
+  return runRows.find((row) => String(row.payload_json?.run_id ?? "") === skillRunId)
+    ?? runRows.find((row) => row.fact_id === skillRunId)
+    ?? null;
+}
+
+async function findSkillRunByRunIdForMutation(pool: Pool, tenant: TenantTriple, skillRunId: string): Promise<SkillRunReadRow | null> {
   await projectSkillRegistryReadV1(pool, tenant);
   const rowByPayload = await pool.query<SkillRunReadRow>(
     `SELECT *
@@ -88,7 +97,7 @@ export async function executeSkillRuntimeV1(pool: Pool, input: SkillRuntimeExecu
 }
 
 export async function cancelSkillRuntimeV1(pool: Pool, tenant: TenantTriple, skillRunId: string): Promise<{ fact_id: string; occurred_at: string; run_id: string } | null> {
-  const row = await findSkillRunByRunId(pool, tenant, skillRunId);
+  const row = await findSkillRunByRunIdForMutation(pool, tenant, skillRunId);
   if (!row) return null;
 
   const payload = row.payload_json ?? {};
@@ -120,7 +129,7 @@ export async function cancelSkillRuntimeV1(pool: Pool, tenant: TenantTriple, ski
 }
 
 export async function getSkillRunRuntimeStatusV1(pool: Pool, tenant: TenantTriple, skillRunId: string): Promise<any | null> {
-  const row = await findSkillRunByRunId(pool, tenant, skillRunId);
+  const row = await findSkillRunByRunIdReadOnly(pool, tenant, skillRunId);
   if (!row) return null;
   const payload = row.payload_json ?? {};
   return {
@@ -134,7 +143,7 @@ export async function getSkillRunRuntimeStatusV1(pool: Pool, tenant: TenantTripl
 }
 
 export async function getSkillRunRuntimeResultV1(pool: Pool, tenant: TenantTriple, skillRunId: string): Promise<any | null> {
-  const row = await findSkillRunByRunId(pool, tenant, skillRunId);
+  const row = await findSkillRunByRunIdReadOnly(pool, tenant, skillRunId);
   if (!row) return null;
   const payload = row.payload_json ?? {};
   return {
@@ -169,7 +178,7 @@ export async function getSkillRuntimeHealthV1(pool: Pool): Promise<any> {
 }
 
 export async function getSkillRunRuntimeV1(pool: Pool, tenant: TenantTriple, skillRunId: string): Promise<any | null> {
-  const row = await findSkillRunByRunId(pool, tenant, skillRunId);
+  const row = await findSkillRunByRunIdReadOnly(pool, tenant, skillRunId);
   if (!row) return null;
   return row;
 }

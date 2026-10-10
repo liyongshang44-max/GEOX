@@ -22,6 +22,7 @@ import {
   type VerifiedRawEvidenceProvenanceV1,
 } from "../../apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.js";
 import { KbsVariate25SoilEvidenceDecoderV1 } from "../../apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.js";
+import { GfsRawBundleEvidenceDecoderV1 } from "../../apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.js";
 import type {
   RawEvidenceRetentionVerificationPortV1,
   VerifyRetainedRawEvidenceInputV1,
@@ -32,6 +33,12 @@ import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domai
 const execFileAsync = promisify(execFile);
 const PYTHON = process.env.PYTHON ?? "python3";
 const PROVIDER_SCRIPT = path.resolve("scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py");
+const PRODUCT_GFS_SCIENTIFIC_CORE_RELATIVE = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py";
+const PRODUCT_GFS_SCIENTIFIC_CORE = path.resolve(PRODUCT_GFS_SCIENTIFIC_CORE_RELATIVE);
+const PRODUCT_GFS_BUNDLE_DECODER_RELATIVE = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py";
+const PRODUCT_GFS_BUNDLE_DECODER = path.resolve(PRODUCT_GFS_BUNDLE_DECODER_RELATIVE);
+const PRODUCT_GFS_TS_DECODER_RELATIVE = "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts";
+const PRODUCT_GFS_TS_DECODER = path.resolve(PRODUCT_GFS_TS_DECODER_RELATIVE);
 const OUTPUT_DIR = path.resolve("acceptance-output");
 const OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json");
 const FORMAL_RAW_BUCKET = "geox-mcft-cap09-formal-raw-v1";
@@ -96,6 +103,47 @@ function sha256Hex(value: Buffer | Uint8Array | string): string {
 
 function sha256(value: Buffer | Uint8Array | string): string {
   return `sha256:${sha256Hex(value)}`;
+}
+
+function assertProductGfsScientificCoreBinding(): void {
+  if (!fs.existsSync(PROVIDER_SCRIPT)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_PROVIDER_SCRIPT_REQUIRED");
+  if (!fs.existsSync(PRODUCT_GFS_SCIENTIFIC_CORE)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_PRODUCT_GFS_CORE_REQUIRED");
+  if (!fs.existsSync(PRODUCT_GFS_BUNDLE_DECODER)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_PRODUCT_GFS_BUNDLE_DECODER_REQUIRED");
+  if (!fs.existsSync(PRODUCT_GFS_TS_DECODER)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_PRODUCT_GFS_TS_DECODER_REQUIRED");
+
+  const providerText = fs.readFileSync(PROVIDER_SCRIPT, "utf8");
+  const pythonDecoderText = fs.readFileSync(PRODUCT_GFS_BUNDLE_DECODER, "utf8");
+  const tsDecoderText = fs.readFileSync(PRODUCT_GFS_TS_DECODER, "utf8");
+
+  for (const marker of [
+    "gfs_bundle_decoder.decode_bundle_v1",
+    "product_gfs_raw_bundle_decoder_used",
+  ]) {
+    if (!providerText.includes(marker)) throw new Error(`MCFT_CAP09_ROLLING_REHYDRATION_PRODUCT_GFS_DELEGATION_REQUIRED:${marker}`);
+  }
+  for (const marker of [
+    "core.decode_pgrb2_v1",
+    "core.decode_sflux_v1",
+    "core.assemble_72h_scientific_series_v1",
+    "build_drafts_v1",
+  ]) {
+    if (!pythonDecoderText.includes(marker)) throw new Error(`MCFT_CAP09_ROLLING_REHYDRATION_PRODUCT_GFS_DECODER_BINDING_REQUIRED:${marker}`);
+  }
+  for (const marker of [
+    "GfsRawBundleEvidenceDecoderV1",
+    "mcft_cap09_gfs_raw_bundle_decoder_v1.py",
+  ]) {
+    if (!tsDecoderText.includes(marker)) throw new Error(`MCFT_CAP09_ROLLING_REHYDRATION_PRODUCT_GFS_TS_BINDING_REQUIRED:${marker}`);
+  }
+  for (const forbidden of [
+    "ea4.decode_pgrb2(",
+    "ea4.decode_sflux(",
+    "ea4.apcp(",
+    "ea4.block_start(",
+    "ea4.scalar_eto(",
+  ]) {
+    if (pythonDecoderText.includes(forbidden)) throw new Error(`MCFT_CAP09_ROLLING_REHYDRATION_SECOND_GFS_SCIENTIFIC_PATH_FORBIDDEN:${forbidden}`);
+  }
 }
 
 function hmac(key: Buffer | string, value: string): Buffer {
@@ -289,27 +337,6 @@ class RetainedRawReplayTransportV1 implements ExternalEvidenceTransportPortV1 {
   }
 }
 
-class PythonGfsRawBundleDecoderV2 implements ExternalEvidenceDecoderPortV1 {
-  readonly decoder_id = "MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V2";
-  readonly decoder_version = "2";
-  constructor(private readonly target: string, private readonly restoredIngestedAt: string) {}
-  async decodeRetainedEvidence(input: ExternalEvidenceDecoderInputV1): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
-    const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-cap09-rolling-gfs-rehydrate-"));
-    const bundle = path.join(temp, "gfs.tar");
-    const output = path.join(temp, "gfs-drafts.json");
-    try {
-      fs.writeFileSync(bundle, Buffer.from(input.raw_bytes));
-      await execFileAsync(PYTHON, [PROVIDER_SCRIPT, "decode-gfs-v2", "--target", this.target, "--available-at", input.provenance.available_at, "--input", bundle, "--output", output], { timeout: 20 * 60_000, maxBuffer: 32 * 1024 * 1024 });
-      const parsed = JSON.parse(fs.readFileSync(output, "utf8")) as { drafts?: GovernedDecodedEvidenceDraftV1[] };
-      if (!Array.isArray(parsed.drafts) || parsed.drafts.length !== 2) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_GFS_DRAFT_PAIR_REQUIRED");
-      const ingestedAt = canonicalIso(this.restoredIngestedAt, "MCFT_CAP09_ROLLING_REHYDRATION_GFS_INGESTED_AT_INVALID");
-      return parsed.drafts.map((draft) => ({ ...draft, role_time: { ...draft.role_time, ingested_at: ingestedAt } }));
-    } finally {
-      fs.rmSync(temp, { recursive: true, force: true });
-    }
-  }
-}
-
 function requestFromProvenance(provenance: VerifiedRawEvidenceProvenanceV1, contentPrefixes: readonly string[]): ExternalEvidenceFetchRequestV1 {
   const sourceHost = new URL(provenance.source_locator).hostname;
   const finalHost = new URL(provenance.final_locator).hostname;
@@ -389,7 +416,10 @@ async function rehydrate(candidate: CandidateV1, pool: Pool): Promise<{ results:
   }, {
     transport: new RetainedRawReplayTransportV1(gfsProvenance, gfsRaw.bytes),
     retention: store,
-    decoder: new PythonGfsRawBundleDecoderV2(candidate.target_t, manifest.gfs.ingested_at),
+    decoder: new GfsRawBundleEvidenceDecoderV1(candidate.target_t, {
+      normalize_et0: true,
+      restored_ingested_at: manifest.gfs.ingested_at,
+    }),
   });
   const soilResults = await collectRetainDecodeCanonicalizeExternalEvidenceV1({
     dataset_id: `mcft_cap09_ea5e2_live_soil_${candidate.target_t}`,
@@ -413,6 +443,7 @@ async function rehydrate(candidate: CandidateV1, pool: Pool): Promise<{ results:
 }
 
 function selftest(): void {
+  assertProductGfsScientificCoreBinding();
   const producer = "a".repeat(40);
   const digest = `sha256:${"b".repeat(64)}`;
   const valid = `s3-private://${FORMAL_RAW_BUCKET}/${TRANSIENT_ROOT_PREFIX}/${producer}/20260813t130000000z/sha256/${"b".repeat(64)}`;
@@ -426,6 +457,8 @@ function selftest(): void {
     producer_subject_sha_bound: true,
     producer_dataset_identity_preserved: true,
     producer_decoder_identity_preserved: true,
+    product_gfs_scientific_core_identity_preserved: true,
+    product_gfs_scientific_core: PRODUCT_GFS_SCIENTIFIC_CORE_RELATIVE,
     formal_raw_prefix_forbidden: true,
     read_only_r2: true,
     s3_put_count: 0,
@@ -467,6 +500,8 @@ async function main(): Promise<void> {
       producer_bound_raw_reverification: true,
       producer_dataset_identity_preserved: true,
       producer_decoder_identity_preserved: true,
+      product_gfs_scientific_core_identity_preserved: true,
+      product_gfs_scientific_core: PRODUCT_GFS_SCIENTIFIC_CORE_RELATIVE,
       provider_refetch_count: 0,
       private_r2_head_count: store.head_count,
       private_r2_get_count: store.get_count,

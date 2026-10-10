@@ -1,0 +1,51 @@
+name: mcft-cap-09-formal-v5-completion-adjudication-v1
+
+on:
+  pull_request:
+    branches:
+      - main
+      - fix/mcft-cap09-formal-v5-final-readback-v1
+    paths:
+      - '.github/workflows/mcft-cap-09-formal-v5-completion-adjudication-v1.yml'
+      - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_COMPLETION_CANDIDATE_V1.cjs'
+      - 'scripts/governance_acceptance/ADJUDICATE_MCFT_CAP_09_FORMAL_V5_COMPLETION_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_COMPLETION_ADJUDICATION_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-formal-v5-completion-adjudication-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  completion-adjudication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact G13 subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prove G13 bounded completion-adjudication change
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs --historic-g13
+
+      - name: Selftest completion candidate assembler
+        run: node scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_COMPLETION_CANDIDATE_V1.cjs --selftest
+
+      - name: Selftest independent adjudicator
+        run: node scripts/governance_acceptance/ADJUDICATE_MCFT_CAP_09_FORMAL_V5_COMPLETION_V1.cjs --selftest
+
+      - name: Upload G13 governance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-formal-v5-completion-adjudication-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_FORMAL_V5_COMPLETION_ADJUDICATION_GOVERNANCE_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 14

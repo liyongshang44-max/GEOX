@@ -1,0 +1,25 @@
+name: foui-projection-contract-wave01
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/product_projection/**'
+      - 'scripts/governance_acceptance/ACCEPTANCE_FOUI_PRODUCT_PROJECTION_CONTRACT_WAVE_01_V1.cjs'
+      - 'scripts/governance_acceptance/FOUI_PRODUCT_PROJECTION_CONTRACT_WAVE_01_NEGATIVE_V1.ts'
+      - 'docs/product_projection/GEOX-FOUI-PROJECTION-CONTRACT-WAVE-01-V1.md'
+      - '.github/workflows/foui-projection-contract-wave01.yml'
+  workflow_dispatch:
+
+jobs:
+  contract-wave01:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile
+      - name: FOUI projection contract Wave-01
+        run: node scripts/governance_acceptance/ACCEPTANCE_FOUI_PRODUCT_PROJECTION_CONTRACT_WAVE_01_V1.cjs

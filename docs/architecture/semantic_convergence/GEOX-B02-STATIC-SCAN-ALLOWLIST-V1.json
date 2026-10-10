@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "status": "proposal_static_scan_allowlist",
+  "phase": "B-02",
+  "purpose": "Allow explicitly inventoried non-owner/consumer touchpoints to satisfy narrow static fingerprint guards without misclassifying them as semantic owners.",
+  "rules": [
+    {
+      "guard_id": "G-B02-03-evidence-qualification-touchpoints",
+      "additional_registered_paths": [
+        "apps/server/src/routes/judge_v2.ts",
+        "apps/server/src/routes/appleii_stage1_evidence_gate_v1.ts"
+      ],
+      "classification": "CONSUMER_OR_PERSISTENCE_TOUCHPOINT_NOT_ADDITIONAL_OWNER"
+    }
+  ]
+}

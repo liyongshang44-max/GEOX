@@ -1,0 +1,100 @@
+{
+  "schema_version": "b09ab_action_window_horizon_authority_topology_decision_package_v1",
+  "phase": "B-09ab",
+  "status": "RECOMMENDED_NOT_AUTHORIZED",
+  "authority_mode": "PRODUCT_GOVERNANCE_DECISION_PACKAGE_ONLY",
+  "stacked_base_product_head": "93b00ec51eca95b6388f236ce73b4fa6d4e10c49",
+  "decision_id": "DEC-BLINE-ACTION-WINDOW-HORIZON-AUTHORITY-TOPOLOGY-001",
+  "problem_statement": "B09aa proves no current repository source is authorized as ActionWindow horizon authority. A topology decision is required before any horizon contract or producer can be created.",
+  "proposed_topology": {
+    "authority_owner": "Decision Eligibility policy content",
+    "topology": "SUCCESSOR_ELIGIBILITY_POLICY_CONTRACT_EMBEDDED_HORIZON",
+    "rationale": [
+      "ActionWindow is an Eligibility criterion, so its risk-tolerance horizon is product eligibility policy rather than execution scheduling",
+      "embedding horizon authority in the selected Eligibility policy avoids creating another parallel policy-selection authority",
+      "the existing B09v selector already establishes one exact policy_ref at Candidate decision_time",
+      "horizon provenance can therefore remain causally tied to the same selected policy identity",
+      "dynamic agronomic shortening may be added later as calculation under explicit policy bounds without changing ownership"
+    ],
+    "separate_parallel_horizon_policy_family": "NOT_RECOMMENDED_V1",
+    "field_program_embedding": "FORBIDDEN",
+    "ao_act_execution_policy_embedding": "FORBIDDEN",
+    "mcft_twin_policy_embedding": "FORBIDDEN"
+  },
+  "contract_evolution_rule": {
+    "existing_contract": "DecisionEligibilityPolicyDeclarationV1 / decision_eligibility_policy_declaration_v1",
+    "existing_contract_status": "IMMUTABLE_PREDECESSOR_V1",
+    "mutate_existing_v1_in_place": false,
+    "recommended_successor": "DecisionEligibilityPolicyDeclarationV2 or semantically equivalent successor contract",
+    "migration_rule": "existing v1 declarations remain valid for v1 semantics and must not receive inferred/default ActionWindow horizons",
+    "action_window_requirement_rule": "if a successor policy requires ACTION_WINDOW, it must carry explicit horizon authority content/ref; absence fails closed",
+    "hidden_backfill_forbidden": true
+  },
+  "horizon_provenance_rule": {
+    "selected_policy_ref_required": true,
+    "exact_selected_policy_fact_ref_required": true,
+    "horizon_source_authority": "same immutable successor Eligibility policy declaration/content",
+    "horizon_source_ref_may_resolve_to_selected_policy_declaration": true,
+    "independent_latest_horizon_lookup_forbidden": true,
+    "fallback_to_field_program_forbidden": true,
+    "fallback_to_ao_act_forbidden": true,
+    "fallback_to_mcft_window_forbidden": true
+  },
+  "value_semantics": {
+    "concrete_duration_selected": false,
+    "fixed_duration_mode_selected": false,
+    "start_offset_selected": false,
+    "unit_selected": false,
+    "min_or_max_duration_selected": false,
+    "dynamic_agronomic_shortening_selected": false,
+    "reason": "B09ab chooses ownership/topology only; numerical/actionability value semantics remain a separate governance decision"
+  },
+  "dynamic_future_extension": {
+    "allowed_later_in_principle": true,
+    "required_authority_order": [
+      "explicit policy maximum/constraint",
+      "canonical agronomic calculation authority",
+      "canonical input-validity semantics if used",
+      "deterministic composition rule"
+    ],
+    "current_status": "NOT_AUTHORIZED_NOT_IMPLEMENTABLE",
+    "mcft_dependency": "Forecast-dependent dynamic shortening remains blocked until MCFT-9 COMPLETE plus separate integration authorization"
+  },
+  "consumer_sequence_if_later_authorized": [
+    "successor policy contract design",
+    "governed declaration/writer compatibility design",
+    "B09v selector successor-policy compatibility",
+    "DecisionActionWindow contract/producer",
+    "shadow-only Candidate ActionWindow materialization",
+    "criterion provenance proof",
+    "separate B07e connection authorization"
+  ],
+  "explicit_non_authorizations": [
+    "no concrete duration",
+    "no successor policy contract implementation",
+    "no writer/route mutation",
+    "no selector runtime mutation",
+    "no ActionWindow producer/instance",
+    "no real policy declaration",
+    "no B09y decision-boundary implementation",
+    "no B07e connection",
+    "no Approval/AO-ACT/Execution change",
+    "no MCFT/Twin integration",
+    "no consumer migration",
+    "no authority removal"
+  ],
+  "non_effects": {
+    "runtime_change": false,
+    "schema_change": false,
+    "db_change": false,
+    "route_change": false,
+    "graph_edge_change": false,
+    "existing_policy_contract_change": false,
+    "policy_fact_written": false,
+    "horizon_value_selected": false,
+    "action_window_producer": false,
+    "b07e_connection": false,
+    "mcft_change": false,
+    "authority_removal": false
+  }
+}

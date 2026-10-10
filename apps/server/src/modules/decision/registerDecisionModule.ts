@@ -9,6 +9,7 @@ import { registerSkillRuntimeV1Routes } from "../../routes/skill_runtime_v1.js";
 import { registerValueChainRoiResponseHooksV1 } from "../../routes/value_chain_roi_hooks_v1.js";
 import { registerFieldCropContextDecisionHookV1 } from "../../routes/field_crop_context_hooks_v1.js";
 import { registerAppleIIStage1EvidenceGateV1 } from "../../routes/appleii_stage1_evidence_gate_v1.js";
+import { registerDecisionEligibilityPolicyDeclarationV1Routes } from "../../routes/decision_eligibility_policy_declarations_v1.js";
 
 /**
  * Skills Architecture Layer (Horizontal Capability Layer)
@@ -32,6 +33,7 @@ export function registerDecisionModule(app: FastifyInstance, pool: Pool): void {
   registerFieldCropContextDecisionHookV1(app, pool);
   registerValueChainRoiResponseHooksV1(app);
   registerAppleIIStage1EvidenceGateV1(app, pool);
+  registerDecisionEligibilityPolicyDeclarationV1Routes(app, pool);
   registerDecisionEngineV1Routes(app, pool);
   registerSkillArchitectureLayer(app, pool);
 }

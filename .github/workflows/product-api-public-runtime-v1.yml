@@ -1,0 +1,38 @@
+name: product-api-public-runtime-v1
+
+on:
+  pull_request:
+    paths:
+      - "apps/server/src/product_api/**"
+      - "apps/server/src/product_api_public_server_v1.ts"
+      - "docker/product-api.Dockerfile"
+      - "docs/product_projection/GEOX-PRODUCT-API-PUBLIC-DEPLOYMENT-V1.md"
+      - "scripts/governance_acceptance/ACCEPTANCE_PRODUCT_API_PUBLIC_RUNTIME_V1.cjs"
+      - ".github/workflows/product-api-public-runtime-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: Public runtime tests
+        run: node --import tsx --test apps/server/src/product_api/product_api_public_runtime_v1.test.ts
+      - name: Public runtime governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_PRODUCT_API_PUBLIC_RUNTIME_V1.cjs
+      - name: Build dedicated Product API image
+        run: docker build -f docker/product-api.Dockerfile -t geox-product-api-public:test .

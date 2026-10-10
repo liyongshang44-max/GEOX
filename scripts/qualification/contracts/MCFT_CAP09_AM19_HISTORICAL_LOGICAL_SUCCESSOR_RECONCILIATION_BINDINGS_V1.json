@@ -1,0 +1,90 @@
+{
+  "schema_version": "geox_mcft_cap09_am19_historical_logical_successor_reconciliation_bindings_v1",
+  "binding_id": "MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_RECONCILIATION_BINDINGS_V1",
+  "binding_version": 1,
+  "status": "CURRENT_STATIC_RECONCILIATION_BINDING",
+  "admission_route": "HISTORICAL_LOGICAL_SUCCESSOR_V1",
+  "profile_ref": "scripts/qualification/contracts/MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PROFILE_V1.json",
+  "contract_ref": "scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1.json",
+  "runner_ref": "scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_V1.cjs",
+  "preflight_ref": "scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PREFLIGHT_V1.cjs",
+  "reconciliation_verifier_ref": "scripts/qualification/VERIFY_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_RECONCILIATION_V1.cjs",
+  "frozen_runtime_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+  "historical_logical_epoch": {
+    "descriptor_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM19-HISTORICAL-LOGICAL-EPOCH-V1.json",
+    "epoch_id": "mcft_cap09_am19_historical_logical_20260821t190000z_v1",
+    "producer_subject_sha": "91d2f518efc5c4c7796c398dabd12801949a9289",
+    "target_t": "2026-08-21T19:00:00.000Z",
+    "semantic_manifest_digest": "sha256:4123573d4a936a8d4c5c39da2d323b10426fbd156b34aa2d6866490ba7c3a132",
+    "retained_raw_object_count": 2,
+    "provider_refetch_authorized": false
+  },
+  "provisioning": {
+    "provisioner_ref": "scripts/qualification/PROVISION_MCFT_CAP09_AM19_RUN_SCOPED_DATABASES_V1.cjs",
+    "provisioner_blob_sha": "d1e1bb2135a0d733d0b400d902e7138cca1fa56e",
+    "inner_ref": "scripts/qualification/PROVISION_MCFT_CAP09_AM19_RUN_SCOPED_DATABASES_INNER_V1.cjs",
+    "inner_blob_sha": "80be618af01672a5d913f4334eca665447c91abf",
+    "formal_store_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+    "formal_store_authority_blob_sha": "34fd3e92e0e628cf0db16e10df3633337fe81a1a",
+    "expected_public_table_count": 29,
+    "database_execution_plane": "LOCAL_EPHEMERAL_PINNED_POSTGRES_CONTAINER",
+    "remote_parent_database_policy": "READ_ONLY_SCHEMA_SOURCE_AND_REHYDRATION_PROVENANCE_ONLY",
+    "data_clone_forbidden": true,
+    "remote_parent_mutation_authorized": false,
+    "formal_database_mutation_authorized": false,
+    "production_database_mutation_authorized": false
+  },
+  "package_and_verification": {
+    "manifest_generator_ref": "scripts/qualification/GENERATE_GEOX_QUALIFICATION_EVIDENCE_MANIFEST_V1.cjs",
+    "manifest_generator_blob_sha": "fc08af36536ff498dd39d09d28b824343ad0c280",
+    "manifest_schema_version": "QualificationEvidenceManifestV1",
+    "evidence_manifest_verifier_ref": "scripts/qualification/VERIFY_GEOX_QUALIFICATION_EVIDENCE_MANIFEST_V1.cjs",
+    "evidence_manifest_verifier_blob_sha": "f0cf38439f4212f90392bc9e3450a35953026a50",
+    "closure_delivery_builder_ref": "scripts/qualification/BUILD_GEOX_QUALIFICATION_CLOSURE_DELIVERY_V1.cjs",
+    "closure_delivery_builder_blob_sha": "2ef0991c8bc48897e115d79161a08e033b0e2334",
+    "closure_delivery_schema_version": "GEOXQualificationClosureDeliveryV1",
+    "closure_delivery_verifier_ref": "scripts/qualification/VERIFY_GEOX_QUALIFICATION_CLOSURE_DELIVERY_V1.cjs",
+    "closure_delivery_verifier_blob_sha": "2484e128639c7b05e61bc17859341d6485586420",
+    "no_latest_run_fallback_required": true,
+    "exact_subject_binding_required": true,
+    "fail_closed_required": true,
+    "package_policy": "EXACT_SUBJECT_IMMUTABLE_PACKAGE_TWO_STAGE_INDEPENDENT_VERIFICATION_V1"
+  },
+  "downstream_governance": {
+    "qcp_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+    "qcp_blob_sha": "63a04286600a03463b22bb066ca88c1860b2d9d5",
+    "qcp_current_resolver_id": "V13_QUALIFICATION_HARNESS_CLOSURE",
+    "qcp_legacy_check_id": "LEGACY_AM19_PERSISTENT_24T",
+    "qcp_legacy_check_classification": "HISTORICAL_ONLY_NOT_CURRENT_SUCCESSOR_ADMISSION",
+    "qualification_evidence_registry_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json",
+    "qualification_evidence_registry_blob_sha": "626d5c277b7f8fbd194d3c0849a9337082d6e2b5",
+    "legacy_registry_evidence_id": "LEGACY_AM19_24T_SUCCESSOR_ROUTING_3BBF096E",
+    "legacy_registry_entry_classification": "HISTORICAL_ONLY_NOT_CURRENT_SUCCESSOR_ADMISSION",
+    "current_successor_registration_policy": "NO_PREMATURE_REGISTRATION_BEFORE_FRESH_QUALIFICATION_PACKAGE_AND_BOTH_VERIFIERS_PASS",
+    "closure_consumer_scope": "MCFT_CAP_09_CLOSURE_TEAM_EVIDENCE_INPUT",
+    "closure_authority_ceiling": "EVIDENCE_INPUT_ONLY_CLOSURE_TEAM_RETAINS_BLOCKER_ADJUDICATION_AUTHORITY",
+    "qcp_semantics_mutation_authorized": false,
+    "closure_semantics_mutation_authorized": false
+  },
+  "legacy_capture_lane": {
+    "classification": "HISTORICAL_PROVENANCE_FALLBACK_COMPARISON_ONLY",
+    "required_for_current_admission": false,
+    "reactivation_authorized": false,
+    "may_replace_historical_logical_epoch": false
+  },
+  "execution_gate": {
+    "qualification_execution_allowed_before_static_reconciliation_pass": false,
+    "required_static_blocker_count": 0,
+    "fresh_13_of_13_is_next_only_after_full_static_pass": true
+  },
+  "non_effects": {
+    "runtime_mutation": false,
+    "provider_semantics_mutation": false,
+    "authority_semantics_mutation": false,
+    "qcp_semantics_mutation": false,
+    "closure_semantics_mutation": false,
+    "formal_v5_arm": false,
+    "a0": false,
+    "o00_o23": false
+  }
+}

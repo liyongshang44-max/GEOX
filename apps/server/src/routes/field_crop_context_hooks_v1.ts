@@ -53,9 +53,14 @@ function isCropSpecificRecommendation(rec: any): boolean {
   return isCropSpecificActionV1(actionOfRecommendation(rec)) || Boolean(text(rec?.crop_code)) || Boolean(text(rec?.crop_stage));
 }
 
-function pickBodyField(req: any): { tenant: TenantTriple; field_id: string | null; season_id: string | null } {
+function pickBodyField(req: any): { tenant: TenantTriple; field_id: string | null; season_id: string | null; program_id: string | null } {
   const body = req.body ?? {};
-  return { tenant: tenantFromAuthOrBody(req), field_id: text(body.field_id), season_id: text(body.season_id) };
+  return {
+    tenant: tenantFromAuthOrBody(req),
+    field_id: text(body.field_id),
+    season_id: text(body.season_id),
+    program_id: text(body.program_id),
+  };
 }
 
 async function loadRecommendationFact(pool: Pool, tenant: TenantTriple, recommendation_id: string): Promise<any | null> {
@@ -79,11 +84,11 @@ export function registerFieldCropContextDecisionHookV1(app: FastifyInstance, poo
     if (reply.statusCode >= 400 || !isRecommendationGeneratePath(req.url)) return payload;
     const parsed = parsePayload(payload);
     if (!parsed || typeof parsed !== "object") return payload;
-    const { tenant, field_id, season_id } = pickBodyField(req as any);
+    const { tenant, field_id, season_id, program_id } = pickBodyField(req as any);
     if (!field_id || !tenant.tenant_id || !tenant.project_id || !tenant.group_id) return payload;
-    const crop_context = await resolveCropContextV1(pool, tenant, field_id, season_id);
+    const crop_context = await resolveCropContextV1(pool, tenant, field_id, season_id, { program_id });
     const field_observability_profile = await resolveFieldObservabilityProfileV1(pool, tenant, field_id);
-    const crop_plan_candidates = buildCropPlanCandidatesV1({ field_id, season_id, crop_context, observability: field_observability_profile });
+    const crop_plan_candidates = buildCropPlanCandidatesV1({ field_id, season_id: crop_context.season_id ?? season_id, crop_context, observability: field_observability_profile });
 
     const recommendations = Array.isArray(parsed.recommendations) ? parsed.recommendations : [];
     const filtered = crop_context.allowed_actions.allow_crop_specific_diagnosis
@@ -99,7 +104,7 @@ export function registerFieldCropContextDecisionHookV1(app: FastifyInstance, poo
       crop_plan_candidates,
       crop_context_guard: {
         blocked_crop_specific_recommendations: blocked,
-        reason: blocked > 0 ? `crop_context.status=${crop_context.status} does not allow crop specific diagnosis` : null,
+        reason: blocked > 0 ? `crop_context.resolution=${crop_context.resolution.status}; status=${crop_context.status} does not allow crop specific diagnosis` : null,
       },
     });
   });
@@ -117,13 +122,13 @@ export function registerFieldCropContextPrescriptionGuardV1(app: FastifyInstance
     if (!rec) return;
     const field_id = text(rec.field_id);
     if (!field_id) return;
-    const crop_context = await resolveCropContextV1(pool, tenant, field_id, text(rec.season_id));
+    const crop_context = await resolveCropContextV1(pool, tenant, field_id, text(rec.season_id), { program_id: text(rec.program_id) });
     if (isCropSpecificRecommendation(rec) && !crop_context.allowed_actions.allow_crop_specific_prescription) {
       return reply.status(400).send({
         ok: false,
         error: "CROP_CONTEXT_NOT_CONFIRMED_FOR_PRESCRIPTION",
         crop_context,
-        reason: `crop_context.status=${crop_context.status} does not allow crop specific prescription`,
+        reason: `crop_context.resolution=${crop_context.resolution.status}; status=${crop_context.status} does not allow crop specific prescription`,
       });
     }
   });

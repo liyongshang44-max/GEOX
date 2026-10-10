@@ -1,0 +1,50 @@
+name: MCFT CAP-09 Production Runtime Non-Owner Standby Materialization
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-production-runtime-non-owner-standby-materialization-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-NON-OWNER-STANDBY-ACTIVATION-AUTHORITY-V1.json'
+      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_AUTHORITY_V1.cjs'
+      - 'scripts/runtime_acceptance/MATERIALIZE_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_MATERIALIZATION_V1.cjs'
+      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY*.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Syntax-check non-owner standby materialization path
+        run: |
+          node --check scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_AUTHORITY_V1.cjs
+          node --check scripts/runtime_acceptance/MATERIALIZE_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_V1.cjs
+          node --check scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_MATERIALIZATION_V1.cjs
+
+      - name: Qualify exact-head non-owner standby authority materialization
+        run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_MATERIALIZATION_V1.cjs
+
+      - name: Upload immutable qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-non-owner-standby-materialization-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_MATERIALIZATION_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

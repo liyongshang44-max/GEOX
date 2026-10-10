@@ -1,0 +1,178 @@
+{
+  "schema_version": "b09i_candidate_provenance_readiness_inventory_v1",
+  "phase": "B-09i",
+  "status": "ANALYSIS_ONLY_NOT_READY_FOR_CANDIDATE_BINDING",
+  "authority_mode": "GOVERNANCE_ANALYSIS_ONLY",
+  "stacked_base_product_head": "8acb1b9e39f84a498e0a794cae0837537a452383",
+  "analyzed_path": {
+    "producer_id": "decision-engine-recommendation",
+    "producer_path": "apps/server/src/routes/decision_engine_v1.ts",
+    "runtime_endpoint": "POST /api/v1/recommendations/generate",
+    "persisted_source_type": "decision_recommendation_v1",
+    "candidate_adapter_path": "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
+    "scope_limit": "THIS_INVENTORY_DOES_NOT_ADJUDICATE_OTHER_CANDIDATE_PRODUCERS"
+  },
+  "runtime_corpus": {
+    "run_id": 33163943525,
+    "job_id": 98824762777,
+    "validation_head": "78e925914a174407446db870637ee6706ca440f7",
+    "product_head": "8acb1b9e39f84a498e0a794cae0837537a452383",
+    "artifact_id": 9682819929,
+    "artifact_name": "b09i-candidate-provenance-runtime-corpus",
+    "artifact_digest": "sha256:693df9ff04e32ea07656963c14eb715af44063d35d50dcc503197071ac5ea9d9",
+    "observation_scope_class": "SYNTHETIC_ACCEPTANCE_RUNTIME",
+    "runtime_path": "PRODUCT_RAW_PERSISTENCE_PLUS_OBSERVATION_PIPELINE_TO_HTTP_RECOMMENDATION_PREAPPROVAL_ONLY",
+    "source_fact_observation": {
+      "fact_id": "499d91b8-f7c2-4469-a0b7-a0474e4f7d4e",
+      "occurred_at": "2026-08-28T10:37:28.204Z",
+      "source": "api/v1/recommendations/generate",
+      "type": "decision_recommendation_v1",
+      "recommendation_id": "rec_e922e763e8e047b48c2b690f4338d43d",
+      "status": "proposed",
+      "action_type": "IRRIGATE",
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA",
+      "field_id": "field_b09i_1787913447386",
+      "season_id": "season_b09i_1787913447386",
+      "snapshot_id": "rm_tenantA_field_b09i_1787913447386_1787913448173",
+      "crop_stage": "unknown",
+      "created_ts": 1787913448197,
+      "legacy_evidence_ref_count": 4,
+      "has_candidate_id": false,
+      "has_context_snapshot_ref": false,
+      "has_crop_stage_state_ref": false,
+      "has_calculation_result_refs": false
+    },
+    "candidate_persistence_observation": {
+      "candidate_decision_fact_count": 0,
+      "candidate_decision_table_exists": false,
+      "candidate_decision_index_exists": false
+    },
+    "recommendation_generate_write_boundary": {
+      "approval_plan_task_receipt_rows_created_by_recommendation_generate": 0
+    }
+  },
+  "b06c_projection_context_readiness": {
+    "candidate_id": {
+      "state": "UNRESOLVED",
+      "contract_requirement": "REQUIRED_NONEMPTY_CANONICAL_ID",
+      "reason": "NO_CANONICAL_CANDIDATE_IDENTITY_POLICY_OR_PERSISTED_IDENTITY_EXISTS_ON_ANALYZED_PATH"
+    },
+    "source_ref": {
+      "state": "RESOLVABLE",
+      "basis": "IMMUTABLE_FACT_ID",
+      "permitted_value_class": "SOURCE_REF_ONLY_NOT_CANDIDATE_ID"
+    },
+    "source_type": {
+      "state": "RESOLVABLE",
+      "value": "decision_recommendation_v1"
+    },
+    "scope": {
+      "state": "RESOLVABLE",
+      "basis": "PERSISTED_SCOPED_SOURCE_FACT_PAYLOAD"
+    },
+    "evidence_qualification_refs": {
+      "state": "NOT_DERIVABLE_FROM_RECOMMENDATION_SOURCE",
+      "contract_shape": "ARRAY_MAY_BE_EMPTY",
+      "rule": "MUST_BE_EXPLICIT_CANONICAL_REFS_IF_SUPPLIED",
+      "legacy_evidence_refs_promotion": "FORBIDDEN",
+      "separate_canonical_provenance": "B09G_B09H_EXIST_ON_AGRONOMY_EVIDENCE_SHADOW_PATH_BUT_ARE_NOT_REFERENTIALLY_BOUND_TO_THIS_CANDIDATE_SOURCE"
+    },
+    "context_snapshot_ref": {
+      "state": "CANONICAL_REF_NOT_PRESENT_ON_SOURCE",
+      "contract_shape": "NULLABLE",
+      "legacy_snapshot_id_promotion": "FORBIDDEN"
+    },
+    "crop_stage_state_ref": {
+      "state": "CANONICAL_REF_NOT_PRESENT_ON_SOURCE",
+      "contract_shape": "NULLABLE",
+      "legacy_crop_stage_promotion": "FORBIDDEN"
+    },
+    "calculation_result_refs": {
+      "state": "CANONICAL_REFS_NOT_PRESENT_ON_SOURCE",
+      "contract_shape": "ARRAY_MAY_BE_EMPTY",
+      "source_inference": "FORBIDDEN"
+    },
+    "interpretation_refs": {
+      "state": "OPTIONAL_EMPTY_ALLOWED",
+      "source_inference": "NOT_REQUIRED"
+    },
+    "created_at": {
+      "state": "RESOLVABLE",
+      "basis": "FACT_OCCURRED_AT",
+      "legacy_created_ts_promotion": "FORBIDDEN"
+    },
+    "decision_time": {
+      "state": "NOT_CANONICALLY_ESTABLISHED",
+      "contract_shape": "NULLABLE",
+      "implication": "NULL_IS_SCHEMA_VALID_BUT_B09I_DOES_NOT_ASSERT_DECISION_TIME_SEMANTICS"
+    }
+  },
+  "referential_binding_readiness": {
+    "b09h_candidate_binding_state": "NOT_BOUND",
+    "b09h_candidate_ref": null,
+    "b09h_decision_eligibility_runtime_connected": false,
+    "b07e_candidate_ref_basis": "candidate_decision_v1:<candidate.candidate_id>",
+    "b07e_candidate_evidence_continuity_required": true,
+    "b07e_criterion_support_ref_authorization_required": true,
+    "proven_join_from_analyzed_recommendation_to_b09h_agronomy_shadow": false,
+    "ready_for_candidate_projection_runtime_binding": false,
+    "ready_for_decision_eligibility_runtime_binding": false,
+    "blockers": [
+      "CANONICAL_CANDIDATE_IDENTITY_POLICY_MISSING",
+      "NO_PERSISTED_CANONICAL_CANDIDATE_IDENTITY_ON_ANALYZED_PATH",
+      "B09H_QUALIFIED_EVIDENCE_CRITERION_CANDIDATE_REF_NOT_BOUND",
+      "NO_PROVEN_REFERENTIAL_JOIN_BETWEEN_ANALYZED_DECISION_RECOMMENDATION_AND_B09H_AGRONOMY_SHADOW",
+      "CANONICAL_BASIS_REF_BINDING_POLICY_NOT_ESTABLISHED_FOR_ANALYZED_SOURCE"
+    ]
+  },
+  "prohibited_promotions": [
+    {
+      "source": "recommendation_id",
+      "forbidden_target": "candidate_id",
+      "reason": "LEGACY_SOURCE_ID_IS_NOT_CANONICAL_CANDIDATE_IDENTITY"
+    },
+    {
+      "source": "fact_id",
+      "forbidden_target": "candidate_id",
+      "allowed_use": "source_ref",
+      "reason": "IMMUTABLE_SOURCE_IDENTITY_IS_NOT_CANDIDATE_IDENTITY"
+    },
+    {
+      "source": "evidence_refs",
+      "forbidden_target": "evidence_qualification_refs"
+    },
+    {
+      "source": "snapshot_id",
+      "forbidden_target": "context_snapshot_ref"
+    },
+    {
+      "source": "crop_stage",
+      "forbidden_target": "crop_stage_state_ref"
+    },
+    {
+      "source": "created_ts",
+      "forbidden_target": "created_at",
+      "allowed_basis": "fact.occurred_at"
+    }
+  ],
+  "migration_state": {
+    "candidate_projection_runtime_connected": false,
+    "decision_eligibility_runtime_connected": false,
+    "consumer_migration_performed": false,
+    "legacy_authority_removed": false,
+    "authority_removal_permitted": false
+  },
+  "nonclaims": [
+    "SYNTHETIC_ACCEPTANCE_RUNTIME_IS_NOT_CUSTOMER_PRODUCTION_TRAFFIC",
+    "THIS_CORPUS_DOES_NOT_PROVE_CANDIDATE_PROVENANCE_FOR_AGRONOMY_AGENT_RULE_ENGINE_LEGACY_OPERATOR_DECISION_PLAN_PRESCRIPTION_OR_OTHER_PRODUCERS",
+    "THIS_INVENTORY_DOES_NOT_CREATE_OR_PERSIST_CANDIDATE_DECISION_V1",
+    "THIS_INVENTORY_DOES_NOT_ESTABLISH_A_CANDIDATE_ID_POLICY",
+    "THIS_INVENTORY_DOES_NOT_BIND_B09H_CRITERIA_TO_A_CANDIDATE",
+    "THIS_INVENTORY_DOES_NOT_AUTHORIZE_B07E_RUNTIME_CONNECTION",
+    "THIS_INVENTORY_DOES_NOT_AUTHORIZE_CONSUMER_MIGRATION",
+    "THIS_INVENTORY_DOES_NOT_AUTHORIZE_AUTHORITY_REMOVAL"
+  ],
+  "next_permitted_step": "ESTABLISH_AND_SHADOW_PROVE_CANONICAL_CANDIDATE_IDENTITY_AND_REFERENTIAL_BINDING_BEFORE_ANY_B07E_RUNTIME_CONNECTION"
+}

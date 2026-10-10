@@ -188,7 +188,22 @@ function normalizeZoneRates(prescription: any, acceptance: any): FertilizationRe
   });
 }
 
-function buildBlockingReasons(input: { assessment: any; recommendation: any; prescription: any; acceptance: any; zoneRates: FertilizationReportZoneRateV1[] }): string[] {
+function hasExactAcceptanceProvenance(acceptance: any): boolean {
+  if (!acceptance || typeof acceptance !== "object") return false;
+  return [
+    "fertilization_prescription_fact_id",
+    "variable_prescription_id",
+    "receipt_fact_id",
+    "receipt_id",
+    "act_task_id",
+    "operation_plan_id",
+    "as_executed_id",
+    "as_applied_id",
+    "acceptance_result_fact_id",
+  ].every((key) => Boolean(cleanText(acceptance?.[key])));
+}
+
+function buildBlockingReasons(input: { assessment: any; recommendation: any; prescription: any; acceptance: any; acceptanceAmbiguous?: boolean; zoneRates: FertilizationReportZoneRateV1[] }): string[] {
   const reasons: string[] = [];
   if (!input.assessment) reasons.push("missing:fertilization_assessment");
   if (input.assessment?.trigger_source === "SENSING_RISK") reasons.push("fertilization_sensing_review_only");
@@ -197,7 +212,9 @@ function buildBlockingReasons(input: { assessment: any; recommendation: any; pre
   if (!input.recommendation) reasons.push("missing:fertilization_recommendation");
   if (input.recommendation && input.recommendation.customer_visible_eligible !== true) reasons.push("fertilization_not_customer_visible");
   if (!input.prescription) reasons.push("missing:fertilization_prescription");
+  if (input.acceptanceAmbiguous) reasons.push("AMBIGUOUS_FERTILIZATION_ACCEPTANCE_BINDING");
   if (!input.acceptance) reasons.push("missing:fertilization_acceptance");
+  if (input.acceptance && !hasExactAcceptanceProvenance(input.acceptance)) reasons.push("FERTILIZATION_ACCEPTANCE_PROVENANCE_REQUIRED");
   if (input.acceptance && normalizeAcceptanceStatus(input.acceptance.acceptance_status) !== "PASS") reasons.push("fertilization_acceptance_not_pass");
   if (input.zoneRates.some((z) => z.result === "FAIL")) reasons.push("fertilization_zone_deviation_large");
   return uniqueReasons(reasons);
@@ -222,7 +239,19 @@ export async function buildFertilizationReportProjectionV1(pool: Pool, params: {
   ].map((x) => cleanText(x)).filter((x): x is string => Boolean(x));
   let facts = await queryFacts(pool, params.tenant, candidates);
 
-  const acceptance = latest(facts, "fertilization_acceptance_v1");
+  const acceptanceRows = facts.filter((row) =>
+    row.record_json?.type === "fertilization_acceptance_v1"
+    && (
+      !cleanText(params.operation_plan_id)
+      || cleanText(row.record_json?.operation_plan_id) === cleanText(params.operation_plan_id)
+    )
+    && (
+      !cleanText(params.act_task_id)
+      || cleanText(row.record_json?.act_task_id) === cleanText(params.act_task_id)
+    )
+  );
+  const acceptanceAmbiguous = acceptanceRows.length > 1;
+  const acceptance = acceptanceRows.length === 1 ? acceptanceRows[0].record_json : null;
 
   const linkedPrescriptionId = cleanText(acceptance?.fertilization_prescription_id);
   if (linkedPrescriptionId && !facts.some((row) =>
@@ -262,7 +291,7 @@ export async function buildFertilizationReportProjectionV1(pool: Pool, params: {
   const assessment = findAssessment(facts, recommendation, prescription);
   if (!assessment && !recommendation && !prescription && !acceptance) return null;
   const zone_rates = normalizeZoneRates(prescription, acceptance);
-  const blocking_reasons = buildBlockingReasons({ assessment, recommendation, prescription, acceptance, zoneRates: zone_rates });
+  const blocking_reasons = buildBlockingReasons({ assessment, recommendation, prescription, acceptance, acceptanceAmbiguous, zoneRates: zone_rates });
   return {
     assessment_id: cleanText(assessment?.assessment_id),
     trigger_source: normalizeTriggerSource(assessment?.trigger_source),
@@ -273,7 +302,13 @@ export async function buildFertilizationReportProjectionV1(pool: Pool, params: {
     material_type: cleanText(prescription?.material_type),
     zone_rates,
     acceptance_status: normalizeAcceptanceStatus(acceptance?.acceptance_status),
-    customer_visible_eligible: Boolean(recommendation?.customer_visible_eligible === true && prescription?.customer_visible_eligible === true && normalizeAcceptanceStatus(acceptance?.acceptance_status) === "PASS"),
+    customer_visible_eligible: Boolean(
+      !acceptanceAmbiguous
+      && hasExactAcceptanceProvenance(acceptance)
+      && recommendation?.customer_visible_eligible === true
+      && prescription?.customer_visible_eligible === true
+      && normalizeAcceptanceStatus(acceptance?.acceptance_status) === "PASS"
+    ),
     blocking_reasons,
   };
 }

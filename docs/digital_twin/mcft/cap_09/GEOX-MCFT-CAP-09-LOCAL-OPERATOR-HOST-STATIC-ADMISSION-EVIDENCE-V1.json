@@ -1,0 +1,80 @@
+{
+  "schema_version": "geox_mcft_cap09_local_operator_host_static_admission_evidence_v1",
+  "status": "PASS",
+  "evidence_class": "OPERATOR_RETURNED_MACHINE_PREFLIGHT_NORMALIZED",
+  "subject_sha": "39b0a76926a34b776698fb7ba1807b88a190ca77",
+  "observed_at": "2026-09-01T09:20:41.017Z",
+  "git": {
+    "branch": "feat/mcft-cap09-v13-producer-driven-qualification-v1",
+    "observed_subject_sha": "39b0a76926a34b776698fb7ba1807b88a190ca77",
+    "exact_subject_match": true,
+    "governed_worktree_clean": true,
+    "governed_worktree_observed_changes": [],
+    "ignored_machine_evidence_paths": []
+  },
+  "host": {
+    "host_id": "fae5f756-ef25-40d5-9777-5b2c3d4837a1",
+    "host_id_match": true,
+    "platform": "win32",
+    "architecture": "x64",
+    "os_release": "10.0.26200",
+    "logical_cpu_count": 8,
+    "total_memory_gib": 7.8,
+    "free_memory_gib_at_probe": 0.62,
+    "repo_disk_free_gib": 31.41
+  },
+  "docker": {
+    "daemon_available": true,
+    "server_version": "29.1.2",
+    "server_os": "linux",
+    "server_architecture": "x86_64",
+    "server_cpu_count": 8,
+    "server_memory_gib": 3.72,
+    "compose_available": true,
+    "compose_version": "2.40.3-desktop.1"
+  },
+  "power_and_time": {
+    "active_power_scheme": "5a5f99d9-30a3-49c8-afe4-a54385d96300",
+    "ac_sleep_seconds": 0,
+    "dc_sleep_seconds": 180,
+    "windows_time_service_state": "Running",
+    "windows_time_service_start_mode": "Manual",
+    "windows_time_source": "time.windows.com,0x9",
+    "windows_time_status_readable": true
+  },
+  "durability_and_network": {
+    "durable_log_root_contract": "~/.geox/mcft-cap09/logs",
+    "durable_log_root_exists": true,
+    "durable_log_root_writable": true,
+    "durable_log_root_outside_os_temp": true,
+    "active_network_interface": "WLAN",
+    "active_ipv4_default_route_present": true,
+    "configured_ipv4_dns_present": true,
+    "network_readiness_pass": true
+  },
+  "classification": {
+    "machine_preflight_classification": "PRE_RUNTIME_STATIC_MACHINE_ADMISSION",
+    "resource_floor_pass": true,
+    "blockers": [],
+    "actual_24h_uptime_proven": false,
+    "actual_24h_network_continuity_proven": false,
+    "actual_runtime_restart_policy_proven": false,
+    "later_runtime_window_required_proofs": [
+      "24H_HOST_UPTIME",
+      "NETWORK_CONTINUITY",
+      "DURABLE_LOG_CONTINUITY",
+      "RESTART_POLICY_UNLESS_STOPPED"
+    ]
+  },
+  "non_effects": {
+    "provider_request_count": 0,
+    "runtime_secret_read": false,
+    "database_connection_attempted": false,
+    "container_start_count": 0,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  }
+}

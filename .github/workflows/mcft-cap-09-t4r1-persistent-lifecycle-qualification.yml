@@ -9,6 +9,7 @@ on:
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs'
       - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CROP_ONLY_GEOMETRY.mjs'
       - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs'
   merge_group:
@@ -41,18 +42,31 @@ jobs:
           node-version: 20.11.1
           cache: pnpm
 
-      - name: Resolve exact protected-main base and subject
+      - name: Resolve current protected-main base and qualification subject
         id: authority
         shell: bash
         run: |
           set -euo pipefail
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse origin/main)"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
-            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+            base_sha='${{ github.event.pull_request.base.sha }}'
+            subject_sha='${{ github.event.pull_request.head.sha }}'
+            if [ '${{ github.event.pull_request.base.ref }}' != 'main' ]; then
+              echo "T4R1_PROTECTED_MAIN_BASE_REF_REQUIRED:${{ github.event.pull_request.base.ref }}" >&2
+              exit 1
+            fi
           else
-            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
-            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+            base_sha='${{ github.event.merge_group.base_sha }}'
+            subject_sha='${{ github.event.merge_group.head_sha }}'
           fi
+          if [ "$base_sha" != "$current_main" ]; then
+            echo "T4R1_PROTECTED_MAIN_BASE_RACE:${base_sha}:${current_main}" >&2
+            exit 1
+          fi
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          echo "subject_sha=$subject_sha" >> "$GITHUB_OUTPUT"
+          echo "current_main_sha=$current_main" >> "$GITHUB_OUTPUT"
 
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
@@ -65,7 +79,7 @@ jobs:
           node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.cjs
           node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
 
-      - name: Validate exact protected-main governance boundary
+      - name: Adjudicate successor-chain protected-main effectiveness
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
@@ -76,54 +90,65 @@ jobs:
           MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
 
-      - name: Bind exact protected-main adoption context
+      - name: Bind protected-main effectiveness without pre-merge authority promotion
         shell: node {0}
         run: |
-          const fs = require('fs');
-          const file='acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json';
-          const result=JSON.parse(fs.readFileSync(file,'utf8'));
+          const fs=require('fs');
+          const resultPath='acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json';
+          const govPath='acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_GOVERNANCE_RESULT.json';
+          const result=JSON.parse(fs.readFileSync(resultPath,'utf8'));
+          const gov=JSON.parse(fs.readFileSync(govPath,'utf8'));
           const base='${{ steps.authority.outputs.base_sha }}';
           const subject='${{ steps.authority.outputs.subject_sha }}';
-          if(base!=='60b15c11aaaf9772083af6451b24b7bfb1e68fc9') throw new Error(`T4R1_EXACT_MAIN_BASE_REQUIRED:${base}`);
+          if(gov.status!=='PASS'||gov.base_sha!==base||gov.subject_sha!==subject) throw new Error('T4R1_SUCCESSOR_CHAIN_EFFECTIVENESS_GOVERNANCE_REQUIRED');
+          if(gov.current_protected_main_sha!==base||gov.successor_chain_effectiveness_adjudicated!==true||gov.authority_predecessor_blobs_pinned_on_current_protected_main!==true) throw new Error('T4R1_CURRENT_MAIN_EFFECTIVENESS_PROOF_REQUIRED');
+          if(gov.subject_is_current_protected_main!==false||gov.post_merge_current_main_evaluation_required!==true||gov.live_result_eligible_if_active_candidate!==false) throw new Error('T4R1_PR_HEAD_MUST_NOT_GAIN_AUTHORITY');
           if(result.status!=='PASS'||result.subject_sha!==subject) throw new Error('T4R1_LIVE_RESULT_EXACT_HEAD_REQUIRED');
-          const adoptable=result.qualification_outcome==='ACTIVE_CANDIDATE';
-          result.authority_effect=adoptable?'EXACT_MAIN_LIFECYCLE_ADOPTION_CANDIDATE_PENDING_THIS_PR_MERGE':'EXACT_MAIN_NONACTIVE_ADJUDICATION';
-          result.exact_main_authority_context={base_sha:base,amendment_16_effective_on_base:true,exact_main_rerun_completed:true,live_result_eligible_for_protected_main_adoption_on_this_pr_merge:adoptable};
-          result.amendment_16_effectiveness={predecessor_subject_sha:base,amendment_16_effective_on_protected_main_for_this_run:true,current_result_may_be_adopted_as_protected_main_authority_on_this_pr_merge:adoptable,exact_main_rerun_required_after_effectiveness:false};
-          result.season_lifecycle.authority_adoption_eligible_on_this_pr_merge=adoptable;
-          fs.writeFileSync(file,JSON.stringify(result,null,2)+'\n');
-          console.log(JSON.stringify({status:'PASS',base_sha:base,subject_sha:subject,outcome:result.qualification_outcome,adoptable_on_merge:adoptable}));
-
-      - name: Verify truthful exact-main result contract
+          result.authority_effect='PR_QUALIFICATION_ONLY_NO_PROTECTED_MAIN_AUTHORITY_EFFECT';
+          result.protected_main_authority_context={
+            base_sha:base,
+            current_protected_main_sha:gov.current_protected_main_sha,
+            successor_chain_effectiveness_adjudicated:true,
+            successor_chain_hop_count:gov.successor_chain_hop_count,
+            authority_predecessor_blobs_pinned:true,
+            subject_is_current_protected_main:false,
+            live_result_eligible_for_protected_main_adoption:false,
+            post_merge_current_main_evaluation_required:true
+          };
+          result.amendment_16_effectiveness={
+            predecessor_subject_sha:result.amendment_16_effectiveness?.predecessor_subject_sha||null,
+            successor_chain_effective_on_current_protected_main:true,
+            current_result_subject_is_current_protected_main:false,
+            current_result_may_be_adopted_as_protected_main_authority:false,
+            protected_main_effectiveness_adjudication_required_after_merge:true,
+            exact_main_rerun_required_after_effectiveness:false
+          };
+          result.season_lifecycle.authority_adoption_eligible_on_current_protected_main=false;
+          fs.writeFileSync(resultPath,JSON.stringify(result,null,2)+'\n');
+          console.log(JSON.stringify({status:'PASS',base_sha:base,subject_sha:subject,outcome:result.qualification_outcome,protected_main_authority_effect:false,exact_main_rerun_required:false}));
+ 
+      - name: Verify truthful successor-chain qualification contract
         shell: node {0}
         run: |
           const fs=require('fs');
           const result=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json','utf8'));
-          const base='${{ steps.authority.outputs.base_sha }}';const subject='${{ steps.authority.outputs.subject_sha }}';
-          if(result.status!=='PASS'||result.subject_sha!==subject) throw new Error('T4R1_EXACT_HEAD_PASS_REQUIRED');
-          if(result.exact_main_authority_context?.base_sha!==base||result.exact_main_authority_context?.amendment_16_effective_on_base!==true||result.exact_main_authority_context?.exact_main_rerun_completed!==true) throw new Error('T4R1_EXACT_MAIN_CONTEXT_REQUIRED');
+          const gov=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_GOVERNANCE_RESULT.json','utf8'));
+          if(gov.status!=='PASS'||gov.successor_chain_effectiveness_adjudicated!==true||gov.exact_main_rerun_required!==false) throw new Error('T4R1_GOVERNANCE_EFFECTIVENESS_REQUIRED');
+          if(result.status!=='PASS'||result.protected_main_authority_context?.subject_is_current_protected_main!==false||result.protected_main_authority_context?.live_result_eligible_for_protected_main_adoption!==false||result.protected_main_authority_context?.post_merge_current_main_evaluation_required!==true) throw new Error('T4R1_PR_AUTHORITY_NONPROMOTION_REQUIRED');
+          if(result.amendment_16_effectiveness?.exact_main_rerun_required_after_effectiveness!==false||result.amendment_16_effectiveness?.protected_main_effectiveness_adjudication_required_after_merge!==true) throw new Error('T4R1_SUCCESSOR_CHAIN_POST_MERGE_ADJUDICATION_REQUIRED');
           if(result.transition_sweep?.provider_coverage_completeness_proven!==false||result.transition_sweep?.proved_no_termination_occurred!==false||result.transition_sweep?.provider_silence_used_as_evidence!==false||result.transition_sweep?.provider_retrieval_time_used_as_coverage_watermark!==false) throw new Error('T4R1_NONCLAIM_CONTRACT_REQUIRED');
           if(result.lifecycle_horizon?.maximum_total_days!==180||result.lifecycle_horizon?.creates_active!==false||result.lifecycle_horizon?.truncation_only!==true||result.lifecycle_horizon?.support_event_renewal_used!==false) throw new Error('T4R1_HORIZON_CONTRACT_REQUIRED');
-          if(result.season_lifecycle?.observation_freshness_refreshed_by_persistence!==false||result.season_lifecycle?.evaluated_at_emitted_as_observed_at!==false) throw new Error('T4R1_OBSERVATION_NONCLAIM_REQUIRED');
           for(const f of ['runtime_write_count','database_write_count','scheduler_write_count','formal_evidence_write_count']) if(result[f]!==0) throw new Error(`T4R1_ZERO_WRITE_REQUIRED:${f}`);
           if(result.ea5e2_operational_activation_qualified!==false||result.formal_window_started!==false||result.formal_execution_count!=='0/24') throw new Error('T4R1_OPERATIONAL_EFFECT_FORBIDDEN');
-          const outcome=result.qualification_outcome;
-          if(!['ACTIVE_CANDIDATE','TERMINATED','CONFLICTED','EXPIRED'].includes(outcome)) throw new Error(`T4R1_OUTCOME_INVALID:${outcome}`);
-          if(outcome==='ACTIVE_CANDIDATE'){
-            if(result.transition_sweep?.known_termination_result!=='NONE_FOUND'||result.transition_sweep?.known_termination_count!==0) throw new Error('T4R1_ACTIVE_KNOWN_TERMINATION');
-            if(result.transition_sweep?.known_contradiction_result!=='NONE_FOUND'||result.transition_sweep?.known_contradiction_count!==0) throw new Error('T4R1_ACTIVE_KNOWN_CONTRADICTION');
-            if(result.lifecycle_horizon?.valid_at_evaluation_time!==true) throw new Error('T4R1_ACTIVE_HORIZON');
-            if(result.season_lifecycle?.domain_state!=='ACTIVE'||result.season_lifecycle?.authority_status!=='RESOLVED'||result.season_lifecycle?.authority_validity!=='VALID'||result.season_lifecycle?.authority_mode!=='GOVERNED_PERSISTENT_STATE'||result.season_lifecycle?.active_consumable_candidate!==true) throw new Error('T4R1_ACTIVE_STATE');
-            if(result.exact_main_authority_context?.live_result_eligible_for_protected_main_adoption_on_this_pr_merge!==true||result.season_lifecycle?.authority_adoption_eligible_on_this_pr_merge!==true) throw new Error('T4R1_ACTIVE_ADOPTION_ELIGIBILITY');
-          }else if(result.exact_main_authority_context?.live_result_eligible_for_protected_main_adoption_on_this_pr_merge!==false){throw new Error('T4R1_NONACTIVE_ADOPTION_FORBIDDEN');}
-          console.log(JSON.stringify({status:'PASS',base_sha:base,subject_sha:subject,outcome,lifecycle:result.season_lifecycle,next_frontier:result.next_frontier}));
+          console.log(JSON.stringify({status:'PASS',outcome:result.qualification_outcome,successor_chain_hops:gov.successor_chain_hop_count,protected_main_authority_effect:false,exact_main_rerun_required:false}));
 
-      - name: Upload sanitized exact-main qualification artifacts
+      - name: Upload sanitized successor-chain qualification artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-t4r1-persistent-lifecycle-${{ steps.authority.outputs.subject_sha }}
           path: |
+            acceptance-output/MCFT_CAP09_T4R1_PROTECTED_MAIN_SUCCESSOR_CHAIN_RESULT.json
             acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_GOVERNANCE_RESULT.json
             acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json
           if-no-files-found: error

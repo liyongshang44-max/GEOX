@@ -1,0 +1,154 @@
+#!/usr/bin/env node
+"use strict";
+
+const assert=require("node:assert/strict");
+const cp=require("node:child_process");
+const fs=require("node:fs");
+const path=require("node:path");
+
+const ROOT=path.resolve(__dirname,"../..");
+const RUNNER="scripts/runtime_acceptance/RUN_MCFT_CAP_09_REAL_CLOCK_REHEARSAL_V1.cjs";
+const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_REAL_CLOCK_REHEARSAL_LAUNCHER_V1_RESULT.json");
+
+function read(rel){return fs.readFileSync(path.join(ROOT,rel),"utf8");}
+function write(value){
+  fs.mkdirSync(path.dirname(OUT),{recursive:true});
+  fs.writeFileSync(OUT,JSON.stringify(value,null,2)+"\n");
+  console.log(JSON.stringify(value,null,2));
+}
+
+try{
+  const source=read(RUNNER);
+  const selftest=JSON.parse(cp.execFileSync(process.execPath,[path.join(ROOT,RUNNER),"--selftest"],{
+    cwd:ROOT,encoding:"utf8",stdio:["ignore","pipe","pipe"],
+  }));
+  assert.equal(selftest.status,"PASS");
+  assert.equal(selftest.run_class,"QUALIFICATION_REHEARSAL");
+  assert.equal(selftest.formal_effect,false);
+  assert.equal(selftest.production_effect,false);
+
+  for(const required of [
+    'const COMPOSE=path.join(ROOT,"docker-compose.mcft-cap09-phase5-qualification.yml")',
+    '"REAL_CLOCK_REHEARSAL"',
+    '"QUALIFICATION_REHEARSAL"',
+    '"R00_R23_IS_NOT_O00_O23"',
+    '"NO_FORMAL_V5_EFFECT_FROM_REHEARSAL"',
+    '"NO_STAGE_1B_CLOSURE_FROM_REHEARSAL"',
+    '"NO_MCFT_CAP09_COMPLETION_FROM_REHEARSAL"',
+    'GEOX_PHASE5_TWIN_IDLE_POLL_MS:"5000"',
+    'GEOX_PHASE5_TWIN_NOT_READY_POLL_MS:"15000"',
+    'GEOX_PHASE5_TWIN_RETRY_BASE_MS:"1000"',
+    'GEOX_PHASE5_TWIN_RETRY_MAXIMUM_MS:"60000"',
+    'GEOX_PHASE5_EVIDENCE_LEASE_DURATION_SECONDS:"300"',
+    'GEOX_PHASE5_EVIDENCE_SUCCESS_CADENCE_MS:"60000"',
+    'GEOX_PHASE5_EVIDENCE_LEASE_STANDBY_MS:"5000"',
+    'GEOX_PHASE5_EVIDENCE_RETRY_BASE_MS:"1000"',
+    'GEOX_PHASE5_EVIDENCE_RETRY_MAXIMUM_MS:"60000"',
+    '"evidence-runtime","twin-runtime"',
+    '"REAL_CLOCK_REHEARSAL_EVIDENCE_START_FAILED"',
+    '"REAL_CLOCK_REHEARSAL_EVIDENCE_NOT_RUNNING_AT_FINALIZE"',
+    '"evidence-runtime-health-proof.json"',
+    'live_production_evidence_runtime:true',
+    'live_production_provider_path:true',
+    'unsafe_raw_log_retained:false',
+    'provider_attempt_outcome_count:completed+retryable',
+    'LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD=2*HOUR',
+    'LIVE_EVIDENCE_MINIMUM_RUNTIME_BEFORE_A0=45*MINUTE',
+    '"REAL_CLOCK_REHEARSAL_EVIDENCE_RUNTIME_PRE_A0_WINDOW_TOO_SHORT"',
+    'selected_pre_a0_lead_seconds',
+    'waitForComposeServiceHealthyV1',
+    '"REAL_CLOCK_REHEARSAL_SERVICE_HEALTH_TIMEOUT"',
+    'state,secrets,"postgres",120_000',
+    'state,secrets,"minio",120_000',
+    'bootstrap_dependency_health',
+    '"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1.ts"',
+    '"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts"',
+    '"CONTROLLED_PROCESS_RESTART_ACROSS_ONE_REAL_UTC_BOUNDARY"',
+    'restartStoppedTwinContainerV1',
+    'exec("docker",["start",containerId]',
+    '"REAL_CLOCK_REHEARSAL_FAULT_RESTART_CONTAINER_ID_MISMATCH"',
+    '"REAL_CLOCK_REHEARSAL_FAULT_RESTART_CONTAINER_ID_DRIFT"',
+    '"REAL_CLOCK_REHEARSAL_FAULT_CONTROLLER_EXCEPTION"',
+    'restarted_exact_stopped_container_id:before.id',
+    'oldest_first_backfill_observed:true',
+    'formal_closure_substituted:false',
+    '"qualification-verify"',
+    '"down","-v","--remove-orphans"',
+  ]){
+    assert.equal(source.includes(required),true,"REAL_CLOCK_REHEARSAL_LAUNCHER_MARKER_REQUIRED:"+required);
+  }
+
+  for(const forbidden of [
+    "docker-compose.mcft-cap09-production.yml",
+    "docker-compose.mcft-cap09-production-preformal.yml",
+    "GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL",
+    "GEOX_MCFT_CAP09_FORMAL_V5_ADMIN_DATABASE_URL",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET",
+    "RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP",
+    "RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION",
+    "ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM",
+    "git merge",
+    "gh pr merge",
+    "push origin",
+    'compose(state,secrets,["start","twin-runtime"]',
+  ]){
+    assert.equal(source.includes(forbidden),false,"REAL_CLOCK_REHEARSAL_LAUNCHER_FORBIDDEN_MARKER:"+forbidden);
+  }
+
+  assert.match(source,/REAL_CLOCK_REHEARSAL_CLEAN_WORKTREE_REQUIRED/);
+  assert.match(source,/REAL_CLOCK_REHEARSAL_ALREADY_RUNNING/);
+  assert.match(source,/REAL_CLOCK_REHEARSAL_FINALIZE_BEFORE_R23_FORBIDDEN/);
+  assert.match(source,/scheduler_slot_count===24&&proof\.terminal_tick_count===24/);
+  assert.match(source,/qualification_rehearsal_baseline_fact_count===49/);
+  assert.match(source,/rehearsal_is_non_authority_bearing===true/);
+  assert.match(source,/formal_closure_substituted_by_rehearsal===false/);
+  assert.match(source,/evidence_container:evidenceContainer/);
+  assert.match(source,/fatal_attempt_failure_count:fatal/);
+  assert.match(source,/starting>=1&&\(completed\+retryable\)>=1&&fatal===0/);
+  assert.doesNotMatch(source,/GEOX_PHASE5_EVIDENCE_BURNIN_ZONE_ID/);
+  assert.match(source,/GEOX_PHASE5_ZONE_ID:"zone_kbs_mcse_t4r1_crop_formal_v1"/);
+  assert.match(source,/strictNextUtcHour\(nowMs\+LIVE_EVIDENCE_PRE_A0_SELECTION_LEAD\)/);
+  assert.match(source,/evidenceRuntimePreA0Ms>=LIVE_EVIDENCE_MINIMUM_RUNTIME_BEFORE_A0/);
+  assert.match(
+    source,
+    /compose\(state,secrets,\["up","-d","postgres","minio"\][\s\S]*waitForComposeServiceHealthyV1\([\s\S]*"postgres"[\s\S]*waitForComposeServiceHealthyV1\([\s\S]*"minio"[\s\S]*"database-platform-bootstrap"/,
+  );
+
+  write({
+    schema_version:"geox_mcft_cap09_real_clock_rehearsal_launcher_acceptance_v1",
+    status:"PASS",
+    run_class:"QUALIFICATION_REHEARSAL",
+    exact_phase5_isolated_compose_required:true,
+    production_compose_reference_count:0,
+    formal_v5_store_binding_count:0,
+    actual_database_clock_preserved:true,
+    automatic_controlled_restart_and_backfill_probe:true,
+    controlled_restart_uses_exact_stopped_container_id:true,
+    controlled_restart_forbids_compose_dependency_reentry:true,
+    controller_exception_writes_fail_proof:true,
+    exact_24_terminal_readback_required:true,
+    live_production_evidence_runtime_burn_in:true,
+    live_provider_path_required:true,
+    evidence_and_twin_both_must_be_running:true,
+    evidence_and_twin_share_exact_external_formal_scope:true,
+    rehearsal_project_storage_remains_isolated_from_production:true,
+    retryable_provider_failure_is_observable_not_automatically_fatal:true,
+    fatal_provider_failure_forbids_rehearsal_pass:true,
+    sanitized_evidence_health_proof_retained:true,
+    live_evidence_pre_a0_selection_lead_reserved:true,
+    minimum_live_evidence_runtime_before_a0_seconds:2700,
+    postgres_health_required_before_database_bootstrap:true,
+    minio_health_required_before_raw_init:true,
+    rehearsal_non_authority_claims_locked:true,
+    formal_closure_substitution:false,
+    production_effect:false,
+  });
+}catch(error){
+  write({
+    schema_version:"geox_mcft_cap09_real_clock_rehearsal_launcher_acceptance_v1",
+    status:"FAIL",
+    error:error instanceof Error?error.message:String(error),
+  });
+  console.error(error);
+  process.exitCode=1;
+}

@@ -5,8 +5,10 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml'
       - 'apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
       - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs'
   merge_group:
@@ -55,6 +57,11 @@ jobs:
           node-version: 20.11.1
           cache: pnpm
 
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24.2'
+          cache: false
+
       - name: Resolve exact EA5C1 base
         id: authority
         shell: bash
@@ -78,30 +85,41 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs
 
       - name: Re-prove CAP08 G3 frozen-core successor compatibility
+        # Successor G3 mode compares every frozen-core blob directly to the accepted G3 merge.
+        # Bind BASE to the exact subject so unrelated stacked-diff whitespace cannot mask that check.
         env:
-          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_BASE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
 
       - name: Start private S3-compatible raw store
         shell: bash
         run: |
           set -euo pipefail
-          docker run -d --name ea5c1-minio \
-            -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin \
-            -e MINIO_ROOT_PASSWORD=minioadmin123 \
-            minio/minio:latest server /data
-          for attempt in $(seq 1 60); do
+          bin="$RUNNER_TEMP/ea5c1-minio-bin"
+          data="$RUNNER_TEMP/ea5c1-minio-data"
+          mkdir -p "$bin" "$data"
+
+          GOBIN="$bin" go install github.com/minio/minio@RELEASE.2025-09-07T16-13-09Z
+          GOBIN="$bin" go install github.com/minio/mc@RELEASE.2025-08-13T08-35-41Z
+
+          MINIO_ROOT_USER=minioadmin \
+          MINIO_ROOT_PASSWORD=minioadmin123 \
+            "$bin/minio" server "$data" >"$RUNNER_TEMP/ea5c1-minio.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/ea5c1-minio.pid"
+
+          for attempt in $(seq 1 90); do
             if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
-            if [ "$attempt" = 60 ]; then docker logs ea5c1-minio; exit 1; fi
+            if [ "$attempt" = 90 ]; then
+              cat "$RUNNER_TEMP/ea5c1-minio.log"
+              exit 1
+            fi
             sleep 1
           done
-          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -ceu '
-            mc alias set local http://127.0.0.1:9000 minioadmin minioadmin123
-            mc mb --ignore-existing local/geox-mcft-cap09-formal-raw-v1
-            mc anonymous set private local/geox-mcft-cap09-formal-raw-v1
-            mc stat local/geox-mcft-cap09-formal-raw-v1
-          '
+
+          "$bin/mc" alias set local http://127.0.0.1:9000 minioadmin minioadmin123
+          "$bin/mc" mb --ignore-existing local/geox-mcft-cap09-formal-raw-v1
+          "$bin/mc" anonymous set private local/geox-mcft-cap09-formal-raw-v1
+          "$bin/mc" stat local/geox-mcft-cap09-formal-raw-v1
 
       - name: Typecheck server
         shell: bash
@@ -118,9 +136,19 @@ jobs:
           EA5C1_S3_BUCKET: geox-mcft-cap09-formal-raw-v1
           EA5C1_S3_ACCESS_KEY: minioadmin
           EA5C1_S3_SECRET_KEY: minioadmin123
+          EA5C1_EXACT_HISTORICAL_BASE: b9e212f98dd1d0c1e8fff5e9f93f369167e6f065
+          EA5C1_CURRENT_BASE: ${{ steps.authority.outputs.base_sha }}
         run: |
-          set -o pipefail
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts 2>&1 | tee acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
+          set -euo pipefail
+          if [ "$EA5C1_CURRENT_BASE" = "$EA5C1_EXACT_HISTORICAL_BASE" ]; then
+            pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts \
+              2>&1 | tee acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
+          else
+            pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts \
+              2>&1 | tee acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
+            pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts \
+              2>&1 | tee acceptance-output/EA5C1_REAL_CLOCK_P0_RETENTION_REUSE.log
+          fi
 
       - name: Re-prove EA3 retention-before-decode collector boundary
         env:
@@ -136,6 +164,14 @@ jobs:
           set -euo pipefail
           status="$(curl -sS -o /tmp/ea5c1-anon-body -w '%{http_code}' http://127.0.0.1:9000/geox-mcft-cap09-formal-raw-v1/ || true)"
           test "$status" = "403"
+
+      - name: Stop private S3-compatible raw store
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/ea5c1-minio.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/ea5c1-minio.pid")" || true
+          fi
 
       - name: Verify EA5C1 remains implementation qualification only
         shell: node {0}
@@ -157,5 +193,6 @@ jobs:
             acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json
             acceptance-output/EA5C1_SERVER_TYPECHECK.log
             acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
+            acceptance-output/EA5C1_REAL_CLOCK_P0_RETENTION_REUSE.log
           if-no-files-found: warn
           retention-days: 90

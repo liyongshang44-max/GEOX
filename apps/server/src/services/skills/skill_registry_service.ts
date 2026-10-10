@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 
 import { appendSkillDefinitionFact, type SkillDefinitionFactPayload } from "../../domain/skill_registry/facts.js";
-import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../../projections/skill_registry_read_v1.js";
+import { computeSkillRegistryReadRowsV1, filterSkillRegistryReadRowsV1, projectSkillRegistryReadV1 } from "../../projections/skill_registry_read_v1.js";
 import type { TenantTriple } from "./skill_trace_service.js";
 
 type SkillRow = {
@@ -29,8 +29,8 @@ type SkillRow = {
 };
 
 export async function listSkills(pool: Pool, tenant: TenantTriple, filters: Record<string, unknown>) {
-  await projectSkillRegistryReadV1(pool, tenant);
-  const rows = await querySkillRegistryReadV1(pool, {
+  const projected = await computeSkillRegistryReadRowsV1(pool, tenant);
+  const rows = filterSkillRegistryReadRowsV1(projected, {
     ...tenant,
     category: typeof filters.category === "string" ? filters.category : undefined,
     status: typeof filters.status === "string" ? filters.status : undefined,
@@ -40,7 +40,7 @@ export async function listSkills(pool: Pool, tenant: TenantTriple, filters: Reco
     bind_target: typeof filters.bind_target === "string" ? filters.bind_target : undefined,
     fact_type: "skill_definition_v1",
   });
-  const bindingRows = await querySkillRegistryReadV1(pool, {
+  const bindingRows = filterSkillRegistryReadRowsV1(projected, {
     ...tenant,
     crop_code: typeof filters.crop_code === "string" ? filters.crop_code : undefined,
     bind_target: typeof filters.bind_target === "string" ? filters.bind_target : undefined,
@@ -53,7 +53,7 @@ export async function listSkills(pool: Pool, tenant: TenantTriple, filters: Reco
     if (!bindingMap.has(key)) bindingMap.set(key, String(row.status ?? "DISABLED").toUpperCase());
   }
 
-  return (rows ?? []).map((row) => ({
+  return rows.map((row) => ({
     skill_id: row.skill_id,
     version: row.version,
     display_name: String(row.payload_json?.display_name ?? row.skill_id),
@@ -72,20 +72,8 @@ export async function listSkills(pool: Pool, tenant: TenantTriple, filters: Reco
 }
 
 export async function getSkillDetail(pool: Pool, tenant: TenantTriple, skill_id: string) {
-  await projectSkillRegistryReadV1(pool, tenant);
-  const readRows = await pool.query<SkillRow>(
-    `SELECT *
-       FROM skill_registry_read_v1
-      WHERE tenant_id = $1
-        AND project_id = $2
-        AND group_id = $3
-        AND skill_id = $4
-      ORDER BY updated_at_ts_ms DESC
-      LIMIT 500`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, skill_id],
-  );
-
-  const rows = readRows.rows ?? [];
+  const projected = await computeSkillRegistryReadRowsV1(pool, tenant);
+  const rows = projected.filter((row) => row.skill_id === skill_id).slice(0, 500) as SkillRow[];
   if (!rows.length) return null;
 
   const defs = rows.filter((r) => r.fact_type === "skill_definition_v1");

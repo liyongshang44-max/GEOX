@@ -1,0 +1,92 @@
+{
+  "schema_version": "b09x_candidate_context_time_nonmcft_readiness_v1",
+  "phase": "B-09x",
+  "status": "ANALYSIS_ONLY_NOT_AUTHORIZED_FOR_BINDING",
+  "stacked_base_product_head": "3bee4dd84eaed71d834a253e8997464e89c488f7",
+  "purpose": "Determine which remaining IRRIGATE eligibility prerequisites can be advanced inside B-Line before MCFT-9 completion, without creating new authority.",
+  "findings": {
+    "decision_time": {
+      "state": "BLOCKED_NO_CANONICAL_SOURCE",
+      "prohibited_sources": [
+        "legacy decision_recommendation_v1.created_ts",
+        "decision_recommendation_v1 fact occurred_at",
+        "wall clock",
+        "evaluated_at",
+        "latest"
+      ],
+      "evidence": [
+        "B06c explicitly does not promote source.created_ts",
+        "decision_engine_v1 persists facts with occurred_at=NOW(), which proves persistence time only",
+        "B09v requires CandidateDecision.decision_time as sole causal selector boundary"
+      ],
+      "next_gate": "EXPLICIT_PRODUCT_GOVERNANCE_MUST_DEFINE_A_REAL_DECISION_BOUNDARY_SOURCE"
+    },
+    "context": {
+      "state": "STRUCTURALLY_READY_BUT_TEMPORALLY_BLOCKED",
+      "capability": "B05b projectFieldProgramDeclaredContextV1",
+      "program_storage": "append-only field_program_v1 facts",
+      "current_product_reader": "latest ORDER BY occurred_at DESC LIMIT 1",
+      "required_future_reader": "exact tenant/project/group/program plus occurred_at <= canonical decision_time; fail closed on 0/>1 applicable identity where required",
+      "prohibition": "LATEST_PROGRAM_STATE_IS_NOT_CAUSAL_CONTEXT_AUTHORITY",
+      "dependency": "canonical decision_time"
+    },
+    "state": {
+      "state": "CAPABILITY_EXISTS_NOT_BOUND",
+      "capability_chain": [
+        "B06b irrigation CalculationResult adapters",
+        "B07c agronomy Judge precursor adapter"
+      ],
+      "invariant": "STATE criterion may use legacy Judge semantics only when canonical CalculationResult refs are supplied",
+      "current_gap": "current B09j Candidate calculation_result_refs=[]",
+      "mcft_dependency": false
+    },
+    "action_window": {
+      "state": "VOCABULARY_ONLY_NO_CANONICAL_PRODUCER",
+      "contract_slots": [
+        "DecisionEligibility criterion ACTION_WINDOW",
+        "DecisionEligibility inputs.action_window_refs",
+        "B07d lifecycle consistency"
+      ],
+      "current_producer": "NONE_ESTABLISHED",
+      "next_gate": "SEPARATE_BLINE_ACTION_WINDOW_CONTRACT_AND_PROVENANCE_DECISION_REQUIRED",
+      "mcft_dependency": false
+    },
+    "forecast": {
+      "state": "FROZEN_EXTERNAL_DEPENDENCY",
+      "reason": "B09w proposes FORECAST for IRRIGATE, but canonical product Forecast binding is not established and MCFT-9 is not complete",
+      "bline_action": "DO_NOT_CONNECT_OR_SIMULATE_MCFT_AUTHORITY",
+      "dependency": "MCFT-9 COMPLETE + separate integration authorization"
+    }
+  },
+  "adjudication": {
+    "may_advance_without_mcft": [
+      "decision-time authority analysis/proposal",
+      "FieldProgram as-of Context read-model design",
+      "CalculationResult/STATE shadow binding design",
+      "ActionWindow contract/provenance design"
+    ],
+    "must_not_advance_before_mcft": [
+      "canonical FORECAST integration",
+      "Twin/MCFT state promotion",
+      "MCFT provider/scheduler/Formal/runtime ownership changes"
+    ],
+    "must_not_advance_before_separate_governance": [
+      "actual Candidate decision_time binding",
+      "actual Candidate context_snapshot_ref binding",
+      "new ActionWindow canonical producer",
+      "real policy declaration",
+      "B07e runtime connection",
+      "consumer migration",
+      "authority removal"
+    ]
+  },
+  "non_effects": {
+    "runtime_change": false,
+    "graph_edge_change": false,
+    "policy_fact": false,
+    "candidate_binding": false,
+    "b07e_connection": false,
+    "mcft_change": false,
+    "authority_removal": false
+  }
+}

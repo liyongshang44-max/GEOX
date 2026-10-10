@@ -1,3 +1,13 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: PRE_FOUI_LEGACY_PROJECTION
+ *
+ * /api/v1/fields/portfolio remains available for existing compatibility consumers.
+ * It is NOT the canonical source for new Customer Fields, Attention, or Field Workspace product construction.
+ * New post-FOUI product consumers use governed Product Projection through /api/product/v1/*.
+ * See docs/frontend-productization/GEOX-PRODUCT-DATA-CONTRACT-SUCCESSION-V1.md.
+ *
+ * This annotation changes no runtime behavior.
+ */
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";

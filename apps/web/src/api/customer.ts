@@ -1,3 +1,9 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_DO_NOT_ADOPT_CONFIRMED_TWIN_SUMMARY
+ * Existing compatibility adapter for the historical confirmed-twin-summary surface.
+ * Do not use this response model as the basis of new post-FOUI product construction.
+ * Missing authority-backed values in new Product Projection contracts must remain unavailable/null rather than inherit historical business defaults.
+ */
 import { apiRequestWithPolicy, withQuery } from "./client";
 import type { CustomerScopeV1 } from "./session";
 

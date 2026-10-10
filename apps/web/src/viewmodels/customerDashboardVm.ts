@@ -1,3 +1,9 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_P1_P2_CUSTOMER_VIEWMODEL
+ * Historical Customer product ViewModel retained for existing apps/web compatibility and provenance.
+ * Do not copy its derived risk/status/value classifications into new post-FOUI product work.
+ * New product presentation semantics must come from governed /api/product/v1/* Product Projection contracts.
+ */
 import type { CustomerDashboardAggregateV1 } from "../api/customerReports";
 import { CUSTOMER_LABELS, labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";

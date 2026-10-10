@@ -1,0 +1,74 @@
+{
+  "schema_version": "geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1",
+  "status": "PASS",
+  "subject_head_sha": "a28a55dc7518d24a4a69fe6f8fe044490f536882",
+  "qualification_outcome": "CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED",
+  "scope": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "site_id": "KBS_MCSE_T4R1",
+    "field_id": "field_kbs_mcse_t4r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t4r1_crop_formal_v1",
+    "crop": "corn",
+    "hybrid_product_code": "43-96P"
+  },
+  "lifecycle": {
+    "domain_state": "ACTIVE",
+    "authority_status": "RESOLVED",
+    "authority_validity": "VALID",
+    "authority_mode": "GOVERNED_PERSISTENT_STATE",
+    "active_consumable_candidate": true,
+    "evaluated_at": "2026-09-03T16:21:20.142Z",
+    "known_termination_result": "NONE_FOUND",
+    "known_contradiction_result": "NONE_FOUND",
+    "horizon_end_utc": "2026-11-24T03:59:59.999Z"
+  },
+  "biological_stage": {
+    "epistemic_class": "THERMAL_MODEL_DERIVED",
+    "resolved_biological_stage": "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
+    "observed_biological_stage_claimed": false,
+    "authority_as_of": "2026-09-03T00:00:00.000Z",
+    "forward_stability_hours": 30,
+    "gdu_bounds": {
+      "black_layer_reference_gdu": 2380,
+      "conservative_r5_reference_min_remaining_gdu": 400,
+      "distance_lower_to_reference_gdu": 392.665,
+      "distance_upper_to_reference_gdu": 337.045,
+      "lower_gdu": 1987.335,
+      "remaining_gdu_lower": 337.045,
+      "remaining_gdu_upper": 392.665,
+      "upper_gdu": 2042.955
+    }
+  },
+  "crop_water_use_stage": "LATE",
+  "crop_model_parameter": {
+    "parameter": "Kc",
+    "stage_code": "LATE",
+    "value": 0.6,
+    "configuration_source_id": "mcft_crop_water_use_corn_v1",
+    "configuration_semantic_hash": "sha256:56ac92e34148bd81fe20f2925e1079cb1a3ed647ffefd1471caf1302df70ee4c",
+    "production_effective": false
+  },
+  "evidence_digest": "sha256:8b479689dfdfc0ec65145e98b1bf5d0ba7fa7534019513ddaa5933e6e1cca81e",
+  "architecture_effective": true,
+  "runtime_consumption_authorized": true,
+  "runtime_config_write_authorized": false,
+  "database_write_authorized": false,
+  "scheduler_write_authorized": false,
+  "formal_evidence_write_authorized": false,
+  "production_runtime_start_authorized": false,
+  "production_owner_activation_authorized": false,
+  "formal_v5_authorized": false,
+  "a0_authorized": false,
+  "o00_o23_authorized": false,
+  "mcft_cap09_completed": false,
+  "graduation": {
+    "status": "EFFECTIVE_FOR_RUNTIME_CONSUMPTION",
+    "amendment_id": "DT02-AMENDMENT-03",
+    "architecture_effectiveness_sha256": "sha256:acffd98b6e014db4d11a3374a50a2e576be3396aef33ed456f7ee104ee72a1c6",
+    "protected_main_sha": "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23",
+    "graduated_at": "2026-09-03T15:23:00.000Z"
+  }
+}

@@ -1,0 +1,669 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geox.local/contracts/customer_product_projection_contracts_v1.schema.json",
+  "title": "GEOX Customer Product Projection Wave-02 V1",
+  "description": "Non-authoritative Customer Overview, Field Summary, and Field Workspace projection contracts.",
+  "$defs": {
+    "EnvelopeBase": {
+      "$ref": "../contracts/product_projection_contracts_v1.schema.json#/$defs/ProductProjectionEnvelopeV1"
+    },
+    "FieldIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "display_name",
+        "display_name_status",
+        "farm_display_name",
+        "crop_display_name",
+        "crop_stage_display",
+        "season_display",
+        "area",
+        "area_unit"
+      ],
+      "properties": {
+        "display_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_name_status": {
+          "enum": [
+            "AVAILABLE",
+            "UNAVAILABLE"
+          ]
+        },
+        "farm_display_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "crop_display_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "crop_stage_display": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "season_display": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "area": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "area_unit": {
+          "oneOf": [
+            {
+              "const": "ha"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "RootZoneWater": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "available_water_fraction",
+        "depletion_from_field_capacity_mm",
+        "root_zone_water_storage_mm",
+        "water_stress_state",
+        "confidence"
+      ],
+      "properties": {
+        "available_water_fraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "depletion_from_field_capacity_mm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "root_zone_water_storage_mm": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mean",
+            "stddev",
+            "interval_low",
+            "interval_high"
+          ],
+          "properties": {
+            "mean": {
+              "type": "number",
+              "minimum": 0
+            },
+            "stddev": {
+              "type": "number",
+              "minimum": 0
+            },
+            "interval_low": {
+              "type": "number",
+              "minimum": 0
+            },
+            "interval_high": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "water_stress_state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "reason_code"
+          ],
+          "properties": {
+            "status": {
+              "const": "NOT_ESTABLISHED"
+            },
+            "reason_code": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "confidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "reason_code"
+          ],
+          "properties": {
+            "status": {
+              "const": "NOT_ESTABLISHED"
+            },
+            "reason_code": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "CurrentCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "condition_kind",
+        "effective_at",
+        "support_state",
+        "source_ref_key",
+        "root_zone_water",
+        "reason_codes"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "AVAILABLE",
+            "LIMITED",
+            "UNAVAILABLE"
+          ]
+        },
+        "condition_kind": {
+          "const": "ROOT_ZONE_WATER_STATE"
+        },
+        "effective_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "support_state": {
+          "enum": [
+            "SUPPORTED",
+            "LIMITED",
+            "UNAVAILABLE"
+          ]
+        },
+        "source_ref_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "root_zone_water": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/RootZoneWater"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "Reporting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reason_codes",
+        "last_qualified_at"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "CURRENT",
+            "LIMITED",
+            "UNAVAILABLE"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "last_qualified_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "Attention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "has_attention",
+        "attention_item_refs",
+        "reason_codes"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "AVAILABLE",
+            "LIMITED",
+            "UNAVAILABLE"
+          ]
+        },
+        "has_attention": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "attention_item_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reason_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "Collection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "items",
+        "reason_codes"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "AVAILABLE",
+            "LIMITED",
+            "UNAVAILABLE"
+          ]
+        },
+        "items": {
+          "type": "array"
+        },
+        "reason_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "FieldSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "envelope",
+        "field_ref",
+        "identity",
+        "current_condition",
+        "reporting_state",
+        "attention",
+        "recent_operation",
+        "geometry_availability",
+        "capability_refs",
+        "limitation_reason_codes"
+      ],
+      "properties": {
+        "envelope": {
+          "$ref": "#/$defs/EnvelopeBase"
+        },
+        "field_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identity": {
+          "$ref": "#/$defs/FieldIdentity"
+        },
+        "current_condition": {
+          "$ref": "#/$defs/CurrentCondition"
+        },
+        "reporting_state": {
+          "$ref": "#/$defs/Reporting"
+        },
+        "attention": {
+          "$ref": "#/$defs/Attention"
+        },
+        "recent_operation": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation_ref",
+                "display_title",
+                "lifecycle_state",
+                "event_at"
+              ],
+              "properties": {
+                "operation_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "display_title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "lifecycle_state": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "event_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "geometry_availability": {
+          "enum": [
+            "AVAILABLE",
+            "PARTIAL",
+            "UNAVAILABLE"
+          ]
+        },
+        "capability_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "limitation_reason_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "EvidenceSummaryItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "artifact_count",
+        "reason_codes"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "AVAILABLE",
+            "LIMITED",
+            "UNAVAILABLE"
+          ]
+        },
+        "artifact_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "reason_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "FieldWorkspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "envelope",
+        "field_ref",
+        "identity",
+        "current_condition",
+        "reporting_state",
+        "recent_changes",
+        "open_action_cases",
+        "recent_operations",
+        "evidence_summary",
+        "observed_outcomes",
+        "capability_availability",
+        "history_summary",
+        "limitation_reason_codes",
+        "provenance_summary"
+      ],
+      "properties": {
+        "envelope": {
+          "$ref": "#/$defs/EnvelopeBase"
+        },
+        "field_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identity": {
+          "$ref": "#/$defs/FieldIdentity"
+        },
+        "current_condition": {
+          "$ref": "#/$defs/CurrentCondition"
+        },
+        "reporting_state": {
+          "$ref": "#/$defs/Reporting"
+        },
+        "recent_changes": {
+          "$ref": "#/$defs/Collection"
+        },
+        "open_action_cases": {
+          "$ref": "#/$defs/Collection"
+        },
+        "recent_operations": {
+          "$ref": "#/$defs/Collection"
+        },
+        "evidence_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "field_condition",
+            "execution_evidence"
+          ],
+          "properties": {
+            "field_condition": {
+              "$ref": "#/$defs/EvidenceSummaryItem"
+            },
+            "execution_evidence": {
+              "$ref": "#/$defs/EvidenceSummaryItem"
+            }
+          }
+        },
+        "observed_outcomes": {
+          "$ref": "#/$defs/Collection"
+        },
+        "capability_availability": {
+          "$ref": "#/$defs/Collection"
+        },
+        "history_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "latest_event_at",
+            "reason_codes"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "AVAILABLE",
+                "LIMITED",
+                "UNAVAILABLE"
+              ]
+            },
+            "latest_event_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "reason_codes": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "limitation_reason_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "provenance_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_authority_count",
+            "source_non_authority_count"
+          ],
+          "properties": {
+            "source_authority_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "source_non_authority_count": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "CustomerOverview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "envelope",
+        "reporting_summary",
+        "attention_items",
+        "field_previews",
+        "recent_operations",
+        "latest_reports",
+        "limitation_reason_codes"
+      ],
+      "properties": {
+        "envelope": {
+          "$ref": "#/$defs/EnvelopeBase"
+        },
+        "reporting_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "total_fields",
+            "current_fields",
+            "limited_fields",
+            "unavailable_fields"
+          ],
+          "properties": {
+            "total_fields": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "current_fields": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limited_fields": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "unavailable_fields": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "attention_items": {
+          "$ref": "#/$defs/Collection"
+        },
+        "field_previews": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FieldSummary"
+          }
+        },
+        "recent_operations": {
+          "$ref": "#/$defs/Collection"
+        },
+        "latest_reports": {
+          "$ref": "#/$defs/Collection"
+        },
+        "limitation_reason_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/CustomerOverview"
+    },
+    {
+      "$ref": "#/$defs/FieldSummary"
+    },
+    {
+      "$ref": "#/$defs/FieldWorkspace"
+    }
+  ]
+}

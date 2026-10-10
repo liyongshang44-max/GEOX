@@ -38,10 +38,13 @@ GEOX 已不再是“验证能力是否存在”的原型系统。
 
 - **`docs/SSOT.md`** — 唯一 repository-level SSOT；负责架构、platform/runtime 状态、正式接受能力以及当前开放/关闭工程边界。
 - **`README_MIGRATION.md`** — 唯一 canonical Sprint / Tag / Freeze index；其 authority **仅限 Sprint / Tag / Freeze 域**，不得替代 repository-level SSOT。
+- **`docs/product/GEOX-PRODUCT-NORTH-STAR-V1.md`** — 受 `docs/SSOT.md` 识别的 Product Direction domain reference；冻结 `Principal × Land × Time` 产品根关系、Land Memory 边界、跨域 `Needs Attention` 产品概念，以及 Field Operations V0 仅为 Execution Closure vertical slice。它不是新的 authority，也不覆盖 MCFT / ADR / B-Line。
 - **`docs/EDGE_SCOPE.md`** 及其他 domain documents — 仅在各自明确声明的领域边界内提供约束或说明；发生上位冲突时服从上述 authority hierarchy。
 - **`docs/ci/CI_ACCEPTANCE_SECRETS.md`** — CI acceptance token/secrets 前置条件说明。
 
 不得从根 README 推导新的冻结事实、runtime truth、完成状态或 tag authority。任何正式裁决必须回到对应 canonical authority 与其 acceptance evidence。
+
+产品开发人员在新增 Customer / Operator / Sites / mobile 产品面之前，应先阅读 Product North Star；新 product read consumer 使用 canonical `/api/product/v1/*` read-only Product Projection，不应继续扩展 legacy `/api/v1/customer/*` 产品 DTO。
 
 ---
 

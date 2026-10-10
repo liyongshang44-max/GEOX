@@ -1,3 +1,8 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_NON_CANONICAL_OPERATOR_ADAPTER
+ * Historical Operator ROI adapter with compatibility fallbacks, including legacy Customer/report sources.
+ * Do not promote this adapter into new FOUI product construction.
+ */
 import { apiRequestWithPolicy, withQuery } from "./client";
 import { fetchOperationReport } from "./reports";
 

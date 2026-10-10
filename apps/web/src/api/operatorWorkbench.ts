@@ -1,3 +1,8 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_NON_CANONICAL_OPERATOR_ADAPTER
+ * Existing compatibility implementation only. Direct /api/v1/reports/* dependencies are frozen for new post-FOUI product construction.
+ * New product consumers must use governed /api/product/v1/* projections where the capability is productized.
+ */
 import { apiRequestWithPolicy, withQuery } from "./client";
 
 export type OperatorWorkbenchQueueKey =

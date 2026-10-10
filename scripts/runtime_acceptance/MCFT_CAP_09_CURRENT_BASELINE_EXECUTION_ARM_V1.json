@@ -1,0 +1,19 @@
+{
+  "schema_version": "geox_mcft_cap09_current_baseline_execution_arm_v1",
+  "armed": false,
+  "mode": "DISABLED",
+  "adopted_base_sha": "96984439d8587f13ba57b6b0948a1c81d55da9e5",
+  "execution_subject_binding": "EXACT_ADOPTED_PROTECTED_MAIN",
+  "expires_at": null,
+  "qualification_first_base": null,
+  "isolated_run_id": null,
+  "qualification_execution_authorized": false,
+  "production_recovery_authorized": false,
+  "new_image_build_and_two_role_cutover_authorized": false,
+  "source_failed_receipt_sha256": null,
+  "stage_ref": null,
+  "formal_v5_arm_authorized": false,
+  "a0_authorized": false,
+  "o00_authorized": false,
+  "historical_attempt_reset_authorized": false
+}

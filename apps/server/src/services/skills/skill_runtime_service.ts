@@ -1,10 +1,11 @@
 import type { Pool } from "pg";
 
-import { projectSkillRegistryReadV1 } from "../../projections/skill_registry_read_v1.js";
+import { computeSkillRegistryReadRowsV1 } from "../../projections/skill_registry_read_v1.js";
 import { toInt } from "./skill_trace_service.js";
 import type { TenantTriple } from "./skill_trace_service.js";
 
 type SkillRunReadRow = {
+  fact_type: string;
   fact_id: string;
   skill_id: string;
   version: string;
@@ -63,43 +64,27 @@ function toExplanationCodes(value: unknown): string[] {
 }
 
 export async function listSkillRuns(pool: Pool, tenant: TenantTriple, query: Record<string, unknown>) {
-  await projectSkillRegistryReadV1(pool, tenant);
-
-  const where = ["tenant_id = $1", "project_id = $2", "group_id = $3", "fact_type = 'skill_run_v1'"];
-  const params: unknown[] = [tenant.tenant_id, tenant.project_id, tenant.group_id];
+  const projected = await computeSkillRegistryReadRowsV1(pool, tenant) as SkillRunReadRow[];
+  let rows = projected.filter((row) => row.fact_type === "skill_run_v1");
 
   const fieldId = typeof query.field_id === "string" ? query.field_id.trim() : "";
-  if (fieldId) {
-    params.push(fieldId);
-    where.push(`field_id = $${params.length}`);
-  }
+  if (fieldId) rows = rows.filter((row) => row.field_id === fieldId);
+
   const deviceId = typeof query.device_id === "string" ? query.device_id.trim() : "";
-  if (deviceId) {
-    params.push(deviceId);
-    where.push(`device_id = $${params.length}`);
-  }
+  if (deviceId) rows = rows.filter((row) => row.device_id === deviceId);
+
   const normalizedCategory = normalizeCategory(query.category);
   if (normalizedCategory) {
-    params.push(String(query.category).trim().toUpperCase());
-    where.push(`category = $${params.length}`);
+    const legacySqlEquivalent = String(query.category).trim().toUpperCase();
+    rows = rows.filter((row) => String(row.category ?? "") === legacySqlEquivalent);
   }
+
   const normalizedStatus = typeof query.status === "string" ? query.status.trim().toLowerCase() : "";
-  if (normalizedStatus === "success") where.push("result_status = 'SUCCESS'");
-  else if (normalizedStatus === "failed") where.push("result_status <> 'SUCCESS'");
+  if (normalizedStatus === "success") rows = rows.filter((row) => String(row.result_status ?? "") === "SUCCESS");
+  else if (normalizedStatus === "failed") rows = rows.filter((row) => String(row.result_status ?? "") !== "SUCCESS");
 
   const limit = Math.min(200, Math.max(1, toInt(query.limit, 50)));
-  params.push(limit);
-
-  const rowsQ = await pool.query<SkillRunReadRow>(
-    `SELECT *
-       FROM skill_registry_read_v1
-      WHERE ${where.join(" AND ")}
-      ORDER BY updated_at_ts_ms DESC
-      LIMIT $${params.length}`,
-    params,
-  );
-
-  const items = (rowsQ.rows ?? []).map((row) => {
+  const items = rows.slice(0, limit).map((row) => {
     const payload = row.payload_json ?? {};
     const started_at_ts_ms =
       parseEpochMs(payload.started_at_ts_ms) ??
@@ -136,35 +121,26 @@ export async function listSkillRuns(pool: Pool, tenant: TenantTriple, query: Rec
 }
 
 export async function listSkillRunsLegacy(pool: Pool, tenant: TenantTriple, query: Record<string, unknown>) {
-  await projectSkillRegistryReadV1(pool, tenant);
+  const projected = await computeSkillRegistryReadRowsV1(pool, tenant) as SkillRunReadRow[];
   const page = Math.max(1, toInt(query.page, 1));
   const page_size = Math.min(200, Math.max(1, toInt(query.page_size, 20)));
   const offset = (page - 1) * page_size;
 
-  const where = ["tenant_id = $1", "project_id = $2", "group_id = $3", "fact_type = 'skill_run_v1'"];
-  const params: unknown[] = [tenant.tenant_id, tenant.project_id, tenant.group_id];
-  const pushEq = (field: string, value?: unknown) => {
-    if (typeof value !== "string" || !value.trim()) return;
-    params.push(value.trim());
-    where.push(`${field} = $${params.length}`);
-  };
+  let rows = projected.filter((row) => row.fact_type === "skill_run_v1");
+  const operationId = typeof (query.operation_id ?? query.operation) === "string" ? String(query.operation_id ?? query.operation).trim() : "";
+  if (operationId) rows = rows.filter((row) => row.operation_id === operationId);
+  const fieldId = typeof query.field_id === "string" ? query.field_id.trim() : "";
+  if (fieldId) rows = rows.filter((row) => row.field_id === fieldId);
+  const deviceId = typeof query.device_id === "string" ? query.device_id.trim() : "";
+  if (deviceId) rows = rows.filter((row) => row.device_id === deviceId);
 
-  pushEq("operation_id", query.operation_id ?? query.operation);
-  pushEq("field_id", query.field_id);
-  pushEq("device_id", query.device_id);
-
-  const countQ = await pool.query<{ total: string }>(`SELECT COUNT(*)::text AS total FROM skill_registry_read_v1 WHERE ${where.join(" AND ")}`, params);
-  params.push(page_size, offset);
-  const rowsQ = await pool.query<SkillRunReadRow>(
-    `SELECT * FROM skill_registry_read_v1 WHERE ${where.join(" AND ")} ORDER BY updated_at_ts_ms DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
-    params,
-  );
-
+  const total = rows.length;
+  const pageRows = rows.slice(offset, offset + page_size);
   return {
     page,
     page_size,
-    total: Number(countQ.rows?.[0]?.total ?? 0),
-    items: (rowsQ.rows ?? []).map((row) => ({
+    total,
+    items: pageRows.map((row) => ({
       run_id: row.payload_json?.run_id ?? row.fact_id,
       skill_id: row.skill_id,
       version: row.version,

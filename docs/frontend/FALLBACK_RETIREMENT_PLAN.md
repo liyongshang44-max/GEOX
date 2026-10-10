@@ -1,3 +1,11 @@
+> [!IMPORTANT]
+> lifecycle: HISTORICAL_PRODUCT_CONTRACT  
+> new_product_construction: SUPERSEDED  
+> compatibility: MAINTENANCE_ONLY  
+> canonical_successor: `GEOX Frontend Canonical Blueprint V1` + `GEOX Product Data Contract Succession V1` + FOUI Product Projection contracts  
+>
+> This document remains valid as P1/P2 implementation and migration provenance. Its historical use of terms such as `OFFICIAL_CUSTOMER_API` does **not** designate the canonical contract for new post-FOUI product construction. Do not add new product consumers or new product semantics to the legacy contract described here.
+
 # Fallback Retirement Plan
 
 Status: P2-H5 fallback retirement baseline  

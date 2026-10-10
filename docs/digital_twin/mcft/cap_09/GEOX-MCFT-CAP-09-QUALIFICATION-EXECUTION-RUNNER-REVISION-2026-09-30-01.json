@@ -1,0 +1,28 @@
+{
+  "schema_version": "geox_qualification_runner_revision_v1",
+  "revision_id": "MCFT_CAP09_QMIG_RUNNER_FIX_2026_09_30_01",
+  "predecessor_subject_sha": "1ec2db0c213fc2e18f16fabb8afa3121fac3fb21",
+  "predecessor_failed_run_id": "mcft_cap09_causal_revision_temporal_v1-20260930t043744688z-1ec2db0c213f-f29cc727",
+  "predecessor_failure": "QUALIFICATION_POSTGRES_INIT_FAILED:001_schema.sql:docker:2",
+  "root_cause": "POSTGRES_SERVER_ACCEPTING_CONNECTIONS_BEFORE_TARGET_POSTGRES_DB_CREATION_COMPLETED",
+  "changes": [
+    "TARGET_DATABASE_READINESS_REQUIRES_PSQL_SELECT_1_AGAINST_CAUSAL_REVISION_QV1",
+    "CONTAINER_TERMINATION_FAILS_CLOSED",
+    "WINDOWS_ISOLATED_WORKTREE_CLEANUP_REMOVES_UNTRACKED_INSTALL_OUTPUT_BEFORE_WORKTREE_REMOVAL",
+    "CLEANUP_FAILURE_FAILS_CLOSED"
+  ],
+  "non_effects": {
+    "frozen_runtime_mutation": false,
+    "existing_github_l2_l3_workflow_mutation": false,
+    "pr_3636_mutation": false,
+    "protected_main_mutation": false,
+    "production_database_mutation": false,
+    "formal_v5_arm": false,
+    "a0": false,
+    "o00_o23": false
+  },
+  "failed_evidence_package_preserved": {
+    "evidence_package_digest": "sha256:ef8adef818559c71357d39c971a796ccc3ee681979dc2fd6a2af7667ce800324",
+    "mutation_forbidden": true
+  }
+}

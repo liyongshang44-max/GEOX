@@ -1,0 +1,149 @@
+{
+  "schema_version": "b09o_decision_eligibility_policy_writer_authority_inventory_v1",
+  "phase": "B-09o",
+  "status": "ANALYSIS_ONLY_DEDICATED_WRITER_AUTHORITY_REQUIRED_NOT_AUTHORIZED",
+  "authority_mode": "GOVERNANCE_ANALYSIS_ONLY",
+  "stacked_base_product_head": "5f8012f90882e94203a2407e718dcb963ced1375",
+  "source_topology_anchor": {
+    "b09n_recommendation": "SEPARATE_APPEND_ONLY_DECISION_ELIGIBILITY_POLICY_DECLARATION_FACT",
+    "recommendation_state": "RECOMMENDED_NOT_AUTHORIZED",
+    "fact_type": "decision_eligibility_policy_declaration_v1",
+    "contract_path": "apps/server/src/contracts/decision_eligibility_policy_declaration_v1.ts"
+  },
+  "existing_authz_surface": {
+    "auth_contract_path": "apps/server/src/auth/ao_act_authz_v0.ts",
+    "role_matrix_path": "apps/server/src/domain/auth/roles.ts",
+    "current_scope_candidates": [
+      {
+        "scope": "ao_act.task.write",
+        "current_semantic_domain": "AO_ACT_TASK_EXECUTION_OR_PROGRAM_ACTION_MUTATION",
+        "suitable_for_policy_declaration_write": false,
+        "reason": "EXECUTION_TASK_AUTHORITY_MUST_NOT_BE_REUSED_AS_DECISION_POLICY_DECLARATION_AUTHORITY"
+      },
+      {
+        "scope": "recommendation.write",
+        "current_semantic_domain": "RECOMMENDATION_WRITE",
+        "suitable_for_policy_declaration_write": false,
+        "reason": "RECOMMENDATION_ARTIFACT_AUTHORITY_IS_NOT_POLICY_DECLARATION_AUTHORITY"
+      },
+      {
+        "scope": "prescription.write",
+        "current_semantic_domain": "PRESCRIPTION_WRITE",
+        "suitable_for_policy_declaration_write": false,
+        "reason": "PRESCRIPTION_ARTIFACT_AUTHORITY_IS_NOT_POLICY_DECLARATION_AUTHORITY"
+      },
+      {
+        "scope": "approval.decide",
+        "current_semantic_domain": "APPROVAL_DECISION",
+        "suitable_for_policy_declaration_write": false,
+        "reason": "APPROVAL_AUTHORITY_IS_DOWNSTREAM_AND_MUST_NOT_DEFINE_PRE_APPROVAL_ELIGIBILITY_POLICY"
+      },
+      {
+        "scope": "security.admin",
+        "current_semantic_domain": "BROAD_SECURITY_ADMINISTRATION",
+        "suitable_for_policy_declaration_write": false,
+        "reason": "BROAD_ADMIN_SCOPE_DOES_NOT_ESTABLISH_A_BOUNDED_PRODUCT_POLICY_DECLARATION_AUTHORITY"
+      },
+      {
+        "scope": "skill.binding.write",
+        "current_semantic_domain": "SKILL_BINDING_GOVERNANCE",
+        "suitable_for_policy_declaration_write": false,
+        "reason": "SKILL_BINDING_AUTHORITY_IS_A_SEPARATE_GOVERNANCE_DOMAIN"
+      }
+    ],
+    "exact_future_policy_scope_token": null,
+    "exact_future_allowed_roles": null,
+    "adjudication": "NO_EXISTING_SCOPE_CAN_BE_REUSED_WITHOUT_SEMANTIC_AUTHORITY_COLLAPSE"
+  },
+  "role_adjudication": {
+    "roles": [
+      "admin",
+      "operator",
+      "viewer",
+      "client",
+      "executor",
+      "agronomist",
+      "approver",
+      "auditor",
+      "support"
+    ],
+    "current_admin_wildcard": true,
+    "current_agronomist_recommendation_write": true,
+    "current_approver_approval_decide": true,
+    "policy_declaration_role_set_established": false,
+    "reason": "CURRENT_ROLE_CAPABILITIES_PROVE_ADJACENT_AUTHORITIES_ONLY; NONE_ESTABLISHES_WHO_MAY_DECLARE_PRODUCT_DECISION_ELIGIBILITY_POLICY"
+  },
+  "auditability_precedent": {
+    "precedent_path": "apps/server/src/domain/skill_registry/facts.ts",
+    "precedent_fact": "skill_binding_v1",
+    "precedent_fields": [
+      "changed_by_actor_id",
+      "changed_by_token_id",
+      "change_reason"
+    ],
+    "precedent_append_only_fact": true,
+    "precedent_reusable_as_authority": false,
+    "reusable_pattern_only": [
+      "ACTOR_ID_REQUIRED",
+      "TOKEN_ID_REQUIRED",
+      "CHANGE_REASON_REQUIRED",
+      "APPEND_ONLY_FACT"
+    ]
+  },
+  "writer_requirements_before_implementation": [
+    "DEDICATED_POLICY_DECLARATION_WRITE_AUTHORITY",
+    "EXPLICIT_ROLE_SCOPE_MATRIX_ENTRY",
+    "TENANT_PROJECT_GROUP_SCOPE_MATCH",
+    "FIELD_OR_PROGRAM_SCOPE_MATCH_WHEN_DECLARATION_IS_NARROWER",
+    "ACTOR_ID_AUDIT_METADATA",
+    "TOKEN_ID_AUDIT_METADATA",
+    "NONEMPTY_CHANGE_REASON",
+    "APPEND_ONLY_NO_IN_PLACE_UPDATE",
+    "POLICY_REF_IMMUTABILITY",
+    "DUPLICATE_SAME_POLICY_REF_DIFFERENT_PAYLOAD_FAIL_CLOSED",
+    "MULTIPLE_APPLICABLE_POLICY_AMBIGUITY_FAIL_CLOSED",
+    "DECISION_TIME_AS_OF_SELECTION_RULE",
+    "NO_B07E_SIDE_EFFECT",
+    "NO_APPROVAL_PLAN_TASK_EXECUTION_SIDE_EFFECT"
+  ],
+  "explicitly_undecided": {
+    "scope_token": null,
+    "allowed_roles": null,
+    "route_path": null,
+    "writer_service_path": null,
+    "policy_id": null,
+    "policy_version": null,
+    "policy_ref": null,
+    "applicable_action_types": null,
+    "required_criteria": null,
+    "state": "INTENTIONALLY_UNDECIDED"
+  },
+  "prohibited_shortcuts": [
+    "DO_NOT_REUSE_AO_ACT_TASK_WRITE_FOR_POLICY_DECLARATION",
+    "DO_NOT_REUSE_RECOMMENDATION_WRITE_OR_PRESCRIPTION_WRITE",
+    "DO_NOT_REUSE_APPROVAL_DECIDE_AS_ELIGIBILITY_POLICY_AUTHORITY",
+    "DO_NOT_TREAT_SECURITY_ADMIN_AS_SUFFICIENT_POLICY_PROVENANCE",
+    "DO_NOT_REUSE_SKILL_BINDING_WRITE_AUTHORITY",
+    "DO_NOT_REGISTER_G_B02_32_PRODUCTION_PATH_BEFORE_AUTHORITY_IS_EXPLICIT",
+    "DO_NOT_CREATE_REAL_POLICY_INSTANCE",
+    "DO_NOT_INVOKE_B07E",
+    "DO_NOT_TOUCH_MCFT_TWIN_ADR_LLM_IMPLEMENTATION"
+  ],
+  "repository_effects": {
+    "auth_scope_added": false,
+    "role_matrix_changed": false,
+    "writer_added": false,
+    "route_added": false,
+    "runtime_implementation_added": false,
+    "schema_or_database_change": false,
+    "workflow_added": false,
+    "policy_instance_added": false,
+    "g_b02_32_registered_paths_changed": false,
+    "parallel_authority_graph_changed": false,
+    "replacement_readiness_changed": false,
+    "mcft_or_twin_kernel_changed": false,
+    "consumer_migration_performed": false,
+    "authority_removal_performed": false
+  },
+  "next_permitted_step": "EXPLICIT_PRODUCT_GOVERNANCE_MUST_AUTHORIZE_A_DEDICATED_POLICY_DECLARATION_WRITE_SCOPE_AND_ALLOWED_ROLE_SET_BEFORE_BLINE_CAN_ADD_THE_APPEND_ONLY_WRITER"
+}

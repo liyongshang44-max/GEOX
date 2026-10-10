@@ -20,6 +20,7 @@ import { registerFieldMemoryModule } from "../field_memory/registerFieldMemoryMo
 import { registerOperatorModule } from "../operator/registerOperatorModule.js";
 import { registerTwinKernelModule } from "../twin_kernel/registerTwinKernelModule.js";
 import { registerRuntimeHealthModule } from "../runtime_health/registerRuntimeHealthModule.js";
+import { registerProductModule } from "../product/registerProductModule.js";
 
 type RegisterDomainModulesOptions = {
   mediaDir: string;
@@ -45,4 +46,5 @@ export function registerDomainModules(app: FastifyInstance, pool: Pool, options:
   registerOperatorModule(app, pool);
   registerTwinKernelModule(app, pool);
   registerRuntimeHealthModule(app);
+  registerProductModule(app, pool);
 }

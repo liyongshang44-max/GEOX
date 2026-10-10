@@ -1,0 +1,224 @@
+{
+  "schema_version": "b09k_decision_eligibility_runtime_readiness_inventory_v1",
+  "phase": "B-09k",
+  "status": "ANALYSIS_ONLY_NOT_READY_FOR_B07E_RUNTIME_CONNECTION",
+  "authority_mode": "GOVERNANCE_ANALYSIS_ONLY",
+  "stacked_base_product_head": "03490b4ce54cdb35f2a2965193ed87fdcab24523",
+  "analyzed_path": {
+    "source_producer_id": "decision-engine-recommendation",
+    "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+    "source_endpoint": "POST /api/v1/recommendations/generate",
+    "candidate_shadow_path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+    "eligibility_runtime_path": "apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts",
+    "eligibility_evaluator_path": "apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts",
+    "scope_limit": "BOUNDED_FORMAL_PRODUCT_DECISION_ENGINE_RECOMMENDATION_PATH_ONLY"
+  },
+  "evidence_anchor": {
+    "b09j_product_head": "03490b4ce54cdb35f2a2965193ed87fdcab24523",
+    "b09j_completion_pr": 3361,
+    "b09j_completion_comment_id": 5452130725,
+    "exact_runtime_run_id": 33168228447,
+    "exact_runtime_job_id": 98838685815,
+    "validation_head": "5ba359e42ce8e7c8a38ad6023c44be7e58dfeda0",
+    "artifact_id": 9684515431,
+    "artifact_name": "b09j-runtime-candidate-referential-shadow-proof",
+    "artifact_digest": "sha256:9b99dda859bf79c2256d2f2c350d3e7d00f5033b8d35a93076d5096c2c313c8e",
+    "runtime_observation": {
+      "observation_scope_class": "SYNTHETIC_ACCEPTANCE_RUNTIME",
+      "recommendation_source_fact_id": "3e589903-f948-41b8-88ff-273b29c45ab1",
+      "recommendation_id": "rec_53b78f6f35ba4345895e2b421f03ff61",
+      "recommendation_source": "api/v1/recommendations/generate",
+      "candidate_identity_policy": "SOURCE_FACT_SCOPE_SHA256_V1",
+      "candidate_id": "candidate_sfsha256_e9dc8593c1f5d87794ab54a4d448f6b947bbdb0d7275e3b2f658c0d436aa950f",
+      "candidate_ref": "candidate_decision_v1:candidate_sfsha256_e9dc8593c1f5d87794ab54a4d448f6b947bbdb0d7275e3b2f658c0d436aa950f",
+      "canonical_evidence_qualification_ref_count": 72,
+      "qualified_evidence_criterion_status": "SATISFIED",
+      "canonical_evidence_continuity_state": "EXACT_REF_SET_MATCH",
+      "criterion_candidate_binding_state": "BOUND_TO_SAME_CANDIDATE",
+      "duplicate_source_fail_closed_state": "SOURCE_AMBIGUOUS",
+      "candidate_decision_fact_count": 0,
+      "downstream_authority_fact_count": 0,
+      "decision_eligibility_runtime_connected": false,
+      "consumer_migration_performed": false,
+      "authority_removal_permitted": false
+    }
+  },
+  "b04_canonical_evidence_reconstruction": {
+    "helper_path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+    "helper_function": "buildCanonicalRawSampleEvidenceQualificationProjectionV1",
+    "projector_path": "apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts",
+    "output_batch_type": "RawSampleEvidenceQualificationProjectionBatchV1",
+    "output_object_type": "EvidenceQualificationV1[]",
+    "persisted_inputs": [
+      "raw_samples",
+      "markers(kind=raw_sample_runtime_available_v1, source=system)"
+    ],
+    "decision_boundary_input": "now_ms",
+    "identity_basis": "evidence_qualification_v1:raw_sample:<sample_id>:<decision_time_ms>",
+    "full_objects_reconstructable_at_fixed_inputs": true,
+    "separate_evidence_qualification_object_store_required_by_b07e": false,
+    "b07e_contract_consumes": "canonical_inputs.evidence_qualification_refs:string[]",
+    "adjudication": "FULL_OBJECT_MATERIALIZATION_AT_B09J_SEAM_IS_NOT_A_B07E_INTERFACE_REQUIREMENT"
+  },
+  "b07e_contract_reality": {
+    "candidate_authoritative_fields": [
+      "candidate_ref",
+      "scope",
+      "context_snapshot_ref",
+      "crop_stage_state_ref",
+      "decision_time"
+    ],
+    "canonical_runtime_ref_sets": [
+      "evidence_qualification_refs",
+      "state_refs",
+      "forecast_refs",
+      "scenario_refs",
+      "knowledge_claim_refs",
+      "policy_refs",
+      "permission_refs",
+      "action_window_refs"
+    ],
+    "criterion_support_refs_must_be_in_canonical_runtime_or_candidate_basis": true,
+    "candidate_evidence_basis_refs_must_remain_in_runtime_evidence_refs": true,
+    "policy_requires_explicit_policy_ref": true,
+    "policy_requires_explicit_required_criteria": true,
+    "policy_requires_explicit_applicable_action_types": true,
+    "hidden_default_required_criteria": false,
+    "b07e_external_route_connected": false,
+    "b07e_is_manual_capability_island": true,
+    "contract_test_example_required_criteria": [
+      "QUALIFIED_EVIDENCE",
+      "CONTEXT",
+      "STATE",
+      "PERMISSION",
+      "ACTION_WINDOW"
+    ],
+    "contract_test_example_is_normative_default": false
+  },
+  "bounded_path_readiness": {
+    "candidate_identity": {
+      "state": "READY_SHADOW_BOUND",
+      "basis": "B09J_SOURCE_FACT_SCOPE_SHA256_V1"
+    },
+    "candidate_source_scope": {
+      "state": "READY_SHADOW_BOUND",
+      "basis": "SCOPED_IMMUTABLE_DECISION_RECOMMENDATION_FACT"
+    },
+    "canonical_evidence_refs": {
+      "state": "READY_SHADOW_BOUND",
+      "basis": "B09G_B09H_B09J_EXACT_REF_CONTINUITY"
+    },
+    "qualified_evidence_criterion": {
+      "state": "READY_SHADOW_BOUND",
+      "current_runtime_observation": "SATISFIED",
+      "authority": "SHADOW_NON_AUTHORITATIVE"
+    },
+    "canonical_evidence_objects": {
+      "state": "RECONSTRUCTABLE_FROM_PERSISTED_B04_INPUTS",
+      "b07e_interface_blocker": false
+    },
+    "context_snapshot_ref": {
+      "state": "NOT_BOUND_ON_B09J_CANDIDATE",
+      "current_candidate_value": null,
+      "source_capability": "B05B_REGISTERED_CAPABILITY_ISLAND",
+      "legacy_snapshot_id_promotion": "FORBIDDEN"
+    },
+    "crop_stage_state_ref": {
+      "state": "NOT_BOUND_ON_B09J_CANDIDATE",
+      "current_candidate_value": null,
+      "canonical_runtime_owner": "Twin Runtime using qualified Evidence plus Context",
+      "legacy_crop_stage_promotion": "FORBIDDEN",
+      "mcft_dependency_boundary": "DO_NOT_CONNECT_OR_MODIFY_MCFT_IN_BLINE"
+    },
+    "calculation_result_refs": {
+      "state": "NOT_BOUND_ON_B09J_CANDIDATE",
+      "current_candidate_value": [],
+      "source_capability": "B06B_REGISTERED_CAPABILITY_ISLAND",
+      "legacy_agronomy_calculation_promotion": "FORBIDDEN"
+    },
+    "state_criterion": {
+      "state": "NOT_RUNTIME_READY_ON_ANALYZED_PATH",
+      "b07c_requirement": "CANONICAL_CALCULATION_RESULT_REFS_REQUIRED_FOR_WATER_DEFICIT_OR_PASS_STATE_PROJECTION",
+      "b07c_runtime_connection": "INTENTIONAL_NONE"
+    },
+    "product_eligibility_policy": {
+      "state": "NOT_ESTABLISHED_ON_ANALYZED_PATH",
+      "consequence": "REQUIRED_CRITERIA_SET_CANNOT_BE_INVENTED_BY_B09_MIGRATION"
+    },
+    "permission_refs": {
+      "state": "NOT_ESTABLISHED_ON_ANALYZED_PATH",
+      "requirement_class": "POLICY_DEPENDENT"
+    },
+    "action_window_refs": {
+      "state": "NOT_ESTABLISHED_ON_ANALYZED_PATH",
+      "requirement_class": "POLICY_AND_LIFECYCLE_DEPENDENT"
+    },
+    "lifecycle_state": {
+      "state": "NOT_BOUND_TO_PRODUCT_ELIGIBILITY_POLICY_ON_ANALYZED_PATH",
+      "b07e_shape": "CALLER_SUPPLIED_ENUM",
+      "implication": "MUST_NOT_BE_INVENTED_DURING_RUNTIME_CONNECTION"
+    },
+    "forecast_scenario_refs": {
+      "state": "TARGET_NOT_PRODUCT_CONNECTED",
+      "requirement_class": "POLICY_DEPENDENT",
+      "mcft_boundary": "EXTERNAL_DEPENDENCY__BLINE_MUST_NOT_TOUCH_MCFT"
+    },
+    "knowledge_policy_refs": {
+      "state": "NOT_ADJUDICATED_FOR_BOUNDED_PRODUCT_POLICY",
+      "requirement_class": "POLICY_DEPENDENT"
+    }
+  },
+  "readiness_adjudication": {
+    "ready_for_b07e_runtime_invocation": false,
+    "ready_for_consumer_migration": false,
+    "ready_for_historical_authority_removal": false,
+    "unconditional_blockers": [
+      "EXPLICIT_PRODUCT_ELIGIBILITY_POLICY_NOT_BOUND",
+      "PRODUCT_REQUIRED_CRITERIA_SET_NOT_ESTABLISHED",
+      "PRODUCT_POLICY_APPLICABLE_ACTION_TYPES_NOT_BOUND",
+      "B07E_RUNTIME_CONNECTION_NOT_AUTHORIZED"
+    ],
+    "policy_dependent_readiness_gaps": [
+      "CANONICAL_CONTEXT_NOT_BOUND_TO_CANDIDATE",
+      "CANONICAL_CROP_STAGE_NOT_BOUND_TO_CANDIDATE",
+      "CANONICAL_CALCULATION_RESULT_NOT_BOUND_TO_CANDIDATE",
+      "STATE_CRITERION_NOT_RUNTIME_READY",
+      "PERMISSION_PROVENANCE_NOT_ESTABLISHED_ON_ANALYZED_PATH",
+      "ACTION_WINDOW_PROVENANCE_NOT_ESTABLISHED_ON_ANALYZED_PATH",
+      "LIFECYCLE_POLICY_BINDING_NOT_ESTABLISHED",
+      "FORECAST_SCENARIO_PRODUCT_BINDING_NOT_ESTABLISHED",
+      "KNOWLEDGE_POLICY_PRODUCT_BINDING_NOT_ADJUDICATED"
+    ],
+    "corrected_non_blocker": [
+      "FULL_CANONICAL_EVIDENCE_QUALIFICATION_OBJECTS_NOT_MATERIALIZED_AT_B09J_SEAM"
+    ],
+    "reason": "B07E_CONSUMES_CANONICAL_EVIDENCE_REFS_AND_B04_CAN_RECONSTRUCT_FULL_OBJECTS; PRODUCT_POLICY_AND_REQUIRED_CANONICAL_INPUT_PROVENANCE_ARE_THE_REAL_UNRESOLVED_BOUNDARIES"
+  },
+  "prohibited_shortcuts": [
+    "DO_NOT_INVENT_A_QUALIFIED_EVIDENCE_ONLY_POLICY_TO_MAKE_B07E_CALLABLE",
+    "DO_NOT_TREAT_B07E_CONTRACT_TEST_REQUIRED_CRITERIA_AS_A_REPOSITORY_DEFAULT_POLICY",
+    "DO_NOT_PROMOTE_LEGACY_SNAPSHOT_ID_TO_CONTEXT_SNAPSHOT_REF",
+    "DO_NOT_PROMOTE_LEGACY_CROP_STAGE_TO_QUALIFIED_CROP_STAGE_STATE_REF",
+    "DO_NOT_PROMOTE_LEGACY_AGRONOMY_CALCULATION_OUTPUTS_TO_CALCULATION_RESULT_REFS",
+    "DO_NOT_SYNTHESIZE_PERMISSION_OR_ACTION_WINDOW_REFS",
+    "DO_NOT_USE_MCFT_FORECAST_STAGE_OR_TWIN_STATE_AS_BLINE_INPUT_WITHOUT_SEPARATE_AUTHORIZED_INTEGRATION",
+    "DO_NOT_INVOKE_B07E_OR_MIGRATE_CONSUMERS_IN_B09K"
+  ],
+  "repository_effects": {
+    "runtime_implementation_added": false,
+    "route_added": false,
+    "schema_or_database_change": false,
+    "workflow_added": false,
+    "connectivity_edge_added": false,
+    "decision_eligibility_producer_added": false,
+    "criterion_producer_added": false,
+    "candidate_producer_added": false,
+    "replacement_readiness_changed": false,
+    "parallel_authority_graph_changed": false,
+    "mcft_changed": false,
+    "adr_llm_changed": false,
+    "consumer_migration_performed": false,
+    "authority_removal_performed": false
+  },
+  "next_permitted_step": "ESTABLISH_AND_SHADOW_PROVE_EXPLICIT_PRODUCT_ELIGIBILITY_POLICY_PROVENANCE_FOR_THE_BOUNDED_IRRIGATE_PATH_BEFORE_BINDING_POLICY_REQUIRED_CRITERIA_OR_INVOKING_B07E"
+}

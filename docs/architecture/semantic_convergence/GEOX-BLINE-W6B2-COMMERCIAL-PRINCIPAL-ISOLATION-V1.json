@@ -1,0 +1,82 @@
+{
+  "version": "GEOX-BLINE-W6B2-COMMERCIAL-PRINCIPAL-ISOLATION-V1",
+  "status": "FROZEN_BOUNDED_WORKSTREAM_INVENTORY",
+  "authority_base": "612d650244310cd60795c9e66883bd12d9981226",
+  "authority_base_status": "W6_B1_EXACT_HEAD_QUALIFIED_CANDIDATE_NOT_CTO_ACCEPTED",
+  "blockers": [
+    {
+      "id": "COMMERCIAL-PRINCIPAL-01",
+      "closure_domain": "CD-08",
+      "severity": "P1",
+      "summary": "Commercial server, telemetry-ingest, jobs and executor share the geox_runtime_v1 database principal; telemetry-ingest and executor share one MQTT credential and broker authority is not direction-isolated."
+    }
+  ],
+  "protected_invariants": [
+    "MCFT-CAP-07 role names, bootstrap implementation, migration authority and runtime startup preflight remain byte-unchanged.",
+    "The long-running server remains authenticated to PostgreSQL as the frozen geox_runtime_v1 role.",
+    "telemetry-ingest, jobs and executor receive distinct PostgreSQL LOGIN principals with distinct credentials and no membership in the MCFT owner, migrator or runtime roles.",
+    "W6-B2 database principals receive an effective object privilege baseline equivalent to the pre-existing runtime workload baseline for compatibility, but identity, session_user, credential rotation and revocation boundaries are independent.",
+    "W6-B2 database principals are NOINHERIT, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOREPLICATION and NOBYPASSRLS, and receive no CREATE privilege on public schema.",
+    "A separate B-Line one-shot commercial-principal bootstrap runs only after the canonical MCFT-CAP-07 migration completes; it is not imported into the long-running server or any worker.",
+    "Commercial MQTT remains anonymous-disabled and uses multiple dedicated broker credentials rather than one shared credential.",
+    "telemetry-ingest MQTT principal may read telemetry/+/+ and heartbeat/+/+ but may not publish.",
+    "executor MQTT principal may publish but may not subscribe; publish authority remains broad enough to preserve the existing explicit custom downlink-topic contract.",
+    "server and jobs receive no MQTT credential unless source-level consumption is proven.",
+    "telemetry-ingest and jobs receive no shared GEOX_AO_ACT_TOKEN unless a source-level HTTP caller is proven; executor retains only its dedicated executor token.",
+    "W1 through W6-B1 protected authority semantics remain unchanged.",
+    "MCFT implementation delta remains zero."
+  ],
+  "database_principals": {
+    "server": "geox_runtime_v1",
+    "telemetry_ingest": "geox_telemetry_ingest_v1",
+    "jobs": "geox_jobs_v1",
+    "executor": "geox_executor_runtime_v1"
+  },
+  "mqtt_principals": {
+    "telemetry_ingest": {
+      "username": "geox_telemetry_ingest_v1",
+      "acl": [
+        "read telemetry/+/+",
+        "read heartbeat/+/+"
+      ]
+    },
+    "executor": {
+      "username": "geox_executor_v1",
+      "acl": [
+        "write #"
+      ],
+      "reason_for_broad_write": "Existing device integration contract permits explicit custom downlink_topic overrides; W6-B2 isolates direction and identity without narrowing that established topic contract."
+    }
+  },
+  "bounded_source_surface": [
+    "apps/server/src/infra/bline_commercial_principal_bootstrap_v1.ts",
+    "apps/server/scripts/write_dist_entries.cjs",
+    "docker-compose.commercial_v1.yml",
+    ".env.commercial_v1.example",
+    "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.ts",
+    ".github/workflows/bline-w6b2-commercial-principal-isolation.yml"
+  ],
+  "forbidden_scope": [
+    "Any modification to apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts",
+    "Any modification to apps/server/src/infra/mcft_cap07_runtime_startup_preflight_v1.ts",
+    "Any MCFT task, artifact, workflow, qualification or production-owner implementation",
+    "New application auth role or scope",
+    "Action Qualification",
+    "Recommendation, Approval, Dispatch, Receipt or Acceptance semantic changes",
+    "Rebase onto moving protected main",
+    "Merge or undraft authority"
+  ],
+  "qualification_target": [
+    "bounded source/config governance gate",
+    "database principal role-graph and credential-separation focused proof",
+    "MQTT identity and read/write ACL proof",
+    "Commercial compose rendering with no shared worker DB/MQTT credential",
+    "real Commercial runtime startup under isolated principals",
+    "W1-W6B1 successor preservation",
+    "Frozen PR-SEC-1, residual authority and active-runtime closure",
+    "Typecheck and Build",
+    "main CI build-test and full acceptance",
+    "MCFT delta = 0"
+  ]
+}

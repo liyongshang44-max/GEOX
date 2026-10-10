@@ -23,7 +23,8 @@
     "api_naming",
     "legacy_compatibility",
     "runtime_modes",
-    "write_authority"
+    "write_authority",
+    "biological_stage_authority"
   ],
   "amendments": [
     {
@@ -54,6 +55,16 @@
         "DT02-ADR-015",
         "DT02-ADR-016"
       ]
+    },
+    {
+      "id": "DT02-AMENDMENT-03",
+      "path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+      "status": "CANDIDATE_NOT_EFFECTIVE",
+      "supersedes": [],
+      "extends": [
+        "DT02-ADR-002",
+        "DT02-ADR-012"
+      ]
     }
   ],
   "decisions": [
@@ -68,8 +79,17 @@
         "Fastify routes compute or advance State",
         "Domain builders read Postgres, environment, wall clock, filesystem, network, or random UUID"
       ],
-      "downstream_owners": ["MCFT-02", "MCFT-04", "MCFT-06", "MCFT-07", "MCFT-17", "MCFT-18"],
-      "input_packet_topics": ["layers"],
+      "downstream_owners": [
+        "MCFT-02",
+        "MCFT-04",
+        "MCFT-06",
+        "MCFT-07",
+        "MCFT-17",
+        "MCFT-18"
+      ],
+      "input_packet_topics": [
+        "layers"
+      ],
       "invariants": [
         "domain has no infrastructure dependency",
         "routes do not own generated-object writes",
@@ -83,9 +103,23 @@
       "amendment_refs": [],
       "decision": "Replay, Shadow-online, Controlled Field, and future Production share one semantic core. Only clock, ingress, scheduler, execution feedback, availability, and deployment vary through adapters.",
       "rationale": "Separate semantic implementations would make replay unable to validate online behavior and would recreate demo/runtime divergence.",
-      "rejected_alternatives": ["One semantic runtime per mode", "Replay-only file persistence or mode-specific State semantics"],
-      "downstream_owners": ["MCFT-01", "MCFT-04", "MCFT-05", "MCFT-16", "MCFT-GATE-A", "MCFT-GATE-B", "MCFT-GATE-C"],
-      "input_packet_topics": ["layers", "runtime_modes"],
+      "rejected_alternatives": [
+        "One semantic runtime per mode",
+        "Replay-only file persistence or mode-specific State semantics"
+      ],
+      "downstream_owners": [
+        "MCFT-01",
+        "MCFT-04",
+        "MCFT-05",
+        "MCFT-16",
+        "MCFT-GATE-A",
+        "MCFT-GATE-B",
+        "MCFT-GATE-C"
+      ],
+      "input_packet_topics": [
+        "layers",
+        "runtime_modes"
+      ],
       "invariants": [
         "same inputs and config yield the same semantic payload in every mode",
         "Replay uses explicit time and no-future-leakage",
@@ -96,7 +130,10 @@
       "id": "DT02-ADR-003",
       "title": "Canonical persistence and envelope profiles",
       "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
-      "amendment_refs": ["DT02-AMENDMENT-01", "DT02-AMENDMENT-02"],
+      "amendment_refs": [
+        "DT02-AMENDMENT-01",
+        "DT02-AMENDMENT-02"
+      ],
       "decision": "Postgres facts remain the only canonical append-only store. Every object declares record class, lineage membership, envelope profile and transaction families. LINEAGE requires lineage_id and revision_id; INITIAL revision identity does not require a revision-run object.",
       "rationale": "Record authority, lineage membership and revision-run lifecycle are separate dimensions. This permits deterministic initial lineage identity while retaining non-lineage bootstrap and failure audit.",
       "rejected_alternatives": [
@@ -104,8 +141,15 @@
         "Infer lineage membership from record class",
         "Require a fabricated revision run for INITIAL revision identity"
       ],
-      "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-17"],
-      "input_packet_topics": ["canonical_index_persistence"],
+      "downstream_owners": [
+        "MCFT-02",
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-17"
+      ],
+      "input_packet_topics": [
+        "canonical_index_persistence"
+      ],
       "invariants": [
         "canonical facts never update",
         "indexes may upsert and must be rebuildable",
@@ -118,7 +162,9 @@
       "id": "DT02-ADR-004",
       "title": "State object granularity and atomicity",
       "status": "FROZEN_WITH_ACCEPTED_AMENDMENT",
-      "amendment_refs": ["DT02-AMENDMENT-02"],
+      "amendment_refs": [
+        "DT02-AMENDMENT-02"
+      ],
       "decision": "A valid State advance atomically appends transition, assimilation update and posterior State. BOOTSTRAP embeds its configured prior in the transition, has no previous posterior, and does not create an independent prior object.",
       "rationale": "The embedded prior keeps bootstrap computation explicit without creating a dangling reference or falsely treating the prior as current State.",
       "rejected_alternatives": [
@@ -126,8 +172,15 @@
         "Latest sensor reading directly becomes root-zone State",
         "Dangling bootstrap_prior_ref without a canonical object"
       ],
-      "downstream_owners": ["MCFT-02", "MCFT-06", "MCFT-07", "MCFT-08"],
-      "input_packet_topics": ["canonical_atomicity"],
+      "downstream_owners": [
+        "MCFT-02",
+        "MCFT-06",
+        "MCFT-07",
+        "MCFT-08"
+      ],
+      "input_packet_topics": [
+        "canonical_atomicity"
+      ],
       "invariants": [
         "prior is not canonical current State",
         "posterior is canonical State",
@@ -141,7 +194,10 @@
       "id": "DT02-ADR-005",
       "title": "Tick claim, compute, and outcome transactions",
       "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
-      "amendment_refs": ["DT02-AMENDMENT-01", "DT02-AMENDMENT-02"],
+      "amendment_refs": [
+        "DT02-AMENDMENT-01",
+        "DT02-AMENDMENT-02"
+      ],
       "decision": "A tick has Claim, Compute and Commit. A0 creates the first lineage, posterior, BLOCKED Forecast and checkpoint atomically; A1 and A2 continue an existing lineage. Forecast FAILED remains operational transaction F.",
       "rationale": "A0 closes the first-tick gap while preserving the existing distinction between valid State progress, blocked Forecast prerequisites and failed computation.",
       "rejected_alternatives": [
@@ -149,8 +205,16 @@
         "Create first State outside transaction A",
         "Require a fake previous posterior or checkpoint"
       ],
-      "downstream_owners": ["MCFT-03", "MCFT-04", "MCFT-05", "MCFT-08", "MCFT-09"],
-      "input_packet_topics": ["tick_transaction"],
+      "downstream_owners": [
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-05",
+        "MCFT-08",
+        "MCFT-09"
+      ],
+      "input_packet_topics": [
+        "tick_transaction"
+      ],
       "invariants": [
         "A0 appends exactly nine canonical facts",
         "A0 Forecast is BLOCKED with zero points and reason codes",
@@ -164,7 +228,9 @@
       "id": "DT02-ADR-006",
       "title": "Checkpoint, lease, fencing, restart, and backfill",
       "status": "FROZEN_WITH_ACCEPTED_AMENDMENT",
-      "amendment_refs": ["DT02-AMENDMENT-02"],
+      "amendment_refs": [
+        "DT02-AMENDMENT-02"
+      ],
       "decision": "Each scope has one fenced writer. A0 inserts the INITIAL checkpoint with null previous_checkpoint_ref after new-key null-CAS checks. A1/A2 append continuation checkpoints. Failed A transactions leave all A pointers unchanged.",
       "rationale": "The first checkpoint cannot reference a predecessor, while fencing, canonical INITIAL uniqueness and expected-null CAS prevent competing bootstrap histories.",
       "rejected_alternatives": [
@@ -172,8 +238,13 @@
         "Fabricated previous checkpoint",
         "Pointer-only check that permits a second canonical INITIAL lineage"
       ],
-      "downstream_owners": ["MCFT-03", "MCFT-04"],
-      "input_packet_topics": ["checkpoint_recovery"],
+      "downstream_owners": [
+        "MCFT-03",
+        "MCFT-04"
+      ],
+      "input_packet_topics": [
+        "checkpoint_recovery"
+      ],
       "invariants": [
         "one writer per tenant/project/group/field/season/zone",
         "old fencing token cannot commit",
@@ -186,7 +257,9 @@
       "id": "DT02-ADR-007",
       "title": "Idempotency and deterministic identity",
       "status": "FROZEN_WITH_ACCEPTED_AMENDMENT",
-      "amendment_refs": ["DT02-AMENDMENT-02"],
+      "amendment_refs": [
+        "DT02-AMENDMENT-02"
+      ],
       "decision": "Every semantic object has deterministic identity. A0 additionally has a deterministic nine-object aggregate identity and independently computed aggregate hash. Existing-key idempotency is resolved before new-key null-CAS checks.",
       "rationale": "A successful A0 necessarily makes pointers non-null; checking idempotency first permits correct same-input replay without weakening new-key bootstrap preconditions.",
       "rejected_alternatives": [
@@ -194,8 +267,14 @@
         "Overwrite on idempotency conflict",
         "Run null-CAS before checking an existing A0 idempotency key"
       ],
-      "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-04"],
-      "input_packet_topics": ["idempotency"],
+      "downstream_owners": [
+        "MCFT-02",
+        "MCFT-03",
+        "MCFT-04"
+      ],
+      "input_packet_topics": [
+        "idempotency"
+      ],
       "invariants": [
         "same semantic A0 returns the same complete nine-object record set",
         "fact_id, audit timestamps, process and branch data are excluded from determinism hash",
@@ -208,7 +287,10 @@
       "id": "DT02-ADR-008",
       "title": "Initial activation and late-Evidence revision lifecycle",
       "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
-      "amendment_refs": ["DT02-AMENDMENT-01", "DT02-AMENDMENT-02"],
+      "amendment_refs": [
+        "DT02-AMENDMENT-01",
+        "DT02-AMENDMENT-02"
+      ],
       "decision": "NULL_TO_INITIAL activation is authorized by successful A0 plus an INITIAL lineage declaration. Replacing an existing active lineage remains authorized only by E3 promotion after revision completion and validation.",
       "rationale": "Initial creation is not promotion. Keeping the authorities distinct avoids a fictitious promotion while preserving strict append-only authority for all later active-lineage replacement.",
       "rejected_alternatives": [
@@ -216,8 +298,17 @@
         "Allow active-to-active switch without E3 promotion",
         "Treat INITIAL lineage as late-Evidence revision candidate"
       ],
-      "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-08", "MCFT-09", "MCFT-16"],
-      "input_packet_topics": ["late_evidence"],
+      "downstream_owners": [
+        "MCFT-02",
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-08",
+        "MCFT-09",
+        "MCFT-16"
+      ],
+      "input_packet_topics": [
+        "late_evidence"
+      ],
       "invariants": [
         "INITIAL declaration plus A0 is null-to-initial authority",
         "candidate declaration is not activation",
@@ -230,12 +321,26 @@
       "id": "DT02-ADR-009",
       "title": "Forecast result and failure separation",
       "status": "FROZEN_WITH_AMENDMENT",
-      "amendment_refs": ["DT02-AMENDMENT-01"],
+      "amendment_refs": [
+        "DT02-AMENDMENT-01"
+      ],
       "decision": "twin_forecast_run_v1 permits COMPLETED with exactly 72 points or BLOCKED with zero points and reason_codes. FAILED is forbidden on the lineage Forecast object and uses non-lineage twin_forecast_failure_v1 in transaction F.",
       "rationale": "BLOCKED describes a valid posterior with an unavailable downstream Forecast prerequisite. FAILED describes failed computation and cannot advance checkpoint.",
-      "rejected_alternatives": ["Treat BLOCKED and FAILED as the same status", "Persist FAILED twin_forecast_run_v1 inside State Tick Commit"],
-      "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-09", "MCFT-17"],
-      "input_packet_topics": ["forecast_storage", "tick_transaction"],
+      "rejected_alternatives": [
+        "Treat BLOCKED and FAILED as the same status",
+        "Persist FAILED twin_forecast_run_v1 inside State Tick Commit"
+      ],
+      "downstream_owners": [
+        "MCFT-02",
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-09",
+        "MCFT-17"
+      ],
+      "input_packet_topics": [
+        "forecast_storage",
+        "tick_transaction"
+      ],
       "invariants": [
         "COMPLETED advances checkpoint and successful Forecast index",
         "BLOCKED advances checkpoint but not successful Forecast index",
@@ -247,13 +352,31 @@
       "id": "DT02-ADR-010",
       "title": "Scenario source eligibility",
       "status": "FROZEN_WITH_AMENDMENT",
-      "amendment_refs": ["DT02-AMENDMENT-01"],
+      "amendment_refs": [
+        "DT02-AMENDMENT-01"
+      ],
       "decision": "Scenario is a separate aggregate and may use only a committed COMPLETED Forecast with exactly 72 points and horizons 1 through 72. BLOCKED and FAILED outcomes are ineligible.",
       "rationale": "Comparable Scenario trajectories require a complete forecast horizon.",
-      "rejected_alternatives": ["Generate Scenario from a zero-point BLOCKED Forecast", "Generate Scenario from failure diagnostics"],
-      "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-10", "MCFT-13", "MCFT-17"],
-      "input_packet_topics": ["scenario_storage"],
-      "invariants": ["fixed five Gate-A options", "Scenario is not Recommendation", "Scenario commit is separate", "BLOCKED or FAILED Forecast cannot source Scenario"]
+      "rejected_alternatives": [
+        "Generate Scenario from a zero-point BLOCKED Forecast",
+        "Generate Scenario from failure diagnostics"
+      ],
+      "downstream_owners": [
+        "MCFT-02",
+        "MCFT-03",
+        "MCFT-10",
+        "MCFT-13",
+        "MCFT-17"
+      ],
+      "input_packet_topics": [
+        "scenario_storage"
+      ],
+      "invariants": [
+        "fixed five Gate-A options",
+        "Scenario is not Recommendation",
+        "Scenario commit is separate",
+        "BLOCKED or FAILED Forecast cannot source Scenario"
+      ]
     },
     {
       "id": "DT02-ADR-011",
@@ -262,10 +385,24 @@
       "amendment_refs": [],
       "decision": "Assimilation residual belongs to the current update. Forecast residual compares later Evidence with a historical COMPLETED Forecast point and never mutates the Forecast.",
       "rationale": "The two residuals have different temporal and governance roles; conflation would corrupt history and silently change models.",
-      "rejected_alternatives": ["One residual object for assimilation and forecast verification", "Residual directly changes active model or historical forecast"],
-      "downstream_owners": ["MCFT-07", "MCFT-11", "MCFT-12", "CAT-10"],
-      "input_packet_topics": ["model_governance"],
-      "invariants": ["assimilation residual is not calibration", "forecast residual does not mutate Forecast", "candidate is not active model"]
+      "rejected_alternatives": [
+        "One residual object for assimilation and forecast verification",
+        "Residual directly changes active model or historical forecast"
+      ],
+      "downstream_owners": [
+        "MCFT-07",
+        "MCFT-11",
+        "MCFT-12",
+        "CAT-10"
+      ],
+      "input_packet_topics": [
+        "model_governance"
+      ],
+      "invariants": [
+        "assimilation residual is not calibration",
+        "forecast residual does not mutate Forecast",
+        "candidate is not active model"
+      ]
     },
     {
       "id": "DT02-ADR-012",
@@ -274,10 +411,25 @@
       "amendment_refs": [],
       "decision": "Each tick resolves one immutable config before compute. Candidate, shadow evaluation, approval and activation are separate append-only transitions. Activation changes only at a tick boundary.",
       "rationale": "A tick must not mix versions, and mutable active pointers need append-only authority and later consumption proof.",
-      "rejected_alternatives": ["Read active parameters repeatedly during a tick", "Candidate self-activation or rollback by deleting history"],
-      "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-12"],
-      "input_packet_topics": ["model_governance"],
-      "invariants": ["config is frozen before compute", "activation changes only at tick boundary", "later outputs prove active-config consumption", "no automatic activation"]
+      "rejected_alternatives": [
+        "Read active parameters repeatedly during a tick",
+        "Candidate self-activation or rollback by deleting history"
+      ],
+      "downstream_owners": [
+        "MCFT-02",
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-12"
+      ],
+      "input_packet_topics": [
+        "model_governance"
+      ],
+      "invariants": [
+        "config is frozen before compute",
+        "activation changes only at tick boundary",
+        "later outputs prove active-config consumption",
+        "no automatic activation"
+      ]
     },
     {
       "id": "DT02-ADR-013",
@@ -286,10 +438,24 @@
       "amendment_refs": [],
       "decision": "Runtime Operator APIs remain read-only under the field-scoped family. Generated objects have no public write endpoint. Human decision and action writes remain separately governed.",
       "rationale": "Extending the existing field-scoped family avoids a parallel namespace and prevents browser submission of generated objects.",
-      "rejected_alternatives": ["New parallel Operator runtime namespace", "Public HTTP tick or generated-object write endpoints"],
-      "downstream_owners": ["MCFT-13", "MCFT-14", "MCFT-17", "MCFT-18"],
-      "input_packet_topics": ["api_naming"],
-      "invariants": ["Operator Runtime APIs are read-only", "manual tick begins as application service, CLI/manual runner, and scheduler adapter", "human writes remain separately governed"]
+      "rejected_alternatives": [
+        "New parallel Operator runtime namespace",
+        "Public HTTP tick or generated-object write endpoints"
+      ],
+      "downstream_owners": [
+        "MCFT-13",
+        "MCFT-14",
+        "MCFT-17",
+        "MCFT-18"
+      ],
+      "input_packet_topics": [
+        "api_naming"
+      ],
+      "invariants": [
+        "Operator Runtime APIs are read-only",
+        "manual tick begins as application service, CLI/manual runner, and scheduler adapter",
+        "human writes remain separately governed"
+      ]
     },
     {
       "id": "DT02-ADR-014",
@@ -298,16 +464,34 @@
       "amendment_refs": [],
       "decision": "Legacy paths remain read-only compatibility surfaces with no new MCFT capability or dual canonical write. Deletion requires caller migration and explicit approval.",
       "rationale": "Active callers and read contracts make immediate deletion unsafe, while continued feature growth would create dual mainlines.",
-      "rejected_alternatives": ["Delete legacy routes in DT-02", "Dual-write legacy and new canonical State or Scenario"],
-      "downstream_owners": ["MCFT-08", "MCFT-10", "MCFT-17", "MCFT-18"],
-      "input_packet_topics": ["legacy_compatibility"],
-      "invariants": ["legacy reads remain available", "legacy paths gain no new capability", "no dual canonical write", "replacement is proven before deletion"]
+      "rejected_alternatives": [
+        "Delete legacy routes in DT-02",
+        "Dual-write legacy and new canonical State or Scenario"
+      ],
+      "downstream_owners": [
+        "MCFT-08",
+        "MCFT-10",
+        "MCFT-17",
+        "MCFT-18"
+      ],
+      "input_packet_topics": [
+        "legacy_compatibility"
+      ],
+      "invariants": [
+        "legacy reads remain available",
+        "legacy paths gain no new capability",
+        "no dual canonical write",
+        "replacement is proven before deletion"
+      ]
     },
     {
       "id": "DT02-ADR-015",
       "title": "Runtime security and write authority",
       "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
-      "amendment_refs": ["DT02-AMENDMENT-01", "DT02-AMENDMENT-02"],
+      "amendment_refs": [
+        "DT02-AMENDMENT-01",
+        "DT02-AMENDMENT-02"
+      ],
       "decision": "Write authority is object and variant specific. Runtime Orchestrator owns A0 INITIAL lineage declaration and State Tick outcomes; Revision Service owns E1/E2; Promotion Service owns E3; failure audit and Action Feedback remain separately governed.",
       "rationale": "Variant-specific authority permits the initial lineage to be created without granting the Runtime Orchestrator general revision-promotion authority.",
       "rejected_alternatives": [
@@ -315,8 +499,20 @@
         "Runtime Orchestrator gains active-to-active promotion authority",
         "Require formal Acceptance before trustworthy executed Evidence"
       ],
-      "downstream_owners": ["MCFT-03", "MCFT-04", "MCFT-10", "MCFT-11", "MCFT-12", "MCFT-13", "MCFT-14", "MCFT-15", "MCFT-17"],
-      "input_packet_topics": ["write_authority"],
+      "downstream_owners": [
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-10",
+        "MCFT-11",
+        "MCFT-12",
+        "MCFT-13",
+        "MCFT-14",
+        "MCFT-15",
+        "MCFT-17"
+      ],
+      "input_packet_topics": [
+        "write_authority"
+      ],
       "invariants": [
         "writer authority is conditional by object and operation variant",
         "checkpoint writes are fenced",
@@ -329,7 +525,10 @@
       "id": "DT02-ADR-016",
       "title": "Runtime health, failure audit, and claim boundaries",
       "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
-      "amendment_refs": ["DT02-AMENDMENT-01", "DT02-AMENDMENT-02"],
+      "amendment_refs": [
+        "DT02-AMENDMENT-01",
+        "DT02-AMENDMENT-02"
+      ],
       "decision": "Attempt, Health and Forecast failure are non-lineage operational audit. A failed A0 has zero A0 facts, projections and pointer changes, but may append a separately transacted F audit that never claims committed State success.",
       "rationale": "Operational failure remains auditable without being miscounted as partial bootstrap success or physical-State history.",
       "rejected_alternatives": [
@@ -337,14 +536,58 @@
         "Count an F audit record as an A0 partial canonical write",
         "Represent Forecast failure as lineage Forecast"
       ],
-      "downstream_owners": ["MCFT-03", "MCFT-04", "MCFT-09", "MCFT-17"],
-      "input_packet_topics": ["tick_transaction", "checkpoint_recovery"],
+      "downstream_owners": [
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-09",
+        "MCFT-17"
+      ],
+      "input_packet_topics": [
+        "tick_transaction",
+        "checkpoint_recovery"
+      ],
       "invariants": [
         "attempt is not State history",
         "health is not physical State",
         "failure audit needs no lineage",
         "failed A0 changes no A0 pointer",
         "stale writer cannot report committed success"
+      ]
+    },
+    {
+      "id": "DT02-ADR-017",
+      "title": "Biological development stage authority and epistemic separation",
+      "status": "CANDIDATE_NOT_EFFECTIVE",
+      "amendment_refs": [
+        "DT02-AMENDMENT-03"
+      ],
+      "decision": "Freeze one reusable BiologicalStageAuthority contract that can consume independently qualified direct observations and derived thermal, calendar, remote-sensing, or fused evidence while preserving epistemic class, uncertainty, scope, chronology, and method provenance. Biological stage, lifecycle, crop-water-use stage, and Kc remain separate authority axes.",
+      "rationale": "A production field Twin cannot depend on a single provider publishing a contemporaneous phenology label, but model-derived development must never be relabelled as direct observation. A common resolver contract allows deterministic multi-source stage adjudication without weakening fail-closed semantics.",
+      "rejected_alternatives": [
+        "KBS or any single provider is universal biological-stage authority",
+        "planting date plus elapsed days is silently treated as observed phenology",
+        "GDD point estimate is silently treated as exact V/R stage",
+        "thermal stage proves lifecycle ACTIVE",
+        "majority vote or uncalibrated confidence erases conflicting sources"
+      ],
+      "downstream_owners": [
+        "MCFT-04",
+        "MCFT-09",
+        "MCFT-13",
+        "MCFT-16"
+      ],
+      "input_packet_topics": [
+        "biological_stage_authority",
+        "runtime_modes",
+        "model_governance"
+      ],
+      "invariants": [
+        "direct observation and derived stage remain epistemically distinct",
+        "lifecycle authority is independent from biological stage authority",
+        "derived stage uncertainty must collapse to one stage before production authority",
+        "stage-specific Kc requires one uniquely mapped crop-water-use stage",
+        "future observations cannot create real-time stage authority",
+        "Replay Shadow-online Controlled Field and Production share one semantic stage resolver"
       ]
     }
   ]

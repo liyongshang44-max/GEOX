@@ -1,209 +1,40 @@
+# Phase 6 retirement sentinel.
+# Complete pre-cutover implementation remains immutable at:
+# 75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml
+# historical blob: ef0aa14b0956808257980aa76e082267f510a957
+# No production schedule, dispatch, workflow-run, push, or callable trigger remains.
 name: mcft-cap-09-rolling-kbs-intersection
 
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml'
-      - 'scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py'
-      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs'
-      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs'
-      - 'scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml'
-      - 'scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py'
-      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs'
-      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs'
-      - 'scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json'
-  schedule:
-    - cron: '20 * * * *'
-  workflow_dispatch:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml'
 
 permissions:
   contents: read
-  actions: read
-
-concurrency:
-  group: mcft-cap09-rolling-kbs-intersection-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
-  cancel-in-progress: false
-
-env:
-  NODE_VERSION: '20.11.1'
-  PYTHON_VERSION: '3.12'
 
 jobs:
-  static-contract:
+  phase6-retirement-sentinel:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install exact KBS decoder dependencies
-        run: |
-          python -m pip install --disable-pip-version-check \
-            eccodes==2.47.0 \
-            eccodeslib==2.47.3.23 \
-            numpy==1.26.4 \
-            refet==0.4.2
-      - name: Prove exact-target KBS decoder seam
-        run: python scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py selftest
-      - name: Prove reusable current crop-consensus evaluator
-        env:
-          TARGET_T: '2026-08-23T07:00:00.000Z'
-        run: node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs
-      - name: Prove rolling crop-legality builder
-        run: node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs selftest
-      - name: Prove oldest crop-legal exact candidate intersection
-        run: python scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py selftest
-      - name: Prove Amendment-11 intersection boundary
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs
-
-  live-intersection:
-    if: github.event_name != 'pull_request'
-    needs: static-contract
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Require exact protected main
+      - name: Prove immutable historical binding and retired trigger surface
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = "refs/heads/main" || { echo 'MCFT_CAP09_ROLLING_INTERSECTION_MAIN_REQUIRED' >&2; exit 1; }
-          git fetch --no-tags origin main
-          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || { echo 'MCFT_CAP09_ROLLING_INTERSECTION_EXACT_MAIN_DRIFT' >&2; exit 1; }
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install exact KBS decoder dependencies
-        run: |
-          python -m pip install --disable-pip-version-check \
-            eccodes==2.47.0 \
-            eccodeslib==2.47.3.23 \
-            numpy==1.26.4 \
-            refet==0.4.2
-
-      - name: Discover recent successful rolling capture artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p candidate-artifacts acceptance-output
-          cutoff="$(python - <<'PY'
-          from datetime import datetime,timedelta,timezone
-          print((datetime.now(timezone.utc)-timedelta(hours=40)).isoformat(timespec='seconds').replace('+00:00','Z'))
-          PY
-          )"
-          gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/mcft-cap-09-rolling-preboundary-capture.yml/runs?branch=main&status=success&per_page=50" > /tmp/runs.json
-          jq -r --arg cutoff "$cutoff" '.workflow_runs[] | select(.created_at >= $cutoff) | [.id,.head_sha,.head_branch,.conclusion] | @tsv' /tmp/runs.json > /tmp/recent-runs.tsv
-          while IFS=$'\t' read -r run_id head_sha head_branch run_conclusion; do
-            test -n "$run_id" || continue
-            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" > "/tmp/artifacts-${run_id}.json"
-            jq -c '.artifacts[] | select(.expired==false and (.name|startswith("mcft-cap09-rolling-preboundary-")))' "/tmp/artifacts-${run_id}.json" | while read -r artifact; do
-              artifact_id="$(jq -r '.id' <<<"$artifact")"
-              artifact_name="$(jq -r '.name' <<<"$artifact")"
-              artifact_digest="$(jq -r '.digest // ""' <<<"$artifact")"
-              dir="candidate-artifacts/${artifact_id}"
-              mkdir -p "$dir"
-              gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "/tmp/${artifact_id}.zip"
-              unzip -q "/tmp/${artifact_id}.zip" -d "$dir"
-              jq -n \
-                --argjson workflow_run_id "$run_id" \
-                --argjson artifact_id "$artifact_id" \
-                --arg artifact_name "$artifact_name" \
-                --arg artifact_digest "$artifact_digest" \
-                --arg head_sha "$head_sha" \
-                --arg head_branch "$head_branch" \
-                --arg run_conclusion "$run_conclusion" \
-                '{workflow_run_id:$workflow_run_id,artifact_id:$artifact_id,artifact_name:$artifact_name,artifact_digest:$artifact_digest,head_sha:$head_sha,head_branch:$head_branch,run_conclusion:$run_conclusion}' \
-                > "$dir/ARTIFACT_METADATA.json"
-            done
-          done < /tmp/recent-runs.tsv
-          find candidate-artifacts -name 'MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json' -print | sort > /tmp/candidate-files.txt
-          echo "candidate_file_count=$(wc -l < /tmp/candidate-files.txt | tr -d ' ')"
-
-      - name: Intersect retained candidates with exact current crop authority before KBS selection
-        run: |
-          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs \
-            --candidate-root candidate-artifacts \
-            --output acceptance-output/MCFT_CAP_09_ROLLING_CROP_LEGALITY.json
-
-      - name: Fetch current KBS daily batch once
-        id: kbs
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail --location --silent --show-error \
-            --max-time 180 \
-            -H 'Accept: text/csv,text/plain;q=0.9,*/*;q=0.5' \
-            -H 'User-Agent: GEOX-MCFT-CAP09-Rolling-KBS-Intersection/2.0' \
-            'https://lter.kbs.msu.edu/datatables/13.csv' \
-            -o /tmp/kbs.csv
-          test -s /tmp/kbs.csv || { echo 'MCFT_CAP09_ROLLING_INTERSECTION_KBS_EMPTY' >&2; exit 1; }
-          available_at="$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')"
-          echo "available_at=$available_at" >> "$GITHUB_OUTPUT"
-
-      - name: Select oldest crop-legal exact rolling candidate visible in KBS daily batch
-        env:
-          KBS_AVAILABLE_AT: ${{ steps.kbs.outputs.available_at }}
-        run: |
-          python scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py select \
-            --available-at "$KBS_AVAILABLE_AT" \
-            --kbs-input /tmp/kbs.csv \
-            --candidate-root candidate-artifacts \
-            --crop-legality acceptance-output/MCFT_CAP_09_ROLLING_CROP_LEGALITY.json \
-            --output acceptance-output/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json
-          rm -f /tmp/kbs.csv
-
-      - name: Classify intersection result
-        id: result
-        shell: node {0}
-        run: |
-          const fs=require('fs');
-          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json','utf8'));
-          if(p.schema_version!=='geox_mcft_cap09_rolling_kbs_intersection_v2'||p.status!=='PASS'||p.temporal_authority!=='PROVIDER_AVAILABILITY_WATERMARK_V1'||p.provider_publication_cadence!=='DAILY_BATCH'||p.freshness_is_late_authoritative_admission_gate!==false||p.crop_authority_intersection_applied!==true||p.crop_authority_effect!=='NONE'||p.future_crop_observations_used!==false||p.selection_policy!=='OLDEST_CROP_LEGAL_EXACT_TARGET_FIRST'||p.database_write_count!==0||p.formal_effect!==false||p.raw_values_emitted!==false) throw new Error('MCFT_CAP09_ROLLING_INTERSECTION_SAFE_RESULT_REQUIRED');
-          const state=p.selected?'EXACT_CROP_LEGAL_INTERSECTION_READY':'WAITING_FOR_DAILY_BATCH_INTERSECTION';
-          fs.appendFileSync(process.env.GITHUB_OUTPUT,`state=${state}\n`);
-          fs.appendFileSync(process.env.GITHUB_OUTPUT,`selected_target_t=${p.selected?.target_t||''}\n`);
-          console.log(JSON.stringify({state,selected_target_t:p.selected?.target_t||null,crop_stage_code:p.selected?.crop_stage_code||null,provider_latest_timestamp:p.provider_latest_timestamp,provider_latest_age_hours:p.provider_latest_age_hours,exact_kbs_intersection_count:p.exact_kbs_intersection_count,crop_legal_candidate_count:p.crop_legal_candidate_count}));
-
-      - name: Report waiting state without failure
-        if: steps.result.outputs.state == 'WAITING_FOR_DAILY_BATCH_INTERSECTION'
-        run: echo 'WAITING_FOR_DAILY_BATCH_INTERSECTION'
-
-      - name: Report exact crop-legal intersection candidate
-        if: steps.result.outputs.state == 'EXACT_CROP_LEGAL_INTERSECTION_READY'
-        run: echo "EXACT_CROP_LEGAL_INTERSECTION_READY target=${{ steps.result.outputs.selected_target_t }}"
-
-      - name: Upload metadata-only intersection proof
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-rolling-kbs-intersection-${{ github.sha }}-${{ github.run_id }}
-          path: |
-            acceptance-output/MCFT_CAP_09_ROLLING_CROP_LEGALITY.json
-            acceptance-output/MCFT_CAP_09_ROLLING_KBS_INTERSECTION.json
-          if-no-files-found: error
-          retention-days: 2
+          test "$(git rev-parse '75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml')" = 'ef0aa14b0956808257980aa76e082267f510a957'
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs selftest
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce >/tmp/mcft-cap09-phase6-owner-audit.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('/tmp/mcft-cap09-phase6-owner-audit.json','utf8'));
+          if(p.status!=='PASS'||p.active_retired_owner_or_trigger_count!==0||p.retired_actions_write_count!==0||p.historical_phase5_workflow_blobs_all_match!==true)throw new Error('PHASE6_RETIREMENT_SENTINEL_REQUIRED');
+          NODE

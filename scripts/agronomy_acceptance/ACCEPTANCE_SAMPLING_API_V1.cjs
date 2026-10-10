@@ -83,6 +83,7 @@ async function main() {
 
   const badPlanReceipt = await postJson('/api/v1/sampling/receipt', {
     plan_id: 'missing-plan-id',
+    plan_fact_id: 'sp_missing-plan-id',
     sample_id: `${ids.sample_id}-x`,
     ...scopedBody,
     collected_at_ts: now,
@@ -96,6 +97,7 @@ async function main() {
 
   const receiptNoEvidence = await postJson('/api/v1/sampling/receipt', {
     plan_id: planRes.json.plan_id,
+    plan_fact_id: planRes.json.fact_id,
     sample_id: `${ids.sample_id}-no-evi`,
     ...scopedBody,
     collected_at_ts: now,
@@ -109,6 +111,7 @@ async function main() {
 
   const goodReceipt = await postJson('/api/v1/sampling/receipt', {
     plan_id: planRes.json.plan_id,
+    plan_fact_id: planRes.json.fact_id,
     sample_id: ids.sample_id,
     ...scopedBody,
     collected_at_ts: now,
@@ -121,6 +124,7 @@ async function main() {
 
   const labMissingSample = await postJson('/api/v1/sampling/lab-result', {
     sample_id: 'missing-sample',
+    receipt_fact_id: 'sr_missing-sample',
     imported_at_ts: now,
     metrics: { ph: 6.5 },
     units: { ph: 'pH' },
@@ -132,6 +136,7 @@ async function main() {
 
   const labNoEvidence = await postJson('/api/v1/sampling/lab-result', {
     sample_id: ids.sample_id,
+    receipt_fact_id: goodReceipt.json.fact_id,
     imported_at_ts: now,
     metrics: { ph: 6.7 },
     units: { ph: 'pH' },
@@ -143,6 +148,7 @@ async function main() {
 
   const labInvalidQuality = await postJson('/api/v1/sampling/lab-result', {
     sample_id: ids.sample_id,
+    receipt_fact_id: goodReceipt.json.fact_id,
     imported_at_ts: now,
     metrics: { ph: 6.9 },
     units: { ph: 'pH' },
@@ -193,6 +199,7 @@ async function main() {
   assert.equal(scopedPlan.status, 200, 'scoped plan create should succeed');
   const crossTenantReceipt = await postJson('/api/v1/sampling/receipt', {
     plan_id: scopedPlan.json.plan_id,
+    plan_fact_id: scopedPlan.json.fact_id,
     sample_id: `${scopedIds.sample_id}-cross`,
     tenant_id: `${scopedIds.tenant_id}-other`,
     project_id: scopedIds.project_id,

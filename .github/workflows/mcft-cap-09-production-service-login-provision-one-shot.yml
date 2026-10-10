@@ -1,0 +1,120 @@
+name: mcft-cap-09-production-service-login-provision-one-shot
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-service-login-provision-one-shot.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_SERVICE_LOGIN_PROVISIONING_V1.ts'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_provisioning_v1.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-production-service-login-provision-one-shot
+  cancel-in-progress: false
+
+jobs:
+  provision-service-logins:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+      SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      EVIDENCE_RUNTIME_PASSWORD: ${{ secrets.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD }}
+      TWIN_RUNTIME_PASSWORD: ${{ secrets.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve explicit service LOGIN arm without I/O
+        id: arm
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const out='acceptance-output/MCFT_CAP_09_PRODUCTION_SERVICE_LOGIN_PROVISIONING_V1_RESULT.json';
+          const arm=JSON.parse(fs.readFileSync('scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json','utf8'));
+          const nonEffects={
+            runtime_database_url_binding:false,
+            runtime_credential_binding:false,
+            runtime_process_start:false,
+            production_owner_activation:false,
+            provider_request_count:0,
+            formal_v5_arm:false,
+            a0_bootstrap:false,
+            o00_started:false
+          };
+          if(arm.armed!==true){
+            if(arm.exact_target_database_name!==null)throw new Error('SERVICE_LOGIN_UNARMED_TARGET_MUST_BE_NULL');
+            for(const key of [
+              'phase4_twin_acl_materialization_authorized',
+              'service_login_bootstrap_authorized',
+              'runtime_credential_binding_authorized',
+              'runtime_process_start_authorized',
+              'production_owner_activation_authorized',
+              'formal_v5_arm_authorized',
+              'a0_authorized',
+              'o00_authorized'
+            ]) if(arm[key]!==false)throw new Error('SERVICE_LOGIN_UNARMED_AUTHORITY_MUST_BE_FALSE:'+key);
+            fs.mkdirSync('acceptance-output',{recursive:true});
+            fs.writeFileSync(out,JSON.stringify({
+              schema_version:'geox_mcft_cap09_production_service_login_provisioning_v1',
+              status:'SKIPPED_NOT_ARMED',
+              stage:'SERVICE_LOGIN_BOOTSTRAP',
+              subject_sha:process.env.SUBJECT_SHA,
+              database_name:'geox_mcft_cap09_production_runtime_v1',
+              service_login_created:false,
+              ...nonEffects
+            },null,2)+'\n');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed=false\n');
+            console.log('SERVICE_LOGIN_PROVISIONING_SKIPPED_NOT_ARMED');
+            process.exit(0);
+          }
+          if(arm.exact_target_database_name!=='geox_mcft_cap09_production_runtime_v1')throw new Error('SERVICE_LOGIN_ARM_DATABASE_MISMATCH');
+          if(arm.service_login_bootstrap_authorized!==true)throw new Error('SERVICE_LOGIN_BOOTSTRAP_AUTHORITY_REQUIRED');
+          for(const key of [
+            'phase4_twin_acl_materialization_authorized',
+            'runtime_credential_binding_authorized',
+            'runtime_process_start_authorized',
+            'production_owner_activation_authorized',
+            'formal_v5_arm_authorized',
+            'a0_authorized',
+            'o00_authorized'
+          ]) if(arm[key]!==false)throw new Error('SERVICE_LOGIN_LATER_AUTHORITY_FORBIDDEN:'+key);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed=true\n');
+
+      - uses: pnpm/action-setup@v4
+        if: steps.arm.outputs.armed == 'true'
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        if: steps.arm.outputs.armed == 'true'
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        if: steps.arm.outputs.armed == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Provision exactly two production service LOGIN principals
+        if: steps.arm.outputs.armed == 'true'
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_SERVICE_LOGIN_PROVISIONING_V1.ts
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-production-service-login-provision-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_PRODUCTION_SERVICE_LOGIN_PROVISIONING_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

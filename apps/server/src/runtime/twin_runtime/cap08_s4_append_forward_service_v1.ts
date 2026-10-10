@@ -66,6 +66,27 @@ export type ExecuteCap08S4AppendForwardResultV1 = {
   mcft_cap_09_authorized: false;
 };
 
+export type Cap08S4AppendForwardRepositoryPortV1 = Pick<
+  PostgresCap08S4AppendForwardRepositoryV1,
+  "inspect" | "establish"
+>;
+
+export type Cap08S4PersistedChainReaderPortV1 = Pick<
+  Cap08S4PersistedChainReaderV1,
+  "read"
+>;
+
+export type Cap08S4T17CorrectedPredecessorResolverPortV1 = Pick<
+  Cap08S4T17CorrectedPredecessorResolverV1,
+  "resolve"
+>;
+
+export type Cap08S4AppendForwardDependenciesV1 = Readonly<{
+  chain_reader?: Cap08S4PersistedChainReaderPortV1;
+  repository?: Cap08S4AppendForwardRepositoryPortV1;
+  resolver?: Cap08S4T17CorrectedPredecessorResolverPortV1;
+}>;
+
 function requiredStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
   return value;
@@ -137,17 +158,26 @@ function qualityWeightV1(quality: unknown, weights: Readonly<{ PASS: number; LIM
 }
 
 export class Cap08S4AppendForwardServiceV1 {
-  private readonly chainReader: Cap08S4PersistedChainReaderV1;
-  private readonly repository: PostgresCap08S4AppendForwardRepositoryV1;
-  private readonly resolver: Cap08S4T17CorrectedPredecessorResolverV1;
+  private readonly chainReader: Cap08S4PersistedChainReaderPortV1;
+  private readonly repository: Cap08S4AppendForwardRepositoryPortV1;
+  private readonly resolver: Cap08S4T17CorrectedPredecessorResolverPortV1;
 
   constructor(
     pool: Pool,
     private readonly evidenceSource: ReplayEvidenceSourcePortV1,
+    dependencies: Cap08S4AppendForwardDependenciesV1 = {},
   ) {
-    this.chainReader = new Cap08S4PersistedChainReaderV1(pool);
-    this.repository = new PostgresCap08S4AppendForwardRepositoryV1(pool);
-    this.resolver = new Cap08S4T17CorrectedPredecessorResolverV1(pool);
+    this.chainReader = dependencies.chain_reader ?? new Cap08S4PersistedChainReaderV1(pool);
+    if (dependencies.repository || dependencies.resolver) {
+      this.repository = dependencies.repository ?? new PostgresCap08S4AppendForwardRepositoryV1(pool);
+      this.resolver = dependencies.resolver
+        ?? new Cap08S4T17CorrectedPredecessorResolverV1(pool, this.repository);
+    } else {
+      // Preserve the historical two-argument composition exactly. The explicit shared-repository
+      // topology is activated only when a successor host supplies a repository dependency.
+      this.repository = new PostgresCap08S4AppendForwardRepositoryV1(pool);
+      this.resolver = new Cap08S4T17CorrectedPredecessorResolverV1(pool);
+    }
   }
 
   async execute(input: ExecuteCap08S4AppendForwardInputV1): Promise<ExecuteCap08S4AppendForwardResultV1> {

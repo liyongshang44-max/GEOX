@@ -1,0 +1,116 @@
+name: mcft-cap-09-production-operational-database-provision-one-shot
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-operational-database-provision-one-shot.yml'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_PROVISION_ARM_V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-production-operational-database-provision-one-shot
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      CANDIDATE_DB: geox_mcft_cap09_production_runtime_v1
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require explicit database-provision arm
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const arm=JSON.parse(fs.readFileSync('scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_PROVISION_ARM_V1.json','utf8'));
+          const auth=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json','utf8'));
+          if(arm.armed!==true||arm.create_database_authorized!==true)throw new Error('OPERATIONAL_DB_PROVISION_NOT_ARMED');
+          if(auth.status!=='QUALIFIED_CANDIDATE_PROVISION_ARMED')throw new Error('OPERATIONAL_DB_QUALIFIED_AUTHORITY_REQUIRED');
+          if(arm.candidate_database_name!==process.env.CANDIDATE_DB||auth.candidate_database_name!==process.env.CANDIDATE_DB)throw new Error('OPERATIONAL_DB_CANDIDATE_BINDING_MISMATCH');
+          const q=auth.candidate_qualification||{};
+          if(q.subject_sha!=='f94f875f1d2026f883e1142f31371ad7ea7f805f'||q.run_id!==33375040615||q.artifact_id!==9751530463||q.candidate_database_present!==false||q.unique_creator_membership!=='neon_superuser'||q.preserved_store_count!==6)throw new Error('OPERATIONAL_DB_IMMUTABLE_QUALIFICATION_REQUIRED');
+          for(const k of ['apply_production_host_schema_authorized','apply_runtime_acl_authorized','service_login_bootstrap_authorized','runtime_credential_binding_authorized','runtime_process_start_authorized','production_owner_activation_authorized','formal_v5_arm_authorized','a0_authorized','o00_authorized'])if(arm[k]!==false)throw new Error('OPERATIONAL_DB_PROVISION_SCOPE_TOO_BROAD:'+k);
+
+      - name: Preflight candidate and creator authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SEED_DATABASE_URL"
+          present="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT count(*)::int FROM pg_catalog.pg_database WHERE datname='$CANDIDATE_DB'")"
+          test "$present" = "0" || { echo "OPERATIONAL_DB_TARGET_ALREADY_EXISTS:$present" >&2; exit 1; }
+          mapfile -t creators < <(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT r.rolname,r.rolsuper::text,r.rolcreatedb::text
+              FROM pg_catalog.pg_roles r
+             WHERE r.rolname<>current_user
+               AND (r.rolsuper OR r.rolcreatedb)
+               AND pg_catalog.pg_has_role(current_user,r.oid,'MEMBER')
+             ORDER BY r.rolsuper DESC,r.rolcreatedb DESC,r.rolname")
+          test "${#creators[@]}" = "1"
+          test "${creators[0]}" = "neon_superuser|false|true"
+          preserved="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+            SELECT count(*)::int FROM pg_catalog.pg_database
+             WHERE datname IN (
+               'geox_mcft_cap09_s6_accel24t_am19_v13',
+               'geox_mcft_cap09_s6_accel24t_am19_blocked_v13',
+               'geox_mcft_cap09_s6_formal_t4r1_24h_v5',
+               'geox_mcft_cap09_s6_formal_t4r1_24h_v4',
+               'geox_mcft_cap09_s6_accel24t_am19_v12',
+               'geox_mcft_cap09_s6_accel24t_am19_blocked_v12'
+             )")"
+          test "$preserved" = "6" || { echo "OPERATIONAL_DB_PROTECTED_STORE_DRIFT:$preserved" >&2; exit 1; }
+
+      - name: Create only the dedicated empty operational database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          psql "$SEED_DATABASE_URL" -q -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$CANDIDATE_DB\" TEMPLATE template0;"
+          target_url="$(node -e "const u=new URL(process.env.SEED_DATABASE_URL);u.pathname='/'+process.env.CANDIDATE_DB;process.stdout.write(u.toString())")"
+          echo "::add-mask::$target_url"
+          counts="$(psql "$target_url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT
+              (SELECT count(*)::int FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S','f')),
+              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
+          test "$counts" = "0|0"
+          cat > acceptance-output/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_PROVISION_V1_RESULT.json <<JSON
+          {
+            "schema_version":"geox_mcft_cap09_production_operational_database_provision_v1",
+            "status":"PASS",
+            "subject_sha":"$SUBJECT_SHA",
+            "database_name":"$CANDIDATE_DB",
+            "created_by_this_run":true,
+            "fresh_zero_state":true,
+            "public_relation_count":0,
+            "public_routine_count":0,
+            "protected_store_count_preserved":6,
+            "schema_migration_performed":false,
+            "service_login_created":false,
+            "runtime_process_start":false,
+            "production_owner_activation":false,
+            "provider_request_count":0,
+            "formal_v5_arm":false,
+            "a0_bootstrap":false,
+            "o00_started":false
+          }
+          JSON
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-production-operational-database-provision-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_PROVISION_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

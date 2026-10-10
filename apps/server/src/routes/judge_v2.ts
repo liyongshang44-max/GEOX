@@ -4,7 +4,14 @@ import { z } from "zod";
 
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAgronomyJudgeV2 } from "../domain/judge/agronomy_judge_v2.js";
-import { evaluateEvidenceJudgeV2 } from "../domain/judge/evidence_judge_v2.js";
+import { buildAgronomyEvidenceDependencyShadowBindingV1 } from "../domain/decision/agronomy_evidence_dependency_shadow_binding_v1.js";
+import { projectAgronomyQualifiedEvidenceCriterionShadowV1 } from "../domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.js";
+import { buildDecisionRecommendationCandidateCriterionShadowBindingV1 } from "../domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.js";
+import { buildCandidateDecisionBoundaryContextBindingV1 } from "../domain/decision/candidate_decision_boundary_context_binding_v1.js";
+import { buildIrrigateStateCalculationShadowBindingV1 } from "../domain/decision/irrigate_state_calculation_shadow_binding_v1.js";
+import { collectEvidenceJudgeSemanticShadowComparisonV1 } from "../domain/decision/evidence_semantic_shadow_runtime_collector_v1.js";
+import { readEvidenceSemanticShadowInventoryV1 } from "../domain/decision/evidence_semantic_shadow_inventory_v1.js";
+import { evaluateEvidenceJudgeV2WithCanonicalShadow } from "../domain/judge/evidence_judge_v2.js";
 import { evaluateExecutionJudgeV2 } from "../domain/judge/execution_judge_v2.js";
 import { buildJudgeResultV2, insertJudgeResultV2, listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
 import { recordMemoryV1 } from "../services/field_memory_service.js";
@@ -38,6 +45,7 @@ const EvaluateAgronomyRequestSchema = TenantSchema.extend({
   evidence_judge_verdict: z.string().min(1).optional(),
   evidence_refs: z.array(z.unknown()).optional(),
   source_refs: z.array(z.unknown()).optional(),
+  field_program_fact_id: z.string().min(1).optional(),
 });
 const EvaluateExecutionRequestSchema = TenantSchema.extend({ prescription_id: z.string().min(1).optional(), field_id: z.string().min(1).optional(), device_id: z.string().min(1).optional(), receipt: z.object({ receipt_id: z.string().min(1).optional(), task_id: z.string().min(1).optional(), status: z.string().min(1).optional(), evidence_refs: z.array(z.unknown()).optional() }).nullable().optional(), as_executed: z.object({ as_executed_id: z.string().min(1).optional(), task_id: z.string().min(1).optional() }).nullable().optional(), as_applied: z.object({ as_applied_id: z.string().min(1).optional() }).nullable().optional(), pre_soil_moisture: z.number().optional(), post_soil_moisture: z.number().optional(), evidence_refs: z.array(z.unknown()).optional(), source_refs: z.array(z.unknown()).optional() });
 const ReadJudgeRequestSchema = TenantSchema.extend({ judge_id: z.string().min(1) });
@@ -45,9 +53,23 @@ const ListByKindSchema = TenantSchema.extend({ judge_kind: z.enum(["EVIDENCE", "
 const ListByFieldSchema = TenantSchema.extend({ field_id: z.string().min(1), limit: z.coerce.number().int().min(1).max(200).optional() });
 const ListByTaskSchema = TenantSchema.extend({ task_id: z.string().min(1), limit: z.coerce.number().int().min(1).max(200).optional() });
 const ListByPrescriptionSchema = TenantSchema.extend({ prescription_id: z.string().min(1), limit: z.coerce.number().int().min(1).max(200).optional() });
+const EvidenceShadowInventoryQuerySchema = TenantSchema.extend({ field_id: z.string().min(1).optional(), limit: z.coerce.number().int().min(1).max(200).optional() });
 
 export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/judge/health", async () => ({ ok: true, module: "judge_v2" }));
+
+  app.get("/api/v1/judge/shadow/evidence/inventory", async (req, reply) => {
+    try {
+      const auth = requireAoActAnyScopeV0(req, reply, ["judge.read", "ao_act.index.read"]);
+      if (!auth) return;
+      const input = EvidenceShadowInventoryQuerySchema.parse((req as any).query ?? {});
+      if (!requireTenantMatchOr404(reply, auth, input)) return;
+      const inventory = await readEvidenceSemanticShadowInventoryV1(pool, input);
+      return reply.send({ ok: true, inventory });
+    } catch (error: any) {
+      return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
+    }
+  });
 
   app.post("/api/v1/judge/evidence/evaluate", async (req, reply) => {
     try {
@@ -55,8 +77,19 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
       if (!auth) return;
       const body = EvaluateEvidenceRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
-      const judgeResult = buildJudgeResultV2(evaluateEvidenceJudgeV2(body));
-      const inserted = await insertJudgeResultV2(pool, judgeResult);
+      const judgeResult = buildJudgeResultV2(await evaluateEvidenceJudgeV2WithCanonicalShadow(pool, body));
+      const semanticShadowComparison =
+        collectEvidenceJudgeSemanticShadowComparisonV1(judgeResult);
+      const judgeResultWithShadow = semanticShadowComparison
+        ? {
+            ...judgeResult,
+            outputs: {
+              ...(judgeResult.outputs ?? {}),
+              semantic_shadow_comparison_v1: semanticShadowComparison,
+            },
+          }
+        : judgeResult;
+      const inserted = await insertJudgeResultV2(pool, judgeResultWithShadow);
       return reply.send({ ok: true, judge_result: inserted });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
@@ -70,7 +103,57 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
       const body = EvaluateAgronomyRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
       const judgeResult = buildJudgeResultV2(evaluateAgronomyJudgeV2(body));
-      const inserted = await insertJudgeResultV2(pool, judgeResult);
+      const evidenceDependencyShadow =
+        await buildAgronomyEvidenceDependencyShadowBindingV1(pool, body);
+      const qualifiedEvidenceCriterionShadow =
+        projectAgronomyQualifiedEvidenceCriterionShadowV1(evidenceDependencyShadow);
+      const decisionBoundaryContextBinding =
+        await buildCandidateDecisionBoundaryContextBindingV1(
+          pool,
+          body,
+          qualifiedEvidenceCriterionShadow.criterion_assessment?.support_refs ?? [],
+        );
+      const boundaryBoundCandidateInput =
+        decisionBoundaryContextBinding.binding_state === "BOUND"
+          ? {
+              ...body,
+              expected_source_fact_id:
+                decisionBoundaryContextBinding.source_recommendation_fact_id,
+              context_snapshot_ref:
+                decisionBoundaryContextBinding.context_snapshot_ref,
+              decision_time:
+                decisionBoundaryContextBinding.decision_time,
+            }
+          : body;
+      const candidateCriterionReferentialShadow =
+        await buildDecisionRecommendationCandidateCriterionShadowBindingV1(
+          pool,
+          boundaryBoundCandidateInput,
+          evidenceDependencyShadow,
+          qualifiedEvidenceCriterionShadow,
+        );
+      const irrigateStateCalculationShadow =
+        await buildIrrigateStateCalculationShadowBindingV1(
+          pool,
+          body,
+          judgeResult as unknown as Record<string, unknown>,
+          candidateCriterionReferentialShadow,
+        );
+      const judgeResultWithShadow = {
+        ...judgeResult,
+        outputs: {
+          ...(judgeResult.outputs ?? {}),
+          agronomy_evidence_dependency_shadow_v1: evidenceDependencyShadow,
+          agronomy_qualified_evidence_criterion_shadow_v1: qualifiedEvidenceCriterionShadow,
+          candidate_decision_boundary_context_binding_v1:
+            decisionBoundaryContextBinding,
+          decision_recommendation_candidate_criterion_shadow_binding_v1:
+            candidateCriterionReferentialShadow,
+          irrigate_state_calculation_shadow_binding_v1:
+            irrigateStateCalculationShadow,
+        },
+      };
+      const inserted = await insertJudgeResultV2(pool, judgeResultWithShadow);
       return reply.send({ ok: true, judge_result: inserted });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });

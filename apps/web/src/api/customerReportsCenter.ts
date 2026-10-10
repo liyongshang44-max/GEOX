@@ -1,3 +1,8 @@
+/**
+ * GEOX_PRODUCT_CONTRACT_LIFECYCLE: LEGACY_CONSUMER_ADAPTER
+ * Existing P1/P2 frontend compatibility adapter. Do not copy or extend this adapter for new post-FOUI product work.
+ * New product consumers must use /api/product/v1/* Product Projection contracts.
+ */
 import { apiRequestWithPolicy, withQuery } from "./client";
 import { fetchCustomerDashboardAggregate, type CustomerDashboardAggregateV1 } from "./customerReports";
 import type { CustomerScopeV1 } from "./session";

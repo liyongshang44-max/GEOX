@@ -1,0 +1,155 @@
+{
+  "version": "GEOX_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1",
+  "status": "FROZEN_BOUNDED_WORKSTREAM_INVENTORY",
+  "authority_base": "89e7ea6e5b322ae7745c04db3ad4ab584aecb6c2",
+  "source_authority": "GEOX-BLINE-PRODUCTION-CALLER-AUTHORITY-INVENTORY-V1.json",
+  "closure_domain": "CD-03",
+  "closure_domain_invariant": "Recommendation generation/read/compatibility authority does not confer Approval authority; approval requests and verdicts require authenticated principals with explicit existing approval-specific capabilities.",
+  "discovery_policy": "NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY",
+  "bounded_predecessor_row_count": 10,
+  "bounded_predecessor_rows": [
+    {
+      "surface_id": "BSEC-052",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entry_symbol": "POST /api/v1/recommendations/:recommendation_id/submit-approval",
+      "exact_route_or_trigger": "/api/v1/recommendations/:recommendation_id/submit-approval",
+      "predecessor_authz_capability": [
+        "recommendation.write",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "w3_disposition": "REQUIRE_APPROVAL_REQUEST; REMOVE_RECOMMENDATION_WRITE_AND_AO_ACT_TASK_WRITE_AUTHORITY"
+    },
+    {
+      "surface_id": "BSEC-084",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "entry_symbol": "POST /api/v1/approvals/request",
+      "exact_route_or_trigger": "/api/v1/approvals/request",
+      "predecessor_authz_capability": [
+        "approval.request",
+        "prescription.submit_approval",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "w3_disposition": "KEEP_APPROVAL_REQUEST_AND_PRESCRIPTION_SUBMIT_APPROVAL; REMOVE_AO_ACT_TASK_WRITE_FALLBACK"
+    },
+    {
+      "surface_id": "BSEC-085",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "entry_symbol": "POST /api/v1/approvals/approve",
+      "exact_route_or_trigger": "/api/v1/approvals/approve",
+      "predecessor_authz_capability": [
+        "approval.decide",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "w3_disposition": "REQUIRE_APPROVAL_DECIDE; REMOVE_AO_ACT_TASK_WRITE_FALLBACK"
+    },
+    {
+      "surface_id": "BSEC-086",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "entry_symbol": "POST /api/control/approval_request/v1/request",
+      "exact_route_or_trigger": "/api/control/approval_request/v1/request",
+      "predecessor_authz_capability": [
+        "approval.request",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "w3_disposition": "KEEP_LEGACY_ROUTE_ONLY_UNDER_APPROVAL_SPECIFIC_REQUEST_AUTHORITY; REMOVE_AO_ACT_TASK_WRITE_FALLBACK"
+    },
+    {
+      "surface_id": "BSEC-087",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "entry_symbol": "POST /api/control/approval_request/v1/approve",
+      "exact_route_or_trigger": "/api/control/approval_request/v1/approve",
+      "predecessor_authz_capability": [
+        "approval.decide",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "w3_disposition": "KEEP_LEGACY_ROUTE_ONLY_UNDER_APPROVAL_DECIDE; REMOVE_AO_ACT_TASK_WRITE_FALLBACK"
+    },
+    {
+      "surface_id": "BSEC-088",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "entry_symbol": "POST /api/v1/approval-requests",
+      "exact_route_or_trigger": "/api/v1/approval-requests",
+      "predecessor_authz_capability": [
+        "approval.request",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "w3_disposition": "KEEP_DEPRECATED_ALIAS_ONLY_UNDER_APPROVAL_SPECIFIC_REQUEST_AUTHORITY; REMOVE_AO_ACT_TASK_WRITE_FALLBACK"
+    },
+    {
+      "surface_id": "BSEC-089",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "entry_symbol": "POST /api/v1/approval-requests/:request_id/approve",
+      "exact_route_or_trigger": "/api/v1/approval-requests/:request_id/approve",
+      "predecessor_authz_capability": [
+        "approval.decide",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "w3_disposition": "KEEP_DEPRECATED_ALIAS_ONLY_UNDER_APPROVAL_DECIDE; REMOVE_AO_ACT_TASK_WRITE_FALLBACK"
+    },
+    {
+      "surface_id": "BSEC-129",
+      "source_path": "apps/server/src/routes/prescriptions_v1.ts",
+      "entry_symbol": "POST /api/v1/prescriptions/:prescription_id/submit-approval",
+      "exact_route_or_trigger": "/api/v1/prescriptions/:prescription_id/submit-approval",
+      "predecessor_authz_capability": [
+        "prescription.submit_approval",
+        "approval.request",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "w3_disposition": "COMMERCIAL_MVP0_REQUIRED; KEEP_PRESCRIPTION_SUBMIT_APPROVAL_OR_APPROVAL_REQUEST; REMOVE_AO_ACT_TASK_WRITE_FALLBACK"
+    },
+    {
+      "surface_id": "BSEC-181",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/approvals",
+      "exact_route_or_trigger": "/api/v1/approvals",
+      "predecessor_authz_capability": [
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "w3_disposition": "REQUIRE_APPROVAL_REQUEST; GENERIC_TASK_WRITE_IS_NOT_APPROVAL_REQUEST_AUTHORITY"
+    },
+    {
+      "surface_id": "BSEC-182",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/approvals/:request_id/decide",
+      "exact_route_or_trigger": "/api/v1/approvals/:request_id/decide",
+      "predecessor_authz_capability": [
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "w3_disposition": "REQUIRE_APPROVAL_DECIDE; GENERIC_TASK_WRITE_IS_NOT_APPROVAL_DECISION_AUTHORITY"
+    }
+  ],
+  "protected_governed_baseline": [
+    "BSEC-062",
+    "BSEC-063",
+    "BSEC-064",
+    "BSEC-081",
+    "BSEC-082",
+    "BSEC-083"
+  ],
+  "commercial_sku_01": {
+    "evidence": "scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs",
+    "prescription_submit_approval_route": "POST /api/v1/prescriptions/:prescription_id/submit-approval",
+    "approval_decide_route": "POST /api/v1/approvals/:request_id/decide",
+    "disposition": "IN_SCOPE_AND_REQUIRED; NARROW_AUTHORITY_DO_NOT_DISABLE"
+  },
+  "explicit_exclusions": [
+    "Action Qualification",
+    "Recommendation semantic redesign",
+    "Executor/device identity",
+    "legacy runtime retirement",
+    "Planner/Crop latest-wins",
+    "MCFT",
+    "new decision brain"
+  ]
+}

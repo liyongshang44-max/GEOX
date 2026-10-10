@@ -1,0 +1,29 @@
+name: MCFT CAP-09 AM22 GFS progress diagnostic engineering
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/*AM22_GFS_PROGRESS_DIAGNOSTIC*'
+      - 'scripts/governance_acceptance/*AM22_GFS_DIAGNOSTIC*'
+      - 'scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_SUCCESSOR_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-PROGRESS-DIAGNOSTIC-V1.md'
+      - '.github/workflows/mcft-cap-09-am22-gfs-progress-diagnostic-v1.yml'
+permissions:
+  contents: read
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Offline diagnostics, missing evidence and redaction negatives
+        run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_GFS_PROGRESS_DIAGNOSTIC_V1.cjs
+      - name: Exact diagnostic successor and immutable predecessor replay
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_GFS_DIAGNOSTIC_SUCCESSOR_V1.cjs

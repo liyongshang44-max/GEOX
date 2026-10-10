@@ -1,0 +1,103 @@
+{
+  "schema_version": "geox_mcft_cap09_current_main_reanchor_2144_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1",
+  "status": "CANDIDATE_PROOF_BOUND_ADMISSION",
+  "frontier": "MCFT_CAP09_CURRENT_MAIN_REANCHOR",
+  "previous_accepted_mcft_base": "ca56d60e3d927ccda5d1f28255e195575bf7a487",
+  "current_protected_main": "2144d63477176f939a0d40d39b96ca97522af8db",
+  "current_protected_main_tree": "47ffe1a6ef479f101b548b6a0e3829f2ffa3a073",
+  "first_parent_successor_merges": [
+    {
+      "pr_number": 3526,
+      "merge_sha": "a56b419f6ddfc3ce2f2d957b0422bb8b4bd9d45c",
+      "owner_class": "MCFT_FIELD_STATE_PARALLEL_FRONTIER"
+    },
+    {
+      "pr_number": 3529,
+      "merge_sha": "d19913c88b81b618507ff6da6fc4f3699123cdd6",
+      "owner_class": "MCFT_CAP05_SUCCESSOR_AWARE_ACCEPTANCE_HARNESS"
+    },
+    {
+      "pr_number": 3530,
+      "merge_sha": "2144d63477176f939a0d40d39b96ca97522af8db",
+      "owner_class": "BLINE_COMMERCIAL_MVP0_FINAL_ADOPTION"
+    }
+  ],
+  "known_protected_path_overlap": [
+    "apps/server/scripts/write_dist_entries.cjs"
+  ],
+  "known_mcft_dependency_overlap": [
+    "apps/server/scripts/write_dist_entries.cjs",
+    "docker/postgres/init/001_schema.sql",
+    "package.json"
+  ],
+  "overlap_adjudications": [
+    {
+      "path": "apps/server/scripts/write_dist_entries.cjs",
+      "classification": "SHARED_PACKAGING_PATH_WITH_NON_MCFT_SUCCESSOR_EXTENSION",
+      "owner_frontier": "BLINE_COMMERCIAL_MVP0_FINAL_ADOPTION",
+      "required_proof": "MCFT_CAP09_DIST_ENTRY_BLOCKS_BYTE_IDENTICAL",
+      "whole_file_allowlist": false
+    },
+    {
+      "path": "docker/postgres/init/001_schema.sql",
+      "classification": "BLINE_FIELD_MEMORY_BOOTSTRAP_SCOPE_CONFIDENCE_HARDENING",
+      "owner_frontier": "BLINE_COMMERCIAL_MVP0_FINAL_ADOPTION",
+      "allowed_exact_transforms": [
+        "field_memory_v1.project_id:REMOVE_LEGACY_projectA_DEFAULT",
+        "field_memory_v1.group_id:REMOVE_LEGACY_groupA_DEFAULT",
+        "field_memory_v1.confidence:REMOVE_NOT_NULL_DEFAULT_0_8"
+      ],
+      "whole_file_allowlist": false
+    },
+    {
+      "path": "package.json",
+      "classification": "BLINE_GOVERNANCE_RUNTIME_COMMAND_REGISTRATION_ONLY",
+      "owner_frontier": "BLINE_COMMERCIAL_MVP0_FINAL_ADOPTION",
+      "required_proof": "ONLY_EXACT_16_BLINE_SCRIPT_KEYS_ADDED_AND_ALL_PREDECESSOR_PACKAGE_CONTENT_PRESERVED",
+      "whole_file_allowlist": false
+    }
+  ],
+  "protected_anchor_paths": [
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts",
+    "docker-compose.mcft-cap09-production.yml",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs"
+  ],
+  "qcp_admission": {
+    "mode": "PROOF_BOUND_EXACT_BASE",
+    "base_sha": "2144d63477176f939a0d40d39b96ca97522af8db",
+    "proof_artifact": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json",
+    "proof_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs",
+    "bare_sha_allowlist_admission_authorized": false,
+    "admission_requires_exact_lineage_and_overlap_proof": true
+  },
+  "fail_closed_rules": {
+    "protected_main_drift": "FAIL",
+    "first_parent_lineage_drift": "FAIL",
+    "unexpected_mcft_control_plane_intersection": "FAIL",
+    "unexpected_mcft_authority_intersection": "FAIL",
+    "unexpected_mcft_dependency_intersection": "FAIL",
+    "protected_anchor_byte_drift": "FAIL",
+    "mcft_runtime_entry_block_drift": "FAIL",
+    "shared_bootstrap_schema_unadjudicated_drift": "FAIL",
+    "root_package_non_bline_or_existing_script_drift": "FAIL"
+  },
+  "non_effects": {
+    "mcft_product_semantics_changed": false,
+    "runtime_config_write_authorized": false,
+    "database_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "production_owner_activation_authorized": false,
+    "production_runtime_start_authorized": false,
+    "formal_v5_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "bline_reopen_authorized": false,
+    "adr_semantic_change_authorized": false
+  }
+}

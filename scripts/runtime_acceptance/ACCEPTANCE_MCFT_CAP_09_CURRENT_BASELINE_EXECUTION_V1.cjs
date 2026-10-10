@@ -1,0 +1,143 @@
+#!/usr/bin/env node
+"use strict";
+const assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), os = require("node:os"), cp = require("node:child_process"), crypto = require("node:crypto");
+const x = require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
+const recovery = require("./RUN_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_V2.cjs");
+let count = 0; function negative(f) { assert.throws(f); count++; }
+assert.equal(x.measureStartupMs("1000", 2500),1500); count++;
+negative(()=>x.measureStartupMs("invalid",2500)); negative(()=>x.measureStartupMs("3000",2500));
+for (const file of ["RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION", "RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE", "AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT"]) {
+  const before=fs.readFileSync(path.join(__dirname,file+"_V1.ts"),"utf8"),after=fs.readFileSync(path.join(__dirname,file+"_V2.ts"),"utf8");
+  for(const line of before.split("\n").filter(line=>line.trim().startsWith("assert.")))assert(after.includes(line),"HISTORICAL_ASSERTION_REMOVED:"+file+":"+line.trim());
+  assert(after.includes("const currentTargets = currentExecution.qualificationTargets();")); count++;
+  if(process.env.MCFT_CURRENT_ENTRY_COMPILE_TEST==="1") {
+    const result=cp.spawnSync(process.execPath,["--import","tsx",path.join(__dirname,file+"_V2.ts")],{cwd:x.ROOT,encoding:"utf8",env:{...process.env,CI:"1"}});
+    assert.equal(result.status,1);assert.match(result.stderr,/CURRENT_EXECUTION_NOT_ARMED/); count++;
+  }
+}
+// The Windows source guard must check all three clean-tree dimensions;
+// ignored files are not a qualification blocker, but untracked files are.
+const fakeGit = outputs => args => {
+  const k = args.join(" ");
+  assert(Object.prototype.hasOwnProperty.call(outputs, k), "UNEXPECTED_GIT_PROBE:" + k);
+  return outputs[k];
+};
+const gitClean = {
+  "diff --name-only --": "",
+  "diff --cached --name-only --": "",
+  "ls-files --others --exclude-standard": "",
+};
+assert.equal(x.sourceWorktreeClean(fakeGit(gitClean)), true); count++;
+for (const key of Object.keys(gitClean)) {
+  assert.equal(x.sourceWorktreeClean(fakeGit({...gitClean, [key]:"dirty.txt"})), false);
+  count++;
+}
+const qcp = JSON.parse(fs.readFileSync(path.join(x.ROOT,
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"), "utf8"));
+const readOnlyV13 = x.frozenRuntimePaths(x.ROOT, qcp);
+assert.equal(readOnlyV13.length, 108); count++;
+negative(() => x.frozenRuntimePaths(x.ROOT,
+  {dependency_resolvers:{V13_RUNTIME_SEMANTIC_CLOSURE:{kind:"GENERATED_GRAPH_OUTPUT"}}}));
+// No tests may mutate the checked-in ARM or invoke live qualification.
+// The scoped, protected-main-adopted ARM is qualification-only. The original
+// disabled engineering/recovery ARM stays immutable and CI still fails closed.
+const legacyArm=JSON.parse(fs.readFileSync(path.join(x.ROOT,x.ARM),"utf8"));
+assert.equal(legacyArm.armed,false);assert.equal(legacyArm.mode,"DISABLED");count++;
+const isoArmRef="scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_ISOLATED_QUALIFICATION_ARM_20261010_V1.json";
+const adoptedIsoArm=JSON.parse(fs.readFileSync(path.join(x.ROOT,isoArmRef),"utf8"));
+const isoTestContext={
+  head:"a".repeat(40),main:"a".repeat(40),clean:true,
+  base_ancestor:true,frozen_runtime_identical:true,ci:false,platform:"win32",
+  now:"2026-10-10T09:05:00.000Z",
+};
+assert.equal(x.validateArm(adoptedIsoArm,"ISOLATED_QUALIFICATION",isoTestContext).isolated_run_id,"72dc0304a21a");count++;
+for(const [key,value] of [
+  ["production_recovery_authorized",true],
+  ["new_image_build_and_two_role_cutover_authorized",true],
+  ["formal_v5_arm_authorized",true],["a0_authorized",true],["o00_authorized",true],
+  ["historical_attempt_reset_authorized",true],
+  ["mode","CANONICAL_RECOVERY_REBOOTSTRAP"],["isolated_run_id","bad"],
+  ["execution_subject_binding","ANY_MAIN"],
+  ["expires_at","2026-10-12T06:00:00.000Z"],
+  ["qualification_first_base","2026-10-10T15:00:00.000Z"],
+]) negative(()=>x.validateArm({...adoptedIsoArm,[key]:value},"ISOLATED_QUALIFICATION",isoTestContext));
+// Isolated producer composition must reuse *exact* canonical primitives but
+// must never claim exact production wrapper-composition equivalence.
+// This smoke performs pure construction only, with no Provider, DB or S3 I/O.
+if (process.env.MCFT_CURRENT_ENTRY_COMPILE_TEST === "1") {
+  const code = [
+    'import {composeIsolatedMcftCap09V13ProducerCoreV1 as make,ISOLATED_V13_COMPOSITION_ID_V1 as ID} from "./scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts";',
+    'import assert from "node:assert/strict";',
+    'const config={endpoint:"http://127.0.0.1:59000",bucket:"mcft-cap09-requal-72dc0304a21a",region:"us-east-1",access_key_id:"TEST_NONSECRET",secret_access_key:"TEST_NONSECRET",allow_insecure_http_for_test:true};',
+    'const params={pool:{},epoch_id:"isolated_pure_constructor_test",subject_sha:"a".repeat(40),isolated_run_id:"72dc0304a21a",private_store:config};',
+    'const p=make(params);',
+    'assert.equal(p.isolated_composition_id,ID);',
+    'assert.equal(p.production_wrapper_composer_reused,false);',
+    'assert.equal(p.production_canonical_primitive_implementations_reused,true);',
+    'assert.throws(()=>make({...params,private_store:{...config,bucket:"geox-mcft-cap09-formal-raw-v1"}}),/ISOLATED_PRODUCER_RUN_SCOPED_BUCKET_REQUIRED/);',
+    'assert.throws(()=>make({...params,private_store:{...config,endpoint:"https://production.example"}}),/ISOLATED_PRODUCER_LOOPBACK_STORAGE_REQUIRED/);',
+    'console.log(JSON.stringify({status:"PASS",qualification_only:true,provider_requests:0,db_writes:0,production_wrapper_reused:false}));',
+  ].join("\n");
+  const result=cp.spawnSync(process.execPath,["--import","tsx","--input-type=module","-e",code],
+    {cwd:x.ROOT,encoding:"utf8",timeout:30000,maxBuffer:4*1024*1024});
+  assert.equal(result.status,0,"ISOLATED_COMPOSITION_PURE_CONSTRUCTOR_TEST_FAILED:"+result.stderr);
+  assert.match(result.stdout,/"status":"PASS"/);
+  count++;
+  const v2=fs.readFileSync(path.join(__dirname,
+    "RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"),"utf8");
+  assert(v2.includes("production_canonical_core_identical: false"),
+    "ISOLATED_PRODUCER_MUST_NOT_CLAIM_EXACT_PRODUCTION_WRAPPER");
+  assert(!v2.includes("composeMcftCap09V13ForcingProducerCoreV1({"),
+    "FROZEN_PRODUCTION_BUCKET_WRAPPER_MUST_NOT_BE_INVOKED");
+  count++;
+}
+const context = {head: "a".repeat(40), main: "a".repeat(40), clean: true, base_ancestor: true, frozen_runtime_identical: true, ci: false, platform: "win32", now: "2026-10-10T02:00:00.000Z"};
+const arm = {schema_version: "geox_mcft_cap09_current_baseline_execution_arm_v1", armed: true, mode: "ISOLATED_QUALIFICATION", adopted_base_sha: x.BASE, execution_subject_binding: "EXACT_ADOPTED_PROTECTED_MAIN", expires_at: "2026-10-10T03:00:00.000Z", qualification_first_base: "2026-10-10T09:00:00.000Z", isolated_run_id: "123456abcdef", qualification_execution_authorized: true, production_recovery_authorized: false, new_image_build_and_two_role_cutover_authorized: false, formal_v5_arm_authorized: false, a0_authorized: false, o00_authorized: false, historical_attempt_reset_authorized: false};
+assert.equal(x.validateArm(arm, arm.mode, context).execution_subject_sha, context.head); count++;
+for (const [k, v] of [["armed", false], ["mode", "CANONICAL_RECOVERY_REBOOTSTRAP"], ["adopted_base_sha", "0".repeat(40)], ["execution_subject_binding", "ANY_SHA"], ["expires_at", "2026-10-10T01:59:00.000Z"], ["qualification_first_base", "2026-10-10T08:00:00.000Z"], ["isolated_run_id", "production"], ["production_recovery_authorized", true], ["new_image_build_and_two_role_cutover_authorized", true], ...["formal_v5_arm_authorized", "a0_authorized", "o00_authorized", "historical_attempt_reset_authorized"].map(k => [k, true])]) {
+  negative(() => x.validateArm({...arm, [k]: v}, arm.mode, context));
+}
+for (const [k, v] of [["main", "b".repeat(40)], ["clean", false], ["base_ancestor", false], ["frozen_runtime_identical", false], ["ci", true], ["platform", "linux"]]) negative(() => x.validateArm(arm, arm.mode, {...context, [k]: v}));
+const temp = fs.mkdtempSync(path.join(os.tmpdir(), "geox-current-entry-tests-"));
+const previousLogRoot = process.env.GEOX_MCFT_CAP09_DURABLE_LOG_ROOT;
+try {
+  const env = {DATABASE_URL: "postgres://login:test@127.0.0.1/mcft_cap09_requal_123456abcdef_positive", BLOCKED_DATABASE_URL: "postgres://login:test@127.0.0.1/mcft_cap09_requal_123456abcdef_negative", MCFT_CAP09_FORMAL_RAW_ENDPOINT: "http://127.0.0.1:9000", MCFT_CAP09_FORMAL_RAW_BUCKET: "mcft-cap09-requal-123456abcdef", MCFT_QUALIFICATION_FIRST_BASE: arm.qualification_first_base, MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR: path.join(temp, "qualification")};
+  assert.equal(x.isolatedTargets(arm, env).positive, "mcft_cap09_requal_123456abcdef_positive"); count++;
+  for (const [k, v] of [["DATABASE_URL", "postgres://login:test@production.example/geox_mcft_cap09_production_runtime_v1"], ["DATABASE_URL", env.DATABASE_URL + "?host=production.example"], ["BLOCKED_DATABASE_URL", env.DATABASE_URL], ["MCFT_CAP09_FORMAL_RAW_ENDPOINT", "https://production.example"], ["MCFT_CAP09_FORMAL_RAW_BUCKET", "geox-mcft-cap09-formal-raw-v1"], ["MCFT_QUALIFICATION_FIRST_BASE", "2026-09-02T18:00:00.000Z"], ["MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR", x.ROOT]]) negative(() => x.isolatedTargets(arm, {...env, [k]: v}));
+  const failed = {status: "FAIL", phase: "GFS_PAIR_WAIT", owner_verified: true, operator_reconciliation_required: true, image_id: "sha256:b2eed3f3845ce4ba45627da028ecc7a04947dd03223698d65cebacf10c659456", formal_v5_arm: false, a0_execution: false, o00_started: false};
+  const bytes = Buffer.from(JSON.stringify(failed)), digest = "sha256:" + crypto.createHash("sha256").update(bytes).digest("hex");
+  const a = {...arm, mode: "CANONICAL_RECOVERY_REBOOTSTRAP", qualification_execution_authorized: false, production_recovery_authorized: true, new_image_build_and_two_role_cutover_authorized: true, source_failed_receipt_sha256: digest, stage_ref: "docs/stage.json", execution_subject_sha: context.head};
+  x.validateArm(a, a.mode, context); count++;
+  const reconciled = recovery.reconcile(failed, a, bytes);
+  assert.equal(reconciled.current_evidence_health_required_before_rebootstrap, false);
+  assert.equal(reconciled.current_owner_health_and_renewal_required_after_rebootstrap, true); count++;
+  negative(() => recovery.reconcile(failed, {...a, source_failed_receipt_sha256: "sha256:" + "0".repeat(64)}, bytes));
+  for (const [k, v] of [["owner_verified", false], ["phase", "PRECHECK"], ["formal_v5_arm", true], ["image_id", "sha256:" + "0".repeat(64)]]) negative(() => recovery.reconcile({...failed, [k]: v}, a, bytes));
+  const receipt = path.join(temp, "failed.json"); fs.writeFileSync(receipt, bytes);
+  const logRoot = path.join(temp, "logs"); fs.mkdirSync(path.join(logRoot, "evidence"), {recursive: true});
+  const log = path.join(logRoot, "evidence/runtime.log"), history = Array(3).fill(JSON.stringify({runtime_role: "EVIDENCE_RUNTIME", failure_token: "PRODUCTION_EVIDENCE_HOST_PLANNER_GFS_MISSED_WINDOW"})).join("\n") + "\n";
+  fs.writeFileSync(log, history); process.env.GEOX_MCFT_CAP09_DURABLE_LOG_ROOT = logRoot;
+  let called = 0;
+  const out = path.join(temp, "recovery");
+  const r = recovery.execute(a, receipt, bytes, a.stage_ref, out, argv => {
+    called++; assert(argv[0].endsWith("RUN_MCFT_CAP_09_AM22_GFS_BOOTSTRAP_CUTOVER_V1.cjs"));
+    const child = path.join(out, "new-window"); fs.mkdirSync(child);
+    fs.writeFileSync(path.join(child, "result.json"), JSON.stringify({status: "PASS", subject_sha: a.execution_subject_sha, stage_ref: a.stage_ref, production_owner_cutover_observed: true, evidence_acquisition_observed: true, formal_v5_arm: false, a0_execution: false, o00_started: false}));
+    fs.appendFileSync(log, "new health record\n"); return 0;
+  });
+  assert.equal(called, 1); assert.equal(r.historical_attempt_reset, false);
+  assert.equal(fs.readFileSync(path.join(out, "historical-evidence-runtime.log"), "utf8"), history);
+  assert.deepEqual(fs.readFileSync(receipt), bytes); count++;
+  negative(() => recovery.execute({...a, armed: false}, receipt, bytes, a.stage_ref, path.join(temp, "unauthorized"), () => { called++; }));
+  assert.equal(called, 1); assert(!fs.existsSync(path.join(temp, "unauthorized")));
+  negative(() => recovery.execute(a, receipt, bytes, a.stage_ref, out, () => { called++; }));
+  assert.equal(called, 1);
+  for (const [file, args] of [["RUN_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_V2.cjs", ["--operator-authorized", "--execute", "--failed=/does-not-exist"]], ["RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs", ["--operator-authorized", "--execute", "--all"]]]) {
+    const r = cp.spawnSync(process.execPath, [path.join(__dirname, file), ...args], {encoding: "utf8", env: {...process.env, CI: "1"}});
+    assert.equal(r.status, 1); assert.match(r.stderr, /CURRENT_EXECUTION_NOT_ARMED/); count++;
+  }
+} finally {
+  if (previousLogRoot === undefined) delete process.env.GEOX_MCFT_CAP09_DURABLE_LOG_ROOT; else process.env.GEOX_MCFT_CAP09_DURABLE_LOG_ROOT = previousLogRoot;
+  fs.rmSync(temp, {recursive: true, force: true});
+}
+console.log(JSON.stringify({status: "PASS", test_count: count, qualification: "ENGINEERING_ENTRY_BOUNDARY_ONLY", real_provider_requests: 0, production_writes: 0, live_owner_proven: false, producer_qualified: false, timing_qualified: false}));

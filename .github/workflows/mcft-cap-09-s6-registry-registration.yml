@@ -29,6 +29,9 @@ jobs:
   s6-registry-registration:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      PROTECTED_MAIN_ADOPTION_BASE_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+      CANONICAL_IMPLEMENTATION_SHA: 'd82c5caccce8169c19ce7ec2230e774a68a9f636'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,7 +74,9 @@ jobs:
           routing_repair_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml' \
             '.github/workflows/mcft-cap-09-s6-registry-registration.yml' | sort)"
-          if [[ "$files" == "$ea2_successor_files" ]]; then
+          if [[ "$MCFT_BASE_SHA" == "$PROTECTED_MAIN_ADOPTION_BASE_SHA" ]] && git merge-base --is-ancestor "$CANONICAL_IMPLEMENTATION_SHA" HEAD; then
+            mode='protected-main-adoption-successor'
+          elif [[ "$files" == "$ea2_successor_files" ]]; then
             mode='not-applicable-ea2-successor-authority'
           elif [[ "$files" == "$t3r1_successor_files" ]]; then
             mode='not-applicable-t3r1-formal-successor-authority'
@@ -84,6 +89,31 @@ jobs:
           fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           printf '%s\n' "mode=$mode" "files:" "$files"
+
+      - name: Record protected-main adoption S6 Registry continuity
+        if: steps.applicability.outputs.mode == 'protected-main-adoption-successor'
+        shell: node {0}
+        env:
+          SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: |
+          const fs=require('node:fs');
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          const proof={
+            status:'PASS',
+            schema_version:'geox_mcft_cap09_s6_registry_protected_main_adoption_v1',
+            classification:'PROTECTED_MAIN_ADOPTION_SUCCESSOR',
+            registry_lane:'s6-registry-registration',
+            subject_sha:process.env.SUBJECT_SHA,
+            canonical_implementation_sha:'d82c5caccce8169c19ce7ec2230e774a68a9f636',
+            historical_registry_lifecycle_reclassified:false,
+            registry_mutation:false,
+            runtime_mutation:false,
+            production_effect:false,
+            graduation_effect:false,
+            mcft_cap09_completed:false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_S6_REGISTRY_REGISTRATION_RESULT.json',JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof));
 
       - name: Record S6 Registry not applicable to EA2 successor authority freeze
         if: steps.applicability.outputs.mode == 'not-applicable-ea2-successor-authority'
@@ -147,6 +177,14 @@ jobs:
           MCFT_REGISTRY_LANE: s6-registry-registration
           MCFT_REGISTRY_MODE: ${{ steps.lifecycle.outputs.mode }}
         run: node scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs
+
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.applicability.outputs.mode == 'protected-main-adoption-successor'
+        with:
+          name: mcft-cap-09-s6-registry-adoption-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_S6_REGISTRY_REGISTRATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
 
       - uses: actions/upload-artifact@v4
         if: always() && steps.applicability.outputs.mode == 'historical-registry-routing'

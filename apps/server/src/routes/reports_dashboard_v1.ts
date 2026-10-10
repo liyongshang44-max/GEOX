@@ -132,7 +132,7 @@ async function queryScopedOperations(
   if (scopedFieldIds && scopedFieldIds.length > 0) params.push(scopedFieldIds);
 
   const q = await pool.query(
-    `SELECT COALESCE(operation_id, operation_plan_id) AS operation_id, field_id
+    `SELECT operation_plan_id AS operation_id, field_id
        FROM operation_plan_index_v1
       WHERE tenant_id = $1
         AND project_id = $2

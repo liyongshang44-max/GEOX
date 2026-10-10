@@ -1,0 +1,65 @@
+name: MCFT CAP-09 T4R1 Thermal Biological Stage Authority
+
+on:
+  pull_request:
+    branches:
+      - docs/dt02-amendment03-biological-stage-authority
+    paths:
+      - apps/server/src/domain/twin_runtime/biological_stage_authority_v1.ts
+      - apps/server/src/domain/twin_runtime/biological_stage_authority_v1.test.ts
+      - docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json
+      - scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py
+      - scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.cjs
+      - .github/workflows/mcft-cap-09-t4r1-thermal-biological-stage-authority-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MCFT_CAP09_T4R1_THERMAL_STAGE_BASE_SHA: 17eb06c4c79f36e51b88561395f8e69cd86195b7
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Server typecheck
+        run: pnpm run typecheck:server
+
+      - name: Biological-stage resolver tests
+        run: node --import tsx --test apps/server/src/domain/twin_runtime/biological_stage_authority_v1.test.ts
+
+      - name: Exact changed-file and authority gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.cjs
+
+      - name: Live read-only T4R1 thermal source probe
+        run: python3 scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py
+
+      - name: Upload derived qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t4r1-thermal-biological-stage-authority
+          path: |
+            acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90

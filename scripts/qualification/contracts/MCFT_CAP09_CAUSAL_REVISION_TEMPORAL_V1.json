@@ -1,0 +1,38 @@
+{
+  "schema_version": "geox_qualification_contract_v1",
+  "contract_id": "MCFT_CAP09_CAUSAL_REVISION_TEMPORAL_V1",
+  "contract_version": 1,
+  "run_class": "L2_CONTROLLED_STATEFUL",
+  "authority_ceiling": "QUALIFICATION_EVIDENCE_PRODUCER_ONLY",
+  "pilot_base_sha": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+  "frozen_runtime_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+  "semantic_revision_sha": "9ffecd38d3093c4a3f566ee996e3ad00aaf6004a",
+  "runtime_source_path": "apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts",
+  "runtime_source_blob_sha": "5e132eb1b307f908dea6118292fb8e0e9d53084c",
+  "qualification_basis_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CAUSAL-REVISION-TEMPORAL-SEMANTICS-QUALIFICATION-BASIS-V1.json",
+  "runtime_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_POSTGRES_V1.ts",
+  "basis_acceptance_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CAUSAL_REVISION_TEMPORAL_SEMANTICS_QUALIFICATION_BASIS_V1.cjs",
+  "postgres_image_policy": "CALLER_MUST_SUPPLY_EXACT_NAME_AT_SHA256_DIGEST",
+  "workspace_policy": "DETACHED_EXACT_SHA_ISOLATED_WORKTREE",
+  "database_policy": "EPHEMERAL_LOCALHOST_POSTGRES_ONLY",
+  "github_actions_execution": "FORBIDDEN",
+  "required_proof_surface": [
+    "real_postgresql_persistence",
+    "logical_time_cutoff",
+    "causal_latest_selection",
+    "future_revision_backward_leakage_rejected",
+    "future_event_leakage_fail_closed",
+    "ambiguous_revision_fail_closed",
+    "restart_replay_determinism"
+  ],
+  "non_effects": {
+    "runtime_mutation": false,
+    "production_mutation": false,
+    "production_owner_cutover": false,
+    "formal_v5_arm": false,
+    "a0": false,
+    "o00_o23": false,
+    "stage_1b_closure_claim": false,
+    "mcft_cap09_completion_claim": false
+  }
+}

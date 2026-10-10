@@ -1,0 +1,70 @@
+{
+  "schema_version": "geox_mcft_cap09_t4r1_current_crop_refresh_request_v1",
+  "request_id": "GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-2026-09-04T04Z-V1",
+  "status": "QUALIFICATION_ONLY_REQUESTED",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "protected_main_base_sha": "ef9f7d45114c98c16ad57ce69226323935f685db",
+  "scope": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "site_id": "KBS_MCSE_T4R1",
+    "field_id": "field_kbs_mcse_t4r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t4r1_crop_formal_v1",
+    "crop": "corn",
+    "hybrid_product_code": "43-96P"
+  },
+  "qualification_snapshot": {
+    "as_of_logical_time": "2026-09-04T04:00:00.000Z",
+    "temperature_start_local_date": "2026-05-27",
+    "last_complete_temperature_local_date": "2026-09-03",
+    "timezone": "America/Detroit",
+    "local_day_complete_boundary_utc": "2026-09-04T04:00:00.000Z",
+    "future_observations_authorized": false,
+    "full_season_ex_post_normalization_authorized": false
+  },
+  "qualification_time": "2026-09-04T04:50:00.000Z",
+  "forward_stability_hours": 30,
+  "architecture_effectiveness": {
+    "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json",
+    "sha256": "sha256:acffd98b6e014db4d11a3374a50a2e576be3396aef33ed456f7ee104ee72a1c6",
+    "must_precede_or_equal_stage_snapshot": true,
+    "may_not_be_reissued_solely_to_refresh_stage_data": true
+  },
+  "previous_effective_current_crop_authority": {
+    "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-V1.json",
+    "sha256": "sha256:372163dc04c306b37d2874f77be3b4ba0a167ae8d6198ce6ecc1411f2d35f9fb",
+    "immutable_historical_input": true,
+    "overwrite_forbidden": true
+  },
+  "target_artifact": {
+    "ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json",
+    "must_be_immutable": true,
+    "must_not_replace_running_preformal_mount": true
+  },
+  "qualification_policy": {
+    "fresh_live_lifecycle_requalification_required": true,
+    "fresh_live_thermal_stage_requalification_required": true,
+    "derived_stage_must_not_be_relabelled_observed": true,
+    "lifecycle_independent_from_stage": true,
+    "architecture_effectiveness_is_persistent_after_effective_merge": true,
+    "rolling_stage_refresh_may_reference_prior_effective_architecture_certificate": true,
+    "qualification_host_may_be_github_actions": true,
+    "production_runtime_host_may_be_github_actions": false
+  },
+  "non_effects": {
+    "runtime_config_write_authorized": false,
+    "database_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "production_runtime_restart_authorized": false,
+    "production_runtime_start_authorized": false,
+    "production_owner_activation_authorized": false,
+    "formal_v5_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "mcft_cap09_completed": false
+  }
+}

@@ -1,0 +1,68 @@
+name: MCFT CAP-09 AM22 admission V2 prequalification
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-am22-admission-v2-prequalification.yml'
+      - '**/*AM22*V2*'
+      - '**/*AM22*V1*'
+      - 'apps/server/src/runtime/*_v2.ts'
+permissions:
+  contents: read
+jobs:
+  unit-prequalification:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: am22_o00
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d am22_o00"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - run: corepack enable && corepack prepare pnpm@9.15.4 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @geox/contracts build
+      - run: pnpm --filter @geox/control-kernel build
+      - run: pnpm --filter @geox/device-skills build
+      - run: pnpm --filter @geox/skill-registry build
+      - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_CLOCK_V2.cjs
+      - run: node --import tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_EVIDENCE_HANDOFF_V2.ts
+      - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_CANDIDATE_ARTIFACT_BINDING_V2.cjs
+      - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_PREQUALIFICATION_BOUNDARY_V1.cjs
+      - run: node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs
+      - run: pnpm exec tsc --noEmit -p apps/server/tsconfig.json
+      - name: New clock to unchanged Runtime A0 and O00 in isolated PostgreSQL
+        env:
+          AM22_ISOLATED_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/am22_o00
+        run: node --import tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_CLOCK_RUNTIME_ISOLATED_O00_V1.ts
+      - name: Reject production entry before any external effect
+        shell: bash
+        run: |
+          set +e
+          node --import tsx apps/server/src/runtime/mcft_cap09_am22_evidence_owner_entry_v2.ts > /tmp/am22-entry.txt 2>&1
+          result=$?
+          set -e
+          test "$result" -ne 0
+          grep -q 'AM22_EFFECTIVE_PRODUCTION_QUALIFICATION_REQUIRED' /tmp/am22-entry.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: am22-clock-runtime-isolated-o00-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_AM22_CLOCK_RUNTIME_ISOLATED_O00_RESULT.json
+          if-no-files-found: warn

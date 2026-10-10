@@ -1,0 +1,110 @@
+{
+  "schema_version": "b09af_non_mcft_eligibility_authorization_gate_matrix_v1",
+  "phase": "B-09af",
+  "status": "ANALYSIS_ONLY_AUTHORIZATION_MATRIX",
+  "stacked_base_product_head": "6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8",
+  "purpose": "Compress qualified-but-unauthorized B-Line Decision Eligibility proposals into the smallest actionable authorization sequence.",
+  "immediate_non_mcft_authorization_gates": [
+    {
+      "priority": 1,
+      "decision_id": "DEC-BLINE-IRRIGATE-STATE-CALCULATION-SHADOW-BINDING-001",
+      "phase": "B-09ae",
+      "why_now": "Directly unlocks shadow-only STATE support through existing B06b/B07c/B09j capabilities with no MCFT dependency and no decision_time dependency.",
+      "implementation_scope_if_authorized": [
+        "same immutable recommendation skill_trace -> canonical CalculationResult shadow",
+        "deterministic calculation identity",
+        "exact Judge/source-input congruence gate",
+        "B02 runtime-edge registration",
+        "existing B07c STATE precursor only"
+      ]
+    },
+    {
+      "priority": 2,
+      "decision_id": "DEC-BLINE-CANDIDATE-DECISION-BOUNDARY-001",
+      "phase": "B-09y",
+      "why_now": "Unlocks canonical decision_time and causal as-of Context/Program binding required by policy selection and future ActionWindow materialization.",
+      "implementation_scope_if_authorized": [
+        "BoundaryEnvelope contract/identity",
+        "exact scoped FieldProgram fact binding without latest fallback",
+        "shadow-only boundary/context binding",
+        "Candidate/Context/Calculation decision_time propagation",
+        "B02 topology"
+      ]
+    }
+  ],
+  "qualified_but_not_immediately_actionable": [
+    {
+      "decision_id": "DEC-BLINE-IRRIGATE-ELIGIBILITY-POLICY-CONTENT-001",
+      "phase": "B-09w",
+      "reason": "Real declaration still needs concrete Program scope/policy identity and criterion support."
+    },
+    {
+      "decision_id": "DEC-BLINE-ACTION-WINDOW-SEMANTICS-001",
+      "phase": "B-09z",
+      "reason": "No numeric ActionWindow horizon authority exists."
+    },
+    {
+      "decision_id": "DEC-BLINE-ACTION-WINDOW-HORIZON-AUTHORITY-TOPOLOGY-001",
+      "phase": "B-09ab",
+      "reason": "Concrete horizon value source remains absent."
+    },
+    {
+      "decision_id": "DEC-BLINE-ELIGIBILITY-POLICY-V2-ACTION-WINDOW-CONTRACT-001",
+      "phase": "B-09ac",
+      "reason": "Successor implementation and numeric policy content are not yet justified."
+    }
+  ],
+  "hard_blockers": [
+    {
+      "item": "ACTION_WINDOW_NUMERIC_HORIZON",
+      "source": "B-09ad",
+      "blocker": "NO_AUTHORIZED_ACTION_SPECIFIC_HORIZON_VALUE_BASIS"
+    },
+    {
+      "item": "FORECAST",
+      "source": "MCFT-9",
+      "blocker": "FROZEN_EXTERNAL_DEPENDENCY"
+    }
+  ],
+  "final_connection_gate": {
+    "item": "B07E_RUNTIME_CONNECTION",
+    "state": "DISCONNECTED",
+    "authorization": "SEPARATE_EXPLICIT_AUTHORIZATION_REQUIRED",
+    "prerequisites": [
+      "selected canonical policy",
+      "Candidate decision_time bound",
+      "Context bound",
+      "STATE canonical support bound",
+      "FORECAST canonical support bound",
+      "ACTION_WINDOW canonical support bound",
+      "all required criterion refs/provenance available at one decision boundary"
+    ]
+  },
+  "recommended_execution_order": [
+    "Authorize and implement B-09ae STATE shadow binding",
+    "Authorize and implement B-09y decision-boundary + Context as-of shadow",
+    "Re-audit non-MCFT readiness",
+    "Resolve ActionWindow numeric product authority separately",
+    "Wait for MCFT-9 COMPLETE and separately authorize Forecast integration",
+    "Authorize concrete IRRIGATE policy identity/scope/declaration",
+    "Prove B09v selector on bound shadow data",
+    "Only then request separate B07e runtime-connection authorization"
+  ],
+  "authorization_semantics": {
+    "generic_continue_is_not_authorization": true,
+    "no_decision_is_authorized_by_b09af": true,
+    "matrix_is_analysis_only": true
+  },
+  "non_effects": {
+    "runtime_change": false,
+    "schema_change": false,
+    "db_change": false,
+    "route_change": false,
+    "graph_edge_change": false,
+    "policy_change": false,
+    "authorization_granted": false,
+    "b07e_connection": false,
+    "mcft_change": false,
+    "authority_removal": false
+  }
+}

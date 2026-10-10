@@ -1,0 +1,56 @@
+{
+  "schema_version": "geox_mcft_cap09_qualification_execution_migration_pilot_v1",
+  "record_status": "PILOT_IMPLEMENTATION_CANDIDATE_FOR_CTO_REVIEW",
+  "mandate": "GEOX QUALIFICATION EXECUTION MIGRATION — CTO Migration Mandate V1 — 2026-09-30",
+  "pilot_source_head": "da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9",
+  "protected_main_at_pilot_start": "8f63c498bd48978e2dd525ad57b6b8fdb7ada560",
+  "frozen_runtime": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+  "scope": "QMIG_01_THROUGH_QMIG_05_ONLY",
+  "pilot_contract": "MCFT_CAP09_CAUSAL_REVISION_TEMPORAL_V1",
+  "qualification_class": "L2_CONTROLLED_STATEFUL",
+  "dual_lane": {
+    "old_github_lane": "HISTORICAL_FALLBACK_COMPARISON_ONLY",
+    "new_controlled_lane": "SUCCESSOR_ARCHITECTURE_CANDIDATE",
+    "old_lane_remains_unchanged_during_pilot": true,
+    "old_lane_result_must_not_be_relabelled": true,
+    "new_lane_result_must_not_satisfy_qcp_until_qmig_06_07": true,
+    "old_lane_supersession_requires": {
+      "local_replacement_pass": true,
+      "github_verifier_pass": true,
+      "qcp_integration_pass": true
+    }
+  },
+  "mechanical_isolation": {
+    "github_actions_l2_l3_execution_forbidden": true,
+    "existing_github_workflow_change_in_pilot_forbidden": true,
+    "runtime_source_change_forbidden": true,
+    "exact_clean_subject_required": true,
+    "detached_isolated_worktree_required": true,
+    "isolated_postgres_required": true,
+    "postgres_exact_digest_required": true,
+    "production_credentials_required": false,
+    "production_mutation_forbidden": true,
+    "evidence_package_finalization_in_place_mutation_forbidden": true
+  },
+  "qmig_status": {
+    "QMIG_01_host_bootstrap": "IMPLEMENTED_FOR_PILOT_REVIEW",
+    "QMIG_02_environment_fingerprint": "IMPLEMENTED_FOR_PILOT_REVIEW",
+    "QMIG_03_generic_qualification_runner": "IMPLEMENTED_FOR_PILOT_REVIEW",
+    "QMIG_04_evidence_package_v1": "IMPLEMENTED_FOR_PILOT_REVIEW",
+    "QMIG_05_causal_revision_temporal_proof": "WIRED_TO_EXISTING_REAL_POSTGRES_ACCEPTANCE_AWAITING_CONTROLLED_HOST_EXECUTION",
+    "QMIG_06_github_evidence_verifier": "NOT_STARTED_BY_SEQUENCE",
+    "QMIG_07_qcp_external_manifest": "NOT_STARTED_BY_SEQUENCE"
+  },
+  "authority_ceiling": {
+    "qualification_host_is_authority_system": false,
+    "qualification_host_role": "EVIDENCE_PRODUCER",
+    "runtime_semantic_change": false,
+    "production_code_change": false,
+    "new_mcft_capability": false,
+    "formal_v5_arm": false,
+    "a0": false,
+    "o00_o23": false,
+    "cap09_completion_claim": false
+  },
+  "stop_conditions_preserved": true
+}

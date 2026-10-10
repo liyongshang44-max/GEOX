@@ -189,13 +189,12 @@ function isFormalAcceptancePayload(payload: any): boolean {
 function hasExecutedReceiptStatus(statusRaw: unknown): boolean {
   const status = String(statusRaw ?? "").trim().toUpperCase();
   if (!status) return false;
-  return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"].includes(status);
+  return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED"].includes(status);
 }
 function transitionToTimelineType(statusRaw: string): TimelineType | null {
   const status = statusRaw.toUpperCase();
   if (["CREATED", "PROPOSED"].includes(status)) return "RECOMMENDATION_CREATED";
   if (["PENDING_APPROVAL", "APPROVED", "REJECTED"].includes(status)) return "APPROVAL_DECIDED";
-  if (["READY", "DISPATCHED"].includes(status)) return "TASK_CREATED";
   if (["EXECUTING", "IN_PROGRESS", "RUNNING"].includes(status)) return "EXECUTING";
   if (["SUCCEEDED", "SUCCESS", "DONE"].includes(status)) return "SUCCEEDED";
   if (["FAILED", "ERROR"].includes(status)) return "FAILED";
@@ -220,7 +219,7 @@ function timelineLabel(type: TimelineType): string {
 }
 function statusFromTransitionForTechnicalProjection(statusRaw: string): OperationStateV1["final_status"] | null {
   const s = statusRaw.toUpperCase();
-  if (["EXECUTING", "RUNNING", "IN_PROGRESS", "DISPATCHED", "READY", "APPROVED"].includes(s)) return "RUNNING";
+  if (["EXECUTING", "RUNNING", "IN_PROGRESS"].includes(s)) return "RUNNING";
   if (["FAILED", "ERROR", "REJECTED", "SUCCEEDED", "SUCCESS", "DONE"].includes(s)) return "PENDING_ACCEPTANCE";
   if (s) return "PENDING";
   return null;
@@ -365,7 +364,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     for (const reason of evidenceEvaluation.blocking_reasons ?? []) blockingReasons.add(String(reason));
     for (const reason of acceptance.missing ?? []) blockingReasons.add(String(reason));
     if (manualFallbackFact) blockingReasons.add("manual_fallback_present");
-    const finalStatusNormalized: OperationStateV1["final_status"] = formalStatus === "FORMAL_PASS" ? "SUCCESS" : formalStatus === "FORMAL_FAIL" ? "FAILED" : receipt && executedReceipt ? "PENDING_ACCEPTANCE" : statusFromTransitionForTechnicalProjection(latestTransition) ?? (task_id ? "RUNNING" : "PENDING");
+    const finalStatusNormalized: OperationStateV1["final_status"] = formalStatus === "FORMAL_PASS" ? "SUCCESS" : formalStatus === "FORMAL_FAIL" ? "FAILED" : receipt && executedReceipt ? "PENDING_ACCEPTANCE" : statusFromTransitionForTechnicalProjection(latestTransition) ?? "PENDING";
     const latestPlanPayload = allPlanFacts[allPlanFacts.length - 1]?.record_json?.payload ?? payload;
     const inferredFieldId = latestNonEmpty(allPlanFacts, (planFact) => toText(planFact.record_json?.payload?.field_id ?? planFact.record_json?.payload?.target?.ref)) ?? toText(rec?.record_json?.payload?.field_id);
     const inferredSeasonId = toText(latestPlanPayload.season_id ?? rec?.record_json?.payload?.season_id);

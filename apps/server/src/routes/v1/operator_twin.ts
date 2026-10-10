@@ -959,44 +959,19 @@ async function latestRootZoneScenarioSetById(
 ): Promise<Row | null> {
   if (!scope.tenantId || !scope.projectId || !scope.groupId || !scope.fieldId || !scope.zoneId) return null;
   if (!(await tableExists(pool, "root_zone_irrigation_scenario_set_index_v1"))) return null;
-  const result = await pool
-    .query(
-      `SELECT *
-         FROM root_zone_irrigation_scenario_set_index_v1
-        WHERE tenant_id = $1
-          AND project_id = $2
-          AND group_id = $3
-          AND field_id = $4
-          AND zone_id = $5
-          AND scenario_set_id = $6
-        ORDER BY updated_at DESC NULLS LAST, computed_at DESC NULLS LAST
-        LIMIT 1`,
-      [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId, scope.zoneId, scenarioSetId],
-    )
-    .catch(() => ({ rows: [] as Row[] }));
-  return result.rows?.[0] ?? null;
-}
-
-async function latestRootZoneScenarioSetCandidateById(
-  pool: Pool,
-  tenantId: string,
-  fieldId: string,
-  scenarioSetId: string,
-): Promise<Row | null> {
-  if (!tenantId || !fieldId || !scenarioSetId) return null;
-  if (!(await tableExists(pool, "root_zone_irrigation_scenario_set_index_v1"))) return null;
-  const result = await pool
-    .query(
-      `SELECT *
-         FROM root_zone_irrigation_scenario_set_index_v1
-        WHERE tenant_id = $1
-          AND field_id = $2
-          AND scenario_set_id = $3
-        ORDER BY updated_at DESC NULLS LAST, computed_at DESC NULLS LAST
-        LIMIT 1`,
-      [tenantId, fieldId, scenarioSetId],
-    )
-    .catch(() => ({ rows: [] as Row[] }));
+  const result = await pool.query(
+    `SELECT *
+       FROM root_zone_irrigation_scenario_set_index_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND field_id = $4
+        AND zone_id = $5
+        AND scenario_set_id = $6
+      ORDER BY updated_at DESC NULLS LAST, computed_at DESC NULLS LAST
+      LIMIT 1`,
+    [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId, scope.zoneId, scenarioSetId],
+  );
   return result.rows?.[0] ?? null;
 }
 
@@ -1069,15 +1044,7 @@ async function buildOperatorRootZoneScenarioRecommendationSubmission(
     },
     params.scenarioSetId,
   );
-  const candidateRow =
-    scopedRow ??
-    (await latestRootZoneScenarioSetCandidateById(
-      pool,
-      tenantId,
-      params.fieldId,
-      params.scenarioSetId,
-    ));
-  const scenarioSet = candidateRow ? mapRootZoneIrrigationScenarioSetRowV1(candidateRow) : null;
+  const scenarioSet = scopedRow ? mapRootZoneIrrigationScenarioSetRowV1(scopedRow) : null;
   const submission = buildRootZoneScenarioRecommendationSubmissionV1({
     tenant_id: tenantId,
     project_id: safeText(body.project_id),

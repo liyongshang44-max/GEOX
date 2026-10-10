@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActAnyScopeV0 } from "../../auth/ao_act_authz_v0.js";
+import { requireAoActAnyScopeV0, requireAoActScopeV0 } from "../../auth/ao_act_authz_v0.js";
 import { requireFieldAllowedOr404V1, tenantFromBodyOrAuthV1, tenantFromQueryOrAuthV1 } from "../../auth/tenant_scope_v1.js";
 import { FertilizationBridgeErrorV1, FertilizationVariableBridgeV1 } from "../../services/fertilization/fertilization_bridge_v1.js";
 import { FertilizationServiceErrorV1, FertilizationServiceV1 } from "../../services/fertilization/fertilization_service_v1.js";
@@ -44,6 +44,15 @@ function requireFertilizationReadAuth(req: any, reply: FastifyReply) {
     "ao_act.index.read",
     "security.admin",
   ]);
+}
+
+function requireFertilizationAcceptanceAuth(req: any, reply: FastifyReply) {
+  const auth = requireAoActScopeV0(req, reply, "acceptance.evaluate");
+  if (!auth) return null;
+  const role = String(auth.role ?? "").trim();
+  if (role === "admin" || role === "operator") return auth;
+  reply.status(403).send({ ok: false, error: "ACCEPTANCE_EVALUATE_ROLE_DENIED" });
+  return null;
 }
 
 function handleServiceError(reply: FastifyReply, error: unknown) {
@@ -135,7 +144,7 @@ export function registerFertilizationV1Routes(app: FastifyInstance, pool: Pool):
   });
 
   app.post("/api/v1/fertilization/acceptance/evaluate", async (req, reply) => {
-    const auth = requireFertilizationWriteAuth(req, reply);
+    const auth = requireFertilizationAcceptanceAuth(req, reply);
     if (!auth) return reply;
     const body: any = req.body ?? {};
     const tenant = tenantFromBodyOrAuthV1(body, auth);

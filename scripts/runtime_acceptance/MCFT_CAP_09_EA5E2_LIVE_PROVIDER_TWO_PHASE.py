@@ -24,6 +24,34 @@ if SPEC is None or SPEC.loader is None:
 ea4 = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(ea4)
 
+GFS_CORE_PATH = ROOT / "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py"
+GFS_SPEC = importlib.util.spec_from_file_location("mcft_cap09_gfs_scientific_core_v1", GFS_CORE_PATH)
+if GFS_SPEC is None or GFS_SPEC.loader is None:
+    raise RuntimeError("EA5E2_PRODUCT_GFS_CORE_LOAD_FAILED")
+gfs_core = importlib.util.module_from_spec(GFS_SPEC)
+sys.modules[GFS_SPEC.name] = gfs_core
+GFS_SPEC.loader.exec_module(gfs_core)
+GFS_BUNDLE_DECODER_PATH = ROOT / "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py"
+GFS_BUNDLE_DECODER_SPEC = importlib.util.spec_from_file_location("mcft_cap09_gfs_raw_bundle_decoder_v1", GFS_BUNDLE_DECODER_PATH)
+if GFS_BUNDLE_DECODER_SPEC is None or GFS_BUNDLE_DECODER_SPEC.loader is None:
+    raise RuntimeError("EA5E2_PRODUCT_GFS_BUNDLE_DECODER_LOAD_FAILED")
+gfs_bundle_decoder = importlib.util.module_from_spec(GFS_BUNDLE_DECODER_SPEC)
+sys.modules[GFS_BUNDLE_DECODER_SPEC.name] = gfs_bundle_decoder
+GFS_BUNDLE_DECODER_SPEC.loader.exec_module(gfs_bundle_decoder)
+GFS_AUTHORITY = gfs_core.GfsScientificAuthorityV1(
+    point_count=int(ea4.AUTH["gfs"]["point_count"]),
+    max_lead=int(ea4.AUTH["gfs"]["max_lead"]),
+    pgrb2_grid_latitude=float(ea4.AUTH["gfs"]["pgrb2_grid_latitude"]),
+    pgrb2_grid_longitude_native=float(ea4.AUTH["gfs"]["pgrb2_grid_longitude_native"]),
+    wind_10m_to_2m_factor=float(ea4.AUTH["gfs"]["wind_10m_to_2m_factor"]),
+    station_elevation_m=float(ea4.AUTH["kbs"]["elevation_m"]),
+    station_latitude=float(ea4.AUTH["kbs"]["station_latitude"]),
+    station_longitude=float(ea4.AUTH["kbs"]["station_longitude"]),
+    solar_native_index=int(ea4.AUTH["gfs"]["solar_native_index"]),
+    solar_native_latitude=float(ea4.AUTH["gfs"]["solar_native_latitude"]),
+    solar_native_longitude_signed=float(ea4.AUTH["gfs"]["solar_native_longitude_signed"]),
+)
+
 GFS_WEATHER_BINDING = "noaa_ncep_gfs_pgrb2_kbs_nearest_72h_v1"
 GFS_ET0_BINDING = "noaa_ncep_gfs_asce_short_reference_et_same_cycle_72h_v1"
 RAIN_BINDING = "kbs_lter_raw_hourly_rain_mm_v1"
@@ -40,13 +68,7 @@ def require(condition: bool, code: str) -> None:
 
 
 def canonical_decimal_half_away_from_zero(value: float, decimals: int) -> float:
-    require(math.isfinite(value), "EA5E2_CANONICAL_DECIMAL_NONFINITE")
-    require(isinstance(decimals, int) and 0 <= decimals <= 12, "EA5E2_CANONICAL_DECIMAL_SCALE_INVALID")
-    factor = 10 ** decimals
-    scaled = abs(value) * factor
-    rounded = math.floor(scaled + 0.5 + sys.float_info.epsilon * scaled)
-    result = (-1.0 if value < 0 else 1.0) * rounded / factor
-    return 0.0 if result == 0 else result
+    return gfs_core.canonical_decimal_half_away_from_zero_v1(value, decimals)
 
 
 def iso(value: datetime) -> str:
@@ -80,10 +102,8 @@ def select_complete_gfs_cycle(tick: datetime):
     """Select the newest cycle whose PGRB2 and SFLUX inventories are both complete."""
     rejections = []
     for cycle in ea4.candidate_cycles(tick):
-        lead_start = int((tick - cycle).total_seconds() // 3600) + 1
-        lead_end = lead_start + ea4.POINT_COUNT - 1
-        support = lead_start - 1
-        if support < 0 or lead_end > ea4.MAX_LEAD:
+        window = gfs_core.lead_window_v1(tick, cycle, GFS_AUTHORITY)
+        if window is None:
             continue
         try:
             url = ea4.directory_url(cycle)
@@ -93,21 +113,18 @@ def select_complete_gfs_cycle(tick: datetime):
             require(final.hostname == "nomads.ncep.noaa.gov" and final.path == urlparse(url).path, "EA5E2_GFS_DIRECTORY_IDENTITY_DRIFT")
             ea4.retain_raw("GFS_DIRECTORY_LISTING", iso(cycle), body)
             entries = ea4.parse_directory(body)
-            for lead in range(support, lead_end + 1):
-                for name in ea4.pgrb2_names(cycle, lead):
-                    match = entries.get(name, [])
-                    require(len(match) == 1 and match[0]["size"] > 0, f"EA5E2_PGRB2_DIRECTORY_ENTRY_MISSING:{name}")
-                    require(match[0]["upper"] <= tick, f"EA5E2_PGRB2_DIRECTORY_ENTRY_AFTER_TARGET:{name}")
-            for lead in range(support, lead_end + 1):
-                for name in ea4.sflux_names(cycle, lead):
-                    match = entries.get(name, [])
-                    require(len(match) == 1 and match[0]["size"] > 0, f"EA5E2_SFLUX_DIRECTORY_ENTRY_MISSING:{name}")
-                    require(match[0]["upper"] <= tick, f"EA5E2_SFLUX_DIRECTORY_ENTRY_AFTER_TARGET:{name}")
+            window = gfs_core.validate_complete_cycle_inventory_v1(
+                entries=entries,
+                tick=tick,
+                cycle=cycle,
+                authority=GFS_AUTHORITY,
+                code_prefix="EA5E2",
+            )
             return {
                 "cycle": cycle,
-                "lead_start": lead_start,
-                "lead_end": lead_end,
-                "support": support,
+                "lead_start": window["lead_start"],
+                "lead_end": window["lead_end"],
+                "support": window["support"],
                 "directory_sha256": sha256_bytes(body),
                 "rejections": rejections,
             }
@@ -523,16 +540,15 @@ def command_selftest_gfs_selection(_args: argparse.Namespace) -> None:
     }
 
     def inventory(cycle: datetime, complete: bool) -> dict:
-        lead_start = int((target - cycle).total_seconds() // 3600) + 1
-        lead_end = lead_start + ea4.POINT_COUNT - 1
-        support = lead_start - 1
+        window = gfs_core.lead_window_v1(target, cycle, GFS_AUTHORITY)
+        require(window is not None, "EA5E2_GFS_SELFTEST_LEAD_WINDOW_REQUIRED")
         entry = {"upper": target - timedelta(minutes=1), "size": 1024}
         values = {}
-        for lead in range(support, lead_end + 1):
-            for name in (*ea4.pgrb2_names(cycle, lead), *ea4.sflux_names(cycle, lead)):
+        for lead in range(window["support"], window["lead_end"] + 1):
+            for name in (*gfs_core.pgrb2_names_v1(cycle, lead), *gfs_core.sflux_names_v1(cycle, lead)):
                 values[name] = [entry]
         if not complete:
-            values.pop(ea4.sflux_names(cycle, support)[0])
+            values.pop(gfs_core.sflux_names_v1(cycle, window["support"])[0])
         return values
 
     inventories = {b"newest": inventory(newest, False), b"older": inventory(older, True)}
@@ -559,6 +575,7 @@ def command_selftest_gfs_selection(_args: argparse.Namespace) -> None:
         "cases": 1,
         "newest_partial_cycle_rejected": True,
         "older_complete_same_cycle_selected": True,
+        "product_gfs_inventory_validation_used": True,
         "provider_request_count": 0,
         "database_write_count": 0,
     }, sort_keys=True))
@@ -586,201 +603,25 @@ def command_selftest_et0_decimal_normalization(_args: argparse.Namespace) -> Non
 
 def command_decode_gfs(args: argparse.Namespace) -> None:
     normalize_et0 = bool(getattr(args, "normalize_et0", False))
-    target = canonical_hour(args.target, "EA5E2_LIVE_GFS_DECODE_TARGET_INVALID")
-    available_at = parse_iso(args.available_at, "EA5E2_LIVE_GFS_AVAILABLE_AT_INVALID")
-    manifest, members = load_tar(Path(args.input))
-    require(manifest.get("target_logical_time") == iso(target), "EA5E2_LIVE_GFS_BUNDLE_TARGET_MISMATCH")
-    cycle = parse_iso(manifest["selected_cycle"], "EA5E2_LIVE_GFS_CYCLE_INVALID")
-    support = int(manifest["support_lead"])
-    lead_start = int(manifest["lead_start"])
-    lead_end = int(manifest["lead_end"])
-    leads = list(range(support, lead_end + 1))
-    targets = list(range(lead_start, lead_end + 1))
-    require(len(targets) == 72 and len(leads) == 73, "EA5E2_LIVE_GFS_LEAD_CARDINALITY")
-
-    by_lead = {}
-    for lead in leads:
-        body = members[f"pgrb2/f{lead:03d}.grib2"]
-        by_lead[lead] = ea4.decode_pgrb2(body, cycle, lead)
-    weather = {"temperature_c": [], "rh_percent": [], "wind_2m": [], "precip_mm": []}
-    duplicate_collapses = 0
-    for lead in targets:
-        temp = ea4.instant(by_lead[lead], "T2", lead)
-        rh = ea4.instant(by_lead[lead], "RH2", lead)
-        u = ea4.instant(by_lead[lead], "U10", lead)
-        v = ea4.instant(by_lead[lead], "V10", lead)
-        precip, collapsed = ea4.apcp(by_lead[lead], lead)
-        duplicate_collapses += collapsed
-        require(180 <= temp["value"] <= 330 and 0 <= rh["value"] <= 100 and abs(u["value"]) <= 100 and abs(v["value"]) <= 100, "EA5E2_LIVE_GFS_RAW_SANITY")
-        length = lead - ea4.block_start(lead)
-        if length == 1:
-            hourly_precip = precip["value"]
-        else:
-            previous, _ = ea4.apcp(by_lead[lead - 1], lead - 1)
-            require(previous["start_step"] == precip["start_step"], f"EA5E2_LIVE_GFS_APCP_CROSS_BLOCK:{lead}")
-            hourly_precip = precip["value"] - previous["value"]
-        require(math.isfinite(hourly_precip) and 0 <= hourly_precip <= 200, f"EA5E2_LIVE_GFS_APCP_HOURLY_INVALID:{lead}")
-        valid = cycle + timedelta(hours=lead)
-        weather["temperature_c"].append((valid, temp["value"] - 273.15))
-        weather["rh_percent"].append((valid, rh["value"]))
-        weather["wind_2m"].append((valid, math.hypot(u["value"], v["value"]) * ea4.WIND_FACTOR))
-        weather["precip_mm"].append((valid, hourly_precip))
-
-    expected = [target + timedelta(hours=index) for index in range(1, 73)]
-    for name, points in weather.items():
-        require(len(points) == 72 and [time for time, _ in points] == expected, f"EA5E2_LIVE_GFS_SERIES_ALIGNMENT:{name}")
-
-    sflux = {}
-    for lead in leads:
-        message = members[f"sflux/f{lead:03d}.grib2"]
-        sflux[lead] = ea4.decode_sflux(message, cycle, lead)
-    require(len(sflux) == 73, "EA5E2_LIVE_GFS_SFLUX_ENDPOINT_COUNT")
-    solar = []
-    for lead in targets:
-        value = (sflux[lead - 1]["value"] + sflux[lead]["value"]) / 2 * ea4.SOLAR_FACTOR
-        require(math.isfinite(value) and value >= 0, f"EA5E2_LIVE_GFS_SOLAR_INTERVAL_INVALID:{lead}")
-        solar.append((cycle + timedelta(hours=lead), value))
-    require([time for time, _ in solar] == expected, "EA5E2_LIVE_GFS_SOLAR_ALIGNMENT")
-
-    temp_map = dict(weather["temperature_c"])
-    rh_map = dict(weather["rh_percent"])
-    wind_map = dict(weather["wind_2m"])
-    solar_map = dict(solar)
-    future_et0 = []
-    for valid in expected:
-        temperature = temp_map[valid]
-        rh = rh_map[valid]
-        actual_vapor_pressure = (rh / 100.0) * 0.6108 * math.exp(17.27 * temperature / (temperature + 237.3))
-        et0 = ea4.scalar_eto(temperature, actual_vapor_pressure, solar_map[valid], wind_map[valid], valid)
-        require(math.isfinite(et0), "EA5E2_LIVE_GFS_ET0_NONFINITE")
-        future_et0.append((
-            valid,
-            canonical_decimal_half_away_from_zero(et0, ET0_CANONICAL_DECIMALS) if normalize_et0 else et0,
-        ))
-
-    decoded_at = datetime.now(timezone.utc)
-    require(available_at <= decoded_at, "EA5E2_LIVE_GFS_DECODE_BEFORE_AVAILABLE")
-    issued_at = iso(cycle)
-    valid_to = iso(target + timedelta(hours=72))
-    weather_points = []
-    et0_points = []
-    for index, valid in enumerate(expected):
-        start = valid - timedelta(hours=1)
-        weather_points.append({
-            "horizon": index + 1,
-            "valid_from": iso(start),
-            "valid_to": iso(valid),
-            "precipitation_mm": weather["precip_mm"][index][1],
-            "air_temperature_c": weather["temperature_c"][index][1],
-            "relative_humidity_percent": weather["rh_percent"][index][1],
-            "wind_speed_2m_m_s": weather["wind_2m"][index][1],
-        })
-        et0_points.append({
-            "horizon": index + 1,
-            "valid_from": iso(start),
-            "valid_to": iso(valid),
-            "et0_mm_per_hour": future_et0[index][1],
-        })
-
-    common_source_payload = {
-        "provider": "NOAA_NCEP_NOMADS",
-        "model": "GFS",
-        "selected_cycle": issued_at,
-        "target_logical_time": iso(target),
-        "lead_start": lead_start,
-        "lead_end": lead_end,
-        "support_lead": support,
-        "raw_provider_object_count": int(manifest["member_count"]),
-        "raw_member_chain_sha256": manifest["member_chain_sha256"],
-        "pgrb2_grid_latitude": ea4.GRID_LAT,
-        "pgrb2_grid_longitude_native": ea4.GRID_LON,
-        "sflux_native_index": int(ea4.AUTH["gfs"]["solar_native_index"]),
-    }
-    time_key = target.strftime("%Y%m%dT%H%M%SZ").lower()
-    cycle_key = cycle.strftime("%Y%m%dT%H%M%SZ").lower()
-    et0_quality = {
-        "status": "LIMITED",
-        "point_count": 72,
-        "solar_temporal_method": "PIECEWISE_LINEAR_ENDPOINT_INTEGRATION_V1",
-    }
-    et0_limitations = ["MODEL_DERIVED_FORECAST_ASSUMPTION", "SFLUX_SOLAR_PIECEWISE_LINEAR_LIMITED"]
-    if normalize_et0:
-        et0_quality.update({
-            "et0_decimal_normalization_id": ET0_DECIMAL_NORMALIZATION_ID,
-            "et0_decimal_places": ET0_CANONICAL_DECIMALS,
-        })
-        et0_limitations.append("CANONICAL_ET0_DECIMAL_HALF_AWAY_FROM_ZERO_12")
-    drafts = [
-        {
-            "role": "FUTURE_WEATHER_ASSUMPTION",
-            "source_record_id": f"gfs_future_weather_{cycle_key}_{time_key}",
-            "binding_id": GFS_WEATHER_BINDING,
-            "origin_source_kind": "NOAA_NCEP_NOMADS_GFS",
-            "origin_source_id": f"gfs_{cycle_key}_pgrb2_0p25_kbs",
-            "epistemic_class": "ASSUMED",
-            "available_to_runtime_at": iso(available_at),
-            "role_time": {
-                "issued_at": issued_at,
-                "retrieved_at": iso(available_at),
-                "available_to_runtime_at": iso(available_at),
-                "ingested_at": iso(decoded_at),
-                "valid_from": iso(target),
-                "valid_to": valid_to,
-            },
-            "quality": {"status": "PASS", "point_count": 72, "apcp_semantic_duplicate_collapse_count": duplicate_collapses},
-            "source_payload": common_source_payload,
-            "canonical_payload": {"snapshot_kind": "FUTURE_WEATHER_ASSUMPTION", "points": weather_points},
-            "source_unit": "GFS_NATIVE_MIXED",
-            "canonical_unit": "mm_and_meteorological_support",
-            "conversion_rule": {
-                "conversion_rule_id": "GFS_PGRB2_72H_KBS_NEAREST_AND_APCP_BLOCK_DIFFERENCE_V1",
-                "conversion_rule_version": "1",
-                "authority_ref": SOURCE_MATRIX_REF,
-            },
-            "source_binding_version": 1,
-            "limitations": ["NEAR_SITE_MODEL_GRID_POINT_SUPPORT", "DIRECT_FIELD_EQUIVALENCE_FALSE"],
-        },
-        {
-            "role": "FUTURE_ET0_ASSUMPTION",
-            "source_record_id": f"gfs_future_et0_{cycle_key}_{time_key}",
-            "binding_id": GFS_ET0_BINDING,
-            "origin_source_kind": "NOAA_NCEP_NOMADS_GFS_DERIVED",
-            "origin_source_id": f"gfs_{cycle_key}_asce_short_reference_et0_kbs",
-            "epistemic_class": "ASSUMED",
-            "available_to_runtime_at": iso(available_at),
-            "role_time": {
-                "issued_at": issued_at,
-                "retrieved_at": iso(available_at),
-                "available_to_runtime_at": iso(available_at),
-                "ingested_at": iso(decoded_at),
-                "valid_from": iso(target),
-                "valid_to": valid_to,
-            },
-            "quality": et0_quality,
-            "source_payload": {**common_source_payload, "algorithm_id": "ASCE_STANDARDIZED_REFERENCE_ET_SHORT_HOURLY_V1", "qualification_oracle": "refet-0.4.2-asce"},
-            "canonical_payload": {"snapshot_kind": "FUTURE_ET0_ASSUMPTION", "points": et0_points},
-            "source_unit": "GFS_METEOROLOGICAL_INPUTS",
-            "canonical_unit": "mm_per_hour",
-            "conversion_rule": {
-                "conversion_rule_id": "ASCE_SHORT_REFERENCE_ET0_GFS_SAME_CYCLE_WITH_SFLUX_PWL_SOLAR_V1",
-                "conversion_rule_version": "1",
-                "authority_ref": AMENDMENT04_REF,
-            },
-            "source_binding_version": 1,
-            "limitations": et0_limitations,
-        },
-    ]
+    drafts = gfs_bundle_decoder.decode_bundle_v1(
+        target_text=args.target,
+        available_at_text=args.available_at,
+        input_path=Path(args.input),
+        normalize_et0=normalize_et0,
+    )
     Path(args.output).write_text(json.dumps({"drafts": drafts}, separators=(",", ":")) + "\n", encoding="utf-8")
+    weather = drafts[0]["canonical_payload"]["points"]
+    et0 = drafts[1]["canonical_payload"]["points"]
     print(json.dumps({
         "status": "PASS",
-        "target_logical_time": iso(target),
-        "selected_cycle": issued_at,
-        "draft_count": 2,
-        "weather_point_count": len(weather_points),
-        "et0_point_count": len(et0_points),
+        "target_logical_time": args.target,
+        "draft_count": len(drafts),
+        "weather_point_count": len(weather),
+        "et0_point_count": len(et0),
+        "product_gfs_scientific_core_used": True,
+        "product_gfs_raw_bundle_decoder_used": True,
         "raw_values_emitted": False,
     }, sort_keys=True))
-
 
 def command_decode_kbs_late(args: argparse.Namespace) -> None:
     target = canonical_hour(args.target, "EA5E2_LIVE_KBS_TARGET_INVALID")

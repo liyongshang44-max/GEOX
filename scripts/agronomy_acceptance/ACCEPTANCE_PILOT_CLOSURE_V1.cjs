@@ -140,7 +140,7 @@ async function runDispatchOnce({ base, dispatchToken, tenant_id, project_id, gro
       '--tenant_id', tenant_id,
       '--project_id', project_id,
       '--group_id', group_id,
-      '--executor_id', `pilot_closure_${Date.now()}`,
+      '--executor_id', env('GEOX_EXECUTOR_ACTOR_ID', 'tok_executor_actor'),
       '--limit', '10'
     ],
     {
@@ -179,14 +179,9 @@ function bundleContainsId(bundleNode, id) {
 
   if (!token) throw new Error('MISSING_AO_ACT_TOKEN');
 
-  let tempExecutor = null;
-  let executorToken = env('AO_ACT_EXECUTOR_TOKEN', env('GEOX_AO_ACT_EXECUTOR_TOKEN', ''));
-  if (!executorToken) {
-    if (!baseRecord) throw new Error('MISSING_BASE_TOKEN_RECORD_FOR_TEMP_EXECUTOR_TOKEN');
-    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-    tempExecutor = createTempExecutorToken(baseRecord, suffix);
-    executorToken = tempExecutor.token;
-  }
+  const tempExecutor = null;
+  const executorToken = env('AO_ACT_EXECUTOR_TOKEN', env('GEOX_AO_ACT_EXECUTOR_TOKEN', env('GEOX_EXECUTOR_TOKEN', '')));
+  if (!executorToken) throw new Error('MISSING_DEDICATED_EXECUTOR_TOKEN');
 
   const triple = { tenant_id, project_id, group_id };
 

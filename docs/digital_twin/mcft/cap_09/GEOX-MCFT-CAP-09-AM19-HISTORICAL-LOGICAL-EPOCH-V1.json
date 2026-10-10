@@ -1,0 +1,118 @@
+{
+  "schema_version": "geox_mcft_cap09_am19_historical_logical_epoch_v1",
+  "epoch_id": "mcft_cap09_am19_historical_logical_20260821t190000z_v1",
+  "purpose": "AM19_PERSISTENT_PRODUCTION_GRAPH_SUCCESSOR_QUALIFICATION_ONLY",
+  "authority_ceiling": "QUALIFICATION_EVIDENCE_PRODUCER_ONLY",
+  "formal_current_season_admission": "SEPARATE_UNCHANGED_GATE",
+  "current_2026_crop_window_status": "CLOSED_NO_RETRY_NO_RECAPTURE_NO_BYPASS",
+  "historical_producer": {
+    "workflow": "mcft-cap-09-t4r1-rolling-preboundary-capture",
+    "workflow_run_id": 32509112890,
+    "job_id": 96855936898,
+    "producer_subject_sha": "91d2f518efc5c4c7796c398dabd12801949a9289",
+    "historical_artifact_id": 9458554156,
+    "historical_artifact_name": "mcft-cap09-t4r1-rolling-preboundary-20260821t190000z-91d2f518efc5c4c7796c398dabd12801949a9289",
+    "historical_artifact_zip_digest": "sha256:87efd0f477340f5bfccbb65c47878bd3622074064965594870bfdf8fdf14ca3e",
+    "historical_artifact_retention_days": 2,
+    "historical_artifact_currently_available": false,
+    "artifact_byte_reuse_required": false,
+    "immutable_provenance_reconstruction_policy": "EXACT_JOB_LOG_IDENTITIES_PLUS_RETAINED_RAW_DIGEST_REVERIFICATION"
+  },
+  "logical_epoch": {
+    "target_t": "2026-08-21T19:00:00.000Z",
+    "captured_at": "2026-08-21T18:50:07.003Z",
+    "original_candidate_expires_at": "2026-08-23T07:00:00.000Z",
+    "candidate_retention_hours": 36,
+    "temporal_authority": "PROVIDER_AVAILABILITY_WATERMARK_V1",
+    "candidate_schema_version": "geox_mcft_cap09_rolling_preboundary_candidate_v1",
+    "semantic_manifest_digest": "sha256:4123573d4a936a8d4c5c39da2d323b10426fbd156b34aa2d6866490ba7c3a132"
+  },
+  "authority_v3_historical_viability": {
+    "authority_id": "GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3",
+    "historical_qualification_run_id": 32553379098,
+    "historical_qualification_subject_sha": "5d619007cc3507a24cc62ef8bdce07e3f5df01ca",
+    "a0": "2026-08-21T19:00:00.000Z",
+    "o00": "2026-08-21T20:00:00.000Z",
+    "o23": "2026-08-22T19:00:00.000Z",
+    "required_context_count": 25,
+    "passing_context_count": 25,
+    "failing_context_count": 0,
+    "required_stage_code": "MID",
+    "backward_stability_hours": 6,
+    "forward_transition_guard_hours": 30,
+    "exact_fao_variant_count": 6,
+    "planting_time_uncertainty_carried": true,
+    "future_observations_used": false
+  },
+  "retained_raw_objects": [
+    {
+      "record_role": "SOIL",
+      "retention_ref": "s3-private://geox-mcft-cap09-formal-raw-v1/mcft-cap09-ea5e2-readiness-transient-v1/91d2f518efc5c4c7796c398dabd12801949a9289/20260821190000000/sha256/65f9bdef363f27732dfa065da170497101d5f0809fa559b7b50964cd66cfccd8",
+      "raw_sha256": "sha256:65f9bdef363f27732dfa065da170497101d5f0809fa559b7b50964cd66cfccd8",
+      "raw_bytes": 205175,
+      "retained_at": "2026-08-21T18:50:06.435Z",
+      "request_id": "ea5c2b1-kbs-soil-e7c5e88e-0e7a-4618-b58f-46b0ca4c2a2f",
+      "provider_id": "KBS_LTER",
+      "source_family": "CURRENT_WEATHER_VARIATE_JSON",
+      "source_locator": "https://lter.kbs.msu.edu/weather/variates/25",
+      "final_locator": "https://lter.kbs.msu.edu/weather/variates/25",
+      "content_type": "application/json; charset=utf-8",
+      "retrieved_at": "2026-08-21T18:50:06.276Z",
+      "available_at": "2026-08-21T18:50:06.276Z",
+      "use_policy_ref": "GEOX-MCFT-CAP-09-EA2A-KBS-SOIL-CONTINUITY-USE-POLICY-V1"
+    },
+    {
+      "record_role": "GFS",
+      "retention_ref": "s3-private://geox-mcft-cap09-formal-raw-v1/mcft-cap09-ea5e2-readiness-transient-v1/91d2f518efc5c4c7796c398dabd12801949a9289/20260821190000000/sha256/d1c317aa65aa259ecd93ccf915e21c1ee4a04fef83edce11064570e7506e176e",
+      "raw_sha256": "sha256:d1c317aa65aa259ecd93ccf915e21c1ee4a04fef83edce11064570e7506e176e",
+      "raw_bytes": 231055360,
+      "retained_at": "2026-08-21T18:30:16.141Z",
+      "request_id": "ea5e2-live-gfs-a69d2a42-f920-460b-bf15-12cbc76de09a",
+      "provider_id": "NOAA_NCEP_NOMADS_GFS",
+      "source_family": "GFS_PGRB2_SFLUX_RAW_BUNDLE",
+      "source_locator": "https://nomads.ncep.noaa.gov/",
+      "final_locator": "https://nomads.ncep.noaa.gov/",
+      "content_type": "application/x-tar",
+      "retrieved_at": "2026-08-21T18:30:15.066Z",
+      "available_at": "2026-08-21T18:30:15.066Z",
+      "use_policy_ref": "GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1",
+      "ingested_at": "2026-08-21T18:30:35.302Z"
+    }
+  ],
+  "expected_records": [
+    {
+      "record_type": "future_et0_assumption_v1",
+      "source_record_id": "gfs_future_et0_20260821t120000z_20260821t190000z",
+      "record_semantic_sha256": "sha256:ed8cfc8df843fa9a77b31ff95fb572a840d086d0c39cf9f3a4b788fb48ef3741"
+    },
+    {
+      "record_type": "future_weather_assumption_v1",
+      "source_record_id": "gfs_future_weather_20260821t120000z_20260821t190000z",
+      "record_semantic_sha256": "sha256:12657f5b5365371d1edc11e2ef715239f932aead7a21d77fa7f2cd36530b955b"
+    },
+    {
+      "record_type": "soil_moisture_observation_v1",
+      "source_record_id": "kbs_lter_variate25_vwc_100mm_v1:2026-08-21T18:45:00.000Z",
+      "record_semantic_sha256": "sha256:d3946da16da7b315e0f7f5489888b2f01ccbfb6e032a1e44836d7cbe3f7646a7"
+    }
+  ],
+  "historical_result_constraints": {
+    "semantic_manifest_match": true,
+    "producer_bound_raw_reverification": true,
+    "provider_refetch_count": 0,
+    "formal_database_write_count": 0,
+    "formal_r2_prefix_write_count": 0,
+    "runtime_write_count": 0,
+    "scheduler_write_count": 0,
+    "formal_effect": false,
+    "raw_values_emitted": false
+  },
+  "non_claims": {
+    "current_crop_window_admitted": false,
+    "formal_v5_arm": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "stage_1b_closure_claim": false,
+    "mcft_cap09_completion_claim": false
+  }
+}

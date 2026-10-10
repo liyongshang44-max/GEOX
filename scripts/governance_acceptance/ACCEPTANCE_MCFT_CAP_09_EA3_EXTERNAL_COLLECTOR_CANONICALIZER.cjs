@@ -7,6 +7,7 @@ const { execFileSync } = require('node:child_process');
 const ROOT = process.cwd();
 const BASE = process.env.MCFT_BASE_SHA || '';
 const EXPECTED_BASE = '3d79a4d670418a88398b61a6da8219771d24a89a';
+const ACCEPTED_HEAD = '08310e5f50bf5df7580b27fd35285f560320b9df';
 const F = {
   task: 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md',
   a1: 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-01-EXTERNAL-PUBLIC-EVIDENCE-AUTHORITY.md',
@@ -40,15 +41,25 @@ const result = {
 };
 
 try {
-  req(BASE === EXPECTED_BASE, `EA3_BASE_MAIN_DRIFT:${BASE}`);
+  req(/^[0-9a-f]{40}$/.test(BASE), `EA3_BASE_SHA_INVALID:${BASE}`);
+  req(git('merge-base', BASE, 'HEAD') === BASE, `EA3_BASE_NOT_ANCESTOR:${BASE}`);
   const changed = git('diff', '--name-only', `${BASE}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
   Object.assign(result, { changed_files: changed, exact_file_count: changed.length });
-  req(JSON.stringify(changed) === JSON.stringify(EXPECT), `EA3_EXACT_FIVE_FILE_BOUNDARY_FAIL:${JSON.stringify(changed)}`);
+  const historicalCandidate = BASE === EXPECTED_BASE;
+  if (historicalCandidate) {
+    req(JSON.stringify(changed) === JSON.stringify(EXPECT), `EA3_EXACT_FIVE_FILE_BOUNDARY_FAIL:${JSON.stringify(changed)}`);
+  } else {
+    req(git('merge-base', '--is-ancestor', ACCEPTED_HEAD, 'HEAD') === '', 'EA3_ACCEPTED_HEAD_NOT_ANCESTOR');
+    req(blob('HEAD', F.auth) === blob(ACCEPTED_HEAD, F.auth), 'EA3_SUCCESSOR_HISTORICAL_AUTHORITY_MUTATED');
+    req(blob('HEAD', F.acceptance) === blob(ACCEPTED_HEAD, F.acceptance), 'EA3_SUCCESSOR_HISTORICAL_ACCEPTANCE_MUTATED');
+  }
 
-  const actual = { task: blob(BASE,F.task), a1: blob(BASE,F.a1), pkg: blob(BASE,F.pkg), source: blob(BASE,F.source) };
+  const historicalRef = historicalCandidate ? BASE : ACCEPTED_HEAD;
+  const actual = { task: blob(historicalRef,F.task), a1: blob(historicalRef,F.a1), pkg: blob(historicalRef,F.pkg), source: blob(historicalRef,F.source) };
   result.predecessor_blobs = actual;
   for (const key of Object.keys(actual)) req(actual[key] === PINS[key], `EA3_PREDECESSOR_BLOB_DRIFT:${key}:actual=${actual[key]}:expected=${PINS[key]}`);
-  req(blob('HEAD', F.impl) === PINS.impl, `EA3_IMPLEMENTATION_BLOB_DRIFT:${blob('HEAD',F.impl)}`);
+  req(blob(ACCEPTED_HEAD, F.impl) === PINS.impl, `EA3_ACCEPTED_IMPLEMENTATION_BLOB_DRIFT:${blob(ACCEPTED_HEAD,F.impl)}`);
+  if (historicalCandidate) req(blob('HEAD', F.impl) === PINS.impl, `EA3_IMPLEMENTATION_BLOB_DRIFT:${blob('HEAD',F.impl)}`);
 
   const task = read(F.task), a1 = read(F.a1), impl = read(F.impl), acceptance = read(F.acceptance), workflow = read(F.workflow);
   const pkg = json(F.pkg), source = json(F.source), auth = json(F.auth);
@@ -69,7 +80,7 @@ try {
   req(source.binding_policy?.runtime_fetches_public_providers === false, 'EA3_EA2_RUNTIME_FETCH_FALSE_REQUIRED');
 
   req(auth.record_status === 'EA3_EXTERNAL_COLLECTOR_CANONICALIZER_CANDIDATE_NOT_EFFECTIVE', 'EA3_AUTHORITY_STATUS_DRIFT');
-  req(auth.base_main_sha === BASE, 'EA3_AUTHORITY_BASE_DRIFT');
+  req(auth.base_main_sha === EXPECTED_BASE, 'EA3_AUTHORITY_BASE_DRIFT');
   req(auth.taskbook_blob_sha === PINS.task && auth.amendment_01_blob_sha === PINS.a1, 'EA3_AUTHORITY_FOUNDATION_PIN_DRIFT');
   req(auth.ea2_package_blob_sha === PINS.pkg && auth.ea2_source_matrix_blob_sha === PINS.source, 'EA3_AUTHORITY_EA2_PIN_DRIFT');
   req(auth.implementation_blob_sha === PINS.impl, 'EA3_AUTHORITY_IMPLEMENTATION_PIN_DRIFT');
@@ -117,7 +128,14 @@ try {
   req(impl.indexOf('const receipt = await ports.retention.retainRawEvidence(retentionInput);') < impl.indexOf('const decoded = await ports.decoder.decodeRetainedEvidence'), 'EA3_DECODER_BEFORE_RETENTION_FORBIDDEN');
   req(!/\bfetch\s*\(/.test(impl), 'EA3_CONCRETE_FETCH_CALL_FORBIDDEN');
   req(!/DATABASE_URL|POSTGRES(?:QL)?|NEON_DATABASE_URL|\bpg\b|psql\b|INSERT\s+INTO|public\.facts/i.test(impl), 'EA3_DATABASE_OR_PUBLIC_FACTS_WRITER_SURFACE_FORBIDDEN');
-  req(!/process\.env|Date\.now\s*\(|new Date\s*\(\s*\)/.test(impl), 'EA3_ENV_OR_WALL_CLOCK_DEPENDENCY_FORBIDDEN');
+  req(!/process\.env|Date\.now\s*\(/.test(impl), 'EA3_ENV_OR_WALL_CLOCK_DEPENDENCY_FORBIDDEN');
+  if (historicalCandidate) {
+    req(!/new Date\s*\(\s*\)/.test(impl), 'EA3_HISTORICAL_WALL_CLOCK_DEPENDENCY_FORBIDDEN');
+  } else {
+    req((impl.match(/new Date\s*\(\s*\)/g) || []).length === 1, 'EA3_SUCCESSOR_EXACT_ONE_DEFAULT_COMPLETION_CLOCK_REQUIRED');
+    req(impl.includes('completionClock: ExternalEvidenceCompletionClockV1 = () => new Date().toISOString()'), 'EA3_SUCCESSOR_INJECTABLE_COMPLETION_CLOCK_REQUIRED');
+    req(impl.includes('canonicalIso(completionClock(), "EA3_COMPLETION_CLOCK_INVALID")'), 'EA3_SUCCESSOR_COMPLETION_CLOCK_VALIDATION_REQUIRED');
+  }
   req(!/from\s+["'](?:node:)?(?:http|https|undici|pg)["']|require\(["'](?:node:)?(?:http|https|undici|pg)["']\)/.test(impl), 'EA3_NETWORK_OR_DATABASE_CLIENT_IMPORT_FORBIDDEN');
 
   for (const token of ['decoder_calls_after_retention_failure','EA3_DECODER_CALLED_AFTER_RETENTION_FAILURE','EA3_EVENT_TIME_AFTER_RUNTIME_AVAILABILITY','EA3_EPISTEMIC_CLASS_MISMATCH','EA3_RAW_BINARY_IN_CANONICAL_RECORD_FORBIDDEN','EA3_UNSAFE_TRUST_SURFACE_FORBIDDEN','public_provider_live_request_count: 0','database_write_count: 0','formal_evidence_write_count: 0']) req(acceptance.includes(token), `EA3_ACCEPTANCE_TOKEN_MISSING:${token}`);
@@ -127,6 +145,10 @@ try {
 
   Object.assign(result, {
     status: 'PASS', authority_blob: blob('HEAD',F.auth), implementation_blob: blob('HEAD',F.impl), runtime_acceptance_blob: blob('HEAD',F.acceptance),
+    validation_mode: historicalCandidate ? 'EXACT_HISTORICAL_CANDIDATE' : 'SUCCESSOR_COLLECTOR_MAINTENANCE_REVALIDATION',
+    historical_accepted_head_sha: ACCEPTED_HEAD,
+    historical_authority_immutable: blob('HEAD', F.auth) === blob(ACCEPTED_HEAD, F.auth),
+    historical_acceptance_immutable: blob('HEAD', F.acceptance) === blob(ACCEPTED_HEAD, F.acceptance),
     collector_canonicalizer_candidate_defined: true, live_source_qualified: false,
     gfs_72h_full_value_pipeline_qualified: false, future_et0_72h_value_execution_qualified: false,
     formal_ingress_eligible: false, ea4_candidate_development_authorized_after_effective_merge: true,

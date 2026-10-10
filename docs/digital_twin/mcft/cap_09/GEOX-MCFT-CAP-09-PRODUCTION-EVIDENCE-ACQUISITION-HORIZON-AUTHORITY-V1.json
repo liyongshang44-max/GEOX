@@ -1,0 +1,517 @@
+{
+  "schema_version": "geox_mcft_cap09_production_evidence_acquisition_horizon_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1",
+  "status": "ENGINEERING_READINESS_QUALIFIED_LIVE_ACTIVATION_BLOCKED_CURRENT_T4R1_AUTHORITY_UNRESOLVED",
+  "stage": "POST_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_PRE_LIVE_ACTIVATION",
+  "subject_predecessor_sha": "1b0954fcbbe359cc94d542db753dab2ffb86e260",
+  "authority_basis": {
+    "master_task_line_ref": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
+    "taskbook_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "production_hosting_route_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+    "provider_watermark_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md",
+    "cadence_decoupling_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY.md",
+    "planner_readiness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json",
+    "kbs_publication_observer_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.md",
+    "kbs_product_provider_ref": "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts",
+    "source_due_policy_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json",
+    "amendment08_implementation_activation_separation_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-08-IMPLEMENTATION-ACTIVATION-QUALIFICATION-SEPARATION-AUTHORITY.md",
+    "post_activation_readiness_audit_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-POST-ACTIVATION-READINESS-AUDIT-V1.json",
+    "phase5_temporal_settlement_ref": "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs",
+    "phase6_runtime_independence_workflow_ref": ".github/workflows/mcft-cap-09-phase6-runtime-independence.yml",
+    "qualification_evidence_registry_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"
+  },
+  "decisive_ruling": {
+    "acquisition_horizon_must_be_explicit": true,
+    "activation_fence_source": "SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
+    "activation_fence_may_come_from_wall_clock_alone": false,
+    "activation_fence_may_come_from_deployment_environment": false,
+    "activation_fence_may_come_from_phase5_fixture": false,
+    "activation_fence_may_come_from_formal_epoch_before_formal_authority": false,
+    "runtime_tick_cursor_may_define_evidence_horizon": false,
+    "formal_forcing_budget_may_define_bootstrap_horizon": false,
+    "fixed_historical_lookback_hours": null,
+    "historical_provider_sweep_authorized": false,
+    "kbs_raw_hourly_endpoint_semantics": "COMPLETE_ACCUMULATED_TABLE_NOT_SINGLE_PUBLICATION_OBJECT",
+    "kbs_non_authoritative_daily_batch_profile_may_define_bootstrap_tail": false,
+    "kbs_fixed_latest_24_rows_bootstrap_authorized": false,
+    "current_t4r1_crop_authority_supports_future_formal_window": false,
+    "runtime_start_may_be_armed_under_current_t4r1_crop_authority": false,
+    "alternative_existing_mcse_scope_rescue_available": false,
+    "software_implementation_qualification_is_distinct_from_operational_activation_qualification": true,
+    "material_provider_change_is_engineering_readiness_blocker": false,
+    "material_provider_change_is_live_activation_eligibility_gate": true,
+    "engineering_readiness_may_be_qualified_while_runtime_start_unarmed": true,
+    "engineering_readiness_may_authorize_stage1b_completion_claim": false,
+    "engineering_readiness_may_authorize_mcft_cap09_complete_claim": false
+  },
+  "bootstrap_policy": {
+    "kbs_raw_hourly": {
+      "mode": "FIRST_RETAINED_FULL_TABLE_SNAPSHOT_ESTABLISHES_PRIVATE_PUBLICATION_BASELINE_NO_CANONICAL_EMISSION",
+      "endpoint_shape": "COMPLETE_ACCUMULATED_TABLE",
+      "baseline_retention_required": true,
+      "baseline_event_index_required": true,
+      "baseline_canonical_emission_count": 0,
+      "first_canonical_emission_requires_observed_post_baseline_forward_event_delta": true,
+      "post_baseline_diff_basis": "EVENT_TIME_PLUS_ROW_IDENTITY_HASH",
+      "revision_or_backfill_before_previous_latest_auto_promotion_authorized": false,
+      "fixed_latest_24_rows_assumption_authorized": false,
+      "non_authoritative_daily_batch_operating_profile_may_define_promotion_set": false,
+      "earlier_historical_table_scan_for_bootstrap_promotion_authorized": false,
+      "raw_retention_before_diff_and_decode_required": true,
+      "real_provider_chronology_required": true,
+      "explicit_poll_due_policy_established": true,
+      "minimum_poll_interval_seconds": 900
+    },
+    "gfs_bundle": {
+      "mode": "FIRST_PROVIDER_SELECTED_CYCLE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
+      "bounded_backfill_unit": "ONE_PROVIDER_SELECTED_CYCLE",
+      "historical_cycle_sweep_authorized": false,
+      "provider_cycle_selection_owner": "PRODUCT_GFS_PROVIDER",
+      "same_cycle_weather_et0_pair_required": true
+    },
+    "kbs_soil": {
+      "mode": "FIRST_CURRENT_PROVIDER_RESPONSE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
+      "bounded_backfill_unit": "ONE_CURRENT_PROVIDER_RESPONSE",
+      "historical_event_scan_authorized": false,
+      "explicit_poll_due_policy_established": true,
+      "minimum_poll_interval_seconds": 300
+    }
+  },
+  "restart_policy": {
+    "durable_progress_present": "RESUME_FROM_EVIDENCE_OWNED_DURABLE_SOURCE_PROGRESS",
+    "bootstrap_rewind_authorized": false,
+    "phase5_manifest_fallback_authorized": false,
+    "formal_epoch_fallback_authorized": false,
+    "runtime_tick_cursor_fallback_authorized": false,
+    "successful_cycle_count_fallback_authorized": false,
+    "kbs_publication_baseline_must_be_durable_when_no_evidence_progress": true,
+    "in_memory_only_kbs_baseline_sufficient_for_production": false,
+    "source_poll_schedule_must_be_durable": true,
+    "no_change_may_advance_poll_schedule_without_evidence_progress": true
+  },
+  "runtime_start_binding": {
+    "schema_version": "geox_mcft_cap09_production_runtime_start_authority_instance_v1",
+    "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-AUTHORITY-INSTANCE-V1",
+    "status": "ENTRYPOINT_BOUND_NOT_ARMED",
+    "armed": false,
+    "active_horizon_instance_bound": false,
+    "authority_class": "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
+    "authority_ref": null,
+    "activation_fence_time": null,
+    "formal_a0_authority_ref": null,
+    "formal_a0_logical_time": null,
+    "required_runtime_start_authority_class": "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
+    "binding_occurs_only_under_separate_runtime_start_authority": true,
+    "runtime_process_start_authorized": false,
+    "evidence_runtime_start_authorized": false,
+    "twin_runtime_start_authorized": false,
+    "production_owner_activation_authorized": false,
+    "formal_v5_arm_authorized": false,
+    "a0_authorized": false,
+    "o00_authorized": false
+  },
+  "non_effects": {
+    "production_target_planner_bound": true,
+    "runtime_secret_read": false,
+    "database_connection_attempted": false,
+    "provider_request_count": 0,
+    "evidence_cursor_mutation": false,
+    "runtime_tick_cursor_mutation": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false,
+    "mcft_cap09_completed": false
+  },
+  "runtime_start_readiness_settlement": {
+    "status": "BLOCKED_NO_VIABLE_FUTURE_FORMAL_WINDOW_UNDER_CURRENT_T4R1_CROP_AUTHORITY",
+    "proof_subject_sha": "9a27816e456402a8eb6a3a7d572713bd8e0737f0",
+    "workflow_run_id": 33622744383,
+    "artifact_id": 9843579935,
+    "observed_at": "2026-09-02T11:06:05.000Z",
+    "crop_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
+    "amendment06_minimum_epoch_selection_lead_hours": 36,
+    "latest_viable_a0": "2026-08-27T21:00:00.000Z",
+    "latest_viable_o00": "2026-08-27T22:00:00.000Z",
+    "latest_viable_o23": "2026-08-28T21:00:00.000Z",
+    "earliest_selectable_a0_at_proof_time": "2026-09-03T23:00:00.000Z",
+    "earliest_selectable_o00_at_proof_time": "2026-09-04T00:00:00.000Z",
+    "viable_future_formal_window_available": false,
+    "runtime_start_authority_may_be_armed": false
+  },
+  "alternative_scope_rescue_settlement": {
+    "status": "SETTLED_IMMUTABLE_READ_ONLY_SCAN",
+    "proof_subject_sha": "76e990f18275eb0bb1bb115540c9725b0fef1321",
+    "workflow_run_id": 33623030240,
+    "artifact_id": 9843705746,
+    "observed_at": "2026-09-02T11:09:43.779Z",
+    "frozen_contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-V1.json",
+    "frozen_contract_blob_sha": "a14d9bee0817960a62463f9a1059ab60959d3e59",
+    "frozen_probe_ref": "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.mjs",
+    "frozen_probe_blob_sha": "b697347078f7898b98795b864e880f0a07f9cb93",
+    "result": "NO_ALTERNATIVE_SCOPE_CANDIDATE_CURRENTLY_ESTABLISHED",
+    "scanned_index_page_count": 8,
+    "scanned_observation_row_count": 240,
+    "planting_lead_count": 4,
+    "inspected_candidate_count": 4,
+    "eligible_candidate_count": 0,
+    "candidate_treatments": [
+      "T1",
+      "T2",
+      "T3",
+      "T4"
+    ],
+    "all_inspected_legal_o00_count_zero": true,
+    "selected_candidate": null,
+    "provider_body_emitted": false,
+    "provider_payload_persisted_or_uploaded": false,
+    "alternative_scope_authority_created": false,
+    "lifecycle_authority_created": false,
+    "geometry_authority_created": false,
+    "source_rebind_authority_created": false,
+    "database_write_count": 0,
+    "runtime_process_start": false,
+    "formal_execution_count": "0/24"
+  },
+  "next_legal_frontier": {
+    "status": "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED_ON_MATERIAL_PROVIDER_CHANGE",
+    "direct_current_stage_route": "REQUALIFY_T4R1_CONTEMPORANEOUS_STAGE_ONLY_IF_EXACT_PROVIDER_EVIDENCE_CAN_MEET_STAGE_AND_6H_30H_GUARDS",
+    "fallback_route": "ADJUDICATE_T4R1_NATURAL_SEASON_SUCCESSOR_WITHOUT_CROSS_SEASON_STITCHING",
+    "runtime_start_before_frontier_resolution_authorized": false,
+    "latest_requalification_settlement_status": "SETTLED_NO_CURRENT_T4R1_STAGE_OR_NATURAL_SEASON_SUCCESSOR_AUTHORITY_ESTABLISHED",
+    "requalification_without_material_provider_change_authorized": false,
+    "material_provider_change_triggers": [
+      "NEW_EXACT_CURRENT_T4R1_PHENOLOGY_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE",
+      "NEW_EXACT_CURRENT_T4R1_TERMINATION_OR_HARVEST_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE",
+      "NEW_KBS_AGLOG_T4_OR_T4R1_PLANTING_OBSERVATION_AFTER_2026_05_27_BECOMES_PUBLICLY_RETRIEVABLE"
+    ],
+    "runtime_start_authority_may_be_armed": false,
+    "status_scope": "LIVE_ACTIVATION_ONLY",
+    "engineering_frontier_status": "MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED",
+    "engineering_work_blocked_by_material_provider_change": false,
+    "live_activation_blocked_until_material_provider_change_and_fresh_authority": true,
+    "material_provider_change_is_engineering_blocker": false,
+    "material_provider_change_is_live_activation_gate": true
+  },
+  "t4r1_stage_or_natural_season_requalification_settlement": {
+    "status": "SETTLED_NO_CURRENT_T4R1_STAGE_OR_NATURAL_SEASON_SUCCESSOR_AUTHORITY_ESTABLISHED",
+    "predecessor_frontier_head": "e075d48b13ef1c85888c0f3dfbf3173bb5232f96",
+    "contemporaneous_stage_route": {
+      "proof_subject_sha": "60e4fd93c9dff017fd0d62967fad17a49383f12e",
+      "workflow_run_id": 33630413934,
+      "artifact_id": 9846584085,
+      "artifact_digest": "sha256:38a6b645cab971c70ed13e116392186f0eafee2c32538d062a02e265a24a18c4",
+      "observed_at_utc": "2026-09-02T12:33:03.075Z",
+      "result": "NO_T4R1_CONTEMPORANEOUS_STAGE_INPUT_AUTHORITY_CURRENTLY_ESTABLISHED",
+      "scanned_index_page_count": 5,
+      "scanned_observation_row_count": 150,
+      "inspected_detail_count": 6,
+      "direct_stage_input_candidate_count": 0,
+      "termination_input_candidate_count": 0,
+      "stage_authority_established": false,
+      "stage": null,
+      "whole_window_6h_30h_guard_passed": false,
+      "database_write_count": 0,
+      "runtime_process_start": false,
+      "provider_body_emitted": false,
+      "formal_execution_count": "0/24"
+    },
+    "natural_season_route": {
+      "proof_subject_sha": "d631d20b3a2a0c179ba2ed98dd827e3e6431f6db",
+      "workflow_run_id": 33630968448,
+      "artifact_id": 9846818521,
+      "artifact_digest": "sha256:6275357bf5a6e054f0656dc907215439e20829b9e94a1925e317ecfcea9af09b",
+      "observed_at_utc": "2026-09-02T12:39:23.929Z",
+      "result": "NO_T4R1_NATURAL_SEASON_SUCCESSOR_CANDIDATE_CURRENTLY_OBSERVED",
+      "scanned_index_page_count": 5,
+      "scanned_observation_row_count": 150,
+      "post_anchor_t4_planting_lead_count": 0,
+      "exact_t4r1_successor_candidate_count": 0,
+      "time_gated_snapshot": true,
+      "global_new_season_source_absence_claimed": false,
+      "new_natural_season_created": false,
+      "new_season_id": null,
+      "new_crop": null,
+      "historical_geometry_reused": false,
+      "cross_season_stitching_authorized": false,
+      "database_write_count": 0,
+      "runtime_process_start": false,
+      "provider_body_emitted": false,
+      "formal_execution_count": "0/24"
+    },
+    "conclusion": {
+      "current_t4r1_stage_authority_established": false,
+      "current_t4r1_natural_season_successor_authority_established": false,
+      "viable_future_formal_window_available": false,
+      "runtime_start_authority_may_be_armed": false,
+      "production_owner_activation_authorized": false,
+      "formal_v5_arm_authorized": false,
+      "a0_authorized": false,
+      "o00_authorized": false,
+      "cross_season_stitching_authorized": false,
+      "requalification_without_material_provider_change_authorized": false,
+      "next_legal_frontier": "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED_ON_MATERIAL_PROVIDER_CHANGE"
+    },
+    "material_provider_change_triggers": [
+      "NEW_EXACT_CURRENT_T4R1_PHENOLOGY_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE",
+      "NEW_EXACT_CURRENT_T4R1_TERMINATION_OR_HARVEST_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE",
+      "NEW_KBS_AGLOG_T4_OR_T4R1_PLANTING_OBSERVATION_AFTER_2026_05_27_BECOMES_PUBLICLY_RETRIEVABLE"
+    ],
+    "transient_proof_scaffolding": {
+      "status": "RETIRED_AFTER_DURABLE_CANONICAL_SETTLEMENT",
+      "reason": "AVOID_REPEATED_HISTORICAL_PROVIDER_SCAN_ON_METADATA_DESCENDANTS",
+      "repository_history_preserves_exact_blobs": true,
+      "files": [
+        {
+          "path": ".github/workflows/mcft-cap-09-t4r1-contemporaneous-stage-input-requalification-v1.yml",
+          "blob_sha": "231f6d1cac4a4250e479f1ced5ba2705d4a8aaba"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CONTEMPORANEOUS-STAGE-INPUT-REQUALIFICATION-V1.json",
+          "blob_sha": "220b0d935bf1404a981ce1e7c43bdd6c831bb793"
+        },
+        {
+          "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.cjs",
+          "blob_sha": "d9bb652226f464dd000520f272391ee821d31455"
+        },
+        {
+          "path": "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.mjs",
+          "blob_sha": "e774e138d190c3d1f3d52d09069f514b007af233"
+        },
+        {
+          "path": ".github/workflows/mcft-cap-09-t4r1-natural-season-successor-adjudication-v1.yml",
+          "blob_sha": "cddfb6acb6d64b0988ad3c2042b053ab4c5339b0"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-NATURAL-SEASON-SUCCESSOR-ADJUDICATION-V1.json",
+          "blob_sha": "cb2a1d2f30b7d4150aa8370375f6442f096c9155"
+        },
+        {
+          "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_NATURAL_SEASON_SUCCESSOR_ADJUDICATION_V1.cjs",
+          "blob_sha": "1a09d0f8737eacbc015efa5087ad1a37da2238bd"
+        },
+        {
+          "path": "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_NATURAL_SEASON_SUCCESSOR_ADJUDICATION_V1.mjs",
+          "blob_sha": "087e2495636a8d34306e021c02d74f303d21eb50"
+        }
+      ]
+    },
+    "non_effects": {
+      "production_database_mutation": false,
+      "raw_object_mutation": false,
+      "runtime_config_mutation": false,
+      "scheduler_mutation": false,
+      "production_runtime_start": false,
+      "production_owner_activation": false,
+      "formal_v5_execution": false,
+      "a0_bootstrap": false,
+      "o00_started": false,
+      "mcft_cap09_completed": false
+    }
+  },
+  "engineering_readiness_live_activation_separation": {
+    "schema_version": "geox_mcft_cap09_engineering_readiness_live_activation_separation_v1",
+    "status": "QUALIFIED_ENGINEERING_READINESS_LIVE_ACTIVATION_NOT_CURRENTLY_ELIGIBLE",
+    "authority_role": "ENGINEERING_READINESS_ONLY_NOT_STAGE1B_COMPLETION_NOT_LIVE_ACTIVATION",
+    "evidence_frontier_parent_sha": "3a83b76450b5459bde8d1d56234e5bba80b49398",
+    "ruling": {
+      "software_implementation_qualification_is_distinct_from_operational_activation_qualification": true,
+      "uncontrollable_third_party_provider_availability_may_block_engineering_readiness": false,
+      "uncontrollable_third_party_provider_availability_may_block_live_activation": true,
+      "kbs_material_provider_change_is_engineering_blocker": false,
+      "kbs_material_provider_change_is_live_activation_gate": true,
+      "synthetic_or_fixture_evidence_may_be_promoted_to_real_t4r1_authority": false,
+      "cross_season_stitching_authorized": false,
+      "taskbook_stage1b_completion_gate_changed": false
+    },
+    "engineering_readiness": {
+      "status": "QUALIFIED",
+      "allowed_claim": "MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED",
+      "claim_scope": "CONTROLLABLE_SOFTWARE_RUNTIME_GOVERNANCE_AND_PRODUCTION_EQUIVALENT_MECHANISMS",
+      "exact_head_validation_mode": "PLANNER_READINESS_REVALIDATES_PROTECTED_TEMPORAL_SEMANTIC_CORE_EVIDENCE_ANCESTRY_AND_V13_RUNTIME_HARNESS_MIGRATION;TWIN_RUNTIME_OWNERSHIP_FENCING_LAYER_REQUIRES_FRESH_PHASE4_AND_PHASE5_FOCUSED_REQUALIFICATION",
+      "protected_semantic_core": {
+        "baseline_subject_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+        "semantic_scope": "IMMUTABLE_PHASE5_TEMPORAL_RUNTIME_CORE",
+        "path_count": 12,
+        "all_paths_unchanged_to_current_subject_required": true,
+        "excludes_runtime_ownership_fencing_layer": true
+      },
+      "evidence_chain": {
+        "phase5_immutable_full_24t": {
+          "subject_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+          "workflow_run_id": 33101400822,
+          "artifact_id": 9659440229,
+          "artifact_digest": "sha256:79606348f954162d867aeba79d2a2e0bbb0ab696b5e7336a3e95f0f904117055",
+          "exact_24t": true,
+          "live_causal_evidence": true
+        },
+        "phase5_fresh_evidence_resilience": {
+          "subject_sha": "3349eaaaab68f80fc9b771f16e4bfe909126eed2",
+          "workflow_run_id": 33110416779,
+          "artifact_id": 9671930864,
+          "artifact_digest": "sha256:ba40853403b3b7f53794e83aa7c4f283def431f63a29b346c53d043add856479",
+          "duplicate_restart_fencing_fresh": true
+        },
+        "phase5_temporal_settlement_and_twin_fencing": {
+          "subject_sha": "776ba8381608cb906f68b57a56fc9aef6258cc52",
+          "workflow_run_id": 33164682861,
+          "artifact_id": 9683116099,
+          "artifact_digest": "sha256:59f14796c7c8ddfb019e40fda408dd2f406f35bb029abbe0bb13479d5daba1a3",
+          "closure_basis": "IMMUTABLE_FULL_24T_PLUS_FRESH_HOSTING_RESILIENCE_AND_SEMANTIC_EQUIVALENCE",
+          "production_owner_cutover": false,
+          "formal_v5_armed": false
+        },
+        "phase6_runtime_independence": {
+          "accepted_subject_sha": "48ceafe7c6e7d3d57a1dc17411fb4bf673486333",
+          "workflow_run_id": 33146391000,
+          "artifact_id": 9676455831,
+          "artifact_digest": "sha256:9a3a22b8b844fc1538d4a6986a9d3477b895208b1e88cdf13106f0f0dbf463d7",
+          "github_control_plane_runtime_dependency_forbidden": true
+        },
+        "phase6_successor_carry_forward": {
+          "subject_sha": "776ba8381608cb906f68b57a56fc9aef6258cc52",
+          "workflow_run_id": 33164682799,
+          "artifact_id": 9683075686,
+          "artifact_digest": "sha256:ab7288ad236577499189bc951b48a32beed8e03b8df8105df5753df38e0bdf99",
+          "retired_owner_audit_passed": true
+        },
+        "v13_producer_driven_runtime": {
+          "source_evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F",
+          "projected_evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1",
+          "source_subject_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+          "source_workflow_run_id": 33605700840,
+          "legacy_dependency_digest": "sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3",
+          "runtime_resolver_id": "V13_RUNTIME_SEMANTIC_CLOSURE",
+          "runtime_path_digest": "sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25",
+          "projected_dependency_digest": "sha256:b312d05f816ab2494f503749d2a2b9d62be91b3ba235e24bce268440b6070235",
+          "settlement_subject_sha": "c8e4b23557fc825d8b40baf06857aaa96cc801fa",
+          "settlement_workflow_run_id": 33639258830,
+          "current_durable_evidence_valid": true,
+          "applicability_resolved_before_live_arm": true,
+          "live_requalification_required": false,
+          "provider_request_count": 0
+        },
+        "t4r1_live_activation_fail_closed": {
+          "contemporaneous_stage_workflow_run_id": 33630413934,
+          "contemporaneous_stage_artifact_id": 9846584085,
+          "natural_season_workflow_run_id": 33630968448,
+          "natural_season_artifact_id": 9846818521,
+          "current_stage_authority_established": false,
+          "current_natural_season_successor_authority_established": false
+        },
+        "parent_exact_head_machine_state": {
+          "subject_sha": "3a83b76450b5459bde8d1d56234e5bba80b49398",
+          "ci_workflow_run_id": 33632065448,
+          "planner_readiness_workflow_run_id": 33632065286,
+          "qcp_workflow_run_id": 33632065496,
+          "qcp_expected_only_blocker": "EXACT_ONE_PRODUCTION_OWNER"
+        }
+      },
+      "nonclaims": [
+        "STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE",
+        "MCFT_CAP_09_COMPLETE",
+        "REAL_FIELD_24_HOUR_ONLINE_PROVEN",
+        "MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE",
+        "CURRENT_T4R1_LIVE_ACTIVATION_ELIGIBLE"
+      ],
+      "runtime_ownership_fencing_layer": {
+        "path_count": 3,
+        "paths": [
+          "apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts",
+          "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
+          "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"
+        ],
+        "may_change_only_with_focused_current_head_requalification": true,
+        "planner_readiness_may_classify_change_as_temporal_semantic_drift": false,
+        "required_requalification_surfaces": [
+          "mcft-cap-09-phase4-twin-runtime-persistence",
+          "mcft-cap-09-phase5-production-equivalent-containers",
+          "mcft-cap-09-phase5-two-service-accelerated-24t"
+        ]
+      }
+    },
+    "live_activation": {
+      "status": "NOT_CURRENTLY_ELIGIBLE",
+      "reason": "NO_CURRENT_T4R1_STAGE_OR_NATURAL_SEASON_SUCCESSOR_AUTHORITY_AND_NO_VIABLE_FUTURE_FORMAL_WINDOW",
+      "material_provider_change_required_before_t4r1_stage_or_season_requalification": true,
+      "runtime_start_authority_may_be_armed": false,
+      "evidence_runtime_start_authorized": false,
+      "twin_runtime_start_authorized": false,
+      "production_owner_activation_authorized": false,
+      "formal_v5_arm_authorized": false,
+      "a0_authorized": false,
+      "o00_authorized": false,
+      "stage1b_completion_claim_authorized": false,
+      "mcft_cap09_complete_claim_authorized": false
+    },
+    "nonblocking_engineering_debt": {
+      "id": "V13_PRODUCER_STALE_ARM_ORDERING",
+      "status": "SETTLED_RUNTIME_HARNESS_RESOLVER_MIGRATION",
+      "classification": "QUALIFICATION_HARNESS_CONTROL_PLANE_DEBT",
+      "blocks_engineering_readiness": false,
+      "live_provider_failure_observed": false,
+      "current_durable_producer_evidence_invalidated": false,
+      "requires_resolution_before_fresh_producer_live_requalification_if_dependency_contract_reopened": false,
+      "settlement_subject_sha": "c8e4b23557fc825d8b40baf06857aaa96cc801fa",
+      "migration_proof_subject_sha": "5e162fceb5758aa3eaf7894a474a5886fa069057",
+      "runtime_resolver_id": "V13_RUNTIME_SEMANTIC_CLOSURE",
+      "qualification_harness_resolver_id": "V13_QUALIFICATION_HARNESS_CLOSURE",
+      "legacy_resolver_id": "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE",
+      "legacy_path_count": 124,
+      "runtime_path_count": 108,
+      "legacy_harness_path_count": 16,
+      "current_harness_path_count": 20,
+      "exact_partition_proven": true,
+      "runtime_harness_overlap_count": 0,
+      "legacy_bf1d_dependency_digest": "sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3",
+      "runtime_path_digest_bf1d": "sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25",
+      "runtime_path_digest_settlement_subject": "sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25",
+      "projected_runtime_aggregate_digest": "sha256:b312d05f816ab2494f503749d2a2b9d62be91b3ba235e24bce268440b6070235",
+      "projected_producer_evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1",
+      "source_producer_evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F",
+      "producer_workflow_run_id": 33639258830,
+      "producer_workflow_conclusion": "success",
+      "producer_applicability_resolved_before_live_arm": true,
+      "producer_live_required": false,
+      "stale_arm_freshness_check_executed": false,
+      "stale_arm_freshness_check_skip_reason": "DURABLE_RUNTIME_EVIDENCE_VALID_LIVE_REQUALIFICATION_NOT_REQUIRED",
+      "provider_request_count": 0,
+      "production_runtime_mutation": false,
+      "production_owner_activation": false,
+      "formal_v5_arm": false,
+      "a0_bootstrap": false,
+      "o00_started": false,
+      "post_merge_control_plane": {
+        "workflow_run_id": 33639259326,
+        "conclusion": "success",
+        "artifact_id": 9850214136,
+        "artifact_digest": "sha256:9d2b11289be5ba992d41dfb83d92a66f1a77b888380c8692219b66fb7ee4d808",
+        "blocker_count": 1,
+        "only_blocker": "EXACT_ONE_PRODUCTION_OWNER",
+        "unknown_changed_paths": 0,
+        "authority_errors": 0,
+        "resolver_errors": 0
+      },
+      "qualification_control_plane": {
+        "workflow_run_id": 33639259224,
+        "conclusion": "failure",
+        "deliberate_fail_closed": true,
+        "artifact_id": 9850279193,
+        "artifact_digest": "sha256:6b2798025d1149429526e12fdaa28e2c4204455f018a12fe580e910b82d0c434",
+        "blocker_count": 1,
+        "only_blocker": "EXACT_ONE_PRODUCTION_OWNER",
+        "unknown_changed_paths": 0,
+        "authority_errors": 0,
+        "resolver_errors": 0
+      },
+      "projection_authorizes_new_live_claim": false,
+      "taskbook_completion_gate_changed": false
+    },
+    "completion_boundary": {
+      "taskbook_completion_gate_unchanged": true,
+      "real_s6_o00_o23_plus_final_exact_sha_r2_still_required_for_stage1b_completion": true,
+      "engineering_readiness_claim_is_subordinate_to_stage1b_completion": true
+    }
+  }
+}

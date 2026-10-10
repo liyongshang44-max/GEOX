@@ -1,0 +1,419 @@
+{
+  "schema_version": "geox_mcft_cap09_protected_main_lineage_advancement_adjudication_v1",
+  "status": "PASS",
+  "previous_mcft_base": "e1f8b078bb8459ecb9a77d1fad0d95f4bf143221",
+  "current_protected_main": "f41dde8d44de95e71748e756e048e0166c1916b7",
+  "previous_base_is_ancestor_of_current_main": true,
+  "exact_first_parent_advancement": [
+    {
+      "pr_number": 3515,
+      "merge_sha": "ead9d0f0f1c787d75588b4970dd9d315fe28f1fb",
+      "previous_first_parent_sha": "e1f8b078bb8459ecb9a77d1fad0d95f4bf143221",
+      "commit_subject": "Merge pull request #3515 from liyongshang44-max/feat/adr-real-geox-readonly-shadow-adoption-v1",
+      "changed_paths": [
+        ".github/workflows/adr-real-geox-readonly-shadow-adoption.yml",
+        "apps/server/src/integrations/adr/read_only_shadow_adoption_v1.ts",
+        "scripts/adr_adoption/qualified-consumer-source.v1.json",
+        "scripts/adr_adoption/real_geox_readonly_shadow_adoption_v1.mjs"
+      ]
+    },
+    {
+      "pr_number": 3516,
+      "merge_sha": "0267c224d5c0c0524997b724b89cbe03d4e8b299",
+      "previous_first_parent_sha": "ead9d0f0f1c787d75588b4970dd9d315fe28f1fb",
+      "commit_subject": "Merge pull request #3516 from liyongshang44-max/feat/adr-real-geox-postgres-readonly-shadow-qualification-v1",
+      "changed_paths": [
+        ".github/workflows/adr-real-geox-postgres-readonly-shadow-qualification.yml",
+        "scripts/adr_adoption/real_geox_postgres_readonly_shadow_qualification_v1.mjs"
+      ]
+    },
+    {
+      "pr_number": 3517,
+      "merge_sha": "bf5bd1dda29d8fef2ddc21dc758c2126077bf98b",
+      "previous_first_parent_sha": "0267c224d5c0c0524997b724b89cbe03d4e8b299",
+      "commit_subject": "Merge pull request #3517 from liyongshang44-max/feat/adr-geox-postgres-transaction-guarded-shadow-v1",
+      "changed_paths": [
+        ".github/workflows/adr-geox-postgres-transaction-guarded-shadow.yml",
+        "apps/server/src/integrations/adr/read_only_shadow_adoption_v1.ts",
+        "scripts/adr_adoption/real_geox_postgres_transaction_guarded_shadow_v1.mjs"
+      ]
+    },
+    {
+      "pr_number": 3518,
+      "merge_sha": "f41dde8d44de95e71748e756e048e0166c1916b7",
+      "previous_first_parent_sha": "bf5bd1dda29d8fef2ddc21dc758c2126077bf98b",
+      "commit_subject": "Merge pull request #3518 from liyongshang44-max/feat/adr-geox-one-shot-shadow-observer-v1",
+      "changed_paths": [
+        ".github/workflows/adr-geox-one-shot-shadow-observer.yml",
+        "scripts/adr_adoption/geox_adr_one_shot_shadow_observer_v1.mjs",
+        "scripts/adr_adoption/qualify_geox_adr_one_shot_shadow_observer_v1.mjs"
+      ]
+    }
+  ],
+  "exact_merge_shas": [
+    "ead9d0f0f1c787d75588b4970dd9d315fe28f1fb",
+    "0267c224d5c0c0524997b724b89cbe03d4e8b299",
+    "bf5bd1dda29d8fef2ddc21dc758c2126077bf98b",
+    "f41dde8d44de95e71748e756e048e0166c1916b7"
+  ],
+  "external_owner": "ADR",
+  "ownership_provenance_basis": "CTO_AUTHORIZED_EXACT_MERGE_LINEAGE_PLUS_EXACT_CHANGED_PATH_SET",
+  "changed_path_count": 11,
+  "changed_paths": [
+    ".github/workflows/adr-geox-one-shot-shadow-observer.yml",
+    ".github/workflows/adr-geox-postgres-transaction-guarded-shadow.yml",
+    ".github/workflows/adr-real-geox-postgres-readonly-shadow-qualification.yml",
+    ".github/workflows/adr-real-geox-readonly-shadow-adoption.yml",
+    "apps/server/src/integrations/adr/read_only_shadow_adoption_v1.ts",
+    "scripts/adr_adoption/geox_adr_one_shot_shadow_observer_v1.mjs",
+    "scripts/adr_adoption/qualified-consumer-source.v1.json",
+    "scripts/adr_adoption/qualify_geox_adr_one_shot_shadow_observer_v1.mjs",
+    "scripts/adr_adoption/real_geox_postgres_readonly_shadow_qualification_v1.mjs",
+    "scripts/adr_adoption/real_geox_postgres_transaction_guarded_shadow_v1.mjs",
+    "scripts/adr_adoption/real_geox_readonly_shadow_adoption_v1.mjs"
+  ],
+  "mcft_control_plane_path_intersection": [],
+  "mcft_authority_artifact_path_intersection": [],
+  "mcft_runtime_dependency_closure_intersection": [],
+  "qcp_bytes_sha256_old": "sha256:c1d3a3396a1811adb2baf8c33f84cdcc345ec7644d4e65adc4e1143105ad5e58",
+  "qcp_bytes_sha256_new": "sha256:c1d3a3396a1811adb2baf8c33f84cdcc345ec7644d4e65adc4e1143105ad5e58",
+  "planner_bytes_sha256_old": "sha256:8790e06e4bb105d8db2bbd020a46a6f9057b46458b8dfe2ca02b459d24dda8e3",
+  "planner_bytes_sha256_new": "sha256:8790e06e4bb105d8db2bbd020a46a6f9057b46458b8dfe2ca02b459d24dda8e3",
+  "resolver_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+  "resolver_digests": [
+    {
+      "resolver_id": "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 5,
+      "definition_digest_old": "sha256:ffc56c527a8b0043bebff6144bdf4e145aff7da3694102139ea7948ef4c3f516",
+      "definition_digest_new": "sha256:ffc56c527a8b0043bebff6144bdf4e145aff7da3694102139ea7948ef4c3f516",
+      "dependency_digest_old": "sha256:85fef8d8c3e9285179cd5a367a3b1d9c617c1c1eaa53c86760e2915cd7c105df",
+      "dependency_digest_new": "sha256:85fef8d8c3e9285179cd5a367a3b1d9c617c1c1eaa53c86760e2915cd7c105df",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 5,
+      "definition_digest_old": "sha256:4b52811e6cf09c7f3cc8a9971a95dca1f1413726cceccd8abdf3ce25333847ad",
+      "definition_digest_new": "sha256:4b52811e6cf09c7f3cc8a9971a95dca1f1413726cceccd8abdf3ce25333847ad",
+      "dependency_digest_old": "sha256:e95d066d613f37a6ebdae38457589e911babe6dc1cce97835aa382e46faf9323",
+      "dependency_digest_new": "sha256:e95d066d613f37a6ebdae38457589e911babe6dc1cce97835aa382e46faf9323",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 4,
+      "definition_digest_old": "sha256:5e0ebb9229d61793a314af8150467d6e5eed60c0343b945df2b6191e742a3054",
+      "definition_digest_new": "sha256:5e0ebb9229d61793a314af8150467d6e5eed60c0343b945df2b6191e742a3054",
+      "dependency_digest_old": "sha256:f2098f3e19d1a4521becbaa192ea6f8df51e740c8ace5756a96857399b057dee",
+      "dependency_digest_new": "sha256:f2098f3e19d1a4521becbaa192ea6f8df51e740c8ace5756a96857399b057dee",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "CONTROL_PLANE_FILES",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 45,
+      "definition_digest_old": "sha256:7dfed528ec2ee8a85dacb1142d331efc0c53c0421ec9138a0c3ab20e4e7050c5",
+      "definition_digest_new": "sha256:7dfed528ec2ee8a85dacb1142d331efc0c53c0421ec9138a0c3ab20e4e7050c5",
+      "dependency_digest_old": "sha256:207af3fe27054ef6611f3f71e8f0518ea8948c82f305409d2026b664cdd17ff0",
+      "dependency_digest_new": "sha256:207af3fe27054ef6611f3f71e8f0518ea8948c82f305409d2026b664cdd17ff0",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 4,
+      "definition_digest_old": "sha256:ac1d0a71e0892f103f675237f6ca246b50490acf3a6f1ede400a37b6061a893b",
+      "definition_digest_new": "sha256:ac1d0a71e0892f103f675237f6ca246b50490acf3a6f1ede400a37b6061a893b",
+      "dependency_digest_old": "sha256:9af70365d1d07eb2bad6829b6ac767ca14bce001a995204da50b5d4ae798f048",
+      "dependency_digest_new": "sha256:9af70365d1d07eb2bad6829b6ac767ca14bce001a995204da50b5d4ae798f048",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+      "kind": "IMPORT_CLOSURE",
+      "path_count": 26,
+      "definition_digest_old": "sha256:fb15d6c11836af97879b8cff8467543227f624a8d4b174a92c8f628e7d0f616b",
+      "definition_digest_new": "sha256:fb15d6c11836af97879b8cff8467543227f624a8d4b174a92c8f628e7d0f616b",
+      "dependency_digest_old": "sha256:43d602999bc986277e3093a3342577f6414f80230e978d61ab0fa5d7586dec53",
+      "dependency_digest_new": "sha256:43d602999bc986277e3093a3342577f6414f80230e978d61ab0fa5d7586dec53",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "EA5E2_RUNTIME_GRAPH_V4",
+      "kind": "GENERATED_GRAPH_OUTPUT",
+      "path_count": 106,
+      "definition_digest_old": "sha256:f157b379bc14cde7553ee3d28fc798b0423109228524905fa7045eaa042f57a3",
+      "definition_digest_new": "sha256:f157b379bc14cde7553ee3d28fc798b0423109228524905fa7045eaa042f57a3",
+      "dependency_digest_old": "sha256:27e895c11b99f61f27e4dbb2e490385521ad590dbd477431a6b4a9f1689f5234",
+      "dependency_digest_new": "sha256:27e895c11b99f61f27e4dbb2e490385521ad590dbd477431a6b4a9f1689f5234",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "LEGACY_AM19_PERSISTENT_24T",
+      "kind": "IMPORT_CLOSURE",
+      "path_count": 99,
+      "definition_digest_old": "sha256:2756f65bf0f0593a020c373883603a9b18f7b654dcda9ee3d7e4610cfa74da5b",
+      "definition_digest_new": "sha256:2756f65bf0f0593a020c373883603a9b18f7b654dcda9ee3d7e4610cfa74da5b",
+      "dependency_digest_old": "sha256:78cfe33ef3d49081ce7cd696a898bfea7493654d1c8d7fda403eb2b7e373831c",
+      "dependency_digest_new": "sha256:78cfe33ef3d49081ce7cd696a898bfea7493654d1c8d7fda403eb2b7e373831c",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "PHASE1_TYPED_RUNTIME_COMPOSITION",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 11,
+      "definition_digest_old": "sha256:800f64aa4995f9f3498b97e3786059b2cb19cbd8378b76bf58499a791a24647c",
+      "definition_digest_new": "sha256:800f64aa4995f9f3498b97e3786059b2cb19cbd8378b76bf58499a791a24647c",
+      "dependency_digest_old": "sha256:7d885876066368b50b956fb3aa27632598b3d9601f385a4dcc69da72e3e580d3",
+      "dependency_digest_new": "sha256:7d885876066368b50b956fb3aa27632598b3d9601f385a4dcc69da72e3e580d3",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "PHASE2_EVIDENCE_PROVIDER_MODULES",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 22,
+      "definition_digest_old": "sha256:0a0d77a059a4da32c832dbfce884c545b0309979a51de2a1fbcdeabfbc095e02",
+      "definition_digest_new": "sha256:0a0d77a059a4da32c832dbfce884c545b0309979a51de2a1fbcdeabfbc095e02",
+      "dependency_digest_old": "sha256:d5f3fec0072bfd7640c94468aa492c59bca998e1b9814f089483166995f6474c",
+      "dependency_digest_new": "sha256:d5f3fec0072bfd7640c94468aa492c59bca998e1b9814f089483166995f6474c",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 93,
+      "definition_digest_old": "sha256:66e83c6718b1a0fd9a752896541f524c7c39161fd0b6b42260908be3876aad23",
+      "definition_digest_new": "sha256:66e83c6718b1a0fd9a752896541f524c7c39161fd0b6b42260908be3876aad23",
+      "dependency_digest_old": "sha256:02436a537643e9568fb2ed8c1d71954a5826e7969fc48026a01a0e0f35fb01fe",
+      "dependency_digest_new": "sha256:02436a537643e9568fb2ed8c1d71954a5826e7969fc48026a01a0e0f35fb01fe",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "PHASE4_TWIN_RUNTIME_FOUNDATION",
+      "kind": "IMPORT_CLOSURE",
+      "path_count": 91,
+      "definition_digest_old": "sha256:9c4ff915efba0e61c12ce88d0f1f64717592c0c26c46315347414df25c98f431",
+      "definition_digest_new": "sha256:9c4ff915efba0e61c12ce88d0f1f64717592c0c26c46315347414df25c98f431",
+      "dependency_digest_old": "sha256:60bdf4f0c47f0b9ad8f74b7f7f7f8f74dd3de74a4f18ac5ae042f0e52277bbd7",
+      "dependency_digest_new": "sha256:60bdf4f0c47f0b9ad8f74b7f7f7f8f74dd3de74a4f18ac5ae042f0e52277bbd7",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 45,
+      "definition_digest_old": "sha256:24f9bdccd6a461798bbf6f8ca1be06ed52592fd2e05a708a5b2ef9da999dfd30",
+      "definition_digest_new": "sha256:24f9bdccd6a461798bbf6f8ca1be06ed52592fd2e05a708a5b2ef9da999dfd30",
+      "dependency_digest_old": "sha256:a72ea54af5f9db8b5057e03b0cd4c97ef13620d23844c4d3bad70fc3d63a7a64",
+      "dependency_digest_new": "sha256:a72ea54af5f9db8b5057e03b0cd4c97ef13620d23844c4d3bad70fc3d63a7a64",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE",
+      "kind": "IMPORT_CLOSURE",
+      "path_count": 46,
+      "definition_digest_old": "sha256:a4947061b41e7d633d3f9dc737e1a9174a485905ed43eb73301ab604214e89db",
+      "definition_digest_new": "sha256:a4947061b41e7d633d3f9dc737e1a9174a485905ed43eb73301ab604214e89db",
+      "dependency_digest_old": "sha256:64cf6d7fcc4b9fdf3dbc4689ab26baa89ddff49f9305930e4fdd1fab01179fc1",
+      "dependency_digest_new": "sha256:64cf6d7fcc4b9fdf3dbc4689ab26baa89ddff49f9305930e4fdd1fab01179fc1",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "PRODUCTION_OWNER_GRADUATION_CLOSURE",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 136,
+      "definition_digest_old": "sha256:cd7e032442c2edef625f4f65b0771f23f98b45a57156a0771ab039404829b56a",
+      "definition_digest_new": "sha256:cd7e032442c2edef625f4f65b0771f23f98b45a57156a0771ab039404829b56a",
+      "dependency_digest_old": "sha256:6d89d1b64b89ac9d23e52df7daa1881a129cd68d7d128aba4dc03e4e544266b9",
+      "dependency_digest_new": "sha256:6d89d1b64b89ac9d23e52df7daa1881a129cd68d7d128aba4dc03e4e544266b9",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "PRODUCTION_RUNTIME_OWNER_CUTOVER_V1",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 12,
+      "definition_digest_old": "sha256:a883c073d910926ce0456daaa1b7b83a4b1184963b273088bf2824de0c76144f",
+      "definition_digest_new": "sha256:a883c073d910926ce0456daaa1b7b83a4b1184963b273088bf2824de0c76144f",
+      "dependency_digest_old": "sha256:a32928df3050b4de51f5cd24d449aa745bab3feea958785155b28afe6ca07bad",
+      "dependency_digest_new": "sha256:a32928df3050b4de51f5cd24d449aa745bab3feea958785155b28afe6ca07bad",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 3,
+      "definition_digest_old": "sha256:35f572fbd32a461b9c6e84c93de74ac73ba6fde16eec9b3c59f07a22b0a1dbc4",
+      "definition_digest_new": "sha256:35f572fbd32a461b9c6e84c93de74ac73ba6fde16eec9b3c59f07a22b0a1dbc4",
+      "dependency_digest_old": "sha256:a0c42d593e122f273ad1d13c337628f26f0cda3f843df2406c48db2f3ed1344b",
+      "dependency_digest_new": "sha256:a0c42d593e122f273ad1d13c337628f26f0cda3f843df2406c48db2f3ed1344b",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "T4R1_BIOLOGICAL_STAGE_AUTHORITY_V1",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 6,
+      "definition_digest_old": "sha256:acd835165a7e727a74a709c7f59bd76dfd55e078ffbbfec5f5f973567cf271ea",
+      "definition_digest_new": "sha256:acd835165a7e727a74a709c7f59bd76dfd55e078ffbbfec5f5f973567cf271ea",
+      "dependency_digest_old": "sha256:5561cdce1827053fc2802c60164f3cc6f2acdf2ef71e7ed20eee9871de03155d",
+      "dependency_digest_new": "sha256:5561cdce1827053fc2802c60164f3cc6f2acdf2ef71e7ed20eee9871de03155d",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 4,
+      "definition_digest_old": "sha256:15f76ce65cabcef995f2f9b196ebce30c45dc202e10f01a99af40b8fd3202e06",
+      "definition_digest_new": "sha256:15f76ce65cabcef995f2f9b196ebce30c45dc202e10f01a99af40b8fd3202e06",
+      "dependency_digest_old": "sha256:3f787929bf8ae0003cdcb60e22641e394072ce745ab3d71f187969484c39ea45",
+      "dependency_digest_new": "sha256:3f787929bf8ae0003cdcb60e22641e394072ce745ab3d71f187969484c39ea45",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "T4R1_CURRENT_CROP_ROLLING_CANDIDATE",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 3,
+      "definition_digest_old": "sha256:172267b8536ba3539ad51337e186c194fb0a1ee876bb90d2254b5586ff6b8a5f",
+      "definition_digest_new": "sha256:172267b8536ba3539ad51337e186c194fb0a1ee876bb90d2254b5586ff6b8a5f",
+      "dependency_digest_old": "sha256:69f1a5769a48fa4e272e02e6d140b09700e89e93de8647164c40734184820d31",
+      "dependency_digest_new": "sha256:69f1a5769a48fa4e272e02e6d140b09700e89e93de8647164c40734184820d31",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "T4R1_CURRENT_CROP_ROLLING_REFRESH",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 5,
+      "definition_digest_old": "sha256:4bd69db6f79247344f8db9f4d9392809b87fabb81a485bca39d063a9261fcf37",
+      "definition_digest_new": "sha256:4bd69db6f79247344f8db9f4d9392809b87fabb81a485bca39d063a9261fcf37",
+      "dependency_digest_old": "sha256:3fb80de2a3ddc73608251b9678bdfffe9980bee8ac84d4fdf3d0e4b3e9bbb542",
+      "dependency_digest_new": "sha256:3fb80de2a3ddc73608251b9678bdfffe9980bee8ac84d4fdf3d0e4b3e9bbb542",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 5,
+      "definition_digest_old": "sha256:40fdf0dd8d9c368b2cfd5c759273399b5d1ff00581da9aeea966ad962ce25622",
+      "definition_digest_new": "sha256:40fdf0dd8d9c368b2cfd5c759273399b5d1ff00581da9aeea966ad962ce25622",
+      "dependency_digest_old": "sha256:f81fb7b1d50673ce984fa32178bbfa1e415b559de79992ab970c2dd322ded72e",
+      "dependency_digest_new": "sha256:f81fb7b1d50673ce984fa32178bbfa1e415b559de79992ab970c2dd322ded72e",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_V1",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 8,
+      "definition_digest_old": "sha256:60443ab5795dd9b3fcb6e15b10adc7624645adc3cacff2b247085d9cbda8793b",
+      "definition_digest_new": "sha256:60443ab5795dd9b3fcb6e15b10adc7624645adc3cacff2b247085d9cbda8793b",
+      "dependency_digest_old": "sha256:90c4ffe287a8c613947f40a1867a05d6fba0f24353a0b3c8bcc8f68ac7bf72cd",
+      "dependency_digest_new": "sha256:90c4ffe287a8c613947f40a1867a05d6fba0f24353a0b3c8bcc8f68ac7bf72cd",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE",
+      "kind": "IMPORT_CLOSURE",
+      "path_count": 124,
+      "definition_digest_old": "sha256:e164782ecac1ecff3a54835f29b5e4b3a0fcc7d5f310b23857eaf9ff92ac4ca0",
+      "definition_digest_new": "sha256:e164782ecac1ecff3a54835f29b5e4b3a0fcc7d5f310b23857eaf9ff92ac4ca0",
+      "dependency_digest_old": "sha256:206e989ed817ce6591b60dd25499e2b56e6e243294b412d97997cea3b91dcec3",
+      "dependency_digest_new": "sha256:206e989ed817ce6591b60dd25499e2b56e6e243294b412d97997cea3b91dcec3",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "V13_QUALIFICATION_HARNESS_CLOSURE",
+      "kind": "EXACT_PATH_SET",
+      "path_count": 20,
+      "definition_digest_old": "sha256:9537a0efe504425ee70e8eb649d49a8ebe92485a418e25f6bd6b75f0d2fcb7ab",
+      "definition_digest_new": "sha256:9537a0efe504425ee70e8eb649d49a8ebe92485a418e25f6bd6b75f0d2fcb7ab",
+      "dependency_digest_old": "sha256:e1aa98f46e40fd60b678dab5e17519ee38438994304e883367e5eb830d154e65",
+      "dependency_digest_new": "sha256:e1aa98f46e40fd60b678dab5e17519ee38438994304e883367e5eb830d154e65",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "V13_RUNTIME_SEMANTIC_CLOSURE",
+      "kind": "IMPORT_CLOSURE",
+      "path_count": 108,
+      "definition_digest_old": "sha256:c72ea262fb76d6acbbc45a1be8dc7d739e934b0c905d5f40d07d318173b1fc62",
+      "definition_digest_new": "sha256:c72ea262fb76d6acbbc45a1be8dc7d739e934b0c905d5f40d07d318173b1fc62",
+      "dependency_digest_old": "sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25",
+      "dependency_digest_new": "sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25",
+      "digest_match": true
+    },
+    {
+      "resolver_id": "V13_TIMING_QUALIFICATION_CLOSURE",
+      "kind": "IMPORT_CLOSURE",
+      "path_count": 58,
+      "definition_digest_old": "sha256:c986ef729b9c15864565803107d948f503b67c195634ebdec35e7b85840d9642",
+      "definition_digest_new": "sha256:c986ef729b9c15864565803107d948f503b67c195634ebdec35e7b85840d9642",
+      "dependency_digest_old": "sha256:e79e522bd2fabcf8cc3716dcb4b1eecf36c14e6bd4050118877f0d25ad580598",
+      "dependency_digest_new": "sha256:e79e522bd2fabcf8cc3716dcb4b1eecf36c14e6bd4050118877f0d25ad580598",
+      "digest_match": true
+    }
+  ],
+  "mcft_dependency_resolver_digest_changes": [],
+  "adjudication": "EXTERNALLY_OWNED_NON_MCFT_APPLICABLE",
+  "fail_closed_on_dependency_impact": true,
+  "adr_paths_added_to_mcft_resolvers": false,
+  "unknown_changed_path_semantics_relaxed": false,
+  "candidate_replay": {
+    "old_candidate_base": "e1f8b078bb8459ecb9a77d1fad0d95f4bf143221",
+    "old_candidate_head": "0d1c194c44e428ac7af88c44c8125903a2bedce3",
+    "new_candidate_base": "f41dde8d44de95e71748e756e048e0166c1916b7",
+    "replayed_pre_reconciliation_head": "f96504e768b3e69cbf79e74b2488f1b5c3065b3f",
+    "old_qualified_subject_sha": "93d08e4003370221218471e53a58ad356c34e3b9",
+    "replayed_qualified_subject_sha": "9d99ba7832b37651c48c750299587953b210ea2d",
+    "replay_commit_count": 8,
+    "commit_map": [
+      {
+        "old_sha": "ba45d0e7bc2a71d02f2adfab7d3fe3a6104aa455",
+        "new_sha": "f20d1bf6da7ba1c3e24ed581b7aa1215429ee0cc",
+        "commit_subject": "docs(mcft-cap09): freeze 2026-09-05 current-crop refresh request",
+        "patch_id": "127335dd67bc8df6e1626adef16205ba924bfb7d"
+      },
+      {
+        "old_sha": "93d08e4003370221218471e53a58ad356c34e3b9",
+        "new_sha": "9d99ba7832b37651c48c750299587953b210ea2d",
+        "commit_subject": "ci(mcft-cap09): qualify 2026-09-05 rolling current-crop refresh",
+        "patch_id": "8bcf3a87cd2f537ec69c271465117a6b33625383"
+      },
+      {
+        "old_sha": "93efed1a20ebdceadc1b59e1c25d43b39ba4ce23",
+        "new_sha": "55089ddddeb853cff659c66a677593e5de9fc87f",
+        "commit_subject": "docs(mcft-cap09): persist qualified 2026-09-05 current-crop authority",
+        "patch_id": "8a30e394002e9b419f2b326a9cf9dc65c78f4faa"
+      },
+      {
+        "old_sha": "90841f1ec6238a9ce277e2ae34f9cef2569ae594",
+        "new_sha": "a74382cfc255120e8150de5363249611e713ef42",
+        "commit_subject": "docs(mcft-cap09): extend effective current-crop registry through 2026-09-06T10Z",
+        "patch_id": "6586257a034fdbad2369bc908c57456d533c3db2"
+      },
+      {
+        "old_sha": "89574d692c1c63bc124bccfb22d8b2cf0e519cbd",
+        "new_sha": "113a152f8110e952b09e3492e75aef7f61621b50",
+        "commit_subject": "test(mcft-cap09): bind 2026-09-05 current-crop refresh to registry",
+        "patch_id": "15fe3701710f2f71c8b5b7635260efd69fdfacb2"
+      },
+      {
+        "old_sha": "67aca52c3475142e34b2b2f39c2aaa81c126d455",
+        "new_sha": "8bb8c2e79d3a6e221444dc453ec4958846676531",
+        "commit_subject": "ci(mcft-cap09): preserve qualified 2026-09-05 current-crop refresh",
+        "patch_id": "5602b788be37b3520056fabedb0f9390af6dfb8e"
+      },
+      {
+        "old_sha": "8e209da212cc78aef7b79ed569dfa10d9e520290",
+        "new_sha": "cd96e9a2ae898903b4a897d881992223556a1950",
+        "commit_subject": "test(mcft-cap09): advance resolver seam through 2026-09-05 refresh",
+        "patch_id": "eb2f7e9906111f4b5a232ecca86e0b0520a5c174"
+      },
+      {
+        "old_sha": "0d1c194c44e428ac7af88c44c8125903a2bedce3",
+        "new_sha": "f96504e768b3e69cbf79e74b2488f1b5c3065b3f",
+        "commit_subject": "chore(mcft-cap09): register current protected-main refresh predecessor",
+        "patch_id": "b2599c06458549b2ce1e347919b551d73b05ac65"
+      }
+    ]
+  }
+}
