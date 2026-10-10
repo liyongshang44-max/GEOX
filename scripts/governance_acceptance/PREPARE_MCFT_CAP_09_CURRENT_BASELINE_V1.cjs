@@ -54,7 +54,7 @@ function validateMainAdoption({anchor, head, main, parents, candidate_tree, main
 function verifySources() {
   const c = read(CONTRACT);
   assert.equal(c.status, "PREPARATION_ONLY_NOT_EXECUTION_AUTHORITY");
-  assert.equal(c.adopted_baseline, "962fde08f5415909e21ab3812754f0bb711b8b69");
+  assert.equal(c.adopted_baseline, "96984439d8587f13ba57b6b0948a1c81d55da9e5");
   assert.equal(c.frozen_runtime, "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a");
   for (const [effect, allowed] of Object.entries(c.authorization)) assert.equal(allowed, false, "EFFECT_FORBIDDEN:" + effect);
   git(["merge-base", "--is-ancestor", c.adopted_baseline, "HEAD"]);

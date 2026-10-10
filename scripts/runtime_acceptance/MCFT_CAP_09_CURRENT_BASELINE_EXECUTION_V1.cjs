@@ -2,7 +2,7 @@
 const assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), cp = require("node:child_process");
 const ROOT = path.resolve(__dirname, "../..");
 const ARM = "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_ARM_V1.json";
-const BASE = "962fde08f5415909e21ab3812754f0bb711b8b69";
+const BASE = "96984439d8587f13ba57b6b0948a1c81d55da9e5";
 function canonical(v) { const n = Date.parse(v); assert(Number.isFinite(n) && new Date(n).toISOString() === v, "CURRENT_EXECUTION_CANONICAL_TIME_REQUIRED"); return n; }
 function validateArm(a, mode, context) {
   assert.equal(a.schema_version, "geox_mcft_cap09_current_baseline_execution_arm_v1");

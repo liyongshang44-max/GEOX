@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft_cap09_current_baseline_execution_arm_v1",
   "armed": false,
   "mode": "DISABLED",
-  "adopted_base_sha": "962fde08f5415909e21ab3812754f0bb711b8b69",
+  "adopted_base_sha": "96984439d8587f13ba57b6b0948a1c81d55da9e5",
   "execution_subject_binding": "EXACT_ADOPTED_PROTECTED_MAIN",
   "expires_at": null,
   "qualification_first_base": null,

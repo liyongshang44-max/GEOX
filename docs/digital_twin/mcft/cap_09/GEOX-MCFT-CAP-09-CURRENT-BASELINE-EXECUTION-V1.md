@@ -1,6 +1,6 @@
 # Current-baseline execution entrypoints
 
-These entrypoints are disabled engineering deliverables, not current production or qualification authority. The checked-in ARM is false. CI performs boundary tests without credentials, provider calls or production execution. Existing 46 QCP checks and historical proofs remain unchanged; the added check covers engineering only.
+These entrypoints are disabled engineering deliverables, not current production or qualification authority. The checked-in ARM is false. CI performs boundary tests without credentials, provider calls or production execution. Existing 47 QCP checks and historical proofs remain unchanged; the added check covers engineering only.
 
 ## Recovery
 

@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_current_baseline_preparation_contract_v1",
   "status": "PREPARATION_ONLY_NOT_EXECUTION_AUTHORITY",
-  "adopted_baseline": "962fde08f5415909e21ab3812754f0bb711b8b69",
+  "adopted_baseline": "96984439d8587f13ba57b6b0948a1c81d55da9e5",
   "frozen_runtime": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
   "runtime_resolver": "V13_RUNTIME_SEMANTIC_CLOSURE",
   "runtime_path_count": 108,
