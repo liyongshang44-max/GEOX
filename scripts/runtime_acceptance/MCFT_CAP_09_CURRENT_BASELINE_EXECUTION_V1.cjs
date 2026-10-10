@@ -2,6 +2,7 @@
 const assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), cp = require("node:child_process");
 const ROOT = path.resolve(__dirname, "../..");
 const ARM = "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_ARM_V1.json";
+const ISOLATED_ARM = "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_ISOLATED_QUALIFICATION_ARM_20261010_V1.json";
 const BASE = "96984439d8587f13ba57b6b0948a1c81d55da9e5";
 function canonical(v) { const n = Date.parse(v); assert(Number.isFinite(n) && new Date(n).toISOString() === v, "CURRENT_EXECUTION_CANONICAL_TIME_REQUIRED"); return n; }
 function validateArm(a, mode, context) {
@@ -91,7 +92,12 @@ function sourceContext() {
 }
 function authorize(mode) {
   // Check disabled policy and local-only scope before even contacting GitHub.
-  const a = JSON.parse(fs.readFileSync(path.join(ROOT, ARM), "utf8"));
+  // Only a reviewed protected-main artifact may authorize the one scoped
+  // local qualification run. Preserve the original disabled ARM for CI and
+  // every recovery/production mode. No operator-controlled arm file path.
+  const authorityPath = mode === "ISOLATED_QUALIFICATION" &&
+    !process.env.CI && !process.env.GITHUB_ACTIONS ? ISOLATED_ARM : ARM;
+  const a = JSON.parse(fs.readFileSync(path.join(ROOT, authorityPath), "utf8"));
   assert.equal(a.armed, true, "CURRENT_EXECUTION_NOT_ARMED");
   assert(!process.env.CI && !process.env.GITHUB_ACTIONS && process.platform === "win32", "CURRENT_EXECUTION_WINDOWS_LOCAL_ONLY");
   return validateArm(a, mode, sourceContext());
