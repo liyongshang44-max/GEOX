@@ -26,6 +26,23 @@ for (const mutated of [
   {main_tree:"f".repeat(40)},
   {parents:["e".repeat(40),"c".repeat(40)]},
 ]) assert.throws(() => p.validateMainAdoption({...descendant,...mutated}));
+// The merged successor is a *different* protected-main subject. It is valid
+// only for the exact five file changes and zero-delta candidate merge tree.
+const adoptedGuard = {...adoption, anchor:adoption.anchor,
+  main:"f".repeat(40), head:"f".repeat(40),
+  parents:["9625680d4bec137956d79960e0f9feaad4ebf6ab","e".repeat(40)],
+  successor_paths:scopedPaths};
+assert.equal(p.validateMainAdoption(adoptedGuard),
+  "POST_MERGE_SOURCE_GUARD_ZERO_DELTA_ADOPTION");
+for(const mutated of [
+  {successor_paths:[]},
+  {successor_paths:scopedPaths.slice(1)},
+  {successor_paths:[...scopedPaths,"scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_ARM_V1.json"]},
+  {candidate_tree:"a".repeat(40)},
+  {head:"e".repeat(40)},
+  {parents:["f".repeat(40),"e".repeat(40)]},
+]) assert.throws(() => p.validateMainAdoption({...adoptedGuard,...mutated}));
+
 // Branch proof above is never provider, producer, timing or Formal authority.
 
 for(const change of [{head:"e".repeat(40)},{parents:[adoption.anchor]},{parents:["e".repeat(40),"c".repeat(40)]},{main_tree:"f".repeat(40)},{candidate_tree:null}])assert.throws(()=>p.validateMainAdoption({...adoption,...change}));
