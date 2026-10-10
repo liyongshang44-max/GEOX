@@ -43,9 +43,36 @@ function verifySuccessor(){
  const arm=JSON.parse(fs.readFileSync(path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_ARM_V1.json"),"utf8"));
  assert.deepEqual(arm,{schema_version:"geox_mcft_cap09_current_baseline_execution_arm_v1",armed:false,mode:"DISABLED",adopted_base_sha:BASE,execution_subject_binding:"EXACT_ADOPTED_PROTECTED_MAIN",expires_at:null,qualification_first_base:null,isolated_run_id:null,qualification_execution_authorized:false,production_recovery_authorized:false,new_image_build_and_two_role_cutover_authorized:false,source_failed_receipt_sha256:null,stage_ref:null,formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false,historical_attempt_reset_authorized:false},"UNAUTHORIZED_ARM_ACTIVATION");
  require("./PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs").verifySources();
- const temp=fs.mkdtempSync(path.join(os.tmpdir(),"current-baseline-predecessor-")),checkout=path.join(temp,"checkout");let attached=false,prior;
- try{git("worktree","add","--detach",checkout,BASE);attached=true;const stage=JSON.parse(cp.execFileSync(process.execPath,["scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs"],{cwd:checkout,encoding:"utf8",timeout:240000,maxBuffer:16*1024*1024}));assert.equal(stage.status,"PASS","ADOPTED_STAGE_SUCCESSOR_NOT_PROVEN");cp.execFileSync("git",["checkout","--detach",HISTORICAL_STAGE_BASE],{cwd:checkout,encoding:"utf8",timeout:30000});prior=JSON.parse(cp.execFileSync(process.execPath,[OLD],{cwd:checkout,encoding:"utf8",timeout:240000,maxBuffer:16*1024*1024}));assert.equal(prior.status,"PASS");prior.stage_changed_paths=stage.changedPaths;prior.stage_adoption_baseline=BASE;}
- finally{if(attached)git("worktree","remove","--force",checkout);fs.rmSync(temp,{recursive:true,force:true});}
+ // Reproduce the predecessor's *historical* origin/main in an isolated Git
+ // clone. Worktrees share refs with the caller and cannot safely rebind
+ // origin/main after protected main has advanced.
+ const temp=fs.mkdtempSync(path.join(os.tmpdir(),"current-baseline-predecessor-")),
+   checkout=path.join(temp,"checkout");
+ let prior;
+ const currentMainBefore=git("rev-parse","origin/main").trim();
+ try{
+  cp.execFileSync("git",["clone","--shared","--no-checkout",ROOT,checkout],
+    {cwd:ROOT,stdio:"ignore",timeout:240000});
+  const historicalGit=(...args)=>cp.execFileSync("git",["-C",checkout,...args],
+    {encoding:"utf8",timeout:120000}).trim();
+  historicalGit("checkout","--detach",BASE);
+  historicalGit("update-ref","refs/remotes/origin/main",BASE);
+  assert.equal(historicalGit("rev-parse","origin/main"),BASE,"ISOLATED_HISTORICAL_REMOTE_REF_REQUIRED");
+  const stage=JSON.parse(cp.execFileSync(process.execPath,
+    ["scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs"],
+    {cwd:checkout,encoding:"utf8",timeout:240000,maxBuffer:16*1024*1024}));
+  assert.equal(stage.status,"PASS","ADOPTED_STAGE_SUCCESSOR_NOT_PROVEN");
+  historicalGit("checkout","--detach",HISTORICAL_STAGE_BASE);
+  prior=JSON.parse(cp.execFileSync(process.execPath,[OLD],
+    {cwd:checkout,encoding:"utf8",timeout:240000,maxBuffer:16*1024*1024}));
+  assert.equal(prior.status,"PASS","IMMUTABLE_PREDECESSOR_REPLAY_NOT_PASS");
+  prior.stage_changed_paths=stage.changedPaths;
+  prior.stage_adoption_baseline=BASE;
+ }finally{
+  fs.rmSync(temp,{recursive:true,force:true});
+  assert.equal(git("rev-parse","origin/main").trim(),currentMainBefore,
+    "LIVE_ORIGIN_MAIN_MUST_NOT_CHANGE_DURING_REPLAY");
+ }
  const migration=JSON.parse(cp.execFileSync(process.execPath,[OLD,"--migration"],{cwd:ROOT,encoding:"utf8",timeout:240000,maxBuffer:16*1024*1024}));assert.equal(migration.status,"PASS");
  return {status:"PASS",baseline:BASE,changedPaths:[...new Set([...prior.changedPaths,...prior.stage_changed_paths,...PATHS])],qualification_scope:prior.qualification_scope,current_entry_scope:"ENGINEERING_ONLY_NOT_LIVE_QUALIFICATION",adopted_stage_base:BASE,historical_stage_base:HISTORICAL_STAGE_BASE,migration,production_runtime_start_authorized:false,formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false};
 }
