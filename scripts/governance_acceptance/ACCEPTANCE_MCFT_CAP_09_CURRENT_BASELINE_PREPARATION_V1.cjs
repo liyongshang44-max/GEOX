@@ -81,6 +81,39 @@ for(const bad of [
 // Branch proof above is never provider, producer, timing or Formal authority.
 
 for(const change of [{head:"e".repeat(40)},{parents:[adoption.anchor]},{parents:["e".repeat(40),"c".repeat(40)]},{main_tree:"f".repeat(40)},{candidate_tree:null}])assert.throws(()=>p.validateMainAdoption({...adoption,...change}));
+// After adopted PR3687, allow only this exact nine-file *engineering* repair.
+const bucketBase="2e4c3e7ac0b0e300b15b26b2f6111e7d39de328b";
+const bucketPaths=[
+ "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+ "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ISOLATED-PRODUCER-BUCKET-SEAM-20261010-V1.md",
+ "scripts/governance_acceptance/PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs",
+ "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs",
+ "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_QUALIFICATION_AUTHORIZATION_SUCCESSOR_V1.cjs",
+ "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_PRODUCER_BUCKET_SEAM_SUCCESSOR_V1.cjs",
+ "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+ "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts",
+ "scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts",
+].sort();
+const bucketCandidate={...adoption,main:bucketBase,head:"e".repeat(40),
+ parents:["6c6f2d77301a852dbb2f52538df89e3098b5aee5","d".repeat(40)],
+ head_descends_from_main:true,successor_paths:bucketPaths};
+assert.equal(p.validateMainAdoption(bucketCandidate),"PRE_MERGE_ISOLATED_BUCKET_SEAM_ENGINEERING_ONLY");
+for(const bad of [
+ {head_descends_from_main:false},
+ {successor_paths:bucketPaths.slice(1)},
+ {successor_paths:[...bucketPaths,"apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts"]},
+ {candidate_tree:"f".repeat(40)},
+])assert.throws(()=>p.validateMainAdoption({...bucketCandidate,...bad}));
+const bucketMerged={...bucketCandidate,main:"f".repeat(40),head:"f".repeat(40),
+ parents:[bucketBase,"e".repeat(40)],head_descends_from_main:false};
+assert.equal(p.validateMainAdoption(bucketMerged),"POST_MERGE_ISOLATED_BUCKET_SEAM_ENGINEERING_ONLY");
+for(const bad of [
+ {head:"e".repeat(40)},
+ {parents:["f".repeat(40),"e".repeat(40)]},
+ {successor_paths:bucketPaths.slice(1)},
+ {main_tree:"e".repeat(40)},
+])assert.throws(()=>p.validateMainAdoption({...bucketMerged,...bad}));
+
 const source = p.verifySources();
 assert.equal(source.deployment_binding.frozen_source_runtime_matches_current_baseline, true);
 assert.equal(source.deployment_binding.image_contents_attested, false);
