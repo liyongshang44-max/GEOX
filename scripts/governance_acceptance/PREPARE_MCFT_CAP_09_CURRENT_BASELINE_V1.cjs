@@ -41,6 +41,7 @@ function verifyDeploymentBinding(c, paths) {
     image_contents_attested: false, owner_qualified: false};
 }
 
+const ADOPTED_ENTRY_MAIN = "9625680d4bec137956d79960e0f9feaad4ebf6ab";
 const ENGINEERING_SOURCE_GUARD_SUCCESSOR_PATHS = [
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs",
   "scripts/governance_acceptance/PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs",
@@ -54,10 +55,16 @@ function validateMainAdoption({
 }) {
   if (main === anchor) return "PRE_MERGE_ANCHOR";
   assert(Array.isArray(parents) && parents.length === 2, "EXACT_TWO_PARENT_ADOPTION_REQUIRED");
-  assert.equal(parents[0], anchor, "FIRST_PARENT_BASE_CHANGED");
+  assert([anchor, ADOPTED_ENTRY_MAIN].includes(parents[0]), "FIRST_PARENT_BASE_CHANGED");
   assert.match(parents[1], /^[a-f0-9]{40}$/);
   assert.match(candidate_tree, /^[a-f0-9]{40}$/);
   assert.equal(main_tree, candidate_tree, "MERGE_CANDIDATE_ZERO_DELTA_REQUIRED");
+  if (parents[0] === ADOPTED_ENTRY_MAIN) {
+    assert.equal(head, main, "SOURCE_GUARD_SUCCESSOR_MAIN_NOT_ADOPTED");
+    assert.deepEqual(successor_paths, ENGINEERING_SOURCE_GUARD_SUCCESSOR_PATHS,
+      "ADOPTED_GUARD_SUCCESSOR_SCOPE_MISMATCH");
+    return "POST_MERGE_SOURCE_GUARD_ZERO_DELTA_ADOPTION";
+  }
   if (head !== main) {
     assert.equal(head_descends_from_main, true, "CURRENT_MAIN_NOT_ANCESTOR_OF_SUCCESSOR");
     assert.deepEqual(successor_paths, ENGINEERING_SOURCE_GUARD_SUCCESSOR_PATHS,
@@ -77,8 +84,9 @@ function verifySources() {
   const head = git(["rev-parse", "HEAD"]), main = git(["rev-parse", "origin/main"]);
   const parents = main === c.adopted_baseline ? [] : git(["show", "-s", "--format=%P", main]).split(" ");
   if (parents.length === 2) git(["merge-base", "--is-ancestor", c.adopted_baseline, parents[1]]);
-  const successorPaths = head===main ? [] :
-    git(["diff", "--name-only", main, head]).split(/\r?\n/).filter(Boolean).sort();
+  const successorPaths = head===main && parents[0] !== ADOPTED_ENTRY_MAIN ? [] :
+    git(["diff", "--name-only",
+      head===main ? ADOPTED_ENTRY_MAIN : main, head]).split(/\r?\n/).filter(Boolean).sort();
   const descends = head===main ? false :
     cp.spawnSync("git", ["merge-base", "--is-ancestor", main, head],
       {cwd:ROOT, timeout:30000}).status === 0;
