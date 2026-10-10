@@ -61,6 +61,36 @@ for(const [key,value] of [
   ["expires_at","2026-10-12T06:00:00.000Z"],
   ["qualification_first_base","2026-10-10T15:00:00.000Z"],
 ]) negative(()=>x.validateArm({...adoptedIsoArm,[key]:value},"ISOLATED_QUALIFICATION",isoTestContext));
+// Isolated producer composition must reuse *exact* canonical primitives but
+// must never claim exact production wrapper-composition equivalence.
+// This smoke performs pure construction only, with no Provider, DB or S3 I/O.
+if (process.env.MCFT_CURRENT_ENTRY_COMPILE_TEST === "1") {
+  const code = [
+    'import {composeIsolatedMcftCap09V13ProducerCoreV1 as make,ISOLATED_V13_COMPOSITION_ID_V1 as ID} from "./scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts";',
+    'import assert from "node:assert/strict";',
+    'const config={endpoint:"http://127.0.0.1:59000",bucket:"mcft-cap09-requal-72dc0304a21a",region:"us-east-1",access_key_id:"TEST_NONSECRET",secret_access_key:"TEST_NONSECRET",allow_insecure_http_for_test:true};',
+    'const params={pool:{},epoch_id:"isolated_pure_constructor_test",subject_sha:"a".repeat(40),isolated_run_id:"72dc0304a21a",private_store:config};',
+    'const p=make(params);',
+    'assert.equal(p.isolated_composition_id,ID);',
+    'assert.equal(p.production_wrapper_composer_reused,false);',
+    'assert.equal(p.production_canonical_primitive_implementations_reused,true);',
+    'assert.throws(()=>make({...params,private_store:{...config,bucket:"geox-mcft-cap09-formal-raw-v1"}}),/ISOLATED_PRODUCER_RUN_SCOPED_BUCKET_REQUIRED/);',
+    'assert.throws(()=>make({...params,private_store:{...config,endpoint:"https://production.example"}}),/ISOLATED_PRODUCER_LOOPBACK_STORAGE_REQUIRED/);',
+    'console.log(JSON.stringify({status:"PASS",qualification_only:true,provider_requests:0,db_writes:0,production_wrapper_reused:false}));',
+  ].join("\n");
+  const result=cp.spawnSync(process.execPath,["--import","tsx","--input-type=module","-e",code],
+    {cwd:x.ROOT,encoding:"utf8",timeout:30000,maxBuffer:4*1024*1024});
+  assert.equal(result.status,0,"ISOLATED_COMPOSITION_PURE_CONSTRUCTOR_TEST_FAILED:"+result.stderr);
+  assert.match(result.stdout,/"status":"PASS"/);
+  count++;
+  const v2=fs.readFileSync(path.join(__dirname,
+    "RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"),"utf8");
+  assert(v2.includes("production_canonical_core_identical: false"),
+    "ISOLATED_PRODUCER_MUST_NOT_CLAIM_EXACT_PRODUCTION_WRAPPER");
+  assert(!v2.includes("composeMcftCap09V13ForcingProducerCoreV1({"),
+    "FROZEN_PRODUCTION_BUCKET_WRAPPER_MUST_NOT_BE_INVOKED");
+  count++;
+}
 const context = {head: "a".repeat(40), main: "a".repeat(40), clean: true, base_ancestor: true, frozen_runtime_identical: true, ci: false, platform: "win32", now: "2026-10-10T02:00:00.000Z"};
 const arm = {schema_version: "geox_mcft_cap09_current_baseline_execution_arm_v1", armed: true, mode: "ISOLATED_QUALIFICATION", adopted_base_sha: x.BASE, execution_subject_binding: "EXACT_ADOPTED_PROTECTED_MAIN", expires_at: "2026-10-10T03:00:00.000Z", qualification_first_base: "2026-10-10T09:00:00.000Z", isolated_run_id: "123456abcdef", qualification_execution_authorized: true, production_recovery_authorized: false, new_image_build_and_two_role_cutover_authorized: false, formal_v5_arm_authorized: false, a0_authorized: false, o00_authorized: false, historical_attempt_reset_authorized: false};
 assert.equal(x.validateArm(arm, arm.mode, context).execution_subject_sha, context.head); count++;

@@ -1267,6 +1267,20 @@
         "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_ISOLATED_QUALIFICATION_ARM_20261010_V1.json"
       ]
+    },
+    "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ISOLATED-PRODUCER-BUCKET-SEAM-20261010-V1.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs",
+        "scripts/governance_acceptance/PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_PRODUCER_BUCKET_SEAM_SUCCESSOR_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_QUALIFICATION_AUTHORIZATION_SUCCESSOR_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
+      ]
     }
   },
   "checks": [
@@ -2743,6 +2757,33 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_QUALIFICATION_AUTHORIZATION_SUCCESSOR_V1.cjs"
+    },
+    {
+      "check_id": "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_ENGINEERING_ONLY",
+      "owner": "MCFT_CAP09_ISOLATED_QUALIFICATION_BUCKET_SEAM",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ISOLATED-PRODUCER-BUCKET-SEAM-20261010-V1.md"
+      ],
+      "resolver_ids": [
+        "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_V1"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_PR3687_AUTHORITY_AND_FAILED_FIRST_EXECUTE_PRESERVED",
+      "execution_workflow": ".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml",
+      "execution_workflow_status": "ENGINEERING_ONLY_NO_LIVE_EXECUTE",
+      "fail_policy": "FAIL_CLOSED_EXACT_NINE_PATHS_CANONICAL_PRIMITIVES_DISTINCT_BUCKET_NO_PRODUCTION_WRAPPER_CLAIM",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_PRODUCER_BUCKET_SEAM_SUCCESSOR_V1.cjs"
     }
   ],
   "non_effects": {
