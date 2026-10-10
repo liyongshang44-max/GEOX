@@ -41,14 +41,29 @@ function verifyDeploymentBinding(c, paths) {
     image_contents_attested: false, owner_qualified: false};
 }
 
-function validateMainAdoption({anchor, head, main, parents, candidate_tree, main_tree}) {
+const ENGINEERING_SOURCE_GUARD_SUCCESSOR_PATHS = [
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs",
+  "scripts/governance_acceptance/PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs",
+  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+].sort();
+function validateMainAdoption({
+  anchor, head, main, parents, candidate_tree, main_tree,
+  head_descends_from_main = false, successor_paths = [],
+}) {
   if (main === anchor) return "PRE_MERGE_ANCHOR";
-  assert.equal(head, main, "LOCAL_MAIN_ADVANCED_REBIND_REQUIRED");
   assert(Array.isArray(parents) && parents.length === 2, "EXACT_TWO_PARENT_ADOPTION_REQUIRED");
   assert.equal(parents[0], anchor, "FIRST_PARENT_BASE_CHANGED");
   assert.match(parents[1], /^[a-f0-9]{40}$/);
   assert.match(candidate_tree, /^[a-f0-9]{40}$/);
   assert.equal(main_tree, candidate_tree, "MERGE_CANDIDATE_ZERO_DELTA_REQUIRED");
+  if (head !== main) {
+    assert.equal(head_descends_from_main, true, "CURRENT_MAIN_NOT_ANCESTOR_OF_SUCCESSOR");
+    assert.deepEqual(successor_paths, ENGINEERING_SOURCE_GUARD_SUCCESSOR_PATHS,
+      "CURRENT_BASELINE_ENGINEERING_SUCCESSOR_SCOPE_MISMATCH");
+    return "PROTECTED_MAIN_DESCENDANT_ENGINEERING_ONLY_CANDIDATE";
+  }
+  assert.deepEqual(successor_paths, [], "CURRENT_MAIN_EXECUTION_CANDIDATE_PATHS_FORBIDDEN");
   return "PROTECTED_MAIN_EXACT_MERGE_TREE_ADOPTION";
 }
 function verifySources() {
@@ -61,9 +76,15 @@ function verifySources() {
   const head = git(["rev-parse", "HEAD"]), main = git(["rev-parse", "origin/main"]);
   const parents = main === c.adopted_baseline ? [] : git(["show", "-s", "--format=%P", main]).split(" ");
   if (parents.length === 2) git(["merge-base", "--is-ancestor", c.adopted_baseline, parents[1]]);
+  const successorPaths = head===main ? [] :
+    git(["diff", "--name-only", main, head]).split(/\\r?\\n/).filter(Boolean).sort();
+  const descends = head===main ? false :
+    cp.spawnSync("git", ["merge-base", "--is-ancestor", main, head],
+      {cwd:ROOT, timeout:30000}).status === 0;
   const adoption = validateMainAdoption({anchor:c.adopted_baseline,head,main,parents,
     candidate_tree:parents.length===2?git(["rev-parse",parents[1]+"^{tree}"]):null,
-    main_tree:main===c.adopted_baseline?null:git(["rev-parse",main+"^{tree}"])});
+    main_tree:main===c.adopted_baseline?null:git(["rev-parse",main+"^{tree}"]),
+    head_descends_from_main:descends,successor_paths:successorPaths});
   const paths = require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs")
     .resolveDependencyResolvers(ROOT, read(QCP)).resolved[c.runtime_resolver].paths;
   assert.equal(paths.length, c.runtime_path_count, "FROZEN_PARTITION_CHANGED");
