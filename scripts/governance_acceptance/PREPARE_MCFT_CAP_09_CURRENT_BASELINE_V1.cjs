@@ -77,7 +77,7 @@ function verifySources() {
   const parents = main === c.adopted_baseline ? [] : git(["show", "-s", "--format=%P", main]).split(" ");
   if (parents.length === 2) git(["merge-base", "--is-ancestor", c.adopted_baseline, parents[1]]);
   const successorPaths = head===main ? [] :
-    git(["diff", "--name-only", main, head]).split(/\\r?\\n/).filter(Boolean).sort();
+    git(["diff", "--name-only", main, head]).split(/\r?\n/).filter(Boolean).sort();
   const descends = head===main ? false :
     cp.spawnSync("git", ["merge-base", "--is-ancestor", main, head],
       {cwd:ROOT, timeout:30000}).status === 0;
