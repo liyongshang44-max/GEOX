@@ -41,6 +41,16 @@ function verifyDeploymentBinding(c, paths) {
     image_contents_attested: false, owner_qualified: false};
 }
 
+function validateMainAdoption({anchor, head, main, parents, candidate_tree, main_tree}) {
+  if (main === anchor) return "PRE_MERGE_ANCHOR";
+  assert.equal(head, main, "LOCAL_MAIN_ADVANCED_REBIND_REQUIRED");
+  assert(Array.isArray(parents) && parents.length === 2, "EXACT_TWO_PARENT_ADOPTION_REQUIRED");
+  assert.equal(parents[0], anchor, "FIRST_PARENT_BASE_CHANGED");
+  assert.match(parents[1], /^[a-f0-9]{40}$/);
+  assert.match(candidate_tree, /^[a-f0-9]{40}$/);
+  assert.equal(main_tree, candidate_tree, "MERGE_CANDIDATE_ZERO_DELTA_REQUIRED");
+  return "PROTECTED_MAIN_EXACT_MERGE_TREE_ADOPTION";
+}
 function verifySources() {
   const c = read(CONTRACT);
   assert.equal(c.status, "PREPARATION_ONLY_NOT_EXECUTION_AUTHORITY");
@@ -48,7 +58,12 @@ function verifySources() {
   assert.equal(c.frozen_runtime, "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a");
   for (const [effect, allowed] of Object.entries(c.authorization)) assert.equal(allowed, false, "EFFECT_FORBIDDEN:" + effect);
   git(["merge-base", "--is-ancestor", c.adopted_baseline, "HEAD"]);
-  assert.equal(git(["rev-parse", "origin/main"]), c.adopted_baseline, "LOCAL_MAIN_ADVANCED_REBIND_REQUIRED");
+  const head = git(["rev-parse", "HEAD"]), main = git(["rev-parse", "origin/main"]);
+  const parents = main === c.adopted_baseline ? [] : git(["show", "-s", "--format=%P", main]).split(" ");
+  if (parents.length === 2) git(["merge-base", "--is-ancestor", c.adopted_baseline, parents[1]]);
+  const adoption = validateMainAdoption({anchor:c.adopted_baseline,head,main,parents,
+    candidate_tree:parents.length===2?git(["rev-parse",parents[1]+"^{tree}"]):null,
+    main_tree:main===c.adopted_baseline?null:git(["rev-parse",main+"^{tree}"])});
   const paths = require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs")
     .resolveDependencyResolvers(ROOT, read(QCP)).resolved[c.runtime_resolver].paths;
   assert.equal(paths.length, c.runtime_path_count, "FROZEN_PARTITION_CHANGED");
@@ -63,7 +78,7 @@ function verifySources() {
   // Generated, untracked acceptance receipts are not source; tracked modifications remain checked.
   const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\r?\n/).filter(p => p && !p.startsWith("acceptance-output/"));
   for (const p of [...tracked, ...untracked]) assert(c.preparation_paths.includes(p), "PREPARATION_SCOPE_EXCEEDED:" + p);
-  return {contract: c, subject_sha: git(["rev-parse", "HEAD"]), frozen_runtime_paths_verified: paths.length,
+  return {contract: c, subject_sha: head, protected_main_adoption:adoption, frozen_runtime_paths_verified: paths.length,
     deployment_binding: verifyDeploymentBinding(c, paths)};
 }
 
@@ -137,7 +152,7 @@ function main() {
   assert(args.every(a => a === "--plan-only"), "ONLY_PLAN_ONLY_SUPPORTED_NO_EXECUTION_AUTHORITY");
   console.log(JSON.stringify(prepare({source: verifySources()}), null, 2));
 }
-module.exports = {verifySources, verifyDeploymentBinding, diagnoseHealth, prepare};
+module.exports = {verifySources, verifyDeploymentBinding, diagnoseHealth, prepare, validateMainAdoption};
 if (require.main === module) {
   try { main(); } catch (e) {
     console.error(JSON.stringify({status: "PREPARATION_BLOCKED", reason: e.message, execution_authorized: false}));
