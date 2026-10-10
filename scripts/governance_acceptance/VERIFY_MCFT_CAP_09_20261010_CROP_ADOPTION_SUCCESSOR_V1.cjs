@@ -27,6 +27,18 @@ function verifyStageSuccessor(){
   assert.equal(cp.spawnSync("git",["merge-base","--is-ancestor",currentMain,"HEAD"],{cwd:ROOT}).status,0,"CURRENT_MAIN_NOT_ANCESTOR");
   return require("./VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs").verifySuccessor();
  }
+ // A later exact-main engineering merge must inherit the current-baseline
+ // successor without reinterpreting the original crop-stage merge parents.
+ // The delegated verifier proves the exact five-path merge and old history.
+ if(currentMain!==BASE &&
+    currentMain!=="9625680d4bec137956d79960e0f9feaad4ebf6ab" &&
+    here===currentMain &&
+    fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs"))){
+  assert.equal(cp.spawnSync("git",["merge-base","--is-ancestor",
+    "9625680d4bec137956d79960e0f9feaad4ebf6ab",currentMain],
+    {cwd:ROOT}).status,0,"ENGINEERING_BASE_NOT_ANCESTOR");
+  return require("./VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs").verifySuccessor();
+ }
  if(currentMain!==BASE){
   const parents=git("show","-s","--format=%P",currentMain).split(" ");
   assert.equal(here,currentMain,"MAIN_MOVED_REBIND_REQUIRED");assert.equal(parents.length,2,"EXACT_TWO_PARENT_ADOPTION_REQUIRED");assert.equal(parents[0],BASE,"FIRST_PARENT_BASE_DRIFT");
