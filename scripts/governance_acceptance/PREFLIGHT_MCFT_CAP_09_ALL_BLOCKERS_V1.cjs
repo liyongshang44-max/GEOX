@@ -188,6 +188,11 @@ function changedPaths(base, head) {
 }
 
 function runDiagnostic(command, extraEnv = {}) {
+  const stageVerifier = path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs");
+  if (fs.existsSync(stageVerifier)) {
+    const stage = require("./VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs");
+    if (stage.isFrozenDiagnosticCommand(command)) return stage.runHistoricalDiagnostic(command, extraEnv);
+  }
   const result = cp.spawnSync(command, {
     cwd: ROOT,
     encoding: "utf8",

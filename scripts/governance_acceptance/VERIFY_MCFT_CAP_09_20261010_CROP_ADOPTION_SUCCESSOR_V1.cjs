@@ -27,7 +27,7 @@ function verifyStageSuccessor(){
  assert.deepEqual(diff.map(x=>x.file).sort(),PATHS,"CURRENT_STAGE_EXACT_PATHS_REQUIRED");
  for(const x of diff)assert.equal(x.kind,[P,W,Q,R].includes(x.file)?"M":"A","UNAUTHORIZED_STAGE_CHANGE:"+x.file);
  assert.equal(fs.readFileSync(path.join(ROOT,FROZEN),"utf8"),original(FROZEN),"FROZEN_VERIFIER_MUTATED");
- assert.equal(fs.readFileSync(path.join(ROOT,P),"utf8"),original(P).replace(OLD_P,NEW_P),"HISTORICAL_PREFLIGHT_MUTATED");
+ assert.equal(fs.readFileSync(path.join(ROOT,P),"utf8"),original(P).replace(OLD_P,NEW_P).replace("function runDiagnostic(command, extraEnv = {}) {\n","function runDiagnostic(command, extraEnv = {}) {\n  const stageVerifier = path.join(ROOT, \"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs\");\n  if (fs.existsSync(stageVerifier)) {\n    const stage = require(\"./VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs\");\n    if (stage.isFrozenDiagnosticCommand(command)) return stage.runHistoricalDiagnostic(command, extraEnv);\n  }\n"),"HISTORICAL_PREFLIGHT_MUTATED");
  assert.equal(fs.readFileSync(path.join(ROOT,W),"utf8"),original(W).replace(OLD_W,NEW_W),"HISTORICAL_QCP_WORKFLOW_MUTATED");
  const before=JSON.parse(original(Q)),now=read(Q);
  assert.equal(before.checks.length,46);assert.equal(now.checks.length,47);assert.deepEqual(now.checks.slice(0,46),before.checks,"HISTORICAL_CHECKS_CHANGED");
@@ -55,5 +55,29 @@ function verifyStageSuccessor(){
  return {status:"PASS",adjudication:"STAGE_SUCCESSOR_EXACT_APPEND_AND_IMMUTABLE_HISTORICAL_REPLAY",head:git("rev-parse","HEAD"),baseline:BASE,changedPaths:PATHS,historical_registration:historical.status,retained_authorities:past.entries.length,new_authority_sha256:entry.authority_sha256,real_run_id:38023043739,production_effect:false,formal_v5_arm:false,a0_execution:false,o00_started:false};
 }
 function replayHistoricalRegistration(){verifyStageSuccessor();return historicalReplay();}
-module.exports={verifyStageSuccessor,replayHistoricalRegistration};
+
+const HISTORIC_DIAGNOSTIC_CHECK_IDS=[
+ "FORMAL_V5_R6_STAGE_ADMISSION","FORMAL_V5_FINAL_READBACK","FORMAL_V5_COMPLETION_ADJUDICATION",
+ "FORMAL_ARM_RETIREMENT_ONLY","AM22_PREQUALIFICATION_ONLY","AM22_START_CHAIN_ENGINEERING_ONLY",
+ "AM22_HOST_MEASUREMENT_ONLY","AM22_FRESH_AUTHORITY_APPEND_ONLY","AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY",
+ "AM22_POST_CUTOVER_RECOVERY_ENGINEERING_ONLY","AM22_GFS_PROGRESS_DIAGNOSTIC_ENGINEERING_ONLY",
+ "FROZEN_V13_REQUALIFICATION_SUCCESSOR_ENGINEERING_ONLY"
+];
+function isFrozenDiagnosticCommand(command) {
+ const rows=JSON.parse(original(Q)).checks.filter(x=>HISTORIC_DIAGNOSTIC_CHECK_IDS.includes(x.check_id));
+ assert.equal(rows.length,HISTORIC_DIAGNOSTIC_CHECK_IDS.length,"FROZEN_DIAGNOSTIC_CHECK_SET_CHANGED");
+ return rows.some(r=>command===r.diagnostic_command||command===r.diagnostic_command+" --selftest");
+}
+function runHistoricalDiagnostic(command,extraEnv={}) {
+ assert(isFrozenDiagnosticCommand(command),"UNBOUND_HISTORIC_DIAGNOSTIC_COMMAND");
+ verifyStageSuccessor();
+ const folder=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-stage-diagnostic-")),checkout=path.join(folder,"base");let attached=false;
+ try {
+  git("worktree","add","--detach",checkout,BASE);attached=true;
+  const result=cp.spawnSync(command,{cwd:checkout,encoding:"utf8",shell:true,env:{...process.env,...extraEnv,MCFT_CAP09_ALL_BLOCKERS_CHILD:"1"},timeout:240000});
+  return {status:result.status===0?"PASS":"FAIL",exit_code:result.status,signal:result.signal||null,stdout_tail:String(result.stdout||"").slice(-4000),stderr_tail:String(result.stderr||"").slice(-4000),historical_subject_sha:BASE,current_stage_successor_proven:true};
+ }finally{if(attached)git("worktree","remove","--force",checkout);fs.rmSync(folder,{recursive:true,force:true});}
+}
+
+module.exports={verifyStageSuccessor,replayHistoricalRegistration,isFrozenDiagnosticCommand,runHistoricalDiagnostic};
 if(require.main===module){try{console.log(JSON.stringify(verifyStageSuccessor(),null,2));}catch(e){console.error(e.stack||String(e));process.exitCode=1;}}
