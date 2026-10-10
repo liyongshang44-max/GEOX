@@ -11,7 +11,7 @@ check(()=>assert.throws(()=>g.validateBoundary(changes.map(x=>({...x,status:"D"}
 check(()=>assert.throws(()=>g.validateBoundary(changes,before,after,policy+" ",policy),/ROOT_POLICY/));
 check(()=>{const bad=structuredClone(after);bad.checks[0].owner="unsafe";assert.throws(()=>g.validateBoundary(changes,before,bad,policy,policy),/PREDECESSOR_QCP/);});
 check(()=>{const bad=structuredClone(after);bad.checks.at(-1).carry_forward_policy="ALL";assert.throws(()=>g.validateBoundary(changes,before,bad,policy,policy),/CHECK_CHANGED/);});
-const authority=JSON.parse(read(g.AUTHORITY)),registry=JSON.parse(read("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json"));
+const authority=JSON.parse(read(g.AUTHORITY)),registry=JSON.parse(cp.execFileSync("git",["show","bb0f4f351d13436a451ac085fc30eaed539dd91a:docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json"],{cwd:g.ROOT,encoding:"utf8"}));
 // Archive negatives are fixtures using the same frozen verifier body. They cannot
 // authorize source adoption, production execution or claim live host measurement.
 function fixture(mutator){

@@ -2,7 +2,7 @@
 
 These entrypoints are disabled engineering deliverables, not current production or qualification authority. The checked-in ARM is false. CI performs boundary tests without credentials, provider calls or production execution. Existing 47 QCP checks and historical proofs remain unchanged; the added check covers engineering only.
 
-After the 2026-10-10 current-crop authority adoption, this successor is governed as an exact 17-path scope. The seventeenth path is the adopted-stage successor verifier itself, modified only to delegate descendant-PR validation to this stricter current-baseline verifier while preserving the adopted-main and historical replay checks.
+After the 2026-10-10 current-crop authority adoption, this successor is governed as an exact 18-path scope. The seventeenth path is the adopted-stage successor verifier itself, modified only to delegate descendant-PR validation to this stricter current-baseline verifier while preserving the adopted-main and historical replay checks.
 
 ## Recovery
 
@@ -21,3 +21,5 @@ The first logical qualification base must be more than six hours ahead of invoca
 Use `--operator-authorized --preflight-only --all` for the guarded qualification preflight, or `--operator-authorized --execute --all` only under separately adopted authority. Environment names are validated by `MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs`. Recovery likewise requires one of `--preflight-only` and `--execute` and `--failed=<immutable-receipt-path>`.
 
 Successful isolated execution still requires governed evidence adjudication and adoption. It does not automatically close Producer, supply-deadline or unique-production-owner blockers. The timing measurement is local-scope evidence; it does not silently replace the old GitHub-scope budget. A production owner requires an independent live T1/T2 fenced-lease proof. No production tests should run merely because wall-clock time reaches 12:00.
+
+The eighteenth path is the AM22 fresh-authority acceptance fixture. It replays the immutable `bb0f4f351d13436a451ac085fc30eaed539dd91a` registry snapshot for the 2026-10-09 single-append negative tests, so later adopted authorities do not corrupt that historical fixture; the production verifier remains unchanged.

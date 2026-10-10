@@ -2,10 +2,11 @@
 "use strict";
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process"),os=require("node:os");
 const ROOT=path.resolve(__dirname,"../.."),BASE="96984439d8587f13ba57b6b0948a1c81d55da9e5",HISTORICAL_STAGE_BASE="962fde08f5415909e21ab3812754f0bb711b8b69",STAGE="scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs";
-const C="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-BASELINE-PREPARATION-CONTRACT-V1.json",Q="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",OLD="scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs";
+const C="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-BASELINE-PREPARATION-CONTRACT-V1.json",Q="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",OLD="scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs",AM22_TEST="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs";
 const PATHS=[
  ".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml",
  C,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-BASELINE-EXECUTION-V1.md",Q,
+ "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs",
  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs",
  "scripts/governance_acceptance/PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs",
  "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs",OLD,STAGE,
@@ -25,7 +26,7 @@ function verifySuccessor(){
  assert.deepEqual(git("status","--porcelain").trim().split(/\r?\n/).filter(x=>x&&!x.startsWith("?? acceptance-output/")),[],"DIRTY_SOURCE");
  const changes=git("diff","--name-status",BASE,"HEAD").trim().split(/\r?\n/).filter(Boolean).map(x=>{const [status,p]=x.split("\t");return {status,p};});
  assert.deepEqual(changes.map(x=>x.p).sort(),PATHS,"EXACT_CURRENT_ENTRY_PATHS_REQUIRED");
- for(const x of changes)assert.equal(x.status,[Q,OLD,STAGE].includes(x.p)?"M":"A","UNAUTHORIZED_CHANGE_KIND");
+ for(const x of changes)assert.equal(x.status,[Q,OLD,STAGE,AM22_TEST].includes(x.p)?"M":"A","UNAUTHORIZED_CHANGE_KIND");
  const c=JSON.parse(fs.readFileSync(path.join(ROOT,C),"utf8"));assert.deepEqual(c.preparation_paths,PATHS);assert.equal(c.adopted_baseline,BASE);
  const before=JSON.parse(git("show",BASE+":"+Q)),after=JSON.parse(fs.readFileSync(path.join(ROOT,Q),"utf8"));
  assert.equal(before.checks.length,47);assert.equal(after.checks.length,48);assert.deepEqual(after.checks.at(-1),CHECK);
@@ -36,6 +37,9 @@ function verifySuccessor(){
  const stageBefore=' const currentMain=git("rev-parse","origin/main");\n if(currentMain!==BASE){\n  const here=git("rev-parse","HEAD"),parents=git("show","-s","--format=%P",currentMain).split(" ");';
  const stageAfter=' const currentMain=git("rev-parse","origin/main"),here=git("rev-parse","HEAD");\n if(here!==currentMain&&fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs"))){\n  assert.equal(cp.spawnSync("git",["merge-base","--is-ancestor",currentMain,"HEAD"],{cwd:ROOT}).status,0,"CURRENT_MAIN_NOT_ANCESTOR");\n  return require("./VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs").verifySuccessor();\n }\n if(currentMain!==BASE){\n  const parents=git("show","-s","--format=%P",currentMain).split(" ");';
  assert.equal(fs.readFileSync(path.join(ROOT,STAGE),"utf8"),git("show",BASE+":"+STAGE).replace(stageBefore,stageAfter),"STAGE_SUCCESSOR_INHERITANCE_CHANGED");
+ const am22Before='const authority=JSON.parse(read(g.AUTHORITY)),registry=JSON.parse(read("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json"));';
+ const am22After='const authority=JSON.parse(read(g.AUTHORITY)),registry=JSON.parse(cp.execFileSync("git",["show","bb0f4f351d13436a451ac085fc30eaed539dd91a:docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json"],{cwd:g.ROOT,encoding:"utf8"}));';
+ assert.equal(fs.readFileSync(path.join(ROOT,AM22_TEST),"utf8"),git("show",BASE+":"+AM22_TEST).replace(am22Before,am22After),"AM22_FRESH_AUTHORITY_FIXTURE_REPLAY_CHANGED");
  const arm=JSON.parse(fs.readFileSync(path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_ARM_V1.json"),"utf8"));
  assert.deepEqual(arm,{schema_version:"geox_mcft_cap09_current_baseline_execution_arm_v1",armed:false,mode:"DISABLED",adopted_base_sha:BASE,execution_subject_binding:"EXACT_ADOPTED_PROTECTED_MAIN",expires_at:null,qualification_first_base:null,isolated_run_id:null,qualification_execution_authorized:false,production_recovery_authorized:false,new_image_build_and_two_role_cutover_authorized:false,source_failed_receipt_sha256:null,stage_ref:null,formal_v5_arm_authorized:false,a0_authorized:false,o00_authorized:false,historical_attempt_reset_authorized:false},"UNAUTHORIZED_ARM_ACTIVATION");
  require("./PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs").verifySources();
