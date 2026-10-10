@@ -44,6 +44,8 @@ function verifyDeploymentBinding(c, paths) {
 const ADOPTED_ENTRY_MAIN = "9625680d4bec137956d79960e0f9feaad4ebf6ab";
 const ISOLATED_AUTHORIZATION_BASE = "6c6f2d77301a852dbb2f52538df89e3098b5aee5";
 const ISOLATED_ADOPTED_MAIN = "2e4c3e7ac0b0e300b15b26b2f6111e7d39de328b";
+const HISTORY_BUDGET_BASE = "af4c68e9c3bd5da782b08443b9397b496ba85b74";
+const HISTORY_BUDGET_SUCCESSOR_PATHS = require("./VERIFY_MCFT_CAP_09_HISTORY_REPLAY_BUDGET_SUCCESSOR_V1.cjs").PATHS;
 const ISOLATED_BUCKET_SUCCESSOR_PATHS = [
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ISOLATED-PRODUCER-BUCKET-SEAM-20261010-V1.md",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
@@ -80,10 +82,20 @@ function validateMainAdoption({
 }) {
   if (main === anchor) return "PRE_MERGE_ANCHOR";
   assert(Array.isArray(parents) && parents.length === 2, "EXACT_TWO_PARENT_ADOPTION_REQUIRED");
-  assert([anchor, ADOPTED_ENTRY_MAIN, ISOLATED_AUTHORIZATION_BASE, ISOLATED_ADOPTED_MAIN].includes(parents[0]), "FIRST_PARENT_BASE_CHANGED");
+  assert([anchor, ADOPTED_ENTRY_MAIN, ISOLATED_AUTHORIZATION_BASE, ISOLATED_ADOPTED_MAIN, HISTORY_BUDGET_BASE].includes(parents[0]), "FIRST_PARENT_BASE_CHANGED");
   assert.match(parents[1], /^[a-f0-9]{40}$/);
   assert.match(candidate_tree, /^[a-f0-9]{40}$/);
   assert.equal(main_tree, candidate_tree, "MERGE_CANDIDATE_ZERO_DELTA_REQUIRED");
+  if (parents[0] === HISTORY_BUDGET_BASE) {
+    assert.equal(head, main, "HISTORY_BUDGET_EXACT_MAIN_REQUIRED");
+    assert.deepEqual(successor_paths, HISTORY_BUDGET_SUCCESSOR_PATHS, "HISTORY_BUDGET_POST_MERGE_SCOPE_CHANGED");
+    return "POST_MERGE_HISTORY_REPLAY_BUDGET_ENGINEERING_ONLY";
+  }
+  if (main === HISTORY_BUDGET_BASE && head !== main) {
+    assert.equal(head_descends_from_main, true, "HISTORY_BUDGET_MAIN_NOT_ANCESTOR");
+    assert.deepEqual(successor_paths, HISTORY_BUDGET_SUCCESSOR_PATHS, "HISTORY_BUDGET_PRE_MERGE_SCOPE_CHANGED");
+    return "PRE_MERGE_HISTORY_REPLAY_BUDGET_ENGINEERING_ONLY";
+  }
   if (parents[0] === ISOLATED_ADOPTED_MAIN) {
     assert.equal(head,main,"ISOLATED_BUCKET_SUCCESSOR_MAIN_NOT_ADOPTED");
     assert.deepEqual(successor_paths,ISOLATED_BUCKET_SUCCESSOR_PATHS,
@@ -133,11 +145,11 @@ function verifySources() {
   const head = git(["rev-parse", "HEAD"]), main = git(["rev-parse", "origin/main"]);
   const parents = main === c.adopted_baseline ? [] : git(["show", "-s", "--format=%P", main]).split(" ");
   if (parents.length === 2) git(["merge-base", "--is-ancestor", c.adopted_baseline, parents[1]]);
-  const adoptedParent = parents[0] === ISOLATED_ADOPTED_MAIN ?
+  const adoptedParent = parents[0] === HISTORY_BUDGET_BASE ? HISTORY_BUDGET_BASE : parents[0] === ISOLATED_ADOPTED_MAIN ?
     ISOLATED_ADOPTED_MAIN : parents[0] === ISOLATED_AUTHORIZATION_BASE ?
     ISOLATED_AUTHORIZATION_BASE : ADOPTED_ENTRY_MAIN;
   const successorPaths = head===main &&
-    ![ADOPTED_ENTRY_MAIN,ISOLATED_AUTHORIZATION_BASE,ISOLATED_ADOPTED_MAIN].includes(parents[0]) ? [] :
+    ![ADOPTED_ENTRY_MAIN,ISOLATED_AUTHORIZATION_BASE,ISOLATED_ADOPTED_MAIN,HISTORY_BUDGET_BASE].includes(parents[0]) ? [] :
     git(["diff", "--name-only",
       head===main ? adoptedParent : main, head]).split(/\r?\n/).filter(Boolean).sort();
   const descends = head===main ? false :
@@ -160,7 +172,10 @@ function verifySources() {
   const tracked = git(["diff", "--name-only", c.adopted_baseline]).split(/\r?\n/).filter(Boolean);
   // Generated, untracked acceptance receipts are not source; tracked modifications remain checked.
   const untracked = git(["ls-files", "--others", "--exclude-standard"]).split(/\r?\n/).filter(p => p && !p.startsWith("acceptance-output/"));
-  const newScope = ["PRE_MERGE_ISOLATED_BUCKET_SEAM_ENGINEERING_ONLY",
+  const newScope = ["PRE_MERGE_HISTORY_REPLAY_BUDGET_ENGINEERING_ONLY",
+    "POST_MERGE_HISTORY_REPLAY_BUDGET_ENGINEERING_ONLY"].includes(adoption) ?
+    [...new Set([...ISOLATED_AUTHORIZATION_SUCCESSOR_PATHS, ...ISOLATED_BUCKET_SUCCESSOR_PATHS, ...HISTORY_BUDGET_SUCCESSOR_PATHS])] :
+    ["PRE_MERGE_ISOLATED_BUCKET_SEAM_ENGINEERING_ONLY",
     "POST_MERGE_ISOLATED_BUCKET_SEAM_ENGINEERING_ONLY"].includes(adoption) ?
     [...new Set([...ISOLATED_AUTHORIZATION_SUCCESSOR_PATHS, ...ISOLATED_BUCKET_SUCCESSOR_PATHS])] :
     ["PRE_MERGE_ISOLATED_QUALIFICATION_AUTHORIZATION",
