@@ -6,10 +6,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
 import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
+import { MCFT_CAP09_V13_FORCING_PRODUCER_CORE_ID_V1 } from "../../apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.js";
 import {
-  composeMcftCap09V13ForcingProducerCoreV1,
-  MCFT_CAP09_V13_FORCING_PRODUCER_CORE_ID_V1,
-} from "../../apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.js";
+  composeIsolatedMcftCap09V13ProducerCoreV1, ISOLATED_V13_COMPOSITION_ID_V1,
+} from "./MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.js";
 import { PostgresExternalFormalForcingBaseContinuityRepositoryV1 } from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.js";
 import { PostgresExternalFormalForcingControllerLifecycleV1 } from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.js";
 
@@ -164,13 +164,17 @@ async function main(): Promise<void> {
       first_required_base: firstBase,
       last_required_base: lastBase,
     });
-    const producerCore = composeMcftCap09V13ForcingProducerCoreV1({
+    const producerCore = composeIsolatedMcftCap09V13ProducerCoreV1({
       pool,
-      scope: MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
+      isolated_run_id: currentTargets.bucket.replace(/^mcft-cap09-requal-/, ""),
       epoch_id: epoch,
       subject_sha: subject,
       private_store: privateStore,
     });
+    assert.equal(producerCore.isolated_composition_id, ISOLATED_V13_COMPOSITION_ID_V1,
+      "ISOLATED_ONLY_COMPOSITION_REQUIRED");
+    assert.equal(producerCore.production_wrapper_composer_reused, false,
+      "PRODUCTION_WRAPPER_BUCKET_LOCK_MUST_NOT_BE_BYPASSED");
 
     assert.equal(producerCore.producer_core_id, MCFT_CAP09_V13_FORCING_PRODUCER_CORE_ID_V1);
     await continuity.initializeCursor();
@@ -308,7 +312,10 @@ async function main(): Promise<void> {
       processed_base_count: samples.length,
       exact_sequential_bases: bases,
       producer_core_id: MCFT_CAP09_V13_FORCING_PRODUCER_CORE_ID_V1,
-      production_canonical_core_identical: true,
+      production_canonical_core_identical: false,
+      production_wrapper_composer_reused: false,
+      production_canonical_primitive_implementations_reused: true,
+      isolated_composition_id: ISOLATED_V13_COMPOSITION_ID_V1,
       qualification_clock_mode: "ACCELERATED_ENGINEERING_ONLY",
       qualification_clock_substitutes_wait_only: true,
       qualification_only_prebudget_admission_boundary: true,
