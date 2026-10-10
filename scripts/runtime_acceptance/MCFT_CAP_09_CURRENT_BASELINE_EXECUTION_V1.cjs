@@ -38,16 +38,56 @@ function validateArm(a, mode, context) {
   }
   return {...a, execution_subject_sha: context.head};
 }
+// Split the Windows worktree read into bounded Git queries. A single
+// `git status --porcelain` call may exceed 30s on this checkout and masks
+// later qualification diagnostics. Include staged, unstaged and untracked
+// non-ignored paths; do not relax the clean-exact-main requirement.
+function sourceWorktreeClean(gitRead) {
+  return gitRead(["diff", "--name-only", "--"]) === ""
+    && gitRead(["diff", "--cached", "--name-only", "--"]) === ""
+    && gitRead(["ls-files", "--others", "--exclude-standard"]) === "";
+}
+function frozenRuntimePaths(root, authority) {
+  const spec = authority.dependency_resolvers?.V13_RUNTIME_SEMANTIC_CLOSURE;
+  assert.equal(spec?.kind, "IMPORT_CLOSURE", "CURRENT_EXECUTION_V13_IMPORT_CLOSURE_REQUIRED");
+  const closure = require("../governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs")
+    .buildImportClosure(root, spec.roots);
+  assert.deepEqual(closure.missing, [], "CURRENT_EXECUTION_FROZEN_IMPORT_CLOSURE_MISSING");
+  const paths = [...new Set([...closure.paths, ...(spec.additional_exact_paths || [])])].sort();
+  assert.equal(paths.length, 108, "CURRENT_EXECUTION_FROZEN_108_PATHS_REQUIRED");
+  for (const rel of paths) {
+    assert(!path.isAbsolute(rel) && !rel.split(/[\\/]/).includes(".."), "CURRENT_EXECUTION_FROZEN_PATH_ESCAPE");
+    assert(fs.existsSync(path.join(root, rel)), "CURRENT_EXECUTION_FROZEN_PATH_MISSING:" + rel);
+  }
+  return paths;
+}
 function sourceContext() {
-  const git = args => cp.execFileSync("git", args, {cwd: ROOT, encoding: "utf8", timeout: 30000}).trim();
+  const git = args => {
+    try {
+      return cp.execFileSync("git", args, {
+        cwd: ROOT, encoding: "utf8", timeout: 90000,
+        maxBuffer: 16 * 1024 * 1024, windowsHide: true,
+      }).trim();
+    } catch (error) {
+      throw new Error("CURRENT_EXECUTION_GIT_READ_FAILED:" + args[0] + ":" + (error.code || error.message));
+    }
+  };
   const head = git(["rev-parse", "HEAD"]);
-  const main = git(["ls-remote", "origin", "refs/heads/main"]).split(/\s+/)[0];
+  const main = git(["ls-remote", "origin", "refs/heads/main"]).split(/\\s+/)[0];
   const q = JSON.parse(fs.readFileSync(path.join(ROOT, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json")));
-  const paths = require("../governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs").resolveDependencyResolvers(ROOT, q).resolved.V13_RUNTIME_SEMANTIC_CLOSURE.paths;
-  assert.equal(paths.length, 108);
-  const frozen = git(["diff", "--name-only", "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a", "HEAD", "--", ...paths]);
-  return {head, main, clean: git(["status", "--porcelain"]) === "", base_ancestor: cp.spawnSync("git", ["merge-base", "--is-ancestor", BASE, head], {cwd: ROOT}).status === 0,
-    frozen_runtime_identical: frozen === "", ci: Boolean(process.env.CI || process.env.GITHUB_ACTIONS), platform: process.platform, now: new Date().toISOString()};
+  // Resolving *every* QCP dependency may materialize GENERATED_GRAPH_OUTPUT
+  // artifacts in the source checkout. Resolve only V13's read-only import graph.
+  const paths = frozenRuntimePaths(ROOT, q);
+  const frozen = git(["diff", "--name-only",
+    "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a", "HEAD", "--", ...paths]);
+  return {
+    head, main, clean: sourceWorktreeClean(git),
+    base_ancestor: cp.spawnSync("git", ["merge-base", "--is-ancestor", BASE, head],
+      {cwd: ROOT, timeout: 90000, windowsHide: true}).status === 0,
+    frozen_runtime_identical: frozen === "",
+    ci: Boolean(process.env.CI || process.env.GITHUB_ACTIONS),
+    platform: process.platform, now: new Date().toISOString(),
+  };
 }
 function authorize(mode) {
   // Check disabled policy and local-only scope before even contacting GitHub.
@@ -82,4 +122,4 @@ function isolatedTargets(a, env) {
 function qualificationTargets() { const a = authorize("ISOLATED_QUALIFICATION"); assert.equal(process.env.MCFT_SUBJECT_SHA, sourceContext().head); return isolatedTargets(a, process.env); }
 function outputPath(targets, name) { assert(/^[A-Z0-9_]+\.json$/.test(name)); const out = path.join(targets.out, name); assert(!fs.existsSync(out), "CURRENT_QUALIFICATION_IMMUTABLE_OUTPUT_EXISTS"); return out; }
 function measureStartupMs(launch, now) { const start=Number(launch); assert(Number.isSafeInteger(start)&&start>0&&Number.isSafeInteger(now)&&now>=start,"CURRENT_TIMING_VALID_LOCAL_LAUNCH_CLOCK_REQUIRED"); return now-start; }
-module.exports = {ROOT, ARM, BASE, canonical, validateArm, sourceContext, authorize, isolatedTargets, qualificationTargets, outputPath, measureStartupMs};
+module.exports = {ROOT, ARM, BASE, canonical, validateArm, sourceContext, sourceWorktreeClean, frozenRuntimePaths, authorize, isolatedTargets, qualificationTargets, outputPath, measureStartupMs};
