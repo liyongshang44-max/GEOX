@@ -1,3 +1,110 @@
+# 2026-10-10 ACTIVE CHECKPOINT — ISOLATED QUALIFICATION ARM ADOPTED / WINDOWS PREFLIGHT PASS / REAL PRODUCER + TIMING PENDING / POST-MERGE MAIN CI RED
+
+Timestamp: **2026-10-10 18:00 Beijing / 10:00Z**. This is an evidence-based takeover snapshot; do not treat a status recorded here as a live proof after this time. **PREPENDED TO THE SECOND EXISTING HANDOFF ONLY; all 2026-10-09 and earlier text is preserved below verbatim.**
+
+**EXECUTIVE STATE:** CAP-09 is NOT recovered in production, Formal ARM/A0/O00–O23 are NOT authorized/executed, and no qualified Posterior State has been shown on Site. However, the independent Windows isolated qualification environment is provisioned, Schema/ACL and scientific selftests PASS, protected-main qualification-only ARM is adopted, and **governed Windows Preflight now PASS**. The NEXT OPERATION is one real isolated Producer + three Timing evidence run, after exact-main, expiry, output-directory and dependency checks. No result from that Execute run has been supplied as of this checkpoint. CRITICAL NEW GOVERNANCE ISSUE: **the adopted protected main has multiple failing post-merge CI checks**; do not equate PR green checks with an all-green main.
+
+## 0. HANDOFF GOVERNANCE, REQUIRED READING AND ROLE
+
+There remain **exactly two** CAP-09 handoff documents, no third handoff:
+1. Historical immutable reference: docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+2. Current continuation, this same file: docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-10-03.md
+
+Preserve full old checkpoints beneath this top prepend. The dedicated handoff PR #3298 must remain **DRAFT / OPEN / UNMERGED**, branch docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier, and may advance only with documentation checkpoints. Do not merge it into protected main. New takeover order: first read Digital Twin master task, MCFT/CAP-09 task and frozen qualification contract, then historical handoff, then THIS continuation newest first, then inspect live GitHub/main/QCP, Windows host, isolated infrastructure, and Neon; never act from stale SHA or historical ARM.
+
+**Two coordinated workstreams remain:** MCFT must qualify and start a genuinely sourced, governed field state and finish actual 24T. Product group must deliver source-verified, signed, scoped MCFT-to-Product read-only publication and C01/C02/C03 Site projection. The joint milestone is first legally persisted, independently verified Posterior State; Product work must not wait for O23 if a qualified publication already exists, but must not claim CAP-09 closure early.
+
+## 1. AUTHORITATIVE GIT HISTORY THROUGH 2026-10-10
+
+Verified via GitHub:
+- #3684 MERGED -> 96984439d8587f13ba57b6b0948a1c81d55da9e5: 2026-10-10 04Z real crop-stage authority adopted; source/registry and historical requalification approved on its own merged base.
+- #3683 MERGED -> 9625680d4bec137956d79960e0f9feaad4ebf6ab: current-baseline recovery, Provider/Producer and Timing engineering entrypoints adopted **default disabled**, without production recovery execution or historical attempt reset.
+- #3686 MERGED -> 6c6f2d77301a852dbb2f52538df89e3098b5aee5: Windows bounded clean-source checks (staged/unstaged/nonignored untracked), read-only V13 108-file IMPORT_CLOSURE path resolution, independent historical predecessor Git-clone replay and protected-main successor governance. Windows sourceContext smoke measured ~0.2950023 s on tested source file; NOT proof that GitHub HTTPS is reliable.
+- #3687 MERGED -> current protected main **2e4c3e7ac0b0e300b15b26b2f6111e7d39de328b**: isolated-only governed ARM for run 72dc0304a21a. GitHub verified protected-main ref, two-parent zero-delta merge, dedicated arm on main, previous arm still DISABLED, new QCP check appended. PR #3687 premerge CI: 34 SUCCESS / 11 SKIPPED / zero failures as observed at merge; this is **not** proof of merged-main CI PASS.
+- Legacy Frozen Runtime anchor: 3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a; historical 108-file import closure unchanged by these engineering/authorization PRs. The exact new protected main must always be rechecked; never reuse this SHA after another main advancement without successor qualification.
+
+**NEW MAIN CI FIRST-RED, NOT RESOLVED:** GitHub check-runs on 2e4c3e7… returned multiple red jobs, including post-merge-v13-control-plane, applicability-and-blocker-inventory, rolling-stage resolver qualification, identity/containment/static and several unrelated workflow gates. At the last API read there were **at least 19 failed check runs** plus a running runtime-only-live-provider-soak; the API reported 183 total check runs and some pages were not included in the first page. Treat this as provisional until fetching the complete check list. Two inspected first errors: (a) MCFT_CAP09_SUCCESSOR_CHAIN_REQUIRES_MAIN_BASE_REF:qual/bline-pmain-matrix-base-26c1383 during blocker inventory (run 38041003105); (b) ROLLING_STAGE_RESOLVER_SEAM_NOT_PASS:current_exact_delta_preservation,current_successor_semantic_preservation (run 38041003182). The post-merge-v13-control-plane run 38041003175 exited 1 with missing expected acceptance-output artifacts. **Do not attribute all failures to #3687 without independent classification**; isolate upstream/external reference issues vs actual successor checker defects and re-run exact-head QCP. Absolutely do not dilute R6/G12/G13 frozen hashes, semantic predicates, historical predecessor proof, or accepted authority whitelist to make CI green.
+
+## 2. ISOLATED LIVE-QUALIFICATION INFRA — MACHINE EVIDENCE FROM WINDOWS
+
+Fixed Run ID: **72dc0304a21a**. Keep this run ID and its immutable local receipts; never replace its existing volumes, DBs or bucket as a shortcut.
+- Local infrastructure folder: D:\gptdown\MCFT-CAP09-ISOLATED-INFRA-20261010
+- Docker project: mcftcap09requal72dc0304a21a
+- PostgreSQL: 127.0.0.1:55432; distinct DBs mcft_cap09_requal_72dc0304a21a_positive and mcft_cap09_requal_72dc0304a21a_negative
+- Local MinIO: 127.0.0.1:59000; dedicated bucket mcft-cap09-requal-72dc0304a21a. Local .env contains credentials: **NEVER paste into chat, logs, PR or handoff.**
+- Isolated infra Inspect: INFRA_READY_SCHEMA_UNMATERIALIZED before migration; then isolated 29-table installer --mode=check PASS (0/0); --mode=materialize PASS (29/29), canonical SQL SHA256 sha256:055f9cb60153a71fb8f75ecfed23267704003e0485c340472fa3d07556512fc2. Schema report: schema-acl-materialize-v1.json. Two fenced SECURITY DEFINER writer routines and ACL audited by installer. Both DBs initially had zero facts; no producer writes as of later resource readback.
+- Qualification resource readiness V2: RESOURCE_PRECHECK_COMPLETE_AUTHORITY_BLOCKED prior to adoption, but real readback of Evidence LOGIN to *both* DBs PASS: 29 tables each, facts=0, fenced writer EXECUTE allowed, direct facts INSERT denied; MinIO /health live, run scope valid, pg/tsx installed. The status's ARM blocker is a historical pre-adoption observation.
+- Windows scientific result: WINDOWS_SCIENTIFIC_SELFTEST_PASS_NON_AUTHORIZING; ecCodes native, GFS Scientific Core and Raw Bundle Decoder functional selftests PASS; eccodes/numpy/refet pinned. Python eccodeslib separately missing on Windows is **NOT** by itself a failure: Windows eccodes bundled library was selftested; do not force-install Linux/macOS eccodeslib wheel.
+- Reports: qualification-resource-readiness-v2.json, scientific-selftest-windows-v1.json; original V1 reports should remain immutable. Local credentials are not in these reports. No production DB, production S3 or Provider calls occurred during provisioning and read-only selftests.
+- Repo used for diagnostic exact-main checkout: D:\gptdown\GEOX-cap09-diagnostic-main-20261010 (user fast-forwarded to 2e4c3e7…). To satisfy clean worktree, separate detached execution worktree: D:\gptdown\GEOX-cap09-iso-execution-72dc0304a21a (PowerShell variable $Clean). A correct HEAD is not alone sufficient for cleanliness; untracked/generated files in the diagnostic checkout caused CURRENT_EXECUTION_CLEAN_SOURCE_REQUIRED on the first attempt.
+
+## 3. ISOLATED AUTHORIZATION VS FORMAL/PRODUCTION START
+
+Adopted separate ARM (exact path): scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_ISOLATED_QUALIFICATION_ARM_20261010_V1.json
+- armed=true; mode=ISOLATED_QUALIFICATION; subject binding=EXACT_ADOPTED_PROTECTED_MAIN; run_id=72dc0304a21a; original adopted base 96984439…
+- qualification_first_base = **2026-10-11T00:00:00.000Z = Beijing 2026-10-11 08:00**
+- expires_at = **2026-10-11T06:00:00.000Z = Beijing 2026-10-11 14:00**
+- qualification_execution_authorized=true within scope; production_recovery_authorized=false; new_image_build_and_two_role_cutover_authorized=false; formal_v5_arm_authorized=false; a0_authorized=false; o00_authorized=false; historical_attempt_reset_authorized=false.
+- **Original** scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_ARM_V1.json remains armed=false, mode=DISABLED. Product publication is NOT authorized by this ARM. No production recovery, Formal ARM, production A0/O00/O23 or 24T completion has occurred.
+
+TIME MIXUP TO PREVENT: Prior fresh stage authority as-of 2026-10-10T04Z is valid until **2026-10-11T10Z / Beijing 18:00**. Its former *theoretical* latest production A0 to cover O23 is **2026-10-10T10Z / Beijing 18:00**, now missed; it was never a production appointment or live authorization. The **Oct 11 08:00 isolated first logical base** is NOT a rescheduled Formal A0 and does not authorize 24T. The “first logical base >=6h in the future” is an entry qualification constraint, not a command to wait six hours before launching the program. A new production A0 needs fresh stage window and independently governed full pre-A0 chain. Do not backdate or rewrite dates to exploit expired coverage.
+
+## 4. LAST WINDOWS QUALIFICATION ACTION / CURRENT FRONTIER
+
+The operator script exists locally: D:\gptdown\MCFT-CAP09-ISOLATED-QUALIFICATION-AUTHORIZED-OPERATOR-20261010.ps1. It uses isolated local .env secrets without printing them; initial Preflight attempts showed transient GitHub HTTPS failures:
+- A first run in dirty diagnostic checkout: CURRENT_EXECUTION_CLEAN_SOURCE_REQUIRED -> STOP, no write. Switched to clean worktree.
+- Clean worktree Preflight: git ls-remote origin refs/heads/main intermittently failed “Recv failure: Connection was reset” / PROTECTED_MAIN_READ_FAILED, although manual ls-remote between attempts returned exact main. HTTP/1.1 alone did NOT make it reliable. Never replace live protected main with cached origin/main solely to bypass this check.
+- Read-only wrapper D:\gptdown\MCFT-CAP09-PREFLIGHT-GITHUB-RETRY-20261010.ps1 was added locally: up to 8 bounded full PRE-FLIGHT retries with transport tweaks and backoff; no Execute functionality, no authority bypass.
+- **Most recent operator report: attempt 2/8 PASS**. Exact output:
+  status=PREFLIGHT_ONLY_NOT_QUALIFIED; subject_sha=2e4c3e7ac0b0e300b15b26b2f6111e7d39de328b; isolation_targets_valid=true; provider_requests=0; production_writes=0; GOV-ERNED_PREFLIGHT_PASS_NO_PROVIDER_REQUESTS.
+- This proves initial scoped **Preflight PASS**, NOT any Provider capture, raw PUT, promotion, readback, timing result, delayed execution or QCP live qualification PASS.
+- The *next* proposed local check (not yet reported as run): dependencies in clean execution worktree (node --import tsx and require('pg')), install with pnpm --frozen-lockfile --ignore-scripts only if missing; ensure git clean again and output directory absent.
+- User has **NOT YET** returned an Execute terminal receipt. Do NOT mark Producer or Timing success. Proposed one-shot command: invoke same authorized operator PS1 with -Mode Execute -Repo $Clean -Infra $Infra -IUnderstandThisRunsRealProvider, ONLY when exact current main, short-lived ARM, clean worktree, local resources, first-base lead and output safety all pass. Output planned: D:\gptdown\MCFT-CAP09-ISOLATED-INFRA-20261010\qualification-evidence-72dc0304a21a-20261011T00Z. Check existing output BEFORE Execute; no blind repeat after partial data writes.
+- After execution, inspect real output files, immutable digests, exact positive and blocked DB attempts, Provider actual request/raw object retention, factual parsing/decoding, promotion/readback, three timing samples and controlled-delay actual cases. The expected “ISOLATED_LOCAL_EXECUTION_COMPLETED_REQUIRES_EVIDENCE_ADJUDICATION” means receipt produced, NOT completed acceptance or production admission.
+
+**KNOWN INTERFACE HAZARD:** Frozen production Producer composition may enforce production raw bucket geox-mcft-cap09-formal-raw-v1 while isolated qualification requires mcft-cap09-requal-72dc0304a21a. If a real isolated Producer construction fails on this mismatch, preserve error and STOP; qualify a bounded successor adapter/test seam, never point isolated DB/MinIO credentials at production bucket or weaken frozen runtime contract. This is a risk to verify at Execute, not evidence of a successful Producer run here.
+
+## 5. PRODUCTION EVIDENCE, OWNER AND GFS MUST NOT BE CONFUSED WITH ISOLATED SUCCESS
+
+Old AM22 Windows bootstrap on 2026-10-09 (main 3b46be1d…) failed in phase GFS_PAIR_WAIT, terminal “Query read timeout”; owner_verified=true but production_owners_may_have_changed=true and operator_reconciliation_required=true. Its failed.json remains at C:\Users\mylr1\AppData\Local\Temp\geox-am22-bootstrap-output-043493c3edf24b19898d958ed3ddd005\failed.json. At that time image b2eed3f3845ce4ba45627da028ecc7a04947dd03223698d65cebacf10c659456 and host fae5f756-ef25-40d5-9777-5b2c3d4837a1; Evidence restart=1, Twin restart=9, last matched local image; historical Fenced T1/T2 owner proof PASS. These historical observations are NOT valid current host proofs.
+
+Older Evidence internal log showed KBS blocked attempts, fatal Neon DNS ENOTFOUND and transient ECONNRESET; subsequent DNS/TCP success from host alone is not application recovery. Do not claim a Windows sleep event caused an incident from temporal correlation only. No automatic compose down, lease deletion, DB clear or forced restart; preserve three historical production attempts, evidence log and failed receipts. A fresh production owner proof requires current T1/T2 fenced lease renewal, exact-one role owners, same container/image/host and appropriate health, after separate recovery authorization. The 2026-10-09 planning selected A0 for measurement only; it did not arm Formal-v5.
+
+PRE-PRODUCTION GATE remains: fresh valid stage authority/25 contexts -> independent real Provider and GFS/ET0 pair availability -> exact-main freeze/image/host qualification -> live owners/cutover and full six-phase measured durations -> real Formal raw write/retain/redecode/promote/readback evidence -> controlled-delay cutoff proof -> eligible future A0 with 24T coverage -> new H5 -> separate Formal ARM -> schema/ACL verification -> actual A0/O00–O23. Frozen Runtime semantics 3d5fd13… and temporal “latest visible revision <= replay T” remain immutable; any semantic drift requires STOP and adjudication.
+
+## 6. PRODUCT TRACK IS PARALLEL, NOT IMPLIED BY MCFT PRE-FLIGHT
+
+Last independently checked Product publication PR **#3676 remains Draft/Open/Unmerged**, head c32a051edfe5681d20bf37e6a9b1d29b9139648e. Its signed publication ledger mechanism was isolated-CI-qualified but not deployed or populated by a real canonical MCFT Posterior State. #3671 capability map and #3674 optional direct-DB prototype are design/experimental tracks, not deployed evidence. Do not silently switch to direct dual-DB reads or create a third physical DB.
+
+Product group next: canonical six-key tenant/project/group/field/season/zone + source/ref/evidence/lineage/posterior/time/hash readback; independent signer and purpose-separated key; append-only ledger in existing Product operational DB; scope-authenticated public read-only adapter; actual C01 overview / C02 fields / C03 field page smoke with root-zone soil moisture, valid time and source; expansion later Evidence, 72h Forecast, History, Crop Stage, Data Health. Product integration may publish the first legitimate independently verified posterior before O23, but must show qualification-pending status and must not synthesize a result just to populate UI. Check Product PR and deployment/Neon live again; do not rely on 10/09 values as current.
+
+## 7. NEXT TAKEOVER WORK ORDER — DO NOT SKIP
+
+1. **READ ONLY CURRENT STATUS.** Re-fetch protected main HEAD and full relevant check-run pages; verify #3686/#3687 merge records and QCP 49th successor. First tackle **main post-merge CI reds** above, preserving exact original historical governance and frozen path/hash assertions. Classify upstream reference/missing Git ref vs real successor applicability errors. If main moves, any qualifications bound to 2e4c3e7… must STOP and rebind; do not fake a cached SHA.
+2. **Preserve isolated infra; validate candidate execution.** Check ARM still within 2026-10-11 14:00 Beijing and >=6h first-base lead at launch, exact current protected main, fresh source cleanliness and no existing output dir, Node pg/tsx modules in the actual clean execution worktree and Python scientific libs, actual isolated DB/MinIO loopback credentials. No credential disclosure.
+3. **Perform ONCE real authorized isolated Producer/Timing acquisition**, only when gate allows. Do not automatically retry Execute on network errors; first collect partial receipts and DB/object effects and only then adjudicate a safe governed resume/new run. No manual result.json, six-phase-input.json or success assertion.
+4. **Reconcile Producer, Timing and controlled-delay evidence** as three separate qualification outcomes; verify both blocked and positive paths, actual raw storage retention/promotion/readback, fence/ACL/identity, three timing samples and cutoff delays. If production hard-coded bucket conflicts with isolated storage, STOP and implement a narrowly reviewed adapter/qualification successor, no mutation to frozen production semantic code.
+5. **Independent exact-head QCP and post-merge governance**, including main CI first-red resolution; receive qualifying execution receipt only after independent proof, not merely because Preflight and CI pass.
+6. **Recompute a NEW production A0 crop authority/window**; Oct 10 18:00 theoretical old A0 is missed. Separate production restoration/cutover/Formal proof from local ISO qualification. Complete ARM -> schema/ACL -> A0 -> O00–O23 only under separate effective signed authority. Never reset old production attempts.
+7. **Run Product work in parallel** using first legitimately verified posterior as join point; coordinate canonical source and target scope with Product signed ledger/API, preserve read-only enforcement and produce C01/C02/C03 real smoke.
+8. **Update this SAME handoff** by prepending the next checkpoint only; update PR #3298 description/head, keep draft/open/unmerged; record exact main and real execution/evidence digests only after observed.
+
+## 8. FAILURE MODES / LEARNED RULES
+
+- **DO NOT confuse clocks**: Beijing 10/10 18:00 past theoretical A0 cutoff vs Beijing 10/11 08:00 ISO qualification logical first base vs 10/11 14:00 ISO ARM expiry vs 10/11 18:00 stage authority expiry. None is an automatic future production start.
+- **DO NOT equate statuses**: isolated INFRA READY != schema materialized != scientific selftest != preflight != Provider real writes != Producer qualification != Timing/delay proof != QCP acceptance != Formal-v5 A0 != 24T == NOT equivalent.
+- **GitHub availability is intermittent**: repeated git ls-remote HTTPS “Recv failure: Connection was reset” sometimes succeeded manually. Retry only full read-only Preflight within bounds, not real write effects. HTTP/1.1 is not a guaranteed fix; source checker must never substitute cached origin/main for fresh protected main.
+- **Worktree must be truly clean**: git fast-forward can succeed while nonignored untracked/generated files still violate guard. Use separate clean exact-main worktree, do not run destructive git clean or reset against diagnostic checkout.
+- **Windows requires actual source dependencies** in exact execution worktree; installing pnpm dependencies under the diagnostic repo does not install them in a new worktree. After install prove clean again.
+- **Do not re-run initialize/materialize** on existing positive/negative 29-table DB; maintain immutable receipt hashes. Original infra Inspect DB-name mismatch was a false negative despite both DB identities correct, diagnosed by direct readback; do not recreate resources to fix inspector bugs.
+- **Prevent Windows science false failures**: missing eccodeslib wheel on Windows does not invalidate native ecCodes selftest.
+- **Never widen static white lists to bypass QCP**; successor governance is independent old-history replay + narrow exact delta, with pre-merge and post-merge proof; when main advances rebind proofs instead of bypassing predecessor SHA.
+- **Real GFS unknown != success**; “Planner not due”, Provider not published, read timeout, database pair missing, KBS missed window and source/fence semantic failure are distinct statuses. Do not infer Provider available solely from preflight or simulated science selftest.
+- **No production-state shortcuts**: no manual database zero, no past-arm replay, no fabricated raw/state, no bare SHA, no unreviewed “production-looking” local qualification privileges.
+- **Product integrity**: a signed record without verified canonical upstream source/scope/evidence is NOT legitimate field state; Site must not invent values while real MCFT state is blocked.
+
+---
+
 # 2026-10-09 ACTIVE CHECKPOINT — AM22 SIX-PHASE ADOPTED / MCFT START + VERIFIED PRODUCT PUBLICATION
 
 Timestamp: **2026-10-09 11:36 Beijing / 03:36Z** (repository checkpoint, not a claim of host state at future execution).
