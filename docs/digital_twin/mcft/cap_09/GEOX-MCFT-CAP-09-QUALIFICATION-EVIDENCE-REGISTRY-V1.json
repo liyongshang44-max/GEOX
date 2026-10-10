@@ -4345,5 +4345,194 @@
       "a0_bootstrap": false,
       "o00_started": false
     }
+  },
+  "frozen_v13_requalification_v1": {
+    "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json",
+    "entries": [
+      {
+        "evidence_id": "FROZEN_V13_ISOLATED_37951525980_V13_AUTONOMOUS_FORCING_FOUNDATION_SUCCESSOR_SUBJECT_PRE_MERGE",
+        "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+        "dependency_digest": "sha256:14e03fdfbd7909de60c56122d7efb98b779bd16af7bae69fffe458fd2de65a9b",
+        "run_snapshot": {
+          "run_id": 37951525980,
+          "head_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+          "base_sha": "7555e38f80872cebc3d5c73c95983a31fee3cab0",
+          "event": "pull_request",
+          "workflow_path": ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+          "conclusion": "success",
+          "job_id": 113891396021,
+          "job_conclusion": "success",
+          "artifact_id": 11626202269,
+          "artifact_digest": "sha256:967381a3f054f03bf6cb758dd5a23418ad86c93a69a426ed7231bfa43fc3929b",
+          "artifact_name": "frozen-v13-V13_AUTONOMOUS_FORCING_FOUNDATION-3a803d703320c5dfb416c6b022767fd1fa1fccba"
+        },
+        "job_name": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+        "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json",
+        "immutable_binding_sha256": "7ff986287e17403280478d535feee0d4345c263cfcb58a0d9954bffacf106815"
+      },
+      {
+        "evidence_id": "FROZEN_V13_ISOLATED_37951525980_V13_AUTONOMOUS_FORCING_FOUNDATION_POST_MERGE_V13_QUALIFICATION",
+        "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+        "stage": "POST_MERGE_V13_QUALIFICATION",
+        "subject_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+        "dependency_digest": "sha256:14e03fdfbd7909de60c56122d7efb98b779bd16af7bae69fffe458fd2de65a9b",
+        "run_snapshot": {
+          "run_id": 37951525980,
+          "head_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+          "base_sha": "7555e38f80872cebc3d5c73c95983a31fee3cab0",
+          "event": "pull_request",
+          "workflow_path": ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+          "conclusion": "success",
+          "job_id": 113891396021,
+          "job_conclusion": "success",
+          "artifact_id": 11626202269,
+          "artifact_digest": "sha256:967381a3f054f03bf6cb758dd5a23418ad86c93a69a426ed7231bfa43fc3929b",
+          "artifact_name": "frozen-v13-V13_AUTONOMOUS_FORCING_FOUNDATION-3a803d703320c5dfb416c6b022767fd1fa1fccba"
+        },
+        "job_name": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+        "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json",
+        "immutable_binding_sha256": "15dbbdee07ac0b1647bb24d06e721a917f57d675d47bfc9c0a6dc3a07df5eb25"
+      },
+      {
+        "evidence_id": "FROZEN_V13_ISOLATED_37951525980_V13_HOLISTIC_SCHEMA_SUCCESSOR_SUBJECT_PRE_MERGE",
+        "check_id": "V13_HOLISTIC_SCHEMA",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+        "dependency_digest": "sha256:14e03fdfbd7909de60c56122d7efb98b779bd16af7bae69fffe458fd2de65a9b",
+        "run_snapshot": {
+          "run_id": 37951525980,
+          "head_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+          "base_sha": "7555e38f80872cebc3d5c73c95983a31fee3cab0",
+          "event": "pull_request",
+          "workflow_path": ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+          "conclusion": "success",
+          "job_id": 113891396125,
+          "job_conclusion": "success",
+          "artifact_id": 11626137504,
+          "artifact_digest": "sha256:4a641dbb718e9cc1c7d8b59061e915571488f12a96020eb8334320431b578af2",
+          "artifact_name": "frozen-v13-V13_HOLISTIC_SCHEMA-3a803d703320c5dfb416c6b022767fd1fa1fccba"
+        },
+        "job_name": "V13_HOLISTIC_SCHEMA",
+        "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json",
+        "immutable_binding_sha256": "f5dafefb3f8091270aab6f067a6467b40e3fcaae21e0c1a94e156dc6fb70f1ce"
+      },
+      {
+        "evidence_id": "FROZEN_V13_ISOLATED_37951525980_V13_HOLISTIC_SCHEMA_POST_MERGE_V13_QUALIFICATION",
+        "check_id": "V13_HOLISTIC_SCHEMA",
+        "stage": "POST_MERGE_V13_QUALIFICATION",
+        "subject_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+        "dependency_digest": "sha256:14e03fdfbd7909de60c56122d7efb98b779bd16af7bae69fffe458fd2de65a9b",
+        "run_snapshot": {
+          "run_id": 37951525980,
+          "head_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+          "base_sha": "7555e38f80872cebc3d5c73c95983a31fee3cab0",
+          "event": "pull_request",
+          "workflow_path": ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+          "conclusion": "success",
+          "job_id": 113891396125,
+          "job_conclusion": "success",
+          "artifact_id": 11626137504,
+          "artifact_digest": "sha256:4a641dbb718e9cc1c7d8b59061e915571488f12a96020eb8334320431b578af2",
+          "artifact_name": "frozen-v13-V13_HOLISTIC_SCHEMA-3a803d703320c5dfb416c6b022767fd1fa1fccba"
+        },
+        "job_name": "V13_HOLISTIC_SCHEMA",
+        "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json",
+        "immutable_binding_sha256": "b73d4c8ab90a6e14c1bfc3c6f3b3b4c91b5dc894381370a1e5139403e6bd5429"
+      },
+      {
+        "evidence_id": "FROZEN_V13_ISOLATED_37951525980_V13_NEXT_TICK_VIABILITY_SUCCESSOR_SUBJECT_PRE_MERGE",
+        "check_id": "V13_NEXT_TICK_VIABILITY",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+        "dependency_digest": "sha256:14e03fdfbd7909de60c56122d7efb98b779bd16af7bae69fffe458fd2de65a9b",
+        "run_snapshot": {
+          "run_id": 37951525980,
+          "head_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+          "base_sha": "7555e38f80872cebc3d5c73c95983a31fee3cab0",
+          "event": "pull_request",
+          "workflow_path": ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+          "conclusion": "success",
+          "job_id": 113891396158,
+          "job_conclusion": "success",
+          "artifact_id": 11625992601,
+          "artifact_digest": "sha256:0c245a54096022f9c8067377640fb1ee08873d5e951ec56b7154a911028d4c29",
+          "artifact_name": "frozen-v13-V13_NEXT_TICK_VIABILITY-3a803d703320c5dfb416c6b022767fd1fa1fccba"
+        },
+        "job_name": "V13_NEXT_TICK_VIABILITY",
+        "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json",
+        "immutable_binding_sha256": "dd6ad21a10841af44c1ca4b5cea0ce94c1f050db16bcfecfb6f431e9a86c38cc"
+      },
+      {
+        "evidence_id": "FROZEN_V13_ISOLATED_37951525980_V13_NEXT_TICK_VIABILITY_POST_MERGE_V13_QUALIFICATION",
+        "check_id": "V13_NEXT_TICK_VIABILITY",
+        "stage": "POST_MERGE_V13_QUALIFICATION",
+        "subject_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+        "dependency_digest": "sha256:14e03fdfbd7909de60c56122d7efb98b779bd16af7bae69fffe458fd2de65a9b",
+        "run_snapshot": {
+          "run_id": 37951525980,
+          "head_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+          "base_sha": "7555e38f80872cebc3d5c73c95983a31fee3cab0",
+          "event": "pull_request",
+          "workflow_path": ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+          "conclusion": "success",
+          "job_id": 113891396158,
+          "job_conclusion": "success",
+          "artifact_id": 11625992601,
+          "artifact_digest": "sha256:0c245a54096022f9c8067377640fb1ee08873d5e951ec56b7154a911028d4c29",
+          "artifact_name": "frozen-v13-V13_NEXT_TICK_VIABILITY-3a803d703320c5dfb416c6b022767fd1fa1fccba"
+        },
+        "job_name": "V13_NEXT_TICK_VIABILITY",
+        "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json",
+        "immutable_binding_sha256": "59f14809d6bd35e11c847dbf83ee30386cd587099bf6fd5607784387e67a5b70"
+      },
+      {
+        "evidence_id": "FROZEN_V13_ISOLATED_37951525980_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_SUCCESSOR_SUBJECT_PRE_MERGE",
+        "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+        "dependency_digest": "sha256:08361c4ee5a17a95c2834bcd48d5b67a1a8a68d3c1875132785d60db496c0e14",
+        "run_snapshot": {
+          "run_id": 37951525980,
+          "head_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+          "base_sha": "7555e38f80872cebc3d5c73c95983a31fee3cab0",
+          "event": "pull_request",
+          "workflow_path": ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+          "conclusion": "success",
+          "job_id": 113891396703,
+          "job_conclusion": "success",
+          "artifact_id": 11625593815,
+          "artifact_digest": "sha256:2c31a7f4eba560d47ae176847a403cea1bba91c00f87f01a322bc00bd95c45cd",
+          "artifact_name": "frozen-v13-EA5C1_DURABLE_RAW_RESTRICTED_INGRESS-3a803d703320c5dfb416c6b022767fd1fa1fccba"
+        },
+        "job_name": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+        "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json",
+        "immutable_binding_sha256": "d65b0dbc712c37f1c6cdd69c16cd2f20c35fab226b217c63b4dce4ce6d2a68cc"
+      },
+      {
+        "evidence_id": "FROZEN_V13_ISOLATED_37951525980_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_POST_MERGE_V13_QUALIFICATION",
+        "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+        "stage": "POST_MERGE_V13_QUALIFICATION",
+        "subject_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+        "dependency_digest": "sha256:08361c4ee5a17a95c2834bcd48d5b67a1a8a68d3c1875132785d60db496c0e14",
+        "run_snapshot": {
+          "run_id": 37951525980,
+          "head_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+          "base_sha": "7555e38f80872cebc3d5c73c95983a31fee3cab0",
+          "event": "pull_request",
+          "workflow_path": ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+          "conclusion": "success",
+          "job_id": 113891396703,
+          "job_conclusion": "success",
+          "artifact_id": 11625593815,
+          "artifact_digest": "sha256:2c31a7f4eba560d47ae176847a403cea1bba91c00f87f01a322bc00bd95c45cd",
+          "artifact_name": "frozen-v13-EA5C1_DURABLE_RAW_RESTRICTED_INGRESS-3a803d703320c5dfb416c6b022767fd1fa1fccba"
+        },
+        "job_name": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+        "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json",
+        "immutable_binding_sha256": "809f8edec329ffc29667083317ef71fb0cf02d79096a5a5e63a144d20476b87c"
+      }
+    ]
   }
 }

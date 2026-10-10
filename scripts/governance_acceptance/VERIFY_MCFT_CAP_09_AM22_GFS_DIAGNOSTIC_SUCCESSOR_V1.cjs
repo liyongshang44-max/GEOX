@@ -8,6 +8,8 @@ const paths=[".github/workflows/mcft-cap-09-am22-gfs-progress-diagnostic-v1.yml"
 const ROUTE=" if(fs.existsSync(path.join(ROOT,\"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_GFS_DIAGNOSTIC_SUCCESSOR_V1.cjs\")))return require(\"./VERIFY_MCFT_CAP_09_AM22_GFS_DIAGNOSTIC_SUCCESSOR_V1.cjs\").verifyDiagnosticSuccessor();\n";
 const git=(...a)=>cp.execFileSync("git",a,{cwd:ROOT,encoding:"utf8",stdio:["ignore","pipe","pipe"]}).trim();
 function verifyDiagnosticSuccessor(){
+ if(fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs")))return require("./VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs").verifySuccessor();
+
  assert.equal(git("merge-base",BASE,"HEAD"),BASE,"DIAGNOSTIC_BASE_NOT_ANCESTOR");
  assert.equal(git("merge-base",BASE,"origin/main"),BASE,"DIAGNOSTIC_BASE_NOT_ADOPTED");
  assert.deepEqual(git("status","--porcelain").split(/\r?\n/).filter(x=>x&&!x.startsWith("?? acceptance-output/")),[],"DIAGNOSTIC_DIRTY_SOURCE");
