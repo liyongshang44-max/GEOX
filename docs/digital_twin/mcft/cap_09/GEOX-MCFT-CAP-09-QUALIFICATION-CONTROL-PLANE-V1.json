@@ -1220,6 +1220,7 @@
       "kind": "EXACT_PATH_SET",
       "paths": [
         ".github/workflows/mcft-cap-09-formal-v5-completion-adjudication-v1.yml",
+        ".github/workflows/mcft-cap-09-formal-v5-final-readback-v1.yml",
         ".github/workflows/mcft-cap-09-formal-v5-r6-admission.yml",
         ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
         ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
