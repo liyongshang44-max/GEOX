@@ -43,7 +43,7 @@ jobs:
           }
           Promise.all(registry.frozen_v13_requalification_v1.entries.map(verify)).then(()=>console.log('REGISTERED_ISOLATED_RUN_AND_ARTIFACT_IDENTITIES_VERIFIED')).catch(e=>{console.error(e);process.exitCode=1;});
       - run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_V1.cjs
-      - run: node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs
+      - run: node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs --historic-frozen
   isolated:
     name: ${{ matrix.check }}
     needs: qualification-contract
