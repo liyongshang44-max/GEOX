@@ -22,6 +22,10 @@ const PATHS=[
 const CHECK={check_id:"CURRENT_BASELINE_EXECUTION_SUCCESSOR_ENGINEERING_ONLY",owner:"MCFT_CAP09_CURRENT_BASELINE_ENTRY_ENGINEERING",generation_scope:["V13","FORMAL_V5"],authority_refs:[C],resolver_ids:["CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1"],historical_evidence_policy:"IMMUTABLE_ADOPTED_MAIN_REPLAY_NO_LIVE_SUCCESS_REUSE",execution_workflow:".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml",execution_workflow_status:"ENGINEERING_ONLY_NO_PRODUCTION_EXECUTION",fail_policy:"FAIL_CLOSED_EXACT_PATHS_FROZEN_RUNTIME_DISABLED_ARM_AND_PRESERVED_HISTORY",carry_forward_policy:"NONE",requalification_triggers:["CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1"],applicable_stages:["SUCCESSOR_SUBJECT_PRE_MERGE","POST_MERGE_V13_QUALIFICATION"],carry_forward_evidence_id:null,diagnostic_command:"node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs"};
 const git=(...args)=>cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8",maxBuffer:16*1024*1024});
 function verifySuccessor(){
+ const isoSuccessor = path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_QUALIFICATION_AUTHORIZATION_SUCCESSOR_V1.cjs");
+ if(fs.existsSync(isoSuccessor)){
+  return require("./VERIFY_MCFT_CAP_09_ISOLATED_QUALIFICATION_AUTHORIZATION_SUCCESSOR_V1.cjs").verifySuccessor();
+ }
  assert.equal(cp.spawnSync("git",["merge-base","--is-ancestor",BASE,"origin/main"],{cwd:ROOT}).status,0,"BASE_NOT_ADOPTED");
  assert.deepEqual(git("status","--porcelain").trim().split(/\r?\n/).filter(x=>x&&!x.startsWith("?? acceptance-output/")),[],"DIRTY_SOURCE");
  const changes=git("diff","--name-status",BASE,"HEAD").trim().split(/\r?\n/).filter(Boolean).map(x=>{const [status,p]=x.split("\t");return {status,p};});
