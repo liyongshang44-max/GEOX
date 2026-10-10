@@ -22,9 +22,13 @@ function historicalReplay(){
 }
 function verifyStageSuccessor(){
  assert.equal(cp.spawnSync("git",["merge-base","--is-ancestor",BASE,"HEAD"],{cwd:ROOT}).status,0,"ADOPTED_BASE_NOT_ANCESTOR");
- const currentMain=git("rev-parse","origin/main");
+ const currentMain=git("rev-parse","origin/main"),here=git("rev-parse","HEAD");
+ if(here!==currentMain&&fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs"))){
+  assert.equal(cp.spawnSync("git",["merge-base","--is-ancestor",currentMain,"HEAD"],{cwd:ROOT}).status,0,"CURRENT_MAIN_NOT_ANCESTOR");
+  return require("./VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs").verifySuccessor();
+ }
  if(currentMain!==BASE){
-  const here=git("rev-parse","HEAD"),parents=git("show","-s","--format=%P",currentMain).split(" ");
+  const parents=git("show","-s","--format=%P",currentMain).split(" ");
   assert.equal(here,currentMain,"MAIN_MOVED_REBIND_REQUIRED");assert.equal(parents.length,2,"EXACT_TWO_PARENT_ADOPTION_REQUIRED");assert.equal(parents[0],BASE,"FIRST_PARENT_BASE_DRIFT");
   assert.equal(git("rev-parse",currentMain+"^{tree}"),git("rev-parse",parents[1]+"^{tree}"),"MERGE_TREE_CHANGED");
  }

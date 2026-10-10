@@ -1,0 +1,36 @@
+name: MCFT CAP-09 current baseline entry engineering
+on:
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/*CURRENT_BASELINE*'
+      - 'scripts/runtime_acceptance/*RECOVERY_V2*'
+      - 'scripts/runtime_acceptance/*QUALIFICATION_V2*'
+      - 'scripts/runtime_acceptance/*TIMING_SAMPLE_V2*'
+      - 'scripts/runtime_acceptance/*TIMING_MEASUREMENT_V2*'
+      - 'scripts/governance_acceptance/*CURRENT_BASELINE*'
+      - 'docs/digital_twin/mcft/cap_09/*CURRENT-BASELINE*'
+      - '.github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml'
+permissions:
+  contents: read
+jobs:
+  engineering-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs
+        env:
+          MCFT_CURRENT_ENTRY_COMPILE_TEST: '1'
+      - run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs
+      - run: node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs

@@ -32,6 +32,7 @@ function verifyMigration(){
  return {status:"PASS",historical_migration_replayed_at:HISTORY,historical_proof_not_promoted:true,frozen_runtime_sha:FROZEN,runtime_path_digest:current.digest,runtime_path_count:108,current_legacy_path_count:125,current_harness_path_count:21,exact_partition_proven:true,production_runtime_mutation:false,provider_request_count:0,formal_v5_arm:false,a0_bootstrap:false,o00_started:false};
 }
 function verifySuccessor(){
+ if(fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs")))return require("./VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs").verifySuccessor();
  assert.deepEqual(read(C),EXPECTED);assert(ancestor(BASE,"origin/main"),"BASE_NOT_ADOPTED");
  assert.deepEqual(git("status","--porcelain").split(/\r?\n/).filter(x=>x&&!x.startsWith("?? acceptance-output/")),[],"DIRTY_SOURCE");
  const changes=git("diff","--name-status",BASE,"HEAD").split(/\r?\n/).filter(Boolean).map(x=>{const [status,p]=x.split("\t");return {status,p};});
