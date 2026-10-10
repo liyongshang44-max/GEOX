@@ -873,7 +873,9 @@ jobs:
           const phase7AdapterChanged = plan.changed_paths.includes(phase7Adapter);
           const frozenVerifierPath = 'scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs';
           const frozenVerifier = fs.existsSync(frozenVerifierPath) ? require(process.cwd() + '/' + frozenVerifierPath) : null;
-          if (frozenVerifier) frozenVerifier.verifySuccessor();
+          const stageSuccessorPath = 'scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs';
+          if (fs.existsSync(stageSuccessorPath)) require(process.cwd() + '/' + stageSuccessorPath).verifyStageSuccessor();
+          else if (frozenVerifier) frozenVerifier.verifySuccessor();
           const expectedQualificationWorkflow = (id, historicalWorkflow) =>
             frozenVerifier && frozenVerifier.EXPECTED.isolated_checks.includes(id) && frozenVerifier.EXPECTED.stages.includes(plan.stage)
               ? frozenVerifier.EXPECTED.isolated_workflow : historicalWorkflow;

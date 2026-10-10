@@ -68,7 +68,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Prove R6 admission-only successor boundary
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs --historic-r6
 
       - name: Requalify G11 productionization after ACTIVE materializer successor
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs
