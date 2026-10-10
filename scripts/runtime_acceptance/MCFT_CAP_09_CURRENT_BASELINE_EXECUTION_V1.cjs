@@ -73,7 +73,7 @@ function sourceContext() {
     }
   };
   const head = git(["rev-parse", "HEAD"]);
-  const main = git(["ls-remote", "origin", "refs/heads/main"]).split(/\\s+/)[0];
+  const main = git(["ls-remote", "origin", "refs/heads/main"]).split(/\s+/)[0];
   const q = JSON.parse(fs.readFileSync(path.join(ROOT, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json")));
   // Resolving *every* QCP dependency may materialize GENERATED_GRAPH_OUTPUT
   // artifacts in the source checkout. Resolve only V13's read-only import graph.
