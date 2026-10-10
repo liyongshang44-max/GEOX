@@ -39,6 +39,28 @@ assert.equal(readOnlyV13.length, 108); count++;
 negative(() => x.frozenRuntimePaths(x.ROOT,
   {dependency_resolvers:{V13_RUNTIME_SEMANTIC_CLOSURE:{kind:"GENERATED_GRAPH_OUTPUT"}}}));
 // No tests may mutate the checked-in ARM or invoke live qualification.
+// The scoped, protected-main-adopted ARM is qualification-only. The original
+// disabled engineering/recovery ARM stays immutable and CI still fails closed.
+const legacyArm=JSON.parse(fs.readFileSync(path.join(x.ROOT,x.ARM),"utf8"));
+assert.equal(legacyArm.armed,false);assert.equal(legacyArm.mode,"DISABLED");count++;
+const isoArmRef="scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_ISOLATED_QUALIFICATION_ARM_20261010_V1.json";
+const adoptedIsoArm=JSON.parse(fs.readFileSync(path.join(x.ROOT,isoArmRef),"utf8"));
+const isoTestContext={
+  head:"a".repeat(40),main:"a".repeat(40),clean:true,
+  base_ancestor:true,frozen_runtime_identical:true,ci:false,platform:"win32",
+  now:"2026-10-10T09:05:00.000Z",
+};
+assert.equal(x.validateArm(adoptedIsoArm,"ISOLATED_QUALIFICATION",isoTestContext).isolated_run_id,"72dc0304a21a");count++;
+for(const [key,value] of [
+  ["production_recovery_authorized",true],
+  ["new_image_build_and_two_role_cutover_authorized",true],
+  ["formal_v5_arm_authorized",true],["a0_authorized",true],["o00_authorized",true],
+  ["historical_attempt_reset_authorized",true],
+  ["mode","CANONICAL_RECOVERY_REBOOTSTRAP"],["isolated_run_id","bad"],
+  ["execution_subject_binding","ANY_MAIN"],
+  ["expires_at","2026-10-12T06:00:00.000Z"],
+  ["qualification_first_base","2026-10-10T15:00:00.000Z"],
+]) negative(()=>x.validateArm({...adoptedIsoArm,[key]:value},"ISOLATED_QUALIFICATION",isoTestContext));
 const context = {head: "a".repeat(40), main: "a".repeat(40), clean: true, base_ancestor: true, frozen_runtime_identical: true, ci: false, platform: "win32", now: "2026-10-10T02:00:00.000Z"};
 const arm = {schema_version: "geox_mcft_cap09_current_baseline_execution_arm_v1", armed: true, mode: "ISOLATED_QUALIFICATION", adopted_base_sha: x.BASE, execution_subject_binding: "EXACT_ADOPTED_PROTECTED_MAIN", expires_at: "2026-10-10T03:00:00.000Z", qualification_first_base: "2026-10-10T09:00:00.000Z", isolated_run_id: "123456abcdef", qualification_execution_authorized: true, production_recovery_authorized: false, new_image_build_and_two_role_cutover_authorized: false, formal_v5_arm_authorized: false, a0_authorized: false, o00_authorized: false, historical_attempt_reset_authorized: false};
 assert.equal(x.validateArm(arm, arm.mode, context).execution_subject_sha, context.head); count++;

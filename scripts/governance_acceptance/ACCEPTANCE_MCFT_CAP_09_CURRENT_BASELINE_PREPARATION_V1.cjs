@@ -44,6 +44,40 @@ for(const mutated of [
   {parents:["f".repeat(40),"e".repeat(40)]},
 ]) assert.throws(() => p.validateMainAdoption({...adoptedGuard,...mutated}));
 
+// Exact nine-file successor on newly adopted PR3686 main.
+// This tests only governance ancestry and path lists, never live Provider access.
+const isoBase = "6c6f2d77301a852dbb2f52538df89e3098b5aee5";
+const isoPaths = [
+"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ISOLATED-QUALIFICATION-ARM-AUTHORIZATION-20261010-V1.md",
+"scripts/governance_acceptance/PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs",
+"scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs",
+"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs",
+"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_QUALIFICATION_AUTHORIZATION_SUCCESSOR_V1.cjs",
+"scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+"scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_ISOLATED_QUALIFICATION_ARM_20261010_V1.json",
+].sort();
+const isoCandidate = {...adoption, main:isoBase,head:"e".repeat(40),
+  parents:["9625680d4bec137956d79960e0f9feaad4ebf6ab","d".repeat(40)],
+  head_descends_from_main:true,successor_paths:isoPaths};
+assert.equal(p.validateMainAdoption(isoCandidate),"PRE_MERGE_ISOLATED_QUALIFICATION_AUTHORIZATION");
+for(const bad of [
+  {head_descends_from_main:false},
+  {successor_paths:isoPaths.slice(1)},
+  {successor_paths:[...isoPaths,"apps/server/src/frozen-runtime.ts"]},
+  {candidate_tree:"f".repeat(40)},
+]) assert.throws(()=>p.validateMainAdoption({...isoCandidate,...bad}));
+const isoMerged={...isoCandidate, main:"f".repeat(40),head:"f".repeat(40),
+  parents:[isoBase,"e".repeat(40)],head_descends_from_main:false};
+assert.equal(p.validateMainAdoption(isoMerged),"POST_MERGE_ISOLATED_QUALIFICATION_AUTHORIZATION");
+for(const bad of [
+  {head:"e".repeat(40)},
+  {parents:["a".repeat(40),"e".repeat(40)]},
+  {successor_paths:isoPaths.slice(1)},
+  {main_tree:"e".repeat(40)},
+]) assert.throws(()=>p.validateMainAdoption({...isoMerged,...bad}));
+
 // Branch proof above is never provider, producer, timing or Formal authority.
 
 for(const change of [{head:"e".repeat(40)},{parents:[adoption.anchor]},{parents:["e".repeat(40),"c".repeat(40)]},{main_tree:"f".repeat(40)},{candidate_tree:null}])assert.throws(()=>p.validateMainAdoption({...adoption,...change}));
