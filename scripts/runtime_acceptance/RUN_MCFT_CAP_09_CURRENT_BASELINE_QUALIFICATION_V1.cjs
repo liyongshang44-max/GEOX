@@ -32,7 +32,7 @@ function main() {
         MCFT_CAP09_V13_EXACT_HEAD_TIMING_SAMPLE: "1", MCFT_TIMING_SAMPLE_ID: "sample" + (i + 1),
         MCFT_TIMING_RUN_ID: attempt, MCFT_TIMING_RUN_ATTEMPT: "1",
         MCFT_TIMING_BASE_TARGET: new Date(Date.parse(a.qualification_first_base) + i * 3600000).toISOString(),
-        MCFT_TIMING_WAKE_DELAY_MS: "0", MCFT_TIMING_JOB_START_SETUP_MS: String(Date.now() - began)
+        MCFT_TIMING_WAKE_DELAY_MS: "0", MCFT_TIMING_JOB_START_SETUP_MS: "0", MCFT_TIMING_LOCAL_LAUNCH_AT_MS: String(began)
       });
     }
     run("AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts", {MCFT_TIMING_SAMPLE_DIR: targets.out});

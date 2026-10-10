@@ -67,6 +67,8 @@ function main(): void {
     assert.equal(row.workflow_run_attempt, null);
     assert.match(String(row.local_measurement_attempt_id), /^[0-9]+$/);
     assert.equal(row.local_measurement_attempt, "1");
+    assert.equal(row.process_and_source_guard_startup_included, true);
+    assert(Number.isSafeInteger(row.local_launch_at_ms));
     assert.equal(row.status, "PASS", "V13_TIMING_AGGREGATE_SAMPLE_PASS_REQUIRED");
     assert.equal(row.subject_sha, subject, "V13_TIMING_AGGREGATE_EXACT_HEAD_REQUIRED");
     assert.equal(row.measurement_only, true, "V13_TIMING_AGGREGATE_MEASUREMENT_ONLY_REQUIRED");

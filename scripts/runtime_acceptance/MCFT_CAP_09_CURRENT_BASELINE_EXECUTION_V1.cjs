@@ -81,4 +81,5 @@ function isolatedTargets(a, env) {
 }
 function qualificationTargets() { const a = authorize("ISOLATED_QUALIFICATION"); assert.equal(process.env.MCFT_SUBJECT_SHA, sourceContext().head); return isolatedTargets(a, process.env); }
 function outputPath(targets, name) { assert(/^[A-Z0-9_]+\.json$/.test(name)); const out = path.join(targets.out, name); assert(!fs.existsSync(out), "CURRENT_QUALIFICATION_IMMUTABLE_OUTPUT_EXISTS"); return out; }
-module.exports = {ROOT, ARM, BASE, canonical, validateArm, sourceContext, authorize, isolatedTargets, qualificationTargets, outputPath};
+function measureStartupMs(launch, now) { const start=Number(launch); assert(Number.isSafeInteger(start)&&start>0&&Number.isSafeInteger(now)&&now>=start,"CURRENT_TIMING_VALID_LOCAL_LAUNCH_CLOCK_REQUIRED"); return now-start; }
+module.exports = {ROOT, ARM, BASE, canonical, validateArm, sourceContext, authorize, isolatedTargets, qualificationTargets, outputPath, measureStartupMs};

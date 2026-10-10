@@ -97,7 +97,8 @@ async function main(): Promise<void> {
   if (Date.parse(base) <= Date.now()) throw new Error("V13_TIMING_SAMPLE_BASE_MUST_BE_FUTURE");
 
   const wakeDelayMs = nonnegativeInteger("MCFT_TIMING_WAKE_DELAY_MS");
-  const jobStartSetupMs = nonnegativeInteger("MCFT_TIMING_JOB_START_SETUP_MS");
+  const jobStartSetupMs = Math.max(nonnegativeInteger("MCFT_TIMING_JOB_START_SETUP_MS"), currentExecution.measureStartupMs(required("MCFT_TIMING_LOCAL_LAUNCH_AT_MS"), Date.now()));
+  assert.equal(wakeDelayMs, 0, "CURRENT_TIMING_LOCAL_NO_GITHUB_WAKE_REQUIRED");
   const url = required("DATABASE_URL");
   assert.equal(dbName(url), EXPECTED_V13_DB, "V13_TIMING_SAMPLE_DATABASE_MISMATCH");
 
@@ -311,6 +312,8 @@ async function main(): Promise<void> {
       workflow_run_attempt: null,
       local_measurement_attempt_id: runId,
       local_measurement_attempt: runAttempt,
+      local_launch_at_ms: Number(required("MCFT_TIMING_LOCAL_LAUNCH_AT_MS")),
+      process_and_source_guard_startup_included: true,
       epoch_id: epoch,
       base_target_t: base,
       qualification_database: EXPECTED_V13_DB,

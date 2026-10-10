@@ -4,6 +4,8 @@ const assert = require("node:assert/strict"), fs = require("node:fs"), path = re
 const x = require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
 const recovery = require("./RUN_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_V2.cjs");
 let count = 0; function negative(f) { assert.throws(f); count++; }
+assert.equal(x.measureStartupMs("1000", 2500),1500); count++;
+negative(()=>x.measureStartupMs("invalid",2500)); negative(()=>x.measureStartupMs("3000",2500));
 for (const file of ["RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION", "RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE", "AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT"]) {
   const before=fs.readFileSync(path.join(__dirname,file+"_V1.ts"),"utf8"),after=fs.readFileSync(path.join(__dirname,file+"_V2.ts"),"utf8");
   for(const line of before.split("\n").filter(line=>line.trim().startsWith("assert.")))assert(after.includes(line),"HISTORICAL_ASSERTION_REMOVED:"+file+":"+line.trim());

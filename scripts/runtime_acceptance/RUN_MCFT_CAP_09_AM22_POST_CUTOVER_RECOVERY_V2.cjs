@@ -3,7 +3,7 @@
 // A new-window canonical rebootstrap, NOT retrying/resetting the exhausted historical target.
 const assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), crypto = require("node:crypto"), cp = require("node:child_process");
 const {ROOT, authorize} = require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
-const {safeRepoRef, selectA0} = require("./MCFT_CAP_09_AM22_GFS_BOOTSTRAP_V1.cjs");
+const {safeRepoRef, selectA0, MEASUREMENT_LEAD_MS, AUTHORITY_MATERIALIZATION_MARGIN_MS} = require("./MCFT_CAP_09_AM22_GFS_BOOTSTRAP_V1.cjs");
 const hash = b => "sha256:" + crypto.createHash("sha256").update(b).digest("hex");
 function reconcile(failed, a, bytes) {
   assert.equal(hash(bytes), a.source_failed_receipt_sha256, "RECOVERY_V2_FAILED_RECEIPT_DIGEST_MISMATCH");
@@ -64,7 +64,14 @@ function main() {
   const registry = JSON.parse(fs.readFileSync(path.join(ROOT, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json")));
   const now = new Date().toISOString(), entry = registry.entries.find(e => e.authority_ref === stage.ref && e.authority_sha256 === hash(fs.readFileSync(stage.resolved)) && ["EFFECTIVE_FOR_RUNTIME_CONSUMPTION", "EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH"].includes(e.graduation_status) && Date.parse(e.authority_as_of) <= Date.parse(now));
   assert(entry, "RECOVERY_V2_ADOPTED_STAGE_REQUIRED");
-  const window = selectA0({source_now: now, budget_ms: 2801804, stage: JSON.parse(fs.readFileSync(stage.resolved))});
+  const budget = JSON.parse(fs.readFileSync(path.join(ROOT, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json")));
+  const planning = JSON.parse(fs.readFileSync(path.join(ROOT, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json")));
+  const selected = Number(budget.qualified_budget?.selected_budget_ms);
+  assert(budget.timing_budget_qualified === true && budget.timing_budget_frozen === true && Number.isSafeInteger(selected) && selected > 0, "RECOVERY_V2_FROZEN_BUDGET_REQUIRED");
+  const combined = selected + MEASUREMENT_LEAD_MS + AUTHORITY_MATERIALIZATION_MARGIN_MS;
+  assert.equal(planning.selection_policy?.selected_acquisition_budget_ms, selected, "RECOVERY_V2_BUDGET_BINDING_MISMATCH");
+  assert.equal(planning.selection_policy?.combined_minimum_lead_ms, combined, "RECOVERY_V2_COMBINED_LEAD_MISMATCH");
+  const window = selectA0({source_now: now, budget_ms: combined, stage: JSON.parse(fs.readFileSync(stage.resolved))});
   assert(Date.parse(entry.authority_valid_until) >= Date.parse(window.o23), "RECOVERY_V2_FULL_25_CONTEXTS_REQUIRED");
   if (args.includes("--preflight-only")) { console.log(JSON.stringify({status: "PRECHECK_PASS_NOT_OWNER_PROOF_OR_RECOVERY", window, production_writes: 0, owner_qualified: false})); return; }
   const out = path.resolve(value("--out") || "");
