@@ -15,6 +15,30 @@ for (const file of ["RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION", "R
     assert.equal(result.status,1);assert.match(result.stderr,/CURRENT_EXECUTION_NOT_ARMED/); count++;
   }
 }
+// The Windows source guard must check all three clean-tree dimensions;
+// ignored files are not a qualification blocker, but untracked files are.
+const fakeGit = outputs => args => {
+  const k = args.join(" ");
+  assert(Object.prototype.hasOwnProperty.call(outputs, k), "UNEXPECTED_GIT_PROBE:" + k);
+  return outputs[k];
+};
+const gitClean = {
+  "diff --name-only --": "",
+  "diff --cached --name-only --": "",
+  "ls-files --others --exclude-standard": "",
+};
+assert.equal(x.sourceWorktreeClean(fakeGit(gitClean)), true); count++;
+for (const key of Object.keys(gitClean)) {
+  assert.equal(x.sourceWorktreeClean(fakeGit({...gitClean, [key]:"dirty.txt"})), false);
+  count++;
+}
+const qcp = JSON.parse(fs.readFileSync(path.join(x.ROOT,
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"), "utf8"));
+const readOnlyV13 = x.frozenRuntimePaths(x.ROOT, qcp);
+assert.equal(readOnlyV13.length, 108); count++;
+negative(() => x.frozenRuntimePaths(x.ROOT,
+  {dependency_resolvers:{V13_RUNTIME_SEMANTIC_CLOSURE:{kind:"GENERATED_GRAPH_OUTPUT"}}}));
+// No tests may mutate the checked-in ARM or invoke live qualification.
 const context = {head: "a".repeat(40), main: "a".repeat(40), clean: true, base_ancestor: true, frozen_runtime_identical: true, ci: false, platform: "win32", now: "2026-10-10T02:00:00.000Z"};
 const arm = {schema_version: "geox_mcft_cap09_current_baseline_execution_arm_v1", armed: true, mode: "ISOLATED_QUALIFICATION", adopted_base_sha: x.BASE, execution_subject_binding: "EXACT_ADOPTED_PROTECTED_MAIN", expires_at: "2026-10-10T03:00:00.000Z", qualification_first_base: "2026-10-10T09:00:00.000Z", isolated_run_id: "123456abcdef", qualification_execution_authorized: true, production_recovery_authorized: false, new_image_build_and_two_role_cutover_authorized: false, formal_v5_arm_authorized: false, a0_authorized: false, o00_authorized: false, historical_attempt_reset_authorized: false};
 assert.equal(x.validateArm(arm, arm.mode, context).execution_subject_sha, context.head); count++;
