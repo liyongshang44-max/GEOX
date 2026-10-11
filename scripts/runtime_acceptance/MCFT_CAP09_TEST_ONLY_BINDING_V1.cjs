@@ -3,7 +3,15 @@
 // This module is intentionally run-specific. It does not grant production
 // authority, does not alter MCFT_CAP09_RETRY_TRUST_V1.json and cannot be used
 // from CI/GitHub Actions.
-const assert=require("node:assert/strict"),path=require("node:path");
+const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process");
+const current=require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
+const ROOT=current.ROOT;
+const BASE=current.BASE;
+const ALLOWED_TEST_ONLY_UNTRACKED=Object.freeze([
+  "scripts/runtime_acceptance/MCFT_CAP09_TEST_ONLY_BINDING_V1.cjs",
+  "scripts/runtime_acceptance/RUN_MCFT_CAP09_TEST_ONLY_QUALIFICATION_V1.cjs",
+  "scripts/runtime_acceptance/RUN_MCFT_CAP09_TEST_ONLY_PRODUCER_C1F7DCC6D04D_V1.ts",
+]);
 
 const RUN_ID="c1f7dcc6d04d";
 const POSITIVE_DB="mcft_cap09_requal_"+RUN_ID+"_positive";
@@ -40,6 +48,35 @@ function validateDb(value,expectedName){
   assert.equal(u.search,"","TEST_ONLY_DB_QUERY_FORBIDDEN");
   assert.equal(u.hash,"","TEST_ONLY_DB_FRAGMENT_FORBIDDEN");
 }
+function gitRead(args){
+  try{
+    return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8",timeout:90000,maxBuffer:16*1024*1024,windowsHide:true}).trim();
+  }catch(error){
+    throw new Error("TEST_ONLY_GIT_READ_FAILED:"+args[0]+":"+(error.code||error.message));
+  }
+}
+function sourceWorktreeCleanAllowingTestOnly(){
+  if(gitRead(["diff","--name-only","--"])!=="") return false;
+  if(gitRead(["diff","--cached","--name-only","--"])!=="") return false;
+  const untracked=gitRead(["ls-files","--others","--exclude-standard"]).split(/\r?\n/).filter(Boolean).sort();
+  const allowed=[...ALLOWED_TEST_ONLY_UNTRACKED].sort();
+  return JSON.stringify(untracked)===JSON.stringify(allowed);
+}
+function sourceContext(){
+  const head=gitRead(["rev-parse","HEAD"]);
+  const main=gitRead(["ls-remote","origin","refs/heads/main"]).split(/\s+/)[0];
+  const q=JSON.parse(fs.readFileSync(path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"),"utf8"));
+  const frozenPaths=current.frozenRuntimePaths(ROOT,q);
+  const frozen=gitRead(["diff","--name-only","3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a","HEAD","--",...frozenPaths]);
+  return {
+    head,main,clean:sourceWorktreeCleanAllowingTestOnly(),
+    base_ancestor:cp.spawnSync("git",["merge-base","--is-ancestor",BASE,head],{cwd:ROOT,timeout:90000,windowsHide:true}).status===0,
+    frozen_runtime_identical:frozen==="",
+    ci:Boolean(process.env.CI||process.env.GITHUB_ACTIONS),
+    platform:process.platform,now:new Date().toISOString(),
+  };
+}
+
 function validateBinding({env,context,root,nowMs=Date.now()}){
   assert.equal(env.MCFT_CAP09_TEST_ONLY_BINDING,"1","TEST_ONLY_BINDING_FLAG_REQUIRED");
   assert.equal(env.MCFT_CAP09_TEST_ONLY_RUN_ID,RUN_ID,"TEST_ONLY_EXACT_OWNER_APPROVED_RUN_REQUIRED");
@@ -76,9 +113,8 @@ function validateBinding({env,context,root,nowMs=Date.now()}){
   };
 }
 function childTargets(){
-  const current=require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
-  const context=current.sourceContext();
-  const result=validateBinding({env:process.env,context,root:current.ROOT});
+  const context=sourceContext();
+  const result=validateBinding({env:process.env,context,root:ROOT});
   assert.equal(process.env.MCFT_SUBJECT_SHA,context.head,"TEST_ONLY_SUBJECT_MUST_EQUAL_PROTECTED_MAIN");
   return result;
 }
@@ -91,4 +127,4 @@ function outputPath(targets,name){
 function constants(){
   return Object.freeze({RUN_ID,POSITIVE_DB,NEGATIVE_DB,BUCKET,EVIDENCE_LOGIN_ROLE,TWIN_LOGIN_ROLE,S3_PRINCIPAL,S3_ENDPOINT,PG_PORT});
 }
-module.exports={validateBinding,childTargets,outputPath,constants};
+module.exports={ROOT,ALLOWED_TEST_ONLY_UNTRACKED,sourceWorktreeCleanAllowingTestOnly,sourceContext,validateBinding,childTargets,outputPath,constants};
