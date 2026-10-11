@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RunBucketMetadata",
+      "Effect": "Allow",
+      "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketVersions"],
+      "Resource": ["arn:aws:s3:::mcft-cap09-requal-c1f7dcc6d04d"]
+    },
+    {
+      "Sid": "RunObjectsReadWriteNoDelete",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:GetObjectVersion", "s3:PutObject"],
+      "Resource": ["arn:aws:s3:::mcft-cap09-requal-c1f7dcc6d04d/*"]
+    },
+    {
+      "Sid": "ExplicitDeleteDeny",
+      "Effect": "Deny",
+      "Action": ["s3:DeleteObject", "s3:DeleteObjectVersion"],
+      "Resource": ["arn:aws:s3:::mcft-cap09-requal-c1f7dcc6d04d/*"]
+    }
+  ]
+}
