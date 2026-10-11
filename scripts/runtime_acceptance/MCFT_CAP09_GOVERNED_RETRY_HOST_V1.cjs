@@ -1,6 +1,7 @@
 "use strict";
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),os=require("node:os");
 const permitApi=require("./MCFT_CAP09_RETRY_PERMIT_V1.cjs");
+const stageCap=require("./MCFT_CAP09_STAGE_CAPABILITY_V1.cjs");
 const {admitProposedRetry}=require("../governance_acceptance/MCFT_CAP09_ISOLATED_RETRY_ADMISSION_BRIDGE_V1.cjs");
 const {hashFile}=require("./MCFT_CAP09_STAGE_RECEIPTS_V1.cjs");
 const ROOT=path.resolve(__dirname,"../..");
