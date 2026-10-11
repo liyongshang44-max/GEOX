@@ -52,6 +52,10 @@ fail(/FUTURE_BASE_LEAD_GT_6H_REQUIRED/,e=>e.MCFT_QUALIFICATION_FIRST_BASE="2026-
 fail(/OUTPUT_OUTSIDE_REPO_REQUIRED/,e=>e.MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR="C:\\repo\\run-"+C.RUN_ID);
 fail(/LEDGER_RUN_ID_REQUIRED/,e=>e.MCFT_CAP09_TEST_ONLY_LEDGER_DIR="C:\\ledger\\other");
 
+const outputProbe=binding.outputPath({out:path.join(__dirname,"nonexistent-output-probe")},"MCFT_CAP09_TEST_ONLY_RESULT.json");
+assert.equal(path.basename(outputProbe),"MCFT_CAP09_TEST_ONLY_RESULT.json");checks++;
+assert.throws(()=>binding.outputPath({out:path.join(__dirname,"nonexistent-output-probe")},"bad.json"),/TEST_ONLY_OUTPUT_FILENAME_INVALID/);checks++;
+
 const producerPath=path.join(__dirname,"RUN_MCFT_CAP09_TEST_ONLY_PRODUCER_C1F7DCC6D04D_V1.ts");
 const producerSource=fs.readFileSync(producerPath,"utf8");
 const transpiled=ts.transpileModule(producerSource,{
