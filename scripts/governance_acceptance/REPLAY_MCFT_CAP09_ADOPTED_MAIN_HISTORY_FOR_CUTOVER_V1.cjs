@@ -105,6 +105,39 @@ function runAdoptedMainLegacyDiagnostic(command,extraEnv={}) {
   fs.rmSync(temp,{recursive:true,force:true});
  }
 }
+
+const EXACT_WORKFLOW_GATE_MODES=Object.freeze([
+ "--historic-frozen","--historic-r6","--historic-g12","--historic-g13",
+ "--current-baseline-preparation","--current-baseline-successor"
+]);
+function runAdoptedMainWorkflowGate(mode) {
+ assert.equal(EXACT_WORKFLOW_GATE_MODES.includes(mode),true,"UNREGISTERED_WORKFLOW_GATE");
+ const {head,main,changed}=verifyCandidateBoundary();
+ const temp=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-cap09-workflow-gate-"));
+ const checkout=path.join(temp,"main");let attached=false;
+ try {
+  git("worktree","add","--detach",checkout,main);attached=true;
+  const historicalCrop="scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs";
+  const mapped=mode==="--current-baseline-preparation"
+    ? "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs"
+    : mode==="--current-baseline-successor"
+    ? "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs"
+    : historicalCrop;
+  const args=[path.join(checkout,mapped)];
+  if(mapped===historicalCrop)args.push(mode);
+  const result=cp.spawnSync(process.execPath,args,{cwd:checkout,encoding:"utf8",
+   timeout:360000,maxBuffer:16*1024*1024,env:{...process.env,MCFT_CAP09_ALL_BLOCKERS_CHILD:"1"}});
+  assert.equal(result.error,undefined,"ADOPTED_GATE_SPAWN_ERROR:"+String(result.error));
+  assert.equal(result.signal,null,"ADOPTED_GATE_SIGNAL:"+String(result.signal));
+  assert.equal(result.status,0,"ADOPTED_GATE_FAILED:"+mode+":"+String(result.stderr||"").slice(-2000));
+  return {status:"PASS",stage:mode,historical_subject_sha:main,candidate_subject_sha:head,
+   exact_scope_count:changed.length,adopted_gate_exit_code:result.status,
+   issuer_trust_adopted:false,execute_authorized:false};
+ }finally{
+  if(attached)git("worktree","remove","--force",checkout);
+  fs.rmSync(temp,{recursive:true,force:true});
+ }
+}
 module.exports={verifyCandidateBoundary,replayAdoptedHistoryForCutoverCandidate,
- runHistoricalDiagnosticForCutoverCandidate,isAdoptedMainLegacyDiagnostic,runAdoptedMainLegacyDiagnostic};
+ runHistoricalDiagnosticForCutoverCandidate,isAdoptedMainLegacyDiagnostic,runAdoptedMainLegacyDiagnostic,runAdoptedMainWorkflowGate};
 if(require.main===module){try{console.log(JSON.stringify(replayAdoptedHistoryForCutoverCandidate()));}catch(e){console.error(e.stack||String(e));process.exitCode=1;}}
