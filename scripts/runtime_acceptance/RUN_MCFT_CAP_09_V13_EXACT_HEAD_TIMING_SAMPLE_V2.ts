@@ -126,7 +126,9 @@ async function main(): Promise<void> {
 
   try {
     if (currentTargets.isolated_login_run_id) await isolatedLogin.verifyEvidenceLogin(pool, currentTargets, EXPECTED_V13_DB);
-    else assert.equal(await currentRole(pool), EVIDENCE_ROLE, "V13_TIMING_SAMPLE_EVIDENCE_ROLE_REQUIRED");
+    else {
+      assert.equal(await currentRole(pool), EVIDENCE_ROLE, "V13_TIMING_SAMPLE_EVIDENCE_ROLE_REQUIRED");
+    }
     assert.equal(await publicTableCount(pool), 29, "V13_TIMING_SAMPLE_29_TABLES_REQUIRED");
     assert.equal(await functionExists(pool), true, "V13_TIMING_SAMPLE_FENCED_WRITER_REQUIRED");
 

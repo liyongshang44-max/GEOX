@@ -65,7 +65,9 @@ async function runBlockedNegative(input: { url: string; subject: string }): Prom
   const pastBase = canonicalHour(Date.now() - 3_600_000);
   try {
     if (currentTargets.isolated_login_run_id) await isolatedLogin.verifyEvidenceLogin(pool, currentTargets, EXPECTED_BLOCKED_DB);
-    else assert.equal(await currentRole(pool), EVIDENCE_LOGIN_ROLE, "V13_BLOCKED_QUALIFICATION_EVIDENCE_LOGIN_ROLE_REQUIRED");
+    else {
+      assert.equal(await currentRole(pool), EVIDENCE_LOGIN_ROLE, "V13_BLOCKED_QUALIFICATION_EVIDENCE_LOGIN_ROLE_REQUIRED");
+    }
     assert.equal(await publicTableCount(pool), 29, "V13_BLOCKED_QUALIFICATION_29_TABLES_REQUIRED");
     const lifecycle = new PostgresExternalFormalForcingControllerLifecycleV1(pool, {
       scope: MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
@@ -163,7 +165,9 @@ async function main(): Promise<void> {
       const negativePreflight = new Pool({connectionString: blockedUrl, max: 1});
       try { await isolatedLogin.verifyEvidenceLogin(negativePreflight, currentTargets, EXPECTED_BLOCKED_DB); }
       finally { await negativePreflight.end(); }
-    } else assert.equal(await currentRole(pool), EVIDENCE_LOGIN_ROLE, "V13_LIVE_QUALIFICATION_EVIDENCE_LOGIN_ROLE_REQUIRED");
+    } else {
+      assert.equal(await currentRole(pool), EVIDENCE_LOGIN_ROLE, "V13_LIVE_QUALIFICATION_EVIDENCE_LOGIN_ROLE_REQUIRED");
+    }
     assert.equal(await publicTableCount(pool), 29, "V13_LIVE_QUALIFICATION_29_TABLES_REQUIRED");
     assert.equal(await functionExists(pool), true, "V13_LIVE_QUALIFICATION_FENCED_WRITER_REQUIRED");
 
