@@ -191,7 +191,12 @@ function runDiagnostic(command, extraEnv = {}) {
   const stageVerifier = path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs");
   if (fs.existsSync(stageVerifier)) {
     const stage = require("./VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs");
-    if (stage.isFrozenDiagnosticCommand(command)) return stage.runHistoricalDiagnostic(command, extraEnv);
+    if (stage.isFrozenDiagnosticCommand(command)) {
+      const manifest = path.join(ROOT, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json");
+      if (fs.existsSync(manifest) && cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim() !== cp.execFileSync("git", ["rev-parse", "origin/main"], { cwd: ROOT, encoding: "utf8" }).trim())
+        return require("./REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs").runHistoricalDiagnosticForCutoverCandidate(command, extraEnv);
+      return stage.runHistoricalDiagnostic(command, extraEnv);
+    }
   }
   const result = cp.spawnSync(command, {
     cwd: ROOT,
