@@ -174,6 +174,21 @@ try {
   assert.equal(result.stdout.trim(),"ERROR_PROPAGATION_PASS");
 } finally { fs.rmSync(fixture,{recursive:true,force:true}); }
 
+const retry = require("./VERIFY_MCFT_CAP_09_DISABLED_RETRY_SUCCESSOR_V1.cjs");
+const retryCandidate = {...adoption, main:retry.BASE, head:"e".repeat(40),
+  parents:[history.BASE,"d".repeat(40)], head_descends_from_main:true, successor_paths:retry.PATHS};
+const retryMerged = {...retryCandidate, main:"f".repeat(40),head:"f".repeat(40),
+  parents:[retry.BASE,"e".repeat(40)],head_descends_from_main:false};
+assert.equal(p.validateMainAdoption(retryCandidate),"PRE_MERGE_DISABLED_RETRY_IMPLEMENTATION_ONLY");
+assert.equal(p.validateMainAdoption(retryMerged),"POST_MERGE_DISABLED_RETRY_IMPLEMENTATION_ONLY");
+for(const state of [retryCandidate,retryMerged]) for(const bad of [
+  {successor_paths:retry.PATHS.slice(1)},
+  {successor_paths:[...retry.PATHS,"scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_ISOLATED_QUALIFICATION_ARM_20261010_V1.json"]},
+  {main_tree:"e".repeat(40)},{parents:["0".repeat(40),"e".repeat(40)]},
+]) assert.throws(()=>p.validateMainAdoption({...state,...bad}));
+assert.throws(()=>p.validateMainAdoption({...retryCandidate,head_descends_from_main:false}));
+assert.throws(()=>p.validateMainAdoption({...retryMerged,head:"e".repeat(40)}));
+
 const source = p.verifySources();
 assert.equal(source.deployment_binding.frozen_source_runtime_matches_current_baseline, true);
 assert.equal(source.deployment_binding.image_contents_attested, false);

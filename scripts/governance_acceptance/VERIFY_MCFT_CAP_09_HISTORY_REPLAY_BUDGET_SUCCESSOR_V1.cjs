@@ -32,6 +32,8 @@ const ROUTE = ' const budgetSuccessor=path.join(ROOT,"' + SELF + '");\n' +
 const git = (...args) => cp.execFileSync("git", args,
   {cwd: ROOT, encoding: "utf8", timeout: 120000, maxBuffer: 16 * 1024 * 1024}).trim();
 function verifySuccessor() {
+ const retrySuccessor=path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_DISABLED_RETRY_SUCCESSOR_V1.cjs");
+ if(fs.existsSync(retrySuccessor))return require("./VERIFY_MCFT_CAP_09_DISABLED_RETRY_SUCCESSOR_V1.cjs").verifySuccessor();
   const head = git("rev-parse", "HEAD"), main = git("rev-parse", "origin/main");
   git("merge-base", "--is-ancestor", BASE, head);
   let stage = "SUCCESSOR_SUBJECT_PRE_MERGE";

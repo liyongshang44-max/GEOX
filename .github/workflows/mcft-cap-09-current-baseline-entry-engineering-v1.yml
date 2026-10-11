@@ -2,6 +2,9 @@ name: MCFT CAP-09 current baseline entry engineering
 on:
   pull_request:
     paths:
+      - 'scripts/governance_acceptance/*RETRY*'
+      - 'scripts/runtime_acceptance/*RETRY_ARM*'
+      - 'docs/digital_twin/mcft/cap_09/*RETRY-IMPLEMENTATION*'
       - 'scripts/runtime_acceptance/*CURRENT_BASELINE*'
       - 'scripts/runtime_acceptance/*RECOVERY_V2*'
       - 'scripts/runtime_acceptance/*QUALIFICATION_V2*'
@@ -29,6 +32,7 @@ jobs:
         with:
           version: '9.15.4'
       - run: pnpm install --frozen-lockfile
+      - run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ISOLATED_RETRY_AUTHORITY_V1.cjs
       - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs
         env:
           MCFT_CURRENT_ENTRY_COMPILE_TEST: '1'
