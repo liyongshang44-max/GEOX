@@ -55,6 +55,10 @@ function issueStageCapability(authority,{id,script,previous_sha256}) {
  const source=prior===0?path.join(base,"CONSUMED.json"):path.join(base,STAGES[prior-1],"COMPLETED.json");
  fileRegular(source);
  assert.equal(hashFile(source),previous_sha256,"CAP_CHAIN_BROKEN");
+ if(prior>0){const priorRecord=JSON.parse(fs.readFileSync(source,"utf8"));
+  assert.equal(priorRecord.id,STAGES[prior-1],"CAP_PREVIOUS_STAGE_WRONG");
+  assert.equal(priorRecord.status,"PASS","CAP_PREVIOUS_STAGE_FAILED");
+ }
  const issued=Date.now();
  const until=Math.min(issued+120000,Date.parse(authority.expires_at));
  assert(issued<until,"CAP_PERMIT_EXPIRED");
