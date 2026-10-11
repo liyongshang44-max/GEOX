@@ -30,12 +30,14 @@ const dir=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-real-pipeline-delay-"));let
  assert.equal(called,6);checks++;
  const proof=gate.seal();assert.equal(proof.operation_event_count,6);checks++;
  const file=path.join(dir,"MCFT_CAP09_REAL_PIPELINE_DELAY_V1_RESULT.json");
- assert.equal(verifyEvidence(file,{runId:run,subjectSha:head,firstBase:first}).count,6);checks++;
+ assert.equal(verifyEvidence(file,{runId:run,subjectSha:head,firstBase:first,plan}).count,6);checks++;
+ assert.throws(()=>verifyEvidence(file,{runId:run,subjectSha:head,firstBase:first,
+    plan:{...plan,promotion_queue_delay_ms:plan.promotion_queue_delay_ms+1}}),/PIPELINE_SIGNED_WAIT_MISMATCH/);checks++;
  assert.throws(()=>gate.seal());checks++;
  assert.throws(()=>makeGate({plan,outputDir:dir}),/EVIDENCE_PREEXISTS/);checks++;
  await assert.rejects(gate.promote(first,()=>{throw Error("duplicate");}),/ALREADY_SEALED/);checks++;
  const event=path.join(dir,"MCFT_CAP09_PIPELINE_DELAY_PHYSICAL_READBACK_2.json");
- fs.appendFileSync(event,"\n");assert.throws(()=>verifyEvidence(file,{runId:run,subjectSha:head,firstBase:first}),/HASH_CHANGED/);checks++;
+ fs.appendFileSync(event,"\n");assert.throws(()=>verifyEvidence(file,{runId:run,subjectSha:head,firstBase:first,plan}),/HASH_CHANGED/);checks++;
  const failDir=path.join(dir,"failed");fs.mkdirSync(failDir);
  const badReadback=makeGate({plan,outputDir:failDir});
  await badReadback.promote(first,async()=>({database_fence_commit_succeeded:true,formal_fact_present_count:3,facts:[1,2,3]}));checks++;

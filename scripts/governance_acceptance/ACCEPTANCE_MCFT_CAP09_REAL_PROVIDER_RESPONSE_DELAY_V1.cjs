@@ -25,13 +25,15 @@ const plan={schema_version:'geox_mcft_cap09_real_provider_response_delay_v1',run
  assert.equal(actualCalls,3);count++;
  const proof=gate.seal();assert.equal(proof.actual_real_https_response_delay_events,3);count++;
  const file=path.join(dir,'MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1_RESULT.json');
- assert.equal(verifyEvidence(file,{runId:plan.run_id,subjectSha:plan.subject_sha}).count,3);count++;
+ assert.equal(verifyEvidence(file,{runId:plan.run_id,subjectSha:plan.subject_sha,plan}).count,3);count++;
  assert.throws(()=>gate.seal(),/EXACT_THREE/);count++;
  assert.deepEqual(fs.readdirSync(dir).sort(),['MCFT_CAP09_PROVIDER_RESPONSE_DELAY_1.json','MCFT_CAP09_PROVIDER_RESPONSE_DELAY_2.json','MCFT_CAP09_PROVIDER_RESPONSE_DELAY_3.json','MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1_RESULT.json'].sort());count++;
  assert.throws(()=>makeGate({plan,outputDir:path.join(dir,'missing'),realFetch:fetch,allowLoopbackTest:true}));count++;
- assert.throws(()=>verifyEvidence(file,{runId:'aaaaaaaaaaaa',subjectSha:plan.subject_sha}));count++;
+ assert.throws(()=>verifyEvidence(file,{runId:'aaaaaaaaaaaa',subjectSha:plan.subject_sha,plan}));count++;
+ assert.throws(()=>verifyEvidence(file,{runId:plan.run_id,subjectSha:plan.subject_sha,
+  plan:{...plan,response_delay_ms:plan.response_delay_ms+1}}),/PROVIDER_DELAY_SIGNED_WAIT_MISMATCH/);count++;
  const dataPath=path.join(dir,'MCFT_CAP09_PROVIDER_RESPONSE_DELAY_2.json');
- fs.appendFileSync(dataPath,'tamper');assert.throws(()=>verifyEvidence(file,{runId:plan.run_id,subjectSha:plan.subject_sha}),/TAMPERED/);count++;
+ fs.appendFileSync(dataPath,'tamper');assert.throws(()=>verifyEvidence(file,{runId:plan.run_id,subjectSha:plan.subject_sha,plan}),/TAMPERED/);count++;
  console.log(JSON.stringify({status:'PASS',count,real_network_loopback_requests:actualCalls,physical_waits:3,provider_response_bytes_preserved:true,synthetic_provider_only:true,authorizes_execute:false}));
  }finally{await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e.stack||e);process.exitCode=1});

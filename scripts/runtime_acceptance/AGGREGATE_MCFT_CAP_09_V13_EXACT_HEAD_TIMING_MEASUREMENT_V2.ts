@@ -104,15 +104,17 @@ function main(): void {
   let realPipelineDelayDigest: string | null = null;
   let realPipelineDelayCount = 0;
   if (governed) {
+    const signedObserved = createRequire(import.meta.url)("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs")
+      .hostBundle(required("MCFT_GOVERNED_RETRY_BUNDLE")).bundle.observed;
     const providerProof = createRequire(import.meta.url)("./MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs")
       .verifyEvidence(path.join(SAMPLE_DIR, "MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1_RESULT.json"),
-        {runId:required("MCFT_GOVERNED_RETRY_RUN_ID"),subjectSha:subject});
+        {runId:required("MCFT_GOVERNED_RETRY_RUN_ID"),subjectSha:subject,plan:signedObserved.real_provider_response_delay_plan});
     realProviderDelayDigest=providerProof.sha256;
     realProviderDelayCount=providerProof.count;
     const pipelineProof = createRequire(import.meta.url)("./MCFT_CAP09_REAL_PIPELINE_DELAY_V1.cjs")
       .verifyEvidence(path.join(SAMPLE_DIR,"MCFT_CAP09_REAL_PIPELINE_DELAY_V1_RESULT.json"),
         {runId:required("MCFT_GOVERNED_RETRY_RUN_ID"),subjectSha:subject,
-         firstBase:required("MCFT_QUALIFICATION_FIRST_BASE")});
+         firstBase:required("MCFT_QUALIFICATION_FIRST_BASE"),plan:signedObserved.real_pipeline_delay_plan});
     realPipelineDelayDigest=pipelineProof.sha256;
     realPipelineDelayCount=pipelineProof.count;
     const delayFile = path.join(SAMPLE_DIR, "MCFT_CAP09_REAL_CONTROLLED_DELAY_V1_RESULT.json");

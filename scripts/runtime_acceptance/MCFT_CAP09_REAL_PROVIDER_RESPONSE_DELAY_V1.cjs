@@ -90,21 +90,28 @@ function makeGate({plan,outputDir,realFetch,allowLoopbackTest=false}){
  }
  return Object.freeze({activateBase,assertBaseCaptured,fetch_impl:fetchWithDelay,seal});
 }
-function verifyEvidence(file,{runId,subjectSha}={}){
+function verifyEvidence(file,{runId,subjectSha,plan}={}){
+ const signed=validatePlan(plan,{runId,subjectSha});
  const raw=fs.readFileSync(file);assert(raw.length<=1024*1024,"PROVIDER_DELAY_EVIDENCE_OVERSIZED");
  const e=JSON.parse(raw);assert.equal(e.schema_version,"geox_mcft_cap09_real_provider_response_delay_evidence_v1");
  assert.equal(e.status,"PASS");assert.equal(e.run_id,runId);assert.equal(e.subject_sha,subjectSha);
  assert.equal(e.actual_real_https_response_delay_events,3);assert.equal(e.provider_http_response_used,true);
  assert.equal(e.latency_injected_into_actual_provider_transport,true);
  assert.equal(e.full_six_case_pipeline_delay_qualified,false);
+ assert.equal(e.mode,signed.mode,"PROVIDER_DELAY_SIGNED_MODE_CHANGED");
  assert(Array.isArray(e.events)&&e.events.length===3);
  for(let i=0;i<3;i++){
   const row=e.events[i];assert(row.real_fetch_returned&&row.original_response_unmodified);
+  assert.equal(row.base_target_t,new Date(Date.parse(signed.first_base)+i*3600000).toISOString(),"PROVIDER_DELAY_BASE_CHANGED");
+  assert.equal(row.response_wait_requested_ms,signed.response_delay_ms,"PROVIDER_DELAY_SIGNED_WAIT_MISMATCH");
   assert(row.response_wait_observed_ms>=row.response_wait_requested_ms);
   assert(Number.isSafeInteger(row.original_response_status)&&row.original_response_status>=200&&row.original_response_status<300,"PROVIDER_DELAY_UNSUCCESSFUL_STATUS_CLAIM");
   assert(typeof row.event_sha256==="string"&&/^[a-f0-9]{64}$/.test(row.event_sha256));
   const source=path.join(path.dirname(file),"MCFT_CAP09_PROVIDER_RESPONSE_DELAY_"+(i+1)+".json");
-  assert.equal(digest(fs.readFileSync(source)),row.event_sha256,"PROVIDER_DELAY_EVENT_TAMPERED");
+  const bytes=fs.readFileSync(source);
+  assert.equal(digest(bytes),row.event_sha256,"PROVIDER_DELAY_EVENT_TAMPERED");
+  const {event_sha256,...event}=row;
+  assert.deepEqual(JSON.parse(bytes),event,"PROVIDER_DELAY_EVENT_CONTENT_CHANGED");
  }
  return {sha256:digest(raw),count:3};
 }

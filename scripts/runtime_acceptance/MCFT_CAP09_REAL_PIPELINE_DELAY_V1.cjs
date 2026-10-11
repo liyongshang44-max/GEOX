@@ -75,10 +75,13 @@ function makeGate({plan,outputDir}){
  return Object.freeze({promote:(base,fn)=>invoke("PROMOTION_QUEUE",base,fn),
   attest:(base,fn)=>invoke("PHYSICAL_READBACK",base,fn),seal});
 }
-function verifyEvidence(file,{runId,subjectSha,firstBase}={}){
+function verifyEvidence(file,{runId,subjectSha,firstBase,plan}={}){
+ const signed=validatePlan(plan,{runId,subjectSha,firstBase});
  normal(file);const raw=fs.readFileSync(file);assert(raw.length<1024*1024,"PIPELINE_PROOF_OVERSIZED");
  const proof=JSON.parse(raw);assert.equal(proof.schema_version,"geox_mcft_cap09_real_pipeline_delay_evidence_v1");
  assert.equal(proof.status,"PASS");assert.equal(proof.run_id,runId);assert.equal(proof.subject_sha,subjectSha);assert.equal(proof.first_base,firstBase);
+ assert.equal(proof.mode,signed.mode,"PIPELINE_SIGNED_MODE_CHANGED");
+ assert.equal(proof.physical_waits_measured,true,"PIPELINE_WAIT_NOT_MEASURED");
  assert.equal(proof.operation_event_count,6);assert.equal(proof.fenced_promotion_result_checks,3);
  assert.equal(proof.physical_readback_result_checks,3);assert.equal(proof.full_six_case_pipeline_delay_qualified,false);
  assert.equal(proof.production_owner_activation,false);
@@ -89,7 +92,8 @@ function verifyEvidence(file,{runId,subjectSha,firstBase}={}){
   assert.equal(row.filename,name);assert.equal(row.kind,kind);assert.equal(row.base_target_t,base);
   assert.equal(row.run_id,runId);assert.equal(row.subject_sha,subjectSha);
   assert.equal(row.callback_result_contract_verified,true);assert.equal(row.production_owner_activation,false);
-  assert(Number.isSafeInteger(row.requested_ms)&&row.requested_ms>=25&&row.requested_ms<=15000);
+  const signedWait=kind==="PROMOTION_QUEUE"?signed.promotion_queue_delay_ms:signed.post_commit_readback_delay_ms;
+  assert.equal(row.requested_ms,signedWait,"PIPELINE_SIGNED_WAIT_MISMATCH");
   assert(row.measured_ms>=row.requested_ms,"PIPELINE_WAIT_UNDERFLOW");
   assert(/^[a-f0-9]{64}$/.test(row.sha256),"PIPELINE_SHA_INVALID");
   const record={...row};delete record.filename;delete record.sha256;
