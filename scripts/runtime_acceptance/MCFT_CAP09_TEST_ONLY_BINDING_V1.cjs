@@ -120,7 +120,7 @@ function childTargets(){
   return result;
 }
 function outputPath(targets,name){
-  assert(/^[A-Z0-9_]+\\.json$/.test(name),"TEST_ONLY_OUTPUT_FILENAME_INVALID");
+  assert(/^[A-Z0-9_]+\.json$/.test(name),"TEST_ONLY_OUTPUT_FILENAME_INVALID");
   const file=path.join(targets.out,name);
   assert(!require("node:fs").existsSync(file),"TEST_ONLY_IMMUTABLE_OUTPUT_EXISTS");
   return file;
