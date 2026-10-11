@@ -31,3 +31,14 @@ Scope: PR #3692, pre-merge engineering. This document is not a runtime authoriza
 
 ## Inherited governance
 Historical QCP checks must replay against the adopted protected main, while current candidate checks use the exact path inventory. A pass in this engineering subset is not a live retry ARM, a Product projection authorization or a Formal-v5 cutover.
+
+
+## Six-stage executor and physically measured delay successor
+
+The exact signed stage plan schema is `geox_mcft_cap09_retry_stage_plan_v2`; the six ordered stages are **PRODUCER → TIMING_1 → TIMING_2 → TIMING_3 → CONTROLLED_DELAY → AGGREGATE**. The standalone single-use scheduler consumes an independently verified one-time parent capability, dispatches each stage with its own Ed25519 ticket, seals exit/timeout/stdout/stderr/artifact/claim digests and verifies each predecessor hash before advancement. A failed or interrupted stage does not issue a successor ticket, does not resume and cannot reuse the consumed run/nonce.
+
+The controlled-delay adapter reads **all three real successful Timing sample artifacts** and their immutable SHA-256 values, computes the six domain-defined delay-probe cases from componentwise observed maxima, and waits for each delay using `process.hrtime.bigint()` on an exclusively-created disposable **filesystem scratch** directory scoped to the fresh isolated run. The result records the requested and observed elapsed times plus case-file hashes and revalidates every source sample after the experiment. It performs **no SQL**, does not open production or retained qualification PostgreSQL databases, does not run a fixture containing `DROP SCHEMA`, and never deletes or overwrites existing evidence.
+
+**Scientific classification restriction:** These probes demonstrate real physical wait durations in scratch; they do **not** slow the actual Provider HTTP request, evidence promotion queue or rehydration transaction. The aggregator may link the scratch-probe evidence but MUST preserve `controlled_delay_matrix_executed=false` until a separately approved full-pipeline latency-injection adapter produces real provider/promotion evidence. Physical scratch-delay PASS is therefore NOT full controlled-delay qualification or a Formal-v5 ARM.
+
+A CI-only, locally pretested six-subprocess end-to-end harness establishes the exact stage order, real monotonic waits, linked receipts, non-destructive scratch behavior, duplicate-attempt rejection, tampered timing sample rejection and failure stop. Its child receipt dispatcher is synthetic; independent Windows/Linux tests cover actual signed parent/child capabilities. All live modes remain blocked by the default `MCFT_CAP09_RETRY_TRUST_V1.json` with `adopted=false` and `execution_enabled=false`. This engineering commit does not enroll an issuer or perform operator Windows/real Producer execution.

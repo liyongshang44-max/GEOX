@@ -9,7 +9,7 @@ const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const crypto=require("node:crypto");
 const FORBIDDEN=/\b(?:DROP\s+(?:SCHEMA|DATABASE|TABLE)|TRUNCATE\s+|ALTER\s+DATABASE|DELETE\s+FROM|CREATE\s+EXTENSION|SET\s+search_path)\b/i;
-const REQUIRED=Object.freeze(["CROSS_WAKE_CAPTURE_OVERLAP","PROVIDER_LATENCY","RETRY_BACKOFF","STALE_OBSERVATION"]);
+const REQUIRED=Object.freeze(["WAKE_DELAY","JOB_START_SETUP_DELAY","PROVIDER_SLOW_PATH","PROMOTION_QUEUE_SETUP_DELAY","REHYDRATION_COMMIT_READBACK_DELAY","CROSS_WAKE_CAPTURE_OVERLAP"]);
 function validateDelayPlan(plan) {
  assert(plan&&typeof plan==="object","DELAY_PLAN_REQUIRED");
  assert.deepEqual(Object.keys(plan).sort(),["cases","schema_version","target"].sort(),"DELAY_PLAN_FIELDS_INVALID");

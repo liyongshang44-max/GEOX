@@ -12,7 +12,7 @@ try {
  for(const args of [valid.concat("--execute"),valid.concat("--governed-retry"),valid.concat("--unknown"),valid.filter(x=>x!=="--operator-authorized"),valid.slice(0,-1),valid.map(x=>x===file?"relative.json":x)]){
   assert.throws(()=>host.parseArgs(args));tests++;
  }
- const plan={schema_version:"geox_mcft_cap09_retry_stage_plan_v1",stages:host.STAGES.map(s=>({id:s[0],timeout_ms:1000}))};
+ const plan={schema_version:"geox_mcft_cap09_retry_stage_plan_v2",stages:host.STAGES.map(s=>({id:s[0],timeout_ms:1000}))};
  host.validatePlan(plan);tests++;
  for(const mutate of [p=>p.stages.reverse(),p=>p.stages.pop(),p=>p.stages[0].timeout_ms=0,p=>p.stages[0].command="arbitrary",p=>p.stages[1].id="DROP_SCHEMA"]){
   const p=structuredClone(plan);mutate(p);assert.throws(()=>host.validatePlan(p));tests++;

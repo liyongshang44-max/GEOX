@@ -4,6 +4,7 @@ const currentTargets = currentExecution.qualificationTargets();
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 
 import {
   MCFT_CAP09_FORMAL_FORCING_ACQUISITION_BUDGET_AUTHORITY_ID_V1,
@@ -93,6 +94,34 @@ function main(): void {
     const phases = byId.get(id)?.timing_phases as FormalForcingSupplyTimingPhasesV1;
     return { sample_id: id, ...phases };
   });
+  // A physically measured scratch-delay probe is separate from an actual
+  // delayed Provider/promotion pipeline. Do not upgrade the latter's qualification.
+  const governed = process.env.MCFT_GOVERNED_RETRY_STAGE === "AGGREGATE";
+  let scratchDelayDigest: string | null = null;
+  let scratchDelayCaseCount = 0;
+  if (governed) {
+    const delayFile = path.join(SAMPLE_DIR, "MCFT_CAP09_REAL_CONTROLLED_DELAY_V1_RESULT.json");
+    const bytes = fs.readFileSync(delayFile);
+    const result = JSON.parse(bytes.toString("utf8"));
+    assert.equal(result.schema_version,"geox_mcft_cap09_real_controlled_delay_scratch_evidence_v1");
+    assert.equal(result.status,"PASS");
+    assert.equal(result.run_id,required("MCFT_GOVERNED_RETRY_RUN_ID"));
+    assert.equal(result.subject_sha,subject);
+    assert.equal(result.physical_delay_cases_executed,true);
+    assert.equal(result.provider_pipeline_injected,false);
+    assert.equal(result.retained_qualification_database_touched,false);
+    assert.equal(result.destructive_sql_executed,false);
+    assert.equal(result.formal_timing_qualified,false);
+    assert(Array.isArray(result.timing_sources) && result.timing_sources.length===3);
+    for(let i=0;i<3;i++) {
+      const source=result.timing_sources[i];
+      assert.equal(source.filename,files[i],"DELAY_PROBE_SAMPLE_SET_CHANGED");
+      assert.equal(source.sha256,crypto.createHash("sha256").update(fs.readFileSync(path.join(SAMPLE_DIR,files[i]!))).digest("hex"),"DELAY_PROBE_TIMING_INPUT_CHANGED");
+    }
+    assert(Array.isArray(result.cases)&&result.cases.length===6,"DELAY_PROBE_CASES_INCOMPLETE");
+    scratchDelayDigest=crypto.createHash("sha256").update(bytes).digest("hex");
+    scratchDelayCaseCount=result.cases.length;
+  }
   const baseline = Object.fromEntries(PHASE_KEYS.map((key) => [
     key,
     Math.max(...realSamples.map((sample) => sample[key])),
@@ -153,7 +182,11 @@ function main(): void {
     real_samples: realSamples,
     componentwise_real_maxima: baseline,
     controlled_delay_matrix_constructed: true,
-    controlled_delay_matrix_executed: false,
+    controlled_delay_matrix_executed: false, // no genuine slow Provider pipeline injected
+    scratch_delay_physical_probe_executed: governed,
+    scratch_delay_physical_probe_case_count: scratchDelayCaseCount,
+    scratch_delay_receipt_sha256: scratchDelayDigest,
+    scratch_delay_proves_provider_pipeline: false,
     controlled_delay_policy_id: "OBSERVED_COMPONENT_MAX_PLUS_ONE_EXTRA_OBSERVED_TARGET_PHASE_V1",
     cross_wake_capture_overlap_model: "ONE_ADDITIONAL_FULL_CAPTURE_WORKLOAD_SERIALIZED_ON_COMPONENTWISE_REAL_MAXIMA",
     controlled_delay_cases: controlledCases,

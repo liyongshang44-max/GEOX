@@ -4,23 +4,21 @@ const permitApi=require("./MCFT_CAP09_RETRY_PERMIT_V1.cjs");
 const stageCap=require("./MCFT_CAP09_STAGE_CAPABILITY_V1.cjs");
 const {admitProposedRetry}=require("../governance_acceptance/MCFT_CAP09_ISOLATED_RETRY_ADMISSION_BRIDGE_V1.cjs");
 const {hashFile}=require("./MCFT_CAP09_STAGE_RECEIPTS_V1.cjs");
+const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
+const {dispatchConsumedStage}=require("./MCFT_CAP09_PARENT_STAGE_DISPATCH_V1.cjs");
+const cp=require("node:child_process");
 const ROOT=path.resolve(__dirname,"../..");
 const STAGES=Object.freeze([
  ["PRODUCER","RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts","MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2_RESULT.json"],
  ...[1,2,3].map(i=>["TIMING_"+i,"RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts",`MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_SAMPLE${i}_V2_RESULT.json`]),
+ ["CONTROLLED_DELAY","MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs","MCFT_CAP09_REAL_CONTROLLED_DELAY_V1_RESULT.json"],
  ["AGGREGATE","AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts","MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2_RESULT.json"]
 ]);
 const digest=value=>permitApi.sha(permitApi.canonical(value));
 function readJson(file){return JSON.parse(fs.readFileSync(file,"utf8").replace(/^\uFEFF/,""));}
 function validatePlan(plan){
- assert.deepEqual(Object.keys(plan).sort(),["schema_version","stages"],"RETRY_PLAN_KEYS_INVALID");
- assert.equal(plan.schema_version,"geox_mcft_cap09_retry_stage_plan_v1");
- assert.equal(plan.stages.length,STAGES.length,"RETRY_STAGE_COUNT_INVALID");
- for(let i=0;i<STAGES.length;i++) {
-  const stage=plan.stages[i];assert.deepEqual(Object.keys(stage).sort(),["id","timeout_ms"]);
-  assert.equal(stage.id,STAGES[i][0],"RETRY_STAGE_ORDER_INVALID");
-  assert(Number.isSafeInteger(stage.timeout_ms)&&stage.timeout_ms>0&&stage.timeout_ms<=3600000,"RETRY_STAGE_TIMEOUT_INVALID");
- }
+ scheduler.validateStagePlan(plan);
+ assert.deepEqual(STAGES.map(x=>x[0]),scheduler.STAGES,"RETRY_STAGE_IMPLEMENTATION_ORDER_MISMATCH");
 }
 function validateBundle(bundle,trust,context){
  assert.equal(trust.adopted,true,"EXECUTE_HOLD: GOVERNED_RETRY_ACTIVATION_NOT_ADOPTED");
@@ -91,7 +89,9 @@ function stageEnvironment(h,id,bundleFile){
  const env={...h.env,MCFT_SUBJECT_SHA:h.arm.protected_main_sha,MCFT_GOVERNED_RETRY_BUNDLE:bundleFile,MCFT_GOVERNED_RETRY_STAGE:id,
   MCFT_CAP09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION:"1",MCFT_CAP09_V13_EXACT_HEAD_TIMING_SAMPLE:"1",
   MCFT_TIMING_SAMPLE_DIR:h.targets.out,MCFT_TIMING_RUN_ID:String(parseInt(h.arm.run_id,16)),MCFT_TIMING_RUN_ATTEMPT:"1",
-  MCFT_TIMING_WAKE_DELAY_MS:"0",MCFT_TIMING_JOB_START_SETUP_MS:"0",MCFT_TIMING_LOCAL_LAUNCH_AT_MS:String(Date.now())};
+  MCFT_TIMING_WAKE_DELAY_MS:"0",MCFT_TIMING_JOB_START_SETUP_MS:"0",MCFT_TIMING_LOCAL_LAUNCH_AT_MS:String(Date.now()),
+  MCFT_GOVERNED_RETRY_RUN_ID:h.arm.run_id,
+  MCFT_GOVERNED_RETRY_DELAY_TIMEOUT_MS:String(h.plan.stages[4].timeout_ms)};
  if(id.startsWith("TIMING_")){const n=Number(id.slice(-1));env.MCFT_TIMING_SAMPLE_ID="sample"+n;env.MCFT_TIMING_BASE_TARGET=new Date(Date.parse(h.arm.qualification_first_base)+(n-1)*3600000).toISOString();}
  return env;
 }
@@ -101,10 +101,39 @@ async function main(args){
  const observedAt=Date.parse(h.bundle.observed.fresh_readback.completed_at);
  assert(Number.isFinite(observedAt)&&observedAt<=Date.now()&&Date.now()-observedAt<=300000,"RETRY_READBACK_STALE");
  if(!options.execute)return {status:"SIGNED_RETRY_PREFLIGHT_PASS_NOT_EXECUTED",execute_authorized:false};
- // Until a separately implemented real-delay plan is adopted, never run a
- // partial Producer sequence and pretend that it covers the requested matrix.
+ // Effectful execution is unreachable while trust is unadopted (repository default).
+ // Preflight EVERYTHING before irreversible single-use parent permit consumption.
  assert.equal(h.trust.real_delay_controller_adopted,true,"EXECUTE_HOLD: REAL_DELAY_CONTROLLER_NOT_ADOPTED");
- throw new Error("EXECUTE_HOLD: REAL_DELAY_STAGE_IMPLEMENTATION_REQUIRED");
+ assert.equal(h.trust.stage_capability_adopted,true,"EXECUTE_HOLD: STAGE_CAPABILITY_NOT_ADOPTED");
+ const scripts=STAGES.map(([id,file,artifact],i)=>{
+   const script=path.join(__dirname,file);
+   const stat=fs.lstatSync(script);
+   assert(stat.isFile()&&!stat.isSymbolicLink(),"RETRY_STAGE_SOURCE_NOT_FROZEN:"+id);
+   const args=file.endsWith(".ts")?["--import","tsx",script]:[script];
+   const env=stageEnvironment(h,id,options.file);
+   assert.equal(path.dirname(path.join(h.targets.out,artifact)),h.targets.out,"RETRY_ARTIFACT_ISOLATION_REQUIRED");
+   return {id,script,artifact:path.join(h.targets.out,artifact),cwd:ROOT,executable:process.execPath,args,env};
+ });
+ assert(!fs.existsSync(path.join(h.trust.ledger_root,"run-"+h.arm.run_id)),"RETRY_LEDGER_RUN_REUSE");
+ assert(!fs.existsSync(h.targets.out),"RETRY_OUTPUT_REUSE");
+ assert.equal(typeof require.resolve("tsx"),"string","RETRY_TSX_DEPENDENCY_REQUIRED");
+ const check=cp.spawnSync(process.env.MCFT_PYTHON_EXECUTABLE||"python",
+   [path.join(ROOT,"apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py"),"selftest"],
+   {cwd:ROOT,timeout:60000,encoding:"utf8",maxBuffer:1024*1024});
+ assert.equal(check.status,0,"RETRY_SCIENTIFIC_SELFTEST_REQUIRED:"+String(check.stderr||"").slice(-350));
+ const consumed=permitApi.consumePermit(h.verified);
+ const authority=stageCap.initializeStageAuthority(consumed,h.verified.payload);
+ fs.mkdirSync(h.targets.out,{recursive:false,mode:0o700});
+ fs.writeFileSync(path.join(h.targets.out,"STARTED_RETRY.json"),JSON.stringify({
+  run_id:h.arm.run_id,subject_sha:h.arm.protected_main_sha,started_at:new Date().toISOString(),
+  single_use_permit_consumed:true,production_owner_activation:false,formal_v5_arm:false
+ },null,2)+"\n",{flag:"wx",mode:0o600});
+ const audit=await scheduler.executeSixStages({authority,plan:h.plan,steps:scripts,
+  dispatch:dispatchConsumedStage,assertConsumed:permitApi.assertConsumed});
+ return {status:audit.status,run_id:h.arm.run_id,stage_count:audit.stage_count,
+  final_receipt_sha256:audit.final_receipt_sha256,output:h.targets.out,
+  controlled_delay_scratch_only:true,provider_slow_path_proven:false,qualification_pass:false,
+  production_owner_activation:false,formal_v5_arm:false};
 }
 // Separate child validation: no implicit legacy ARM fallback when marker exists.
 function childTargets(){
@@ -113,8 +142,19 @@ function childTargets(){
  const h=hostBundle(file);
  const stage=STAGES.find(s=>s[0]===id);assert(stage,"RETRY_CHILD_UNKNOWN_STAGE");
  assert.equal(path.resolve(process.argv[1]),path.join(__dirname,stage[1]),"RETRY_CHILD_WRONG_SCRIPT");
- // Parent launch and per-stage consumption are deliberately unavailable until
- // the full real-delay controller is present. Signature PASS alone never launches.
- throw new Error("EXECUTE_HOLD: RETRY_PARENT_STAGE_AUTHORITY_NOT_IMPLEMENTED");
+ // Every TypeScript child and the scratch-delay child must burn the exact
+ // parent-signed stage ticket before Provider, DB, or output effects.
+ assert.equal(h.trust.real_delay_controller_adopted,true,"EXECUTE_HOLD: REAL_DELAY_CONTROLLER_NOT_ADOPTED");
+ assert.equal(h.trust.stage_capability_adopted,true,"EXECUTE_HOLD: STAGE_CAPABILITY_NOT_ADOPTED");
+ const ticket=process.env.MCFT_GOVERNED_RETRY_TICKET;
+ const previous=process.env.MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256;
+ assert(ticket&&previous,"RETRY_CHILD_ONE_TIME_CAPABILITY_REQUIRED");
+ const claim=stageCap.consumeStageCapability({ticket,
+  run_directory:path.join(h.trust.ledger_root,"run-"+h.arm.run_id),
+  id,run_id:h.arm.run_id,nonce:h.verified.payload.nonce,
+  subject_sha:h.arm.protected_main_sha,envelope_sha256:h.verified.envelope_sha256,
+  script:path.join(__dirname,stage[1]),previous_sha256:previous});
+ assert.equal(claim.status,"STAGE_CAPABILITY_CONSUMED_NO_RETRY");
+ return h.targets;
 }
 module.exports={STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};
