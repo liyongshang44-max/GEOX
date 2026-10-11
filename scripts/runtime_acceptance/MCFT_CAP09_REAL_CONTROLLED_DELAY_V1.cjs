@@ -102,6 +102,10 @@ if(require.main===module){
   const targets=host.childTargets();
   const runId=process.env.MCFT_GOVERNED_RETRY_RUN_ID,subjectSha=process.env.MCFT_SUBJECT_SHA;
   const samples=[1,2,3].map(i=>path.join(targets.out,`MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_SAMPLE${i}_V2_RESULT.json`));
+  const providerReceipt=require("./MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs").verifyEvidence(
+   path.join(targets.out,"MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1_RESULT.json"),
+   {runId,subjectSha});
+  assert.equal(providerReceipt.count,3,"DELAY_REQUIRES_THREE_REAL_PROVIDER_RESPONSE_EVENTS");
   const plan=deriveDelayPlan({sampleFiles:samples,runId,subjectSha});
   const limit=Number(process.env.MCFT_GOVERNED_RETRY_DELAY_TIMEOUT_MS);
   const result=await executeRealDelay({plan,scratchParent:targets.out,

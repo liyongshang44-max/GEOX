@@ -71,5 +71,7 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_PARENT_STAGE_DISPATCH_V1.cjs
       - name: Six subprocess stages with actual monotonic scratch-delay and tamper fail-stop E2E
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_SIX_STAGE_E2E_V1.cjs
+      - name: Real loopback HTTP response latency, byte preservation and tamper negatives
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs
       - name: Fresh real Timing stage launch timestamps without stale prebuilt-plan bias
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE_START_CLOCK_V1.cjs

@@ -5,5 +5,8 @@
   "host_id": null,
   "operator_id": null,
   "ledger_root": null,
-  "issuers": []
+  "issuers": [],
+  "real_delay_controller_adopted": false,
+  "stage_capability_adopted": false,
+  "real_provider_transport_delay_adopted": false
 }

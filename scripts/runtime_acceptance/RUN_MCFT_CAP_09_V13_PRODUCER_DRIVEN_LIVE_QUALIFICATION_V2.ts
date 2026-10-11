@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 const currentExecution = createRequire(import.meta.url)("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
 const currentTargets = currentExecution.qualificationTargets();
+const responseDelay = createRequire(import.meta.url)("./MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs");
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -134,6 +135,16 @@ async function main(): Promise<void> {
   if (Date.parse(firstBase) <= Date.now()) throw new Error("V13_LIVE_QUALIFICATION_FIRST_BASE_MUST_BE_FUTURE");
   const bases = [firstBase, addHours(firstBase, 1), addHours(firstBase, 2)];
   const lastBase = bases[2]!;
+  // Child qualificationTargets() has already burnt the parent stage ticket.
+  // This read binds latency to the independently signed Observations envelope.
+  const governedResponseGate = process.env.MCFT_GOVERNED_RETRY_STAGE === "PRODUCER"
+    ? responseDelay.makeGate({
+        plan: createRequire(import.meta.url)("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs")
+          .hostBundle(required("MCFT_GOVERNED_RETRY_BUNDLE")).bundle.observed.real_provider_response_delay_plan,
+        outputDir: currentTargets.out,
+        realFetch: fetch,
+      })
+    : null;
   const controllerOwner = "mcft-cap09-v13-qualification-controller:" + subject.slice(0, 12);
   const producerOwner = "mcft-cap09-v13-qualification-producer:" + subject.slice(0, 12);
   const samples: Array<Record<string, unknown>> = [];
@@ -170,6 +181,7 @@ async function main(): Promise<void> {
       epoch_id: epoch,
       subject_sha: subject,
       private_store: privateStore,
+      fetch_impl: governedResponseGate?.fetch_impl,
     });
     assert.equal(producerCore.isolated_composition_id, ISOLATED_V13_COMPOSITION_ID_V1,
       "ISOLATED_ONLY_COMPOSITION_REQUIRED");
@@ -204,12 +216,14 @@ async function main(): Promise<void> {
         phase: "ACQUIRING",
       });
 
+      governedResponseGate?.activateBase(expectedBase);
       const captureStart = Date.now();
       const capture = await producerCore.capture_promotion.captureExactBase({
         base_target_t: expectedBase,
         subject_sha: subject,
         idempotency_key: claim.idempotency_key,
       });
+      governedResponseGate?.assertBaseCaptured(expectedBase);
       const captureMs = elapsed(captureStart);
 
       const renewed = await lifecycle.acquireOrRenew({
@@ -283,6 +297,7 @@ async function main(): Promise<void> {
       });
     }
 
+    const responseDelayProof = governedResponseGate?.seal() ?? null;
     const finalCursor = await continuity.readCursor();
     assert.equal(finalCursor.completed, true, "V13_LIVE_QUALIFICATION_CURSOR_MUST_COMPLETE");
     assert.equal(finalCursor.next_missing_required_base, null, "V13_LIVE_QUALIFICATION_NEXT_MISSING_MUST_BE_NULL");
@@ -335,6 +350,9 @@ async function main(): Promise<void> {
       timing_budget_qualified: false,
       timing_budget_frozen: false,
       controlled_delay_matrix_executed: false,
+      real_provider_response_delay_executed: responseDelayProof !== null,
+      real_provider_response_delay_count: responseDelayProof?.actual_real_https_response_delay_events ?? 0,
+      full_six_case_pipeline_delay_qualified: false,
       blocked_negative: blocked,
       formal_v5_mutation_count: 0,
       production_owner_activation: false,

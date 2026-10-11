@@ -2,6 +2,7 @@
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),os=require("node:os");
 const permitApi=require("./MCFT_CAP09_RETRY_PERMIT_V1.cjs");
 const stageCap=require("./MCFT_CAP09_STAGE_CAPABILITY_V1.cjs");
+const responseDelay=require("./MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs");
 const {admitProposedRetry}=require("../governance_acceptance/MCFT_CAP09_ISOLATED_RETRY_ADMISSION_BRIDGE_V1.cjs");
 const {hashFile}=require("./MCFT_CAP09_STAGE_RECEIPTS_V1.cjs");
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
@@ -28,6 +29,7 @@ function validateBundle(bundle,trust,context){
  validatePlan(bundle.plan);
  const {arm,observed,permit,plan}=bundle;
  const verified=permitApi.verifyPermit(permit,trust,{...context,arm_sha256:digest(arm),observations_sha256:digest(observed),plan_sha256:digest(plan)});
+ responseDelay.validatePlan(observed.real_provider_response_delay_plan,{runId:arm.run_id,subjectSha:arm.protected_main_sha,firstBase:arm.qualification_first_base,producerStageTimeoutMs:plan.stages[0].timeout_ms});
  assert.equal(verified.payload.run_id,arm.run_id,"PERMIT_ARM_RUN_MISMATCH");
  assert.equal(verified.payload.subject_sha,arm.protected_main_sha,"PERMIT_ARM_HEAD_MISMATCH");
  assert.equal(verified.payload.issued_at,arm.authorized_at,"PERMIT_ARM_ISSUED_MISMATCH");
@@ -106,6 +108,7 @@ async function main(args){
  // Preflight EVERYTHING before irreversible single-use parent permit consumption.
  assert.equal(h.trust.real_delay_controller_adopted,true,"EXECUTE_HOLD: REAL_DELAY_CONTROLLER_NOT_ADOPTED");
  assert.equal(h.trust.stage_capability_adopted,true,"EXECUTE_HOLD: STAGE_CAPABILITY_NOT_ADOPTED");
+ assert.equal(h.trust.real_provider_transport_delay_adopted,true,"EXECUTE_HOLD: REAL_PROVIDER_TRANSPORT_DELAY_NOT_ADOPTED");
  const scripts=STAGES.map(([id,file,artifact],i)=>{
    const script=path.join(__dirname,file);
    const stat=fs.lstatSync(script);
@@ -148,6 +151,7 @@ function childTargets(){
  // parent-signed stage ticket before Provider, DB, or output effects.
  assert.equal(h.trust.real_delay_controller_adopted,true,"EXECUTE_HOLD: REAL_DELAY_CONTROLLER_NOT_ADOPTED");
  assert.equal(h.trust.stage_capability_adopted,true,"EXECUTE_HOLD: STAGE_CAPABILITY_NOT_ADOPTED");
+ assert.equal(h.trust.real_provider_transport_delay_adopted,true,"EXECUTE_HOLD: REAL_PROVIDER_TRANSPORT_DELAY_NOT_ADOPTED");
  const ticket=process.env.MCFT_GOVERNED_RETRY_TICKET;
  const previous=process.env.MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256;
  assert(ticket&&previous,"RETRY_CHILD_ONE_TIME_CAPABILITY_REQUIRED");
