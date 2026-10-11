@@ -6,6 +6,7 @@ const {admitProposedRetry}=require("../governance_acceptance/MCFT_CAP09_ISOLATED
 const {hashFile}=require("./MCFT_CAP09_STAGE_RECEIPTS_V1.cjs");
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
 const {dispatchConsumedStage}=require("./MCFT_CAP09_PARENT_STAGE_DISPATCH_V1.cjs");
+const {freshStageLaunch}=require("./MCFT_CAP09_STAGE_START_CLOCK_V1.cjs");
 const cp=require("node:child_process");
 const ROOT=path.resolve(__dirname,"../..");
 const STAGES=Object.freeze([
@@ -129,7 +130,8 @@ async function main(args){
   single_use_permit_consumed:true,production_owner_activation:false,formal_v5_arm:false
  },null,2)+"\n",{flag:"wx",mode:0o600});
  const audit=await scheduler.executeSixStages({authority,plan:h.plan,steps:scripts,
-  dispatch:dispatchConsumedStage,assertConsumed:permitApi.assertConsumed});
+  dispatch:async (authority,step)=>dispatchConsumedStage(authority,freshStageLaunch(step)),
+  assertConsumed:permitApi.assertConsumed});
  return {status:audit.status,run_id:h.arm.run_id,stage_count:audit.stage_count,
   final_receipt_sha256:audit.final_receipt_sha256,output:h.targets.out,
   controlled_delay_scratch_only:true,provider_slow_path_proven:false,qualification_pass:false,
