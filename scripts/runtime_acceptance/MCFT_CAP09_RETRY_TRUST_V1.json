@@ -1,0 +1,13 @@
+{
+  "schema_version": "geox_mcft_cap09_retry_trust_v1",
+  "adopted": false,
+  "execution_enabled": false,
+  "host_id": null,
+  "operator_id": null,
+  "ledger_root": null,
+  "issuers": [],
+  "real_delay_controller_adopted": false,
+  "stage_capability_adopted": false,
+  "real_provider_transport_delay_adopted": false,
+  "real_pipeline_delay_adopted": false
+}

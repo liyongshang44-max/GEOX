@@ -1,0 +1,335 @@
+{
+  "schema_version": "geox_mcft_cap09_failed_execute_readonly_audit_v2",
+  "status": "READONLY_AUDIT_COMPLETED_NOT_QUALIFIED",
+  "recorded_at": "2026-10-10T10:20:15.776Z",
+  "run_id": "72dc0304a21a",
+  "first_attempt_subject": "2e4c3e7ac0b0e300b15b26b2f6111e7d39de328b",
+  "databases": [
+    {
+      "database": "mcft_cap09_requal_72dc0304a21a_negative",
+      "status": "READBACK_PASS",
+      "started_at": "2026-10-10T10:20:15.130Z",
+      "completed_at": "2026-10-10T10:20:15.326Z",
+      "identity": {
+        "database": "mcft_cap09_requal_72dc0304a21a_negative",
+        "username": "qual_admin",
+        "read_only": "on",
+        "server_address": "172.27.0.2/32",
+        "server_port": 5432
+      },
+      "transport": "WINDOWS_HOST_TCP_127.0.0.1_55432",
+      "table_count": 29,
+      "tables": [
+        {
+          "table": "facts",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_action_feedback_cycle_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_action_feedback_evidence_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_action_feedback_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_active_lineage_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_approved_plan_binding_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_decision_record_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_external_formal_forcing_base_cursor_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_external_formal_forcing_base_target_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_external_formal_forcing_controller_lease_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_forecast_point_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_forecast_residual_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_forecast_result_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_forecast_run_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_forecast_success_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_object_idempotency_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_runtime_authority_snapshot_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_runtime_checkpoint_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_runtime_health_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_runtime_lease_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_scenario_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_scenario_point_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_scenario_set_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_scenario_set_uniqueness_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_shadow_online_scheduler_cursor_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_shadow_online_scheduler_slot_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_state_history_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_state_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_terminal_tick_uniqueness_v1",
+          "row_count": "0"
+        }
+      ],
+      "all_rows_zero": true
+    },
+    {
+      "database": "mcft_cap09_requal_72dc0304a21a_positive",
+      "status": "READBACK_PASS",
+      "started_at": "2026-10-10T10:20:15.333Z",
+      "completed_at": "2026-10-10T10:20:15.444Z",
+      "identity": {
+        "database": "mcft_cap09_requal_72dc0304a21a_positive",
+        "username": "qual_admin",
+        "read_only": "on",
+        "server_address": "172.27.0.2/32",
+        "server_port": 5432
+      },
+      "transport": "WINDOWS_HOST_TCP_127.0.0.1_55432",
+      "table_count": 29,
+      "tables": [
+        {
+          "table": "facts",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_action_feedback_cycle_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_action_feedback_evidence_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_action_feedback_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_active_lineage_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_approved_plan_binding_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_decision_record_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_external_formal_forcing_base_cursor_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_external_formal_forcing_base_target_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_external_formal_forcing_controller_lease_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_forecast_point_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_forecast_residual_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_forecast_result_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_forecast_run_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_forecast_success_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_object_idempotency_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_runtime_authority_snapshot_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_runtime_checkpoint_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_runtime_health_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_runtime_lease_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_scenario_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_scenario_point_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_scenario_set_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_scenario_set_uniqueness_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_shadow_online_scheduler_cursor_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_shadow_online_scheduler_slot_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_state_history_projection_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_state_latest_index_v1",
+          "row_count": "0"
+        },
+        {
+          "table": "twin_terminal_tick_uniqueness_v1",
+          "row_count": "0"
+        }
+      ],
+      "all_rows_zero": true
+    }
+  ],
+  "all_database_rows_zero": true,
+  "bucket": {
+    "status": "READBACK_PASS",
+    "bucket": "mcft-cap09-requal-72dc0304a21a",
+    "endpoint": "http://127.0.0.1:59000",
+    "started_at": "2026-10-10T10:20:15.448Z",
+    "completed_at": "2026-10-10T10:20:15.775Z",
+    "current": {
+      "status": "READBACK_PASS",
+      "entries_observed": {
+        "Contents": 0
+      },
+      "truncated": false,
+      "empty": true
+    },
+    "versions": {
+      "status": "READBACK_PASS",
+      "entries_observed": {
+        "Version": 0,
+        "DeleteMarker": 0
+      },
+      "truncated": false,
+      "empty": true
+    },
+    "multipart": {
+      "status": "READBACK_PASS",
+      "entries_observed": {
+        "Upload": 0
+      },
+      "truncated": false,
+      "empty": true
+    },
+    "empty": true,
+    "scope": "CURRENT_OBJECTS_VERSIONS_DELETE_MARKERS_AND_PENDING_UPLOADS",
+    "historical_request_count": null
+  },
+  "prior_evidence_hashes": [
+    {
+      "file": "failed-first-execute-readonly-audit-v1.json",
+      "sha256": "47553066e96e8b259f4a7c0d9d91b8531109184011d2a68b6fb6ef0c19526a05"
+    },
+    {
+      "file": "MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2_RESULT.json",
+      "sha256": "00a5eb698fcd9ed0d18689fdd6e25df9e4b2e321e412d8565fec12a04b39b9c8"
+    },
+    {
+      "file": "started.json",
+      "sha256": "5b6ab70a869002f3b9841acf9e55231315b35144979f252b6ad2a4623fb4ec19"
+    }
+  ],
+  "old_output_preserved": true,
+  "credentials_included": false,
+  "provider_calls_performed_by_this_audit": 0,
+  "database_writes_performed_by_this_audit": 0,
+  "object_storage_writes_performed_by_this_audit": 0,
+  "first_execution_provider_calls": null,
+  "qualification_pass": false,
+  "execute_retry_authorized": false
+}

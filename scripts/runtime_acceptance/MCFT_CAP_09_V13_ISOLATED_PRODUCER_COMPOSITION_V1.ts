@@ -24,6 +24,7 @@ export function composeIsolatedMcftCap09V13ProducerCoreV1(input: {
   isolated_run_id: string;
   private_store: S3CompatiblePrivateRawRetentionConfigV1;
   clock?: () => Date;
+  fetch_impl?: typeof fetch;
 }) {
   assert.match(input.isolated_run_id, /^[a-f0-9]{12}$/, "ISOLATED_RUN_ID_INVALID");
   assert.match(input.subject_sha, /^[a-f0-9]{40}$/, "ISOLATED_SUBJECT_INVALID");
@@ -40,7 +41,7 @@ export function composeIsolatedMcftCap09V13ProducerCoreV1(input: {
   const retention = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1({...input.private_store,clock});
   const candidateStore = new S3CompatiblePrivateCandidateManifestStoreV1({...input.private_store,clock});
   const rawReader = new S3CompatiblePrivateRetainedRawReaderV1({...input.private_store,clock});
-  const workItemFactory = new ProductionEvidenceWorkItemFactoryV1({retention,clock});
+  const workItemFactory = new ProductionEvidenceWorkItemFactoryV1({retention,clock,fetch_impl:input.fetch_impl});
   const fencedPromotion = new PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1(
     input.pool,retention,{
       scope:MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,

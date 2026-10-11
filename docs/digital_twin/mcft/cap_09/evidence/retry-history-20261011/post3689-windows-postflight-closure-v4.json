@@ -1,0 +1,62 @@
+﻿{
+    "schema_version":  "geox_mcft_cap09_post3689_windows_postflight_closure_v4",
+    "status":  "ENGINEERING_CHECKS_PASS_WITH_RETAINED_UNTRACKED_ARTIFACT",
+    "v3_wrapper_final_clean_gate":  "FAIL",
+    "protected_main":  "c9e027b832d1e25a20384d4853ed5564ed405fd4",
+    "historical_subject":  "af4c68e9c3bd5da782b08443b9397b496ba85b74",
+    "execution_boundary":  {
+                               "status":  "PASS",
+                               "test_count":  65,
+                               "qualification":  "ENGINEERING_ENTRY_BOUNDARY_ONLY",
+                               "real_provider_requests":  0,
+                               "production_writes":  0,
+                               "live_owner_proven":  false,
+                               "producer_qualified":  false,
+                               "timing_qualified":  false
+                           },
+    "preparation_boundary":  {
+                                 "status":  "PASS",
+                                 "qualification":  "READ_ONLY_PREPARATION_BOUNDARY_ONLY",
+                                 "frozen_runtime_paths_verified":  108,
+                                 "owner_qualified":  false,
+                                 "producer_qualified":  false,
+                                 "timing_qualified":  false,
+                                 "production_effects_authorized":  false
+                             },
+    "historical_replay":  {
+                              "status":  "PASS",
+                              "adjudication":  "BOUNDED_HISTORICAL_REPLAY_ENGINEERING_ONLY",
+                              "stage":  "POST_MERGE_V13_QUALIFICATION",
+                              "head":  "c9e027b832d1e25a20384d4853ed5564ed405fd4",
+                              "main":  "c9e027b832d1e25a20384d4853ed5564ed405fd4",
+                              "history_replay":  "PASS",
+                              "historical_subject":  "af4c68e9c3bd5da782b08443b9397b496ba85b74",
+                              "history_elapsed_ms":  330526,
+                              "history_budget_ms":  1200000,
+                              "historical_source_unchanged":  true,
+                              "frozen_runtime_108_unchanged":  true,
+                              "qcp_check_count":  51,
+                              "authorize_execute":  false,
+                              "qualification_pass":  false,
+                              "production_recovery":  false,
+                              "formal_v5":  false,
+                              "a0":  false,
+                              "o00":  false
+                          },
+    "tracked_worktree_clean":  true,
+    "untracked_exception":  "acceptance-output/",
+    "artifact_provenance_verified":  false,
+    "artifact_manifest":  [
+                              {
+                                  "relative_path":  "MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json",
+                                  "bytes":  10286,
+                                  "sha256":  "f6d792dee2c71ff4bfa577e1579022c33ee70fe64e2f5385f02a1709604176d2"
+                              }
+                          ],
+    "first_failure_preserved":  true,
+    "attempt2_absent":  true,
+    "authorized_real_producer":  false,
+    "authorized_formal_start":  false,
+    "next_action":  "ADJUDICATE_ACCEPTANCE_OUTPUT_PROVENANCE_AND_OBTAIN_FRESH_EXACT_MAIN_ISOLATED_AUTHORITY",
+    "captured_at_utc":  "2026-10-10T17:06:55.6981880Z"
+}
