@@ -105,7 +105,13 @@ function runHistoricalDiagnostic(command,extraEnv={}) {
 module.exports={verifyStageSuccessor,replayHistoricalRegistration,isFrozenDiagnosticCommand,runHistoricalDiagnostic};
 if(require.main===module){try{
  const mode=process.argv[2];
- if(!mode)console.log(JSON.stringify(verifyStageSuccessor(),null,2));
+ // New candidate: preserve this historical verifier's original exact-main semantics
+ // by running its explicit workflow gate at the actually adopted protected main.
+ // This branch never licenses effects and does not modify archived verifier code.
+ const localCutoverManifest=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json");
+ if(mode && fs.existsSync(localCutoverManifest) && git("rev-parse","HEAD")!==git("rev-parse","origin/main")) {
+   console.log(JSON.stringify(require("./REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs").runAdoptedMainWorkflowGate(mode)));
+ } else if(!mode)console.log(JSON.stringify(verifyStageSuccessor(),null,2));
  else{
   const allow={"--historic-frozen":"scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs","--historic-r6":"scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs","--historic-g13":"scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_COMPLETION_ADJUDICATION_V1.cjs","--historic-g12":"scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_FINAL_READBACK_V1.cjs"};
   assert(allow[mode],"UNRECOGNIZED_HISTORIC_GATE");
