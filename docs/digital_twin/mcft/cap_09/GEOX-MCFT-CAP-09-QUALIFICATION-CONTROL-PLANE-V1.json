@@ -1331,6 +1331,7 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_LOCAL_CUTOVER_EXACT_SCOPE_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONDESTRUCTIVE_REAL_DELAY_BOUNDARY_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_PARENT_STAGE_DISPATCH_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_PIPELINE_DELAY_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_HISTORICAL_EVIDENCE_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_PERMIT_V1.cjs",
@@ -1352,6 +1353,7 @@
         "scripts/runtime_acceptance/MCFT_CAP09_NONDESTRUCTIVE_REAL_DELAY_BOUNDARY_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_PARENT_STAGE_DISPATCH_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_REAL_PIPELINE_DELAY_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json",
@@ -2939,7 +2941,7 @@
       "historical_evidence_policy": "ORIGINAL_RETRY_EVIDENCE_IMMUTABLE_CANDIDATE_SCOPE_NOT_ADOPTION",
       "execution_workflow": ".github/workflows/mcft-cap09-local-cutover-candidate-v1.yml",
       "execution_workflow_status": "ENGINEERING_ONLY_NO_LIVE_PROVIDER_EXECUTION",
-      "fail_policy": "FAIL_CLOSED_EXACT_53_PATHS_REAL_PROVIDER_RESPONSE_INJECTION_UNADOPTED_SIX_CASE_PIPELINE_NOT_QUALIFIED",
+      "fail_policy": "FAIL_CLOSED_EXACT_55_PATHS_REAL_PROVIDER_AND_ISOLATED_PROMOTION_READBACK_INJECTION_UNADOPTED_FULL_SIX_CASE_NOT_QUALIFIED",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
         "LOCAL_CUTOVER_EXACT_SCOPE_20261011_V1"

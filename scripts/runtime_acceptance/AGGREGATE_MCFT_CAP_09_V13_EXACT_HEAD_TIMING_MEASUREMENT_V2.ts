@@ -101,12 +101,20 @@ function main(): void {
   let scratchDelayCaseCount = 0;
   let realProviderDelayDigest: string | null = null;
   let realProviderDelayCount = 0;
+  let realPipelineDelayDigest: string | null = null;
+  let realPipelineDelayCount = 0;
   if (governed) {
     const providerProof = createRequire(import.meta.url)("./MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs")
       .verifyEvidence(path.join(SAMPLE_DIR, "MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1_RESULT.json"),
         {runId:required("MCFT_GOVERNED_RETRY_RUN_ID"),subjectSha:subject});
     realProviderDelayDigest=providerProof.sha256;
     realProviderDelayCount=providerProof.count;
+    const pipelineProof = createRequire(import.meta.url)("./MCFT_CAP09_REAL_PIPELINE_DELAY_V1.cjs")
+      .verifyEvidence(path.join(SAMPLE_DIR,"MCFT_CAP09_REAL_PIPELINE_DELAY_V1_RESULT.json"),
+        {runId:required("MCFT_GOVERNED_RETRY_RUN_ID"),subjectSha:subject,
+         firstBase:required("MCFT_QUALIFICATION_FIRST_BASE")});
+    realPipelineDelayDigest=pipelineProof.sha256;
+    realPipelineDelayCount=pipelineProof.count;
     const delayFile = path.join(SAMPLE_DIR, "MCFT_CAP09_REAL_CONTROLLED_DELAY_V1_RESULT.json");
     const bytes = fs.readFileSync(delayFile);
     const result = JSON.parse(bytes.toString("utf8"));
@@ -196,6 +204,9 @@ function main(): void {
     scratch_delay_proves_provider_pipeline: false,
     real_provider_transport_delay_response_count: realProviderDelayCount,
     real_provider_transport_delay_receipt_sha256: realProviderDelayDigest,
+    real_pipeline_promotion_readback_event_count: realPipelineDelayCount,
+    real_pipeline_promotion_readback_receipt_sha256: realPipelineDelayDigest,
+    real_pipeline_delay_callbacks_verified: governed,
     full_six_case_pipeline_delay_qualified: false,
     controlled_delay_policy_id: "OBSERVED_COMPONENT_MAX_PLUS_ONE_EXTRA_OBSERVED_TARGET_PHASE_V1",
     cross_wake_capture_overlap_model: "ONE_ADDITIONAL_FULL_CAPTURE_WORKLOAD_SERIALIZED_ON_COMPONENTWISE_REAL_MAXIMA",

@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 const currentExecution = createRequire(import.meta.url)("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
 const currentTargets = currentExecution.qualificationTargets();
 const responseDelay = createRequire(import.meta.url)("./MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs");
+const pipelineDelay = createRequire(import.meta.url)("./MCFT_CAP09_REAL_PIPELINE_DELAY_V1.cjs");
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -137,13 +138,17 @@ async function main(): Promise<void> {
   const lastBase = bases[2]!;
   // Child qualificationTargets() has already burnt the parent stage ticket.
   // This read binds latency to the independently signed Observations envelope.
-  const governedResponseGate = process.env.MCFT_GOVERNED_RETRY_STAGE === "PRODUCER"
-    ? responseDelay.makeGate({
-        plan: createRequire(import.meta.url)("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs")
-          .hostBundle(required("MCFT_GOVERNED_RETRY_BUNDLE")).bundle.observed.real_provider_response_delay_plan,
-        outputDir: currentTargets.out,
-        realFetch: fetch,
-      })
+  // Both plans are bound to the same independently signed Observations digest.
+  const governedObserved = process.env.MCFT_GOVERNED_RETRY_STAGE === "PRODUCER"
+    ? createRequire(import.meta.url)("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs")
+      .hostBundle(required("MCFT_GOVERNED_RETRY_BUNDLE")).bundle.observed
+    : null;
+  const governedResponseGate = governedObserved
+    ? responseDelay.makeGate({plan: governedObserved.real_provider_response_delay_plan,
+        outputDir: currentTargets.out, realFetch: fetch})
+    : null;
+  const governedPipelineGate = governedObserved
+    ? pipelineDelay.makeGate({plan: governedObserved.real_pipeline_delay_plan,outputDir: currentTargets.out})
     : null;
   const controllerOwner = "mcft-cap09-v13-qualification-controller:" + subject.slice(0, 12);
   const producerOwner = "mcft-cap09-v13-qualification-producer:" + subject.slice(0, 12);
@@ -252,7 +257,7 @@ async function main(): Promise<void> {
       });
 
       const promotionStart = Date.now();
-      const promoted = await producerCore.capture_promotion.promoteExactBase({
+      const performPromotion = () => producerCore.capture_promotion.promoteExactBase({
         base_target_t: expectedBase,
         subject_sha: subject,
         idempotency_key: claim.idempotency_key,
@@ -260,6 +265,9 @@ async function main(): Promise<void> {
         controller_lease: controllerLease,
         producer_claim: claim,
       });
+      const promoted = governedPipelineGate
+        ? await governedPipelineGate.promote(expectedBase,performPromotion)
+        : await performPromotion();
       const promotionMs = elapsed(promotionStart);
       assert.equal(promoted.database_fence_commit_succeeded, true);
       assert.equal(promoted.formal_fact_present_count, 3);
@@ -267,7 +275,7 @@ async function main(): Promise<void> {
       assert.equal(promoted.formal_database_write_count + promoted.idempotent_existing_fact_count, 3);
 
       const attestationStart = Date.now();
-      const attested = await continuity.attestFormalPhysicalVisibilityUnderController({
+      const performPhysicalReadback = () => continuity.attestFormalPhysicalVisibilityUnderController({
         controller_lease: controllerLease,
         claim,
         facts: promoted.facts,
@@ -275,6 +283,9 @@ async function main(): Promise<void> {
         promotion_run_id: promoted.promotion_run_id,
         candidate_artifact_digest: capture.candidate_artifact_digest,
       });
+      const attested = governedPipelineGate
+        ? await governedPipelineGate.attest(expectedBase,performPhysicalReadback)
+        : await performPhysicalReadback();
       const attestationMs = elapsed(attestationStart);
       assert.equal(attested.status, "PASS");
       assert.equal(attested.base_target_t, expectedBase);
@@ -298,6 +309,7 @@ async function main(): Promise<void> {
     }
 
     const responseDelayProof = governedResponseGate?.seal() ?? null;
+    const pipelineDelayProof = governedPipelineGate?.seal() ?? null;
     const finalCursor = await continuity.readCursor();
     assert.equal(finalCursor.completed, true, "V13_LIVE_QUALIFICATION_CURSOR_MUST_COMPLETE");
     assert.equal(finalCursor.next_missing_required_base, null, "V13_LIVE_QUALIFICATION_NEXT_MISSING_MUST_BE_NULL");
@@ -352,6 +364,9 @@ async function main(): Promise<void> {
       controlled_delay_matrix_executed: false,
       real_provider_response_delay_executed: responseDelayProof !== null,
       real_provider_response_delay_count: responseDelayProof?.actual_real_https_response_delay_events ?? 0,
+      real_pipeline_delay_callbacks_executed: pipelineDelayProof !== null,
+      pipeline_delay_fenced_promotion_checks: pipelineDelayProof?.fenced_promotion_result_checks ?? 0,
+      pipeline_delay_physical_readback_checks: pipelineDelayProof?.physical_readback_result_checks ?? 0,
       full_six_case_pipeline_delay_qualified: false,
       blocked_negative: blocked,
       formal_v5_mutation_count: 0,

@@ -106,6 +106,10 @@ if(require.main===module){
    path.join(targets.out,"MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1_RESULT.json"),
    {runId,subjectSha});
   assert.equal(providerReceipt.count,3,"DELAY_REQUIRES_THREE_REAL_PROVIDER_RESPONSE_EVENTS");
+  const pipelineProof=require("./MCFT_CAP09_REAL_PIPELINE_DELAY_V1.cjs").verifyEvidence(
+    path.join(targets.out,"MCFT_CAP09_REAL_PIPELINE_DELAY_V1_RESULT.json"),
+    {runId,subjectSha,firstBase:process.env.MCFT_QUALIFICATION_FIRST_BASE});
+  assert.equal(pipelineProof.count,6,"DELAY_REQUIRES_SIX_PROMOTION_AND_READBACK_EVENTS");
   const plan=deriveDelayPlan({sampleFiles:samples,runId,subjectSha});
   const limit=Number(process.env.MCFT_GOVERNED_RETRY_DELAY_TIMEOUT_MS);
   const result=await executeRealDelay({plan,scratchParent:targets.out,

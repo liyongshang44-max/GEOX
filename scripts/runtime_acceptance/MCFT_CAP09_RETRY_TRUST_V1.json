@@ -8,5 +8,6 @@
   "issuers": [],
   "real_delay_controller_adopted": false,
   "stage_capability_adopted": false,
-  "real_provider_transport_delay_adopted": false
+  "real_provider_transport_delay_adopted": false,
+  "real_pipeline_delay_adopted": false
 }
