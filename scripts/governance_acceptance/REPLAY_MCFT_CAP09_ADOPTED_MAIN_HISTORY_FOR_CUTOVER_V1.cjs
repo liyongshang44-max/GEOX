@@ -22,10 +22,10 @@ function replayAdoptedHistoryForCutoverCandidate(){
  assert.deepEqual(changed,manifest.paths,"UNREGISTERED_CANDIDATE_DELTA_FORBIDDEN");
  const prior=JSON.parse(git("show",main+":"+QCP));
  const candidate=JSON.parse(fs.readFileSync(path.join(ROOT,QCP),"utf8"));
- assert.equal(prior.checks.length,51,"HISTORICAL_QCP_COUNT_CHANGED");
- assert.equal(candidate.checks.length,52,"SUCCESSOR_CHECK_COUNT_CHANGED");
- assert.deepEqual(candidate.checks.slice(0,51),prior.checks,"HISTORICAL_CHECKS_MUTATED");
- assert.equal(candidate.checks[51].check_id,CHECK,"SUCCESSOR_CHECK_ID_MISSING");
+ assert.equal(prior.checks.length,52,"HISTORICAL_QCP_COUNT_CHANGED");
+ assert.equal(candidate.checks.length,53,"SUCCESSOR_CHECK_COUNT_CHANGED");
+ assert.deepEqual(candidate.checks.slice(0,52),prior.checks,"HISTORICAL_CHECKS_MUTATED");
+ assert.equal(candidate.checks[52].check_id,CHECK,"SUCCESSOR_CHECK_ID_MISSING");
  const rid="LOCAL_CUTOVER_EXACT_SCOPE_20261011_V1";
  assert.deepEqual(candidate.dependency_resolvers[rid],{kind:"EXACT_PATH_SET",paths:manifest.paths},"EXACT_RESOLVER_MISMATCH");
  const stripped=structuredClone(candidate);stripped.checks.pop();delete stripped.dependency_resolvers[rid];
