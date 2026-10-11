@@ -1,0 +1,32 @@
+{
+  "schema_version": "geox_mcft_cap09_isolated_retry_arm_v1",
+  "armed": false,
+  "mode": "DISABLED",
+  "parent_run_id": "72dc0304a21a",
+  "run_id": null,
+  "attempt_ordinal": null,
+  "protected_main_sha": null,
+  "authorized_at": null,
+  "qualification_first_base": null,
+  "expires_at": null,
+  "retry_adjudication": null,
+  "resources": null,
+  "output_directory": null,
+  "evidence_sha256": {
+    "first_failed_receipt": "00a5eb698fcd9ed0d18689fdd6e25df9e4b2e321e412d8565fec12a04b39b9c8",
+    "first_started": "5b6ab70a869002f3b9841acf9e55231315b35144979f252b6ad2a4623fb4ec19",
+    "audit_v1": "47553066e96e8b259f4a7c0d9d91b8531109184011d2a68b6fb6ef0c19526a05",
+    "audit_v2": null,
+    "audit_v6": null
+  },
+  "first_execution_provider_calls": null,
+  "execute_authorized": false,
+  "retry_authorized": false,
+  "production_recovery_authorized": false,
+  "owner_cutover_authorized": false,
+  "formal_v5_authorized": false,
+  "a0_authorized": false,
+  "o00_o23_authorized": false,
+  "automatic_retry_authorized": false,
+  "historical_reset_authorized": false
+}

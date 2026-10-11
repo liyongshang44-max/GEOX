@@ -1293,6 +1293,21 @@
         "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_HISTORY_REPLAY_BUDGET_SUCCESSOR_V1.cjs",
         "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_PRODUCER_BUCKET_SEAM_SUCCESSOR_V1.cjs"
       ]
+    },
+    "DISABLED_RETRY_IMPLEMENTATION_20261011_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-DISABLED-RETRY-IMPLEMENTATION-20261011-V1.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ISOLATED_RETRY_AUTHORITY_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP_09_ISOLATED_RETRY_AUTHORITY_POLICY_V1.cjs",
+        "scripts/governance_acceptance/PREPARE_MCFT_CAP_09_CURRENT_BASELINE_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_DISABLED_RETRY_SUCCESSOR_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_HISTORY_REPLAY_BUDGET_SUCCESSOR_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_ISOLATED_RETRY_ARM_20261011_V1.json"
+      ]
     }
   },
   "checks": [
@@ -2823,6 +2838,33 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_HISTORY_REPLAY_BUDGET_SUCCESSOR_V1.cjs"
+    },
+    {
+      "check_id": "DISABLED_RETRY_IMPLEMENTATION_20261011_ENGINEERING_ONLY",
+      "owner": "MCFT_CAP09_DISABLED_RETRY_IMPLEMENTATION",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-DISABLED-RETRY-IMPLEMENTATION-20261011-V1.md"
+      ],
+      "resolver_ids": [
+        "DISABLED_RETRY_IMPLEMENTATION_20261011_V1"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_PR3689_REPLAY_AND_DISABLED_ARM_NO_ACTIVATION",
+      "execution_workflow": ".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml",
+      "execution_workflow_status": "ENGINEERING_ONLY_NO_LIVE_EXECUTE",
+      "fail_policy": "FAIL_CLOSED_EXACT_TEN_PATHS_DEFAULT_DISABLED_RETRY_AUTHORITY",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "DISABLED_RETRY_IMPLEMENTATION_20261011_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_DISABLED_RETRY_SUCCESSOR_V1.cjs"
     }
   ],
   "non_effects": {
