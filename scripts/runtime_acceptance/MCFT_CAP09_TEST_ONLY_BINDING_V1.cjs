@@ -43,6 +43,8 @@ function validateDb(value,expectedName){
 function validateBinding({env,context,root,nowMs=Date.now()}){
   assert.equal(env.MCFT_CAP09_TEST_ONLY_BINDING,"1","TEST_ONLY_BINDING_FLAG_REQUIRED");
   assert.equal(env.MCFT_CAP09_TEST_ONLY_RUN_ID,RUN_ID,"TEST_ONLY_EXACT_OWNER_APPROVED_RUN_REQUIRED");
+  assert(!env.MCFT_GOVERNED_RETRY_BUNDLE&&!env.MCFT_GOVERNED_RETRY_STAGE&&!env.MCFT_GOVERNED_RETRY_RUN_ID,
+    "TEST_ONLY_GOVERNED_RETRY_CONTEXT_FORBIDDEN");
   assert(context&&context.platform==="win32","TEST_ONLY_WINDOWS_LOCAL_ONLY");
   assert.equal(context.ci,false,"TEST_ONLY_CI_FORBIDDEN");
   assert.equal(context.head,context.main,"TEST_ONLY_EXACT_PROTECTED_MAIN_REQUIRED");
@@ -80,7 +82,13 @@ function childTargets(){
   assert.equal(process.env.MCFT_SUBJECT_SHA,context.head,"TEST_ONLY_SUBJECT_MUST_EQUAL_PROTECTED_MAIN");
   return result;
 }
+function outputPath(targets,name){
+  assert(/^[A-Z0-9_]+\\.json$/.test(name),"TEST_ONLY_OUTPUT_FILENAME_INVALID");
+  const file=path.join(targets.out,name);
+  assert(!require("node:fs").existsSync(file),"TEST_ONLY_IMMUTABLE_OUTPUT_EXISTS");
+  return file;
+}
 function constants(){
   return Object.freeze({RUN_ID,POSITIVE_DB,NEGATIVE_DB,BUCKET,EVIDENCE_LOGIN_ROLE,TWIN_LOGIN_ROLE,S3_PRINCIPAL,S3_ENDPOINT,PG_PORT});
 }
-module.exports={validateBinding,childTargets,constants};
+module.exports={validateBinding,childTargets,outputPath,constants};
