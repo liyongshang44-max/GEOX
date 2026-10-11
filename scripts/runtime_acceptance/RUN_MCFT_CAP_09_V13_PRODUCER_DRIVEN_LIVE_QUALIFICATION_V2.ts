@@ -19,7 +19,7 @@ const OUT = currentExecution.outputPath(currentTargets, "MCFT_CAP_09_V13_PRODUCE
 const EXPECTED_V13_DB = currentTargets.positive;
 const EXPECTED_BLOCKED_DB = currentTargets.negative;
 const EXPECTED_BUCKET = currentTargets.bucket;
-const EVIDENCE_LOGIN_ROLE = currentTargets.evidence_login_role ?? "geox_mcft_cap09_evidence_runtime_login_v1";
+const EVIDENCE_LOGIN_ROLE = "geox_mcft_cap09_evidence_runtime_login_v1";
 
 function required(name: string): string {
   const value = String(process.env[name] ?? "").trim();
