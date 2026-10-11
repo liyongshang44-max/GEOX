@@ -15,7 +15,7 @@ const env={
   MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID:C.S3_PRINCIPAL,
   MCFT_CAP09_FORMAL_RAW_SECRET_ACCESS_KEY:"0123456789abcdef0123456789abcdef",
   MCFT_CAP09_TEST_ONLY_S3_PRINCIPAL:C.S3_PRINCIPAL,
-  MCFT_QUALIFICATION_FIRST_BASE:"2026-10-12T04:00:00.000Z",
+  MCFT_QUALIFICATION_FIRST_BASE:"2026-10-12T08:00:00.000Z",
   MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR:"C:\\evidence\\run-"+C.RUN_ID,
   MCFT_CAP09_TEST_ONLY_LEDGER_DIR:"C:\\ledger\\run-"+C.RUN_ID
 };
@@ -48,7 +48,7 @@ fail(/S3_ENDPOINT_MISMATCH/,e=>e.MCFT_CAP09_FORMAL_RAW_ENDPOINT="http://127.0.0.
 fail(/S3_BUCKET_MISMATCH/,e=>e.MCFT_CAP09_FORMAL_RAW_BUCKET="geox-mcft-cap09-formal-raw-v1");
 fail(/S3_SCOPED_PRINCIPAL_REQUIRED/,e=>e.MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID="minioadmin");
 fail(/S3_PRINCIPAL_ATTESTATION_REQUIRED/,e=>e.MCFT_CAP09_TEST_ONLY_S3_PRINCIPAL="other");
-fail(/FUTURE_BASE_REQUIRED/,e=>e.MCFT_QUALIFICATION_FIRST_BASE="2026-10-11T23:00:00.000Z");
+fail(/FUTURE_BASE_LEAD_GT_6H_REQUIRED/,e=>e.MCFT_QUALIFICATION_FIRST_BASE="2026-10-12T05:00:00.000Z");
 fail(/OUTPUT_OUTSIDE_REPO_REQUIRED/,e=>e.MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR="C:\\repo\\run-"+C.RUN_ID);
 fail(/LEDGER_RUN_ID_REQUIRED/,e=>e.MCFT_CAP09_TEST_ONLY_LEDGER_DIR="C:\\ledger\\other");
 
@@ -76,6 +76,14 @@ const policyText=JSON.stringify(policy);
 assert(policyText.includes(C.BUCKET));assert(!policyText.includes("arn:aws:s3:::*"));checks++;
 const deny=policy.Statement.find(x=>x.Effect==="Deny");
 assert(deny&&deny.Action.includes("s3:DeleteObject")&&deny.Action.includes("s3:DeleteObjectVersion"));checks++;
+
+assert.deepEqual(binding.ALLOWED_TEST_ONLY_UNTRACKED,[
+  "scripts/runtime_acceptance/MCFT_CAP09_TEST_ONLY_BINDING_V1.cjs",
+  "scripts/runtime_acceptance/RUN_MCFT_CAP09_TEST_ONLY_QUALIFICATION_V1.cjs",
+  "scripts/runtime_acceptance/RUN_MCFT_CAP09_TEST_ONLY_PRODUCER_C1F7DCC6D04D_V1.ts",
+]);checks++;
+const bindingSource=fs.readFileSync(path.join(__dirname,"MCFT_CAP09_TEST_ONLY_BINDING_V1.cjs"),"utf8");
+assert(bindingSource.includes("sourceWorktreeCleanAllowingTestOnly"));checks++;
 
 const runner=require("./RUN_MCFT_CAP09_TEST_ONLY_QUALIFICATION_V1.cjs");
 assert.deepEqual(runner.parseArgs(["--operator-authorized","--test-only","--preflight-only","--producer"]),
