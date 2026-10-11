@@ -1,3 +1,16 @@
+# 2026-10-11 ACTIVE TEST-POLICY UPDATE — OWNER APPROVED NONPRODUCTION RESOURCE SETUP; INDEPENDENT HUMAN SIGNER WAIVED FOR TESTS ONLY
+
+Owner decision explicitly recorded in conversation: **“这个执行许可多余了，现在是测试。你直接批准过了。”** This supersedes earlier instructions that nonproduction *testing* must await a distinct human governance signer. No AI signature impersonation or production authorization is asserted. See GitHub issue #3685, latest owner-test comment 6110484665.
+
+- Test run allocation for **resource setup only**: `c1f7dcc6d04d`, attempt ordinal 2, main at decision `3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358`. Identity is OWNER_ALLOCATED_FOR_NONPRODUCTION_TEST_SETUP_NOT_CONSUMED. The original failed `72dc0304a21a` receipts, databases and bucket must remain untouched; discarded diagnostic ID `4cdb3db5d3b5` not reused.
+- Project-owner-approved **effects**: create exactly two NEW nonproduction PostgreSQL databases under `127.0.0.1:55432` and one NEW MinIO bucket under `http://127.0.0.1:59000`, after clean-exact-main and absence checks, using operator-supplied local-only admin credentials. No destruction, automatic rollback, repeated attempt, production connection, owner cutover, Formal-v5/A0 or Product publication.
+- Operator package: `MCFT-CAP09-OWNER-APPROVED-TEST-SETUP-20261011-V3.zip`, SHA256 `a79a3783aeee4b9b9967362add0be9ca7b8d2da80fc5c6c6cd2a6e284da5efa7`. Local syntax/selftests PASS: scaffold 6 / changes 0; read-only audit 4 / no external connections; 5 negative no-command admission checks; ZIP integrity PASS. **No actual Windows resource provisioning or PG/S3 access performed by ChatGPT.**
+- After resource creation, a separately reviewed qualification-specific schema/ACL installer must install exactly the canonical 29 tables and two fenced SECURITY DEFINER routines on **new DB names only**; then independently read real DB/ACL/zero-row and S3 current/version/delete-marker/multipart state, plus real Provider causal observations and deadline.
+- **Existing merged six-stage runtime remains unchanged and technically EXECUTE_HOLD**: it hard-requires independently signed Ed25519 permit, issuer enrolment and adopted trust flags. The owner's test-policy decision does NOT make an unsupported claim that these existing validations passed. To actually run without independent human signing, implement a **separate, explicit TEST_ONLY** admission successor with negative tests and exact-main/nonproduction/immutable-evidence/no-retry/deadline guards. Never merely edit trust JSON, impersonate signer or repurpose production authority.
+- This document is the SAME second active continuation Handoff, prepended only; earlier 2026-10-11 and 2026-10-10 checkpoints are historical and their independent-signing directions are now **superseded for nonproduction testing**, but not for production release. #3298 remains DRAFT / OPEN / UNMERGED.
+
+---
+
 # 2026-10-11 ACTIVE CHECKPOINT — #3692 ENGINEERING MERGED; REAL RETRY STILL EXECUTE_HOLD
 
 Evidence cut: 2026-10-11, after GitHub protected-main merge of #3692. **This checkpoint is PREPENDED TO THE SAME SECOND ACTIVE CONTINUATION HANDOFF ONLY**; all older text below remains intact. Do not create a third handoff or mutate the historical canonical handoff. #3298 is DRAFT / OPEN / UNMERGED and must stay that way.
