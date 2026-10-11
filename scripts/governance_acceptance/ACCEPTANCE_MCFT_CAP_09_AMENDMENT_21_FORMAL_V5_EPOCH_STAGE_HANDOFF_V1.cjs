@@ -124,7 +124,7 @@ function replayInheritedCandidateGate(mode){
     ".github/workflows/mcft-cap-09-formal-v5-r6-admission.yml",
     SELF,
   ].sort();
-  assert.deepEqual(git("diff","--name-only",main,current).split(/\\r?\\n/).filter(Boolean).sort(),
+  assert.deepEqual(git("diff","--name-only",main,current).split(/\r?\n/).filter(Boolean).sort(),
     allowed,"AM21_NEW_SUCCESSOR_EXACT_SCOPE_REQUIRED");
   const tmp=fs.mkdtempSync(path.join(require("node:os").tmpdir(),"mcft-am21-inherited-"));
   const checkout=path.join(tmp,"historic");const runGit=(...args)=>cp.execFileSync("git",args,{cwd:checkout,encoding:"utf8",timeout:120000}).trim();
@@ -151,7 +151,7 @@ function replayInheritedCandidateGate(mode){
       formal_arm:false,provider_execution:false,qualification_claim:false};
     fs.mkdirSync(path.join(ROOT,"acceptance-output"),{recursive:true});
     fs.writeFileSync(path.join(ROOT,"acceptance-output/MCFT_CAP_09_AM21_INHERITED_"+mode.slice(19).toUpperCase().replaceAll("-","_")+"_V1.json"),
-      JSON.stringify(proof,null,2)+"\\n",{flag:"wx"});
+      JSON.stringify(proof,null,2)+"\n",{flag:"wx"});
     console.log(JSON.stringify(proof));
   }finally{
     fs.rmSync(tmp,{recursive:true,force:true});
