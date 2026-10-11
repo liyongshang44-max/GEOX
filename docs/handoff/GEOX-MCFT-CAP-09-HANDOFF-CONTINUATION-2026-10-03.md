@@ -1,3 +1,11 @@
+# 2026-10-12 SCHEMA INSTALLER TEST-HARNESS CORRECTION — REAL WINDOWS PREFLIGHT PASS / INSTALL NOT EXECUTED
+
+- Actual operator V1 synthetic acceptance failed on first positive mock: `CREATION_AND_EMPTY_BASELINE_REQUIRED`. Root cause was **mock filesystem POSIX `/safe/...` paths under a real Windows Node `node:path` resolver**; a cross-OS test harness flaw. The **real Windows read-only installer preflight nevertheless PASSED**: `SCHEMA_ACL_TESTONLY_PREFLIGHT_PASS_NO_CHANGES`, run `c1f7dcc6d04d`, 2 databases empty, 4 proposed scoped roles unused, 11 migration hashes, zero mutations and `producer_authorized=false`. **No schema installed.**
+- A local V1.1 ZIP (`MCFT-CAP09-TESTONLY-SCHEMA-ACL-20261012-V1_1.zip`, SHA256 `048e75a002d5d2be8a465a31eea49a46e7cdeb98aacf49c9d6ad68a3768b904a`) changes **only synthetic acceptance fixtures** to explicit Windows absolute paths / `path.win32`. The installer bytes are unchanged: SHA256 `fc99459219626868c1e16add375484de330cf5e32c16e9dbb7c8ae9389bbf21b`. Local 27 selftest checks PASS + 13 scenario mock acceptance PASS, plus PostgreSQL session read/write boundary assertions; no actual database/S3 changes. See issue #3685 comment 6111724858.
+- Next actual step: unpack V1.1 into fresh Windows folder; require selftest, synthetic 13-case acceptance and **fresh real read-only preflight all PASS** before single, nonretryable schema installation in two freshly created DBs. On failure of the one-time install preserve the STARTED marker and all receipts, **never rerun or reset**. Then independent 29-table / 2-SECURITY-DEFINER routine / zero-row / ACL role validation, scoped LOGIN provisioning, live Provider gate and separate TEST_ONLY six-stage runner. Production/Formal-v5, original failure resources and frozen V13 Runtime unchanged.
+
+---
+
 # 2026-10-12 ACTIVE CHECKPOINT — SECOND TEST RESOURCES CREATED AND EMPTY BASELINE PASS; SCOPED SCHEMA INSTALLER PREPARED, NOT RUN
 
 - Actual Windows operator creation result: `CREATED_UNVERIFIED_NOT_SIGNED`, run `c1f7dcc6d04d`, 2 new PostgreSQL DBs on `127.0.0.1:55432` plus new bucket `mcft-cap09-requal-c1f7dcc6d04d` at `127.0.0.1:59000`, audit creation report `D:\gptdown\MCFT-CAP09-RESOURCE-SCAFFOLD-c1f7dcc6d04d.json`. This report does NOT authorize Provider execution.
