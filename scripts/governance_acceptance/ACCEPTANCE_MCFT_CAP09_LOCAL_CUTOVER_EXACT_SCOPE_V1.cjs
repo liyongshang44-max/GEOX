@@ -12,12 +12,7 @@ assert.deepEqual(manifest.paths,[...unique].sort(),"DUPLICATE_OR_UNSORTED_SCOPE"
 assert(!manifest.paths.some(p=>p.startsWith("apps/server/src/")),"FROZEN_APP_RUNTIME_NOT_IN_SCOPE");
 function git(...args){return cp.execFileSync("git",args,{cwd:root,encoding:"utf8",timeout:30000}).trim();}
 const actualCommon=git("merge-base","HEAD",manifest.base_sha);
-const oldHead="bf08ec7e3dbb7efeba1fea21a619e28562f6969f";
-// #3692 was stacked before #3691 merge and has NOT been rebased onto main.
-// Do not pretend direct ancestry; prove equivalence of merged main tree and
-// stacked parent tree, then compare the candidate against the original parent.
-assert.equal(actualCommon,oldHead,"STACKED_BRANCH_BASE_CHANGED_REQUIRE_REBASE");
-assert.equal(git("rev-parse",manifest.base_sha+"^{tree}"),git("rev-parse",oldHead+"^{tree}"),"PROTECTED_MAIN_TREE_NOT_EQUAL_STACKED_BASE");
-const paths=git("diff","--name-only",oldHead,"HEAD").split(/\r?\n/).filter(Boolean).sort();
+assert.equal(actualCommon,manifest.base_sha,"EXACT_PROTECTED_MAIN_ANCESTRY_REQUIRED");
+const paths=git("diff","--name-only",manifest.base_sha,"HEAD").split(/\r?\n/).filter(Boolean).sort();
 assert.deepEqual(paths,manifest.paths,"CANDIDATE_EXACT_SCOPE_MISMATCH");
-console.log(JSON.stringify({status:"CANDIDATE_EXACT_SCOPE_PASS_NOT_GOVERNANCE_ADOPTION",count:paths.length,base_sha:manifest.base_sha,stacked_parent_tree_equivalent:true,needs_main_rebase:true,execute_authorized:false}));
+console.log(JSON.stringify({status:"CANDIDATE_EXACT_SCOPE_PASS_NOT_GOVERNANCE_ADOPTION",count:paths.length,base_sha:manifest.base_sha,exact_main_ancestor:true,execute_authorized:false}));
