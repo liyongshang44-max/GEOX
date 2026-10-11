@@ -36,6 +36,10 @@ async function main(){try{
  await assert.rejects(executeSixStages({authority:{consumed:{run_directory:failed.ledger}},plan,steps:failedSteps,dispatch:syntheticDispatch,assertConsumed:()=>{}}),/STAGE_FAILED_NO_AUTOMATIC_RETRY/);tests++;
  assert(!fs.existsSync(failedSteps[3].artifact)&&!fs.existsSync(path.join(failed.ledger,"TIMING_3")));tests++;
  assert(!fs.existsSync(path.join(failed.ledger,"SIX_STAGE_AUDIT.json")));tests++;
+ const zeroDir=path.join(dir,"zero");fs.mkdirSync(zeroDir);
+ for(let i=1;i<=3;i++)fs.writeFileSync(path.join(zeroDir,`MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_SAMPLE${i}_V2_RESULT.json`),JSON.stringify({schema_version:"geox_mcft_cap09_v13_exact_head_timing_sample_v2",status:"PASS",subject_sha:head,measurement_only:true,sample_id:`sample${i}`,timing_phases:{wake_delay_ms:0,job_start_setup_ms:0,provider_capture_ms:0,retained_raw_and_candidate_ms:0,promotion_queue_and_setup_ms:0,rehydration_promotion_commit_readback_ms:0}}));
+ const zeroPlan=delay.deriveDelayPlan({sampleFiles:[1,2,3].map(i=>path.join(zeroDir,`MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_SAMPLE${i}_V2_RESULT.json`)),runId:run,subjectSha:head});
+ assert(zeroPlan.cases.every(x=>x.delay_ms===1));tests++;
  assert.throws(()=>delay.deriveDelayPlan({sampleFiles:[1,2,3].map(i=>path.join(good.out,`MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_SAMPLE${i}_V2_RESULT.json`)),runId:run,subjectSha:"c".repeat(40)}),/SUBJECT_MISMATCH/);tests++;
  console.log(JSON.stringify({status:"PASS",tests,real_elapsed_ms:Math.round(elapsed),stage_count:6,real_monotonic_delay:true,provider_calls:0,external_db_calls:0,fail_stop:true,live_authorized:false}));
 }finally{fs.rmSync(dir,{recursive:true,force:true});}}

@@ -35,7 +35,7 @@ function deriveDelayPlan({sampleFiles,runId,subjectSha,maximumCaseMs=120000}){
   values.push(phases);sources.push({filename:path.basename(file),sha256:sha(bytes)});
  }
  const maxima=Object.fromEntries(DATA_KEYS.map(k=>[k,Math.max(...values.map(v=>v[k]))]));
- const cases=PHASES.map(([id,keys])=>({id,delay_ms:keys.reduce((n,k)=>n+maxima[k],0)}));
+ const cases=PHASES.map(([id,keys])=>({id,delay_ms:Math.max(1,keys.reduce((n,k)=>n+maxima[k],0))}));
  for(const entry of cases)assert(entry.delay_ms>0&&entry.delay_ms<=maximumCaseMs,"DELAY_REAL_CASE_BUDGET_INVALID:"+entry.id);
  return {schema_version:"geox_mcft_cap09_real_scratch_delay_plan_v1",run_id:runId,subject_sha:subjectSha,
    target:{kind:"DISPOSABLE_ISOLATED_TEST_FIXTURE",name:"mcft_cap09_delay_scratch_"+runId},
