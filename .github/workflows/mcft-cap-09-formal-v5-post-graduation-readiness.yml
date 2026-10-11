@@ -96,6 +96,16 @@ jobs:
           MCFT_SUBJECT_SHA: ${{ env.SUBJECT_SHA }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs
 
+      - name: Replay adopted R6 manifest predecessor on main-push semantics
+        # A PR head is intentionally evaluated twice: first with its true PR
+        # base above, then with the absent base of a future main push.
+        env:
+          MCFT_BASE_SHA: ''
+          MCFT_SUBJECT_SHA: ${{ env.SUBJECT_SHA }}
+          AM21_SUCCESSOR_BASE_SHA: ''
+          GITHUB_EVENT_PATH: ''
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs
+
       - name: Prove real T4R1 late-season stage-handoff regression
         run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_LATE_SEASON_EPOCH_STAGE_HANDOFF_V1.cjs
 
