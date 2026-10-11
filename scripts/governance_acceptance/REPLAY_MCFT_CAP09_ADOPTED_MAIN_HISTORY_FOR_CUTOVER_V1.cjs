@@ -74,5 +74,37 @@ function runHistoricalDiagnosticForCutoverCandidate(command, extraEnv={}) {
   fs.rmSync(temp,{recursive:true,force:true});
  }
 }
-module.exports={verifyCandidateBoundary,replayAdoptedHistoryForCutoverCandidate,runHistoricalDiagnosticForCutoverCandidate};
+const LEGACY_SUCCESSOR_CHECK_IDS=Object.freeze([
+ "CURRENT_CROP_20261010_ADOPTION_SUCCESSOR_ENGINEERING_ONLY",
+ "CURRENT_BASELINE_EXECUTION_SUCCESSOR_ENGINEERING_ONLY",
+ "ISOLATED_QUALIFICATION_AUTHORIZATION_20261010_ENGINEERING_GOVERNANCE",
+ "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_ENGINEERING_ONLY",
+ "HISTORY_REPLAY_BUDGET_20261010_ENGINEERING_ONLY",
+ "DISABLED_RETRY_IMPLEMENTATION_20261011_ENGINEERING_ONLY"
+]);
+function isAdoptedMainLegacyDiagnostic(command){
+ const before=JSON.parse(git("show",BASE+":"+QCP));
+ const allowed=before.checks.filter(x=>LEGACY_SUCCESSOR_CHECK_IDS.includes(x.check_id));
+ assert.equal(allowed.length,LEGACY_SUCCESSOR_CHECK_IDS.length,"LEGACY_DIAGNOSTIC_REGISTRY_CHANGED");
+ return allowed.some(x=>x.diagnostic_command===command);
+}
+function runAdoptedMainLegacyDiagnostic(command,extraEnv={}) {
+ assert.equal(isAdoptedMainLegacyDiagnostic(command),true,"UNREGISTERED_LEGACY_SUCCESSOR_DIAGNOSTIC");
+ const {main}=verifyCandidateBoundary();
+ const temp=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-cap09-adopted-successor-diagnostic-"));
+ const checkout=path.join(temp,"main");let attached=false;
+ try {
+  git("worktree","add","--detach",checkout,main);attached=true;
+  const out=cp.spawnSync(command,{cwd:checkout,encoding:"utf8",shell:true,timeout:360000,
+    env:{...process.env,...extraEnv,MCFT_CAP09_ALL_BLOCKERS_CHILD:"1"}});
+  return {status:out.status===0?"PASS":"FAIL",exit_code:out.status,signal:out.signal||null,
+   stdout_tail:String(out.stdout||"").slice(-4000),stderr_tail:String(out.stderr||"").slice(-4000),
+   historical_subject_sha:main,candidate_subject_separate:true};
+ }finally{
+  if(attached)git("worktree","remove","--force",checkout);
+  fs.rmSync(temp,{recursive:true,force:true});
+ }
+}
+module.exports={verifyCandidateBoundary,replayAdoptedHistoryForCutoverCandidate,
+ runHistoricalDiagnosticForCutoverCandidate,isAdoptedMainLegacyDiagnostic,runAdoptedMainLegacyDiagnostic};
 if(require.main===module){try{console.log(JSON.stringify(replayAdoptedHistoryForCutoverCandidate()));}catch(e){console.error(e.stack||String(e));process.exitCode=1;}}
