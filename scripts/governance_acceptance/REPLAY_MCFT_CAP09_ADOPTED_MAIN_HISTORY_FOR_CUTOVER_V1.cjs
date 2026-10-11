@@ -42,7 +42,10 @@ function replayAdoptedHistoryForCutoverCandidate(){
   const rows=String(child.stdout||"").trim().split(/\r?\n/);
   const result=JSON.parse(rows.at(-1));
   assert.equal(result.status,"PASS","HISTORICAL_REPLAY_NOT_PASS");
-  return {status:"PASS",historical_subject_sha:main,candidate_subject_sha:head,
+  assert.equal(result.qcp_central_ownership_registered,true,"HISTORICAL_CENTRAL_OWNERSHIP_UNPROVEN");
+  assert.equal(result.legacy_registry_boundary_preserved,true,"HISTORICAL_LEGACY_BOUNDARY_UNPROVEN");
+  assert.equal(result.current_successor_inserted_into_legacy_registry,false,"HISTORICAL_SUCCESSOR_REGISTRY_SCOPE_CHANGED");
+  return {...result,status:"PASS",historical_subject_sha:main,candidate_subject_sha:head,
    historical_replay_at_exact_main:true,changed_path_count:changed.length,
    adopted_history_not_rewritten:true,execute_authorized:false};
  }finally{if(attached)git("worktree","remove","--force",checkout);fs.rmSync(temp,{recursive:true,force:true});}
