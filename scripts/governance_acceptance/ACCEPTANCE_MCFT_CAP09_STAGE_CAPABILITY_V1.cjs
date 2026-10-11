@@ -52,9 +52,11 @@ try{
  const stageDir=path.join(consumed.run_directory,"PRODUCER");fs.mkdirSync(stageDir);
  const file=path.join(stageDir,"COMPLETED.json");
  fs.writeFileSync(file,JSON.stringify({schema_version:"geox_mcft_cap09_stage_completed_v1",id:"PRODUCER",status:"FAIL"}));
- const producerSha=hashFile(file),t1=cap.issueStageCapability(authority,{id:"TIMING_1",script:consumer,previous_sha256:producerSha});
- const t1req={...req,id:"TIMING_1",ticket:t1.ticket,previous_sha256:producerSha};
- assert.equal(await spawn(t1req),9);count++; // failed prior stage must not be continued
+ const producerSha=hashFile(file);
+ assert.throws(()=>cap.issueStageCapability(authority,{id:"TIMING_1",script:consumer,previous_sha256:producerSha}),/CAP_PREVIOUS_STAGE_FAILED/);count++;
+ // The failed predecessor must block authority at the parent BEFORE
+ // issuing a ticket or allowing even one child process to start.
+ assert.equal(fs.existsSync(path.join(consumed.run_directory,"STAGE_TICKET_TIMING_1.json")),false);count++;
  assert.equal(fs.existsSync(path.join(consumed.run_directory,"SPENT_TIMING_1")),false);count++;
  assert.equal(fs.existsSync(path.join(consumed.run_directory,"STAGE_TICKET_TIMING_2.json")),false);count++;
  assert.equal(JSON.parse(fs.readFileSync(path.resolve(__dirname,"../runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json"))).adopted,false);count++;

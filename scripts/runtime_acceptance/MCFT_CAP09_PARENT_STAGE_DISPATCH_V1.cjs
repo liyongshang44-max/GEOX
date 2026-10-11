@@ -23,6 +23,9 @@ async function dispatchConsumedStage(authority,step) {
   MCFT_GOVERNED_RETRY_STAGE:step.id};
  return receipts.runRecordedStage({directory:authority.consumed.run_directory,
   cwd:step.cwd,executable:step.executable,args:step.args,timeout_ms:step.timeout_ms,
-  id:step.id,previous_sha256:step.previous_sha256,expected_artifact:step.artifact,env});
+  id:step.id,previous_sha256:step.previous_sha256,expected_artifact:step.artifact,
+  expected_claim:{file:path.join(authority.consumed.run_directory,"SPENT_"+step.id,"CLAIMED.json"),
+   id:step.id,run_id:authority.run_id,nonce:authority.nonce,
+   ticket_sha256:receipts.hashFile(ticket.ticket)},env});
 }
 module.exports={dispatchConsumedStage};

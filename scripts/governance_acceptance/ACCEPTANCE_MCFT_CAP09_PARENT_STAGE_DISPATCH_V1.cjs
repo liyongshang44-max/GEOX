@@ -32,6 +32,9 @@ try{
   artifact:path.join(dir,"producer.json"),env:{...baseEnv,CAP_OUTPUT:path.join(dir,"producer.json")}});
  assert.equal(first.record.status,"PASS");count++;
  assert.equal(first.record.artifact_present,true);count++;
+ assert.equal(first.record.claim_present,true);count++;
+ assert.equal(first.record.claim_valid,true);count++;
+ assert.equal(first.record.claim_sha256,hashFile(path.join(authority.consumed.run_directory,"SPENT_PRODUCER","CLAIMED.json")));count++;
  assert.equal(first.record.artifact_sha256,hashFile(path.join(dir,"producer.json")));count++;
  assert.equal(first.record.stdout_sha256,hashFile(path.join(first.directory,"stdout.log")));count++;
  assert.equal(first.record.previous_sha256,hashFile(path.join(authority.consumed.run_directory,"CONSUMED.json")));count++;
@@ -41,16 +44,37 @@ try{
   artifact:path.join(dir,"timing1.json"),env:{...baseEnv,CAP_OUTPUT:path.join(dir,"timing1.json")}});
  assert.equal(second.record.previous_sha256,first.sha256);count++;
  assert.equal(second.record.artifact_sha256,hashFile(path.join(dir,"timing1.json")));count++;
+ assert.equal(second.record.claim_valid,true);count++;
  let failed;
  try{await dispatchConsumedStage(authority,{...base,id:"TIMING_2",previous_sha256:second.sha256,
   artifact:path.join(dir,"timing2.json"),env:{...baseEnv,CAP_OUTPUT:"SKIP"}});assert.fail("EXPECTED_FAILURE");}
  catch(e){assert.match(e.message,/STAGE_FAILED_NO_AUTOMATIC_RETRY/);failed=e.receipt;count++;}
  assert.equal(failed.record.status,"FAIL");count++;
  assert.equal(failed.record.artifact_present,false);count++;
+ assert.equal(failed.record.claim_valid,true);count++;
  assert.equal(failed.record.previous_sha256,second.sha256);count++;
  assert.throws(()=>cap.issueStageCapability(authority,{id:"TIMING_3",script,previous_sha256:failed.sha256}),/PREVIOUS_STAGE_FAILED/);count++;
  assert.equal(fs.existsSync(path.join(authority.consumed.run_directory,"STAGE_TICKET_TIMING_3.json")),false);count++;
  assert.throws(()=>permit.consumePermit(permit.verifyPermit(envelope,trust,context)),/EEXIST/);count++;
+ // A child can write an output and return success but is never qualified
+ // unless the atomic parent-bound ticket was actually consumed.
+ const {runRecordedStage}=require("../runtime_acceptance/MCFT_CAP09_STAGE_RECEIPTS_V1.cjs");
+ const fakeRoot=path.join(dir,"fake-stage-records");fs.mkdirSync(fakeRoot);
+ const fakeOutput=path.join(dir,"fake-output.json");
+ let bypass;
+ try{
+  await runRecordedStage({directory:fakeRoot,cwd:dir,executable:process.execPath,
+   args:["-e","require('node:fs').writeFileSync("+JSON.stringify(fakeOutput)+",'fake\\n')"],
+   id:"UNCLAIMED",timeout_ms:5000,previous_sha256:"f".repeat(64),
+   expected_artifact:fakeOutput,
+   expected_claim:{file:path.join(dir,"missing-claim.json"),id:"UNCLAIMED",
+    run_id:payload.run_id,nonce:payload.nonce,ticket_sha256:"e".repeat(64)}});
+  assert.fail("UNCLAIMED_CHILD_WRONGLY_ACCEPTED");
+ }catch(e){assert.match(e.message,/STAGE_FAILED_NO_AUTOMATIC_RETRY/);bypass=e.receipt;}
+ assert.equal(bypass.record.exit_code,0);count++;
+ assert.equal(bypass.record.artifact_present,true);count++;
+ assert.equal(bypass.record.claim_valid,false);count++;
+ assert.equal(bypass.record.status,"FAIL");count++;
  console.log(JSON.stringify({status:"PASS",tests:count,synthetic_only:true,
   parent_and_child_real_process_execution:true,provider_calls:0,
   stage_artifact_hashes_chained:true,duplicate_stage_and_run_burned:true,

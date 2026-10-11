@@ -13,6 +13,7 @@
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-EXECUTION-CUTOVER-CONTRACT-20261011-V1.md",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE-EXECUTION-CONTRACT-20261011-V1.md",
     "docs/digital_twin/mcft/cap_09/evidence/retry-history-20261011/.gitattributes",
     "docs/digital_twin/mcft/cap_09/evidence/retry-history-20261011/failed-first-execute-readonly-audit-v2.json",
     "docs/digital_twin/mcft/cap_09/evidence/retry-history-20261011/post3689-windows-artifact-closure-v5.json",

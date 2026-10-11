@@ -23,6 +23,15 @@ async function runRecordedStage(spec) {
   assert(path.isAbsolute(spec.expected_artifact),"STAGE_ARTIFACT_ABSOLUTE_REQUIRED");
   assert(!fs.existsSync(spec.expected_artifact),"STAGE_ARTIFACT_MUST_BE_NEW");
  }
+ if(spec.expected_claim!==undefined){
+  const claim=spec.expected_claim;
+  assert(claim&&path.isAbsolute(claim.file),"STAGE_CLAIM_FILE_REQUIRED");
+  assert(/^[a-f0-9]{64}$/.test(claim.ticket_sha256),"STAGE_CLAIM_TICKET_DIGEST_REQUIRED");
+  assert(/^[a-f0-9]{12}$/.test(claim.run_id),"STAGE_CLAIM_RUN_REQUIRED");
+  assert(/^[a-f0-9]{64}$/.test(claim.nonce),"STAGE_CLAIM_NONCE_REQUIRED");
+  assert.equal(claim.id,spec.id,"STAGE_CLAIM_ID_MISMATCH");
+  assert(!fs.existsSync(claim.file),"STAGE_CLAIM_REUSE_FORBIDDEN");
+ }
  const directory=path.join(spec.directory,spec.id);
  fs.mkdirSync(directory,{mode:0o700}); // exclusive stage identity; no resume
  const started={schema_version:"geox_mcft_cap09_stage_started_v1",id:spec.id,
@@ -50,6 +59,23 @@ async function runRecordedStage(spec) {
    child.once("close",(code,signal)=>resolve({exit_code:code,signal,timed_out:timedOut,spawn_error:spawnError,tree_kill_error:killError}));
   });
  } finally {clearTimeout(timer);fs.fsyncSync(out);fs.fsyncSync(err);fs.closeSync(out);fs.closeSync(err);}
+ let claimPresent=null,claimValid=null,claimSha=null,claimFailure=null;
+ if(spec.expected_claim!==undefined){
+  const expectation=spec.expected_claim;
+  claimPresent=fs.existsSync(expectation.file);
+  claimValid=false;
+  if(claimPresent){
+   try {
+    const claimed=JSON.parse(fs.readFileSync(expectation.file,"utf8"));
+    claimSha=hashFile(expectation.file);
+    claimValid=claimed.schema_version==="geox_mcft_cap09_child_stage_claim_v1" &&
+      claimed.id===expectation.id && claimed.run_id===expectation.run_id &&
+      claimed.nonce===expectation.nonce && claimed.ticket_sha256===expectation.ticket_sha256 &&
+      claimed.parent_pid===process.pid;
+    if(!claimValid)claimFailure="CLAIM_FIELD_MISMATCH";
+   }catch(e){claimFailure="CLAIM_INVALID:"+String(e.code||e.message).slice(0,128);}
+  }else claimFailure="CHILD_DID_NOT_ATOMICALLY_CONSUME_STAGE";
+ }
  const artifactPresent=spec.expected_artifact===undefined?null:fs.existsSync(spec.expected_artifact);
  const artifactSha=artifactPresent?hashFile(spec.expected_artifact):null;
  const record={schema_version:"geox_mcft_cap09_stage_completed_v1",id:spec.id,
@@ -57,7 +83,9 @@ async function runRecordedStage(spec) {
   elapsed_ms:Number((process.hrtime.bigint()-beginning)/1000000n),...result,
   stdout_sha256:hashFile(stdout),stderr_sha256:hashFile(stderr),
   expected_artifact:spec.expected_artifact||null,artifact_present:artifactPresent,artifact_sha256:artifactSha,
-  status:result.exit_code===0&&!result.timed_out&&!result.spawn_error&&!result.tree_kill_error&&artifactPresent!==false?"PASS":"FAIL",
+  expected_child_claim:spec.expected_claim?.file||null,claim_present:claimPresent,claim_valid:claimValid,
+  claim_sha256:claimSha,claim_failure:claimFailure,
+  status:result.exit_code===0&&!result.timed_out&&!result.spawn_error&&!result.tree_kill_error&&artifactPresent!==false&&claimValid!==false?"PASS":"FAIL",
   qualification_pass:false};
  const sha256=writeOnce(path.join(directory,"COMPLETED.json"),record);
  if(record.status!=="PASS") {
