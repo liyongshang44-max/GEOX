@@ -19,6 +19,10 @@ async function runRecordedStage(spec) {
  assert(path.isAbsolute(spec.executable)&&Array.isArray(spec.args)&&spec.args.every(x=>typeof x==="string"),"STAGE_COMMAND_REQUIRED");
  assert(Number.isSafeInteger(spec.timeout_ms)&&spec.timeout_ms>0&&spec.timeout_ms<=86400000,"STAGE_TIMEOUT_REQUIRED");
  assert(/^[a-f0-9]{64}$/.test(spec.previous_sha256),"STAGE_PREVIOUS_RECEIPT_REQUIRED");
+ if(spec.expected_artifact!==undefined){
+  assert(path.isAbsolute(spec.expected_artifact),"STAGE_ARTIFACT_ABSOLUTE_REQUIRED");
+  assert(!fs.existsSync(spec.expected_artifact),"STAGE_ARTIFACT_MUST_BE_NEW");
+ }
  const directory=path.join(spec.directory,spec.id);
  fs.mkdirSync(directory,{mode:0o700}); // exclusive stage identity; no resume
  const started={schema_version:"geox_mcft_cap09_stage_started_v1",id:spec.id,
@@ -46,11 +50,14 @@ async function runRecordedStage(spec) {
    child.once("close",(code,signal)=>resolve({exit_code:code,signal,timed_out:timedOut,spawn_error:spawnError,tree_kill_error:killError}));
   });
  } finally {clearTimeout(timer);fs.fsyncSync(out);fs.fsyncSync(err);fs.closeSync(out);fs.closeSync(err);}
+ const artifactPresent=spec.expected_artifact===undefined?null:fs.existsSync(spec.expected_artifact);
+ const artifactSha=artifactPresent?hashFile(spec.expected_artifact):null;
  const record={schema_version:"geox_mcft_cap09_stage_completed_v1",id:spec.id,
   started_sha256:startHash,previous_sha256:spec.previous_sha256,completed_at:new Date().toISOString(),
   elapsed_ms:Number((process.hrtime.bigint()-beginning)/1000000n),...result,
   stdout_sha256:hashFile(stdout),stderr_sha256:hashFile(stderr),
-  status:result.exit_code===0&&!result.timed_out&&!result.spawn_error&&!result.tree_kill_error?"PASS":"FAIL",
+  expected_artifact:spec.expected_artifact||null,artifact_present:artifactPresent,artifact_sha256:artifactSha,
+  status:result.exit_code===0&&!result.timed_out&&!result.spawn_error&&!result.tree_kill_error&&artifactPresent!==false?"PASS":"FAIL",
   qualification_pass:false};
  const sha256=writeOnce(path.join(directory,"COMPLETED.json"),record);
  if(record.status!=="PASS") {
