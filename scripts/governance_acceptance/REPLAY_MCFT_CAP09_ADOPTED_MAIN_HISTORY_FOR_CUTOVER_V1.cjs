@@ -8,7 +8,7 @@ const MANIFEST="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXAC
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const CHECK="LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY";
 function git(...args){return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8",timeout:120000,maxBuffer:16*1024*1024}).trim();}
-function replayAdoptedHistoryForCutoverCandidate(){
+function verifyCandidateBoundary(){
  const head=git("rev-parse","HEAD"),main=git("rev-parse","origin/main");
  assert.equal(main,BASE,"HISTORY_MAIN_MOVED_REBIND_REQUIRED");
  assert.notEqual(head,main,"REQUIRES_DISTINCT_CANDIDATE_SUBJECT");
@@ -30,6 +30,10 @@ function replayAdoptedHistoryForCutoverCandidate(){
  assert.deepEqual(candidate.dependency_resolvers[rid],{kind:"EXACT_PATH_SET",paths:manifest.paths},"EXACT_RESOLVER_MISMATCH");
  const stripped=structuredClone(candidate);stripped.checks.pop();delete stripped.dependency_resolvers[rid];
  assert.deepEqual(stripped,prior,"HISTORICAL_QCP_DIFF_NOT_APPEND_ONLY");
+ return {head,main,changed};
+}
+function replayAdoptedHistoryForCutoverCandidate(){
+ const {head,main,changed}=verifyCandidateBoundary();
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-cap09-historical-replay-"));
  const checkout=path.join(temp,"adopted-main");let attached=false;
  try{
@@ -50,5 +54,25 @@ function replayAdoptedHistoryForCutoverCandidate(){
    adopted_history_not_rewritten:true,execute_authorized:false};
  }finally{if(attached)git("worktree","remove","--force",checkout);fs.rmSync(temp,{recursive:true,force:true});}
 }
-module.exports={replayAdoptedHistoryForCutoverCandidate};
+function runHistoricalDiagnosticForCutoverCandidate(command, extraEnv={}) {
+ const crop=require("./VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs");
+ assert.equal(crop.isFrozenDiagnosticCommand(command),true,"UNREGISTERED_HISTORIC_DIAGNOSTIC");
+ const {main}=verifyCandidateBoundary();
+ const historicalBase="962fde08f5415909e21ab3812754f0bb711b8b69";
+ assert.equal(git("merge-base",main,historicalBase),historicalBase,"HISTORICAL_BASE_NOT_ANCESTOR");
+ const temp=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-cap09-historic-diagnostic-"));
+ const checkout=path.join(temp,"historic");let attached=false;
+ try {
+  git("worktree","add","--detach",checkout,historicalBase);attached=true;
+  const out=cp.spawnSync(command,{cwd:checkout,encoding:"utf8",shell:true,
+    timeout:240000,env:{...process.env,...extraEnv,MCFT_CAP09_ALL_BLOCKERS_CHILD:"1"}});
+  return {status:out.status===0?"PASS":"FAIL",exit_code:out.status,signal:out.signal||null,
+   stdout_tail:String(out.stdout||"").slice(-4000),stderr_tail:String(out.stderr||"").slice(-4000),
+   historical_subject_sha:historicalBase,adopted_main_sha:main,candidate_proven:true};
+ }finally{
+  if(attached)git("worktree","remove","--force",checkout);
+  fs.rmSync(temp,{recursive:true,force:true});
+ }
+}
+module.exports={verifyCandidateBoundary,replayAdoptedHistoryForCutoverCandidate,runHistoricalDiagnosticForCutoverCandidate};
 if(require.main===module){try{console.log(JSON.stringify(replayAdoptedHistoryForCutoverCandidate()));}catch(e){console.error(e.stack||String(e));process.exitCode=1;}}
