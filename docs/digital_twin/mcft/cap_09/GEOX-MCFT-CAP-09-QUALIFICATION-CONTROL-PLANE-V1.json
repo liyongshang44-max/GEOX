@@ -1312,6 +1312,7 @@
     "LOCAL_CUTOVER_EXACT_SCOPE_20261011_V1": {
       "kind": "EXACT_PATH_SET",
       "paths": [
+        ".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml",
         ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
         ".github/workflows/mcft-cap09-local-cutover-candidate-v1.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
@@ -1333,9 +1334,11 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_WINDOWS_IMMUTABLE_ATTEMPT_JOURNAL_V1.cjs",
         "scripts/governance_acceptance/MCFT_CAP09_ISOLATED_EVIDENCE_DRIVEN_CLOCK_V1.cjs",
         "scripts/governance_acceptance/MCFT_CAP09_ISOLATED_RETRY_ADMISSION_BRIDGE_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_LOCAL_CUTOVER_WORKFLOW_GATE_V1.cjs",
         "scripts/governance_acceptance/MCFT_CAP09_RETRY_HISTORICAL_EVIDENCE_V1.cjs",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
         "scripts/governance_acceptance/REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_DISPATCH_GUARD_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_NONDESTRUCTIVE_REAL_DELAY_BOUNDARY_V1.cjs",
@@ -2920,7 +2923,7 @@
       "historical_evidence_policy": "ORIGINAL_RETRY_EVIDENCE_IMMUTABLE_CANDIDATE_SCOPE_NOT_ADOPTION",
       "execution_workflow": ".github/workflows/mcft-cap09-local-cutover-candidate-v1.yml",
       "execution_workflow_status": "ENGINEERING_ONLY_NO_LIVE_PROVIDER_EXECUTION",
-      "fail_policy": "FAIL_CLOSED_EXACT_34_PATHS_ADOPTED_MAIN_HISTORICAL_REPLAY_AND_CURRENT_CANDIDATE_NO_EXECUTE",
+      "fail_policy": "FAIL_CLOSED_EXACT_37_PATHS_ADOPTED_MAIN_HISTORICAL_REPLAY_AND_CURRENT_CANDIDATE_NO_EXECUTE",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
         "LOCAL_CUTOVER_EXACT_SCOPE_20261011_V1"
