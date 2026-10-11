@@ -7,6 +7,8 @@
  */
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
 const permits=require("./MCFT_CAP09_RETRY_PERMIT_V1.cjs");
+const STAGE_DOMAIN="GEOX_MCFT_CAP09_HOST_STAGE_V1\n";
+const privateStageKeys=new WeakMap();
 const {hashFile}=require("./MCFT_CAP09_STAGE_RECEIPTS_V1.cjs");
 const STAGES=Object.freeze(["PRODUCER","TIMING_1","TIMING_2","TIMING_3","AGGREGATE","CONTROLLED_DELAY"]);
 const HEX40=/^[a-f0-9]{40}$/,HEX64=/^[a-f0-9]{64}$/,RUN=/^[a-f0-9]{12}$/;
@@ -37,14 +39,21 @@ function initializeStageAuthority(consumed,permitPayload) {
  assert.equal(receipt.status,"CONSUMED_NO_AUTOMATIC_RETRY","CAP_CONSUMPTION_STATUS_INVALID");
  assert.equal(path.basename(consumed.run_directory),"run-"+permitPayload.run_id,"CAP_RUN_DIRECTORY_MISMATCH");
  directoryNoLink(consumed.run_directory);
- const key=crypto.randomBytes(32);
- writeOnce(path.join(consumed.run_directory,"STAGE_KEY.bin"),key);
- return Object.freeze({consumed,run_id:permitPayload.run_id,nonce:permitPayload.nonce,
+ // Store only the child-verifiable public key; keep private signing
+ // capability exclusively in the parent process memory.
+ const {privateKey,publicKey}=crypto.generateKeyPairSync("ed25519");
+ writeOnce(path.join(consumed.run_directory,"STAGE_PUBLIC_KEY.pem"),
+   Buffer.from(publicKey.export({type:"spki",format:"pem"})));
+ const authority=Object.freeze({consumed,run_id:permitPayload.run_id,nonce:permitPayload.nonce,
    subject_sha:permitPayload.subject_sha,envelope_sha256:receipt.envelope_sha256,
    parent_pid:process.pid,expires_at:permitPayload.expires_at});
+ privateStageKeys.set(authority,privateKey);
+ return authority;
 }
 function issueStageCapability(authority,{id,script,previous_sha256}) {
  permits.assertConsumed(authority.consumed);
+ const signingKey=privateStageKeys.get(authority);
+ assert(signingKey&&signingKey.asymmetricKeyType==="ed25519","CAP_PARENT_PRIVATE_KEY_REQUIRED");
  assert(STAGES.includes(id),"CAP_UNKNOWN_STAGE");
  assert(HEX64.test(previous_sha256),"CAP_PREVIOUS_RECEIPT_REQUIRED");
  assert(path.isAbsolute(script),"CAP_ABSOLUTE_SCRIPT_REQUIRED");
@@ -67,10 +76,14 @@ function issueStageCapability(authority,{id,script,previous_sha256}) {
    subject_sha:authority.subject_sha,envelope_sha256:authority.envelope_sha256,
    parent_pid:authority.parent_pid,script_sha256:hashFile(script),previous_sha256,
    issued_at:new Date(issued).toISOString(),expires_at:new Date(until).toISOString()};
- const keyPath=path.join(base,"STAGE_KEY.bin");fileRegular(keyPath);
- const signature=crypto.createHmac("sha256",fs.readFileSync(keyPath)).update(permits.canonical(payload)).digest("hex");
+ const publicKeyFile=path.join(base,"STAGE_PUBLIC_KEY.pem");fileRegular(publicKeyFile);
+ const publicKey=crypto.createPublicKey(fs.readFileSync(publicKeyFile));
+ assert.equal(publicKey.asymmetricKeyType,"ed25519","CAP_ED25519_REQUIRED");
+ assert.equal(crypto.createPublicKey(signingKey).export({type:"spki",format:"pem"}).toString(),
+  publicKey.export({type:"spki",format:"pem"}).toString(),"CAP_PUBLIC_KEY_CHANGED");
+ const signature=crypto.sign(null,Buffer.from(STAGE_DOMAIN+permits.canonical(payload)),signingKey).toString("base64");
  const ticket=path.join(base,"STAGE_TICKET_"+id+".json");
- writeOnce(ticket,Buffer.from(JSON.stringify({payload,hmac_sha256:signature},null,2)+"\n"));
+ writeOnce(ticket,Buffer.from(JSON.stringify({payload,signature_base64:signature},null,2)+"\n"));
  return Object.freeze({ticket,id,previous_sha256});
 }
 function consumeStageCapability({ticket,run_directory,id,run_id,nonce,subject_sha,envelope_sha256,script,previous_sha256}) {
@@ -80,7 +93,7 @@ function consumeStageCapability({ticket,run_directory,id,run_id,nonce,subject_sh
  assert.equal(path.resolve(ticket),path.join(run_directory,"STAGE_TICKET_"+id+".json"),"CAP_TICKET_PATH_MISMATCH");
  fileRegular(ticket);
  const envelope=JSON.parse(fs.readFileSync(ticket,"utf8"));
- assert.deepEqual(Object.keys(envelope).sort(),["hmac_sha256","payload"].sort(),"CAP_TICKET_FIELDS_INVALID");
+ assert.deepEqual(Object.keys(envelope).sort(),["signature_base64","payload"].sort(),"CAP_TICKET_FIELDS_INVALID");
  const p=envelope.payload;
  assert.deepEqual(Object.keys(p).sort(),["schema_version","id","ordinal","run_id","nonce","subject_sha","envelope_sha256","parent_pid","script_sha256","previous_sha256","issued_at","expires_at"].sort(),"CAP_FIELDS_INVALID");
  assert.equal(p.schema_version,"geox_mcft_cap09_host_stage_capability_v1");
@@ -93,10 +106,13 @@ function consumeStageCapability({ticket,run_directory,id,run_id,nonce,subject_sh
  assert.equal(p.script_sha256,hashFile(script),"CAP_EXECUTABLE_HASH_CHANGED");
  const now=Date.now(),begin=Date.parse(p.issued_at),end=Date.parse(p.expires_at);
  assert(Number.isFinite(begin)&&Number.isFinite(end)&&begin<=now&&now<end&&end-begin<=120000,"CAP_STAGE_EXPIRED");
- const key=path.join(run_directory,"STAGE_KEY.bin");fileRegular(key);
- const mac=crypto.createHmac("sha256",fs.readFileSync(key)).update(permits.canonical(p)).digest();
- assert(HEX64.test(envelope.hmac_sha256),"CAP_SIGNATURE_FORMAT");
- assert(crypto.timingSafeEqual(mac,Buffer.from(envelope.hmac_sha256,"hex")),"CAP_BAD_HMAC");
+ const publicKeyFile=path.join(run_directory,"STAGE_PUBLIC_KEY.pem");fileRegular(publicKeyFile);
+ const publicKey=crypto.createPublicKey(fs.readFileSync(publicKeyFile));
+ assert.equal(publicKey.asymmetricKeyType,"ed25519","CAP_ED25519_REQUIRED");
+ assert(typeof envelope.signature_base64==="string","CAP_SIGNATURE_FORMAT");
+ const signature=Buffer.from(envelope.signature_base64,"base64");
+ assert(signature.length===64&&signature.toString("base64")===envelope.signature_base64,"CAP_SIGNATURE_FORMAT");
+ assert(crypto.verify(null,Buffer.from(STAGE_DOMAIN+permits.canonical(p)),publicKey,signature),"CAP_BAD_SIGNATURE");
  const consumedReceipt=path.join(run_directory,"CONSUMED.json");fileRegular(consumedReceipt);
  const receipt=JSON.parse(fs.readFileSync(consumedReceipt,"utf8"));
  assert.equal(receipt.payload.run_id,run_id,"CAP_CONSUMED_RUN_MISMATCH");

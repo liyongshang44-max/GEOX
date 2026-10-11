@@ -25,6 +25,13 @@ try{
  assert.throws(()=>cap.initializeStageAuthority({run_directory:dir},payload),/CONSUMPTION_REQUIRED/);count++;
  const consumed=permit.consumePermit(signed);
  const authority=cap.initializeStageAuthority(consumed,payload);assert.equal(authority.parent_pid,process.pid);count++;
+ const publicFile=path.join(consumed.run_directory,"STAGE_PUBLIC_KEY.pem");
+ assert.equal(crypto.createPublicKey(fs.readFileSync(publicFile)).asymmetricKeyType,"ed25519");count++;
+ assert.throws(()=>crypto.createPrivateKey(fs.readFileSync(publicFile)));count++;
+ assert.equal(fs.existsSync(path.join(consumed.run_directory,"STAGE_KEY.bin")),false);count++;
+ assert.equal(fs.readdirSync(consumed.run_directory).filter(x=>/PRIVATE|SECRET|STAGE_KEY/.test(x)).length,0);count++;
+ const copiedAuthority=Object.freeze({...authority});
+ assert.throws(()=>cap.issueStageCapability(copiedAuthority,{id:"PRODUCER",script:__filename,previous_sha256:"f".repeat(64)}),/CAP_PARENT_PRIVATE_KEY_REQUIRED/);count++;
  assert.throws(()=>cap.initializeStageAuthority(consumed,payload),/EEXIST/);count++;
  const consumer=path.join(dir,"stage-child.cjs");
  const source=`const cap=require(${JSON.stringify(path.resolve(__dirname,"../runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V1.cjs"))});const fs=require('node:fs');const data=JSON.parse(fs.readFileSync(process.argv[2]));try{cap.consumeStageCapability(data);process.exitCode=0}catch(e){process.stderr.write(String(e.code||e.message));process.exitCode=e.code==='EEXIST'?7:9;}`;

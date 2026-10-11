@@ -5,8 +5,8 @@ Scope: PR #3692, pre-merge engineering. This document is not a runtime authoriza
 ## Execution state machine
 1. Independently adopted trust and a freshly signed, exact-main Ed25519 permit are required. Current repository trust remains `adopted=false`, `execution_enabled=false`. The default is EXECUTE_HOLD.
 2. The parent validates source, isolation, historical bytes, review and timing. Before any child or Provider side effect, it must atomically consume the permit nonce and new run ID; consumption is irreversible even after an error.
-3. The parent creates a run-scoped stage-key with an already consumed permit capability. A stage ticket binds stage ID, parent PID, original permit digest, run/nonce, script SHA-256, previous receipt SHA-256 and expiry. Only one ticket of each stage ID may exist.
-4. The child validates its exact parent, ticket HMAC, script digest, predecessor success and receipt hash. It atomically burns `SPENT_<STAGE>` and writes an immutable claim BEFORE any qualifications, database connections or Provider effects.
+3. The parent generates an ephemeral Ed25519 signing key after consuming the independent permit. Only the public key is persisted; the signing key remains in parent memory. A stage ticket binds stage ID, parent PID, original permit digest, run/nonce, script SHA-256, previous receipt SHA-256 and expiry. Only one ticket of each stage ID may exist.
+4. The child validates its exact parent, ticket Ed25519 signature, script digest, predecessor success and receipt hash. It atomically burns `SPENT_<STAGE>` and writes an immutable claim BEFORE any qualifications, database connections or Provider effects.
 5. The parent supervisor records exit code, termination signal, timeout/tree-kill outcome, stdout/stderr SHA-256, expected artifact SHA-256, and child claim SHA-256. An exit code of zero with no valid child claim or missing expected artifact is FAIL.
 6. Before issuing each successor ticket, the parent verifies the immediate predecessor has a COMPLETE, hash-matching PASS receipt. A FAIL, interrupted process or existing stage reservation cannot resume automatically.
 
@@ -21,7 +21,7 @@ Scope: PR #3692, pre-merge engineering. This document is not a runtime authoriza
 ## Candidate acceptance matrix
 | Scenario | Expected |
 | --- | --- |
-| Wrong run, nonce, stage, source SHA, parent PID or ticket HMAC | FAIL before child effects |
+| Wrong run, nonce, stage, source SHA, parent PID or ticket Ed25519 signature | FAIL before child effects |
 | Concurrent children presenting the same stage ticket | Exactly one atomic claim, others FAIL |
 | Parent attempts stage issuance after predecessor FAIL | FAIL before creating a successor ticket |
 | Child exits zero and creates output without consuming ticket | FAIL, immutable stage receipt with `claim_valid=false` |
