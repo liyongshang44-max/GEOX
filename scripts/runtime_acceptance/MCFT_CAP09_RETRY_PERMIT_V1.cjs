@@ -8,6 +8,7 @@ const path = require("node:path");
 const TRUST_PATH = path.join(__dirname, "MCFT_CAP09_RETRY_TRUST_V1.json");
 const DOMAIN = "GEOX_MCFT_CAP09_ISOLATED_RETRY_PERMIT_V1\n";
 const verified = new WeakSet();
+const consumed = new WeakSet();
 const sha = bytes => crypto.createHash("sha256").update(bytes).digest("hex");
 function canonical(value) {
   if (value === null || typeof value === "boolean" || typeof value === "string") return JSON.stringify(value);
@@ -115,6 +116,15 @@ function consumePermit(permit) {
   durableWrite(path.join(nonce, "CONSUMED.json"), receipt);
   durableWrite(path.join(run, "CONSUMED.json"), receipt);
   verified.delete(permit);
-  return freeze({nonce_directory:nonce, run_directory:run, receipt_sha256:sha(canonical(receipt)), execute_authorized:false});
+  const result=freeze({nonce_directory:nonce, run_directory:run, receipt_sha256:sha(canonical(receipt)), execute_authorized:false});
+  consumed.add(result);
+  return result;
 }
-module.exports = {DOMAIN, TRUST_PATH, canonical, sha, verifyPermit, loadHostPermit, consumePermit};
+function assertConsumed(authorization) {
+  assert(consumed.has(authorization),"PARENT_ATOMIC_PERMIT_CONSUMPTION_REQUIRED");
+  assert.equal(authorization.execute_authorized,false,"CONSUMPTION_IS_NOT_EXECUTE_AUTHORITY");
+  assert.equal(hashFileBytes(path.join(authorization.run_directory,"CONSUMED.json")),hashFileBytes(path.join(authorization.nonce_directory,"CONSUMED.json")),"CONSUMPTION_DUAL_RECEIPT_MISMATCH");
+  return authorization;
+}
+function hashFileBytes(file){return sha(fs.readFileSync(file));}
+module.exports = {DOMAIN, TRUST_PATH, canonical, sha, verifyPermit, loadHostPermit, consumePermit, assertConsumed};
