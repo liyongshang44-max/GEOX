@@ -1,0 +1,67 @@
+name: MCFT CAP-09 local cutover candidate checks
+on:
+  pull_request:
+    paths:
+      - 'scripts/governance_acceptance/*MCFT_CAP09*'
+      - 'scripts/runtime_acceptance/*MCFT_CAP09*'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs'
+      - 'scripts/runtime_acceptance/*WINDOWS_LOCAL_QUALIFICATION_ENTRY*'
+      - 'docs/digital_twin/mcft/cap_09/*LOCAL-EXECUTION-CUTOVER*'
+      - 'docs/digital_twin/mcft/cap_09/evidence/retry-history-20261011/**'
+      - '.github/workflows/mcft-cap09-local-cutover-candidate-v1.yml'
+permissions:
+  contents: read
+jobs:
+  isolated-clock-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Source tree digest for exact-main reparent review
+        run: |
+          echo "MCFT_CUTOVER_HEAD_TREE=$(git rev-parse 'HEAD^{tree}')"
+          echo "MCFT_CUTOVER_HEAD=$(git rev-parse HEAD)"
+      - name: Exact local cutover candidate diff scope (not adoption)
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_LOCAL_CUTOVER_EXACT_SCOPE_V1.cjs
+      - name: Pure evidence-driven readiness tests (cannot authorize execute)
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_ISOLATED_EVIDENCE_DRIVEN_CLOCK_V1.cjs
+      - name: Pure retry admission and immutable evidence-negative gates
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_ISOLATED_RETRY_ADMISSION_BRIDGE_V1.cjs
+      - name: Synthetic single-use attempt and immutable receipt negative tests
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_WINDOWS_IMMUTABLE_ATTEMPT_JOURNAL_V1.cjs
+      - name: Retry dispatch guard cannot fall through legacy authorization
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_DISPATCH_GUARD_V1.cjs
+
+  permit-and-process-evidence:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: No destructive SQL or retained database in controlled delay proposals
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONDESTRUCTIVE_REAL_DELAY_BOUNDARY_V1.cjs
+      - name: Actual runner and child retry dispatch reject unadopted trust
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs
+      - name: Original Windows evidence bytes and missing-adjudication boundaries
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_HISTORICAL_EVIDENCE_V1.cjs
+      - name: Synthetic issuer and concurrent nonce consumption tests
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_PERMIT_V1.cjs
+      - name: Synthetic subprocess exit, timeout and immutable receipt tests
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE_RECEIPTS_V1.cjs

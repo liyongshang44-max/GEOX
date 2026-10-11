@@ -1,0 +1,14 @@
+﻿{
+    "schema_version":  "geox_mcft_cap09_post3689_artifact_retention_v5",
+    "status":  "ARCHIVED_AND_EXACT_MAIN_WORKTREE_CLEAN_AFTER_REMEDIATION",
+    "main":  "c9e027b832d1e25a20384d4853ed5564ed405fd4",
+    "v3_gate":  "FAIL_RETAINED",
+    "v4_status":  "ENGINEERING_CHECKS_PASS_WITH_RETAINED_UNTRACKED_ARTIFACT",
+    "relative_path":  "MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json",
+    "sha256":  "f6d792dee2c71ff4bfa577e1579022c33ee70fe64e2f5385f02a1709604176d2",
+    "bytes":  10286,
+    "archived_path":  "D:\\gptdown\\MCFT-CAP09-ISOLATED-INFRA-20261010\\post3689-acceptance-output-v5-retained\\MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json",
+    "captured_at_utc":  "2026-10-10T17:30:26.7364863Z",
+    "execute_authorized":  false,
+    "cleaned_at_utc":  "2026-10-10T17:30:26.8685851Z"
+}

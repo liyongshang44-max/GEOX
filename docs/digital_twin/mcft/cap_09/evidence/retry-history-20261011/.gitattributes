@@ -1,0 +1,2 @@
+# Evidence digests cover original bytes, including BOM and CRLF.
+*.json -text

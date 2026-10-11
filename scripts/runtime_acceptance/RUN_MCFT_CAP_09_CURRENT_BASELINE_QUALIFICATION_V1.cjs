@@ -2,8 +2,16 @@
 "use strict";
 const assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), cp = require("node:child_process");
 const {ROOT, authorize, isolatedTargets} = require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
-function main() {
+const {rejectUnadoptedRetry} = require("./MCFT_CAP09_GOVERNED_RETRY_DISPATCH_GUARD_V1.cjs");
+async function main() {
   const args = process.argv.slice(2);
+  // Must fail before old ARM evaluation, filesystem reservation or Provider I/O.
+  // A retry requires a distinct later adopted activation, never flag fallback.
+  if(args.includes("--governed-retry")) {
+    const result=await require("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs").main(args);
+    console.log(JSON.stringify(result));return;
+  }
+  rejectUnadoptedRetry(args);
   assert(args.includes("--operator-authorized"), "CURRENT_QUALIFICATION_OPERATOR_AUTHORIZATION_REQUIRED");
   assert(args.includes("--execute") !== args.includes("--preflight-only"), "CURRENT_QUALIFICATION_SELECT_ONE_MODE");
   assert(args.every(x => ["--operator-authorized", "--execute", "--preflight-only", "--producer", "--timing", "--all"].includes(x)), "CURRENT_QUALIFICATION_UNKNOWN_ARGUMENT");
@@ -40,4 +48,4 @@ function main() {
   console.log(JSON.stringify({status: "ISOLATED_LOCAL_EXECUTION_COMPLETED_REQUIRES_EVIDENCE_ADJUDICATION", output: targets.out,
     qcp_blockers_closed: false, production_owner_activation: false, formal_v5_arm: false, a0_execution: false, o00_started: false}));
 }
-if (require.main === module) { try { main(); } catch (e) { console.error(JSON.stringify({status: "CURRENT_QUALIFICATION_BLOCKED", reason: e.message, qualification_pass: false})); process.exitCode = 1; } }
+if (require.main === module) { main().catch(e => { console.error(JSON.stringify({status: "CURRENT_QUALIFICATION_BLOCKED", reason: e.message, qualification_pass: false})); process.exitCode = 1; }); }
