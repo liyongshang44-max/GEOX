@@ -247,7 +247,7 @@ jobs:
 
       - name: Prove central QCP applicability semantics
         if: github.event_name == 'pull_request'
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs --replay-inherited-qcp
 
       - name: Generate central QCP successor applicability plan
         if: github.event_name == 'pull_request'
