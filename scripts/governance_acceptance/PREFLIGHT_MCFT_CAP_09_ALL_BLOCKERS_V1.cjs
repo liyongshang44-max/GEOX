@@ -188,6 +188,14 @@ function changedPaths(base, head) {
 }
 
 function runDiagnostic(command, extraEnv = {}) {
+  const cutoverManifest = path.join(ROOT, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json");
+  if (fs.existsSync(cutoverManifest) &&
+      cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim() !==
+      cp.execFileSync("git", ["rev-parse", "origin/main"], { cwd: ROOT, encoding: "utf8" }).trim()) {
+    const adopted = require("./REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs");
+    if (adopted.isAdoptedMainLegacyDiagnostic(command))
+      return adopted.runAdoptedMainLegacyDiagnostic(command, extraEnv);
+  }
   const stageVerifier = path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs");
   if (fs.existsSync(stageVerifier)) {
     const stage = require("./VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs");
