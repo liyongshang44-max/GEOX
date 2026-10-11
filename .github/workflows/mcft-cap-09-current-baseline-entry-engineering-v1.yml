@@ -36,5 +36,6 @@ jobs:
       - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs
         env:
           MCFT_CURRENT_ENTRY_COMPILE_TEST: '1'
+      - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_TEST_ONLY_BINDING_V1.cjs
       - run: node scripts/governance_acceptance/MCFT_CAP09_LOCAL_CUTOVER_WORKFLOW_GATE_V1.cjs --current-baseline-preparation
       - run: node scripts/governance_acceptance/MCFT_CAP09_LOCAL_CUTOVER_WORKFLOW_GATE_V1.cjs --current-baseline-successor
