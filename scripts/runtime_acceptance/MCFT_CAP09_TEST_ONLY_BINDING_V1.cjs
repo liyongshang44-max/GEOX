@@ -27,7 +27,8 @@ function canonicalFutureHour(value,nowMs){
   const parsed=Date.parse(value);
   assert(Number.isFinite(parsed)&&new Date(parsed).toISOString()===value&&value.endsWith(":00:00.000Z"),
     "TEST_ONLY_CANONICAL_FUTURE_BASE_REQUIRED");
-  assert(parsed>nowMs,"TEST_ONLY_FUTURE_BASE_REQUIRED");
+  assert(parsed>nowMs+6*3600_000,"TEST_ONLY_FUTURE_BASE_LEAD_GT_6H_REQUIRED");
+  assert(parsed<=nowMs+24*3600_000,"TEST_ONLY_FUTURE_BASE_WITHIN_24H_REQUIRED");
   return value;
 }
 function outsideRepo(root,value,label,pathApi){
