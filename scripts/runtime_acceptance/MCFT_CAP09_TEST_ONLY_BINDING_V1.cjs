@@ -22,10 +22,10 @@ function canonicalFutureHour(value,nowMs){
   assert(parsed>nowMs,"TEST_ONLY_FUTURE_BASE_REQUIRED");
   return value;
 }
-function outsideRepo(root,value,label){
-  assert(value&&path.isAbsolute(value),"TEST_ONLY_"+label+"_ABSOLUTE_REQUIRED");
-  const resolved=path.resolve(value),relative=path.relative(root,resolved);
-  assert(relative.startsWith(".."+path.sep),"TEST_ONLY_"+label+"_OUTSIDE_REPO_REQUIRED");
+function outsideRepo(root,value,label,pathApi){
+  assert(value&&pathApi.isAbsolute(value),"TEST_ONLY_"+label+"_ABSOLUTE_REQUIRED");
+  const resolved=pathApi.resolve(value),relative=pathApi.relative(root,resolved);
+  assert(relative.startsWith(".."+pathApi.sep),"TEST_ONLY_"+label+"_OUTSIDE_REPO_REQUIRED");
   assert(resolved.toLowerCase().includes(RUN_ID),"TEST_ONLY_"+label+"_RUN_ID_REQUIRED");
   return resolved;
 }
@@ -61,8 +61,9 @@ function validateBinding({env,context,root,nowMs=Date.now()}){
   assert(String(env.MCFT_CAP09_FORMAL_RAW_SECRET_ACCESS_KEY||"").length>=16,"TEST_ONLY_S3_SECRET_REQUIRED");
 
   const firstBase=canonicalFutureHour(env.MCFT_QUALIFICATION_FIRST_BASE,nowMs);
-  const out=outsideRepo(root,env.MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR,"OUTPUT");
-  const ledger=outsideRepo(root,env.MCFT_CAP09_TEST_ONLY_LEDGER_DIR,"LEDGER");
+  const pathApi=context.platform==="win32"?path.win32:path;
+  const out=outsideRepo(root,env.MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR,"OUTPUT",pathApi);
+  const ledger=outsideRepo(root,env.MCFT_CAP09_TEST_ONLY_LEDGER_DIR,"LEDGER",pathApi);
   assert.notEqual(out,ledger,"TEST_ONLY_OUTPUT_LEDGER_MUST_DIFFER");
 
   return {
