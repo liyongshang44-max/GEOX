@@ -1,0 +1,36 @@
+name: MCFT CAP-09 TEST_ONLY binding
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/MCFT_CAP09_TEST_ONLY_BINDING_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_TEST_ONLY_BINDING_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP09_TEST_ONLY_QUALIFICATION_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP09_TEST_ONLY_PRODUCER_C1F7DCC6D04D_V1.ts'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_TEST_ONLY_MINIO_POLICY_C1F7DCC6D04D_V1.json'
+      - '.github/workflows/mcft-cap09-test-only-binding-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  no-effect-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - run: pnpm install --frozen-lockfile
+      - run: node -c scripts/runtime_acceptance/MCFT_CAP09_TEST_ONLY_BINDING_V1.cjs
+      - run: node -c scripts/runtime_acceptance/RUN_MCFT_CAP09_TEST_ONLY_QUALIFICATION_V1.cjs
+      - run: node -c scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_TEST_ONLY_BINDING_V1.cjs
+      - run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_TEST_ONLY_BINDING_V1.cjs
