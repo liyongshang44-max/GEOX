@@ -4,13 +4,25 @@
 const assert=require("node:assert/strict"),fs=require("node:fs"),os=require("node:os"),path=require("node:path"),cp=require("node:child_process");
 const ROOT=path.resolve(__dirname,"../..");
 const BASE="0d62e7fa4f0905151b38c25964b48d672187e6d3";
+const CURRENT_BASE="5945e459edb212da39b9fe107f87cc07782dd93c";
+const PARSER_PATH="scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs";
 const MANIFEST="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json";
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const CHECK="LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY";
 function git(...args){return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8",timeout:120000,maxBuffer:16*1024*1024}).trim();}
+function historicalCheckout(checkout, ref=BASE){
+ cp.execFileSync("git",["clone","--shared","--no-checkout",ROOT,checkout],{stdio:"pipe",timeout:120000});
+ const run=(...args)=>cp.execFileSync("git",args,{cwd:checkout,stdio:"pipe",timeout:120000});
+ run("checkout","--detach",ref);
+ // Clone-local ref: historic verifiers retain their adopted-main context.
+ // Never change the caller's origin/main or replay old assertions on a new tree.
+ run("update-ref","refs/remotes/origin/main",BASE);
+}
 function verifyCandidateBoundary(){
  const head=git("rev-parse","HEAD"),main=git("rev-parse","origin/main");
- assert.equal(main,BASE,"HISTORY_MAIN_MOVED_REBIND_REQUIRED");
+ assert.equal(main,CURRENT_BASE,"HISTORY_MAIN_MOVED_REBIND_REQUIRED");
+ assert.equal(git("show","-s","--format=%P",main),BASE+" b6b444cb00b6f4db35e772cbbac72c44f6978e75","PARSER_SUCCESSOR_PARENTS_CHANGED");
+ assert.deepEqual(git("diff","--name-only",BASE,main).split(/\r?\n/),[PARSER_PATH],"PARSER_SUCCESSOR_SCOPE_CHANGED");
  assert.notEqual(head,main,"REQUIRES_DISTINCT_CANDIDATE_SUBJECT");
  assert.equal(git("merge-base",head,main),main,"EXACT_MAIN_ANCESTRY_REQUIRED");
  assert.deepEqual(git("status","--porcelain").split(/\r?\n/).filter(s=>s&&!s.startsWith("?? acceptance-output/")),[],"CANDIDATE_DIRTY");
@@ -37,7 +49,7 @@ function replayAdoptedHistoryForCutoverCandidate(){
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-cap09-historical-replay-"));
  const checkout=path.join(temp,"adopted-main");let attached=false;
  try{
-  git("worktree","add","--detach",checkout,main);attached=true;
+  historicalCheckout(checkout);attached=true;
   const child=cp.spawnSync(process.execPath,["-e",
    "const r=require('./scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs').replayHistoricalRegistration(); console.log(JSON.stringify(r));"],
    {cwd:checkout,encoding:"utf8",timeout:360000,maxBuffer:16*1024*1024,
@@ -49,10 +61,10 @@ function replayAdoptedHistoryForCutoverCandidate(){
   assert.equal(result.qcp_central_ownership_registered,true,"HISTORICAL_CENTRAL_OWNERSHIP_UNPROVEN");
   assert.equal(result.legacy_registry_boundary_preserved,true,"HISTORICAL_LEGACY_BOUNDARY_UNPROVEN");
   assert.equal(result.current_successor_inserted_into_legacy_registry,false,"HISTORICAL_SUCCESSOR_REGISTRY_SCOPE_CHANGED");
-  return {...result,status:"PASS",historical_subject_sha:main,candidate_subject_sha:head,
+  return {...result,status:"PASS",historical_subject_sha:BASE,candidate_base_sha:main,candidate_subject_sha:head,
    historical_replay_at_exact_main:true,changed_path_count:changed.length,
    adopted_history_not_rewritten:true,execute_authorized:false};
- }finally{if(attached)git("worktree","remove","--force",checkout);fs.rmSync(temp,{recursive:true,force:true});}
+ }finally{fs.rmSync(temp,{recursive:true,force:true});assert.equal(git("rev-parse","origin/main"),main,"LIVE_MAIN_REF_CHANGED");}
 }
 function runHistoricalDiagnosticForCutoverCandidate(command, extraEnv={}) {
  const crop=require("./VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs");
@@ -63,15 +75,15 @@ function runHistoricalDiagnosticForCutoverCandidate(command, extraEnv={}) {
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-cap09-historic-diagnostic-"));
  const checkout=path.join(temp,"historic");let attached=false;
  try {
-  git("worktree","add","--detach",checkout,historicalBase);attached=true;
+  historicalCheckout(checkout,historicalBase);attached=true;
   const out=cp.spawnSync(command,{cwd:checkout,encoding:"utf8",shell:true,
     timeout:240000,env:{...process.env,...extraEnv,MCFT_CAP09_ALL_BLOCKERS_CHILD:"1"}});
   return {status:out.status===0?"PASS":"FAIL",exit_code:out.status,signal:out.signal||null,
    stdout_tail:String(out.stdout||"").slice(-4000),stderr_tail:String(out.stderr||"").slice(-4000),
    historical_subject_sha:historicalBase,adopted_main_sha:main,candidate_proven:true};
  }finally{
-  if(attached)git("worktree","remove","--force",checkout);
   fs.rmSync(temp,{recursive:true,force:true});
+  assert.equal(git("rev-parse","origin/main"),main,"LIVE_MAIN_REF_CHANGED");
  }
 }
 const LEGACY_SUCCESSOR_CHECK_IDS=Object.freeze([
@@ -94,15 +106,15 @@ function runAdoptedMainLegacyDiagnostic(command,extraEnv={}) {
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-cap09-adopted-successor-diagnostic-"));
  const checkout=path.join(temp,"main");let attached=false;
  try {
-  git("worktree","add","--detach",checkout,main);attached=true;
+  historicalCheckout(checkout);attached=true;
   const out=cp.spawnSync(command,{cwd:checkout,encoding:"utf8",shell:true,timeout:360000,
     env:{...process.env,...extraEnv,MCFT_CAP09_ALL_BLOCKERS_CHILD:"1"}});
   return {status:out.status===0?"PASS":"FAIL",exit_code:out.status,signal:out.signal||null,
    stdout_tail:String(out.stdout||"").slice(-4000),stderr_tail:String(out.stderr||"").slice(-4000),
-   historical_subject_sha:main,candidate_subject_separate:true};
+   historical_subject_sha:BASE,candidate_base_sha:main,candidate_subject_separate:true};
  }finally{
-  if(attached)git("worktree","remove","--force",checkout);
   fs.rmSync(temp,{recursive:true,force:true});
+  assert.equal(git("rev-parse","origin/main"),main,"LIVE_MAIN_REF_CHANGED");
  }
 }
 
@@ -116,7 +128,7 @@ function runAdoptedMainWorkflowGate(mode) {
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-cap09-workflow-gate-"));
  const checkout=path.join(temp,"main");let attached=false;
  try {
-  git("worktree","add","--detach",checkout,main);attached=true;
+  historicalCheckout(checkout);attached=true;
   const historicalCrop="scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs";
   const mapped=mode==="--current-baseline-preparation"
     ? "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_BASELINE_PREPARATION_V1.cjs"
@@ -130,12 +142,12 @@ function runAdoptedMainWorkflowGate(mode) {
   assert.equal(result.error,undefined,"ADOPTED_GATE_SPAWN_ERROR:"+String(result.error));
   assert.equal(result.signal,null,"ADOPTED_GATE_SIGNAL:"+String(result.signal));
   assert.equal(result.status,0,"ADOPTED_GATE_FAILED:"+mode+":"+String(result.stderr||"").slice(-2000));
-  return {status:"PASS",stage:mode,historical_subject_sha:main,candidate_subject_sha:head,
+  return {status:"PASS",stage:mode,historical_subject_sha:BASE,candidate_base_sha:main,candidate_subject_sha:head,
    exact_scope_count:changed.length,adopted_gate_exit_code:result.status,
    issuer_trust_adopted:false,execute_authorized:false};
  }finally{
-  if(attached)git("worktree","remove","--force",checkout);
   fs.rmSync(temp,{recursive:true,force:true});
+  assert.equal(git("rev-parse","origin/main"),main,"LIVE_MAIN_REF_CHANGED");
  }
 }
 module.exports={verifyCandidateBoundary,replayAdoptedHistoryForCutoverCandidate,

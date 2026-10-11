@@ -1,6 +1,6 @@
 {
   "schema_version": "geox_mcft_cap09_local_cutover_exact_scope_candidate_v1",
-  "base_sha": "0d62e7fa4f0905151b38c25964b48d672187e6d3",
+  "base_sha": "5945e459edb212da39b9fe107f87cc07782dd93c",
   "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
   "execution_authorized": false,
   "governance_adopted": false,

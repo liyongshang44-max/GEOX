@@ -11,7 +11,10 @@ const REGISTRY_PATH = path.join(ROOT, 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUT
 const RESULT_PATH = path.join(ROOT, 'acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json');
 const MODE = process.argv[2] || '--selftest';
 
-function loadJson(filePath) { return JSON.parse(fs.readFileSync(filePath, 'utf8')); }
+// Strip one transport BOM for parsing only. Never normalize stored evidence,
+// raw repository text, blob IDs or byte-level evidence digests.
+function parseJsonDocument(text) { return JSON.parse(text.replace(/^\uFEFF/, '')); }
+function loadJson(filePath) { return parseJsonDocument(fs.readFileSync(filePath, 'utf8')); }
 function writeResult(value) {
   fs.mkdirSync(path.dirname(RESULT_PATH), { recursive: true });
   fs.writeFileSync(RESULT_PATH, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
@@ -171,7 +174,7 @@ async function readRepositoryFile(repository, filePath, ref, token) {
 async function readOptionalJson(repository, filePath, ref, token) {
   try {
     const file = await readRepositoryFile(repository, filePath, ref, token);
-    return { ...file, json: JSON.parse(file.text) };
+    return { ...file, json: parseJsonDocument(file.text) };
   } catch (error) {
     if (error && error.status === 404) return null;
     throw error;
@@ -237,6 +240,16 @@ async function waitForRequiredRuns(repository, pr, declaration, token) {
   throw new Error('REQUIRED_WORKFLOWS_NOT_COMPLETED');
 }
 function selftest() {
+  const original = '\uFEFF{\r\n  "status": "PASS", "execute_authorized": false\r\n}\r\n';
+  const bytes = Buffer.from(original, 'utf8');
+  const plain = { status: 'PASS', execute_authorized: false };
+  assert.deepEqual(parseJsonDocument(original), plain);
+  assert.deepEqual(parseJsonDocument(JSON.stringify(plain)), plain);
+  assert.deepEqual(Buffer.from(original, 'utf8'), bytes, 'PARSER_MUST_PRESERVE_ORIGINAL_BYTES');
+  assert.equal(parseJsonDocument('{"text":"\uFEFFinside"}').text, '\uFEFFinside');
+  for (const invalid of ['\uFEFF\uFEFF{}', '\uFEFF{', '\uFEFF', '{} trailing']) {
+    assert.throws(() => parseJsonDocument(invalid), SyntaxError, 'MALFORMED_JSON_MUST_STILL_FAIL');
+  }
   const { policy, registry, signalContract } = loadAuthorities();
   const cap07Status = 'docs/digital_twin/mcft/cap_07/GEOX-MCFT-CAP-07-CURRENT-AUTHORITY-V1.json';
   const body = `<!-- ${policy.candidate_declaration.marker}\ncapability_line=MCFT-CAP-07\nslice_id=MCFT-CAP-07.S0\nstatus_file=${cap07Status}\ncandidate_field=status\ncandidate_value=AUTHORIZATION_CANDIDATE_NOT_EFFECTIVE\nfocused_workflow=mcft-cap-07-s0-authorization\nstandard_workflow=ci\nsemantic_snapshot_files=${cap07Status}\nsemantic_snapshot_blobs=${'1'.repeat(40)}\ncandidate_head=${'2'.repeat(40)}\nbase_head=${'3'.repeat(40)}\n-->`;
@@ -317,7 +330,7 @@ async function enforce() {
   const declaredTransition = transitions.find((item) => item.file === declaration.status_file && item.field === declaration.candidate_field && same(item.head_value, declaration.candidate_value_parsed));
   if (!declaredTransition) throw new Error('DECLARATION_DOES_NOT_MATCH_REGISTERED_TRANSITION');
   const status = await readRepositoryFile(repository, declaration.status_file, pr.head.sha, token);
-  if (!same(getField(JSON.parse(status.text), declaration.candidate_field), declaration.candidate_value_parsed)) throw new Error('DECLARED_STATUS_FIELD_VALUE_MISMATCH');
+  if (!same(getField(parseJsonDocument(status.text), declaration.candidate_field), declaration.candidate_value_parsed)) throw new Error('DECLARED_STATUS_FIELD_VALUE_MISMATCH');
   for (let index = 0; index < declaration.semantic_files.length; index += 1) {
     const file = await readRepositoryFile(repository, declaration.semantic_files[index], pr.head.sha, token);
     if (file.blob_sha !== declaration.semantic_blobs[index]) throw new Error(`SEMANTIC_BLOB_MISMATCH:${declaration.semantic_files[index]}`);
