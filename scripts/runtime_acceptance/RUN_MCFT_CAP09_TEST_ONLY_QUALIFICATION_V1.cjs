@@ -4,7 +4,6 @@
 // It never consumes or mutates production retry trust/permits.
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process");
 const binding=require("./MCFT_CAP09_TEST_ONLY_BINDING_V1.cjs");
-const current=require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
 
 function parseArgs(args){
   assert(args.includes("--operator-authorized")&&args.includes("--test-only"),
@@ -19,21 +18,21 @@ function parseArgs(args){
 }
 function scientificSelftest(){
   const r=cp.spawnSync(process.env.MCFT_PYTHON_EXECUTABLE||"python",[
-    path.join(current.ROOT,"apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py"),"selftest"
-  ],{cwd:current.ROOT,stdio:"inherit",timeout:60000,windowsHide:true});
+    path.join(binding.ROOT,"apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py"),"selftest"
+  ],{cwd:binding.ROOT,stdio:"inherit",timeout:60000,windowsHide:true});
   assert.equal(r.status,0,"TEST_ONLY_SCIENTIFIC_SELFTEST_REQUIRED");
 }
 function runProducer(env){
   const file=path.join("scripts","runtime_acceptance","RUN_MCFT_CAP09_TEST_ONLY_PRODUCER_C1F7DCC6D04D_V1.ts");
   const r=cp.spawnSync(process.execPath,["--import","tsx",file],{
-    cwd:current.ROOT,env,stdio:"inherit",windowsHide:true
+    cwd:binding.ROOT,env,stdio:"inherit",windowsHide:true
   });
   assert.equal(r.status,0,"TEST_ONLY_PRODUCER_CHILD_FAILED");
 }
 async function main(args=process.argv.slice(2)){
   const options=parseArgs(args);
-  const context=current.sourceContext();
-  const targets=binding.validateBinding({env:process.env,context,root:current.ROOT});
+  const context=binding.sourceContext();
+  const targets=binding.validateBinding({env:process.env,context,root:binding.ROOT});
 
   // Dependency check is deliberately before the attempt-burn. It performs no
   // Provider/DB/S3 operation and prevents a missing local dependency from
