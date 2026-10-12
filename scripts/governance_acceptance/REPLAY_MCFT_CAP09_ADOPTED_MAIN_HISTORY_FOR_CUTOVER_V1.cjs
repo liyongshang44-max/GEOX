@@ -33,13 +33,13 @@ function verifyCandidateBoundary(){
  const candidateHead=adopted?ADOPTED_LOCAL_CUTOVER_SUBJECT:currentHead;
  assert.equal(git("show","-s","--format=%P",CURRENT_BASE),
    BASE+" b6b444cb00b6f4db35e772cbbac72c44f6978e75","PARSER_SUCCESSOR_PARENTS_CHANGED");
- assert.deepEqual(git("diff","--name-only",BASE,CURRENT_BASE).split(/\\r?\\n/),
+ assert.deepEqual(git("diff","--name-only",BASE,CURRENT_BASE).split(/\r?\n/),
    [PARSER_PATH],"PARSER_SUCCESSOR_SCOPE_CHANGED");
  assert.notEqual(candidateHead,CURRENT_BASE,"REQUIRES_DISTINCT_CANDIDATE_SUBJECT");
  assert.equal(isAncestor(CURRENT_BASE,candidateHead),true,"ORIGINAL_CANDIDATE_BASE_ANCESTRY_REQUIRED");
  assert.equal(isAncestor(candidateHead,currentHead),true,"FROZEN_CANDIDATE_NOT_ANCESTOR_OF_HEAD");
  assert.equal(isAncestor(candidateHead,currentMain),true,"FROZEN_CANDIDATE_NOT_ADOPTED_MAIN_ANCESTOR");
- assert.deepEqual(git("status","--porcelain").split(/\\r?\\n/)
+ assert.deepEqual(git("status","--porcelain").split(/\r?\n/)
     .filter(v=>v&&!v.startsWith("?? acceptance-output/")),[],"CANDIDATE_DIRTY");
  const manifest=JSON.parse(git("show",candidateHead+":"+MANIFEST));
  assert.equal(manifest.base_sha,CURRENT_BASE,"ORIGINAL_CANDIDATE_BASE_BINDING_MISMATCH");
@@ -49,7 +49,7 @@ function verifyCandidateBoundary(){
  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(ROOT,MANIFEST),"utf8")),
    manifest,"ORIGINAL_CANDIDATE_MANIFEST_MUTATED");
  const changed=git("diff","--name-only",CURRENT_BASE,candidateHead)
-   .split(/\\r?\\n/).filter(Boolean).sort();
+   .split(/\r?\n/).filter(Boolean).sort();
  assert.deepEqual(changed,manifest.paths,"UNREGISTERED_CANDIDATE_DELTA_FORBIDDEN");
  const prior=JSON.parse(git("show",CURRENT_BASE+":"+QCP));
  const candidate=JSON.parse(git("show",candidateHead+":"+QCP));
