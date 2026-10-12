@@ -29,7 +29,9 @@ const bridge=fs.readFileSync(path.join(root,"scripts/governance_acceptance/MCFT_
 const host=fs.readFileSync(path.join(root,"scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs"),"utf8");
 pass(()=>assert(bridge.includes("assertDedicatedPgEndpoint(arm.run_id,resource);")));
 pass(()=>assert(host.includes("assertDedicatedPgUrl(valid.arm.run_id,env[key],name);")));
-pass(()=>assert(!bridge.includes("database_port===55432")&&!host.includes('u.port,"55432"')));
+pass(()=>assert(bridge.includes('if(arm.run_id==="800c023cf337") assertDedicatedPgEndpoint(arm.run_id,resource);')));
+pass(()=>assert(bridge.includes('else assert(resource && resource.database_host==="127.0.0.1"&&resource.database_port===55432,"LOCAL_DB_REQUIRED");')));
+pass(()=>assert(!host.includes('u.port,"55432"')));
 const trust=JSON.parse(fs.readFileSync(path.join(root,"scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json"),"utf8"));
 pass(()=>assert.equal(trust.execution_enabled,false));
 pass(()=>assert.equal(trust.adopted,false));
