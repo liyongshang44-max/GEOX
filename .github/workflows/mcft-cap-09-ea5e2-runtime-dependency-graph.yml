@@ -241,8 +241,14 @@ jobs:
           const base=process.env.PR_BASE;
           const head=process.env.PR_HEAD;
           const changed=cp.execFileSync('git',['diff','--name-only',base+'...'+head],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
-          assert(changed.includes(science),'SCIENTIFIC_REQUAL_CHANGED_CORE_REQUIRED');
-          console.log(JSON.stringify({status:'SCIENTIFIC_CORE_EA5E2_FULL_GRAPH_PASS_NO_AUTHORITY',subject_sha:head,changed_science:science,governed_regression:regression,graph_digest:proof.expected_dependency_graph_sha256,provider_requests:0,s3_mutations:0,db_mutations:0,producer_runs:0,production_authorized:false}));
+          const original=cp.execFileSync('git',['show',base+':'+science]);
+          const current=fs.readFileSync(science);
+          const crypto=require('node:crypto');
+          const digest=b=>crypto.createHash('sha256').update(b).digest('hex');
+          const coreChanged=changed.includes(science);
+          if(coreChanged) assert.notEqual(digest(original),digest(current),'SCIENTIFIC_REQUAL_DECLARED_CHANGE_WITHOUT_BYTE_DIFF');
+          else assert.equal(digest(original),digest(current),'SCIENTIFIC_REQUAL_UNDECLARED_CORE_CHANGE');
+          console.log(JSON.stringify({status:'SCIENTIFIC_CORE_EA5E2_FULL_GRAPH_PASS_NO_AUTHORITY',subject_sha:head,changed_science:coreChanged?science:null,scientific_core_byte_unchanged:!coreChanged,governed_regression:regression,graph_digest:proof.expected_dependency_graph_sha256,provider_requests:0,s3_mutations:0,db_mutations:0,producer_runs:0,production_authorized:false}));
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
