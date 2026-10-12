@@ -1,3 +1,9 @@
+# 2026-10-12 old shared instance pg_controldata identity witness
+
+Operator executed Docker read-only pg_controldata under postgres OS user on historical shared container mcftcap09requal72dc0304a21a-postgres-1. Exit code 0; Database system identifier = 7694946540638810151. Dedicated instance previous system identifier = 7695721255092854818. Thus current PostgreSQL cluster identities differ; the old data directory is readable. Historic receipt ROLE_PRIVILEGE_READBACK_MISMATCH lacks contemporaneous container/system-ID linkage; historical failure attribution remains UNPROVEN. No authority: execution_authorized=false; production_authorized=false. Next locate original execution path and dated logs/receipts without mutation.
+
+---
+
 # 2026-10-12 FINAL INDEPENDENT REVIEW — historical FAIL provenance remains unbound; EXECUTE HOLD
 
 - Fixed isolation run: `800c023cf337`; preserve the failed old shared instance and the qualified dedicated instance separately. No new provisioning, no Producer, no authorization. `execution_authorized=false`, `production_authorized=false`.
