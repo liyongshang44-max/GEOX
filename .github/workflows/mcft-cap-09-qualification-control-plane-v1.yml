@@ -631,19 +631,24 @@ jobs:
               if (!governedRequalificationBases.has(snapshot.base_sha)) {
                 const expected = new Map([
                   ['PHASE2_EVIDENCE_PROVIDER_MODULES_REQUAL_49115588_SCIENCE_FIX_V1',
-                   '.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml'],
+                   {path:'.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml',run_id:38192933253}],
                   ['PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_49115588_SCIENCE_FIX_V1',
-                   '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'],
+                   {path:'.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml',run_id:38192933309}],
                 ]);
                 const adopted = '3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358';
                 const subject = '4911558874297afc81d10bf3051ff4f1a8f6fabd';
                 if (snapshot.base_sha === adopted &&
                     snapshot.head_sha === subject &&
                     entry.subject_sha === subject &&
-                    expected.get(entry.evidence_id) === entry.workflow_path &&
+                    expected.get(entry.evidence_id)?.path === entry.workflow_path &&
+                    expected.get(entry.evidence_id)?.run_id === entry.run_id &&
+                    snapshot.base_sha === adopted &&
                     run.head_sha === subject &&
-                    liveRunAssociatedBases.length === 1 &&
-                    liveRunAssociatedBases[0] === adopted) {
+                    // GitHub Actions may expose no PR associations for a successful PR run.
+                    // This exception is limited to the two SHA/run/workflow-bound
+                    // immutable snapshots above. A present divergent base still fails.
+                    (liveRunAssociatedBases.length === 0 ||
+                     (liveRunAssociatedBases.length === 1 && liveRunAssociatedBases[0] === adopted))) {
                   const boundary = require(require('node:path').resolve(process.cwd(), 'scripts/governance_acceptance/REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs'))
                     .verifyAdoptedLocalCutoverScopeDiagnostic();
                   if (boundary.status !== 'PASS' ||
