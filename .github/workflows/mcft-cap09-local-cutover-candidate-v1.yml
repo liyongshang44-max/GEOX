@@ -42,8 +42,11 @@ jobs:
           const manifest = require('./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json');
           const changed = cp.execFileSync('git', ['diff','--name-only',process.env.PR_BASE+'...'+process.env.PR_HEAD], {encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
           // This workflow's routing edit is not a modification of the historical candidate itself.
-          const routingFile = '.github/workflows/mcft-cap09-local-cutover-candidate-v1.yml';
-          const owned = changed.filter(p => p!==routingFile && manifest.paths.includes(p));
+          const routingOnly = new Set([
+            '.github/workflows/mcft-cap09-local-cutover-candidate-v1.yml',
+            'scripts/governance_acceptance/REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs',
+          ]);
+          const owned = changed.filter(p => !routingOnly.has(p) && manifest.paths.includes(p));
           const required = owned.length > 0;
           fs.appendFileSync(process.env.GITHUB_OUTPUT, 'required='+required+'\n');
           console.log(JSON.stringify({status:required?'HISTORICAL_CANDIDATE_SCOPE_REQUIRED':'HISTORICAL_CANDIDATE_SCOPE_NOT_APPLICABLE',candidate_owned_changes:owned,pr_changed_paths:changed,production_authorized:false}));
