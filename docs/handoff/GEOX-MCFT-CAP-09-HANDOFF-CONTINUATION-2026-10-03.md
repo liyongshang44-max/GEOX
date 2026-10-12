@@ -1,3 +1,13 @@
+# 2026-10-13 — historical failed-resource provenance: script/preflight concordance
+
+- Offline review of original local artifacts for run `800c023cf337`: `MCFT-CAP09-800c023cf337-PG-PROVISION-V2.ps1` SHA256 `4fb0ea0b4511d1904f6f437c9c9f48c298e0516adbdd6c699f6b95411cca6734`; `preflight.json` SHA256 `da2b7fdc02d6a5144ed1f6f377ba5369c7d19ecb55d27fd66f8ac710420a769f`.
+- The script defaults `$Pg` to historical shared Docker container `mcftcap09requal72dc0304a21a-postgres-1`, runs database commands through `docker exec -i $Pg psql -U qual_admin`, defines four run-scoped login roles and two DBs, explicitly throws `ROLE_PRIVILEGE_READBACK_MISMATCH`, and writes catch output to `postgres-provision-failure-v1.json`.
+- Existing raw historical failure receipt at that name (SHA256 `047661125d271447905ef7984d6acdd0f4f1b8417d688c1f81624853fcb682de`) identifies exact run/roles/DBs/error; earlier preflight explicitly identifies same historical shared container and network. Current old PG system ID is `7694946540638810151`, and dedicated PG system ID is `7695721255092854818`.
+- This establishes strong source/preflight/error/receipt concordance. It is not a verified contemporaneous launch-command trace: script parameter `-Pg` can override default. Attribution status `STRONGLY_CORROBORATED_INVOCATION_OVERRIDE_UNVERIFIED`; no claim of cryptographically definitive old-resource binding. Only remaining historical discriminator is a contemporaneous command/terminal transcript or runtime container-id witness confirming no override. Do not infer retroactive proof from today's Docker inventory.
+- `FAIL_CLOSED_EXECUTE_HOLD`; execution_authorized=false; production_authorized=false. No mutations or Producer execution.
+
+---
+
 # 2026-10-12 old shared instance pg_controldata identity witness
 
 Operator executed Docker read-only pg_controldata under postgres OS user on historical shared container mcftcap09requal72dc0304a21a-postgres-1. Exit code 0; Database system identifier = 7694946540638810151. Dedicated instance previous system identifier = 7695721255092854818. Thus current PostgreSQL cluster identities differ; the old data directory is readable. Historic receipt ROLE_PRIVILEGE_READBACK_MISMATCH lacks contemporaneous container/system-ID linkage; historical failure attribution remains UNPROVEN. No authority: execution_authorized=false; production_authorized=false. Next locate original execution path and dated logs/receipts without mutation.
