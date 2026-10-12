@@ -1,3 +1,11 @@
+# 2026-10-13 — formal PR #3700 review discovered missed dedicated PG regression
+
+On prior head c8b11c1eed6fa9f6ce8d9ae0c49867fedcf16fb5 all 28 completed applicable GitHub checks succeeded (Producer live skipped), but independent code review inspection of the PR diff caught a previously UNEXECUTED negative regression: `ACCEPTANCE_MCFT_CAP09_DEDICATED_PG_ENDPOINT_V1.cjs` asserted bridge never contained `database_port===55432`, yet bridge preserves exactly that legacy synthetic branch for non-800c run IDs. Green CI was insufficient because new test was not wired. Review #5494150417 documents issue. GitHub rejected the author's REQUEST_CHANGES review (`Review Can not request changes on your own pull request`), and COMMENT was recorded; no independent APPROVED review exists.
+
+Targeted fix to contradictory test commit 9530f7e53cff46988ecc458680f18d129eac0e34 now asserts exact 800c dedicated guard AND inherited synthetic branch, still requiring host URL guard on dedicated port. Workflow commit 5387f74de6541565aa8db022726aa0341a862bb8 wires test into Local Cutover checks; this is latest PR head. New workflow runs #38285379348 Local Cutover, #38285379228 QCP, #38285379161 EA5E2, #38285379534 CI were QUEUED at checkpoint, no PASS claim. Main not changed; PR #3700 Open Ready for Review Unmerged, reviewer approval pending. Therefore main post-merge QCP/Formal Readiness NOT YET checked, TEST_ONLY issuer registry not enabled and no permit issued. `FAIL_CLOSED_EXECUTE_HOLD`, execution_authorized=false, production_authorized=false.
+
+---
+
 # 2026-10-13 — current-main exact Phase2 evidence qualification candidate, NOT YET adopted
 
 In Draft PR #3700, fixed target `800c023cf337` and exact protected-main predecessor `adfaf9fdbd2c75923fb298e26b5d5d106a0fc61a`. Fresh Phase2 Actions run `38281449457`, workflow number `546`, job `114919428739`, at source subject `9e4e8132628f2581cbac025f81f7342027660631` completed SUCCESS (original qualification logs PASS, governed base `adfaf9...`); original ZIP artifact ID `11761517036` is separately reported and *not* promoted to a claimed artifact digest. Phase2 EXACT_PATH_SET has 23 members and current dependency digest `sha256:d53545afb8deac0c0f232774c82f4f0ce4269ee26a7f3f7286e50e39d4e9ff5d`; old Phase2 evidence has different dependency digests and is not rewritten or automatically inherited.
