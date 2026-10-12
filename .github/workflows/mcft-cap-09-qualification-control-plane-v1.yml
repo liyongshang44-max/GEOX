@@ -644,7 +644,7 @@ jobs:
                     run.head_sha === subject &&
                     liveRunAssociatedBases.length === 1 &&
                     liveRunAssociatedBases[0] === adopted) {
-                  const boundary = require('./scripts/governance_acceptance/REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs')
+                  const boundary = require(require('node:path').resolve(process.cwd(), 'scripts/governance_acceptance/REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs'))
                     .verifyAdoptedLocalCutoverScopeDiagnostic();
                   if (boundary.status !== 'PASS' ||
                       boundary.historical_candidate_subject_sha !== adopted ||
