@@ -2642,7 +2642,7 @@
         "dependency_digest": "sha256:fc699c5b66a74fc5d293e6eb85f066a7a677c0e7baf7ade17b8abbf944871cfc",
         "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
-        "immutable_binding_sha256": "sha256:d1aab5d7a7ba5a0fbf4704b93c858295e098fe0084711947afd01a8129d5da3d"
+        "immutable_binding_sha256": "d1aab5d7a7ba5a0fbf4704b93c858295e098fe0084711947afd01a8129d5da3d"
       },
       {
         "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_49115588_SCIENCE_FIX_V1",
@@ -2662,7 +2662,7 @@
         "dependency_digest": "sha256:4427600dc96d14be1526eb86dc55676dfc005799dbec4cce5ef3430d08c725a3",
         "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
-        "immutable_binding_sha256": "sha256:78f81543523c83494b32e5d3432dea203e19f1374a977449e97669b4efb7b325"
+        "immutable_binding_sha256": "78f81543523c83494b32e5d3432dea203e19f1374a977449e97669b4efb7b325"
       }
     ],
     "durable_anchors": {
