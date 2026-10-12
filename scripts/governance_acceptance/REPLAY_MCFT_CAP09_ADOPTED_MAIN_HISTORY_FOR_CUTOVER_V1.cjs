@@ -171,6 +171,15 @@ function runAdoptedMainWorkflowGate(mode) {
   assert.equal(git("rev-parse","origin/main"),main,"LIVE_MAIN_REF_CHANGED");
  }
 }
-module.exports={verifyCandidateBoundary,replayAdoptedHistoryForCutoverCandidate,
+function verifyAdoptedLocalCutoverScopeDiagnostic() {
+ const proof=verifyCandidateBoundary();
+ return {status:"PASS",reason_code:"HISTORICAL_3692_EXACT_SCOPE_VERIFIED_AT_ADOPTED_SUBJECT",
+  historical_candidate_subject_sha:proof.head,
+  historical_candidate_base_sha:proof.candidate_base_sha,
+  adopted_main_sha:proof.main,changed_path_count:proof.changed.length,
+  production_authorized:false,execute_authorized:false,
+  historical_manifest_mutated:false};
+}
+module.exports={verifyCandidateBoundary,replayAdoptedHistoryForCutoverCandidate,verifyAdoptedLocalCutoverScopeDiagnostic,
  runHistoricalDiagnosticForCutoverCandidate,isAdoptedMainLegacyDiagnostic,runAdoptedMainLegacyDiagnostic,runAdoptedMainWorkflowGate};
 if(require.main===module){try{console.log(JSON.stringify(replayAdoptedHistoryForCutoverCandidate()));}catch(e){console.error(e.stack||String(e));process.exitCode=1;}}
