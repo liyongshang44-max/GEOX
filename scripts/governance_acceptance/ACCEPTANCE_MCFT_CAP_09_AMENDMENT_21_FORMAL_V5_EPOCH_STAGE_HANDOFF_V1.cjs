@@ -172,12 +172,22 @@ const r6ManifestSuccessorMode=
   manifestBaseBlob===R6_MANIFEST_PREDECESSOR_BLOB &&
   manifestHeadBlob===R6_MANIFEST_SUCCESSOR_BLOB;
 
+const ADOPTED_R6_SUBJECT="ba9a14bc08610beda54d4c482c2cf919bd6ced82";
+const ADOPTED_R6_PARENT="53a28bc4f77499687d6a3e1988845bba6384c790";
+const adoptedR6PostMergeMode = !baseEnv &&
+  manifestHeadBlob === R6_MANIFEST_SUCCESSOR_BLOB &&
+  cp.spawnSync("git", ["merge-base","--is-ancestor",ADOPTED_R6_SUBJECT,head], {cwd:ROOT,stdio:"ignore"}).status === 0;
+if (adoptedR6PostMergeMode) {
+  assert.equal(git("rev-parse",ADOPTED_R6_SUBJECT+"^"),ADOPTED_R6_PARENT,"AM21_R6_PARENT_CHANGED");
+  assert.equal(git("rev-parse",ADOPTED_R6_PARENT+":"+FORMAL_V5_MANIFEST),R6_MANIFEST_PREDECESSOR_BLOB,"AM21_R6_PREDECESSOR_CHANGED");
+  assert.equal(git("rev-parse",ADOPTED_R6_SUBJECT+":"+FORMAL_V5_MANIFEST),R6_MANIFEST_SUCCESSOR_BLOB,"AM21_R6_SUCCESSOR_CHANGED");
+}
 if(r6ManifestSuccessorMode){
   const changed=git("diff","--name-only",baseEnv+"..."+head).split(/\r?\n/).filter(Boolean).sort();
   assert.deepEqual(changed,R6_SUCCESSOR_EXACT_FILES,"AM21_R6_SUCCESSOR_EXACT_BOUNDARY_REQUIRED");
   assert.equal(git("rev-parse","HEAD:"+R6_ACCEPTANCE).length,40,"AM21_R6_ACCEPTANCE_BLOB_REQUIRED");
   assert.equal(git("rev-parse","HEAD:"+R6_WORKFLOW).length,40,"AM21_R6_WORKFLOW_BLOB_REQUIRED");
-}else{
+}else if(!adoptedR6PostMergeMode){
   assert.equal(
     manifestHeadBlob,
     manifestBaseBlob,
