@@ -624,8 +624,38 @@ jobs:
                   .filter(Boolean)
               )];
 
+              // Narrow proof-bound successor admission for the 2026-10-12 scientific fix only.
+              // The adopted #3692 merge is NOT added to the historical global allowlist.
+              // Reject any mismatched ID, workflow, subject, base or frozen ancestry.
+              let exact3692ScienceAdmission = false;
               if (!governedRequalificationBases.has(snapshot.base_sha)) {
-                throw new Error(`REQUALIFICATION_SNAPSHOT_BASE_UNGOVERNED:${entry.evidence_id}:${snapshot.base_sha}`);
+                const expected = new Map([
+                  ['PHASE2_EVIDENCE_PROVIDER_MODULES_REQUAL_49115588_SCIENCE_FIX_V1',
+                   '.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml'],
+                  ['PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_49115588_SCIENCE_FIX_V1',
+                   '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'],
+                ]);
+                const adopted = '3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358';
+                const subject = '4911558874297afc81d10bf3051ff4f1a8f6fabd';
+                if (snapshot.base_sha === adopted &&
+                    snapshot.head_sha === subject &&
+                    entry.subject_sha === subject &&
+                    expected.get(entry.evidence_id) === entry.workflow_path &&
+                    run.head_sha === subject &&
+                    liveRunAssociatedBases.length === 1 &&
+                    liveRunAssociatedBases[0] === adopted) {
+                  const boundary = require('./scripts/governance_acceptance/REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs')
+                    .verifyAdoptedLocalCutoverScopeDiagnostic();
+                  if (boundary.status !== 'PASS' ||
+                      boundary.historical_candidate_subject_sha !== adopted ||
+                      boundary.historical_candidate_base_sha !== '5945e459edb212da39b9fe107f87cc07782dd93c' ||
+                      boundary.production_authorized !== false) {
+                    throw new Error(`SCIENCE_REQUALIFICATION_HISTORICAL_ADMISSION_INVALID:${entry.evidence_id}`);
+                  }
+                  exact3692ScienceAdmission = true;
+                } else {
+                  throw new Error(`REQUALIFICATION_SNAPSHOT_BASE_UNGOVERNED:${entry.evidence_id}:${snapshot.base_sha}`);
+                }
               }
 
               const liveRunAssociationMatchesSnapshot =
@@ -647,7 +677,7 @@ jobs:
                 non_authoritative_run_associated_bases:liveRunAssociatedBases,
                 run_conclusion:run.conclusion, head_sha:run.head_sha,
                 base_sha:runBaseSha, workflow_name:run.name, workflow_path:run.path, event:run.event,
-                durable_anchor_resolved:true,
+                durable_anchor_resolved:true, exact_3692_science_admission:exact3692ScienceAdmission,
               });
             }
 
