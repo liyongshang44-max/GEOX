@@ -1013,6 +1013,20 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
   }
   const anchors = new Map((section.durable_anchors?.entries || []).map((row) => [row.evidence_id, row]));
   const candidates = (section.entries || []).filter((entry) => entry.check_id === decision.check_id);
+  // Specific post-#3692 adopted-main successor: prove immutable ancestry and
+  // historical exact candidate scope. Do not extend the generic predecessor
+  // allowlist or rebind any older successful workflow run.
+  let adopted3692ProofValid = false;
+  if (candidates.some((entry) => anchors.get(entry.evidence_id)?.run_snapshot?.base_sha === "3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358")) {
+    try {
+      const proof = require("./REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs")
+        .verifyAdoptedLocalCutoverScopeDiagnostic();
+      adopted3692ProofValid = proof.status === "PASS"
+        && proof.historical_candidate_subject_sha === "3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358"
+        && proof.historical_candidate_base_sha === "5945e459edb212da39b9fe107f87cc07782dd93c"
+        && isAncestor("3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358", head);
+    } catch { adopted3692ProofValid = false; }
+  }
   const adjudications = candidates.map((entry) => {
     const anchor = anchors.get(entry.evidence_id);
     const snapshot = anchor?.run_snapshot || null;
@@ -1030,7 +1044,8 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
       anchor_present: Boolean(anchor),
       anchor_run_match: anchor?.run_id === entry.run_id,
       anchor_head_match: snapshot?.head_sha === entry.subject_sha,
-      anchor_base_match: governedPredecessorSet.has(snapshot?.base_sha),
+      anchor_base_match: governedPredecessorSet.has(snapshot?.base_sha)
+        || (snapshot?.base_sha === "3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358" && adopted3692ProofValid),
       anchor_event_match: snapshot?.event === "pull_request",
       anchor_workflow_path_match: snapshot?.workflow_path === entry.workflow_path,
       anchor_workflow_name_match: snapshot?.workflow_name === entry.workflow_name,
