@@ -29,8 +29,31 @@ jobs:
         run: |
           echo "MCFT_CUTOVER_HEAD_TREE=$(git rev-parse 'HEAD^{tree}')"
           echo "MCFT_CUTOVER_HEAD=$(git rev-parse HEAD)"
+      - name: Classify historical cutover-candidate applicability
+        id: candidate-scope
+        shell: bash
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs'), cp = require('node:child_process');
+          const manifest = require('./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json');
+          const changed = cp.execFileSync('git', ['diff','--name-only',process.env.PR_BASE+'...'+process.env.PR_HEAD], {encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
+          // This workflow's routing edit is not a modification of the historical candidate itself.
+          const routingFile = '.github/workflows/mcft-cap09-local-cutover-candidate-v1.yml';
+          const owned = changed.filter(p => p!==routingFile && manifest.paths.includes(p));
+          const required = owned.length > 0;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'required='+required+'\n');
+          console.log(JSON.stringify({status:required?'HISTORICAL_CANDIDATE_SCOPE_REQUIRED':'HISTORICAL_CANDIDATE_SCOPE_NOT_APPLICABLE',candidate_owned_changes:owned,pr_changed_paths:changed,production_authorized:false}));
+          NODE
       - name: Exact local cutover candidate diff scope (not adoption)
+        if: steps.candidate-scope.outputs.required == 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_LOCAL_CUTOVER_EXACT_SCOPE_V1.cjs
+      - name: Historical candidate scope excluded from unrelated scientific repair
+        if: steps.candidate-scope.outputs.required == 'false'
+        run: echo HISTORICAL_CANDIDATE_NOT_APPLICABLE_NO_AUTHORITY_EFFECT
       - name: Pure evidence-driven readiness tests (cannot authorize execute)
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_ISOLATED_EVIDENCE_DRIVEN_CLOCK_V1.cjs
       - name: Pure retry admission and immutable evidence-negative gates
