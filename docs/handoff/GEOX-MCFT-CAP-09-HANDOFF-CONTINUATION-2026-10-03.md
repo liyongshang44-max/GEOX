@@ -1,3 +1,11 @@
+# 2026-10-13 — historical Actions PR-association empty array confirmed and narrow verifier fix
+
+Operator queried original GitHub REST workflow run `38192933253`: event=pull_request, head_sha=4911558874297afc81d10bf3051ff4f1a8f6fabd, pull_requests=[]. This resolves the earlier unknown: the REST association is genuinely empty, not one base. Original job log captured event PR base 3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358 and governed_base_sha matching; durable requalification snapshots for exact run IDs 38192933253 (Phase2) and 38192933309 (Phase3) record the same base and exact workflow/head. PR #3692 merge equals the frozen base. Historical verifier previously demanded exactly one REST association and rejected this valid empty result.
+
+Dedicated engineering Draft PR #3700 commit `9e4e8132628f2581cbac025f81f7342027660631` modifies only its QCP workflow's narrowly constrained historical science admission: expected evidence IDs must match exact workflow paths and exact run IDs, snapshot and live run exact head plus snapshot base must equal the adopted #3692 merge, historical replay proof must PASS, and REST associated bases may be either empty or exactly one matching adopted base; any mismatched/multiple bases still denied. Does NOT change shared global allowlist, historical immutable evidence, science kernel, accepted graph digest, or actual production/auth flags. CI/QCP were running after commit, no PASS claim without actual completion. Run 800c023cf337 remains `FAIL_CLOSED_EXECUTE_HOLD`, execution_authorized=false, production_authorized=false. Main unchanged; #3700 Draft/Unmerged, second Handoff #3298 Draft/Unmerged.
+
+---
+
 # 2026-10-13 — EA5E2 graph rebind passed; original science run event-base verified; REST association remains unknown
 
 In Draft PR #3700, changed only generated EA5E2 digest carrier from sha256:554bf1270b9a81ff056a1bfac73375a988ed169b16c262c53bdbeb59fc747154 to exact expected digest sha256:209abfbd63f5d7ea9ca6666742bd30c3f9ea061b964c6f3055dd9c47cda11f70, as computed and recorded by previous live GitHub Actions graph run. Commit a23a350ff72158ec675d3dc312868ca3a912c939. Recheck run 38281047578 EA5E2 runtime-dependency-graph completed SUCCESS. No science-core changes, no graph checks removed.
