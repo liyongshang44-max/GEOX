@@ -1,3 +1,14 @@
+# 2026-10-13 — PowerShell launch-command provenance review, preservation-first
+
+- Owner requested inspection of contemporaneous PowerShell command history and terminal transcript for actual invocation of `MCFT-CAP09-800c023cf337-PG-PROVISION-V2.ps1` and possible `-Pg` override. Review of *available uploaded evidence* and repository Handoff found source/default-container concordance, **but no contemporaneous full PowerShell invocation or transcript proving whether `-Pg` was overridden**. The user's local PSReadLine history and terminal scrollback are not accessible via GitHub/ChatGPT and have not yet been examined; **do not mark history check PASS**.
+- Original V2 script SHA256 `4fb0ea0b4511d1904f6f437c9c9f48c298e0516adbdd6c699f6b95411cca6734`, default `mcftcap09requal72dc0304a21a-postgres-1`; original preflight `da2b7fdc02d6a5144ed1f6f377ba5369c7d19ecb55d27fd66f8ac710420a769f` names shared container and network; original failure receipt SHA256 `047661125d271447905ef7984d6acdd0f4f1b8417d688c1f81624853fcb682de` records `ROLE_PRIVILEGE_READBACK_MISMATCH`. These establish `STRONGLY_CORROBORATED_INVOCATION_OVERRIDE_UNVERIFIED`, not cryptographic proof of launch target.
+- Old shared instance still independently observed: container `12414c279fb4069b07687469b5aa78b8b49da054bb4730ca6f0b06a8d1b68a01`, PG system identifier `7694946540638810151`, distinct dedicated PG system identifier `7695721255092854818`; startup logs show `01-create-identities.sh` created six roles/two databases on 2026-10-10. The script's named identities are the six GEOX runtime roles, not `800c` application login roles; don't mistake initialization for later failed provisioning.
+- The original PSReadLine history should be inspected *read-only*, with sensitive command arguments redacted, plus PowerShell transcript files only if present. Prove both invocation date/source and any actual `-Pg` override, not merely absence in incomplete history. If no contemporaneous witness is recoverable, retain `UNPROVEN` for definitive attribution.
+- Next operator-local task is a read-only history scan; no PostgreSQL/Docker/server mutation, no bootstrap rerun, no Producer. `execution_authorized=false`, `production_authorized=false`, `FAIL_CLOSED_EXECUTE_HOLD`.
+- Second Active Continuation Handoff only; keep PR #3298 Draft/Open/Unmerged, preserve prior entries.
+
+---
+
 # 2026-10-13 — historical failed-resource provenance: script/preflight concordance
 
 - Offline review of original local artifacts for run `800c023cf337`: `MCFT-CAP09-800c023cf337-PG-PROVISION-V2.ps1` SHA256 `4fb0ea0b4511d1904f6f437c9c9f48c298e0516adbdd6c699f6b95411cca6734`; `preflight.json` SHA256 `da2b7fdc02d6a5144ed1f6f377ba5369c7d19ecb55d27fd66f8ac710420a769f`.
