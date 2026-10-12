@@ -1,3 +1,11 @@
+# 2026-10-13 — verified PowerShell history target line
+
+Read-only operator scan of PSReadLine ConsoleHost_history.txt: latest whole-file SHA256 b1a44983ebfaee92fde0094bead9d4c48d626b6f13c4b018ec99ac30a9a7239f; 210193 lines. Earlier full-file hash changed as additional history accrued, but line 209496 retained its original SHA256 f9a1d27c596806794c94301e52910c12893c918b6f353410c5da19d1dc5f8a31 (ORIGINAL_COMMAND_UNCHANGED_PASS). This line contains V2 provisioning script mention, is classified as an invocation, has no literal -Pg argument under the scan regex, and does not end with backtick continuation. Neighbouring lines 209495 and 209498 classify as invocations but contents have not been examined. The scan does not exclude splatting or indirect arguments, and the actual invocation target cannot yet be conclusively confirmed. Historical attribution remains strongly corroborated but not definitively proven.
+
+Historical supporting evidence: V2 default shared PG container mcftcap09requal72dc0304a21a-postgres-1, preflight same container, historical original failure ROLE_PRIVILEGE_READBACK_MISMATCH, old PG system identifier 7694946540638810151 distinct from dedicated 7695721255092854818. Retain FAIL_CLOSED_EXECUTE_HOLD, execution_authorized=false, production_authorized=false. No resource mutations; this is a continuation of the same second Handoff, draft PR #3298.
+
+---
+
 # 2026-10-13 — PowerShell launch-command provenance review, preservation-first
 
 - Owner requested inspection of contemporaneous PowerShell command history and terminal transcript for actual invocation of `MCFT-CAP09-800c023cf337-PG-PROVISION-V2.ps1` and possible `-Pg` override. Review of *available uploaded evidence* and repository Handoff found source/default-container concordance, **but no contemporaneous full PowerShell invocation or transcript proving whether `-Pg` was overridden**. The user's local PSReadLine history and terminal scrollback are not accessible via GitHub/ChatGPT and have not yet been examined; **do not mark history check PASS**.
