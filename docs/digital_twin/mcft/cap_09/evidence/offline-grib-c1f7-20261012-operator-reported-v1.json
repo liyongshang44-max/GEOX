@@ -1,0 +1,75 @@
+{
+  "schema_version": "geox_mcft_cap09_retained_gfs_offline_regression_operator_report_v1",
+  "evidence_status": "FROZEN_OPERATOR_REPORTED_MACHINE_OUTPUT_NOT_INDEPENDENT_HOST_ATTESTATION",
+  "subject_sha": "6ec440ca0b55aac7cb92a843be019bc32abdcc6d",
+  "reported_fix_pr": 3697,
+  "run_id": "c1f7dcc6d04d",
+  "original_execution_subject_sha": "3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358",
+  "source": {
+    "s3_bucket": "mcft-cap09-requal-c1f7dcc6d04d",
+    "object_key": "mcft-cap09-formal-raw-v1/sha256/0cd08bd2cd6f4c92d86ab5133f1c6cd1a04c2474e63d4bbed9619f639594830c",
+    "sha256": "0cd08bd2cd6f4c92d86ab5133f1c6cd1a04c2474e63d4bbed9619f639594830c",
+    "bytes": 226674176,
+    "selected_cycle": "2026-10-11T18:00:00Z",
+    "target": "2026-10-12T09:00:00Z",
+    "manifest_member_count": 220,
+    "archive_member_count": 221
+  },
+  "operator_supplied_host_regression_result": {
+    "status": "PASS",
+    "run_id": "c1f7dcc6d04d",
+    "source_sha256": "0cd08bd2cd6f4c92d86ab5133f1c6cd1a04c2474e63d4bbed9619f639594830c",
+    "pgrb2_files": 73,
+    "sflux_files": 73,
+    "decoder_exit_code": 0,
+    "provider_requests": 0,
+    "s3_mutations": 0,
+    "db_mutations": 0,
+    "point_counts": [
+      72,
+      72
+    ]
+  },
+  "operator_supplied_selftest_results": {
+    "scientific_core": {
+      "status": "PASS",
+      "future_et0_points": 72,
+      "weather_points": 72,
+      "provider_request_count": 0,
+      "database_write_count": 0,
+      "twin_state_mutation": false
+    },
+    "product_decoder": {
+      "status": "PASS",
+      "draft_count": 2,
+      "weather_point_count": 72,
+      "et0_point_count": 72,
+      "runtime_tick_cursor_mutation": false
+    }
+  },
+  "provenance_limitations": [
+    "This freezes data supplied in conversation by the Windows operator; the original machine result JSON bytes and file SHA256 have not yet been collected into a signed attestation.",
+    "The retained 226MB source object was not transferred to GitHub; its independently computed local SHA256 was reported by the operator.",
+    "The original TEST_ONLY run c1f7dcc6d04d failed at Python CFFI tempfile decoding and single_attempt_burned remains true.",
+    "This evidence record authorizes no new Provider call, Producer run, retry trust, QCP adoption, Formal ARM, A0, O00, production startup, or Product publication."
+  ],
+  "qualification_gates": {
+    "ea5e2_runtime_dependency_graph_ci": {
+      "status": "PASS",
+      "run_id": 38191071532,
+      "commit_sha": "85d1dbcb92e8f2436ea10a7771023e6bc02e10c0",
+      "full_science_job": "scientific-core-requalification"
+    },
+    "historic_local_cutover_ci": {
+      "status": "PASS",
+      "run_id": 38191071452,
+      "commit_sha": "85d1dbcb92e8f2436ea10a7771023e6bc02e10c0"
+    },
+    "qualification_control_plane": {
+      "status": "PENDING_AT_EVIDENCE_FREEZE",
+      "run_id": 38191071320
+    }
+  },
+  "production_authorized": false,
+  "new_test_only_execution_authorized": false
+}
