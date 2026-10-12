@@ -43,6 +43,7 @@ const STATIC=[LIVE,PHASE6,SELF,STATIC_WF,
  "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts",
  "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py",
  "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py",
+ "apps/server/src/external_evidence/provider/python/mcft_cap09_offline_retained_gfs_regression_v1.py",
  "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py",
  "package.json","pnpm-lock.yaml","pnpm-workspace.yaml","apps/server/package.json"];
 const MUST=[

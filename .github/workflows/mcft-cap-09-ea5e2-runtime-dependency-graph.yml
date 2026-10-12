@@ -206,3 +206,51 @@ jobs:
           path: acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json
           if-no-files-found: error
           retention-days: 7
+
+  scientific-core-requalification:
+    # Separate engineering qualification from Phase6-retired GitHub production routing.
+    # No Provider/S3/DB/Producer calls; no authority or retry permit is issued.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact scientific candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Generate full EA5E2 runtime dependency graph
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
+      - name: Assert changed scientific core is in full governed graph
+        shell: node {0}
+        run: |
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+          const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json','utf8'));
+          assert.equal(proof.status,'PASS','SCIENTIFIC_REQUAL_EA5E2_FULL_GRAPH_REQUIRED');
+          assert.equal(proof.phase6_retirement_authority_active,true,'SCIENTIFIC_REQUAL_PHASE6_BOUNDARY_REQUIRED');
+          assert.equal(proof.phase6_live_manual_dispatch_forbidden,true,'SCIENTIFIC_REQUAL_LIVE_DISPATCH_FORBIDDEN');
+          const science='apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py';
+          const regression='apps/server/src/external_evidence/provider/python/mcft_cap09_offline_retained_gfs_regression_v1.py';
+          assert(proof.runtime_dependency_graph_paths.includes(science),'SCIENTIFIC_REQUAL_CORE_NOT_GOVERNED');
+          assert(proof.runtime_dependency_graph_paths.includes(regression),'SCIENTIFIC_REQUAL_REAL_TAR_TEST_NOT_GOVERNED');
+          const base=process.env.PR_BASE;
+          const head=process.env.PR_HEAD;
+          const changed=cp.execFileSync('git',['diff','--name-only',base+'...'+head],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
+          assert(changed.includes(science),'SCIENTIFIC_REQUAL_CHANGED_CORE_REQUIRED');
+          console.log(JSON.stringify({status:'SCIENTIFIC_CORE_EA5E2_FULL_GRAPH_PASS_NO_AUTHORITY',subject_sha:head,changed_science:science,governed_regression:regression,graph_digest:proof.expected_dependency_graph_sha256,provider_requests:0,s3_mutations:0,db_mutations:0,producer_runs:0,production_authorized:false}));
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+      - name: Upload independent scientific requalification proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-science-full-ea5e2-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json
+          if-no-files-found: warn
+          retention-days: 90

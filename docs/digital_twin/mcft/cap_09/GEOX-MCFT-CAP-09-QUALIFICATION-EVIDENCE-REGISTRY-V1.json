@@ -2623,6 +2623,46 @@
         "artifact_absence_reason": "RUN_LEVEL_EXACT_CURRENT_MAIN_REQUALIFICATION_PR_CARRIER_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "450fd3ff58188cef4f6f0a6b5cb70fb2d088f54f88014dbef461fc599480353b"
+      },
+      {
+        "evidence_id": "PHASE2_EVIDENCE_PROVIDER_MODULES_REQUAL_49115588_SCIENCE_FIX_V1",
+        "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "grib-compat-scientific-requalification-20261012",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "4911558874297afc81d10bf3051ff4f1a8f6fabd",
+        "workflow_name": "mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor",
+        "workflow_path": ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+        "run_id": 38192933253,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "4911558874297afc81d10bf3051ff4f1a8f6fabd",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:fc699c5b66a74fc5d293e6eb85f066a7a677c0e7baf7ade17b8abbf944871cfc",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "d1aab5d7a7ba5a0fbf4704b93c858295e098fe0084711947afd01a8129d5da3d"
+      },
+      {
+        "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_49115588_SCIENCE_FIX_V1",
+        "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "grib-compat-scientific-requalification-20261012",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "4911558874297afc81d10bf3051ff4f1a8f6fabd",
+        "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+        "run_id": 38192933309,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "4911558874297afc81d10bf3051ff4f1a8f6fabd",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:4427600dc96d14be1526eb86dc55676dfc005799dbec4cce5ef3430d08c725a3",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "78f81543523c83494b32e5d3432dea203e19f1374a977449e97669b4efb7b325"
       }
     ],
     "durable_anchors": {
@@ -4263,6 +4303,34 @@
             "base_sha": "cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4",
             "created_at": "2026-10-05T09:13:30Z",
             "updated_at": "2026-10-05T09:13:45Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE2_EVIDENCE_PROVIDER_MODULES_REQUAL_49115588_SCIENCE_FIX_V1",
+          "run_id": 38192933253,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 539,
+            "workflow_path": ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+            "workflow_name": "mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor",
+            "head_sha": "4911558874297afc81d10bf3051ff4f1a8f6fabd",
+            "base_sha": "3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358",
+            "created_at": "2026-10-12T01:42:34Z",
+            "updated_at": "2026-10-12T01:43:51Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_49115588_SCIENCE_FIX_V1",
+          "run_id": 38192933309,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 954,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+            "head_sha": "4911558874297afc81d10bf3051ff4f1a8f6fabd",
+            "base_sha": "3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358",
+            "created_at": "2026-10-12T01:42:34Z",
+            "updated_at": "2026-10-12T01:44:04Z"
           }
         }
       ],

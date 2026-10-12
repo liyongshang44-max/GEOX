@@ -29,8 +29,12 @@ jobs:
         run: |
           echo "MCFT_CUTOVER_HEAD_TREE=$(git rev-parse 'HEAD^{tree}')"
           echo "MCFT_CUTOVER_HEAD=$(git rev-parse HEAD)"
-      - name: Exact local cutover candidate diff scope (not adoption)
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_LOCAL_CUTOVER_EXACT_SCOPE_V1.cjs
+      - name: Verify immutable #3692 adopted candidate scope
+        # The 2026-10-11 exact candidate was already adopted as 3857b91b.
+        # Subsequent PRs must verify that exact historical subject, not compare
+        # their unrelated HEAD deltas with the frozen #3692 manifest.
+        run: >-
+          node -e "const p=require('./scripts/governance_acceptance/REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs').verifyAdoptedLocalCutoverScopeDiagnostic();if(p.status!=='PASS')process.exit(1);console.log(JSON.stringify(p));"
       - name: Pure evidence-driven readiness tests (cannot authorize execute)
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_ISOLATED_EVIDENCE_DRIVEN_CLOCK_V1.cjs
       - name: Pure retry admission and immutable evidence-negative gates
