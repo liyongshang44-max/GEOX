@@ -6,7 +6,6 @@ import hashlib
 import json
 import math
 import sys
-import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -16,8 +15,8 @@ from eccodes import (
     codes_get,
     codes_get_array,
     codes_get_message,
+    codes_new_from_message,
     codes_grib_find_nearest,
-    codes_grib_new_from_file,
     codes_release,
 )
 
@@ -98,60 +97,72 @@ def pgrb2_role_v1(short: str, name: str, level_type: str, level: float) -> str |
     return None
 
 
+def grib_messages_v1(body: bytes):
+    """Yield complete GRIB2 messages; do not pass tempfile wrappers into CFFI."""
+    offset = 0
+    while offset < len(body):
+        require_v1(body[offset:offset + 4] == b"GRIB",
+                   f"MCFT_CAP09_GFS_GRIB_MESSAGE_HEADER_INVALID:OFFSET={offset}")
+        require_v1(offset + 16 <= len(body), "MCFT_CAP09_GFS_GRIB_MESSAGE_TRUNCATED_HEADER")
+        require_v1(body[offset + 7] == 2, "MCFT_CAP09_GFS_GRIB2_EDITION_REQUIRED")
+        length = int.from_bytes(body[offset + 8:offset + 16], "big")
+        require_v1(length >= 20 and offset + length <= len(body),
+                   "MCFT_CAP09_GFS_GRIB_MESSAGE_LENGTH_INVALID")
+        message = body[offset:offset + length]
+        require_v1(message[-4:] == b"7777", "MCFT_CAP09_GFS_GRIB_MESSAGE_TERMINATOR_INVALID")
+        yield message
+        offset += length
+
+
 def decode_pgrb2_v1(body: bytes, cycle: datetime, lead: int, authority: GfsScientificAuthorityV1) -> list[dict]:
     require_v1(cycle.tzinfo is not None, "MCFT_CAP09_GFS_PGRB2_CYCLE_TZ_REQUIRED")
     require_v1(body.startswith(b"GRIB"), f"MCFT_CAP09_GFS_PGRB2_NOT_GRIB:F{lead:03d}")
     cycle = cycle.astimezone(timezone.utc)
     records: list[dict] = []
-    with tempfile.TemporaryFile() as handle:
-        handle.write(body)
-        handle.seek(0)
-        while True:
-            gid = codes_grib_new_from_file(handle)
-            if gid is None:
-                break
-            try:
-                role = pgrb2_role_v1(
-                    str(codes_get(gid, "shortName")),
-                    str(codes_get(gid, "name")),
-                    str(codes_get(gid, "typeOfLevel")),
-                    float(codes_get(gid, "level")),
-                )
-                if role is None:
-                    continue
-                step_type = str(codes_get(gid, "stepType"))
-                start_step = int(codes_get(gid, "startStep"))
-                end_step = int(codes_get(gid, "endStep"))
-                data_dt = dt_keys_v1(codes_get(gid, "dataDate"), codes_get(gid, "dataTime"))
-                valid_dt = dt_keys_v1(codes_get(gid, "validityDate"), codes_get(gid, "validityTime"))
-                values = codes_get_array(gid, "values")
-                lats = codes_get_array(gid, "latitudes")
-                lons = codes_get_array(gid, "longitudes")
-                require_v1(len(values) == 1 and len(lats) == 1 and len(lons) == 1, f"MCFT_CAP09_GFS_PGRB2_POINT_COUNT:{role}:F{lead:03d}")
-                require_v1(
-                    abs(float(lats[0]) - authority.pgrb2_grid_latitude) < 1e-6
-                    and abs(normalize_lon_v1(float(lons[0])) - authority.pgrb2_grid_longitude_native) < 1e-6,
-                    f"MCFT_CAP09_GFS_PGRB2_GRID_NODE_DRIFT:{role}:F{lead:03d}",
-                )
-                require_v1(
-                    data_dt == cycle and valid_dt == cycle + timedelta(hours=lead) and end_step == lead,
-                    f"MCFT_CAP09_GFS_PGRB2_CHRONOLOGY_DRIFT:{role}:F{lead:03d}",
-                )
-                value = float(values[0])
-                require_v1(math.isfinite(value), f"MCFT_CAP09_GFS_PGRB2_NONFINITE:{role}:F{lead:03d}")
-                records.append(
-                    {
-                        "role": role,
-                        "step_type": step_type,
-                        "start_step": start_step,
-                        "end_step": end_step,
-                        "units": str(codes_get(gid, "units")),
-                        "value": value,
-                        "section4": sha256_bytes_v1(grib_section_v1(bytes(codes_get_message(gid)), 4)),
-                    }
-                )
-            finally:
-                codes_release(gid)
+    for message in grib_messages_v1(body):
+        gid = codes_new_from_message(message)
+        try:
+            role = pgrb2_role_v1(
+                str(codes_get(gid, "shortName")),
+                str(codes_get(gid, "name")),
+                str(codes_get(gid, "typeOfLevel")),
+                float(codes_get(gid, "level")),
+            )
+            if role is None:
+                continue
+            step_type = str(codes_get(gid, "stepType"))
+            start_step = int(codes_get(gid, "startStep"))
+            end_step = int(codes_get(gid, "endStep"))
+            data_dt = dt_keys_v1(codes_get(gid, "dataDate"), codes_get(gid, "dataTime"))
+            valid_dt = dt_keys_v1(codes_get(gid, "validityDate"), codes_get(gid, "validityTime"))
+            values = codes_get_array(gid, "values")
+            lats = codes_get_array(gid, "latitudes")
+            lons = codes_get_array(gid, "longitudes")
+            require_v1(len(values) == 1 and len(lats) == 1 and len(lons) == 1, f"MCFT_CAP09_GFS_PGRB2_POINT_COUNT:{role}:F{lead:03d}")
+            require_v1(
+                abs(float(lats[0]) - authority.pgrb2_grid_latitude) < 1e-6
+                and abs(normalize_lon_v1(float(lons[0])) - authority.pgrb2_grid_longitude_native) < 1e-6,
+                f"MCFT_CAP09_GFS_PGRB2_GRID_NODE_DRIFT:{role}:F{lead:03d}",
+            )
+            require_v1(
+                data_dt == cycle and valid_dt == cycle + timedelta(hours=lead) and end_step == lead,
+                f"MCFT_CAP09_GFS_PGRB2_CHRONOLOGY_DRIFT:{role}:F{lead:03d}",
+            )
+            value = float(values[0])
+            require_v1(math.isfinite(value), f"MCFT_CAP09_GFS_PGRB2_NONFINITE:{role}:F{lead:03d}")
+            records.append(
+                {
+                    "role": role,
+                    "step_type": step_type,
+                    "start_step": start_step,
+                    "end_step": end_step,
+                    "units": str(codes_get(gid, "units")),
+                    "value": value,
+                    "section4": sha256_bytes_v1(grib_section_v1(bytes(codes_get_message(gid)), 4)),
+                }
+            )
+        finally:
+            codes_release(gid)
     return records
 
 
@@ -191,50 +202,49 @@ def apcp_v1(records: list[dict], lead: int) -> tuple[dict, int]:
 def decode_sflux_v1(message: bytes, cycle: datetime, lead: int, authority: GfsScientificAuthorityV1) -> dict:
     require_v1(cycle.tzinfo is not None, "MCFT_CAP09_GFS_SFLUX_CYCLE_TZ_REQUIRED")
     cycle = cycle.astimezone(timezone.utc)
-    with tempfile.TemporaryFile() as handle:
-        handle.write(message)
-        handle.seek(0)
-        gid = codes_grib_new_from_file(handle)
-        require_v1(gid is not None, f"MCFT_CAP09_GFS_SFLUX_GRIB_REQUIRED:F{lead:03d}")
-        try:
-            discipline = int(codes_get(gid, "discipline"))
-            category = int(codes_get(gid, "parameterCategory"))
-            number = int(codes_get(gid, "parameterNumber"))
-            require_v1(discipline == 0 and category == 4 and number in (7, 192), f"MCFT_CAP09_GFS_SFLUX_PARAMETER_DRIFT:F{lead:03d}")
-            require_v1(
-                str(codes_get(gid, "typeOfLevel")).lower() == "surface"
-                and str(codes_get(gid, "stepType")).lower() == "instant",
-                f"MCFT_CAP09_GFS_SFLUX_STEP_DRIFT:F{lead:03d}",
-            )
-            require_v1(
-                int(codes_get(gid, "forecastTime")) == lead and int(codes_get(gid, "endStep")) == lead,
-                f"MCFT_CAP09_GFS_SFLUX_LEAD_DRIFT:F{lead:03d}",
-            )
-            data_dt = dt_keys_v1(codes_get(gid, "dataDate"), codes_get(gid, "dataTime"))
-            valid_dt = dt_keys_v1(codes_get(gid, "validityDate"), codes_get(gid, "validityTime"))
-            require_v1(data_dt == cycle and valid_dt == cycle + timedelta(hours=lead), f"MCFT_CAP09_GFS_SFLUX_TIME_DRIFT:F{lead:03d}")
-            nearest = codes_grib_find_nearest(gid, authority.station_latitude, authority.station_longitude)[0]
-            require_v1(int(nearest.index) == authority.solar_native_index, f"MCFT_CAP09_GFS_SFLUX_NATIVE_INDEX_DRIFT:F{lead:03d}:{int(nearest.index)}")
-            require_v1(abs(float(nearest.lat) - authority.solar_native_latitude) < 1e-8, f"MCFT_CAP09_GFS_SFLUX_NATIVE_LAT_DRIFT:F{lead:03d}")
-            signed = ((float(nearest.lon) % 360) + 540) % 360 - 180
-            require_v1(abs(signed - authority.solar_native_longitude_signed) < 1e-8, f"MCFT_CAP09_GFS_SFLUX_NATIVE_LON_DRIFT:F{lead:03d}")
-            value = float(nearest.value)
-            require_v1(math.isfinite(value) and value >= 0, f"MCFT_CAP09_GFS_SFLUX_VALUE_INVALID:F{lead:03d}")
-            require_v1(
-                str(codes_get(gid, "gridType")) == "regular_gg"
-                and int(codes_get(gid, "N")) == 768
-                and int(codes_get(gid, "numberOfDataPoints")) == 4718592,
-                f"MCFT_CAP09_GFS_SFLUX_GRID_DEFINITION_DRIFT:F{lead:03d}",
-            )
-            return {
-                "value": value,
-                "param_number": number,
-                "param_id": int(codes_get(gid, "paramId")),
-                "short_name": str(codes_get(gid, "shortName")),
-                "native_index": int(nearest.index),
-            }
-        finally:
-            codes_release(gid)
+    messages = list(grib_messages_v1(message))
+    require_v1(len(messages) == 1, f"MCFT_CAP09_GFS_SFLUX_MESSAGE_COUNT_INVALID:F{lead:03d}")
+    gid = codes_new_from_message(messages[0])
+    require_v1(gid is not None, f"MCFT_CAP09_GFS_SFLUX_GRIB_REQUIRED:F{lead:03d}")
+    try:
+        discipline = int(codes_get(gid, "discipline"))
+        category = int(codes_get(gid, "parameterCategory"))
+        number = int(codes_get(gid, "parameterNumber"))
+        require_v1(discipline == 0 and category == 4 and number in (7, 192), f"MCFT_CAP09_GFS_SFLUX_PARAMETER_DRIFT:F{lead:03d}")
+        require_v1(
+            str(codes_get(gid, "typeOfLevel")).lower() == "surface"
+            and str(codes_get(gid, "stepType")).lower() == "instant",
+            f"MCFT_CAP09_GFS_SFLUX_STEP_DRIFT:F{lead:03d}",
+        )
+        require_v1(
+            int(codes_get(gid, "forecastTime")) == lead and int(codes_get(gid, "endStep")) == lead,
+            f"MCFT_CAP09_GFS_SFLUX_LEAD_DRIFT:F{lead:03d}",
+        )
+        data_dt = dt_keys_v1(codes_get(gid, "dataDate"), codes_get(gid, "dataTime"))
+        valid_dt = dt_keys_v1(codes_get(gid, "validityDate"), codes_get(gid, "validityTime"))
+        require_v1(data_dt == cycle and valid_dt == cycle + timedelta(hours=lead), f"MCFT_CAP09_GFS_SFLUX_TIME_DRIFT:F{lead:03d}")
+        nearest = codes_grib_find_nearest(gid, authority.station_latitude, authority.station_longitude)[0]
+        require_v1(int(nearest.index) == authority.solar_native_index, f"MCFT_CAP09_GFS_SFLUX_NATIVE_INDEX_DRIFT:F{lead:03d}:{int(nearest.index)}")
+        require_v1(abs(float(nearest.lat) - authority.solar_native_latitude) < 1e-8, f"MCFT_CAP09_GFS_SFLUX_NATIVE_LAT_DRIFT:F{lead:03d}")
+        signed = ((float(nearest.lon) % 360) + 540) % 360 - 180
+        require_v1(abs(signed - authority.solar_native_longitude_signed) < 1e-8, f"MCFT_CAP09_GFS_SFLUX_NATIVE_LON_DRIFT:F{lead:03d}")
+        value = float(nearest.value)
+        require_v1(math.isfinite(value) and value >= 0, f"MCFT_CAP09_GFS_SFLUX_VALUE_INVALID:F{lead:03d}")
+        require_v1(
+            str(codes_get(gid, "gridType")) == "regular_gg"
+            and int(codes_get(gid, "N")) == 768
+            and int(codes_get(gid, "numberOfDataPoints")) == 4718592,
+            f"MCFT_CAP09_GFS_SFLUX_GRID_DEFINITION_DRIFT:F{lead:03d}",
+        )
+        return {
+            "value": value,
+            "param_number": number,
+            "param_id": int(codes_get(gid, "paramId")),
+            "short_name": str(codes_get(gid, "shortName")),
+            "native_index": int(nearest.index),
+        }
+    finally:
+        codes_release(gid)
 
 
 def compute_asce_short_hourly_et0_v1(
