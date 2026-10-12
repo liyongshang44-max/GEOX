@@ -18,22 +18,41 @@ function historicalCheckout(checkout, ref=BASE){
  // Never change the caller's origin/main or replay old assertions on a new tree.
  run("update-ref","refs/remotes/origin/main",BASE);
 }
+const ADOPTED_LOCAL_CUTOVER_SUBJECT="3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358";
+function isAncestor(ancestor, descendant) {
+ return cp.spawnSync("git",["merge-base","--is-ancestor",ancestor,descendant],{cwd:ROOT}).status===0;
+}
 function verifyCandidateBoundary(){
- const head=git("rev-parse","HEAD"),main=git("rev-parse","origin/main");
- assert.equal(main,CURRENT_BASE,"HISTORY_MAIN_MOVED_REBIND_REQUIRED");
- assert.equal(git("show","-s","--format=%P",main),BASE+" b6b444cb00b6f4db35e772cbbac72c44f6978e75","PARSER_SUCCESSOR_PARENTS_CHANGED");
- assert.deepEqual(git("diff","--name-only",BASE,main).split(/\r?\n/),[PARSER_PATH],"PARSER_SUCCESSOR_SCOPE_CHANGED");
- assert.notEqual(head,main,"REQUIRES_DISTINCT_CANDIDATE_SUBJECT");
- assert.equal(git("merge-base",head,main),main,"EXACT_MAIN_ANCESTRY_REQUIRED");
- assert.deepEqual(git("status","--porcelain").split(/\r?\n/).filter(s=>s&&!s.startsWith("?? acceptance-output/")),[],"CANDIDATE_DIRTY");
- const manifest=JSON.parse(fs.readFileSync(path.join(ROOT,MANIFEST),"utf8"));
- assert.equal(manifest.base_sha,main,"CANDIDATE_BASE_BINDING_MISMATCH");
+ const currentHead=git("rev-parse","HEAD"),currentMain=git("rev-parse","origin/main");
+ // The original candidate lives at the 2026-10-11 #3692 adoption commit.
+ // Never reinterpret a later scientific fix as part of the historical candidate.
+ const adopted=isAncestor(ADOPTED_LOCAL_CUTOVER_SUBJECT,currentMain);
+ if(!adopted){
+  assert.equal(currentMain,CURRENT_BASE,"HISTORY_MAIN_MOVED_REBIND_REQUIRED");
+ }
+ const candidateHead=adopted?ADOPTED_LOCAL_CUTOVER_SUBJECT:currentHead;
+ assert.equal(git("show","-s","--format=%P",CURRENT_BASE),
+   BASE+" b6b444cb00b6f4db35e772cbbac72c44f6978e75","PARSER_SUCCESSOR_PARENTS_CHANGED");
+ assert.deepEqual(git("diff","--name-only",BASE,CURRENT_BASE).split(/\\r?\\n/),
+   [PARSER_PATH],"PARSER_SUCCESSOR_SCOPE_CHANGED");
+ assert.notEqual(candidateHead,CURRENT_BASE,"REQUIRES_DISTINCT_CANDIDATE_SUBJECT");
+ assert.equal(isAncestor(CURRENT_BASE,candidateHead),true,"ORIGINAL_CANDIDATE_BASE_ANCESTRY_REQUIRED");
+ assert.equal(isAncestor(candidateHead,currentHead),true,"FROZEN_CANDIDATE_NOT_ANCESTOR_OF_HEAD");
+ assert.equal(isAncestor(candidateHead,currentMain),true,"FROZEN_CANDIDATE_NOT_ADOPTED_MAIN_ANCESTOR");
+ assert.deepEqual(git("status","--porcelain").split(/\\r?\\n/)
+    .filter(v=>v&&!v.startsWith("?? acceptance-output/")),[],"CANDIDATE_DIRTY");
+ const manifest=JSON.parse(git("show",candidateHead+":"+MANIFEST));
+ assert.equal(manifest.base_sha,CURRENT_BASE,"ORIGINAL_CANDIDATE_BASE_BINDING_MISMATCH");
  assert.equal(manifest.governance_adopted,false,"CANDIDATE_SELF_ADOPTION_FORBIDDEN");
  assert.equal(manifest.execution_authorized,false,"CANDIDATE_EFFECT_FORBIDDEN");
- const changed=git("diff","--name-only",main,head).split(/\r?\n/).filter(Boolean).sort();
+ // The later workspace may not silently rewrite the historical #3692 manifest.
+ assert.deepEqual(JSON.parse(fs.readFileSync(path.join(ROOT,MANIFEST),"utf8")),
+   manifest,"ORIGINAL_CANDIDATE_MANIFEST_MUTATED");
+ const changed=git("diff","--name-only",CURRENT_BASE,candidateHead)
+   .split(/\\r?\\n/).filter(Boolean).sort();
  assert.deepEqual(changed,manifest.paths,"UNREGISTERED_CANDIDATE_DELTA_FORBIDDEN");
- const prior=JSON.parse(git("show",main+":"+QCP));
- const candidate=JSON.parse(fs.readFileSync(path.join(ROOT,QCP),"utf8"));
+ const prior=JSON.parse(git("show",CURRENT_BASE+":"+QCP));
+ const candidate=JSON.parse(git("show",candidateHead+":"+QCP));
  assert.equal(prior.checks.length,52,"HISTORICAL_QCP_COUNT_CHANGED");
  assert.equal(candidate.checks.length,53,"SUCCESSOR_CHECK_COUNT_CHANGED");
  assert.deepEqual(candidate.checks.slice(0,52),prior.checks,"HISTORICAL_CHECKS_MUTATED");
@@ -42,8 +61,10 @@ function verifyCandidateBoundary(){
  assert.deepEqual(candidate.dependency_resolvers[rid],{kind:"EXACT_PATH_SET",paths:manifest.paths},"EXACT_RESOLVER_MISMATCH");
  const stripped=structuredClone(candidate);stripped.checks.pop();delete stripped.dependency_resolvers[rid];
  assert.deepEqual(stripped,prior,"HISTORICAL_QCP_DIFF_NOT_APPEND_ONLY");
- return {head,main,changed};
+ return {head:candidateHead,main:currentMain,candidate_base_sha:CURRENT_BASE,changed,
+   historical_candidate_adopted:adopted};
 }
+
 function replayAdoptedHistoryForCutoverCandidate(){
  const {head,main,changed}=verifyCandidateBoundary();
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-cap09-historical-replay-"));
