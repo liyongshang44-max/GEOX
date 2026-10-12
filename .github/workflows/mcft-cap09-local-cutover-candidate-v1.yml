@@ -39,6 +39,8 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_ISOLATED_EVIDENCE_DRIVEN_CLOCK_V1.cjs
       - name: Pure retry admission and immutable evidence-negative gates
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_ISOLATED_RETRY_ADMISSION_BRIDGE_V1.cjs
+      - name: Dedicated PostgreSQL endpoint exact-run regression (no execution)
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DEDICATED_PG_ENDPOINT_V1.cjs
       - name: Synthetic single-use attempt and immutable receipt negative tests
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_WINDOWS_IMMUTABLE_ATTEMPT_JOURNAL_V1.cjs
       - name: Retry dispatch guard cannot fall through legacy authorization
