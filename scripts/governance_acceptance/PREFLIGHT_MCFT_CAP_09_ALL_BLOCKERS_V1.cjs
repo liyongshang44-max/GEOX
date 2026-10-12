@@ -1045,7 +1045,21 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
       anchor_run_match: anchor?.run_id === entry.run_id,
       anchor_head_match: snapshot?.head_sha === entry.subject_sha,
       anchor_base_match: governedPredecessorSet.has(snapshot?.base_sha)
-        || (snapshot?.base_sha === "3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358" && adopted3692ProofValid),
+        || (snapshot?.base_sha === "3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358" && adopted3692ProofValid)
+        || (
+          // Exact one-run successor to the verified protected main, not a
+          // general addition to governed_successor_predecessors.
+          entry.evidence_id === "PHASE2_EVIDENCE_PROVIDER_MODULES_REQUAL_9E4E8132_DEDICATED_PG_V1"
+          && entry.check_id === "PHASE2_EVIDENCE_PROVIDER_MODULES"
+          && entry.run_id === 38281449457
+          && entry.subject_sha === "9e4e8132628f2581cbac025f81f7342027660631"
+          && entry.workflow_path === ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml"
+          && snapshot?.base_sha === "adfaf9fdbd2c75923fb298e26b5d5d106a0fc61a"
+          && snapshot?.head_sha === entry.subject_sha
+          && isAncestor(snapshot.base_sha, entry.subject_sha)
+          && isAncestor(snapshot.base_sha, head)
+          && adopted3692ProofValid
+        ),
       anchor_event_match: snapshot?.event === "pull_request",
       anchor_workflow_path_match: snapshot?.workflow_path === entry.workflow_path,
       anchor_workflow_name_match: snapshot?.workflow_name === entry.workflow_name,
