@@ -1,3 +1,9 @@
+# 2026-10-13 — isolated PostgreSQL 55434 binding engineering candidate
+
+Created dedicated engineering branch `fix/mcft-cap09-800c-dedicated-pg-port-gate-v1` from protected main `adfaf9fdbd2c75923fb298e26b5d5d106a0fc61a`, Draft PR #3700 (OPEN, UNMERGED), head `fc1df7da7ae2a225e2612c18535f930aa9197d21`. Source change: new exact-run PG binding helper, admission bridge and governed retry host both require run `800c023cf337` on dedicated loopback `127.0.0.1:55434`; shared historical `55432` must fail. New regression test covers positive/negative DB URLs, wrong ports/hosts, old/replaced run IDs, wrong DBs, URL parameters, and unchanged disabled trust registry. Total PR change is four files, no Docker/database/environment mutation. Tests were COMMITTED, NOT YET EXECUTED/CI VERIFIED. PR status at creation reported mergeable=false, not interpreted as final review verdict. Protected-main merge, QCP and Windows validation still required. The existing frozen audit_user=qual_admin requirement and cryptographic permit/clock conditions remain separately unresolved; no grant implied. Continue FAIL_CLOSED_EXECUTE_HOLD, execution_authorized=false, production_authorized=false. Keep this Handoff as separate existing Draft PR #3298, OPEN/UNMERGED; do not merge it to advance code.
+
+---
+
 # 2026-10-13 — final adoption and TEST_ONLY permit review against executable frozen gates
 
 Decision: NOT_ADOPTED / NO_PERMIT / FAIL_CLOSED_EXECUTE_HOLD. Owner acceptance of historical cross-evidence is recorded and only resolves that evidence-admissibility question; does not grant independent retry issuance or execution.
