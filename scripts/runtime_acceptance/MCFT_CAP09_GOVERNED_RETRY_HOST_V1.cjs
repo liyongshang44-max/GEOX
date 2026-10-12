@@ -7,6 +7,7 @@ const pipelineDelay=require("./MCFT_CAP09_REAL_PIPELINE_DELAY_V1.cjs");
 const {admitProposedRetry}=require("../governance_acceptance/MCFT_CAP09_ISOLATED_RETRY_ADMISSION_BRIDGE_V1.cjs");
 const {hashFile}=require("./MCFT_CAP09_STAGE_RECEIPTS_V1.cjs");
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
+const {assertDedicatedPgUrl}=require("../governance_acceptance/MCFT_CAP09_DEDICATED_PG_ENDPOINT_V1.cjs");
 const {dispatchConsumedStage}=require("./MCFT_CAP09_PARENT_STAGE_DISPATCH_V1.cjs");
 const {freshStageLaunch}=require("./MCFT_CAP09_STAGE_START_CLOCK_V1.cjs");
 const cp=require("node:child_process");
@@ -73,9 +74,7 @@ function hostBundle(file){
  const env={...process.env,MCFT_QUALIFICATION_FIRST_BASE:valid.arm.qualification_first_base,
   MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR:valid.arm.output_directory};
  for(const [key,name] of [["DATABASE_URL",valid.arm.resources.positive_database],["BLOCKED_DATABASE_URL",valid.arm.resources.negative_database]]) {
-  const u=new URL(env[key]);
-  assert.equal(u.hostname,"127.0.0.1");assert.equal(u.port,"55432");assert.equal(u.search,"");assert.equal(u.hash,"");
-  assert.equal(decodeURIComponent(u.pathname.slice(1)),name);
+  assertDedicatedPgUrl(valid.arm.run_id,env[key],name);
  }
  assert.equal(env.MCFT_CAP09_FORMAL_RAW_ENDPOINT,valid.arm.resources.bucket_endpoint);
  const targets=execution.isolatedTargets({isolated_run_id:valid.arm.run_id,qualification_first_base:valid.arm.qualification_first_base},env);
