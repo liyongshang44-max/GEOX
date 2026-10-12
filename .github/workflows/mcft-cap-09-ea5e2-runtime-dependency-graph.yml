@@ -233,7 +233,7 @@ jobs:
           const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json','utf8'));
           assert.equal(proof.status,'PASS','SCIENTIFIC_REQUAL_EA5E2_FULL_GRAPH_REQUIRED');
           assert.equal(proof.phase6_retirement_authority_active,true,'SCIENTIFIC_REQUAL_PHASE6_BOUNDARY_REQUIRED');
-          assert.equal(proof.live_manual_dispatch_forbidden,true,'SCIENTIFIC_REQUAL_LIVE_DISPATCH_FORBIDDEN');
+          assert.equal(proof.phase6_live_manual_dispatch_forbidden,true,'SCIENTIFIC_REQUAL_LIVE_DISPATCH_FORBIDDEN');
           const science='apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py';
           const regression='apps/server/src/external_evidence/provider/python/mcft_cap09_offline_retained_gfs_regression_v1.py';
           assert(proof.runtime_dependency_graph_paths.includes(science),'SCIENTIFIC_REQUAL_CORE_NOT_GOVERNED');
