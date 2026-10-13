@@ -1,3 +1,18 @@
+# 2026-10-13 — Run 800c MinIO existing one-shot intent/credential, missing receipt (operator filesystem readback)
+
+Actual Windows operator readback of local file presence at `D:\gptdown\MCFT-CAP09-NEW-ISOLATION-EVIDENCE\800c023cf337`:
+```text
+minio-identity-commit-intent-v1.json             True
+minio-identity-acl-receipt-v1.json              False
+private-credentials\minio-v1\minio-app-v1.json True
+preflight.json                                   True
+MINIO_EXISTING_STATE_REQUIRES_READBACK
+```
+Meaning: local one-shot mutation intent and private credential file already exist, while validated post-apply receipt is absent. **Remote policy/user/attachment state and scope NOT yet determined.** This combination is consistent with an interrupted/partially finished apply OR completed remote changes without verify, among other possibilities; do not infer success or failure. V2 script `apply` is non-replayable and `verify` executes object put/stat/delete.
+Mandatory next step: inspect only non-secret intent metadata, then admin read-only `mc admin user info`, `mc admin policy info`, bucket stat, full object versions/delete markers/multipart inventory, and scope attachments; do not rerun apply, verify, or clean resources. Preserve credentials/intent; no secret output. `MINIO_IDENTITY_RECEIPT_PENDING`; `TEST_ONLY_EXECUTE_HOLD`, execution and production not authorized. PostgreSQL 8/8 auth, 58/58 zero state, 62/62 precise parity remain recorded; frozen canonical ACL still pending.
+
+---
+
 # 2026-10-13 — Run 800c MinIO ACL V2 source-only safety review (NOT runtime-qualified)
 
 Operator supplied complete text listing of three entries from `MCFT-CAP09-800c023cf337-MINIO-ACL-V2.zip`: `README.txt` (387 bytes), `minio_iso_800c_v2.py` (8576 bytes), `test_minio_iso_800c_v2.py` (1532 bytes). Reviewed the pasted contents; **no package script was run and no MinIO host result was obtained**. This is a SOURCE REVIEW only, not PASS evidence.
