@@ -1,3 +1,18 @@
+# 2026-10-13 — Run 800c MinIO actual historical-version, delete-marker and MPU zero inventory readback
+
+Actual Windows host operator executed read-only Docker-shell MinIO admin commands against `mcft-cap09-requal-800c023cf337`:
+```text
+=== OBJECT_VERSIONS_AND_DELETE_MARKERS ===
+=== INCOMPLETE_MULTIPART_UPLOADS ===
+MINIO_OBJECT_INVENTORY_READBACK_COMPLETE
+MINIO_INVENTORY_READBACK_EXIT=0
+```
+The enumerations `mc ls --recursive --versions g/mcft-cap09-requal-800c023cf337/` and `mc ls --recursive --incomplete g/mcft-cap09-requal-800c023cf337/` returned zero entries, both commands completed with shell exit=0. Together with preceding `mc stat` size=0B, objects=0, versions=0, this independently supports **`MINIO_VISIBLE_OBJECT_VERSION_MARKER_AND_INCOMPLETE_MPU_ZERO_PASS` as observed at readback**, not a timeless absence guarantee.
+
+Already observed: remote run bucket exists, admin policy and run-scoped user exist, attached policy names only 800c bucket; local one-shot intent and credentials exist, receipt absent. Do NOT rerun `apply` or effectful `verify`. Next: independently check existing app principal's own-list ALLOW, old-bucket list DENY, global-list DENY via read-only authenticated commands, with no secret exposure; then match canonical policy and write-probe authorization governance. `MINIO_APP_EFFECTIVE_ACL_PENDING`; `TEST_ONLY_EXECUTE_HOLD`, no production authority. Preserve all resources and history. PostgreSQL exact parity 62/62 PASS; canonical frozen ACL congruence pending.
+
+---
+
 # 2026-10-13 — Run 800c MinIO actual remote identity, policy and bucket readback PASS (no application-scope probe)
 
 Operator host actual local intent metadata readback: run=800c023cf337; status=ONE_SHOT_MUTATION_INTENT; bucket=mcft-cap09-requal-800c023cf337; policy=mcft800c023cf337bucketonly; created_at_utc=2026-10-12T11:21:06.682962+00:00; execution_authorized=false; intent container ID exactly matches currently inspected `mcftcap09requal72dc0304a21a-minio-1`.
