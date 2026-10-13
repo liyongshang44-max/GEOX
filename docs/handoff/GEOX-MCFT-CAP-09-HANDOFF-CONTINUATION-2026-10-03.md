@@ -1,3 +1,20 @@
+# 2026-10-13 — Run 800c MinIO app-principal read-only scope probe FAILED (global list unexpected)
+
+Actual Windows operator executed a read-only app-credential `mc ls` scope script against local MinIO for run `800c023cf337`, obtaining:
+```text
+OWN_BUCKET_LIST_PASS
+OLD_BUCKET_LIST_DENIED
+GLOBAL_LIST_UNEXPECTED
+MINIO_READONLY_APP_SCOPE_FAILED
+MINIO_APP_SCOPE_NOT_QUALIFIED
+```
+- Own-bucket list succeeded; previous run's bucket list returned nonzero (test classified as denial, but original stderr was suppressed); `mc ls app/` exited **0**, contrary to script's expected denial. The script stopped; no `MINIO_READONLY_APP_SCOPE_3_OF_3_PASS`; no full ACL qualification. This is a real behavioral discrepancy, NOT proof yet that all bucket names were visible, nor proof of MinIO cross-bucket object access.
+- MinIO policy as separately admin-read back contains only `mcft-cap09-requal-800c023cf337` resources, with no `s3:ListAllMyBuckets` grant in its document. Whether `mc ls app/` exit=0 signifies bucket enumeration (possibly filtered/empty) vs client semantics or unintended privilege remains under investigation.
+- **STOP:** Do not change policy, remove accounts, re-run apply, run effectful verify, or sign TEST_ONLY execution. Preserve original stdout/stderr (do not print secrets). Next: read-only `mc --json ls app/` and assess returned bucket identities/status, plus if necessary direct authenticated root S3 ListBuckets HTTP status, and independent server effective policy checks; redact names/secrets in public report. Avoid using nonzero alone as proof of AccessDenied.
+- Prior actual admin bucket/principal/policy readback and versions/delete markers/MPU zero inventory stand as separate passes. `MINIO_APP_ACL=FAIL_PENDING_ROOT_CAUSE`, `TEST_ONLY_EXECUTE_HOLD`; PostgreSQL 8/8 auth, 62/62 cross-DB ACL parity PASS, canonical frozen ACL still unconfirmed.
+
+---
+
 # 2026-10-13 — Run 800c MinIO actual historical-version, delete-marker and MPU zero inventory readback
 
 Actual Windows host operator executed read-only Docker-shell MinIO admin commands against `mcft-cap09-requal-800c023cf337`:
