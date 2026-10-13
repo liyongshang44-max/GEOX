@@ -19,4 +19,5 @@ reject(t=>t.verifyHistorical=()=>({...good().verifyHistorical(),head:"d".repeat(
 reject(t=>t.verifyHistorical=()=>({...good().verifyHistorical(),frozen_runtime_108_unchanged:false}),"HISTORICAL_FROZEN_RUNTIME_CHANGED");
 reject(t=>t.verifyHistorical=()=>({...good().verifyHistorical(),qcp_check_count:51}),"HISTORICAL_52_CHECKS_CHANGED");
 reject(t=>t.firstParent=[H,head],"CURRENT_HEAD_NOT_FIRST_PARENT_TIP");
+reject(t=>t.verifyHistorical=()=>{throw new Error("HISTORICAL_SOURCE_BYTES_CHANGED");},"HISTORICAL_SOURCE_BYTES_CHANGED");
 console.log(JSON.stringify({status:"PASS",acceptance_id:"MCFT_CAP09_DISABLED_RETRY_HISTORICAL_INHERITANCE_V1",positive:1,negative:count,history_replay_executed:false,production_authorized:false}));
