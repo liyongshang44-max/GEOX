@@ -1,3 +1,9 @@
+# 2026-10-13 — 800c positive and negative default ACL/RLS parity
+
+Positive operator read-only inspection committed: pg_default_acl count 0, public pg_policies count 0, public tables relrowsecurity count 0 and relforcerowsecurity count 0. Both empty-set fingerprints d41d8cd98f00b204e9800998ecf8427e. Negative checks previously returned identical values and committed. CROSS_DATABASE_DEFAULT_ACL_RLS_PARITY_PASS for these read-only catalog measures. No custom default ACL rows does not imply absence of PostgreSQL built-in defaults. Protected-main canonical DDL equivalence and MinIO write-side authorization remain pending. TEST_ONLY EXECUTE_HOLD.
+
+---
+
 # 2026-10-13 — 800c Negative default ACL and RLS catalog readback
 
 Operator READ ONLY PostgreSQL transaction committed in Negative DB. pg_default_acl records=0; public pg_policies records=0; public table RLS enabled=0 and forced=0. Both zero-row aggregates reported d41d8cd98f00b204e9800998ecf8427e. NEGATIVE_DEFAULT_ACL_RLS_CHECK_PASS for these scoped checks. No custom default ACL entries does not imply absence of built-in PostgreSQL defaults. Positive symmetric readback pending. TEST_ONLY EXECUTE_HOLD.
