@@ -79,7 +79,8 @@ function assessActivationProposal(arm, observed) {
   assert.equal(decision.authorized_at, arm.authorized_at, "ADJUDICATION_WRONG_CLOCK");
   assert.equal(decision.first_failure_phase, "UNKNOWN", "UNPROVEN_ERROR_PHASE_RECLASSIFICATION");
   const expectedResources = {
-    database_host: "127.0.0.1", database_port: 55432, audit_user: "qual_admin",
+    database_host: "127.0.0.1", database_port: arm.run_id==="800c023cf337"?55434:55432,
+    audit_user: arm.run_id==="800c023cf337"?"qual_dedicated_admin":"qual_admin",
     negative_database: "mcft_cap09_requal_" + arm.run_id + "_negative",
     positive_database: "mcft_cap09_requal_" + arm.run_id + "_positive",
     bucket_endpoint: "http://127.0.0.1:59000", bucket: "mcft-cap09-requal-" + arm.run_id,
@@ -106,7 +107,7 @@ function assessActivationProposal(arm, observed) {
     const rows = readback.databases.filter(x => x.database === name);
     assert.equal(rows.length, 1, "DATABASE_IDENTITY_MISMATCH");
     assert.equal(rows[0].status, "READBACK_PASS", "DATABASE_READBACK_FAILED");
-    assert.equal(rows[0].username, "qual_admin", "AUDIT_USER_MISMATCH");
+    assert.equal(rows[0].username, expectedResources.audit_user, "AUDIT_USER_MISMATCH");
     assert.equal(rows[0].table_count, 29, "DATABASE_TABLE_SET_CHANGED");
     assert.equal(rows[0].all_rows_zero, true, "DATABASE_NOT_EMPTY");
   }

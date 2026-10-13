@@ -33,6 +33,9 @@ try {
  reject(envelope,{...trust,adopted:false},context,/NOT_ADOPTED/);
  reject(envelope,{...trust,execution_enabled:"true"},context,/FLAG_INVALID/);
  reject(envelope,{...trust,operator_id:payload.issuer_id},context,/NOT_INDEPENDENT/);
+ const single={...trust,operator_id:payload.issuer_id,issuers:[{...trust.issuers[0],role:"ACCOUNTABLE_SINGLE_OPERATOR"}]};
+ assert.equal(verifyPermit(envelope,single,context).execute_authorized,false);tests++;
+ reject(envelope,{...single,issuers:[{...single.issuers[0],role:"UNREVIEWED"}]},context,/ROLE_INVALID/);
  reject(envelope,{...trust,issuers:[...trust.issuers,...trust.issuers]},context,/DUPLICATE/);
  for(const [k,v] of [["revoked",true],["role","OPERATOR"],["spki_sha256","f".repeat(64)],["not_after",iso(now)]])
   reject(envelope,{...trust,issuers:[{...trust.issuers[0],[k]:v}]},context);

@@ -62,4 +62,22 @@ for(const evidence of [
  {...evidence_sha256,audit_v2:"f".repeat(64)}
 ]) {assert.throws(()=>admitProposedRetry({...arm,evidence_sha256:evidence},{...observed,evidence_sha256:evidence}));count++;}
 assert.throws(()=>admitProposedRetry({...arm,resources:{...resources,audit_user:"postgres"}},{...observed,resources:{...resources,audit_user:"postgres"}}));count++;
+
+// Dedicated run must use its authenticated principal and loopback 55434.
+const dedicatedRun="800c023cf337";
+const dedicatedResources={...resources,database_port:55434,audit_user:"qual_dedicated_admin",
+ positive_database:"mcft_cap09_requal_"+dedicatedRun+"_positive",
+ negative_database:"mcft_cap09_requal_"+dedicatedRun+"_negative",
+ bucket:"mcft-cap09-requal-"+dedicatedRun};
+const dedicatedArm={...arm,run_id:dedicatedRun,resources:dedicatedResources,
+ retry_adjudication:{...arm.retry_adjudication,run_id:dedicatedRun}};
+const dedicatedObserved={...observed,resources:dedicatedResources,
+ fresh_readback:{...observed.fresh_readback,run_id:dedicatedRun}};
+assert.equal(admitProposedRetry(dedicatedArm,dedicatedObserved).execute_authorized,false);count++;
+for(const bad of [
+ {...dedicatedResources,audit_user:"qual_admin"},
+ {...dedicatedResources,database_port:55432},
+ {...dedicatedResources,positive_database:resources.positive_database},
+ {...dedicatedResources,bucket:resources.bucket}
+]) {assert.throws(()=>admitProposedRetry({...dedicatedArm,resources:bad},{...dedicatedObserved,resources:bad}));count++;}
 console.log(JSON.stringify({status:"PASS",negative_and_boundary_test_count:count,execute_authorized:false,authority_adopted:false,production_runtime_unchanged:true}));
