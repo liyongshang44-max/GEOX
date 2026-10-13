@@ -1,3 +1,11 @@
+# 2026-10-13 — Run 800c Negative exact frozen table and routine name-set PASS
+
+Actual operator read-only SQL against `mcft_cap09_requal_800c023cf337_negative`, with `BEGIN TRANSACTION READ ONLY` and `COMMIT`, checked the explicitly enumerated 29 frozen public table names from protected-main `scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MATERIALIZATION_V1.ts` versus catalog public ordinary/partitioned tables. Result: expected_tables=29, actual_tables=29, missing_tables=0, extra_tables=0, `TABLE_SET_PASS`. Separately compared public routine names against the expected two append routines: actual_routines=2, missing_routines=0, extra_routines=0, `ROUTINE_SET_PASS`. Adjudication: `NEGATIVE_FROZEN_SCHEMA_OBJECT_SET_PASS` for object names and counts, not full structural equivalence. Positive identical frozen-set check still PENDING. No schema writes.
+
+Existing PostgreSQL dual role ACL parity (62/62), two function-body fingerprint parity, dual login escalation-boundary PASS, actual 8/8 credential-authentication PASS; MinIO read-only scoped evidence recorded. Full constraints/indexes/column-level ACL/default privileges and future TEST_ONLY authorization unqualified. `TEST_ONLY_EXECUTE_HOLD`.
+
+---
+
 # 2026-10-13 — 800c two-database LOGIN escalation-boundary check PASS
 
 Actual operator read-only PostgreSQL catalog checks for Positive and Negative databases completed and committed. Each side's Evidence and Twin LOGIN: public schema USAGE=true, CREATE=false, no effective privilege on any public sequence, no SET or USAGE capability on any of three named writer-owner roles. Direct `pg_auth_members` results per side show exactly two rows: run-specific Evidence LOGIN -> `geox_mcft_cap09_evidence_runtime_v1`, run-specific Twin LOGIN -> `geox_mcft_cap09_twin_runtime_v1`; both admin_option=false, inherit_option=true, set_option=true. SET relates to own runtime role, not a writer owner. `CROSS_DATABASE_LOGIN_PRIVILEGE_BOUNDARY_PASS` for tested roles and permissions.
