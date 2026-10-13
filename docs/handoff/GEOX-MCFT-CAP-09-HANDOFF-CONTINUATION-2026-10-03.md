@@ -1,3 +1,23 @@
+# 2026-10-13 — Run 800c dedicated PostgreSQL interactive admin login PASS (positive DB only)
+
+The operator has now successfully completed the previously blocked Windows-host interactive PostgreSQL authentication and read-only identity test using the **existing** dedicated Run 800c PostgreSQL admin credential (no password disclosed). Exact command:
+`docker exec -it mcft-cap09-800c023cf337-pg-dedicated psql -X -h 127.0.0.1 -p 5432 -U qual_dedicated_admin -d mcft_cap09_requal_800c023cf337_positive -W -v ON_ERROR_STOP=1 -c "BEGIN READ ONLY; SELECT current_database(), current_user, current_setting('transaction_read_only'); COMMIT;"`.
+Actual operator terminal result:
+```text
+Password:
+BEGIN
+            current_database             |     current_user     | current_setting
+-----------------------------------------+----------------------+-----------------
+ mcft_cap09_requal_800c023cf337_positive | qual_dedicated_admin | on
+(1 row)
+COMMIT
+```
+Verdict: `POSTGRES_800C_POSITIVE_ADMIN_AUTH_AND_READONLY_IDENTITY_PASS`. The `on` is the **explicit BEGIN READ ONLY transaction flag**, NOT independent proof the login role defaults to read-only or lacks write grants. The earlier attempt with user `qual_admin` was denied (`password authentication failed`); avoid retrying other account passwords or falsely marking schema/ACL failure. This step did not query tables, routines, actual row counts, roles, privileges, the **negative DB**, or MinIO policies. The success proves one dedicated admin login and positive DB SELECT, not full schema/ACL qualification, not an evidence/twin low-privilege login qualification and not TEST_ONLY authorization.
+
+Next: with the **same existing local-only credential** and no password published, run a read-only `qual_dedicated_admin` identity and public table/routine inventory against both exact run-specific DBs (positive and negative); then independently prove all 29 expected table *names*, two expected public routines, every table's exact zero row counts, Evidence/Twin/blocked role ACL and negative-denial semantics using the appropriate provisioned *low-privilege* users. Independently reverify run-specific MinIO bucket/object/version/list/action policies without mutations. Obtain actual postmerge main QCP / Formal readiness evidence; distinct operator/issuer and signed one-shot permission remain unadopted. Preserve the already proven V2 host identity, protected-main SHA `8563fc7025fc6e2aa6fd8b8e217f168c9caa59ed`, old worktrees, MinIO/PG volumes and historical receipts. No production change, no direct TEST_ONLY signing. Fail-closed `execution_authorized=false, production_authorized=false`.
+
+---
+
 # 2026-10-13 — Follow-up 800c PostgreSQL interactive credential failure, not an ACL verdict
 
 - Operator ran `docker exec -it mcft-cap09-800c023cf337-pg-dedicated psql -X -h 127.0.0.1 -p 5432 -U qual_admin -d mcft_cap09_requal_800c023cf337_positive -W -v ON_ERROR_STOP=1 -c "BEGIN READ ONLY; SELECT current_database(), current_user, current_setting('transaction_read_only'); COMMIT;"`. Prompt displayed `Password:` followed by `FATAL: password authentication failed for user "qual_admin"`. Operator said password did not paste. PostgreSQL masks password input completely (no echo) and this error means password authentication did not succeed, **not proof that paste failed**. The query was NOT executed; do not mark DB schema or ACL FAILED. No retry brute force or reset.
