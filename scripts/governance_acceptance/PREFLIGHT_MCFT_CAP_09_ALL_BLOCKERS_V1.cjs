@@ -1103,6 +1103,9 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
 }
 
 function main() {
+  if (process.env.MCFT_CAP09_ALL_BLOCKERS_CHILD === "1") {
+    throw new Error("QCP_RECURSIVE_INVOCATION_FORBIDDEN");
+  }
   const args = parseArgs(process.argv.slice(2));
   const authority = readJson(AUTHORITY_PATH);
   const registry = readJson(REGISTRY_PATH);
