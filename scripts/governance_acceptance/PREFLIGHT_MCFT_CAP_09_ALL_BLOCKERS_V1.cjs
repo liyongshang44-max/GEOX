@@ -188,6 +188,7 @@ function changedPaths(base, head) {
 }
 
 function runDiagnostic(command, extraEnv = {}, checkId = "UNATTRIBUTED") {
+  extraEnv = { ...extraEnv, MCFT_CAP09_QCP_CHECK_ID: checkId };
   const tracePath = process.env.MCFT_CAP09_QCP_TRACE_PATH;
   const trace = (event, details = {}) => {
     if (!tracePath) return;
