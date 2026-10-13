@@ -1,3 +1,9 @@
+# 2026-10-13 — 800c Positive writer-owner full table ACL matrix
+
+Operator read-only Positive DB check and COMMIT: two owner roles x 29 public tables = 58 table-owner combinations, with SELECT/INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER effective privilege checks compared to protected-main Twin/Forcing writer ACL grants. checked=58, mismatches=0, WRITER_OWNER_TABLE_ACL_PASS. POSITIVE_WRITER_OWNER_TABLE_ACL_PASS for tested table privileges. Negative counterpart not yet run. Does not qualify sequences, other object categories, routine source parity or TEST_ONLY authorization. TEST_ONLY EXECUTE_HOLD.
+
+---
+
 # 2026-10-13 — Run 800c Positive writer-owner base role and facts ACL readback
 
 Actual operator READ ONLY Positive DB transaction committed. Both geox_mcft_cap09_forcing_writer_owner_v1 and geox_mcft_cap09_twin_writer_owner_v1: NOLOGIN, NOINHERIT, NOSUPERUSER, NOCREATEROLE, NOCREATEDB, NOBYPASSRLS; public schema USAGE yes/CREATE no; facts SELECT/INSERT yes and UPDATE/DELETE no. POSITIVE_WRITER_OWNER_BASE_PRIVILEGE_PASS only. Remaining complete 29-table owner grant matrix, sequences, role members and Negative symmetry pending. TEST_ONLY EXECUTE_HOLD.
