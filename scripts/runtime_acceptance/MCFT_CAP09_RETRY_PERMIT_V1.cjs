@@ -62,8 +62,9 @@ function verifyPermit(envelope, trust, context) {
   assert.equal(matches.length, 1, "PERMIT_UNKNOWN_OR_DUPLICATE_ISSUER");
   const issuer = matches[0];
   assert.equal(issuer.revoked, false, "PERMIT_ISSUER_REVOKED");
-  assert.equal(issuer.role, "INDEPENDENT_RETRY_GOVERNANCE", "PERMIT_ISSUER_ROLE_INVALID");
-  assert.notEqual(issuer.issuer_id, trust.operator_id, "PERMIT_ISSUER_NOT_INDEPENDENT");
+  assert(["INDEPENDENT_RETRY_GOVERNANCE","ACCOUNTABLE_SINGLE_OPERATOR"].includes(issuer.role), "PERMIT_ISSUER_ROLE_INVALID");
+  if (issuer.role === "INDEPENDENT_RETRY_GOVERNANCE")
+    assert.notEqual(issuer.issuer_id, trust.operator_id, "PERMIT_ISSUER_NOT_INDEPENDENT");
   assert(epoch(issuer.not_before) <= start && end <= epoch(issuer.not_after), "PERMIT_OUTSIDE_KEY_LIFETIME");
   const key = crypto.createPublicKey(issuer.public_key_pem);
   assert.equal(key.asymmetricKeyType, "ed25519", "PERMIT_ED25519_REQUIRED");
