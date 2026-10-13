@@ -1124,6 +1124,22 @@ function main() {
     throw new Error("QCP_RECURSIVE_INVOCATION_FORBIDDEN");
   }
   const args = parseArgs(process.argv.slice(2));
+  if (process.argv.includes("--self-audit")) {
+    const registered = readJson(AUTHORITY_PATH).checks || [];
+    const forbidden = registered.filter((entry) =>
+      typeof entry.diagnostic_command === "string" &&
+      entry.diagnostic_command.replaceAll(String.fromCharCode(92), "/").includes(
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"));
+    const audit = {
+      audit: "QCP_REGISTERED_DIAGNOSTIC_SELF_CALL_V1",
+      checked: registered.length,
+      forbidden: forbidden.map((x) => ({ check_id: x.check_id, command: x.diagnostic_command })),
+      status: forbidden.length ? "FAIL" : "PASS",
+    };
+    process.stdout.write(JSON.stringify(audit) + "\n");
+    if (forbidden.length) process.exitCode = 1;
+    return;
+  }
   const authority = readJson(AUTHORITY_PATH);
   const registry = readJson(REGISTRY_PATH);
   const registryById = new Map((registry.entries || []).map((entry) => [entry.evidence_id, entry]));
