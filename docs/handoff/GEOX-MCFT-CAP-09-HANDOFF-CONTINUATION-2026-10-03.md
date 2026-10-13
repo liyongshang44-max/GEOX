@@ -1,3 +1,40 @@
+# 2026-10-13 — ACTUAL operator-host Run 800c database zero-state / role-isolation checkpoint and credential-location correction (NONPRODUCTION; EXECUTE_HOLD)
+
+> This is a PURE PREPEND to the **same second Active Continuation Handoff** in Draft PR #3298. The complete historical body below is retained verbatim. This record is based on operator-supplied actual PowerShell/psql output; no new independent runtime qualification or permit is claimed.
+
+## Exact subject and work undertaken
+
+- Run ID: `800c023cf337`; post-merge protected-main reference: `8563fc7025fc6e2aa6fd8b8e217f168c9caa59ed` (#3700, dedicated-PG port restriction). Re-read exact main before any future admission; this checkpoint does not itself certify current GitHub/host SHA continuity.
+- Existing container `mcft-cap09-800c023cf337-pg-dedicated` returned Docker `STATUS=running`, with `docker port ... 5432/tcp` returning `127.0.0.1:55434`. Successful interactive admin connections occurred **inside** the container via `127.0.0.1:5432` using `qual_dedicated_admin` and hidden password input. An earlier Windows-host `127.0.0.1:55434` connection attempt failed password authentication: do not misconstrue as schema failure or assert equivalent password-authentication success on the host route.
+- Database names: `mcft_cap09_requal_800c023cf337_positive` and `mcft_cap09_requal_800c023cf337_negative`. Both returned `current_user=qual_dedicated_admin` and `transaction_read_only=on` under **explicit BEGIN TRANSACTION READ ONLY**. This flag is not evidence that the superuser lacks write privileges.
+- Positive: exact public table-name listing showed **29 tables**; actual `SELECT count(*)` across **each of 29 public tables** under read-only transaction returned **zero on each table**, `DO` and `COMMIT` succeeded. Two public SECURITY DEFINER routines and signature arguments read back:
+  - `mcft_cap09_twin_runtime_append_fact_v1`
+  - `mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1`
+  Both `prosecdef=true`. This is identity/shape evidence, not yet an exact canonical schema/hash comparison.
+- Negative: independent read-only `COUNT(*)` over all public tables completed with `NOTICE: ZERO_ROW_PASS: tables=29, nonzero=0`, routine_count=2, security_definer_count=2, `COMMIT`. Thus **58/58 observed public tables have actual zero rows**. The negative table-name/routine-signature full exact-set comparison is still outstanding.
+- PostgreSQL roles: `mcft_cap09_800c023cf337_{p,n}_{evidence,twin}` all exist with LOGIN=true; all four have superuser=false, CREATEDB=false, CREATEROLE=false, BYPASSRLS=false. Each inherits only its matching `geox_mcft_cap09_{evidence,twin}_runtime_v1` role in the displayed direct membership rows; `inherit_option=t`, `set_option=t`, `admin_option=f`. The runtime authority roles themselves are NOLOGIN.
+- Database privilege **catalog** matrix: in Positive, `p_evidence` and `p_twin` CONNECT=true while both `n_*` CONNECT=false; in Negative, both `n_*` CONNECT=true and both `p_*` CONNECT=false. All four reported `public.USAGE=true` and `public.CREATE=false` in both database-context queries. Both SQL matrix queries completed successfully with `COMMIT`. This proves catalog-based database CONNECT boundaries, **not** actual cross-DB password-authenticated denials.
+- Positive `information_schema.role_table_grants` returned frozen role-level grant counts (not the exact allowlist comparison); both routines had explicit EXECUTE ACLs to their relevant runtime roles without an observed PUBLIC execute entry. Do not infer complete table, routine, ownership, default-privilege or role-escalation isolation from these summaries alone.
+- `pg_authid` inspected in a read-only transaction with **boolean password presence only, never password hash**. All four LOGIN roles returned `can_login=t`, `has_password=t`, `password_status=NO_EXPIRY` / `rolvaliduntil IS NULL`. A finite expiry/revocation policy for this new run is **not demonstrated**; do not confuse with former run `c1f7dcc6d04d` expiry `2026-10-25T17:55:56.650Z`.
+- These operations produced no user-reported schema or ACL mutation, Producer start, Provider call, Formal-v5 arm, or production execution. Existing container/resources and historical evidence remain preserved.
+
+## Credential discovery: CORRECTED conclusion
+
+- First shallow search in `D:\gptdown` found no filename matching both `800c023cf337` and `SECRET|CREDENTIAL|DPAPI|LOGIN`. **It searched root-level files only, not the evidence subtree; this was never proof of missing credentials.**
+- Operator then performed recursive **filename-only** search and supplied 105 candidate paths. One exact, run-scoped credential-path candidate was found: `D:\gptdown\MCFT-CAP09-NEW-ISOLATION-EVIDENCE\800c023cf337\dedicated-pg-private\credentials.json`. Related candidate: `...\dedicated-pg-private\admin-password.txt` in earlier handoff. Only their *filenames* are in evidence here: neither file contents, secret format, identity coverage, DPAPI protection, nor suitability for use has been inspected/verified.
+- Old DPAPI ciphertext `D:\gptdown\MCFT-CAP09-LOGIN-DPAPI-SECRETS-c1f7dcc6d04d.json` belongs to a **different** Run ID; prohibit reuse or cross-run credential substitution.
+- **Next safe step:** locally verify file existence/metadata and inspect the credential **schema/keys only** with a secret-redacted procedure approved for the actual file format; determine whether four individual runtime credential entries exist. Do not print plaintext, hashes, connection strings or encrypted material into chat, logs or GitHub. Do not run provisioning, reset credentials, or mutate roles. Only subsequently attempt four positive password-authenticated read-only local logins and four negative cross-DB denials, with refusal classification distinguishing CONNECT denial from authentication failure.
+
+## Remaining gates / strict hold
+
+1. Compare exact 29-table/2-routine schema, columns/constraints/owners/ACL/default privileges against the frozen accepted source for **both** DBs; validate low-privilege Evidence/Twin effective table/function privileges and real 4+4 authenticated positive/negative access matrix.
+2. Recheck the Run 800c MinIO identity, bucket, object/version/delete/multipart zero-state and scope-bound policy through non-mutating, positively/negatively adjudicated evidence (existing ZIP filenames are not execution evidence).
+3. Verify host exact main, QCP/Formal readiness, freshness/expiry, test-only admission design, reviewer/issuer and signed non-replayable permit independently. The existence of an owner-approved test purpose is NOT proof the current guarded runner can execute.
+4. `TEST_ONLY=HOLD`; `execution_authorized=false`; `production_authorized=false`; no Provider, Producer, three Timing, controlled delay, Formal-v5 A0/O00–O23, Product publication, merge or deploy under this checkpoint.
+5. Preserve previous one-shot records and runs `72dc0304a21a` and `c1f7dcc6d04d`; no cleanup, replay, database rebuild, privilege elevation, Runtime changes, or historical rewrites.
+
+---
+
 # 2026-10-13 — Run 800c two-database SQL readback checkpoint
 
 Windows operator read both isolated Run `800c023cf337` databases, positive and negative, using `qual_dedicated_admin` with an explicit read-only transaction. Both connections returned correct database identity, `current_user=qual_dedicated_admin`, `transaction_read_only=on`, `public_tables=29`, `public_routines=2`, and completed `COMMIT`. `RUN_800C_BOTH_DB_AUTH_AND_CATALOG_COUNTS_PASS`. No data changed. Counts do not prove exact table/routine names or zero rows; explicit transaction read-only does not prove the admin role lacks write privilege. Remaining: canonical exact sets and all-row-zero scans, low-privilege evidence/twin ACL denial, MinIO bucket/principal ACL, QCP and Formal Readiness on post-merge main, independent issuer and TEST_ONLY signing. Remain `FAIL_CLOSED_EXECUTE_HOLD`; no permit or production execution. Existing historical container, volumes, working directories and evidence retained.
