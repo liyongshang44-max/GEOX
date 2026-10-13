@@ -1,3 +1,13 @@
+# 2026-10-13 — Run 800c Negative Routine SECURITY DEFINER and owner readback PASS
+
+Actual operator read-only transaction against `mcft_cap09_requal_800c023cf337_negative` successfully committed. Exactly 2 public routines:
+- `mcft_cap09_twin_runtime_append_fact_v1`: SECURITY DEFINER=true, owner=`geox_mcft_cap09_twin_writer_owner_v1`, function_settings=`{"search_path=pg_catalog, public"}`, PUBLIC EXECUTE=false.
+- `mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1`: SECURITY DEFINER=true, owner=`geox_mcft_cap09_forcing_writer_owner_v1`, same search_path, PUBLIC EXECUTE=false.
+
+All reported fields exactly match the previously observed Positive database readback. `POSITIVE_NEGATIVE_ROUTINE_SECURITY_ATTRIBUTE_PARITY_PASS`. Function-body identity, full schema/ACL contract and additional effective/column/sequence grants are NOT established by this result. Prior PostgreSQL 8/8 actual authentication and 62/62 ACL matrix parity, MinIO actual old-bucket AccessDenied, MinIO empty object/version/multipart inventory remain as scoped evidence. MinIO receipt and effectful access verification not completed. `TEST_ONLY_EXECUTE_HOLD`, no production authority, no replay of MinIO apply.
+
+---
+
 # 2026-10-13 — 800c Positive PostgreSQL function owner and PUBLIC ACL readback
 
 Actual operator successful container-local PostgreSQL 16.4 `qual_dedicated_admin` login to positive DB, with `BEGIN TRANSACTION READ ONLY` and `COMMIT`, observed exactly two public functions:
