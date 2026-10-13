@@ -1,3 +1,33 @@
+# 2026-10-13 — Run 800c actual 8/8 PostgreSQL LOGIN authentication and positive effective ACL readback
+
+> ACTUAL operator console evidence; PURE PREPEND to the same second Active Continuation Handoff. No inherited qualifications promoted. Preserve all material below unchanged.
+
+## Actual password-authenticated connection tests — 8/8 PASS
+
+- Run `800c023cf337`; Windows-host `psql 18.6` (`D:\pdsl\bin\psql.exe`) connected to dedicated container PostgreSQL 16.4 through `127.0.0.1:55434`, using credentials from the local-only candidate `D:\gptdown\MCFT-CAP09-NEW-ISOLATION-EVIDENCE\800c023cf337\dedicated-pg-private\credentials.json`. No password value, hash, or connection-secret contents were submitted.
+- **Allowed positive connections confirmed:** `p_evidence -> positive`, `p_twin -> positive`, `n_evidence -> negative`, `n_twin -> negative`.
+- **Expected cross-database CONNECT rejection confirmed by test script's stderr classification:** `p_evidence -> negative`, `p_twin -> negative`, `n_evidence -> positive`, `n_twin -> positive`; script counted only explicit `permission denied for database` for denial PASS, not generic errors or wrong passwords.
+- Operator reported eight PASS rows, `AUTH_MATRIX_PASS_COUNT=8`, `AUTH_MATRIX_8_OF_8_PASS`. Earlier container Python implementation did NOT execute (container lacks python3); an isolated manually printed `AUTH_MATRIX_8_OF_8_PASS` from that earlier attempt is INVALID and must not be cited. The new 8/8 was executed via host psql, not the missing container Python.
+- This qualifies real password authentication and database CONNECT isolation only. It does not prove all effective schema/table/function ACLs or production readiness.
+
+## Positive database effective ACL (actual read-only PostgreSQL catalog)
+
+- Actual `qual_dedicated_admin` query against `mcft_cap09_requal_800c023cf337_positive` inside `BEGIN TRANSACTION READ ONLY`, with `COMMIT`, returned **58 table-role rows** (2 runtime LOGIN roles x 29 public tables) and **4 routine-role rows** (2 x 2).
+- `p_evidence`: SELECT on `facts` and three `twin_external_formal_forcing_{base_cursor_v1,base_target_v1,controller_lease_v1}` tables (4 total); INSERT and UPDATE on the three forcing tables; no table DELETE or TRUNCATE in the enumerated 29 tables. Other Twin projections unreadable/unwritable by these table checks.
+- `p_twin`: SELECT on `facts` and 19 Twin runtime projection/index tables (20 total); INSERT/UPDATE on 19, DELETE on 5, TRUNCATE on none; no table privileges over Evidence forcing cursor/target/controller lease. The 5 DELETE grants are observed, not yet adjudicated against exact canonical allowlist.
+- EXECUTE matrix: `p_evidence` can invoke only `mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1` (not `mcft_cap09_twin_runtime_append_fact_v1`); `p_twin` can invoke only `mcft_cap09_twin_runtime_append_fact_v1` (not Evidence append). Both are previously observed SECURITY DEFINER. Functional authorization separation is OBSERVED PASS, but exact frozen function definition, owner, search_path, PUBLIC grants/default privileges and effective role/column privileges are not yet wholly adjudicated.
+- **Do not mark complete ACL qualification** from these raw effective privileges or from counts: compare exact protected-main frozen Schema/ACL expectations, then run matching Negative DB effective table/routine privilege readback (n_evidence/n_twin) and side-by-side differential.
+- All four role passwords existed with `rolvaliduntil IS NULL` at previous checkpoint; expiry/revocation remains unproven.
+
+## Next safe frontier / hold
+
+1. Read-only Negative DB 58 table-role + 4 function-role effective privilege matrix; compare against the Positive matrix and exact frozen accepted ACL definition; perform further scoped-negative tests only if dictated by acceptance.
+2. Run 800c MinIO independent identity/bucket/policy/object-version/delete-marker/multipart inventory readbacks, without effectful initialization or changing objects.
+3. Exact main/host freshness, QCP/Formal checks, TEST_ONLY admission policy and single-use permit must be separately satisfied. `TEST_ONLY=HOLD`; `execution_authorized=false`; `production_authorized=false`; no Provider/Producer/Timing/Formal A0/Product publishing.
+4. Preserve historical first-run evidence, isolation containers/volumes, credentials and prior snapshots. No merge, deploy, Runtime or schema mutation.
+
+---
+
 # 2026-10-13 — ACTUAL operator-host Run 800c database zero-state / role-isolation checkpoint and credential-location correction (NONPRODUCTION; EXECUTE_HOLD)
 
 > This is a PURE PREPEND to the **same second Active Continuation Handoff** in Draft PR #3298. The complete historical body below is retained verbatim. This record is based on operator-supplied actual PowerShell/psql output; no new independent runtime qualification or permit is claimed.
