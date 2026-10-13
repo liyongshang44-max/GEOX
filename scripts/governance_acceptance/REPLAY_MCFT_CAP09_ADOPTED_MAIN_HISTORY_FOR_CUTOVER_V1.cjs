@@ -14,7 +14,7 @@ function historicalCheckout(checkout, ref=BASE){
  // Independent remote object graph: a shared local clone can silently inherit
  // missing blobs and yield a dirty historical checkout on Windows.
  const remote=git("remote","get-url","origin");
- cp.execFileSync("git",["clone","--no-checkout","--filter=blob:none",remote,checkout],{stdio:"pipe",timeout:600000});
+ cp.execFileSync("git",["clone","--no-local","--no-checkout",remote,checkout],{stdio:"pipe",timeout:600000});
  const run=(...args)=>cp.execFileSync("git",args,{cwd:checkout,stdio:"pipe",timeout:120000});
  run("checkout","--detach",ref);
  // Fail closed if the disposable clone materialized an incomplete historical tree.
