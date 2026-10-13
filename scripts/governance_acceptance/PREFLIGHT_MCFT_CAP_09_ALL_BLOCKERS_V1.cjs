@@ -190,10 +190,10 @@ function changedPaths(base, head) {
 function runDiagnostic(command, extraEnv = {}) {
   // Reject self-referential registry diagnostics before shell spawning.
   // Nested QCP calls are not independent acceptance evidence.
-  const normalizedCommand = String(command || "").trim().replace(/\\\\/g, "/");
+  const normalizedCommand = String(command || "").trim().replaceAll(String.fromCharCode(92), "/");
   const qcpEntrypoint = "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs";
-  const commandParts = normalizedCommand.split(/\\s+/);
-  if (/^node(?:\\.exe)?$/i.test(commandParts[0] || "") &&
+  const commandParts = normalizedCommand.split(" ").filter(Boolean);
+  if (["node", "node.exe"].includes((commandParts[0] || "").toLowerCase()) &&
       commandParts[1] === qcpEntrypoint) {
     return {status:"FAIL",exit_code:1,stdout_tail:"",
       stderr_tail:"QCP_RECURSIVE_DIAGNOSTIC_FORBIDDEN",execute_authorized:false};
