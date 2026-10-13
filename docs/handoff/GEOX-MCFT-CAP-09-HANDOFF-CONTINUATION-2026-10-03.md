@@ -1,3 +1,12 @@
+# 2026-10-13 — Follow-up 800c PostgreSQL interactive credential failure, not an ACL verdict
+
+- Operator ran `docker exec -it mcft-cap09-800c023cf337-pg-dedicated psql -X -h 127.0.0.1 -p 5432 -U qual_admin -d mcft_cap09_requal_800c023cf337_positive -W -v ON_ERROR_STOP=1 -c "BEGIN READ ONLY; SELECT current_database(), current_user, current_setting('transaction_read_only'); COMMIT;"`. Prompt displayed `Password:` followed by `FATAL: password authentication failed for user "qual_admin"`. Operator said password did not paste. PostgreSQL masks password input completely (no echo) and this error means password authentication did not succeed, **not proof that paste failed**. The query was NOT executed; do not mark DB schema or ACL FAILED. No retry brute force or reset.
+- Operator showed old plaintext config labeled `QUAL RUN ID=72dc0304a21a`; **do not use old Run credentials on isolated 800c database**. Prior handoff recovery path to VERIFY LOCALLY (not GitHub): `D:\gptdown\MCFT-CAP09-NEW-ISOLATION-EVIDENCE\800c023cf337\dedicated-pg-private\admin-password.txt`; associated expected dedicated admin login is `qual_dedicated_admin`, **distinct** from `qual_admin`, and credentials/account must be independently checked. Avoid falsely claiming file was verified to exist.
+- Suggested **local-only** interactive, read-only SQL identity probe for actual `qual_dedicated_admin` against `mcft_cap09_requal_800c023cf337_positive`; use native terminal paste (Windows Terminal Ctrl+Shift+V or classic PowerShell right-click / Shift+Insert), password is hidden even on successful paste. No credential contents or secrets in logs/handoff/chat, never pass in command args. This admin identity probe does **not** replace distinct low-privilege `qual_admin` / evidence/twin ACL positive-negative proofs; these remain pending.
+- Continue from host V2 Docker identity PASS on main `8563fc7025fc6e2aa6fd8b8e217f168c9caa59ed`; require fresh actual database schema/ACL and MinIO ACL readbacks, exact main QCP / Formal Readiness, issuer and independent TEST_ONLY permit adjudication. `FAIL_CLOSED_EXECUTE_HOLD`, `execution_authorized=false`, `production_authorized=false`. Existing second Active Continuation Handoff only; no third copy and no production changes.
+
+---
+
 # 2026-10-13 — Run 800c Windows post-merge V2 readback PASS; PostgreSQL authentication probe requires existing credential (NO SCHEMA/ACL VERDICT)
 
 ## Precise inherited state and evidence (do not redo work)
