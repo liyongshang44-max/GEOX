@@ -62,4 +62,27 @@ for(const evidence of [
  {...evidence_sha256,audit_v2:"f".repeat(64)}
 ]) {assert.throws(()=>admitProposedRetry({...arm,evidence_sha256:evidence},{...observed,evidence_sha256:evidence}));count++;}
 assert.throws(()=>admitProposedRetry({...arm,resources:{...resources,audit_user:"postgres"}},{...observed,resources:{...resources,audit_user:"postgres"}}));count++;
+// Exercise the real dedicated-run branch through the full admission bridge.
+const dedicatedRun="800c023cf337";
+const dedicatedArm={...arm,run_id:dedicatedRun,output_directory:"D:\\gptdown\\out-"+dedicatedRun,
+ retry_adjudication:{...arm.retry_adjudication,run_id:dedicatedRun},
+ resources:{...resources,database_port:55434,audit_user:"qual_dedicated_admin",
+  positive_database:"mcft_cap09_requal_"+dedicatedRun+"_positive",
+  negative_database:"mcft_cap09_requal_"+dedicatedRun+"_negative",bucket:"mcft-cap09-requal-"+dedicatedRun}};
+const dedicatedObserved={...observed,resources:dedicatedArm.resources,output_directory:dedicatedArm.output_directory,
+ fresh_readback:{...observed.fresh_readback,run_id:dedicatedRun}};
+const dedicatedResult=admitProposedRetry(dedicatedArm,dedicatedObserved);
+assert.equal(dedicatedResult.execute_authorized,false);
+assert.equal(dedicatedResult.authority_adopted,false);count++;
+for(const audit_user of ["qual_admin","postgres","mcft_cap09_800c023cf337_p_evidence","",null]) {
+ const changed={...dedicatedArm.resources,audit_user};
+ assert.throws(()=>admitProposedRetry({...dedicatedArm,resources:changed},{...dedicatedObserved,resources:changed}),/DEDICATED_AUDIT_USER_REQUIRED/);count++;
+}
+for(const database_port of [55432,5432]) {
+ const changed={...dedicatedArm.resources,database_port};
+ assert.throws(()=>admitProposedRetry({...dedicatedArm,resources:changed},{...dedicatedObserved,resources:changed}),/DEDICATED_PG_PORT_REQUIRED/);count++;
+}
+assert.throws(()=>admitProposedRetry(dedicatedArm,{...dedicatedObserved,resources:{...dedicatedArm.resources,audit_user:"qual_admin"}}),/RESOURCE_READBACK_MISMATCH/);count++;
+const legacyChanged={...resources,audit_user:"qual_dedicated_admin"};
+assert.throws(()=>admitProposedRetry({...arm,resources:legacyChanged},{...observed,resources:legacyChanged}),/AUDIT_USER_MUST_BE_QUAL_ADMIN/);count++;
 console.log(JSON.stringify({status:"PASS",negative_and_boundary_test_count:count,execute_authorized:false,authority_adopted:false,production_runtime_unchanged:true}));
