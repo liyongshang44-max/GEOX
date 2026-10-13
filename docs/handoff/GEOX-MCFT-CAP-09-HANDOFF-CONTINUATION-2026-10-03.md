@@ -1,3 +1,15 @@
+# 2026-10-13 — 800c paired PostgreSQL structure comparison
+
+Positive and Negative read-only catalog checks produced identical results, both committed.
+
+COLUMN: count 424; MD5 f3518f6f67e11755e6a0bbc372017b5a
+CONSTRAINT: count 78; MD5 51b1ecd1717d014fcadd6341ae99b8ac
+INDEX: count 61; MD5 e74691e95b7642dee9b55efb894c2596
+
+Verdict: CROSS_DATABASE_SCHEMA_STRUCTURE_FINGERPRINT_PASS for the enumerated metadata only. Frozen-main DDL equivalence, default privileges, row security and complete object authority not yet demonstrated. Maintain TEST_ONLY EXECUTE_HOLD.
+
+---
+
 # 2026-10-13 — Run 800c Positive frozen object set PASS; both DBs confirmed
 
 Actual operator read-only PostgreSQL `positive` session compared 29 explicitly frozen names against public ordinary/partitioned table catalog: expected=29, actual=29, missing=0, extra=0, TABLE_SET_PASS. Two frozen public routine names: actual=2, missing=0, extra=0, ROUTINE_SET_PASS. Read-only transaction committed. Independent previously recorded Negative results identical; hence `CROSS_DATABASE_FROZEN_SCHEMA_OBJECT_SET_PASS` for table/routine names and cardinalities, **not column, indexes, constraints, default ACL, or full DDL equivalence**.
