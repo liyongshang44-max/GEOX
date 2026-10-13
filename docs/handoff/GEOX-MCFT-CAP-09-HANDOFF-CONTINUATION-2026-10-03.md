@@ -1,3 +1,9 @@
+# 2026-10-13 — Run 800c Positive writer-owner base role and facts ACL readback
+
+Actual operator READ ONLY Positive DB transaction committed. Both geox_mcft_cap09_forcing_writer_owner_v1 and geox_mcft_cap09_twin_writer_owner_v1: NOLOGIN, NOINHERIT, NOSUPERUSER, NOCREATEROLE, NOCREATEDB, NOBYPASSRLS; public schema USAGE yes/CREATE no; facts SELECT/INSERT yes and UPDATE/DELETE no. POSITIVE_WRITER_OWNER_BASE_PRIVILEGE_PASS only. Remaining complete 29-table owner grant matrix, sequences, role members and Negative symmetry pending. TEST_ONLY EXECUTE_HOLD.
+
+---
+
 # 2026-10-13 — Protected-main writer DDL source inspection
 
 Read protected-main Formal V5 materializer and the Twin (2026_08_27) and Evidence (2026_08_28) writer ACL SQL migrations. The materializer binds a different formal target database and Formal ARM and is **not** a read-only auditor suitable for isolated Run 800c. Twin writer owner is intended NOLOGIN/NOINHERIT and to receive facts SELECT+INSERT and runtime lease SELECT+UPDATE; Evidence forcing writer owner is intended NOLOGIN/NOINHERIT with facts SELECT+INSERT and forcing controller/target SELECT+UPDATE. Both define SECURITY DEFINER functions with constrained search_path and runtime-scoped EXECUTE, not PUBLIC. Prior 800c observations match named table set, dual matrix, routine owners, and security metadata, but do not prove frozen source-body exact equality or writer-owner full grant closure. Next: read-only owner-role capabilities, precise effective owner table/sequence privileges, absence of inappropriate schema CREATE and role-membership escalation, then independent frozen-DDL provenance. TEST_ONLY EXECUTE_HOLD.
