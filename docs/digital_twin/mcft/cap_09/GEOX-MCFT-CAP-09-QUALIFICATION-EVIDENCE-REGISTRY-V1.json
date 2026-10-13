@@ -2663,6 +2663,26 @@
         "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "78f81543523c83494b32e5d3432dea203e19f1374a977449e97669b4efb7b325"
+      },
+      {
+        "evidence_id": "PHASE2_EVIDENCE_PROVIDER_MODULES_REQUAL_9E4E8132_DEDICATED_PG_V1",
+        "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "dedicated-pg-port-qualification-20261013",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "9e4e8132628f2581cbac025f81f7342027660631",
+        "workflow_name": "mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor",
+        "workflow_path": ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+        "run_id": 38281449457,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "9e4e8132628f2581cbac025f81f7342027660631",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:d53545afb8deac0c0f232774c82f4f0ce4269ee26a7f3f7286e50e39d4e9ff5d",
+        "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "d25ea51f28018727a4083859a824a592c803ccafd4fff84e1c512223635a0a76"
       }
     ],
     "durable_anchors": {
@@ -4331,6 +4351,18 @@
             "base_sha": "3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358",
             "created_at": "2026-10-12T01:42:34Z",
             "updated_at": "2026-10-12T01:44:04Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE2_EVIDENCE_PROVIDER_MODULES_REQUAL_9E4E8132_DEDICATED_PG_V1",
+          "run_id": 38281449457,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 546,
+            "workflow_path": ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+            "workflow_name": "mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor",
+            "head_sha": "9e4e8132628f2581cbac025f81f7342027660631",
+            "base_sha": "adfaf9fdbd2c75923fb298e26b5d5d106a0fc61a"
           }
         }
       ],

@@ -10,6 +10,7 @@ const fs=require("node:fs");
 const {assessIsolatedReadiness}=require("./MCFT_CAP09_ISOLATED_EVIDENCE_DRIVEN_CLOCK_V1.cjs");
 const {ANCHORS}=require("./MCFT_CAP_09_ISOLATED_RETRY_AUTHORITY_POLICY_V1.cjs");
 const {HASHES:HISTORICAL_HASHES,verifyHistoricalEvidence}=require("./MCFT_CAP09_RETRY_HISTORICAL_EVIDENCE_V1.cjs");
+const {assertDedicatedPgEndpoint}=require("./MCFT_CAP09_DEDICATED_PG_ENDPOINT_V1.cjs");
 const SHA=/^[0-9a-f]{64}$/;
 const RUN=/^[0-9a-f]{12}$/;
 const HEAD=/^[0-9a-f]{40}$/;
@@ -50,7 +51,10 @@ function admitProposedRetry(arm,observed) {
   assert(!Object.values(HISTORICAL_HASHES).includes(hashes.retry_adjudication),"HISTORICAL_REPORT_IS_NOT_RETRY_ADJUDICATION");
   for(const [key,value] of Object.entries(hashes)) assert.equal(observed.evidence_sha256?.[key],value,"EVIDENCE_HASH_MISMATCH:"+key);
   const resource=arm.resources;
-  assert(resource && resource.database_host==="127.0.0.1"&&resource.database_port===55432,"LOCAL_DB_REQUIRED");
+  // Preserve the existing synthetic/structural retry contract for unrelated run IDs.
+  // Only this evidence-qualified run may claim the dedicated 55434 endpoint.
+  if(arm.run_id==="800c023cf337") assertDedicatedPgEndpoint(arm.run_id,resource);
+  else assert(resource && resource.database_host==="127.0.0.1"&&resource.database_port===55432,"LOCAL_DB_REQUIRED");
   assert.equal(resource.audit_user,"qual_admin","AUDIT_USER_MUST_BE_QUAL_ADMIN");
   assert.equal(resource.positive_database,"mcft_cap09_requal_"+arm.run_id+"_positive","FRESH_POSITIVE_DB_REQUIRED");
   assert.equal(resource.negative_database,"mcft_cap09_requal_"+arm.run_id+"_negative","FRESH_NEGATIVE_DB_REQUIRED");
