@@ -1,0 +1,33 @@
+name: MCFT CAP-09 adoption and offline admission synthetic closure
+on:
+  pull_request:
+    paths:
+      - 'scripts/cap09_adoption_v1/**'
+      - 'docs/digital_twin/mcft/cap_09/*ADOPTION*'
+      - '.github/workflows/mcft-cap09-adoption-local-synthetic-v1.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic-closure:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Sign, verify offline, consume concurrently and reject drift
+        run: node scripts/cap09_adoption_v1/acceptance.cjs --bundle synthetic-proof-bundle
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: synthetic-proof-${{ matrix.os }}-${{ github.event.pull_request.head.sha }}
+          path: synthetic-proof-bundle/
+          if-no-files-found: error
