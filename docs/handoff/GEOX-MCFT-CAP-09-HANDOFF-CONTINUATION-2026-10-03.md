@@ -1,3 +1,9 @@
+# 2026-10-13 — PR 3703 adopted public identity registration, execution remains disabled
+
+User authorized merge of PR #3703. Candidate head d0918644f0961129dea342ae68fffc1ab679036f had eight workflow conclusions SUCCESS. GitHub temporarily rejected standard merge for two in-progress required checks; subsequent standard merge was accepted, result cfaf55f10f2ce7e995ffeb95fe4d5675f1a893a4. Comparison confirms protected main identical to merge SHA. Main trust registry now has one accountable single-operator Ed25519 public issuer with SPKI SHA256 223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365, host LAPTOP-STN2A2P1, operator mcft_cap09_operator_mylr1 and fixed Windows ledger path. adopted=false, execution_enabled=false; all four stage/delay adoption flags false. Public registry adopted as code only; no live permit, no nonce/run consumption, no Producer or production activation. Future operations must re-check exact main and Windows evidence; fresh five-minute readback only immediately before permit issuance. TEST_ONLY EXECUTE_HOLD and production HOLD.
+
+---
+
 # 2026-10-13 — Disabled Windows signer registration candidate, PR #3703
 
 Uploaded public trust JSON independently decoded; Ed25519 SPKI digest matches 223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365. A Draft PR #3703 registers Windows hostname/operator and fixed ledger path with adopted=false, execution_enabled=false and all capability flags false. It also updates permit and dedicated endpoint registry assertions. Head d0918644f0961129dea342ae68fffc1ab679036f. All eight workflows are currently queued/in progress, not yet PASS. No private key committed; no merge or execution authorization. TEST_ONLY EXECUTE_HOLD and production HOLD.
