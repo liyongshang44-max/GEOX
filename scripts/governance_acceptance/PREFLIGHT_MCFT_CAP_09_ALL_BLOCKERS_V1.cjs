@@ -195,7 +195,7 @@ function runDiagnostic(command, extraEnv = {}, checkId = "UNATTRIBUTED") {
     fs.appendFileSync(tracePath, JSON.stringify({
       event, check_id: checkId, command, caller: "PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.runDiagnostic",
       cwd: ROOT, child_flag: "1", at: new Date().toISOString(), ...details,
-    }) + "\\n");
+    }) + String.fromCharCode(10));
   };
   trace("DIAGNOSTIC_DISPATCH");
 
