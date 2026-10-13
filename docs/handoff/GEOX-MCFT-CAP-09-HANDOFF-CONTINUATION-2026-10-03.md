@@ -1,3 +1,9 @@
+# 2026-10-13 — PR 3702 exact-head CI 8/8 SUCCESS; adoption review pending
+
+GitHub Actions readback for candidate head 498ac5b33f22c6b3df1080f6903ce030e632ab0a confirmed eight workflows completed with conclusion success: ci, CAP09 current baseline entry engineering, local cutover candidate checks, main ruleset readiness, candidate declaration selftest, EA5E2 dependency graph, release lane, delivery policy. Candidate test files inspected on its branch contain single-operator and dedicated-run negative-case additions. This is CI success, not independent operational adoption or evidence that every newly added test was invoked by CI; detailed job-step and regression coverage adjudication remains open. PR #3702 stays draft/unmerged; runtime trust unchanged and TEST_ONLY EXECUTE_HOLD and production HOLD remain.
+
+---
+
 # 2026-10-13 — Single-operator governance implementation candidate under CI (not adopted)
 
 Draft PR #3702 created from protected main, branch fix/mcft-cap09-single-operator-dedicated-audit-20261013, head 498ac5b33f22c6b3df1080f6903ce030e632ab0a. Candidate revises cryptographic permit issuer role check to accept explicitly enrolled ACCOUNTABLE_SINGLE_OPERATOR in addition to the original independent role; independent-role same-person rejection retained. Adds signed synthetic same-operator and invalid-role tests. Updates both admission bridge and historical activation-proposal policy to strictly bind Run 800c023cf337 to 127.0.0.1:55434 and qual_dedicated_admin, retaining prior contract for other run IDs. Adds dedicated audit username, port, wrong positive database and bucket denial tests. Trust registry, operational issuer enrollment and actual executable authorization not touched. Initial PR-head workflows are queued/in_progress, not passed; full CI and security review pending. No merge, deploy, host permit consumption, Producer or database writes. TEST_ONLY_EXECUTE_HOLD; production HOLD.
