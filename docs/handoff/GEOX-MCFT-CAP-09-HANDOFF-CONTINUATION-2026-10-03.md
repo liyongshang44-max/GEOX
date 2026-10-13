@@ -1,3 +1,11 @@
+# 2026-10-13 — 800c two-database LOGIN escalation-boundary check PASS
+
+Actual operator read-only PostgreSQL catalog checks for Positive and Negative databases completed and committed. Each side's Evidence and Twin LOGIN: public schema USAGE=true, CREATE=false, no effective privilege on any public sequence, no SET or USAGE capability on any of three named writer-owner roles. Direct `pg_auth_members` results per side show exactly two rows: run-specific Evidence LOGIN -> `geox_mcft_cap09_evidence_runtime_v1`, run-specific Twin LOGIN -> `geox_mcft_cap09_twin_runtime_v1`; both admin_option=false, inherit_option=true, set_option=true. SET relates to own runtime role, not a writer owner. `CROSS_DATABASE_LOGIN_PRIVILEGE_BOUNDARY_PASS` for tested roles and permissions.
+
+This is not equivalent to full transitive grants of all roles, column-level ACLs, canonical schema hashes, or full runtime admission. Previously verified 62/62 per-object ACL parity, 2/2 function definition parity, 8/8 LOGIN authentication, 58/58 empty tables, MinIO old-bucket AccessDenied and zero inventory stand. Continue exact frozen schema/ACL matching and separate MinIO receipt authorization. `TEST_ONLY_EXECUTE_HOLD` remains; no merge/deploy/provision/write.
+
+---
+
 # 2026-10-13 — Run 800c Positive/Negative Routine definition parity PASS
 
 Operator actual Positive PostgreSQL read-only query and COMMIT yielded the same two complete function identities and `md5(pg_get_functiondef(oid))` as prior Negative readback:
