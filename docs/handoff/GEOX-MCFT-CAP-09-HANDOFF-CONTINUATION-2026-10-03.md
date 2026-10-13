@@ -1,3 +1,15 @@
+# 2026-10-13 — Run 800c MinIO global-list anomaly narrowed: only own bucket visible
+
+Actual Windows operator application-credential `mc --json ls app/` root listing readback: `GLOBAL_LIST_EXIT=0`; `GLOBAL_LIST_ENTRIES=1`; `GLOBAL_LIST_BUCKETS=1`; `OWN_BUCKET_VISIBLE=True`; `OLD_BUCKET_VISIBLE=False`; `JSON_ERROR_ENTRIES=0`.
+
+Interpretation: the earlier `GLOBAL_LIST_UNEXPECTED` from a harness treating any successful root listing as forbidden was too strict for the observed server/client listing semantics. The application principal's global list returned exactly one permitted run-scoped bucket and did not display the prior run bucket. **No observed cross-run disclosure in this result**. This alone is NOT positive independent proof of direct old-bucket AccessDenied, nor of object read/write denial, nor canonical policy equivalence. Do not mark comprehensive scoped ACL PASS solely from filtered listing. Earlier `OWN_BUCKET_LIST_PASS`, `OLD_BUCKET_LIST_DENIED` shell outputs stand, but the negative check had suppressed errors and needs specific AccessDenied classification.
+
+Next: correct the test/receipt contract to accept successful filtered root listing only if all returned bucket identities are within the exact 800c allowlist, no unexpected names and no JSON errors; distinguish explicit 403 AccessDenied from 404/missing bucket, transport or authentication failure on direct out-of-scope call. Keep local one-shot intent and private credentials; no `apply` replay, no effectful `verify`, no policy/account change. No Handoff assertion that source file was modified: this is adjudication only.
+
+`MINIO_FILTERED_GLOBAL_LIST_SCOPE_OBSERVED_PASS`; `DIRECT_CROSS_BUCKET_DENIAL_CLASSIFICATION_PENDING`; `TEST_ONLY_EXECUTE_HOLD` and no production authority. PostgreSQL 8/8 actual auth, 62/62 parity PASS; canonical frozen ACL still pending.
+
+---
+
 # 2026-10-13 — Run 800c MinIO app-principal read-only scope probe FAILED (global list unexpected)
 
 Actual Windows operator executed a read-only app-credential `mc ls` scope script against local MinIO for run `800c023cf337`, obtaining:
