@@ -1,3 +1,9 @@
+# 2026-10-13 — Disabled Windows signer registration candidate, PR #3703
+
+Uploaded public trust JSON independently decoded; Ed25519 SPKI digest matches 223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365. A Draft PR #3703 registers Windows hostname/operator and fixed ledger path with adopted=false, execution_enabled=false and all capability flags false. It also updates permit and dedicated endpoint registry assertions. Head d0918644f0961129dea342ae68fffc1ab679036f. All eight workflows are currently queued/in progress, not yet PASS. No private key committed; no merge or execution authorization. TEST_ONLY EXECUTE_HOLD and production HOLD.
+
+---
+
 # 2026-10-13 — Windows scratch-ledger persistence and replay test PASS
 
 Operator's Windows local transcript confirms isolated scratch test directory writing a synthetic nonce receipt (LEDGER_WRITE_PASS), reopening it from a separate Node.js process (LEDGER_PERSISTENCE_PASS), rejecting repeat nonce directory mkdir with EEXIST (LEDGER_REPLAY_REJECTED_PASS), and checking official ledger D:\gptdown\MCFT-CAP09-AUTHORITY-LEDGER remained empty (REAL_LEDGER_UNTOUCHED_PASS). Prior Windows synthetic signed-permit regression 38 tests PASS with exactly one concurrent winner and only fake identities; real Ed25519 public-key fingerprint independently read as 223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365. Windows key-file effective ACL readback shows only SYSTEM and current operator via inheritance from protected parent. This validates scratch persistence and EEXIST, not real consumption, power-loss recovery, identity trust adoption, or unauthorized Windows user attack. Next stage: prepare public-only issuer/trust candidate with accurate identity and bounded validity; retain adopted=false, execution_enabled=false; do not sign or consume live permit. Five-minute live resource readback only immediately before execution. TEST_ONLY EXECUTE_HOLD; production HOLD.
