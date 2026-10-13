@@ -1,3 +1,9 @@
+# 2026-10-13 — 800c Negative default ACL and RLS catalog readback
+
+Operator READ ONLY PostgreSQL transaction committed in Negative DB. pg_default_acl records=0; public pg_policies records=0; public table RLS enabled=0 and forced=0. Both zero-row aggregates reported d41d8cd98f00b204e9800998ecf8427e. NEGATIVE_DEFAULT_ACL_RLS_CHECK_PASS for these scoped checks. No custom default ACL entries does not imply absence of built-in PostgreSQL defaults. Positive symmetric readback pending. TEST_ONLY EXECUTE_HOLD.
+
+---
+
 # 2026-10-13 — 800c paired PostgreSQL structure comparison
 
 Positive and Negative read-only catalog checks produced identical results, both committed.
