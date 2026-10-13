@@ -1,3 +1,12 @@
+# 2026-10-13 — Run 800c Positive/Negative Routine definition parity PASS
+
+Operator actual Positive PostgreSQL read-only query and COMMIT yielded the same two complete function identities and `md5(pg_get_functiondef(oid))` as prior Negative readback:
+- `mcft_cap09_twin_runtime_append_fact_v1` (11 parameters): `802776085138a24868e6e67b6d2df849`.
+- `mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1` (15 parameters): `6158c1d58f12e51135c29c8680cc8511`.
+Both DBs returned exactly two routine rows, matching signatures and MD5. Verdict: `CROSS_DATABASE_ROUTINE_DEFINITION_PARITY_PASS` (PostgreSQL-rendered definition parity, not protected-main frozen source provenance). Previously observed security-definer/owners/search_path/PUBLIC EXECUTE parity and 62/62 table/function permission parity stand. Frozen-main full schema/ACL adjudication and MinIO effectful receipt remain pending; `TEST_ONLY_EXECUTE_HOLD`.
+
+---
+
 # 2026-10-13 — 800c Negative Routine function definition fingerprint captured
 
 Operator successfully executed read-only PostgreSQL catalog inspection in `mcft_cap09_requal_800c023cf337_negative`, transaction committed. `md5(pg_get_functiondef(p.oid))` with `pg_get_function_identity_arguments` returned:
