@@ -18,7 +18,7 @@ function historicalCheckout(checkout, ref=BASE){
  // Recover only the exact tracked workflow from HEAD when checkout left it deleted;
  // never ignore other changes and always compare the on-disk bytes to the Git blob.
  const workflow=".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml";
- const trackedStatus=()=>cp.execFileSync("git",["status","--porcelain","--untracked-files=no"],{cwd:checkout,encoding:"utf8"}).trim().split(/\\r?\\n/).filter(Boolean);
+ const trackedStatus=()=>cp.execFileSync("git",["status","--porcelain","--untracked-files=no"],{cwd:checkout,encoding:"utf8"}).split(/\\r?\\n/).filter(Boolean);
  const before=trackedStatus();
  if(before.length===1 && before[0]===" D "+workflow){
    const expected=cp.execFileSync("git",["show",ref+":"+workflow],{cwd:checkout});
