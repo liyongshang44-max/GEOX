@@ -1,3 +1,27 @@
+# 2026-10-13 — Run 800c exact Positive/Negative effective ACL parity 62/62 PASS
+
+**Actual operator-host verification**, full standalone Windows PowerShell plus host PostgreSQL `psql` 18.6 using `127.0.0.1:55434`; dedicated DBs `mcft_cap09_requal_800c023cf337_positive` and `mcft_cap09_requal_800c023cf337_negative`. `PGOPTIONS="-c default_transaction_read_only=on"`; no DB writes, migrations, login secret disclosure or container/runtime mutation.
+
+Actual terminal output:
+```text
+AUDITING=mcft_cap09_requal_800c023cf337_positive
+ACL_ROWS=62
+AUDITING=mcft_cap09_requal_800c023cf337_negative
+ACL_ROWS=62
+CROSS_DATABASE_EXACT_ACL_MATRIX_PASS
+MATCHED_ROWS=62
+TABLE_PERMISSION_ROWS=58
+ROUTINE_PERMISSION_ROWS=4
+```
+
+- 62 object-role privilege records compared by exact row strings, with uniqueness assertion and zero differences: 2 logical domains x 29 public tables across SELECT/INSERT/UPDATE/DELETE/TRUNCATE; 2 logical domains x 2 public routine identities using `pg_get_function_identity_arguments` and EXECUTE.
+- These results prove **exact positive/negative parity for the specified effective privileges and objects**. This does NOT alone prove frozen protected-main schema/ACL allowlist congruence, column-level/sequence/schema grants, routine definitions/owners/search_path, default privileges, RLS, or actual SQL write enforcement. Canonical comparison remains PENDING.
+- Prior 8/8 actual password-login+cross-database denial checks PASS; 58/58 tables empty PASS; Positive 58+4 records and Negative aggregate+4 function records already recorded.
+- Previous failed comparison attempts were test-harness defects (`psql -w:false` invalid argument; stale/out-of-scope `$SQL` variable causing zero matched rows), not database/ACL FAIL and not qualification evidence.
+- **Next:** independently match against frozen exact ACL/schema contract; inspect existing MinIO V2 package before any execution and gather read-only scoped principal/policy/bucket/object inventory. `TEST_ONLY_EXECUTE_HOLD` and `production_authorized=false` remain. No merge/deploy/schema/Runtime/Provider/Producer/Timing/Formal A0/Product write.
+
+---
+
 # 2026-10-13 — Run 800c Negative effective ACL aggregate and function separation readback
 
 Actual Windows operator PostgreSQL 16.4 interactive `qual_dedicated_admin` session against `mcft_cap09_requal_800c023cf337_negative`; transaction `BEGIN TRANSACTION READ ONLY` completed `COMMIT`. Effective access checked via `has_table_privilege` over 29 public tables and `has_function_privilege` over the two public routines for `mcft_cap09_800c023cf337_n_evidence` and `mcft_cap09_800c023cf337_n_twin`.
