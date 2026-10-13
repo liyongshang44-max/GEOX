@@ -34,8 +34,18 @@ function verifyHistoricalInClone() {
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"mcft-3691-history-"));
  const checkout=path.join(temp,"historical");
  try {
-  cp.execFileSync("git",["clone","--shared","--no-checkout",ROOT,checkout],{stdio:"ignore",timeout:240000});
+  // A shared local clone inherits missing Git objects from the host repository.
+  // Fetch the historical tree independently from origin; verify checkout objects
+  // and tracked source integrity before executing its unchanged verifier.
+  const remote=git(ROOT,"remote","get-url","origin");
+  cp.execFileSync("git",["clone","--no-checkout","--filter=blob:none",remote,checkout],{stdio:"ignore",timeout:600000});
+
   git(checkout,"checkout","--detach",HISTORICAL_MERGE);
+  const tracked=git(checkout,"ls-files");
+  assert(tracked.includes(".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml"),"HISTORICAL_WORKFLOW_NOT_TRACKED");
+  const expected=cp.execFileSync("git",["show",HISTORICAL_MERGE+":.github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml"],{cwd:checkout});
+  assert.deepEqual(fs.readFileSync(path.join(checkout,".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml")),expected,"HISTORICAL_WORKFLOW_BLOB_MISSING_OR_CHANGED");
+  assert.equal(git(checkout,"status","--porcelain","--untracked-files=no"),"","HISTORICAL_CLONE_DIRTY");
   // This ref changes ONLY inside the independent clone, never in the working repo.
   git(checkout,"update-ref","refs/remotes/origin/main",HISTORICAL_MERGE);
   assert.equal(git(checkout,"rev-parse","origin/main"),HISTORICAL_MERGE);
