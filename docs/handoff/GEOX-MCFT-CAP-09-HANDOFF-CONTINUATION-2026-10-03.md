@@ -1,3 +1,9 @@
+# 2026-10-13 — Run 800c two-database SQL readback checkpoint
+
+Windows operator read both isolated Run `800c023cf337` databases, positive and negative, using `qual_dedicated_admin` with an explicit read-only transaction. Both connections returned correct database identity, `current_user=qual_dedicated_admin`, `transaction_read_only=on`, `public_tables=29`, `public_routines=2`, and completed `COMMIT`. `RUN_800C_BOTH_DB_AUTH_AND_CATALOG_COUNTS_PASS`. No data changed. Counts do not prove exact table/routine names or zero rows; explicit transaction read-only does not prove the admin role lacks write privilege. Remaining: canonical exact sets and all-row-zero scans, low-privilege evidence/twin ACL denial, MinIO bucket/principal ACL, QCP and Formal Readiness on post-merge main, independent issuer and TEST_ONLY signing. Remain `FAIL_CLOSED_EXECUTE_HOLD`; no permit or production execution. Existing historical container, volumes, working directories and evidence retained.
+
+---
+
 # 2026-10-13 — Run 800c dedicated PostgreSQL interactive admin login PASS (positive DB only)
 
 The operator has now successfully completed the previously blocked Windows-host interactive PostgreSQL authentication and read-only identity test using the **existing** dedicated Run 800c PostgreSQL admin credential (no password disclosed). Exact command:
