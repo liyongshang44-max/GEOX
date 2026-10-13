@@ -9,6 +9,16 @@ const PARSER_PATH="scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLA
 const MANIFEST="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json";
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const CHECK="LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY";
+function recordDiagnosticTrace(event, command, checkout, childFlag) {
+ const file=process.env.MCFT_CAP09_QCP_TRACE_PATH;
+ if (!file) return;
+ fs.appendFileSync(file,JSON.stringify({
+   event,command,check_id:process.env.MCFT_CAP09_QCP_CHECK_ID || "HISTORICAL_REPLAY",
+   caller:"REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1",
+   checkout,child_flag:childFlag,at:new Date().toISOString()
+ })+"\\n");
+}
+
 function git(...args){return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8",timeout:120000,maxBuffer:16*1024*1024}).trim();}
 function historicalCheckout(checkout, ref=BASE){
  // Independent remote object graph: a shared local clone can silently inherit
@@ -112,8 +122,10 @@ function runHistoricalDiagnosticForCutoverCandidate(command, extraEnv={}) {
  const checkout=path.join(temp,"historic");let attached=false;
  try {
   historicalCheckout(checkout,historicalBase);attached=true;
+  recordDiagnosticTrace("HISTORICAL_CHILD_START",command,checkout,"1");
   const out=cp.spawnSync(command,{cwd:checkout,encoding:"utf8",shell:true,
     timeout:240000,env:{...process.env,...extraEnv,MCFT_CAP09_ALL_BLOCKERS_CHILD:"1"}});
+  recordDiagnosticTrace("HISTORICAL_CHILD_END",command,checkout,"1");
   return {status:out.status===0?"PASS":"FAIL",exit_code:out.status,signal:out.signal||null,
    stdout_tail:String(out.stdout||"").slice(-4000),stderr_tail:String(out.stderr||"").slice(-4000),
    historical_subject_sha:historicalBase,adopted_main_sha:main,candidate_proven:true};
