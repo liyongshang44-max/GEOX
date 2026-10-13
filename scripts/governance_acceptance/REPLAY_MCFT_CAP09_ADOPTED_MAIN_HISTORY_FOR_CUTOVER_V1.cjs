@@ -14,6 +14,18 @@ function historicalCheckout(checkout, ref=BASE){
  cp.execFileSync("git",["clone","--shared","--no-checkout",ROOT,checkout],{stdio:"pipe",timeout:120000});
  const run=(...args)=>cp.execFileSync("git",args,{cwd:checkout,stdio:"pipe",timeout:120000});
  run("checkout","--detach",ref);
+ // Fail closed if the disposable clone materialized an incomplete historical tree.
+ // Recover only the exact tracked workflow from HEAD when checkout left it deleted;
+ // never ignore other changes and always compare the on-disk bytes to the Git blob.
+ const workflow=".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml";
+ const trackedStatus=()=>cp.execFileSync("git",["status","--porcelain","--untracked-files=no"],{cwd:checkout,encoding:"utf8"}).trim().split(/\\r?\\n/).filter(Boolean);
+ const before=trackedStatus();
+ if(before.length===1 && before[0]===" D "+workflow){
+   const expected=cp.execFileSync("git",["show",ref+":"+workflow],{cwd:checkout});
+   run("restore","--source=HEAD","--worktree","--",workflow);
+   assert.deepEqual(fs.readFileSync(path.join(checkout,workflow)),expected,"HISTORICAL_WORKFLOW_RESTORED_BYTES_DIFFER");
+ }
+ assert.deepEqual(trackedStatus(),[],"HISTORICAL_CLONE_DIRTY_AFTER_CHECKOUT");
  // Clone-local ref: historic verifiers retain their adopted-main context.
  // Never change the caller's origin/main or replay old assertions on a new tree.
  run("update-ref","refs/remotes/origin/main",BASE);
