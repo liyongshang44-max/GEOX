@@ -1,3 +1,18 @@
+# 2026-10-13 — Run 800c MinIO ACL V2 source-only safety review (NOT runtime-qualified)
+
+Operator supplied complete text listing of three entries from `MCFT-CAP09-800c023cf337-MINIO-ACL-V2.zip`: `README.txt` (387 bytes), `minio_iso_800c_v2.py` (8576 bytes), `test_minio_iso_800c_v2.py` (1532 bytes). Reviewed the pasted contents; **no package script was run and no MinIO host result was obtained**. This is a SOURCE REVIEW only, not PASS evidence.
+
+- Fixed constants: run `800c023cf337`, bucket `mcft-cap09-requal-800c023cf337`, container `mcftcap09requal72dc0304a21a-minio-1`, user `mcft800c023cf337app`, policy `mcft800c023cf337bucketonly`, old bucket `mcft-cap09-requal-c1f7dcc6d04d`, preflight subject pinned `adfaf9fdbd2c75923fb298e26b5d5d106a0fc61a`.
+- CLI modes: `plan` calls preflight/container checks + admin `mc stat`, `mc du`, account/policy absence checks; no intentional mutations. `apply` creates NTFS private credential dir, secrets JSON, irrevocable one-shot intent, then uses `mc admin policy create`, `mc admin user add`, `mc admin policy attach`. `verify` invokes real in-bucket `mc cp /etc/hostname`, `mc stat`, `mc rm`, and writes local receipt. **Do not treat verify as read-only**.
+- `bucket_zero()` examines ordinary object byte/count `mc du --json` only: no exhaustive bucket object version/delete marker/multipart upload inventory; no verified lifecycle cleanup invariant for the write/delete probe.
+- `apply` persists one-shot intent before remote changes and fails closed if any intent/credential/receipt exists. A partial remote failure must NOT be retried or cleaned up blindly; preserve all evidence and perform forensic readback.
+- Tests focus on syntax, pinned run/bucket, LF input encoding, redaction, no replay marker, absence of `psql`, narrow policy-resource names. They do not independently prove bucket versions/markers/MPU, actual cross-scope principal denials, actual policy document readback, or verify side-effect-free behavior.
+- Policy grants run-bucket `ListBucket`, `GetBucketLocation`, `ListBucketMultipartUploads`, and object-level `GetObject`, `PutObject`, `DeleteObject`, `AbortMultipartUpload`, `ListMultipartUploadParts`; requires canonical frozen ACL comparison. Shell heredoc for JSON policy merits on-host exact-file syntax verification before any apply; pasted console rendering is insufficient to certify it.
+- Next: run only side-effect-free plan once after checking no existing intent; independently read MinIO scope and versions/delete markers/MPU with admin read-only commands; compare intended policy to frozen canonical policy; authorize any actual write probe only in separate explicit phase. No attempt to mark identity/ACL as PASS on source review alone.
+- PostgreSQL run 800c: actual 8/8 password + cross-db denial PASS; zero-row 58/58 PASS; exact parity 62/62 PASS, protected-main frozen ACL comparison still pending. `TEST_ONLY_EXECUTE_HOLD`; `execution_authorized=false`; `production_authorized=false`. No merge/deploy/schema/Runtime or provider/producer/timing/A0 actions.
+
+---
+
 # 2026-10-13 — Run 800c exact Positive/Negative effective ACL parity 62/62 PASS
 
 **Actual operator-host verification**, full standalone Windows PowerShell plus host PostgreSQL `psql` 18.6 using `127.0.0.1:55434`; dedicated DBs `mcft_cap09_requal_800c023cf337_positive` and `mcft_cap09_requal_800c023cf337_negative`. `PGOPTIONS="-c default_transaction_read_only=on"`; no DB writes, migrations, login secret disclosure or container/runtime mutation.
