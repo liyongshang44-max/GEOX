@@ -1,3 +1,9 @@
+# 2026-10-13 — Retry execution admission remains HOLD; dedicated audit identity mismatch confirmed
+
+Reviewed protected-main bridge, policy and trust registry against Run 800c dedicated PostgreSQL evidence. The read-only admission bridge validates dedicated PostgreSQL endpoint for run 800c but separately requires audit_user=qual_admin. The historical activation proposal policy also hard-codes port 55432 and audit_user=qual_admin; these conflict with dedicated endpoint 55434 and actual audit principal qual_dedicated_admin. Corrective engineering must be a reviewed, run-specific contract with strict authenticated account binding and negative regression tests; never falsify the audit principal or loosen the general old-run contract. Current trust registry adopted=false, execution_enabled=false, issuers empty, host/operator/ledger null, four capabilities disabled. Signed one-use permit is not issued; offline synthetic tests do not establish independent Windows signing or ledger authority. An independent signer (not the Windows execution operator or Producer) must be explicitly appointed and own a separately protected Ed25519 key; identity and public key not yet supplied, so no trust enrollment is claimed. TEST_ONLY_EXECUTE_HOLD and production HOLD remain. No authority changes, merge, deployment, or local side effects.
+
+---
+
 # 2026-10-13 — 800c Positive writer-owner full table ACL matrix
 
 Operator read-only Positive DB check and COMMIT: two owner roles x 29 public tables = 58 table-owner combinations, with SELECT/INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER effective privilege checks compared to protected-main Twin/Forcing writer ACL grants. checked=58, mismatches=0, WRITER_OWNER_TABLE_ACL_PASS. POSITIVE_WRITER_OWNER_TABLE_ACL_PASS for tested table privileges. Negative counterpart not yet run. Does not qualify sequences, other object categories, routine source parity or TEST_ONLY authorization. TEST_ONLY EXECUTE_HOLD.
