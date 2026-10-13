@@ -16,7 +16,7 @@ function recordDiagnosticTrace(event, command, checkout, childFlag) {
    event,command,check_id:process.env.MCFT_CAP09_QCP_CHECK_ID || "HISTORICAL_REPLAY",
    caller:"REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1",
    checkout,child_flag:childFlag,at:new Date().toISOString()
- })+"\\n");
+ })+String.fromCharCode(10));
 }
 
 function git(...args){return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8",timeout:120000,maxBuffer:16*1024*1024}).trim();}
