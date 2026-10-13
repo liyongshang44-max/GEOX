@@ -187,7 +187,17 @@ function changedPaths(base, head) {
   return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
-function runDiagnostic(command, extraEnv = {}) {
+function runDiagnostic(command, extraEnv = {}, checkId = "UNATTRIBUTED") {
+  const tracePath = process.env.MCFT_CAP09_QCP_TRACE_PATH;
+  const trace = (event, details = {}) => {
+    if (!tracePath) return;
+    fs.appendFileSync(tracePath, JSON.stringify({
+      event, check_id: checkId, command, caller: "PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.runDiagnostic",
+      cwd: ROOT, child_flag: "1", at: new Date().toISOString(), ...details,
+    }) + "\\n");
+  };
+  trace("DIAGNOSTIC_DISPATCH");
+
   // Reject self-referential registry diagnostics before shell spawning.
   // Nested QCP calls are not independent acceptance evidence.
   const normalizedCommand = String(command || "").trim().replaceAll(String.fromCharCode(92), "/");
@@ -195,6 +205,7 @@ function runDiagnostic(command, extraEnv = {}) {
   const commandParts = normalizedCommand.split(" ").filter(Boolean);
   if (["node", "node.exe"].includes((commandParts[0] || "").toLowerCase()) &&
       commandParts[1] === qcpEntrypoint) {
+    trace("DIAGNOSTIC_REJECT_SELF");
     return {status:"FAIL",exit_code:1,stdout_tail:"",
       stderr_tail:"QCP_RECURSIVE_DIAGNOSTIC_FORBIDDEN",execute_authorized:false};
   }
@@ -212,8 +223,10 @@ function runDiagnostic(command, extraEnv = {}) {
       cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim() !==
       cp.execFileSync("git", ["rev-parse", "origin/main"], { cwd: ROOT, encoding: "utf8" }).trim()) {
     const adopted = require("./REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs");
-    if (adopted.isAdoptedMainLegacyDiagnostic(command))
+    if (adopted.isAdoptedMainLegacyDiagnostic(command)) {
+      trace("HISTORICAL_ADOPTED_MAIN_START");
       return adopted.runAdoptedMainLegacyDiagnostic(command, extraEnv);
+    }
   }
   const stageVerifier = path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs");
   if (fs.existsSync(stageVerifier)) {
@@ -221,7 +234,8 @@ function runDiagnostic(command, extraEnv = {}) {
     if (stage.isFrozenDiagnosticCommand(command)) {
       const manifest = path.join(ROOT, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json");
       if (fs.existsSync(manifest) && cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim() !== cp.execFileSync("git", ["rev-parse", "origin/main"], { cwd: ROOT, encoding: "utf8" }).trim())
-        return require("./REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs").runHistoricalDiagnosticForCutoverCandidate(command, extraEnv);
+        { trace("HISTORICAL_CUTOVER_START"); return require("./REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs").runHistoricalDiagnosticForCutoverCandidate(command, extraEnv); }
+      trace("HISTORICAL_STAGE_START");
       return stage.runHistoricalDiagnostic(command, extraEnv);
     }
   }
@@ -229,8 +243,11 @@ function runDiagnostic(command, extraEnv = {}) {
     cwd: ROOT,
     encoding: "utf8",
     shell: true,
+    timeout: 180000,
+    maxBuffer: 16 * 1024 * 1024,
     env: { ...process.env, ...extraEnv, MCFT_CAP09_ALL_BLOCKERS_CHILD: "1" },
   });
+  trace("DIAGNOSTIC_END", { exit_code: result.status, signal: result.signal || null, error: result.error ? String(result.error) : null });
   const stdout = String(result.stdout || "");
   const stderr = String(result.stderr || "");
   return {
@@ -1271,7 +1288,7 @@ function main() {
     } else if (decision.status === "REQUALIFY" || decision.status === "REQUIRED") {
       if (successorChainUnchangedPrivateStoreSelftest) {
         const diagnosticCommand = `${decision.diagnostic_command} --selftest`;
-        const diagnostic = runDiagnostic(diagnosticCommand);
+        const diagnostic = runDiagnostic(diagnosticCommand, {}, decision.check_id);
         result = {
           ...common,
           execution: "SUCCESSOR_CHAIN_UNCHANGED_CURRENT_STATE_SELFTEST",
@@ -1292,7 +1309,7 @@ function main() {
           detail: diagnostic,
         });
       } else if (phase6Active && decision.check_id === "EA5E2_RUNTIME_DEPENDENCY_GRAPH") {
-        const diagnostic = runDiagnostic(`node ${PHASE6_OWNER_AUDITOR_PATH} enforce`);
+        const diagnostic = runDiagnostic(`node ${PHASE6_OWNER_AUDITOR_PATH} enforce`, {}, decision.check_id);
         result = {
           ...common,
           execution: "PHASE6_GITHUB_PRODUCTION_EXECUTION_RETIREMENT_AUDIT",
@@ -1714,6 +1731,7 @@ function main() {
           const diagnostic = runDiagnostic(
             decision.diagnostic_command,
             diagnosticEnv,
+            decision.check_id,
           );
 
           result = {
