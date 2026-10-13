@@ -11,7 +11,10 @@ const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-
 const CHECK="LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY";
 function git(...args){return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8",timeout:120000,maxBuffer:16*1024*1024}).trim();}
 function historicalCheckout(checkout, ref=BASE){
- cp.execFileSync("git",["clone","--shared","--no-checkout",ROOT,checkout],{stdio:"pipe",timeout:120000});
+ // Independent remote object graph: a shared local clone can silently inherit
+ // missing blobs and yield a dirty historical checkout on Windows.
+ const remote=git("remote","get-url","origin");
+ cp.execFileSync("git",["clone","--no-checkout","--filter=blob:none",remote,checkout],{stdio:"pipe",timeout:600000});
  const run=(...args)=>cp.execFileSync("git",args,{cwd:checkout,stdio:"pipe",timeout:120000});
  run("checkout","--detach",ref);
  // Fail closed if the disposable clone materialized an incomplete historical tree.
