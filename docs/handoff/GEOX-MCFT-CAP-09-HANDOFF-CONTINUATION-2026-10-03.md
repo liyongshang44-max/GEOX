@@ -1,3 +1,13 @@
+# 2026-10-13 — 800c Positive PostgreSQL function owner and PUBLIC ACL readback
+
+Actual operator successful container-local PostgreSQL 16.4 `qual_dedicated_admin` login to positive DB, with `BEGIN TRANSACTION READ ONLY` and `COMMIT`, observed exactly two public functions:
+- `mcft_cap09_twin_runtime_append_fact_v1`: `prosecdef=true`, owner `geox_mcft_cap09_twin_writer_owner_v1`, `proconfig={"search_path=pg_catalog, public"}`, PUBLIC EXECUTE false, by `aclexplode(coalesce(proacl,acldefault('f',proowner)))` grantee=0.
+- `mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1`: `prosecdef=true`, owner `geox_mcft_cap09_forcing_writer_owner_v1`, same search_path, PUBLIC EXECUTE false.
+
+Earlier repeated Windows-host `psql` `qual_dedicated_admin` authentication attempts failed before SQL; container-local connection succeeded. Do not categorize auth retry errors as ACL failures or reset credentials. Negative counterpart and exact frozen function definition check pending. Previous PostgreSQL 62/62 effective ACL parity PASS and MinIO direct prior-run AccessDenied PASS remain, but TEST_ONLY execution HOLD.
+
+---
+
 # 2026-10-13 — Run 800c direct old-bucket denial probe inconclusive: JSON error code empty
 
 Operator actual low-privilege app-credential `mc --json ls app/mcft-cap09-requal-c1f7dcc6d04d/` probe produced:
