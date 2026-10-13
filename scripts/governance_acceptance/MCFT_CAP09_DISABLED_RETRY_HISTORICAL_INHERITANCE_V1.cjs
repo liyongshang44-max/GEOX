@@ -38,7 +38,7 @@ function verifyHistoricalInClone() {
   // Fetch the historical tree independently from origin; verify checkout objects
   // and tracked source integrity before executing its unchanged verifier.
   const remote=git(ROOT,"remote","get-url","origin");
-  cp.execFileSync("git",["clone","--no-checkout","--filter=blob:none",remote,checkout],{stdio:"ignore",timeout:600000});
+  cp.execFileSync("git",["clone","--no-local","--no-checkout",remote,checkout],{stdio:"ignore",timeout:600000});
 
   git(checkout,"checkout","--detach",HISTORICAL_MERGE);
   const tracked=git(checkout,"ls-files");
