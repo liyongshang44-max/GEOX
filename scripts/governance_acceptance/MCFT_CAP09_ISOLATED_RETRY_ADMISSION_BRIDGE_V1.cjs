@@ -55,7 +55,7 @@ function admitProposedRetry(arm,observed) {
   // Only this evidence-qualified run may claim the dedicated 55434 endpoint.
   if(arm.run_id==="800c023cf337") assertDedicatedPgEndpoint(arm.run_id,resource);
   else assert(resource && resource.database_host==="127.0.0.1"&&resource.database_port===55432,"LOCAL_DB_REQUIRED");
-  assert.equal(resource.audit_user,"qual_admin","AUDIT_USER_MUST_BE_QUAL_ADMIN");
+  assert.equal(resource.audit_user,arm.run_id==="800c023cf337"?"qual_dedicated_admin":"qual_admin","AUDIT_USER_RUN_BINDING_MISMATCH");
   assert.equal(resource.positive_database,"mcft_cap09_requal_"+arm.run_id+"_positive","FRESH_POSITIVE_DB_REQUIRED");
   assert.equal(resource.negative_database,"mcft_cap09_requal_"+arm.run_id+"_negative","FRESH_NEGATIVE_DB_REQUIRED");
   assert.equal(resource.bucket_endpoint,"http://127.0.0.1:59000","LOOPBACK_BUCKET_REQUIRED");
