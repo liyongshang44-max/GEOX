@@ -1,3 +1,16 @@
+# 2026-10-13 — Run 800c Negative effective ACL aggregate and function separation readback
+
+Actual Windows operator PostgreSQL 16.4 interactive `qual_dedicated_admin` session against `mcft_cap09_requal_800c023cf337_negative`; transaction `BEGIN TRANSACTION READ ONLY` completed `COMMIT`. Effective access checked via `has_table_privilege` over 29 public tables and `has_function_privilege` over the two public routines for `mcft_cap09_800c023cf337_n_evidence` and `mcft_cap09_800c023cf337_n_twin`.
+
+- Negative Evidence: tables_checked=29; SELECT=4; INSERT=3; UPDATE=3; DELETE=0; TRUNCATE=0.
+- Negative Twin: tables_checked=29; SELECT=20; INSERT=19; UPDATE=19; DELETE=5; TRUNCATE=0.
+- Routine EXECUTE: Negative Evidence -> `mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1` true / Twin append false; Negative Twin -> `mcft_cap09_twin_runtime_append_fact_v1` true / Evidence append false. All four expected function-domain decisions observed.
+- These aggregate totals exactly match previously observed Positive database figures; **aggregation equality does not certify equality of the per-table ACL assignments**, nor exact frozen canonical schema/ACL, function body/owner/search_path, role default privileges, or actual low-privilege SQL write denial. Status: `NEGATIVE_ACL_AGGREGATE_AND_ROUTINE_DOMAIN_SEPARATION_PASS`, `FULL_SCHEMA_ACL_QUALIFICATION_PENDING`.
+- Previously verified actual host `psql` password-authenticated eight-case database CONNECT matrix = 8/8 PASS; real zero-row inventory = 58/58 tables PASS. Password valid-until of four run-scoped logins = NULL; expiry/revocation decision pending.
+- Next: obtain per-table per-action Negative privilege details and compare to exact Positive inventory and frozen schema/ACL contract; then inspect existing 800c MinIO V2 package **without running its effectful setup commands**, and obtain scoped identity and zero-state independent readback. Keep `TEST_ONLY_EXECUTE_HOLD`, `execution_authorized=false`, `production_authorized=false`. No Provider, Producer, three Timing, Formal A0, Product publish, merge, deploy, runtime change or DB modification. Historical evidence and all prior text retained.
+
+---
+
 # 2026-10-13 — Run 800c actual 8/8 PostgreSQL LOGIN authentication and positive effective ACL readback
 
 > ACTUAL operator console evidence; PURE PREPEND to the same second Active Continuation Handoff. No inherited qualifications promoted. Preserve all material below unchanged.
