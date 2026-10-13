@@ -1,3 +1,16 @@
+# 2026-10-13 — Run 800c direct old-bucket denial probe inconclusive: JSON error code empty
+
+Operator actual low-privilege app-credential `mc --json ls app/mcft-cap09-requal-c1f7dcc6d04d/` probe produced:
+```text
+DIRECT_OLD_BUCKET_EXIT=1
+S3_ERROR_CODES=
+MINIO_DIRECT_CROSS_BUCKET_DENIAL_NOT_PROVEN
+MINIO_CROSS_BUCKET_ACL_HOLD
+```
+The request failed, but the client parser did not retrieve an explicit S3 `AccessDenied` code. **Not proof of authorization denial**; cannot rule out NoSuchBucket, auth/transport errors, or JSON error nesting/stderr variance. Previous root `mc --json ls app/` returned only current 800c bucket; remote admin readback shows own-bucket-only policy, but direct out-of-scope denial remains unqualified. Next use read-only classified and redacted client output from BOTH stdout/stderr, require specific response code without exposing secrets; if unavailable, maintain HOLD. Do not replay `apply`, run effectful `verify`, modify accounts/buckets, or sign TEST_ONLY. Keep `TEST_ONLY_EXECUTE_HOLD` and all existing evidence.
+
+---
+
 # 2026-10-13 — Run 800c MinIO global-list anomaly narrowed: only own bucket visible
 
 Actual Windows operator application-credential `mc --json ls app/` root listing readback: `GLOBAL_LIST_EXIT=0`; `GLOBAL_LIST_ENTRIES=1`; `GLOBAL_LIST_BUCKETS=1`; `OWN_BUCKET_VISIBLE=True`; `OLD_BUCKET_VISIBLE=False`; `JSON_ERROR_ENTRIES=0`.
