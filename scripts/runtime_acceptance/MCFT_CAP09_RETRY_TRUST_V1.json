@@ -2,10 +2,21 @@
   "schema_version": "geox_mcft_cap09_retry_trust_v1",
   "adopted": false,
   "execution_enabled": false,
-  "host_id": null,
-  "operator_id": null,
-  "ledger_root": null,
-  "issuers": [],
+  "host_id": "LAPTOP-STN2A2P1",
+  "operator_id": "mcft_cap09_operator_mylr1",
+  "ledger_root": "D:\\gptdown\\MCFT-CAP09-AUTHORITY-LEDGER",
+  "issuers": [
+    {
+      "issuer_id": "mcft_cap09_operator_mylr1",
+      "key_id": "mcft_cap09_ed25519_223c806e",
+      "role": "ACCOUNTABLE_SINGLE_OPERATOR",
+      "revoked": false,
+      "not_before": "2026-10-13T00:00:00.000Z",
+      "not_after": "2026-11-13T00:00:00.000Z",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAbvpUDWBt+TOQqEwiHrxG/eA5eM+h/epg7+TecimHkis=\n-----END PUBLIC KEY-----\n",
+      "spki_sha256": "223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365"
+    }
+  ],
   "real_delay_controller_adopted": false,
   "stage_capability_adopted": false,
   "real_provider_transport_delay_adopted": false,

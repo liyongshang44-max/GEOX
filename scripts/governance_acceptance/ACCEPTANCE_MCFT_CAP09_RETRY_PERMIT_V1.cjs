@@ -58,7 +58,23 @@ try {
  const codes=await Promise.all([launch(),launch(),launch(),launch()]);
  assert.deepEqual(codes.sort(),[0,7,7,7]);tests++;
  const disabled=JSON.parse(fs.readFileSync(path.resolve(__dirname,"../runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json")));
- assert.equal(disabled.adopted,false);assert.equal(disabled.execution_enabled,false);assert.deepEqual(disabled.issuers,[]);tests++;
+ assert.equal(disabled.adopted,false);assert.equal(disabled.execution_enabled,false);
+ assert.equal(disabled.host_id,"LAPTOP-STN2A2P1");
+ assert.equal(disabled.operator_id,"mcft_cap09_operator_mylr1");
+ assert.equal(disabled.ledger_root,"D:\\gptdown\\MCFT-CAP09-AUTHORITY-LEDGER");
+ assert.equal(disabled.issuers.length,1);
+ const registered=disabled.issuers[0];
+ assert.equal(registered.issuer_id,disabled.operator_id);
+ assert.equal(registered.role,"ACCOUNTABLE_SINGLE_OPERATOR");
+ assert.equal(registered.revoked,false);
+ assert.equal(registered.spki_sha256,"223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365");
+ const registeredKey=crypto.createPublicKey(registered.public_key_pem);
+ assert.equal(registeredKey.asymmetricKeyType,"ed25519");
+ assert.equal(sha(registeredKey.export({type:"spki",format:"der"})),registered.spki_sha256);
+ assert.equal(disabled.real_delay_controller_adopted,false);
+ assert.equal(disabled.stage_capability_adopted,false);
+ assert.equal(disabled.real_provider_transport_delay_adopted,false);
+ assert.equal(disabled.real_pipeline_delay_adopted,false);tests++;
  console.log(JSON.stringify({status:"PASS",tests,concurrent_consumers:4,successful_consumers:1,synthetic_only:true,execute_authorized:false}));
 } finally {fs.rmSync(root,{recursive:true,force:true});}
 }
