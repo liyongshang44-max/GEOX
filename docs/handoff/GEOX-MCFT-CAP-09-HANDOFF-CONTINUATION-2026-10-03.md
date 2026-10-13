@@ -1,3 +1,18 @@
+# 2026-10-13 — Run 800c MinIO actual remote identity, policy and bucket readback PASS (no application-scope probe)
+
+Operator host actual local intent metadata readback: run=800c023cf337; status=ONE_SHOT_MUTATION_INTENT; bucket=mcft-cap09-requal-800c023cf337; policy=mcft800c023cf337bucketonly; created_at_utc=2026-10-12T11:21:06.682962+00:00; execution_authorized=false; intent container ID exactly matches currently inspected `mcftcap09requal72dc0304a21a-minio-1`.
+
+Operator actual `docker exec -i ... sh -s` admin read-only results (exit code 0):
+- `mc stat g/mcft-cap09-requal-800c023cf337`: bucket exists, unversioned, us-east-1, Anonymous Disabled, ILM Disabled; current size=0 B, Objects count=0, Versions count=0.
+- `mc admin user info g mcft800c023cf337app`: AccessKey matches expected, Status enabled, PolicyName `mcft800c023cf337bucketonly`, MemberOf empty.
+- `mc admin policy info g mcft800c023cf337bucketonly`: document has Allow bucket-level `s3:GetBucketLocation`, `s3:ListBucket`, `s3:ListBucketMultipartUploads` on `arn:aws:s3:::mcft-cap09-requal-800c023cf337`, and object-level `s3:PutObject`, `s3:AbortMultipartUpload`, `s3:DeleteObject`, `s3:GetObject`, `s3:ListMultipartUploadParts` on bucket `/*`. Policy CreateDate and UpdateDate both `2026-10-12T11:21:06.911Z`.
+- Local intent=true, private credentials=true, validation receipt=false. Remote admin readback establishes policy/user creation and attachment happened even though local receipt missing; never replay `apply` or overwrite/repair state automatically.
+- **Adjudication:** `MINIO_IDENTITY_AND_POLICY_ADMIN_READBACK_PASS`; this is NOT low-privilege application identity actual deny/allow enforcement proof; no independent multipart/delete-marker list, no app probe, no receipt, no canonical policy contract or exact authoritative subject freshness adjudication. Existing `mc stat` counters do not exhaustively demonstrate absence of pending uploads. App `verify` is effectful and remains disallowed absent explicit gated next-phase authorization.
+- Next safe phase: read-only remote `mc ls --versions` and `mc ls --incomplete` on bucket and app-scoped **read-only** positive/negative access checks using existing local credential, without printing secrets or doing `mc cp`, `mc rm`, credential export, `apply`, or `verify`; check canonical ACL and permit gate separately.
+- PostgreSQL 58/58 zero rows, actual 8/8 authentication, exact Positive/Negative effective ACL parity 62/62 are PASS, but frozen canonical ACL unresolved; `TEST_ONLY_EXECUTE_HOLD`, `execution_authorized=false`, `production_authorized=false`, no merge/deploy/runtime/schema/Provider/Producer/Timing/Formal A0.
+
+---
+
 # 2026-10-13 — Run 800c MinIO existing one-shot intent/credential, missing receipt (operator filesystem readback)
 
 Actual Windows operator readback of local file presence at `D:\gptdown\MCFT-CAP09-NEW-ISOLATION-EVIDENCE\800c023cf337`:
