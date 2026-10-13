@@ -1,3 +1,11 @@
+# 2026-10-13 — Run 800c Positive frozen object set PASS; both DBs confirmed
+
+Actual operator read-only PostgreSQL `positive` session compared 29 explicitly frozen names against public ordinary/partitioned table catalog: expected=29, actual=29, missing=0, extra=0, TABLE_SET_PASS. Two frozen public routine names: actual=2, missing=0, extra=0, ROUTINE_SET_PASS. Read-only transaction committed. Independent previously recorded Negative results identical; hence `CROSS_DATABASE_FROZEN_SCHEMA_OBJECT_SET_PASS` for table/routine names and cardinalities, **not column, indexes, constraints, default ACL, or full DDL equivalence**.
+
+Preserve `TEST_ONLY_EXECUTE_HOLD`, production hold, no write-side MinIO verify, no identity-apply replay, no DB mutation. Next read-only structural/column/constraint/index checks and separate main-frozen contract comparison.
+
+---
+
 # 2026-10-13 — Run 800c Negative exact frozen table and routine name-set PASS
 
 Actual operator read-only SQL against `mcft_cap09_requal_800c023cf337_negative`, with `BEGIN TRANSACTION READ ONLY` and `COMMIT`, checked the explicitly enumerated 29 frozen public table names from protected-main `scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MATERIALIZATION_V1.ts` versus catalog public ordinary/partitioned tables. Result: expected_tables=29, actual_tables=29, missing_tables=0, extra_tables=0, `TABLE_SET_PASS`. Separately compared public routine names against the expected two append routines: actual_routines=2, missing_routines=0, extra_routines=0, `ROUTINE_SET_PASS`. Adjudication: `NEGATIVE_FROZEN_SCHEMA_OBJECT_SET_PASS` for object names and counts, not full structural equivalence. Positive identical frozen-set check still PENDING. No schema writes.
