@@ -47,6 +47,22 @@ function verifySignature(envelope,policy,domain){
  const sig=Buffer.from(envelope.signature_base64,'base64');assert.equal(sig.length,64);assert.equal(sig.toString('base64'),envelope.signature_base64,'OFFLINE_SIGNATURE_ENCODING_INVALID');
  assert(crypto.verify(null,Buffer.from(domain+c.canonical(q)),key,sig),'OFFLINE_BAD_SIGNATURE');
 }
+function verifyReleaseSourceBinding(release,profile){
+ assert(Array.isArray(release.files)&&release.files.length>=108,'OFFLINE_RELEASE_FILES_INCOMPLETE');
+ assert.equal(release.content_inventory_sha256,c.digest(release.files),'OFFLINE_RELEASE_INVENTORY_DIGEST_CHANGED');
+ assert(Array.isArray(profile.files)&&profile.files.length>0,'OFFLINE_INSTALLED_FILES_REQUIRED');
+ const materialFiles=new Map(profile.files.map(row=>[row.path,row.sha256]));
+ const seen=new Set();
+ for(const row of release.files){
+  assert(row&&typeof row.path==='string'&&!row.path.startsWith('/')&&!row.path.includes('\\')&&!row.path.includes(':')&&
+   row.path.split('/').every(part=>part&&part!=='.'&&part!=='..'),'OFFLINE_RELEASE_PATH_INVALID');
+  assert(!seen.has(row.path.toLowerCase()),'OFFLINE_RELEASE_PATH_DUPLICATE');seen.add(row.path.toLowerCase());
+  c.hash(row.sha256);
+  assert.equal(materialFiles.get(row.path),row.sha256,'OFFLINE_RELEASE_SOURCE_DRIFT:'+row.path);
+ }
+ assert(seen.has(QCP_REL.toLowerCase()),'OFFLINE_RELEASE_QCP_NOT_BOUND');
+}
+
 function validateFormal(request,policy,root,{now=Date.now(),host=os.hostname(),environment=process.env}={}){
  validateStaticPolicy(policy,now);
  c.exact(request,['qualification','material','evidence_root']);
@@ -94,6 +110,7 @@ function validateFormal(request,policy,root,{now=Date.now(),host=os.hostname(),e
 
  assert.equal(q.material_digest,c.digest(request.material),'OFFLINE_MATERIAL_BINDING_CHANGED');
  const checked=material.verify(request.material,root,environment);
+ verifyReleaseSourceBinding(release,request.material);
  return {q,checked};
 }
 function verifyFormal(request,policy,root,options={}){
@@ -147,4 +164,4 @@ function bindObserved(context,bundle){
  assert.equal(bundle.observed.adoption_binding.material_digest,context.material_digest,'OFFLINE_PERMIT_MATERIAL_MISMATCH');
  assert(c.epoch(bundle.permit.payload.expires_at)<=c.epoch(context.qualification_expires_at),'PERMIT_OUTLIVES_ADOPTION');
 }
-module.exports={DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,load,isFormalVerified,bindObserved};
+module.exports={DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,verifyReleaseSourceBinding,load,isFormalVerified,bindObserved};

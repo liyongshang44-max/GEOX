@@ -72,7 +72,8 @@ function formalFixture(){
  });
  const qcpProof={schema:'MCFT_CAP09_FINAL_QCP_ADOPTION_PROOF_V1',subject_sha:subject,status:'PASS',total_checks:55,adoption_checks:54,blocker_count:0};
  const qcpRef='formal-qcp-proof.json',qcpProofBytes=JSON.stringify(qcpProof);fs.writeFileSync(path.join(evidence,qcpRef),qcpProofBytes);
- const release={schema_version:'MCFT_CAP09_RELEASE_MATERIAL_BINDING_V1',subject_commit_sha:subject};
+ const releaseFiles=m.inventory(base.root).map(row=>({...row,size_bytes:fs.statSync(path.join(base.root,...row.path.split('/'))).size,mode:'100644',category:'synthetic-fixture'}));
+ const release={schema_version:'MCFT_CAP09_RELEASE_MATERIAL_BINDING_V1',subject_commit_sha:subject,files:releaseFiles,content_inventory_sha256:c.digest(releaseFiles)};
  const releaseRef='formal-release-binding.json',releaseBytes=JSON.stringify(release);fs.writeFileSync(path.join(evidence,releaseRef),releaseBytes);
  const q={qualification_id:'formal_fixture_v1',schema:'MCFT_CAP09_ADOPTION_QUALIFICATION_V1',subject_sha:subject,scope:'TEST_ONLY',
   issued_at:iso(now-1000),expires_at:iso(now+60000),issuer_id:'fixture-operator',key_id:'fixture-adoption-key',
@@ -94,6 +95,17 @@ test('formal_signed_adoption_rejects_policy_self_activation',()=>{const f=formal
 test('formal_signed_adoption_rejects_missing_check',()=>{const f=formalFixture();f.q.checks.pop();f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
 test('formal_signed_adoption_rejects_definition_revision_drift',()=>{const f=formalFixture();f.q.checks[0].revision='0'.repeat(64);f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
 test('formal_signed_adoption_rejects_unapproved_not_applicable',()=>{const f=formalFixture();f.q.checks[0].result='NOT_APPLICABLE';f.q.checks[0].reason='fixture';f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
+test('formal_signed_adoption_rejects_rebound_installed_source',()=>{
+ const f=formalFixture(),entry=path.join(f.root,'entry.cjs');
+ fs.appendFileSync(entry,'\nchanged after Git adoption');
+ f.request.material.files=m.inventory(f.root);f.sign();
+ assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}),/OFFLINE_RELEASE_SOURCE_DRIFT/);
+});
+test('formal_signed_adoption_rejects_tampered_release_inventory',()=>{
+ const f=formalFixture(),file=path.join(f.request.evidence_root,f.q.release_binding_ref),release=JSON.parse(fs.readFileSync(file,'utf8'));
+ release.files[0].sha256='f'.repeat(64);fs.writeFileSync(file,JSON.stringify(release));f.q.release_binding_sha256=c.sha(fs.readFileSync(file));f.sign();
+ assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}),/OFFLINE_RELEASE_INVENTORY_DIGEST_CHANGED/);
+});
 test('formal_signed_adoption_rejects_qcp_blocker',()=>{const f=formalFixture(),file=path.join(f.request.evidence_root,f.q.qcp_proof_ref),proof=JSON.parse(fs.readFileSync(file,'utf8'));proof.blocker_count=1;fs.writeFileSync(file,JSON.stringify(proof));f.q.qcp_proof_sha256=c.sha(fs.readFileSync(file));f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
 
 test('permit_observation_binding',()=>{const f=fixture(),r=verify(f),bundle={observed:{adoption_binding:{qualification_digest:r.adoption_digest,material_digest:r.material_digest}},permit:{payload:{expires_at:f.q.expires_at}}};v.bindObserved(r,bundle);bundle.observed.adoption_binding.material_digest='0'.repeat(64);assert.throws(()=>v.bindObserved(r,bundle));});
@@ -114,5 +126,13 @@ test('installed_material_collector_roundtrip',()=>{
  assert.equal(r.status,'INSTALLED_MATERIAL_COLLECTED_AND_SELF_VERIFIED');assert.equal(m.verify(profile,root,env).digest,r.profile_sha256);assert.equal(r.execution_authorized,false);assert.equal(r.production_authorized,false);
 });
 
+test('installed_material_collector_allows_exact_signed_child_stage_names',()=>{
+ const dir=fs.mkdtempSync(path.join(tmp,'child-stage-')),root=path.join(dir,'release'),out=path.join(dir,'profile.json');fs.mkdirSync(root);fs.writeFileSync(path.join(root,'one.cjs'),'fixture');
+ const node=fs.realpathSync(process.execPath),env={MCFT_PYTHON_EXECUTABLE:node,PATH:'fixed'},p=m.collect(root,node,node,out,env),profile=c.read(out);
+ assert.equal(m.CHILD_STAGE_ENVIRONMENT_NAMES.length,19);
+ const child={...env,MCFT_SUBJECT_SHA:'a'.repeat(40),MCFT_GOVERNED_RETRY_STAGE:'PRODUCER',MCFT_GOVERNED_RETRY_TICKET:'fixture-ticket'};
+ assert.equal(m.verify(profile,root,child).digest,p.profile_sha256);
+ child.NODE_OPTIONS='--require untrusted';assert.throws(()=>m.verify(profile,root,child));
+});
 test('fixed_production_policy_disabled',()=>{assert.equal(c.read(v.POLICY).adopted,false);assert.throws(()=>v.load(path.join(tmp,'missing.json'),tmp));});
 console.log(JSON.stringify({status:'PASS',checks,synthetic_material_and_signer:true,real_execution_authorized:false,windows_host_attested:false}));
