@@ -43,7 +43,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "CONTROL_PLANE_INTEGRITY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
@@ -72,7 +78,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "V13_HOLISTIC_SCHEMA",
@@ -100,7 +112,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "V13_HOLISTIC_SCHEMA"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "V13_NEXT_TICK_VIABILITY",
@@ -128,7 +146,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "V13_NEXT_TICK_VIABILITY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
@@ -157,7 +181,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "EA5E2_RUNTIME_DEPENDENCY_GRAPH",
@@ -187,7 +217,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "EA5E2_RUNTIME_DEPENDENCY_GRAPH"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "LEGACY_AM19_PERSISTENT_24T",
@@ -213,7 +249,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "LEGACY_AM19_PERSISTENT_24T"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "PHASE1_TYPED_RUNTIME_COMPOSITION",
@@ -240,7 +282,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE1_TYPED_RUNTIME_COMPOSITION"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES",
@@ -267,7 +315,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
@@ -294,7 +348,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION",
@@ -321,7 +381,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
@@ -349,7 +415,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
@@ -377,7 +449,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION",
@@ -403,7 +481,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION"
+      },
+      "candidate_qcp_status": "NOT_APPLICABLE"
     },
     {
       "check_id": "END_TO_END_EVIDENCE_SUPPLY_DEADLINE",
@@ -430,7 +514,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "END_TO_END_EVIDENCE_SUPPLY_DEADLINE"
+      },
+      "candidate_qcp_status": "NOT_APPLICABLE"
     },
     {
       "check_id": "EXACT_ONE_PRODUCTION_OWNER",
@@ -459,7 +549,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "EXACT_ONE_PRODUCTION_OWNER"
+      },
+      "candidate_qcp_status": "NOT_APPLICABLE"
     },
     {
       "check_id": "FORMAL_V5_H6_SUCCESSOR_SEAM",
@@ -487,7 +583,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_H6_SUCCESSOR_SEAM"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF",
@@ -518,7 +620,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "FORMAL_V5_ACTIVATION",
@@ -551,7 +659,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_ACTIVATION"
+      },
+      "candidate_qcp_status": "NOT_APPLICABLE"
     },
     {
       "check_id": "V13_RUNTIME_HARNESS_RESOLVER_MIGRATION",
@@ -581,7 +695,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "V13_RUNTIME_HARNESS_RESOLVER_MIGRATION"
+      },
+      "candidate_qcp_status": "NOT_APPLICABLE"
     },
     {
       "check_id": "T4R1_BIOLOGICAL_STAGE_AUTHORITY",
@@ -609,7 +729,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "T4R1_BIOLOGICAL_STAGE_AUTHORITY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION",
@@ -637,7 +763,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
@@ -666,7 +798,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "A18_BIOLOGICAL_STAGE_CONTEXT_V4"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR",
@@ -696,7 +834,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING",
@@ -727,7 +871,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION",
@@ -757,7 +907,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS",
@@ -789,7 +945,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "T4R1_CURRENT_CROP_ROLLING_REFRESH",
@@ -817,7 +979,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "T4R1_CURRENT_CROP_ROLLING_REFRESH"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "PRODUCTION_RUNTIME_OWNER_CUTOVER",
@@ -848,7 +1016,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PRODUCTION_RUNTIME_OWNER_CUTOVER"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "T4R1_CURRENT_CROP_ROLLING_CANDIDATE",
@@ -876,7 +1050,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "T4R1_CURRENT_CROP_ROLLING_CANDIDATE"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM",
@@ -902,7 +1082,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "PROTECTED_MAIN_LINEAGE_ADVANCEMENT_ADJUDICATION",
@@ -928,7 +1114,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PROTECTED_MAIN_LINEAGE_ADVANCEMENT_ADJUDICATION"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING",
@@ -955,7 +1147,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "FORMAL_V5_G11_PRODUCTIONIZATION",
@@ -985,7 +1183,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_G11_PRODUCTIONIZATION"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "FORMAL_V5_R6_STAGE_ADMISSION",
@@ -1018,7 +1222,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_R6_STAGE_ADMISSION"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "FORMAL_V5_FINAL_READBACK",
@@ -1050,7 +1260,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_FINAL_READBACK"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "FORMAL_V5_COMPLETION_ADJUDICATION",
@@ -1080,7 +1296,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_COMPLETION_ADJUDICATION"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "FORMAL_ARM_RETIREMENT_ONLY",
@@ -1109,7 +1331,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_ARM_RETIREMENT_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "AM22_PREQUALIFICATION_ONLY",
@@ -1137,7 +1365,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_PREQUALIFICATION_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "AM22_START_CHAIN_ENGINEERING_ONLY",
@@ -1166,7 +1400,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_START_CHAIN_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "AM22_HOST_MEASUREMENT_ONLY",
@@ -1195,7 +1435,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_HOST_MEASUREMENT_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "AM22_FRESH_AUTHORITY_APPEND_ONLY",
@@ -1224,7 +1470,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_FRESH_AUTHORITY_APPEND_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY",
@@ -1255,7 +1507,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "AM22_POST_CUTOVER_RECOVERY_ENGINEERING_ONLY",
@@ -1284,7 +1542,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_POST_CUTOVER_RECOVERY_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "AM22_GFS_PROGRESS_DIAGNOSTIC_ENGINEERING_ONLY",
@@ -1312,7 +1576,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_GFS_PROGRESS_DIAGNOSTIC_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "FROZEN_V13_REQUALIFICATION_SUCCESSOR_ENGINEERING_ONLY",
@@ -1340,7 +1610,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FROZEN_V13_REQUALIFICATION_SUCCESSOR_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "CURRENT_CROP_20261010_ADOPTION_SUCCESSOR_ENGINEERING_ONLY",
@@ -1369,7 +1645,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "CURRENT_CROP_20261010_ADOPTION_SUCCESSOR_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "CURRENT_BASELINE_EXECUTION_SUCCESSOR_ENGINEERING_ONLY",
@@ -1397,7 +1679,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "CURRENT_BASELINE_EXECUTION_SUCCESSOR_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "ISOLATED_QUALIFICATION_AUTHORIZATION_20261010_ENGINEERING_GOVERNANCE",
@@ -1424,7 +1712,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "ISOLATED_QUALIFICATION_AUTHORIZATION_20261010_ENGINEERING_GOVERNANCE"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_ENGINEERING_ONLY",
@@ -1451,7 +1745,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "HISTORY_REPLAY_BUDGET_20261010_ENGINEERING_ONLY",
@@ -1478,7 +1778,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "HISTORY_REPLAY_BUDGET_20261010_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "DISABLED_RETRY_IMPLEMENTATION_20261011_ENGINEERING_ONLY",
@@ -1505,7 +1811,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "DISABLED_RETRY_IMPLEMENTATION_20261011_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY",
@@ -1532,7 +1844,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_ENGINEERING_ONLY",
@@ -1559,7 +1877,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     },
     {
       "check_id": "A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1_ENGINEERING_ONLY",
@@ -1585,7 +1909,13 @@
       "required_evidence_digest": null,
       "evidence_review": "NOT_ADJUDICATED",
       "result": "BLOCKED",
-      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1_ENGINEERING_ONLY"
+      },
+      "candidate_qcp_status": "PASS"
     }
   ],
   "non_effects": {
@@ -1606,5 +1936,1733 @@
     "workflow_evidence_role": "CANDIDATE_QCP_PASS_NOT_REAL_A44_ADOPTION_SIGNATURE",
     "historical_qualification_subject_sha": "a44b294f684027c0d1dd7a28c3735442fca736a4",
     "subject_match": false
-  }
+  },
+  "original_a44_exact_source": {
+    "subject_commit_sha": "a44b294f684027c0d1dd7a28c3735442fca736a4",
+    "authority_blob_sha": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+    "original_check_count": 54
+  },
+  "machine_artifact_adjudication": {
+    "run_id": 38545964031,
+    "artifact_id": 11885016966,
+    "zip_sha256": "c972ae653469047365ab7135dd48a6b763399557170a2d47738cac514ad4e00a",
+    "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+    "observed_result_counts": {
+      "total": 55,
+      "pass": 50,
+      "not_applicable": 5,
+      "fail": 0,
+      "blocker_count": 0
+    },
+    "evidence_scope": "GOVERNANCE_CANDIDATE_ONLY",
+    "source_subject_equal_to_a44": false
+  },
+  "a44_original_check_mapping": [
+    {
+      "ordinal": 1,
+      "check_id": "CONTROL_PLANE_INTEGRITY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_QUALIFICATION_CONTROL_PLANE_V1",
+      "original_generation_scope": [
+        "CONTROL_PLANE_V1"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+      ],
+      "original_resolver_ids": [
+        "CONTROL_PLANE_FILES"
+      ],
+      "original_historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "CONTROL_PLANE_INTEGRITY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 2,
+      "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_V13_SUCCESSOR_IMPLEMENTATION",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.cjs"
+      ],
+      "original_resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
+      ],
+      "original_historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 3,
+      "check_id": "V13_HOLISTIC_SCHEMA",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_V13_SCHEMA_QUALIFICATION",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+      ],
+      "original_resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
+      ],
+      "original_historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "V13_HOLISTIC_SCHEMA"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 4,
+      "check_id": "V13_NEXT_TICK_VIABILITY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_V13_RUNTIME_QUALIFICATION",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+      ],
+      "original_resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
+      ],
+      "original_historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "V13_NEXT_TICK_VIABILITY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 5,
+      "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_EA5C1_INGRESS_QUALIFICATION",
+      "original_generation_scope": [
+        "HISTORICAL_AUTHORITY",
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1.json"
+      ],
+      "original_resolver_ids": [
+        "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"
+      ],
+      "original_historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_EXACT_RESOLVER_PATHS_UNCHANGED",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 6,
+      "check_id": "EA5E2_RUNTIME_DEPENDENCY_GRAPH",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_EA5E2_RUNTIME_GRAPH_QUALIFICATION",
+      "original_generation_scope": [
+        "EA5E2_GRAPH_V4",
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs"
+      ],
+      "original_resolver_ids": [
+        "EA5E2_RUNTIME_GRAPH_V4"
+      ],
+      "original_historical_evidence_policy": "FRESH_REQUALIFICATION_REQUIRED_AFTER_PHASE2_DEPENDENCY_SET_EXPANSION",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "EA5E2_RUNTIME_DEPENDENCY_GRAPH"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 7,
+      "check_id": "LEGACY_AM19_PERSISTENT_24T",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_AMENDMENT19_HISTORICAL_QUALIFICATION",
+      "original_generation_scope": [
+        "HISTORICAL_AM19_PRE_V13"
+      ],
+      "original_authority_refs": [
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts"
+      ],
+      "original_resolver_ids": [
+        "LEGACY_AM19_PERSISTENT_24T"
+      ],
+      "original_historical_evidence_policy": "FRESH_SUCCESSOR_REQUALIFICATION_REQUIRED_AFTER_PHASE2_PROVIDER_EXTRACTION",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "LEGACY_AM19_PERSISTENT_24T"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 8,
+      "check_id": "PHASE1_TYPED_RUNTIME_COMPOSITION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_PHASE1_TYPED_RUNTIME_COMPOSITION_QUALIFICATION",
+      "original_generation_scope": [
+        "PHASE1_TYPED_RUNTIME_COMPOSITION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "apps/server/src/runtime/twin_runtime/cap08_replay_host_composition_v1.ts"
+      ],
+      "original_resolver_ids": [
+        "PHASE1_TYPED_RUNTIME_COMPOSITION"
+      ],
+      "original_historical_evidence_policy": "FRESH_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE1_TYPED_RUNTIME_COMPOSITION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 9,
+      "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_PHASE2_EVIDENCE_PROVIDER_MODULES_QUALIFICATION",
+      "original_generation_scope": [
+        "PHASE2_EVIDENCE_PROVIDER_MODULES"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs"
+      ],
+      "original_resolver_ids": [
+        "PHASE2_EVIDENCE_PROVIDER_MODULES"
+      ],
+      "original_historical_evidence_policy": "FRESH_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 10,
+      "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_PHASE3_EVIDENCE_RUNTIME_QUALIFICATION",
+      "original_generation_scope": [
+        "PHASE3_EVIDENCE_RUNTIME_FOUNDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts"
+      ],
+      "original_resolver_ids": [
+        "PHASE3_EVIDENCE_RUNTIME_FOUNDATION"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 11,
+      "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_PHASE4_TWIN_RUNTIME_QUALIFICATION",
+      "original_generation_scope": [
+        "PHASE4_TWIN_RUNTIME_FOUNDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"
+      ],
+      "original_resolver_ids": [
+        "PHASE4_TWIN_RUNTIME_FOUNDATION"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 12,
+      "check_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_PHASE5_PRODUCTION_EQUIVALENT_CONTAINER_QUALIFICATION",
+      "original_generation_scope": [
+        "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts"
+      ],
+      "original_resolver_ids": [
+        "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 13,
+      "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_PHASE7_PRIVATE_CANDIDATE_PROMOTION_QUALIFICATION",
+      "original_generation_scope": [
+        "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts"
+      ],
+      "original_resolver_ids": [
+        "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 14,
+      "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_V13_POST_MERGE_QUALIFICATION",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+      ],
+      "original_resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
+      ],
+      "original_historical_evidence_policy": "FRESH_QUALIFICATION_REQUIRED_NO_PREVIOUS_GENERATION_REUSE",
+      "original_applicable_stages": [
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "NOT_APPLICABLE",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 15,
+      "check_id": "END_TO_END_EVIDENCE_SUPPLY_DEADLINE",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_V13_TIMING_QUALIFICATION",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json"
+      ],
+      "original_resolver_ids": [
+        "V13_TIMING_QUALIFICATION_CLOSURE"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REAL_TIMING_EVIDENCE_REQUIRED",
+      "original_applicable_stages": [
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "NOT_APPLICABLE",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "END_TO_END_EVIDENCE_SUPPLY_DEADLINE"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 16,
+      "check_id": "EXACT_ONE_PRODUCTION_OWNER",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_PRODUCTION_WORKFLOW_LIFECYCLE",
+      "original_generation_scope": [
+        "V13_POST_MERGE",
+        "FORMAL_V5_ACTIVATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json"
+      ],
+      "original_resolver_ids": [
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE"
+      ],
+      "original_historical_evidence_policy": "NO_HISTORICAL_SUBSTITUTE_FOR_LIVE_OWNER_INVENTORY",
+      "original_applicable_stages": [
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "candidate_qcp_status": "NOT_APPLICABLE",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "EXACT_ONE_PRODUCTION_OWNER"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 17,
+      "check_id": "FORMAL_V5_H6_SUCCESSOR_SEAM",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM",
+      "original_generation_scope": [
+        "V13",
+        "FORMAL_V5_H6_SUCCESSOR_SEAM"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json"
+      ],
+      "original_resolver_ids": [
+        "FORMAL_V5_H6_SUCCESSOR_SEAM_V1"
+      ],
+      "original_historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_SUCCESSOR_SEAM_MUST_REQUALIFY",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_H6_SUCCESSOR_SEAM"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 18,
+      "check_id": "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_AMENDMENT21_FORMAL_V5_STAGE_HANDOFF",
+      "original_generation_scope": [
+        "V13",
+        "FORMAL_V5",
+        "AMENDMENT21_STAGE_HANDOFF"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json"
+      ],
+      "original_resolver_ids": [
+        "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1"
+      ],
+      "original_historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_REAL_LATE_SEASON_HANDOFF_MUST_REQUALIFY",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 19,
+      "check_id": "FORMAL_V5_ACTIVATION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_FORMAL_V5_ACTIVATION",
+      "original_generation_scope": [
+        "FORMAL_V5"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md"
+      ],
+      "original_resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE",
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE",
+        "FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1",
+        "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1",
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1"
+      ],
+      "original_historical_evidence_policy": "FRESH_V5_EPOCH_ONLY_FAILED_V4_REUSE_FORBIDDEN",
+      "original_applicable_stages": [
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "candidate_qcp_status": "NOT_APPLICABLE",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_ACTIVATION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 20,
+      "check_id": "V13_RUNTIME_HARNESS_RESOLVER_MIGRATION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_V13_RUNTIME_EVIDENCE_GOVERNANCE",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json"
+      ],
+      "original_resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE",
+        "V13_QUALIFICATION_HARNESS_CLOSURE",
+        "CONTROL_PLANE_FILES"
+      ],
+      "original_historical_evidence_policy": "IMMUTABLE_5E162_HISTORICAL_REPLAY_AND_CURRENT_3D5FD13_FROZEN_PARTITION_NO_BF1D_PROMOTION",
+      "original_applicable_stages": [
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "NOT_APPLICABLE",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "V13_RUNTIME_HARNESS_RESOLVER_MIGRATION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 21,
+      "check_id": "T4R1_BIOLOGICAL_STAGE_AUTHORITY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_BIOLOGICAL_STAGE_AUTHORITY_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json"
+      ],
+      "original_resolver_ids": [
+        "T4R1_BIOLOGICAL_STAGE_AUTHORITY_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "T4R1_BIOLOGICAL_STAGE_AUTHORITY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 22,
+      "check_id": "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_CURRENT_CROP_AUTHORITY_COMPOSITION_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "original_resolver_ids": [
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 23,
+      "check_id": "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_A18_BIOLOGICAL_STAGE_CONTEXT_V4_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "original_resolver_ids": [
+        "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "A18_BIOLOGICAL_STAGE_CONTEXT_V4"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 24,
+      "check_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "original_resolver_ids": [
+        "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_V1",
+        "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 25,
+      "check_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "original_resolver_ids": [
+        "PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1",
+        "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_V1",
+        "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 26,
+      "check_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-EFFECTIVENESS-GRADUATION-V1.json"
+      ],
+      "original_resolver_ids": [
+        "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1",
+        "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_V1",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 27,
+      "check_id": "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-EFFECTIVENESS-GRADUATION-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json"
+      ],
+      "original_resolver_ids": [
+        "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1",
+        "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "original_historical_evidence_policy": "CANONICAL_EXACT_AT_EFFECTIVENESS_SUBJECT_SUCCESSOR_BLOB_PRESERVATION_AFTER_EFFECTIVENESS_MERGE",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 28,
+      "check_id": "T4R1_CURRENT_CROP_ROLLING_REFRESH",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_CURRENT_CROP_ROLLING_REFRESH_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json"
+      ],
+      "original_resolver_ids": [
+        "T4R1_CURRENT_CROP_ROLLING_REFRESH"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "T4R1_CURRENT_CROP_ROLLING_REFRESH"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 29,
+      "check_id": "PRODUCTION_RUNTIME_OWNER_CUTOVER",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_PRODUCTION_RUNTIME_OWNER_CUTOVER_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json"
+      ],
+      "original_resolver_ids": [
+        "PRODUCTION_RUNTIME_OWNER_CUTOVER_V1",
+        "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1",
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PRODUCTION_RUNTIME_OWNER_CUTOVER"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 30,
+      "check_id": "T4R1_CURRENT_CROP_ROLLING_CANDIDATE",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_CURRENT_CROP_ROLLING_CANDIDATE_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "original_resolver_ids": [
+        "T4R1_CURRENT_CROP_ROLLING_CANDIDATE"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "T4R1_CURRENT_CROP_ROLLING_CANDIDATE"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 31,
+      "check_id": "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md"
+      ],
+      "original_resolver_ids": [
+        "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 32,
+      "check_id": "PROTECTED_MAIN_LINEAGE_ADVANCEMENT_ADJUDICATION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_PROTECTED_MAIN_LINEAGE_ADVANCEMENT_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PROTECTED-MAIN-LINEAGE-ADVANCEMENT-E1F8-TO-F41D-V1.json"
+      ],
+      "original_resolver_ids": [
+        "PROTECTED_MAIN_LINEAGE_ADVANCEMENT_ADJUDICATION_V1"
+      ],
+      "original_historical_evidence_policy": "EXACT_LINEAGE_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PROTECTED_MAIN_LINEAGE_ADVANCEMENT_ADJUDICATION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 33,
+      "check_id": "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_QUALIFICATION",
+      "original_generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-RUNTIME-PRIVATE-STORE-BINDING-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2A-FORMAL-RAW-STORE-BINDING-CONTRACT-V1.json"
+      ],
+      "original_resolver_ids": [
+        "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1"
+      ],
+      "original_historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 34,
+      "check_id": "FORMAL_V5_G11_PRODUCTIONIZATION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_FORMAL_V5_G11_PRODUCTIONIZATION",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "G11_PRODUCTIONIZATION_ONLY"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json"
+      ],
+      "original_resolver_ids": [
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1"
+      ],
+      "original_historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_G11_MUST_REQUALIFY_EXACT_HEAD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_G11_PRODUCTIONIZATION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 35,
+      "check_id": "FORMAL_V5_R6_STAGE_ADMISSION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_FORMAL_V5_R6_STAGE_ADMISSION",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "R6_ADMISSION_ONLY"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json"
+      ],
+      "original_resolver_ids": [
+        "FORMAL_V5_R6_STAGE_ADMISSION_V1",
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1",
+        "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1"
+      ],
+      "original_historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_R6_ADMISSION_MUST_REQUALIFY_EXACT_HEAD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_R6_STAGE_ADMISSION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 36,
+      "check_id": "FORMAL_V5_FINAL_READBACK",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_FORMAL_V5_FINAL_READBACK",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "FINAL_READ_ONLY_CLOSURE_EVIDENCE"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+      ],
+      "original_resolver_ids": [
+        "FORMAL_V5_FINAL_READBACK_V1",
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1",
+        "FORMAL_V5_R6_STAGE_ADMISSION_V1"
+      ],
+      "original_historical_evidence_policy": "NO_V4_OR_GITHUB_HOURLY_ARTIFACT_CARRY_FORWARD_FRESH_V5_READBACK_REQUIRED",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_FINAL_READBACK"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 37,
+      "check_id": "FORMAL_V5_COMPLETION_ADJUDICATION",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_FORMAL_V5_COMPLETION_ADJUDICATION",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "FINAL_CLOSURE_ADJUDICATION"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json"
+      ],
+      "original_resolver_ids": [
+        "FORMAL_V5_COMPLETION_ADJUDICATION_V1",
+        "FORMAL_V5_FINAL_READBACK_V1"
+      ],
+      "original_historical_evidence_policy": "NO_V4_COMPLETION_OR_GITHUB_HOURLY_LEDGER_CARRY_FORWARD_FRESH_V5_EVIDENCE_ONLY",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_V5_COMPLETION_ADJUDICATION"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 38,
+      "check_id": "FORMAL_ARM_RETIREMENT_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_FORMAL_ARM_RETIREMENT_ONLY",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "ARM_RETIREMENT_ONLY"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json"
+      ],
+      "original_resolver_ids": [
+        "FORMAL_ARM_RETIREMENT_ONLY_V1"
+      ],
+      "original_historical_evidence_policy": "NO_ARM_CARRY_FORWARD_NO_NEW_START_AUTHORITY",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FORMAL_ARM_RETIREMENT_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 39,
+      "check_id": "AM22_PREQUALIFICATION_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_AM22_PREQUALIFICATION_ONLY",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "AM22_PREQUALIFICATION_ONLY"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json"
+      ],
+      "original_resolver_ids": [
+        "AM22_PREQUALIFICATION_ONLY_V1"
+      ],
+      "original_historical_evidence_policy": "NO_FORMAL_START_OR_ARM_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_PREQUALIFICATION_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 40,
+      "check_id": "AM22_START_CHAIN_ENGINEERING_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_AM22_START_CHAIN_ENGINEERING",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "AM22_START_CHAIN_ENGINEERING_ONLY"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-START-CHAIN-V2-ENGINEERING.md"
+      ],
+      "original_resolver_ids": [
+        "AM22_START_CHAIN_ENGINEERING_ONLY_V2"
+      ],
+      "original_historical_evidence_policy": "NO_FORMAL_START_OR_ARM_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_START_CHAIN_ENGINEERING_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 41,
+      "check_id": "AM22_HOST_MEASUREMENT_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_AM22_HOST_MEASUREMENT",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "AM22_HOST_MEASUREMENT_ONLY"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-SIX-PHASE-HOST-MEASUREMENT-V2.md"
+      ],
+      "original_resolver_ids": [
+        "AM22_HOST_MEASUREMENT_ONLY_V2"
+      ],
+      "original_historical_evidence_policy": "NO_FORMAL_START_OR_ARM_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_HOST_MEASUREMENT_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 42,
+      "check_id": "AM22_FRESH_AUTHORITY_APPEND_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_AM22_FRESH_AUTHORITY",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "AM22_FRESH_AUTHORITY_APPEND_ONLY"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-10-09T04Z-V1.json"
+      ],
+      "original_resolver_ids": [
+        "AM22_FRESH_AUTHORITY_APPEND_ONLY_V1"
+      ],
+      "original_historical_evidence_policy": "NO_FORMAL_START_OR_ARM_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_FRESH_AUTHORITY_APPEND_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 43,
+      "check_id": "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_AM22_GFS_BOOTSTRAP",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-CUTOVER-V1.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json"
+      ],
+      "original_resolver_ids": [
+        "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1"
+      ],
+      "original_historical_evidence_policy": "NO_36H_HANDOFF_OR_FORMAL_EFFECT_CARRY_FORWARD",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 44,
+      "check_id": "AM22_POST_CUTOVER_RECOVERY_ENGINEERING_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_AM22_POST_CUTOVER_RECOVERY",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "AM22_POST_CUTOVER_RECOVERY_ENGINEERING_ONLY"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json"
+      ],
+      "original_resolver_ids": [
+        "AM22_POST_CUTOVER_RECOVERY_SUCCESSOR_V1"
+      ],
+      "original_historical_evidence_policy": "NO_REUSE_OF_FAILED_BOOTSTRAP_AS_SUCCESS",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_POST_CUTOVER_RECOVERY_ENGINEERING_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 45,
+      "check_id": "AM22_GFS_PROGRESS_DIAGNOSTIC_ENGINEERING_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_AM22_GFS_DIAGNOSTIC",
+      "original_generation_scope": [
+        "FORMAL_V5",
+        "AM22_GFS_PROGRESS_DIAGNOSTIC_ENGINEERING_ONLY"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-PROGRESS-DIAGNOSTIC-V1.md"
+      ],
+      "original_resolver_ids": [
+        "AM22_GFS_PROGRESS_DIAGNOSTIC_SUCCESSOR_V1"
+      ],
+      "original_historical_evidence_policy": "IMMUTABLE_ADOPTED_RECOVERY_REPLAY_NO_LIVE_SUCCESS_REUSE",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "AM22_GFS_PROGRESS_DIAGNOSTIC_ENGINEERING_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 46,
+      "check_id": "FROZEN_V13_REQUALIFICATION_SUCCESSOR_ENGINEERING_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_FROZEN_RUNTIME_QUALIFICATION",
+      "original_generation_scope": [
+        "V13",
+        "FORMAL_V5"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json"
+      ],
+      "original_resolver_ids": [
+        "FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1"
+      ],
+      "original_historical_evidence_policy": "IMMUTABLE_PREDECESSOR_REPLAY_NO_LIVE_SUCCESS_REUSE",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "FROZEN_V13_REQUALIFICATION_SUCCESSOR_ENGINEERING_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 47,
+      "check_id": "CURRENT_CROP_20261010_ADOPTION_SUCCESSOR_ENGINEERING_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_T4R1_STAGE_ADOPTION",
+      "original_generation_scope": [
+        "T4R1",
+        "FORMAL_V5"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-10-10T04Z-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json"
+      ],
+      "original_resolver_ids": [
+        "CURRENT_CROP_20261010_ADOPTION_SUCCESSOR_V1"
+      ],
+      "original_historical_evidence_policy": "IMMUTABLE_962FDE08_HISTORICAL_REGISTRATION_REPLAY_AND_REAL_STAGE_EVIDENCE",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "CURRENT_CROP_20261010_ADOPTION_SUCCESSOR_ENGINEERING_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 48,
+      "check_id": "CURRENT_BASELINE_EXECUTION_SUCCESSOR_ENGINEERING_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_CURRENT_BASELINE_ENTRY_ENGINEERING",
+      "original_generation_scope": [
+        "V13",
+        "FORMAL_V5"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-BASELINE-PREPARATION-CONTRACT-V1.json"
+      ],
+      "original_resolver_ids": [
+        "CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1"
+      ],
+      "original_historical_evidence_policy": "IMMUTABLE_ADOPTED_MAIN_REPLAY_NO_LIVE_SUCCESS_REUSE",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "CURRENT_BASELINE_EXECUTION_SUCCESSOR_ENGINEERING_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 49,
+      "check_id": "ISOLATED_QUALIFICATION_AUTHORIZATION_20261010_ENGINEERING_GOVERNANCE",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_ISOLATED_QUALIFICATION_AUTHORIZATION",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_ISOLATED_QUALIFICATION_ARM_20261010_V1.json"
+      ],
+      "original_resolver_ids": [
+        "ISOLATED_QUALIFICATION_AUTHORIZATION_20261010_V1"
+      ],
+      "original_historical_evidence_policy": "IMMUTABLE_PR3686_PROTECTED_MAIN_REPLAY_NO_HISTORICAL_PROOF_REUSE",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "ISOLATED_QUALIFICATION_AUTHORIZATION_20261010_ENGINEERING_GOVERNANCE"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 50,
+      "check_id": "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_ENGINEERING_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_ISOLATED_QUALIFICATION_BUCKET_SEAM",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ISOLATED-PRODUCER-BUCKET-SEAM-20261010-V1.md"
+      ],
+      "original_resolver_ids": [
+        "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_V1"
+      ],
+      "original_historical_evidence_policy": "IMMUTABLE_PR3687_AUTHORITY_AND_FAILED_FIRST_EXECUTE_PRESERVED",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_ENGINEERING_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 51,
+      "check_id": "HISTORY_REPLAY_BUDGET_20261010_ENGINEERING_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_HISTORY_REPLAY_BUDGET",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-HISTORY-REPLAY-BUDGET-20261010-V1.md"
+      ],
+      "original_resolver_ids": [
+        "HISTORY_REPLAY_BUDGET_20261010_V1"
+      ],
+      "original_historical_evidence_policy": "IMMUTABLE_PR3688_REPLAY_ALL_ASSERTIONS_PRESERVED",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "HISTORY_REPLAY_BUDGET_20261010_ENGINEERING_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 52,
+      "check_id": "DISABLED_RETRY_IMPLEMENTATION_20261011_ENGINEERING_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_DISABLED_RETRY_IMPLEMENTATION",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-DISABLED-RETRY-IMPLEMENTATION-20261011-V1.md"
+      ],
+      "original_resolver_ids": [
+        "DISABLED_RETRY_IMPLEMENTATION_20261011_V1"
+      ],
+      "original_historical_evidence_policy": "IMMUTABLE_PR3689_REPLAY_AND_DISABLED_ARM_NO_ACTIVATION",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "DISABLED_RETRY_IMPLEMENTATION_20261011_ENGINEERING_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 53,
+      "check_id": "LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_LOCAL_CUTOVER_GOVERNANCE",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json"
+      ],
+      "original_resolver_ids": [
+        "LOCAL_CUTOVER_EXACT_SCOPE_20261011_V1"
+      ],
+      "original_historical_evidence_policy": "ORIGINAL_RETRY_EVIDENCE_IMMUTABLE_CANDIDATE_SCOPE_NOT_ADOPTION",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    },
+    {
+      "ordinal": 54,
+      "check_id": "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_ENGINEERING_ONLY",
+      "check_revision_authority_blob": "fbcbf8694829f4e1558bcd91def5500474e2da6c",
+      "original_owner": "MCFT_CAP09_GOVERNANCE_HISTORY_INHERITANCE",
+      "original_generation_scope": [
+        "V13"
+      ],
+      "original_authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+      ],
+      "original_resolver_ids": [
+        "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_V1"
+      ],
+      "original_historical_evidence_policy": "REPLAY_EXACT_PR3691_PROOF_IN_DISPOSABLE_CLONE_NO_HISTORICAL_REWRITE",
+      "original_applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "candidate_qcp_status": "PASS",
+      "machine_evidence_locator": {
+        "artifact_id": 11885016966,
+        "member": "MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json",
+        "check_id": "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_ENGINEERING_ONLY"
+      },
+      "original_a44_evidence_hash": null,
+      "subject_equivalence": "NOT_PROVEN",
+      "adoption_result": "BLOCKED",
+      "reason_code": "CANDIDATE_QCP_PASS_NOT_A44_SUBJECT_ADOPTION_EVIDENCE"
+    }
+  ]
 }
