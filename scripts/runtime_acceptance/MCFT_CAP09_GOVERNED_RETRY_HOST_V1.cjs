@@ -64,10 +64,13 @@ function hostBundle(file){
  assert.equal(trust.execution_enabled,true,"EXECUTE_HOLD: GOVERNED_RETRY_EXECUTION_DISABLED");
  assert(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS,"RETRY_WINDOWS_LOCAL_ONLY");
  assert(!process.env.NODE_OPTIONS&&!process.env.NODE_PATH,"RETRY_NODE_INJECTION_FORBIDDEN");
- const execution=require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
+ // Offline qualification must be checked before loading the legacy execution module.
+ // The disabled retry trust above remains the first live gate.
  const offlineFile=process.env.MCFT_CAP09_ADOPTION_REQUEST;
  const offline=Object.hasOwn(process.env,'MCFT_CAP09_ADOPTION_REQUEST')?require('../cap09_adoption_v1/offline-context.cjs'):null;
- const context=offline?offline.load(offlineFile,ROOT):execution.sourceContext();
+ const offlineContext=offline?offline.load(offlineFile,ROOT):null;
+ const execution=require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
+ const context=offlineContext||execution.sourceContext();
  assert.equal(context.frozen_runtime_identical,true,"RETRY_FROZEN_RUNTIME_CHANGED");
  assert.equal(context.base_ancestor,true,"RETRY_BASE_ANCESTRY_MISSING");
  if(offline)assert.equal(context.host_id,os.hostname(),"OFFLINE_HOST_CHANGED");
