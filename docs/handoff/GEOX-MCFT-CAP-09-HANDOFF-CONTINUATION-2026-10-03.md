@@ -1,3 +1,13 @@
+# 2026-10-14 — Live ListBuckets response is filtered to 800c target only (HOST VERIFIED)
+
+**Operator-host actual readback:** scoped 800c MinIO account invoked `ListBuckets` at `http://127.0.0.1:59000` using Python `subprocess.run(shell=False)`; `LIST_BUCKETS_EXIT=0`, `LIST_BUCKETS=ALLOWED`, `RETURNED_BUCKET_COUNT=1`, `TARGET_VISIBLE=True`, `OLD_RUN_VISIBLE=False`, `OTHER_BUCKET_COUNT=0`. Only `mcft-cap09-requal-800c023cf337` was exposed by this API response. This corrects the old harness's assumption that ANY successful ListBuckets must mean global bucket enumeration exposure. It establishes **observed filtered result**, not effective IAM attestation. Previous true `ListObjectsV2` checks: target ALLOWED (exit 0); old-run bucket DENIED (exit 254). All tested read/enum cross-run scope conditions PASS. Do not repeat these tests unless identity, policy, or container changes.
+
+**Remains unverified:** effective IAM attachments/group/default policy under exact non-root principal, policy drift vs historic `mcft800c023cf337bucketonly` snapshot, any other S3 actions or writes/deletes (MUST NOT be tested via effects), signed real A44 Local Admission and Adoption Qualification. Do not call `MINIO_IAM_FULL_PASS` or authorize execution. Required next step is read-only review of existing identity/policy binding receipts or scoped management view with no secrets or IAM mutations. Hard gates `LOCAL_ADMISSION_ELIGIBLE=false / TEST_ONLY_HOLD=true / PRODUCTION_HOLD=true`.
+
+**Handoff practice:** this observed correction is prepended immediately to the same second Handoff; earlier failed-harness history preserved, not erased.
+
+---
+
 # 2026-10-14 — Windows PowerShell Python -c quote-loss incident; ListBuckets result scope still pending
 
 Host attempted inline here-string `python -c $Py` for S3 ListBuckets response-scope readback; Python emitted `SyntaxError: invalid decimal literal` at `run = 800c023cf337`, indicating quote characters were lost passing the Python source through Windows PowerShell argument marshalling. This is a **tooling invocation failure, NOT MinIO authorization evidence**. Avoid `python -c $Py` with quoted Python source in Windows PowerShell; write a temporary UTF-8 `.py` script with a single-quoted PowerShell here-string, execute `python $Script`, finally delete temporary script; do not write credential values to the script or log.
