@@ -8,11 +8,13 @@ const runnerPath = path.join(root, "scripts/runtime_acceptance/MCFT_CAP09_WINDOW
 const configPath = path.join(root, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-WINDOWS-DEPLOYMENT-RUNNER-800C-CONFIG-V1.json");
 const workflowPath = path.join(root, ".github/workflows/mcft-cap09-windows-deployment-runner-v1.yml");
 const docPath = path.join(root, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-WINDOWS-DEPLOYMENT-RUNNER-V1.md");
+const qcpPath = path.join(root, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json");
 
 const runner = fs.readFileSync(runnerPath, "utf8");
 const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 const workflow = fs.readFileSync(workflowPath, "utf8");
 const doc = fs.readFileSync(docPath, "utf8");
+const qcp = JSON.parse(fs.readFileSync(qcpPath, "utf8"));
 let checks = 0;
 const pass = fn => { fn(); checks++; };
 
@@ -64,6 +66,26 @@ pass(() => assert.match(workflow, /ACCEPTANCE_MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNN
 pass(() => assert.match(doc, /never starts Producer/i));
 pass(() => assert.match(doc, /does not issue or consume a permit/i));
 pass(() => assert.match(doc, /FullReadOnly/i));
+
+const runnerResolverId = "WINDOWS_DEPLOYMENT_RUNNER_20261014_V1";
+const runnerCheckId = "WINDOWS_DEPLOYMENT_RUNNER_20261014_ENGINEERING_ONLY";
+const expectedOwnedPaths = [
+  ".github/workflows/mcft-cap09-windows-deployment-runner-v1.yml",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-WINDOWS-DEPLOYMENT-RUNNER-800C-CONFIG-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-WINDOWS-DEPLOYMENT-RUNNER-V1.md",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNNER_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNNER_V1.ps1"
+];
+pass(() => assert.equal(qcp.checks.length, 54));
+pass(() => assert.deepEqual(qcp.dependency_resolvers[runnerResolverId], {kind:"EXACT_PATH_SET", paths:expectedOwnedPaths}));
+const runnerCheck = qcp.checks.find(x => x.check_id === runnerCheckId);
+pass(() => assert.ok(runnerCheck));
+pass(() => assert.deepEqual(runnerCheck.resolver_ids, [runnerResolverId]));
+pass(() => assert.equal(runnerCheck.execution_workflow, ".github/workflows/mcft-cap09-windows-deployment-runner-v1.yml"));
+pass(() => assert.equal(runnerCheck.execution_workflow_status, "ENGINEERING_ONLY_NO_LIVE_EXECUTE"));
+pass(() => assert.equal(runnerCheck.carry_forward_policy, "NONE"));
+pass(() => assert.equal(runnerCheck.carry_forward_evidence_id, null));
+pass(() => assert.deepEqual(runnerCheck.applicable_stages, ["SUCCESSOR_SUBJECT_PRE_MERGE","POST_MERGE_V13_QUALIFICATION"]));
 
 console.log(JSON.stringify({
   status: "WINDOWS_DEPLOYMENT_RUNNER_STATIC_ACCEPTANCE_PASS",
