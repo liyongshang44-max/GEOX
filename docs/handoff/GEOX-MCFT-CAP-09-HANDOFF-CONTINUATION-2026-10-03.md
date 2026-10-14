@@ -1,3 +1,11 @@
+# 2026-10-14 — Actual original CP2/QCP execution triggered against independent governance candidate
+
+Opened independent **Draft PR #3706**, `qualification/mcft-cap09-cp2-a44-path-registration-20261014` into `main`; exact candidate `4d1f47479edb139ec1546a2de2c59825feceff81` (one exact-scope control-plane addition atop #3704 candidate, with 9 A44 unknown paths). Native GitHub pull_request trigger enqueued the **existing, unmodified original CP2/QCP** workflow run `38539946631` and **existing synthetic admission workflow** run `38539946388`. Both were `queued` as of readback; machine verdict NOT YET AVAILABLE. Native provider-driven live qualification workflow was `skipped`. No manual rerun of historical passed tests, no custom replacement assertions, no signing, permit, merge, deploy, Provider or Producer.
+
+This run must NOT be promoted to adoption/admission PASS until completed job logs and machine artifacts are checked for original CP2 successor-chain, updated applicability (new 55th check), 52/65 inherited checks, 108 frozen path assertions, historical equivalence and no new first-failure. Draft PR #3706 intentionally stays open/unmerged. `A44_ADOPTION_BLOCKED / LOCAL_ADMISSION_ELIGIBLE=false / TEST_ONLY_HOLD=true / PRODUCTION_HOLD=true`.
+
+---
+
 # 2026-10-14 — Independent A44 CP2 governance repair candidate committed and static-reviewed; original QCP NOT RUN
 
 Created independent branch `qualification/mcft-cap09-cp2-a44-path-registration-20261014` based on existing PR #3704 draft branch, without modifying #3704/main. Commit `4d1f47479edb139ec1546a2de2c59825feceff81` only edits `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json`. Registers exact 9 A44 paths extracted from immutable failed QCP job 115452167618 under resolver `A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1`, an `EXACT_PATH_SET` with linked required engineering-only check `A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1_ENGINEERING_ONLY`. Check stage `SUCCESSOR_SUBJECT_PRE_MERGE`; workflow `.github/workflows/mcft-cap09-adoption-local-synthetic-v1.yml`; `SYNTHETIC_ONLY_NO_EXECUTION_AUTHORIZATION`; fail-closed for unknown paths/required evidence, no historical carry forward.
