@@ -1,3 +1,9 @@
+# 2026-10-14 — PR #3706 original governance and synthetic Actions execution: interim job readback
+
+GitHub PR #3706 candidate SHA 4d1f47479edb139ec1546a2de2c59825feceff81 triggered original QCP run 38539946631 (job 115771939106, applicability-and-blocker-inventory) and synthetic/materal binding run 38539946388. Actual GitHub jobs readback: synthetic-closure (ubuntu-24.04) job 115771937755 COMPLETED/SUCCESS; synthetic-closure (windows-2022) job 115771938335 COMPLETED/SUCCESS; release-material-binding (ubuntu-24.04) job 115771938261 COMPLETED/SUCCESS; release-material-binding (windows-2022) job 115771938217 IN_PROGRESS; original QCP job 115771939106 IN_PROGRESS. These are genuinely returned job states, not forecast or completed QCP. DO NOT call A44 adoption PASS; original CP2 machine verdict and ALL_BLOCKERS still unavailable. No signer, permit, merge, deployment, runtime, resource or execution actions performed. Hold unchanged.
+
+---
+
 # 2026-10-14 — Actual original CP2/QCP execution triggered against independent governance candidate
 
 Opened independent **Draft PR #3706**, `qualification/mcft-cap09-cp2-a44-path-registration-20261014` into `main`; exact candidate `4d1f47479edb139ec1546a2de2c59825feceff81` (one exact-scope control-plane addition atop #3704 candidate, with 9 A44 unknown paths). Native GitHub pull_request trigger enqueued the **existing, unmodified original CP2/QCP** workflow run `38539946631` and **existing synthetic admission workflow** run `38539946388`. Both were `queued` as of readback; machine verdict NOT YET AVAILABLE. Native provider-driven live qualification workflow was `skipped`. No manual rerun of historical passed tests, no custom replacement assertions, no signing, permit, merge, deploy, Provider or Producer.
