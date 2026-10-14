@@ -107,5 +107,12 @@ test('real_host_offline_proof_precedes_legacy_execution_import',()=>{
  const legacy=host.indexOf('const execution=require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs")',start);
  assert(start>=0&&offline>start&&legacy>offline,'OFFLINE_PROOF_MUST_PRECEDE_LEGACY_EXECUTION_IMPORT');
 });
+
+test('installed_material_collector_roundtrip',()=>{
+ const dir=fs.mkdtempSync(path.join(tmp,'collector-')),root=path.join(dir,'release'),out=path.join(dir,'material.json');fs.mkdirSync(root);fs.writeFileSync(path.join(root,'entry.cjs'),'fixture');
+ const node=fs.realpathSync(process.execPath),env={MCFT_PYTHON_EXECUTABLE:node,PATH:'fixture'};const r=m.collect(root,node,node,out,env),profile=c.read(out);
+ assert.equal(r.status,'INSTALLED_MATERIAL_COLLECTED_AND_SELF_VERIFIED');assert.equal(m.verify(profile,root,env).digest,r.profile_sha256);assert.equal(r.execution_authorized,false);assert.equal(r.production_authorized,false);
+});
+
 test('fixed_production_policy_disabled',()=>{assert.equal(c.read(v.POLICY).adopted,false);assert.throws(()=>v.load(path.join(tmp,'missing.json'),tmp));});
 console.log(JSON.stringify({status:'PASS',checks,synthetic_material_and_signer:true,real_execution_authorized:false,windows_host_attested:false}));

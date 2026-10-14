@@ -7,6 +7,7 @@ from pathlib import Path, PurePosixPath
 import re
 import subprocess
 import sys
+import zipfile
 from material_binding import canonical, category, ensure, no_links, safe_relative, sha, verify, write_new, SCHEMA
 
 SUBJECT = 'a44b294f684027c0d1dd7a28c3735442fca736a4'
@@ -252,11 +253,74 @@ def build(repo, subject, output, capture=None):
         'release_files':len(payload_rows),'release_verification':result,'overall_pass_issuance_allowed':False,'execution_authorized':False,'production_authorized':False}
     write_new(out/'summary.json',canonical(summary)+b'\n');return summary
 
+
+FORMAL_ENGINEERING_CHECK='A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_ENGINEERING_ONLY'
+FORMAL_ALLOWED_NA={'V13_PRODUCER_DRIVEN_QUALIFICATION','END_TO_END_EVIDENCE_SUPPLY_DEADLINE','EXACT_ONE_PRODUCTION_OWNER','FORMAL_V5_ACTIVATION','V13_RUNTIME_HARNESS_RESOLVER_MIGRATION'}
+FORMAL_QCP_MEMBERS={
+ 'MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json','MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json',
+ 'MCFT_CAP_09_CP2_CURRENT_PLAN_DEBUG.json','MCFT_CAP_09_CP2_FUTURE_PLAN_DEBUG.json',
+ 'MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json','MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json',
+ 'MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json','MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json'}
+
+def finalize_qcp_adoption(repo,subject,artifact_zip,output):
+    ensure(re.fullmatch(r'[0-9a-f]{40}',subject) is not None,'SUBJECT_INVALID')
+    out=Path(output).resolve();ensure(not out.exists(),'OUTPUT_EXISTS');out.mkdir(parents=True)
+    artifact_bytes=Path(artifact_zip).read_bytes();artifact_sha=sha(artifact_bytes)
+    with zipfile.ZipFile(artifact_zip) as z:
+        ensure(set(z.namelist())==FORMAL_QCP_MEMBERS,'QCP_ARTIFACT_MEMBER_SET_CHANGED')
+        raw={n:z.read(n) for n in z.namelist()}
+    docs={n:json.loads(b) for n,b in raw.items()}
+    cp2=docs['MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json'];plan=docs['MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json']
+    blockers=docs['MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json'];immutable=docs['MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json']
+    first=docs['MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json'];semantics=docs['MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json']
+    for obj,name in [(cp2,'CP2'),(plan,'PLAN'),(blockers,'ALL_BLOCKERS')]:ensure(obj.get('head_sha')==subject,'QCP_SUBJECT_MISMATCH:'+name)
+    ensure(semantics.get('status')=='PASS','QCP_SEMANTICS_NOT_PASS');ensure(cp2.get('status')=='PASS' and cp2.get('failures')==[],'QCP_CP2_NOT_PASS')
+    ensure(plan.get('status')=='PASS' and plan.get('unknown_changed_paths')==[] and plan.get('authority_errors')==[] and plan.get('resolver_errors')==[],'QCP_PLAN_NOT_CLOSED')
+    counts=blockers.get('counts') or {};ensure(blockers.get('status')=='PASS' and blockers.get('blockers')==[],'QCP_ALL_BLOCKERS_NOT_PASS')
+    ensure(counts.get('total_checks')==55 and counts.get('pass')==50 and counts.get('not_applicable')==5,'QCP_RESULT_CARDINALITY_INVALID')
+    for k in ['fail','unknown','forbidden','authority_errors','unknown_changed_paths','blocker_count']:ensure(counts.get(k)==0,'QCP_BLOCKER_COUNT_NONZERO:'+k)
+    ensure(immutable.get('status')=='PASS' and immutable.get('all_durable_anchor_refs_resolvable') is True and immutable.get('all_live_refs_match_when_present') is True and immutable.get('all_requalification_live_refs_match') is True,'QCP_IMMUTABLE_EVIDENCE_INCOMPLETE')
+    ensure(first.get('status')=='PASS' and first.get('first_parent_chain_complete') is True and first.get('merge_tree_equivalence_all') is True and first.get('candidate_to_merge_zero_delta_all') is True,'QCP_FIRST_PARENT_NOT_PASS')
+    for k in ['runtime_mutation','database_mutation','production_runtime_start_authorized','production_owner_activation_authorized','formal_v5_authorized','a0_authorized','o00_o23_authorized']:ensure(first.get(k) is False,'QCP_AUTHORITY_ESCALATION:'+k)
+
+    git=GitObjects(repo);tree=git.tree(subject);selected={p:r for p,r in tree.items() if category(p) is not None or p.startswith('.github/workflows/')};files=dict(git.blobs(selected))
+    q=json.loads(files[QCP]);checks=q.get('checks') or [];ensure(len(checks)==55 and len({x['check_id'] for x in checks})==55,'LOCAL_QCP_CHECK_SET_INVALID')
+    by_id={x['check_id']:x for x in checks};ensure(FORMAL_ENGINEERING_CHECK in by_id,'FORMAL_ENGINEERING_CHECK_MISSING');formal=[x for x in checks if x['check_id']!=FORMAL_ENGINEERING_CHECK];ensure(len(formal)==54,'FORMAL_CHECK_COUNT_INVALID')
+    results=blockers.get('results') or [];ensure(len(results)==55 and len({x.get('check_id') for x in results})==55,'QCP_RESULTS_INVALID');result_by={x['check_id']:x for x in results};ensure(set(result_by)==set(by_id),'QCP_RESULT_MEMBERSHIP_MISMATCH')
+    ensure(result_by[FORMAL_ENGINEERING_CHECK].get('status')=='PASS','FORMAL_ENGINEERING_CHECK_NOT_PASS')
+    observed_na={x['check_id'] for x in results if x.get('status')=='NOT_APPLICABLE'};ensure(observed_na==FORMAL_ALLOWED_NA,'QCP_NOT_APPLICABLE_SET_CHANGED')
+    for cid in FORMAL_ALLOWED_NA:ensure(result_by[cid].get('reason_code')=='STAGE_NOT_APPLICABLE','QCP_NA_REASON_CHANGED:'+cid)
+    frozen=q['dependency_resolvers']['V13_RUNTIME_SEMANTIC_CLOSURE'];frozen_paths=sorted(closure(files,frozen['roots'])|set(frozen['additional_exact_paths']));ensure(len(frozen_paths)==108,'FROZEN_108_CHANGED')
+
+    rows=[]
+    for index,definition in enumerate(formal,1):
+        cid=definition['check_id'];decision=result_by[cid];status=decision.get('status');ensure(status in ('PASS','NOT_APPLICABLE'),'FORMAL_CHECK_NOT_CLOSED:'+cid)
+        revision=sha(canonical(definition));rel=f'checks/{index:02d}-{cid}.json';ev={'schema':'MCFT_CAP09_ADOPTION_CHECK_EVIDENCE_V1','subject_sha':subject,'check_id':cid,'revision':revision,'result':status,'reason':decision.get('reason_code') or status,'qcp_applicability':decision.get('applicability'),'qcp_reason_code':decision.get('reason_code'),'dependency_digest':decision.get('dependency_digest'),'qcp_artifact_sha256':artifact_sha}
+        data=canonical(ev)+b'\n';write_new(out/rel,data);rows.append({'check_id':cid,'revision':revision,'result':status,'reason':ev['reason'],'evidence_ref':rel,'sha256':sha(data)})
+    proof={'schema':'MCFT_CAP09_FINAL_QCP_ADOPTION_PROOF_V1','subject_sha':subject,'status':'PASS','stage':blockers.get('stage'),'generation':blockers.get('generation'),'total_checks':55,'adoption_checks':54,'blocker_count':0,'not_applicable_ids':sorted(FORMAL_ALLOWED_NA),'engineering_check_id':FORMAL_ENGINEERING_CHECK,'engineering_check_status':'PASS','qcp_artifact_sha256':artifact_sha,'qcp_artifact_members':{n:sha(raw[n]) for n in sorted(raw)},'immutable_evidence_status':'PASS','first_parent_status':'PASS','first_parent_hop_count':first.get('hop_count'),'frozen_paths':108,'runtime_mutation':False,'execution_authorized':False,'production_authorized':False}
+    proof_bytes=canonical(proof)+b'\n';write_new(out/'qcp-proof.json',proof_bytes)
+    for n in sorted(raw):write_new(out/'raw'/n,raw[n])
+
+    payload_rows=[]
+    for p,b in sorted(files.items()):
+        kind=category(p)
+        if kind is None:continue
+        payload_rows.append({'path':p,'git_blob_sha':tree[p]['git_blob_sha'],'sha256':sha(b),'size_bytes':len(b),'mode':tree[p]['mode'],'category':kind})
+    ensure(all(p in {x['path'] for x in payload_rows} for p in ENTRYPOINTS),'RELEASE_ENTRYPOINT_MISSING')
+    binding={'schema_version':SCHEMA,'subject_commit_sha':subject,'source_tree_git_sha':git.git('rev-parse',subject+'^{tree}').decode().strip(),'scope_version':'CONSERVATIVE_REPOSITORY_SOURCE_V1','scope_description':'Exact Git-object source binding for formal Adoption; installed dependency/interpreter bytes are separately host-bound.','files':payload_rows,'content_inventory_sha256':sha(canonical(payload_rows)),'execution_entrypoints':ENTRYPOINTS,'category_counts':dict(Counter(x['category'] for x in payload_rows)),'installed_material_separately_required':True,'execution_authorized':False,'production_authorized':False}
+    binding_bytes=canonical(binding)+b'\n';write_new(out/'release-material-binding.json',binding_bytes)
+    candidate={'schema':'MCFT_CAP09_ADOPTION_CANDIDATE_V1','subject_sha':subject,'scope':'TEST_ONLY','checks':rows,'frozen_paths':108,'first_parent_proven':True,'qcp_proof_ref':'qcp-proof.json','qcp_proof_sha256':sha(proof_bytes),'qcp_artifact_sha256':artifact_sha,'engineering_check_id':FORMAL_ENGINEERING_CHECK,'release_binding_ref':'release-material-binding.json','release_binding_sha256':sha(binding_bytes),'installed_material_required':True,'signature_required':True,'execution_authorized':False,'production_authorized':False}
+    candidate_bytes=canonical(candidate)+b'\n';write_new(out/'adoption-candidate.json',candidate_bytes)
+    summary={'status':'FINAL_QCP_ADOPTION_PACKAGE_PREPARED_UNSIGNED','subject_sha':subject,'formal_checks':54,'frozen_paths':108,'engineering_check':'PASS','not_applicable_ids':sorted(FORMAL_ALLOWED_NA),'qcp_artifact_sha256':artifact_sha,'candidate_sha256':sha(candidate_bytes),'release_binding_sha256':sha(binding_bytes),'execution_authorized':False,'production_authorized':False}
+    write_new(out/'summary.json',canonical(summary)+b'\n');return summary
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--repo',required=True);parser.add_argument('--subject',required=True)
-    parser.add_argument('--output',required=True);parser.add_argument('--ci-capture')
+    parser.add_argument('--output',required=True);parser.add_argument('--ci-capture');parser.add_argument('--formal-qcp-artifact')
     a=parser.parse_args()
-    try: print(json.dumps(build(a.repo,a.subject,a.output,a.ci_capture)))
+    try:
+        result=finalize_qcp_adoption(a.repo,a.subject,a.formal_qcp_artifact,a.output) if a.formal_qcp_artifact else build(a.repo,a.subject,a.output,a.ci_capture)
+        print(json.dumps(result))
     except Exception as e:
         print(json.dumps({'status':'ADOPTION_BUILD_FAILED_PRESERVE_OUTPUT','reason_code':str(e).split(':')[0] if isinstance(e,ValueError) else type(e).__name__,'execution_authorized':False}),file=sys.stderr)
         raise SystemExit(1)

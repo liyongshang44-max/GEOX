@@ -6,6 +6,7 @@ import socket
 import subprocess
 import tempfile
 import unittest
+import zipfile
 from unittest.mock import patch
 
 import material_binding as mb
@@ -131,5 +132,34 @@ class RealCandidateTests(unittest.TestCase):
     def test_entry65_source_anchor_drift(self):
         src=(self.root/'payload'/be.ENTRY_TEST).read_bytes().replace(b'assert.equal(x.measureStartupMs',b'changedAssertion')
         with self.assertRaisesRegex(ValueError,'ENTRY_SOURCE_CHANGED'):be.entry65(src)
+
+
+class FormalQcpPackageTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name);self.repo=self.root/'repo';self.repo.mkdir()
+        subprocess.run(['git','init','-q'],cwd=self.repo,check=True);subprocess.run(['git','config','user.email','fixture@example.com'],cwd=self.repo,check=True);subprocess.run(['git','config','user.name','fixture'],cwd=self.repo,check=True)
+        ids=[f'CHECK_{i:02d}' for i in range(49)]+sorted(be.FORMAL_ALLOWED_NA)+[be.FORMAL_ENGINEERING_CHECK];frozen=[]
+        for i in range(108):
+            rel=f'scripts/frozen/f{i:03d}.cjs';p=self.repo/rel;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('// frozen\n');frozen.append(rel)
+        q={'dependency_resolvers':{'V13_RUNTIME_SEMANTIC_CLOSURE':{'roots':[],'additional_exact_paths':frozen}},'checks':[{'check_id':x,'owner':'fixture','applicable_stages':['SUCCESSOR_SUBJECT_PRE_MERGE']} for x in ids]}
+        p=self.repo/be.QCP;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(q)+'\n')
+        for rel in be.ENTRYPOINTS:
+            x=self.repo/rel;x.parent.mkdir(parents=True,exist_ok=True);x.write_text('// entry\n')
+        subprocess.run(['git','add','.'],cwd=self.repo,check=True);subprocess.run(['git','commit','-qm','fixture'],cwd=self.repo,check=True);self.subject=subprocess.check_output(['git','rev-parse','HEAD'],cwd=self.repo,text=True).strip();self.zip=self.root/'qcp.zip';self._zip()
+    def _zip(self,blockers=0,na=None):
+        na=set(be.FORMAL_ALLOWED_NA if na is None else na);q=json.loads(subprocess.check_output(['git','show',self.subject+':'+be.QCP],cwd=self.repo));ids=[x['check_id'] for x in q['checks']]
+        results=[{'check_id':cid,'status':'NOT_APPLICABLE' if cid in na else 'PASS','applicability':'NOT_APPLICABLE' if cid in na else 'REQUALIFY','reason_code':'STAGE_NOT_APPLICABLE' if cid in na else 'DIAGNOSTIC_PASS','dependency_digest':'sha256:'+'1'*64,'execution':'NOT_APPLICABLE' if cid in na else 'DIAGNOSTIC_COMMAND'} for cid in ids]
+        counts={'total_checks':55,'pass':50,'fail':0,'not_applicable':5,'carry_forward':0,'required':20,'requalify':30,'proof_bound_preserved_required':0,'unknown':0,'forbidden':0,'authority_errors':0,'unknown_changed_paths':0,'blocker_count':blockers}
+        docs={'MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json':{'status':'PASS'},'MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json':{'status':'PASS','head_sha':self.subject,'failures':[]},'MCFT_CAP_09_CP2_CURRENT_PLAN_DEBUG.json':{'status':'FAIL','head_sha':self.subject},'MCFT_CAP_09_CP2_FUTURE_PLAN_DEBUG.json':{'status':'PASS','head_sha':self.subject},'MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json':{'status':'PASS','all_durable_anchor_refs_resolvable':True,'all_live_refs_match_when_present':True,'all_requalification_live_refs_match':True},'MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json':{'status':'PASS','head_sha':self.subject,'unknown_changed_paths':[],'authority_errors':[],'resolver_errors':[]},'MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json':{'status':'PASS','stage':'SUCCESSOR_SUBJECT_PRE_MERGE','generation':'v13','head_sha':self.subject,'counts':counts,'results':results,'blockers':[] if blockers==0 else [{'x':1}]},'MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json':{'status':'PASS','hop_count':1,'first_parent_chain_complete':True,'merge_tree_equivalence_all':True,'candidate_to_merge_zero_delta_all':True,'runtime_mutation':False,'database_mutation':False,'production_runtime_start_authorized':False,'production_owner_activation_authorized':False,'formal_v5_authorized':False,'a0_authorized':False,'o00_o23_authorized':False}}
+        with zipfile.ZipFile(self.zip,'w') as z:
+            for name,obj in docs.items():z.writestr(name,json.dumps(obj))
+    def test_final_package_success(self):
+        out=self.root/'out';r=be.finalize_qcp_adoption(self.repo,self.subject,self.zip,out);self.assertEqual([r['formal_checks'],r['frozen_paths']],[54,108]);c=json.loads((out/'adoption-candidate.json').read_text());self.assertEqual(len(c['checks']),54);self.assertEqual(sum(x['result']=='NOT_APPLICABLE' for x in c['checks']),5);self.assertTrue((out/'release-material-binding.json').is_file());self.assertFalse(r['execution_authorized'])
+    def test_blocker_rejected(self):
+        self._zip(blockers=1)
+        with self.assertRaisesRegex(ValueError,'QCP_ALL_BLOCKERS_NOT_PASS'):be.finalize_qcp_adoption(self.repo,self.subject,self.zip,self.root/'bad')
+    def test_na_set_rejected(self):
+        wrong=set(be.FORMAL_ALLOWED_NA);wrong.remove(next(iter(wrong)));wrong.add('CHECK_00');self._zip(na=wrong)
+        with self.assertRaisesRegex(ValueError,'QCP_NOT_APPLICABLE_SET_CHANGED'):be.finalize_qcp_adoption(self.repo,self.subject,self.zip,self.root/'bad2')
 
 if __name__=='__main__':unittest.main()
