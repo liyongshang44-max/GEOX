@@ -1,3 +1,13 @@
+# 2026-10-14 — V2 live MinIO IAM semantic comparison PASS; remaining groups/adoption HOLD
+
+Operator-host read-only evidence observed 2026-10-14T08:45:50.750636Z for Run 800c023cf337 and app principal mcft800c023cf337app. Correct running container ID matched. Live directly attached policy name mcft800c023cf337bucketonly matched; user status success. Live policy Version matched historical; normalized statements 2 versus historical 2 with zero added and zero removed, policy_semantic_match=true. Prior raw JSON object equality returned false, but normalized permission comparison succeeds. Historic policy snapshot SHA256 47b07f9e6dfbe6377fe628eb972f388c3f7cece28757afe86cc36e75530728b6. This is a PASS for the directly attached policy semantic equivalence, not proof of all effective IAM rights.
+
+Live group-membership field absent in the management response (FIELD_ABSENT). Group memberships, other policy attachments and derived effective rights remain NOT_VERIFIED. Keep LIVE_IAM_ATTESTATION_PENDING and do not claim full IAM closure or modify IAM. Prior S3 scope checks, 13/13 historic JSON parses, and A44 artifact/release checks remain valid; no repeat needed. A44 formal Adoption Qualification is separately BLOCKED; PR 3704 is a distinct unmerged draft historical verifier candidate. No real permit, no execution authority: LOCAL_ADMISSION_ELIGIBLE=false; TEST_ONLY_HOLD=true; PRODUCTION_HOLD=true.
+
+Next: obtain trusted read-only group membership and additional authorization evidence for exact principal, then independently adjudicate real A44 Adoption Qualification against source evidence. Do not run old S3 tests or change production.
+
+---
+
 # 2026-10-14 — Actual scoped 800c live IAM admin metadata read: direct attachment PASS, policy direct-object mismatch, groups absent
 
 Operator ran V1 read-only live MinIO IAM inspector on running pinned container (observed `2026-10-14T08:43:52.379497Z`): `container_exact_id_match=true`; `live_direct_policy_exact_match=true`, `live_direct_policy_present=true`, `live_user_status=success`; `live_policy_document_available=true` but `live_policy_document_exact_match=false`; `live_group_membership=FIELD_ABSENT`, `result=LIVE_IAM_ATTESTATION_PENDING`, `writes_or_s3_probes=false`. This proves live direct policy name attachment but DOES NOT prove equivalent policy semantics or absence of extra group authorization. Old historical policy snapshot SHA256 `47b07f9e6dfbe6377fe628eb972f388c3f7cece28757afe86cc36e75530728b6`. `FIELD_ABSENT` is not equivalent to explicitly empty groups.
