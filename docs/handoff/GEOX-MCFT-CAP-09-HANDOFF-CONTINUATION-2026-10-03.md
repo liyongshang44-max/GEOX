@@ -1,3 +1,11 @@
+# 2026-10-14 — Live MinIO group-list scanner V1 cannot parse actual response; IAM attestation still pending
+
+Windows actual V1 read-only admin group metadata result observed `2026-10-14T08:50:38.864892Z`, Run 800c023cf337: `container_exact_id_match=true`, `direct_policy_name_match=true`, `reason_code=GROUP_LIST_SHAPE_UNRECOGNIZED`, `failure_class=ValueError`, `result=LIVE_GROUP_AUTHORIZATION_PENDING`. This is a parser/response-shape failure, NOT evidence of no groups or extra authorization. No S3 probes, no IAM changes, `writes_or_s3_probes=false`.
+
+Reviewed V1 script: `group_names()` recognizes only strings, arrays of strings, or specific `{status:'success',groups:[...]}` / `{groups:[...]}` / `{groupNames:[...]}` shapes; different valid MinIO CLI output may cause failure. Prepared new `MCFT-CAP09-800c-GROUP-AUTHORITY-READONLY-V2.py` for a single narrowly scoped read-only rerun which outputs only group-response structure (object key names, value types and counts; NO group names, other user IDs, access keys, credentials, or secrets), keeps fail-closed on unrecognized shape. Python compile check PASS; **Windows execution pending**. Group membership attestation NOT_VERIFIED; A44 actual adoption BLOCKED; admission and producer gates HOLD. No prior S3, PG, release, or TS validation should be rerun.
+
+---
+
 # 2026-10-14 — V2 live MinIO IAM semantic comparison PASS; remaining groups/adoption HOLD
 
 Operator-host read-only evidence observed 2026-10-14T08:45:50.750636Z for Run 800c023cf337 and app principal mcft800c023cf337app. Correct running container ID matched. Live directly attached policy name mcft800c023cf337bucketonly matched; user status success. Live policy Version matched historical; normalized statements 2 versus historical 2 with zero added and zero removed, policy_semantic_match=true. Prior raw JSON object equality returned false, but normalized permission comparison succeeds. Historic policy snapshot SHA256 47b07f9e6dfbe6377fe628eb972f388c3f7cece28757afe86cc36e75530728b6. This is a PASS for the directly attached policy semantic equivalence, not proof of all effective IAM rights.
