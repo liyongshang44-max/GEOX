@@ -7,6 +7,7 @@ const DOMAIN='GEOX_CAP09_ADOPTED_EXECUTION_CONTEXT_V1\n';
 const ADOPTION_DOMAIN='GEOX_MCFT_CAP09_ADOPTION_QUALIFICATION_V1\n';
 const QCP_REL='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
 const ENGINEERING_ONLY_CHECK='A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_ENGINEERING_ONLY';
+const verifiedFormalContexts=new WeakSet();
 
 function safeRef(root,rel){
  assert(typeof rel==='string'&&rel.length>0&&!path.isAbsolute(rel)&&!rel.includes('\\'),'OFFLINE_EVIDENCE_PATH_INVALID');
@@ -99,10 +100,11 @@ function verifyFormal(request,policy,root,options={}){
  const {q,checked}=validateFormal(request,policy,root,options);
  verifySignature(request.qualification,policy,ADOPTION_DOMAIN);
  const now=options.now??Date.now(),host=options.host??os.hostname(),environment=options.environment??process.env;
- return Object.freeze({head:q.subject_sha,main:q.subject_sha,clean:true,base_ancestor:true,frozen_runtime_identical:true,
+ const result=Object.freeze({head:q.subject_sha,main:q.subject_sha,clean:true,base_ancestor:true,frozen_runtime_identical:true,
   host_id:host,now:new Date(now).toISOString(),platform:process.platform,ci:Boolean(environment.CI||environment.GITHUB_ACTIONS),
   source:'SIGNED_ADOPTION_NOT_LIVE_REMOTE_MAIN',scope:'TEST_ONLY',adoption_digest:c.digest(request.qualification),material_digest:checked.digest,
   qualification_id:q.qualification_id,qualification_expires_at:q.expires_at,execution_authorized:true,production_authorized:false});
+ verifiedFormalContexts.add(result);return result;
 }
 
 // Retained candidate verifier for synthetic tests only. It is unreachable from the fixed production policy.
@@ -138,10 +140,11 @@ function verify(request,policy,root,options={}){
  return policy.activation_mode==='SIGNED_ADOPTION_REQUIRED'?verifyFormal(request,policy,root,options):verifyLegacy(request,policy,root,options);
 }
 function load(file,root){const policy=c.read(POLICY);return verify(c.read(file),policy,root);}
+function isFormalVerified(context){return verifiedFormalContexts.has(context);}
 function bindObserved(context,bundle){
  c.exact(bundle.observed.adoption_binding,['qualification_digest','material_digest']);
  assert.equal(bundle.observed.adoption_binding.qualification_digest,context.adoption_digest,'OFFLINE_PERMIT_PROOF_MISMATCH');
  assert.equal(bundle.observed.adoption_binding.material_digest,context.material_digest,'OFFLINE_PERMIT_MATERIAL_MISMATCH');
  assert(c.epoch(bundle.permit.payload.expires_at)<=c.epoch(context.qualification_expires_at),'PERMIT_OUTLIVES_ADOPTION');
 }
-module.exports={DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,load,bindObserved};
+module.exports={DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,load,isFormalVerified,bindObserved};
