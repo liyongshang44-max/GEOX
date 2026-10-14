@@ -58,17 +58,26 @@ function validateBundle(bundle,trust,context){
  return {verified,arm,plan};
 }
 function hostBundle(file){
- // Keep the adopted gate first: candidate code cannot invoke Git/DB/Provider.
  const trust=readJson(permitApi.TRUST_PATH);
- assert.equal(trust.adopted,true,"EXECUTE_HOLD: GOVERNED_RETRY_ACTIVATION_NOT_ADOPTED");
- assert.equal(trust.execution_enabled,true,"EXECUTE_HOLD: GOVERNED_RETRY_EXECUTION_DISABLED");
  assert(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS,"RETRY_WINDOWS_LOCAL_ONLY");
  assert(!process.env.NODE_OPTIONS&&!process.env.NODE_PATH,"RETRY_NODE_INJECTION_FORBIDDEN");
- // Offline qualification must be checked before loading the legacy execution module.
- // The disabled retry trust above remains the first live gate.
+ // A present Adoption Request is verified before the legacy execution module is imported.
+ // The repository trust remains disabled by default; signed TEST_ONLY Adoption is the
+ // activation fact, while the same static trust root still supplies permit issuer/ledger policy.
  const offlineFile=process.env.MCFT_CAP09_ADOPTION_REQUEST;
  const offline=Object.hasOwn(process.env,'MCFT_CAP09_ADOPTION_REQUEST')?require('../cap09_adoption_v1/offline-context.cjs'):null;
  const offlineContext=offline?offline.load(offlineFile,ROOT):null;
+ const signedActivation=Boolean(offlineContext);
+ if(signedActivation){
+  assert.equal(offline.isFormalVerified(offlineContext),true,"OFFLINE_ADOPTION_VERIFICATION_REQUIRED");
+  assert.equal(offlineContext.scope,"TEST_ONLY","OFFLINE_REAL_SCOPE_FORBIDDEN");
+  assert.equal(offlineContext.execution_authorized,true,"OFFLINE_TEST_ONLY_NOT_AUTHORIZED");
+  assert.equal(offlineContext.production_authorized,false,"OFFLINE_PRODUCTION_AUTHORITY_FORBIDDEN");
+ }else{
+  assert.equal(trust.adopted,true,"EXECUTE_HOLD: GOVERNED_RETRY_ACTIVATION_NOT_ADOPTED");
+  assert.equal(trust.execution_enabled,true,"EXECUTE_HOLD: GOVERNED_RETRY_EXECUTION_DISABLED");
+ }
+ const effectiveTrust=signedActivation?{...trust,adopted:true,execution_enabled:true}:trust;
  const execution=require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
  const context=offlineContext||execution.sourceContext();
  assert.equal(context.frozen_runtime_identical,true,"RETRY_FROZEN_RUNTIME_CHANGED");
@@ -78,7 +87,7 @@ function hostBundle(file){
  const size=fs.statSync(file).size;assert(size>0&&size<=4*1024*1024,"RETRY_BUNDLE_SIZE_INVALID");
  const bundle=readJson(file);
  if(offline)offline.bindObserved(context,bundle);
- const valid=validateBundle(bundle,trust,context);
+ const valid=validateBundle(bundle,effectiveTrust,context);
  const env={...process.env,MCFT_QUALIFICATION_FIRST_BASE:valid.arm.qualification_first_base,
   MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR:valid.arm.output_directory};
  for(const [key,name] of [["DATABASE_URL",valid.arm.resources.positive_database],["BLOCKED_DATABASE_URL",valid.arm.resources.negative_database]]) {
@@ -92,7 +101,7 @@ function hostBundle(file){
    assert(relative.startsWith('..'+path.sep)||relative==='..'||path.isAbsolute(relative),'OFFLINE_MUTABLE_PATH_INSIDE_RELEASE');
   }
  }
- return {...valid,bundle,trust,targets,env,context};
+ return {...valid,bundle,trust,effectiveTrust,targets,env,context,signedActivation};
 }
 function parseArgs(args){
  assert(args.includes("--operator-authorized")&&args.includes("--governed-retry")&&args.includes("--all"),"RETRY_EXPLICIT_ALL_REQUIRED");
@@ -119,12 +128,18 @@ async function main(args){
  const observedAt=Date.parse(h.bundle.observed.fresh_readback.completed_at);
  assert(Number.isFinite(observedAt)&&observedAt<=Date.now()&&Date.now()-observedAt<=300000,"RETRY_READBACK_STALE");
  if(!options.execute)return {status:"SIGNED_RETRY_PREFLIGHT_PASS_NOT_EXECUTED",execute_authorized:false};
- // Effectful execution is unreachable while trust is unadopted (repository default).
  // Preflight EVERYTHING before irreversible single-use parent permit consumption.
- assert.equal(h.trust.real_delay_controller_adopted,true,"EXECUTE_HOLD: REAL_DELAY_CONTROLLER_NOT_ADOPTED");
- assert.equal(h.trust.stage_capability_adopted,true,"EXECUTE_HOLD: STAGE_CAPABILITY_NOT_ADOPTED");
- assert.equal(h.trust.real_provider_transport_delay_adopted,true,"EXECUTE_HOLD: REAL_PROVIDER_TRANSPORT_DELAY_NOT_ADOPTED");
- assert.equal(h.trust.real_pipeline_delay_adopted,true,"EXECUTE_HOLD: REAL_PIPELINE_DELAY_NOT_ADOPTED");
+ // On the migrated path, these exact controller/stage bytes are covered by the signed
+ // Adoption qualification; legacy execution still requires its repository adoption flags.
+ if(h.signedActivation){
+  assert.equal(h.context.execution_authorized,true,"OFFLINE_TEST_ONLY_NOT_AUTHORIZED");
+  assert.equal(h.context.production_authorized,false,"OFFLINE_PRODUCTION_AUTHORITY_FORBIDDEN");
+ }else{
+  assert.equal(h.trust.real_delay_controller_adopted,true,"EXECUTE_HOLD: REAL_DELAY_CONTROLLER_NOT_ADOPTED");
+  assert.equal(h.trust.stage_capability_adopted,true,"EXECUTE_HOLD: STAGE_CAPABILITY_NOT_ADOPTED");
+  assert.equal(h.trust.real_provider_transport_delay_adopted,true,"EXECUTE_HOLD: REAL_PROVIDER_TRANSPORT_DELAY_NOT_ADOPTED");
+  assert.equal(h.trust.real_pipeline_delay_adopted,true,"EXECUTE_HOLD: REAL_PIPELINE_DELAY_NOT_ADOPTED");
+ }
  const scripts=STAGES.map(([id,file,artifact],i)=>{
    const script=path.join(__dirname,file);
    const stat=fs.lstatSync(script);
@@ -165,10 +180,15 @@ function childTargets(){
  assert.equal(path.resolve(process.argv[1]),path.join(__dirname,stage[1]),"RETRY_CHILD_WRONG_SCRIPT");
  // Every TypeScript child and the scratch-delay child must burn the exact
  // parent-signed stage ticket before Provider, DB, or output effects.
- assert.equal(h.trust.real_delay_controller_adopted,true,"EXECUTE_HOLD: REAL_DELAY_CONTROLLER_NOT_ADOPTED");
- assert.equal(h.trust.stage_capability_adopted,true,"EXECUTE_HOLD: STAGE_CAPABILITY_NOT_ADOPTED");
- assert.equal(h.trust.real_provider_transport_delay_adopted,true,"EXECUTE_HOLD: REAL_PROVIDER_TRANSPORT_DELAY_NOT_ADOPTED");
- assert.equal(h.trust.real_pipeline_delay_adopted,true,"EXECUTE_HOLD: REAL_PIPELINE_DELAY_NOT_ADOPTED");
+ if(h.signedActivation){
+  assert.equal(h.context.execution_authorized,true,"OFFLINE_TEST_ONLY_NOT_AUTHORIZED");
+  assert.equal(h.context.production_authorized,false,"OFFLINE_PRODUCTION_AUTHORITY_FORBIDDEN");
+ }else{
+  assert.equal(h.trust.real_delay_controller_adopted,true,"EXECUTE_HOLD: REAL_DELAY_CONTROLLER_NOT_ADOPTED");
+  assert.equal(h.trust.stage_capability_adopted,true,"EXECUTE_HOLD: STAGE_CAPABILITY_NOT_ADOPTED");
+  assert.equal(h.trust.real_provider_transport_delay_adopted,true,"EXECUTE_HOLD: REAL_PROVIDER_TRANSPORT_DELAY_NOT_ADOPTED");
+  assert.equal(h.trust.real_pipeline_delay_adopted,true,"EXECUTE_HOLD: REAL_PIPELINE_DELAY_NOT_ADOPTED");
+ }
  const ticket=process.env.MCFT_GOVERNED_RETRY_TICKET;
  const previous=process.env.MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256;
  assert(ticket&&previous,"RETRY_CHILD_ONE_TIME_CAPABILITY_REQUIRED");
