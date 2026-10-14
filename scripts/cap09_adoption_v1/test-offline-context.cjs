@@ -42,6 +42,54 @@ reject('unknown_env',f=>f.environment.UNBOUND='x');
 reject('preload_even_if_allowlisted',f=>{f.environment.NODE_OPTIONS='--require x';f.request.material.environment.allowed_names.push('NODE_OPTIONS');},true);
 reject('secrets_not_public_profile_values',f=>f.request.material.environment.public_values.PGPASSWORD='secret',true);
 reject('wrong_material_root',f=>f.request.material.root=path.dirname(f.root),true);
+
+function formalFixture(){
+ const base=fixture(),qcpPath=path.resolve(__dirname,'../../docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json');
+ const qcp=JSON.parse(fs.readFileSync(qcpPath,'utf8'));
+ const engineering='A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_ENGINEERING_ONLY';
+ const definitions=qcp.checks.filter(x=>x.check_id!==engineering);assert.equal(definitions.length,54);
+ const allowedNA=new Set(['V13_PRODUCER_DRIVEN_QUALIFICATION','END_TO_END_EVIDENCE_SUPPLY_DEADLINE','EXACT_ONE_PRODUCTION_OWNER','FORMAL_V5_ACTIVATION','V13_RUNTIME_HARNESS_RESOLVER_MIGRATION']);
+ const pair=crypto.generateKeyPairSync('ed25519'),now=base.now,iso=x=>new Date(x).toISOString();
+ const policy={schema:'CAP09_OFFLINE_ADOPTION_TRUST_V1',activation_mode:'SIGNED_ADOPTION_REQUIRED',adopted:false,subject_sha:null,
+  host_id:'fixture-host',operator_id:'fixture-operator',valid_until:iso(now+600000),
+  checks:definitions.map(x=>({check_id:x.check_id,check_revision:'LOCAL_QCP_DEFINITION_SHA256',allow_not_applicable:allowedNA.has(x.check_id)})),
+  allowed_not_applicable_ids:[...allowedNA],
+  issuers:[{issuer_id:'fixture-operator',key_id:'fixture-adoption-key',purpose:'ADOPTION',role:'ACCOUNTABLE_SINGLE_OPERATOR',revoked:false,
+   not_before:iso(now-60000),not_after:iso(now+600000),public_key_pem:pair.publicKey.export({type:'spki',format:'pem'}),
+   spki_sha256:c.sha(pair.publicKey.export({type:'spki',format:'der'}))}]};
+ const evidence=base.request.evidence_root,subject='b'.repeat(40);
+ const rows=definitions.map(definition=>{
+  const revision=c.digest(definition),evidence_ref='formal-'+c.sha(definition.check_id).slice(0,24)+'.json';
+  const row={schema:'MCFT_CAP09_ADOPTION_CHECK_EVIDENCE_V1',subject_sha:subject,check_id:definition.check_id,revision,result:'PASS',reason:'formal fixture'};
+  const bytes=JSON.stringify(row);fs.writeFileSync(path.join(evidence,evidence_ref),bytes);
+  return {check_id:definition.check_id,revision,result:'PASS',reason:'formal fixture',evidence_ref,sha256:c.sha(bytes)};
+ });
+ const qcpProof={schema:'MCFT_CAP09_FINAL_QCP_ADOPTION_PROOF_V1',subject_sha:subject,status:'PASS',total_checks:55,adoption_checks:54,blocker_count:0};
+ const qcpRef='formal-qcp-proof.json',qcpBytes=JSON.stringify(qcpProof);fs.writeFileSync(path.join(evidence,qcpRef),qcpBytes);
+ const release={schema_version:'MCFT_CAP09_RELEASE_MATERIAL_BINDING_V1',subject_commit_sha:subject};
+ const releaseRef='formal-release-binding.json',releaseBytes=JSON.stringify(release);fs.writeFileSync(path.join(evidence,releaseRef),releaseBytes);
+ const q={qualification_id:'formal_fixture_v1',schema:'MCFT_CAP09_ADOPTION_QUALIFICATION_V1',subject_sha:subject,scope:'TEST_ONLY',
+  issued_at:iso(now-1000),expires_at:iso(now+60000),issuer_id:'fixture-operator',key_id:'fixture-adoption-key',
+  policy_digest:c.digest(policy),material_digest:c.digest(base.request.material),checks:rows,frozen_paths:108,first_parent_proven:true,
+  host_id:policy.host_id,operator_id:policy.operator_id,qcp_proof_ref:qcpRef,qcp_proof_sha256:c.sha(qcpBytes),
+  release_binding_ref:releaseRef,release_binding_sha256:c.sha(releaseBytes)};
+ const envelope={payload:q,signature_base64:crypto.sign(null,Buffer.from(v.ADOPTION_DOMAIN+c.canonical(q)),pair.privateKey).toString('base64')};
+ return {...base,request:{qualification:envelope,material:base.request.material,evidence_root:evidence},policy,pair,q,sign(){
+  q.policy_digest=c.digest(policy);q.material_digest=c.digest(base.request.material);
+  envelope.signature_base64=crypto.sign(null,Buffer.from(v.ADOPTION_DOMAIN+c.canonical(q)),pair.privateKey).toString('base64');
+ }};
+}
+test('formal_signed_adoption_activates_test_only_without_repo_boolean',()=>{
+ const f=formalFixture(),r=v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment});
+ assert.equal(v.isFormalVerified(r),true);assert.equal(r.scope,'TEST_ONLY');assert.equal(r.execution_authorized,true);assert.equal(r.production_authorized,false);
+});
+test('formal_context_cannot_be_fabricated',()=>{assert.equal(v.isFormalVerified(Object.freeze({execution_authorized:true,production_authorized:false})),false);});
+test('formal_signed_adoption_rejects_policy_self_activation',()=>{const f=formalFixture();f.policy.adopted=true;f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
+test('formal_signed_adoption_rejects_missing_check',()=>{const f=formalFixture();f.q.checks.pop();f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
+test('formal_signed_adoption_rejects_definition_revision_drift',()=>{const f=formalFixture();f.q.checks[0].revision='0'.repeat(64);f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
+test('formal_signed_adoption_rejects_unapproved_not_applicable',()=>{const f=formalFixture();f.q.checks[0].result='NOT_APPLICABLE';f.q.checks[0].reason='fixture';f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
+test('formal_signed_adoption_rejects_qcp_blocker',()=>{const f=formalFixture(),file=path.join(f.request.evidence_root,f.q.qcp_proof_ref),proof=JSON.parse(fs.readFileSync(file,'utf8'));proof.blocker_count=1;fs.writeFileSync(file,JSON.stringify(proof));f.q.qcp_proof_sha256=c.sha(fs.readFileSync(file));f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
+
 test('permit_observation_binding',()=>{const f=fixture(),r=verify(f),bundle={observed:{adoption_binding:{qualification_digest:r.adoption_digest,material_digest:r.material_digest}},permit:{payload:{expires_at:f.q.expires_at}}};v.bindObserved(r,bundle);bundle.observed.adoption_binding.material_digest='0'.repeat(64);assert.throws(()=>v.bindObserved(r,bundle));});
 test('permit_cannot_outlive_qualification',()=>{const f=fixture(),r=verify(f);assert.throws(()=>v.bindObserved(r,{observed:{adoption_binding:{qualification_digest:r.adoption_digest,material_digest:r.material_digest}},permit:{payload:{expires_at:new Date(f.now+120000).toISOString()}}}));});
 test('real_dispatch_rejects_offline_marker_without_governed_retry',()=>{const runner=path.resolve(__dirname,'../runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs');const r=cp.spawnSync(process.execPath,[runner,'--operator-authorized','--preflight-only','--all'],{encoding:'utf8',env:{...process.env,MCFT_CAP09_ADOPTION_REQUEST:path.join(tmp,'missing.json')}});assert.equal(r.status,1);assert.match(r.stderr,/OFFLINE_ADOPTION_REQUIRES_GOVERNED_RETRY/);});
