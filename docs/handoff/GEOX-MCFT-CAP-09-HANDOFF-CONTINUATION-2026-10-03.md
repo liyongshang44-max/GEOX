@@ -1,3 +1,13 @@
+# 2026-10-14 — Independent A44 CP2 governance repair candidate committed and static-reviewed; original QCP NOT RUN
+
+Created independent branch `qualification/mcft-cap09-cp2-a44-path-registration-20261014` based on existing PR #3704 draft branch, without modifying #3704/main. Commit `4d1f47479edb139ec1546a2de2c59825feceff81` only edits `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json`. Registers exact 9 A44 paths extracted from immutable failed QCP job 115452167618 under resolver `A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1`, an `EXACT_PATH_SET` with linked required engineering-only check `A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1_ENGINEERING_ONLY`. Check stage `SUCCESSOR_SUBJECT_PRE_MERGE`; workflow `.github/workflows/mcft-cap09-adoption-local-synthetic-v1.yml`; `SYNTHETIC_ONLY_NO_EXECUTION_AUTHORIZATION`; fail-closed for unknown paths/required evidence, no historical carry forward.
+
+**Independent static comparison PASS** against original branch: 9 unique registered paths; original 54 checks all preserved bit-for-bit at parsed JSON structure; 54 prior resolvers unchanged; all other control-plane keys unchanged; now 55 checks. All non-effects remain false: runtime mutation, production workflow activation, formal DB mutation, provider request, graduation, completion. New branch config file blob SHA `b282499ceb2f126dde27284eeb79c227f355788d`.
+
+IMPORTANT: no QCP, original CP2, applicability, Windows CI or end-to-end validation executed; `ORIGINAL_CP2=NOT_RUN`, `ADOPTION_QUALIFICATION=BLOCKED`. This candidate may expose further failure such as check digest, applicability or historical replay. Do not sign, merge or authorize TEST_ONLY. Next: run original governing assertions on an isolated exact candidate, collect detailed machine verdict and iterate fail-closed without weakening requirements. Preserve prior A44 host validations, no unnecessary S3/PG reruns. `LOCAL_ADMISSION_ELIGIBLE=false; TEST_ONLY_HOLD=true; PRODUCTION_HOLD=true`.
+
+---
+
 # 2026-10-14 — CP2 exact unknown-path evidence retrieved from immutable A44 failed CI
 
 Fetched actual job 115452167618 logs (run 38442436228, artifact 11836147376, October 13 17:56Z). Both failures `CP2_SUCCESSOR_CHAIN_CANDIDATE_UNKNOWN_PATH` and `CP2_SUCCESSOR_CHAIN_UNKNOWN_OUTSIDE_ACCEPTED_ANCHOR` contain the **same 9 paths**, not an unknown or unspecified list:
