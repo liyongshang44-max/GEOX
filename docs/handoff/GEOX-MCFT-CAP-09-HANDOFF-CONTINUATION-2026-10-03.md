@@ -1,3 +1,13 @@
+# 2026-10-14 — PR3706 original QCP first run FAIL on six additional A44 paths; narrow follow-up committed
+
+Native original QCP run 38539946631 / job 115771939106 on candidate 4d1f47479edb139ec1546a2de2c59825feceff81 COMPLETED/FAILURE. Actual logged CP2 failure arrays now include exactly six not-yet-registered new files: `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-MATERIAL-CHECKPOINT-A44-V1.json`, `scripts/cap09_adoption_v1/MATERIAL-BINDING.md`, `scripts/cap09_adoption_v1/build_evidence.py`, `scripts/cap09_adoption_v1/evidence_review.py`, `scripts/cap09_adoption_v1/material_binding.py`, `scripts/cap09_adoption_v1/test_material_binding.py`. Both `CP2_SUCCESSOR_CHAIN_CANDIDATE_UNKNOWN_PATH` and `CP2_SUCCESSOR_CHAIN_UNKNOWN_OUTSIDE_ACCEPTED_ANCHOR` show these same six. Initial nine paths disappeared from unknown list, confirming scoped progress. The source job produced QCP artifact 11882230724 (ZIP SHA256 from log 042e690ddd94e7075883e12a71230ae030b28a8bf1191c37d7510fb027472514).
+
+Original Adoption/offline synthetic run 38539946388 COMPLETED/SUCCESS, not an A44 real admission or adoption PASS.
+
+Appended six exact files to original single A44 engineering-only resolver on PR3706 branch; now **15 exact paths**, unchanged check count 55, commit `a0903f9fd290b85ca69ed6e445677f1a4f7d5818`. Native pull_request update queued original QCP run `38540800723` and synthetic run `38540800755`. Outcomes not yet claimed. Did not disable/waive CP2 checks; original 54 checks retained; no merge or real execution. `A44_ADOPTION_BLOCKED; LOCAL_ADMISSION_ELIGIBLE=false; TEST_ONLY_HOLD=true; PRODUCTION_HOLD=true`.
+
+---
+
 # 2026-10-14 — PR #3706 original governance and synthetic Actions execution: interim job readback
 
 GitHub PR #3706 candidate SHA 4d1f47479edb139ec1546a2de2c59825feceff81 triggered original QCP run 38539946631 (job 115771939106, applicability-and-blocker-inventory) and synthetic/materal binding run 38539946388. Actual GitHub jobs readback: synthetic-closure (ubuntu-24.04) job 115771937755 COMPLETED/SUCCESS; synthetic-closure (windows-2022) job 115771938335 COMPLETED/SUCCESS; release-material-binding (ubuntu-24.04) job 115771938261 COMPLETED/SUCCESS; release-material-binding (windows-2022) job 115771938217 IN_PROGRESS; original QCP job 115771939106 IN_PROGRESS. These are genuinely returned job states, not forecast or completed QCP. DO NOT call A44 adoption PASS; original CP2 machine verdict and ALL_BLOCKERS still unavailable. No signer, permit, merge, deployment, runtime, resource or execution actions performed. Hold unchanged.
