@@ -641,7 +641,9 @@ jobs:
                       entry.subject_sha !== subject ||
                       snapshot.head_sha !== subject || run.head_sha !== subject ||
                       snapshot.base_sha !== base ||
-                      boundary.status !== 'PASS' || boundary.adopted_main_sha !== base ||
+                      boundary.status !== 'PASS' ||
+                       !/^[0-9a-f]{40}$/.test(boundary.adopted_main_sha || '') ||
+                       cp.spawnSync('git', ['merge-base', '--is-ancestor', base, boundary.adopted_main_sha], {stdio:'ignore'}).status !== 0 ||
                       boundary.production_authorized !== false || boundary.execute_authorized !== false ||
                       !(liveRunAssociatedBases.length === 0 ||
                         (liveRunAssociatedBases.length === 1 && liveRunAssociatedBases[0] === base))) {
