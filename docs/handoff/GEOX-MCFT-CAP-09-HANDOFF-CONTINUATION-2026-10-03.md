@@ -1,3 +1,23 @@
+# 2026-10-14 — CP2 exact unknown-path evidence retrieved from immutable A44 failed CI
+
+Fetched actual job 115452167618 logs (run 38442436228, artifact 11836147376, October 13 17:56Z). Both failures `CP2_SUCCESSOR_CHAIN_CANDIDATE_UNKNOWN_PATH` and `CP2_SUCCESSOR_CHAIN_UNKNOWN_OUTSIDE_ACCEPTED_ANCHOR` contain the **same 9 paths**, not an unknown or unspecified list:
+
+- `.github/workflows/mcft-cap09-adoption-local-synthetic-v1.yml`
+- `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ADR-ADOPTION-QUALIFICATION-LOCAL-EXECUTION-ADMISSION-V1.md`
+- `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-MIGRATION-INVENTORY-V1.json`
+- `scripts/cap09_adoption_v1/README.md`
+- `scripts/cap09_adoption_v1/acceptance.cjs`
+- `scripts/cap09_adoption_v1/contract.cjs`
+- `scripts/cap09_adoption_v1/signer.cjs`
+- `scripts/cap09_adoption_v1/synthetic-launcher.cjs`
+- `scripts/cap09_adoption_v1/verifier.cjs`
+
+The job environment declares `MCFT_CAP09_SUCCESSOR_CHAIN_BASE_ADMITTED=true`, `MCFT_CAP09_ADMITTED_PR_BASE_SHA=cfaf55f10f2ce7e995ffeb95fe4d5675f1a893a4`, `CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA=b689938f6161d01dec06a1ce4ce6f24420c4b3a0`, stage `SUCCESSOR_SUBJECT_PRE_MERGE`. The current QCP workflow compares unknown_changed_paths with candidate `git diff chainBase...head` and excludes only properly anchored/registered paths. These 9 arise from the newly introduced adoption/offline-admission candidate; they lack corresponding accepted exact-path/dependency resolver registration for the candidate. Evidence source CI log is specific and immutable; 5 files from QCP job were uploaded to artifact 11836147376. Audit did not rerun checks.
+
+Resolution MUST NOT change/falsify CP2 verdict. Next engineering candidate: explicitly register new nine exact paths in a scoped control-plane dependency resolver, annotate check applicability and source material, and keep immutable inheritance with #3691 historical assertion. Validate original QCP on isolated candidate BEFORE merge; if merely registering 9 paths still creates unknown control-plane paths or replays historical failures, preserve HOLD and adjudicate. A44 adoption manifest still `qcp_adoption_blocked=54` at original snapshot; later Windows release/TS/PG/MinIO checks do not override this. `TEST_ONLY_HOLD=true / PRODUCTION_HOLD=true`. Group IAM metadata still pending separate proof.
+
+---
+
 # 2026-10-14 — A44 adoption CP2 first concrete fail, no tests replayed
 
 Inspected current GitHub PR #3704 draft/open/unmerged and its immutable A44 material checkpoint `GEOX-MCFT-CAP09-ADOPTION-MATERIAL-CHECKPOINT-A44-V1.json` on candidate branch. It identifies exact A44 subject `a44b294f684027c0d1dd7a28c3735442fca736a4`, release files 6414, frozen unchanged 108/108, entry checks 65, historical checks 52, but `qcp_checks=54`, `qcp_adoption_blocked=54`, `overall_pass_issuance_allowed=false`; CI run 38442436228 job 115452167618 failure codes `CP2_SUCCESSOR_CHAIN_CANDIDATE_UNKNOWN_PATH` and `CP2_SUCCESSOR_CHAIN_UNKNOWN_OUTSIDE_ACCEPTED_ANCHOR`. Checkpoint is not post-host requalification; do not equate later file/TS/minio/PG successes with adopted QCP.
