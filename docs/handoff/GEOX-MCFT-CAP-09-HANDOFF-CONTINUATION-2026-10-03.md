@@ -1,3 +1,11 @@
+# 2026-10-14 — Actual scoped 800c live IAM admin metadata read: direct attachment PASS, policy direct-object mismatch, groups absent
+
+Operator ran V1 read-only live MinIO IAM inspector on running pinned container (observed `2026-10-14T08:43:52.379497Z`): `container_exact_id_match=true`; `live_direct_policy_exact_match=true`, `live_direct_policy_present=true`, `live_user_status=success`; `live_policy_document_available=true` but `live_policy_document_exact_match=false`; `live_group_membership=FIELD_ABSENT`, `result=LIVE_IAM_ATTESTATION_PENDING`, `writes_or_s3_probes=false`. This proves live direct policy name attachment but DOES NOT prove equivalent policy semantics or absence of extra group authorization. Old historical policy snapshot SHA256 `47b07f9e6dfbe6377fe628eb972f388c3f7cece28757afe86cc36e75530728b6`. `FIELD_ABSENT` is not equivalent to explicitly empty groups.
+
+V1 code inspected: document comparator is raw Python `document == historic`, which is order-sensitive for lists; mismatched documents require **semantic normalized comparison** of Effect/Action/Resource/Condition before asserting policy drift. A new conversation deliverable `MCFT-CAP09-800c-LIVE-IAM-READONLY-V2.py` was generated with syntactic verification, reuses same admin metadata-only calls and reports removed/added statements; not yet executed on Windows. Never infer V2 PASS. No policy changes or S3 probes. Local admission/adoption blocked; `LOCAL_ADMISSION_ELIGIBLE=false / TEST_ONLY_HOLD=true / PRODUCTION_HOLD=true`.
+
+---
+
 # 2026-10-14 — live IAM and A44 adoption prioritized, no repeat S3/QCP
 
 GitHub current `PR #3704` verified `OPEN / DRAFT / UNMERGED` at HEAD `unknown`, PR description says Windows historical first-parent verifier and main ALL_BLOCKERS remain mandatory, explicitly no QCP PASS and execute/production HOLD. PR #3704 is a historical inheritance repair, NOT a signed A44 Adoption Qualification. No new authoritative A44 adoption PASS was identified in this review; historic A44 manifest still `ADOPTION_INCOMPLETE`.
