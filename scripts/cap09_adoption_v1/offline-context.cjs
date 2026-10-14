@@ -115,6 +115,12 @@ function validateFormal(request,policy,root,{now=Date.now(),host=os.hostname(),e
 }
 function verifyFormal(request,policy,root,options={}){
  const {q,checked}=validateFormal(request,policy,root,options);
+ // Formal TEST_ONLY activation requires a purpose-separated independent signer.
+ // The existing ACCOUNTABLE_SINGLE_OPERATOR key may only serve legacy/synthetic contracts.
+ const independent=policy.issuers.filter(x=>x.issuer_id===q.issuer_id&&x.key_id===q.key_id&&x.purpose==='ADOPTION');
+ assert.equal(independent.length,1,'OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
+ assert.equal(independent[0].role,'INDEPENDENT_GOVERNANCE','OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
+ assert.notEqual(independent[0].issuer_id,policy.operator_id,'OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
  verifySignature(request.qualification,policy,ADOPTION_DOMAIN);
  const now=options.now??Date.now(),host=options.host??os.hostname(),environment=options.environment??process.env;
  const result=Object.freeze({head:q.subject_sha,main:q.subject_sha,clean:true,base_ancestor:true,frozen_runtime_identical:true,

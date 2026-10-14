@@ -60,7 +60,7 @@ function formalFixture(){
   host_id:'fixture-host',operator_id:'fixture-operator',valid_until:iso(now+600000),
   checks:definitions.map(x=>({check_id:x.check_id,check_revision:'LOCAL_QCP_DEFINITION_SHA256',allow_not_applicable:allowedNA.has(x.check_id)})),
   allowed_not_applicable_ids:[...allowedNA],
-  issuers:[{issuer_id:'fixture-operator',key_id:'fixture-adoption-key',purpose:'ADOPTION',role:'ACCOUNTABLE_SINGLE_OPERATOR',revoked:false,
+  issuers:[{issuer_id:'fixture-independent-governance',key_id:'fixture-adoption-key',purpose:'ADOPTION',role:'INDEPENDENT_GOVERNANCE',revoked:false,
    not_before:iso(now-60000),not_after:iso(now+600000),public_key_pem:pair.publicKey.export({type:'spki',format:'pem'}),
    spki_sha256:c.sha(pair.publicKey.export({type:'spki',format:'der'}))}]};
  const evidence=base.request.evidence_root,subject='b'.repeat(40);
@@ -76,7 +76,7 @@ function formalFixture(){
  const release={schema_version:'MCFT_CAP09_RELEASE_MATERIAL_BINDING_V1',subject_commit_sha:subject,files:releaseFiles,content_inventory_sha256:c.digest(releaseFiles)};
  const releaseRef='formal-release-binding.json',releaseBytes=JSON.stringify(release);fs.writeFileSync(path.join(evidence,releaseRef),releaseBytes);
  const q={qualification_id:'formal_fixture_v1',schema:'MCFT_CAP09_ADOPTION_QUALIFICATION_V1',subject_sha:subject,scope:'TEST_ONLY',
-  issued_at:iso(now-1000),expires_at:iso(now+60000),issuer_id:'fixture-operator',key_id:'fixture-adoption-key',
+  issued_at:iso(now-1000),expires_at:iso(now+60000),issuer_id:'fixture-independent-governance',key_id:'fixture-adoption-key',
   policy_digest:c.digest(policy),material_digest:c.digest(base.request.material),checks:rows,frozen_paths:108,first_parent_proven:true,
   host_id:policy.host_id,operator_id:policy.operator_id,qcp_proof_ref:qcpRef,qcp_proof_sha256:c.sha(qcpProofBytes),
   release_binding_ref:releaseRef,release_binding_sha256:c.sha(releaseBytes)};
@@ -92,6 +92,10 @@ test('formal_signed_adoption_activates_test_only_without_repo_boolean',()=>{
 });
 test('formal_context_cannot_be_fabricated',()=>{assert.equal(v.isFormalVerified(Object.freeze({execution_authorized:true,production_authorized:false})),false);});
 test('formal_signed_adoption_rejects_policy_self_activation',()=>{const f=formalFixture();f.policy.adopted=true;f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
+test('formal_signed_adoption_rejects_legacy_operator_issuer',()=>{
+ const f=formalFixture();f.policy.issuers[0].role='ACCOUNTABLE_SINGLE_OPERATOR';f.sign();
+ assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}),/OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED/);
+});
 test('formal_signed_adoption_rejects_missing_check',()=>{const f=formalFixture();f.q.checks.pop();f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
 test('formal_signed_adoption_rejects_definition_revision_drift',()=>{const f=formalFixture();f.q.checks[0].revision='0'.repeat(64);f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
 test('formal_signed_adoption_rejects_unapproved_not_applicable',()=>{const f=formalFixture();f.q.checks[0].result='NOT_APPLICABLE';f.q.checks[0].reason='fixture';f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
