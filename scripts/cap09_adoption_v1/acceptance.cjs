@@ -94,7 +94,12 @@ async function main(){
   test('purpose_key_separation',()=>{const f=fixture();f.policy.issuers=f.policy.issuers.filter(i=>i.purpose!=='permit');assert.throws(()=>signer.permit(f.permit.payload,f.qualification,f.materials,f.evidence,f.context,f.privateKey,f.policy));});
   test('material_directory_link_rejected',()=>{const f=fixture(),dest=path.join(f.dir,'linked'),original=path.join(f.materials,'runtime_code');fs.renameSync(original,dest);fs.symlinkSync(dest,original,process.platform==='win32'?'junction':'dir');assert.throws(()=>verifier.admit(f));});
   test('ledger_link_rejected',()=>{const f=fixture(),dest=path.join(f.dir,'linked-ledger');fs.renameSync(f.policy.ledger_root,dest);fs.symlinkSync(dest,f.policy.ledger_root,process.platform==='win32'?'junction':'dir');assert.throws(()=>launcher.launch(f));});
-  const f=fixture(argv[1]),args=requestFiles(f);
+  // QCP diagnostics are read-only: keep synthetic proof bytes out of the checkout.
+  // The separate synthetic workflow still retains its explicitly requested bundle.
+  const qcpDiagnostic=process.env.GITHUB_WORKFLOW==='mcft-cap-09-qualification-control-plane-v1'
+    && argv[1]==='synthetic-proof-bundle';
+  const bundleDir=qcpDiagnostic?path.join(root,'qcp-synthetic-proof-bundle'):argv[1];
+  const f=fixture(bundleDir),args=requestFiles(f);
   const processStart=performance.now();
   const outputs=await Promise.all(Array.from({length:4},()=>new Promise((resolve,reject)=>{
     const p=cp.spawn(process.execPath,[path.join(__dirname,'synthetic-launcher.cjs'),...args],{stdio:['ignore','pipe','pipe']});let out='',err='';const timer=setTimeout(()=>{p.kill();reject(Error('CONCURRENCY_TIMEOUT'));},10000);

@@ -71,13 +71,13 @@ function formalFixture(){
   return {check_id:definition.check_id,revision,result:'PASS',reason:'formal fixture',evidence_ref,sha256:c.sha(bytes)};
  });
  const qcpProof={schema:'MCFT_CAP09_FINAL_QCP_ADOPTION_PROOF_V1',subject_sha:subject,status:'PASS',total_checks:55,adoption_checks:54,blocker_count:0};
- const qcpRef='formal-qcp-proof.json',qcpBytes=JSON.stringify(qcpProof);fs.writeFileSync(path.join(evidence,qcpRef),qcpBytes);
+ const qcpRef='formal-qcp-proof.json',qcpProofBytes=JSON.stringify(qcpProof);fs.writeFileSync(path.join(evidence,qcpRef),qcpProofBytes);
  const release={schema_version:'MCFT_CAP09_RELEASE_MATERIAL_BINDING_V1',subject_commit_sha:subject};
  const releaseRef='formal-release-binding.json',releaseBytes=JSON.stringify(release);fs.writeFileSync(path.join(evidence,releaseRef),releaseBytes);
  const q={qualification_id:'formal_fixture_v1',schema:'MCFT_CAP09_ADOPTION_QUALIFICATION_V1',subject_sha:subject,scope:'TEST_ONLY',
   issued_at:iso(now-1000),expires_at:iso(now+60000),issuer_id:'fixture-operator',key_id:'fixture-adoption-key',
   policy_digest:c.digest(policy),material_digest:c.digest(base.request.material),checks:rows,frozen_paths:108,first_parent_proven:true,
-  host_id:policy.host_id,operator_id:policy.operator_id,qcp_proof_ref:qcpRef,qcp_proof_sha256:c.sha(qcpBytes),
+  host_id:policy.host_id,operator_id:policy.operator_id,qcp_proof_ref:qcpRef,qcp_proof_sha256:c.sha(qcpProofBytes),
   release_binding_ref:releaseRef,release_binding_sha256:c.sha(releaseBytes)};
  const envelope={payload:q,signature_base64:crypto.sign(null,Buffer.from(v.ADOPTION_DOMAIN+c.canonical(q)),pair.privateKey).toString('base64')};
  return {...base,request:{qualification:envelope,material:base.request.material,evidence_root:evidence},policy,pair,q,sign(){
