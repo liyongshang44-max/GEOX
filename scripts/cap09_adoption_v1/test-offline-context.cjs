@@ -50,6 +50,10 @@ function formalFixture(){
  const installedQcpPath=path.join(base.root,...v.QCP_REL.split('/'));
  fs.mkdirSync(path.dirname(installedQcpPath),{recursive:true});
  fs.writeFileSync(installedQcpPath,qcpBytes,{flag:'wx'});
+ // An adopted release must bind at least the frozen 108-path scope.
+ // Add inert source files to this synthetic fixture; real source hashes stay Git-derived.
+ const frozenDir=path.join(base.root,'scripts','frozen');fs.mkdirSync(frozenDir,{recursive:true});
+ for(let i=0;i<106;i++)fs.writeFileSync(path.join(frozenDir,'f'+String(i).padStart(3,'0')+'.cjs'),'// frozen synthetic test only\n');
  base.request.material.files=m.inventory(base.root);
  const qcp=JSON.parse(qcpBytes.toString('utf8'));
  const engineering='A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_ENGINEERING_ONLY';
