@@ -41,7 +41,8 @@ function Write-NewUtf8File([string]$Path, [string]$Text) {
   }
   $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
   try {
-    $writer = New-Object System.IO.StreamWriter($stream, (New-Object System.Text.UTF8Encoding($false)))
+    $encoding = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
+    $writer = New-Object -TypeName System.IO.StreamWriter -ArgumentList $stream,$encoding
     try {
       $writer.Write($Text)
       $writer.Flush()
@@ -505,29 +506,52 @@ function Invoke-PgReadOnly($Config) {
   Add-Stage 'PG_RESTRICTED_IDENTITY_AND_ACL' 'PASS' ([ordered]@{principals=$observed; admin_identity_used=$false; sql_mode='READ_ONLY_AND_CATALOG_SELECT_ONLY'})
 }
 
-function Assert-MininoPolicyReadOnly([string]$Path, [string]$ExpectedSha, [string]$Bucket) {
+function Assert-MinioPolicyReadOnly([string]$Path, [string]$ExpectedSha, [string]$Bucket, [string]$Prefix) {
   if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw 'MINIO_POLICY_EVIDENCE_REQUIRED' }
   if ([string]::IsNullOrWhiteSpace($ExpectedSha) -or $ExpectedSha -notmatch '^[0-9a-f]{64}$') { throw 'MINIO_POLICY_DIGEST_REQUIRED' }
+  if ([string]::IsNullOrWhiteSpace($Prefix)) { throw 'MINIO_POLICY_PREFIX_REQUIRED' }
   if ((Get-Sha256File $Path) -ne $ExpectedSha.ToLowerInvariant()) { throw 'MINIO_POLICY_DIGEST_MISMATCH' }
   $policy = Read-JsonFile $Path
+  $bucketArn = 'arn:aws:s3:::' + $Bucket
+  $prefixBase = $Prefix.TrimStart('/')
+  $objectArnPrefix = $bucketArn + '/' + $prefixBase
+  $allowedActions = @('s3:listbucket','s3:getobject','s3:getobjectversion','s3:getbucketlocation')
+
   foreach ($statement in @($policy.Statement)) {
     if ([string]$statement.Effect -ne 'Allow') { continue }
-    foreach ($action in @($statement.Action)) {
+    $actions = @($statement.Action)
+    foreach ($action in $actions) {
       $a = ([string]$action).ToLowerInvariant()
-      if ($a -eq '*' -or $a -eq 's3:*' -or $a -eq 's3:putobject' -or $a -eq 's3:deleteobject' -or $a -eq 's3:deleteobjectversion' -or $a -eq 's3:putbucketpolicy' -or $a -eq 's3:deletebucket') {
-        throw 'MINIO_WRITE_OR_ADMIN_ACTION_ALLOWED'
+      if ($allowedActions -notcontains $a) {
+        throw 'MINIO_ACTION_NOT_READONLY_WHITELISTED'
       }
     }
     foreach ($resource in @($statement.Resource)) {
       $r = [string]$resource
-      if ($r -eq '*' -or (-not $r.StartsWith(('arn:aws:s3:::' + $Bucket), [System.StringComparison]::Ordinal))) {
-        throw 'MINIO_ALLOW_RESOURCE_OUTSIDE_RUN_BUCKET'
+      if ($r -eq $bucketArn) { continue }
+      if (-not $r.StartsWith($objectArnPrefix, [System.StringComparison]::Ordinal)) {
+        throw 'MINIO_ALLOW_RESOURCE_OUTSIDE_RUN_PREFIX'
+      }
+    }
+    if (@($actions | Where-Object { ([string]$_).ToLowerInvariant() -eq 's3:listbucket' }).Count -gt 0) {
+      if ($null -eq $statement.Condition) { throw 'MINIO_LIST_PREFIX_CONDITION_REQUIRED' }
+      $prefixValues = @()
+      foreach ($group in $statement.Condition.PSObject.Properties) {
+        $prefixProp = $group.Value.PSObject.Properties['s3:prefix']
+        if ($null -ne $prefixProp) { $prefixValues += @($prefixProp.Value) }
+      }
+      if ($prefixValues.Count -eq 0) { throw 'MINIO_LIST_PREFIX_CONDITION_REQUIRED' }
+      foreach ($value in $prefixValues) {
+        $v = [string]$value
+        if (-not $v.StartsWith($prefixBase, [System.StringComparison]::Ordinal)) {
+          throw 'MINIO_LIST_PREFIX_CONDITION_OUTSIDE_RUN_PREFIX'
+        }
       }
     }
   }
 }
 
-function Invoke-MininoReadOnly($Config) {
+function Invoke-MinioReadOnly($Config) {
   $script:CurrentStage = 'MINIO_RESTRICTED_IDENTITY_AND_SCOPE'
   $profile = if (-not [string]::IsNullOrWhiteSpace($AwsProfile)) { $AwsProfile } else { [string]$Config.minio.aws_profile }
   $bucket = [string]$Config.minio.bucket
@@ -540,7 +564,7 @@ function Invoke-MininoReadOnly($Config) {
     Stop-Runner 'MINIO_DENIED_BUCKET_MUST_BE_DISTINCT' 'Negative-scope bucket equals the allowed run bucket.' 'Use a known existing out-of-scope bucket for the restricted identity denial probe.' 'Negative proof cannot target the allowed resource.'
   }
   try {
-    Assert-MininoPolicyReadOnly $MinioPolicyPath ([string]$Config.minio.expected_policy_sha256) $bucket
+    Assert-MinioPolicyReadOnly $MinioPolicyPath ([string]$Config.minio.expected_policy_sha256) $bucket $prefix
   } catch {
     Stop-Runner 'MINIO_POLICY_READONLY_CONTRACT_FAILED' $_.Exception.Message 'Use the reviewed non-secret IAM policy evidence for the restricted run identity and pin its digest. Do not call mc admin or change policy from this runner.' 'Policy bytes are digest-bound and Allow statements are rejected if they contain write/admin actions or resources outside the run bucket.'
   }
@@ -583,8 +607,8 @@ function Invoke-SelfTest {
     $src = Join-Path $tmp 'src'
     $dst = Join-Path $tmp 'dst'
     [System.IO.Directory]::CreateDirectory((Join-Path $src 'dir')) | Out-Null
-    [System.IO.File]::WriteAllText((Join-Path $src 'a.txt'),'alpha',(New-Object System.Text.UTF8Encoding($false)))
-    [System.IO.File]::WriteAllText((Join-Path $src 'dir\b.txt'),'beta',(New-Object System.Text.UTF8Encoding($false)))
+    [System.IO.File]::WriteAllText((Join-Path $src 'a.txt'),'alpha',(New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false))
+    [System.IO.File]::WriteAllText((Join-Path $src 'dir\b.txt'),'beta',(New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false))
     $rows = @(
       [pscustomobject]@{path='a.txt';size_bytes=(Get-Item (Join-Path $src 'a.txt')).Length;sha256=(Get-Sha256File (Join-Path $src 'a.txt'))},
       [pscustomobject]@{path='dir/b.txt';size_bytes=(Get-Item (Join-Path $src 'dir\b.txt')).Length;sha256=(Get-Sha256File (Join-Path $src 'dir\b.txt'))}
@@ -611,11 +635,11 @@ function Invoke-SelfTest {
     }
 
     $policy = Join-Path $tmp 'policy.json'
-    [System.IO.File]::WriteAllText($policy,'{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:ListBucket"],"Resource":["arn:aws:s3:::runbucket","arn:aws:s3:::runbucket/*"]}]}',(New-Object System.Text.UTF8Encoding($false)))
-    Assert-MininoPolicyReadOnly $policy (Get-Sha256File $policy) 'runbucket'
+    [System.IO.File]::WriteAllText($policy,'{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:ListBucket"],"Resource":["arn:aws:s3:::runbucket"],"Condition":{"StringLike":{"s3:prefix":["scope/*"]}}},{"Effect":"Allow","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::runbucket/scope/*"]}]}',(New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false))
+    Assert-MinioPolicyReadOnly $policy (Get-Sha256File $policy) 'runbucket' 'scope/'
     $checks++
-    [System.IO.File]::WriteAllText($policy,'{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:PutObject"],"Resource":["arn:aws:s3:::runbucket/*"]}]}',(New-Object System.Text.UTF8Encoding($false)))
-    try { Assert-MininoPolicyReadOnly $policy (Get-Sha256File $policy) 'runbucket'; throw 'SELFTEST_EXPECTED_POLICY_FAILURE' } catch { if ($_.Exception.Message -eq 'SELFTEST_EXPECTED_POLICY_FAILURE') { throw }; $checks++ }
+    [System.IO.File]::WriteAllText($policy,'{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:PutObject"],"Resource":["arn:aws:s3:::runbucket/scope/*"]}]}',(New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false))
+    try { Assert-MinioPolicyReadOnly $policy (Get-Sha256File $policy) 'runbucket' 'scope/'; throw 'SELFTEST_EXPECTED_POLICY_FAILURE' } catch { if ($_.Exception.Message -eq 'SELFTEST_EXPECTED_POLICY_FAILURE') { throw }; $checks++ }
 
     if ($checks -lt 7) { throw 'SELFTEST_CHECK_COUNT' }
     Write-Host ('WINDOWS_DEPLOYMENT_RUNNER_SELFTEST_PASS checks=' + $checks + ' execution_authorized=false production_authorized=false')
@@ -656,7 +680,7 @@ function Invoke-Main {
     }
 
     Invoke-PgReadOnly $config
-    Invoke-MininoReadOnly $config
+    Invoke-MinioReadOnly $config
     $script:Result.admission_input_ready = $true
     $script:Result.status = 'LOCAL_ADMISSION_INPUT_READY_EXECUTE_HOLD'
     Add-Stage 'AUTHORITY_BOUNDARY' 'PASS' ([ordered]@{
