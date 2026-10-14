@@ -1,3 +1,9 @@
+# 2026-10-14 — MinIO group list V2 response is status-only; no group conclusion yet
+
+Host read-only V2 for Run 800c023cf337 observed 2026-10-14T08:53:33.018704Z: exact container ID PASS and direct policy name PASS, no S3 probes or mutation. `group_list_shape` was JSON object with sole key `status` (str), `reason_code=GROUP_LIST_SHAPE_UNRECOGNIZED`, `result=LIVE_GROUP_AUTHORIZATION_PENDING`. This DOES NOT substantiate group existence, absence or effective inherited policies. Earlier V1 and V2 tooling incorrectly assumed all successful group-list output included a `groups` array; MinIO mc JSON output can be status-only for an empty result or have differing format, requiring explicit exit/status and independent metadata confirmation. Official MinIO `mc admin group ls` and `mc admin group info` are read-only administrative queries; `mc admin user info --json` may include `memberOf` but missing field in this version is ambiguous. Next do a single minimal read-only group-list check that records success status and exact sanitized record count and, if group entries exist, membership checks without exposing users/groups. No IAM changes and do not assert zero groups from shape alone. Direct policy semantic equivalence remains PASS (2/2 statements, zero additions/deletions). A44 real Adoption Qualification remains BLOCKED; local admission and execution remain HOLD.
+
+---
+
 # 2026-10-14 — Live MinIO group-list scanner V1 cannot parse actual response; IAM attestation still pending
 
 Windows actual V1 read-only admin group metadata result observed `2026-10-14T08:50:38.864892Z`, Run 800c023cf337: `container_exact_id_match=true`, `direct_policy_name_match=true`, `reason_code=GROUP_LIST_SHAPE_UNRECOGNIZED`, `failure_class=ValueError`, `result=LIVE_GROUP_AUTHORIZATION_PENDING`. This is a parser/response-shape failure, NOT evidence of no groups or extra authorization. No S3 probes, no IAM changes, `writes_or_s3_probes=false`.
