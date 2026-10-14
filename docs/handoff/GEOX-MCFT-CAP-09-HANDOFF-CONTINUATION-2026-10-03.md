@@ -1,3 +1,13 @@
+# 2026-10-14 — A44 historical registry receipts counted and Windows read-only collector built; no claimed execution PASS
+
+Independently re-opened exact A44 source bundle and extracted all 54 embedded check rows. Counted 133 original registry evidence references distributed across 20/54 checks (34 have none); zero entries report `original_artifact_bytes_verified=true`. Those references are registry pointers and hashes of evidence records, **not authenticated original workflow artifact payload bytes**. No original A44 check establishes legal carry-forward to same subject independently; all 54 remain BLOCKED. Read-only detailed local report `MCFT-CAP09-A44-EVIDENCE-RECHECK-V2.json` records each check and status; no endorsement of QCP candidate result as A44.
+
+Built standalone pure-read-only Windows collector `MCFT-CAP09-A44-WINDOWS-MATERIAL-READONLY-V1.py`: accept exact A44 ZIP + already-existing clean Windows release root + new output path; compare all 6414 on-disk source files SHA-256 and size against release-material-binding.json; record selected installed dependency manifests, optional hash of pre-existing external load trace, no source mutation, no process startup, no network, no credentials. Tested on empty fixture: correctly emits 6414 MISSING and HOLD. Does **not** assert actual Node/Python binaries, OS principal, process load identity, runtime ACL or MinIO group authorization; these remain independent required proof. Not yet run on Windows; output and host material attestation PENDING. Tool and report delivered via conversation downloadable files, not merged/deployed or signed.
+
+Strict gates preserved: `A44_ADOPTION_INCOMPLETE`, `LOCAL_ADMISSION_ELIGIBLE=false`, `TEST_ONLY_HOLD=true`, `PRODUCTION_HOLD=true`; no signer, permit, old QCP rerun, runtime or DB changes.
+
+---
+
 # 2026-10-14 — Independent read-only A44 54-check historical and 6414-byte release adjudication (NO ADOPTION PASS)
 
 Recomputed direct sources locally using A44 archive `MCFT-CAP09-A44-ADOPTION-AND-RELEASE-V1(1).zip` SHA-256 `3560ee033a6a75962675cb7a10035145aa71dedb6ea281b1bfe4c64a20a2ae82`, the fourth success QCP Actions artifact ZIP `11885016966` SHA-256 `c972ae653469047365ab7135dd48a6b763399557170a2d47738cac514ad4e00a`, and original 19-item Windows evidence index for Run `800c023cf337`. Independently read A44 original embedded `adoption-evidence-manifest.json` and `release-material-binding.json`, and QCP immutable `MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json`.
