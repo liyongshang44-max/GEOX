@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'scripts/cap09_adoption_v1/**'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/*ADOPTION*'
       - '.github/workflows/mcft-cap09-adoption-local-synthetic-v1.yml'
 permissions:
@@ -25,6 +27,11 @@ jobs:
           node-version: '20.11.1'
       - name: Sign, verify offline, consume concurrently and reject drift
         run: node scripts/cap09_adoption_v1/acceptance.cjs --bundle synthetic-proof-bundle
+      - name: Offline context, installed material and real dispatch rejection
+        run: |
+          node scripts/cap09_adoption_v1/test-offline-context.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_DISPATCH_GUARD_V1.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

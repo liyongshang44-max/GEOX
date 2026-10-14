@@ -1,0 +1,10 @@
+{
+  "schema": "CAP09_OFFLINE_ADOPTION_TRUST_V1",
+  "adopted": false,
+  "subject_sha": null,
+  "host_id": "LAPTOP-STN2A2P1",
+  "operator_id": "mcft_cap09_operator_mylr1",
+  "valid_until": null,
+  "checks": [],
+  "issuers": []
+}

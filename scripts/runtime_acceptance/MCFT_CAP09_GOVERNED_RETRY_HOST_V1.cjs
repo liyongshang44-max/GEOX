@@ -65,12 +65,17 @@ function hostBundle(file){
  assert(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS,"RETRY_WINDOWS_LOCAL_ONLY");
  assert(!process.env.NODE_OPTIONS&&!process.env.NODE_PATH,"RETRY_NODE_INJECTION_FORBIDDEN");
  const execution=require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
- const context=execution.sourceContext();
+ const offlineFile=process.env.MCFT_CAP09_ADOPTION_REQUEST;
+ const offline=Object.hasOwn(process.env,'MCFT_CAP09_ADOPTION_REQUEST')?require('../cap09_adoption_v1/offline-context.cjs'):null;
+ const context=offline?offline.load(offlineFile,ROOT):execution.sourceContext();
  assert.equal(context.frozen_runtime_identical,true,"RETRY_FROZEN_RUNTIME_CHANGED");
  assert.equal(context.base_ancestor,true,"RETRY_BASE_ANCESTRY_MISSING");
- context.host_id=os.hostname();
+ if(offline)assert.equal(context.host_id,os.hostname(),"OFFLINE_HOST_CHANGED");
+ else context.host_id=os.hostname();
  const size=fs.statSync(file).size;assert(size>0&&size<=4*1024*1024,"RETRY_BUNDLE_SIZE_INVALID");
- const bundle=readJson(file),valid=validateBundle(bundle,trust,context);
+ const bundle=readJson(file);
+ if(offline)offline.bindObserved(context,bundle);
+ const valid=validateBundle(bundle,trust,context);
  const env={...process.env,MCFT_QUALIFICATION_FIRST_BASE:valid.arm.qualification_first_base,
   MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR:valid.arm.output_directory};
  for(const [key,name] of [["DATABASE_URL",valid.arm.resources.positive_database],["BLOCKED_DATABASE_URL",valid.arm.resources.negative_database]]) {
@@ -78,6 +83,12 @@ function hostBundle(file){
  }
  assert.equal(env.MCFT_CAP09_FORMAL_RAW_ENDPOINT,valid.arm.resources.bucket_endpoint);
  const targets=execution.isolatedTargets({isolated_run_id:valid.arm.run_id,qualification_first_base:valid.arm.qualification_first_base},env);
+ if(offline) {
+  for(const mutable of [targets.out,trust.ledger_root]) {
+   const relative=path.relative(ROOT,path.resolve(mutable));
+   assert(relative.startsWith('..'+path.sep)||relative==='..'||path.isAbsolute(relative),'OFFLINE_MUTABLE_PATH_INSIDE_RELEASE');
+  }
+ }
  return {...valid,bundle,trust,targets,env,context};
 }
 function parseArgs(args){
