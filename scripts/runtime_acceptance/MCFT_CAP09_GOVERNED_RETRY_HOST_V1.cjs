@@ -59,13 +59,20 @@ function validateBundle(bundle,trust,context){
 }
 function hostBundle(file){
  const trust=readJson(permitApi.TRUST_PATH);
+ // Preserve the legacy no-marker fail-closed gate as the first observable decision.
+ // A present Adoption Request has a distinct, Windows-only signature verification path.
+ const hasAdoptionRequest=Object.hasOwn(process.env,'MCFT_CAP09_ADOPTION_REQUEST');
+ if(!hasAdoptionRequest){
+  assert.equal(trust.adopted,true,"EXECUTE_HOLD: GOVERNED_RETRY_ACTIVATION_NOT_ADOPTED");
+  assert.equal(trust.execution_enabled,true,"EXECUTE_HOLD: GOVERNED_RETRY_EXECUTION_DISABLED");
+ }
  assert(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS,"RETRY_WINDOWS_LOCAL_ONLY");
  assert(!process.env.NODE_OPTIONS&&!process.env.NODE_PATH,"RETRY_NODE_INJECTION_FORBIDDEN");
  // A present Adoption Request is verified before the legacy execution module is imported.
  // The repository trust remains disabled by default; signed TEST_ONLY Adoption is the
  // activation fact, while the same static trust root still supplies permit issuer/ledger policy.
  const offlineFile=process.env.MCFT_CAP09_ADOPTION_REQUEST;
- const offline=Object.hasOwn(process.env,'MCFT_CAP09_ADOPTION_REQUEST')?require('../cap09_adoption_v1/offline-context.cjs'):null;
+ const offline=hasAdoptionRequest?require('../cap09_adoption_v1/offline-context.cjs'):null;
  const offlineContext=offline?offline.load(offlineFile,ROOT):null;
  const signedActivation=Boolean(offlineContext);
  if(signedActivation){
