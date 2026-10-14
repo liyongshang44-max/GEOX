@@ -1,0 +1,1599 @@
+{
+  "schema_version": "MCFT_CAP09_A44_ADOPTION_CHECK_MAPPING_CANDIDATE_V1",
+  "subject_commit_sha": "a44b294f684027c0d1dd7a28c3735442fca736a4",
+  "candidate_control_plane_source": {
+    "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+    "source_blob_sha": "347609bb8220e9128c1de06811f27888d017de70",
+    "source_branch_at_read": "qualification/mcft-cap09-a44-adoption-mapping-isolated-20261014",
+    "checks_count": 55,
+    "original_a44_snapshot_qcp_checks": 54,
+    "revision_difference": "New engineering-only mapping check is not part of original A44 source snapshot and is not historical PASS evidence"
+  },
+  "status": "ADOPTION_INCOMPLETE",
+  "overall_pass_issuance_allowed": false,
+  "execution_authorized": false,
+  "production_authorized": false,
+  "material_binding": "INDEPENDENT_A44_REAL_HOST_MATERIAL_ATTESTATION_NOT_ATTACHED",
+  "historical_equivalence": "NOT_PROVEN",
+  "signature_issuance": "FORBIDDEN_UNTIL_ALL_REQUIRED_PROOFS_REVIEWED",
+  "required_checks": [
+    {
+      "check_id": "CONTROL_PLANE_INTEGRITY",
+      "check_ordinal": 1,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_QUALIFICATION_CONTROL_PLANE_V1",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "generation_scope": [
+        "CONTROL_PLANE_V1"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+      ],
+      "resolver_ids": [
+        "CONTROL_PLANE_FILES"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+      "check_ordinal": 2,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_V13_SUCCESSOR_IMPLEMENTATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.cjs"
+      ],
+      "resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
+      ],
+      "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
+      "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "V13_HOLISTIC_SCHEMA",
+      "check_ordinal": 3,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_V13_SCHEMA_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+      ],
+      "resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
+      ],
+      "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
+      "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "V13_NEXT_TICK_VIABILITY",
+      "check_ordinal": 4,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_V13_RUNTIME_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+      ],
+      "resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
+      ],
+      "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
+      "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+      "check_ordinal": 5,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_EA5C1_INGRESS_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "generation_scope": [
+        "HISTORICAL_AUTHORITY",
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1.json"
+      ],
+      "resolver_ids": [
+        "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"
+      ],
+      "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_EXACT_RESOLVER_PATHS_UNCHANGED",
+      "carry_forward_policy": "ONLY_WHEN_EXACT_RESOLVER_PATHS_UNCHANGED",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "EA5E2_RUNTIME_DEPENDENCY_GRAPH",
+      "check_ordinal": 6,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_EA5E2_RUNTIME_GRAPH_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "generation_scope": [
+        "EA5E2_GRAPH_V4",
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs"
+      ],
+      "resolver_ids": [
+        "EA5E2_RUNTIME_GRAPH_V4"
+      ],
+      "historical_evidence_policy": "FRESH_REQUALIFICATION_REQUIRED_AFTER_PHASE2_DEPENDENCY_SET_EXPANSION",
+      "carry_forward_policy": "NONE_AFTER_PHASE2_DEPENDENCY_SET_EXPANSION",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "LEGACY_AM19_PERSISTENT_24T",
+      "check_ordinal": 7,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_AMENDMENT19_HISTORICAL_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "HISTORICAL_AM19_PRE_V13"
+      ],
+      "authority_refs": [
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts"
+      ],
+      "resolver_ids": [
+        "LEGACY_AM19_PERSISTENT_24T"
+      ],
+      "historical_evidence_policy": "FRESH_SUCCESSOR_REQUALIFICATION_REQUIRED_AFTER_PHASE2_PROVIDER_EXTRACTION",
+      "carry_forward_policy": "NONE_AFTER_PHASE2_PROVIDER_EXTRACTION",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "PHASE1_TYPED_RUNTIME_COMPOSITION",
+      "check_ordinal": 8,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_PHASE1_TYPED_RUNTIME_COMPOSITION_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "PHASE1_TYPED_RUNTIME_COMPOSITION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "apps/server/src/runtime/twin_runtime/cap08_replay_host_composition_v1.ts"
+      ],
+      "resolver_ids": [
+        "PHASE1_TYPED_RUNTIME_COMPOSITION"
+      ],
+      "historical_evidence_policy": "FRESH_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES",
+      "check_ordinal": 9,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_PHASE2_EVIDENCE_PROVIDER_MODULES_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "PHASE2_EVIDENCE_PROVIDER_MODULES"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs"
+      ],
+      "resolver_ids": [
+        "PHASE2_EVIDENCE_PROVIDER_MODULES"
+      ],
+      "historical_evidence_policy": "FRESH_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+      "check_ordinal": 10,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_PHASE3_EVIDENCE_RUNTIME_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "PHASE3_EVIDENCE_RUNTIME_FOUNDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts"
+      ],
+      "resolver_ids": [
+        "PHASE3_EVIDENCE_RUNTIME_FOUNDATION"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION",
+      "check_ordinal": 11,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_PHASE4_TWIN_RUNTIME_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "PHASE4_TWIN_RUNTIME_FOUNDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"
+      ],
+      "resolver_ids": [
+        "PHASE4_TWIN_RUNTIME_FOUNDATION"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+      "check_ordinal": 12,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_PHASE5_PRODUCTION_EQUIVALENT_CONTAINER_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts"
+      ],
+      "resolver_ids": [
+        "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+      "check_ordinal": 13,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_PHASE7_PRIVATE_CANDIDATE_PROMOTION_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts"
+      ],
+      "resolver_ids": [
+        "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION",
+      "check_ordinal": 14,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_V13_POST_MERGE_QUALIFICATION",
+      "applicable_stages": [
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+      ],
+      "resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
+      ],
+      "historical_evidence_policy": "FRESH_QUALIFICATION_REQUIRED_NO_PREVIOUS_GENERATION_REUSE",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "END_TO_END_EVIDENCE_SUPPLY_DEADLINE",
+      "check_ordinal": 15,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_V13_TIMING_QUALIFICATION",
+      "applicable_stages": [
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json"
+      ],
+      "resolver_ids": [
+        "V13_TIMING_QUALIFICATION_CLOSURE"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REAL_TIMING_EVIDENCE_REQUIRED",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "EXACT_ONE_PRODUCTION_OWNER",
+      "check_ordinal": 16,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_PRODUCTION_WORKFLOW_LIFECYCLE",
+      "applicable_stages": [
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "generation_scope": [
+        "V13_POST_MERGE",
+        "FORMAL_V5_ACTIVATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json"
+      ],
+      "resolver_ids": [
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_SUBSTITUTE_FOR_LIVE_OWNER_INVENTORY",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "FORMAL_V5_H6_SUCCESSOR_SEAM",
+      "check_ordinal": 17,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13",
+        "FORMAL_V5_H6_SUCCESSOR_SEAM"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json"
+      ],
+      "resolver_ids": [
+        "FORMAL_V5_H6_SUCCESSOR_SEAM_V1"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_SUCCESSOR_SEAM_MUST_REQUALIFY",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF",
+      "check_ordinal": 18,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_AMENDMENT21_FORMAL_V5_STAGE_HANDOFF",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "generation_scope": [
+        "V13",
+        "FORMAL_V5",
+        "AMENDMENT21_STAGE_HANDOFF"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json"
+      ],
+      "resolver_ids": [
+        "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_REAL_LATE_SEASON_HANDOFF_MUST_REQUALIFY",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "FORMAL_V5_ACTIVATION",
+      "check_ordinal": 19,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_FORMAL_V5_ACTIVATION",
+      "applicable_stages": [
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md"
+      ],
+      "resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE",
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE",
+        "FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1",
+        "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1",
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1"
+      ],
+      "historical_evidence_policy": "FRESH_V5_EPOCH_ONLY_FAILED_V4_REUSE_FORBIDDEN",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": null,
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "V13_RUNTIME_HARNESS_RESOLVER_MIGRATION",
+      "check_ordinal": 20,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_V13_RUNTIME_EVIDENCE_GOVERNANCE",
+      "applicable_stages": [
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json"
+      ],
+      "resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE",
+        "V13_QUALIFICATION_HARNESS_CLOSURE",
+        "CONTROL_PLANE_FILES"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_5E162_HISTORICAL_REPLAY_AND_CURRENT_3D5FD13_FROZEN_PARTITION_NO_BF1D_PROMOTION",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs --migration",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "T4R1_BIOLOGICAL_STAGE_AUTHORITY",
+      "check_ordinal": 21,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_BIOLOGICAL_STAGE_AUTHORITY_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json"
+      ],
+      "resolver_ids": [
+        "T4R1_BIOLOGICAL_STAGE_AUTHORITY_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION",
+      "check_ordinal": 22,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_CURRENT_CROP_AUTHORITY_COMPOSITION_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "resolver_ids": [
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+      "check_ordinal": 23,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_A18_BIOLOGICAL_STAGE_CONTEXT_V4_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "resolver_ids": [
+        "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A18_BIOLOGICAL_STAGE_CONTEXT_V4.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR",
+      "check_ordinal": 24,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "resolver_ids": [
+        "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_V1",
+        "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING",
+      "check_ordinal": 25,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "resolver_ids": [
+        "PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1",
+        "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_V1",
+        "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION",
+      "check_ordinal": 26,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-EFFECTIVENESS-GRADUATION-V1.json"
+      ],
+      "resolver_ids": [
+        "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1",
+        "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_V1",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS",
+      "check_ordinal": 27,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-EFFECTIVENESS-GRADUATION-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json"
+      ],
+      "resolver_ids": [
+        "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1",
+        "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
+      ],
+      "historical_evidence_policy": "CANONICAL_EXACT_AT_EFFECTIVENESS_SUBJECT_SUCCESSOR_BLOB_PRESERVATION_AFTER_EFFECTIVENESS_MERGE",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ROUTE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "T4R1_CURRENT_CROP_ROLLING_REFRESH",
+      "check_ordinal": 28,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_CURRENT_CROP_ROLLING_REFRESH_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json"
+      ],
+      "resolver_ids": [
+        "T4R1_CURRENT_CROP_ROLLING_REFRESH"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REGISTRY_PRESERVATION_V1.cjs --invocation qcp",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "PRODUCTION_RUNTIME_OWNER_CUTOVER",
+      "check_ordinal": 29,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_PRODUCTION_RUNTIME_OWNER_CUTOVER_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json"
+      ],
+      "resolver_ids": [
+        "PRODUCTION_RUNTIME_OWNER_CUTOVER_V1",
+        "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1",
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "T4R1_CURRENT_CROP_ROLLING_CANDIDATE",
+      "check_ordinal": 30,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_CURRENT_CROP_ROLLING_CANDIDATE_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "resolver_ids": [
+        "T4R1_CURRENT_CROP_ROLLING_CANDIDATE"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM",
+      "check_ordinal": 31,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md"
+      ],
+      "resolver_ids": [
+        "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "PROTECTED_MAIN_LINEAGE_ADVANCEMENT_ADJUDICATION",
+      "check_ordinal": 32,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_PROTECTED_MAIN_LINEAGE_ADVANCEMENT_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PROTECTED-MAIN-LINEAGE-ADVANCEMENT-E1F8-TO-F41D-V1.json"
+      ],
+      "resolver_ids": [
+        "PROTECTED_MAIN_LINEAGE_ADVANCEMENT_ADJUDICATION_V1"
+      ],
+      "historical_evidence_policy": "EXACT_LINEAGE_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROTECTED_MAIN_LINEAGE_ADVANCEMENT_E1F8_TO_F41D_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING",
+      "check_ordinal": 33,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-RUNTIME-PRIVATE-STORE-BINDING-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2A-FORMAL-RAW-STORE-BINDING-CONTRACT-V1.json"
+      ],
+      "resolver_ids": [
+        "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "FORMAL_V5_G11_PRODUCTIONIZATION",
+      "check_ordinal": 34,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_FORMAL_V5_G11_PRODUCTIONIZATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "G11_PRODUCTIONIZATION_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json"
+      ],
+      "resolver_ids": [
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_G11_MUST_REQUALIFY_EXACT_HEAD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_G11_PRODUCTIONIZATION_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "FORMAL_V5_R6_STAGE_ADMISSION",
+      "check_ordinal": 35,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_FORMAL_V5_R6_STAGE_ADMISSION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "R6_ADMISSION_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json"
+      ],
+      "resolver_ids": [
+        "FORMAL_V5_R6_STAGE_ADMISSION_V1",
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1",
+        "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF_V1"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_R6_ADMISSION_MUST_REQUALIFY_EXACT_HEAD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "FORMAL_V5_FINAL_READBACK",
+      "check_ordinal": 36,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_FORMAL_V5_FINAL_READBACK",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "FINAL_READ_ONLY_CLOSURE_EVIDENCE"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+      ],
+      "resolver_ids": [
+        "FORMAL_V5_FINAL_READBACK_V1",
+        "FORMAL_V5_G11_PRODUCTIONIZATION_V1",
+        "FORMAL_V5_R6_STAGE_ADMISSION_V1"
+      ],
+      "historical_evidence_policy": "NO_V4_OR_GITHUB_HOURLY_ARTIFACT_CARRY_FORWARD_FRESH_V5_READBACK_REQUIRED",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_FINAL_READBACK_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "FORMAL_V5_COMPLETION_ADJUDICATION",
+      "check_ordinal": 37,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_FORMAL_V5_COMPLETION_ADJUDICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "FINAL_CLOSURE_ADJUDICATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json"
+      ],
+      "resolver_ids": [
+        "FORMAL_V5_COMPLETION_ADJUDICATION_V1",
+        "FORMAL_V5_FINAL_READBACK_V1"
+      ],
+      "historical_evidence_policy": "NO_V4_COMPLETION_OR_GITHUB_HOURLY_LEDGER_CARRY_FORWARD_FRESH_V5_EVIDENCE_ONLY",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_COMPLETION_ADJUDICATION_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "FORMAL_ARM_RETIREMENT_ONLY",
+      "check_ordinal": 38,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_FORMAL_ARM_RETIREMENT_ONLY",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "ARM_RETIREMENT_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json"
+      ],
+      "resolver_ids": [
+        "FORMAL_ARM_RETIREMENT_ONLY_V1"
+      ],
+      "historical_evidence_policy": "NO_ARM_CARRY_FORWARD_NO_NEW_START_AUTHORITY",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ARM_RETIREMENT_ONLY_SUCCESSOR_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "AM22_PREQUALIFICATION_ONLY",
+      "check_ordinal": 39,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_AM22_PREQUALIFICATION_ONLY",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "AM22_PREQUALIFICATION_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json"
+      ],
+      "resolver_ids": [
+        "AM22_PREQUALIFICATION_ONLY_V1"
+      ],
+      "historical_evidence_policy": "NO_FORMAL_START_OR_ARM_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_PREQUALIFICATION_ONLY_SUCCESSOR_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "AM22_START_CHAIN_ENGINEERING_ONLY",
+      "check_ordinal": 40,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_AM22_START_CHAIN_ENGINEERING",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "AM22_START_CHAIN_ENGINEERING_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-START-CHAIN-V2-ENGINEERING.md"
+      ],
+      "resolver_ids": [
+        "AM22_START_CHAIN_ENGINEERING_ONLY_V2"
+      ],
+      "historical_evidence_policy": "NO_FORMAL_START_OR_ARM_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "AM22_HOST_MEASUREMENT_ONLY",
+      "check_ordinal": 41,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_AM22_HOST_MEASUREMENT",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "AM22_HOST_MEASUREMENT_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-SIX-PHASE-HOST-MEASUREMENT-V2.md"
+      ],
+      "resolver_ids": [
+        "AM22_HOST_MEASUREMENT_ONLY_V2"
+      ],
+      "historical_evidence_policy": "NO_FORMAL_START_OR_ARM_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "AM22_FRESH_AUTHORITY_APPEND_ONLY",
+      "check_ordinal": 42,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_AM22_FRESH_AUTHORITY",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "AM22_FRESH_AUTHORITY_APPEND_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-EFFECTIVE-START-AUTHORITY-V2.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-10-09T04Z-V1.json"
+      ],
+      "resolver_ids": [
+        "AM22_FRESH_AUTHORITY_APPEND_ONLY_V1"
+      ],
+      "historical_evidence_policy": "NO_FORMAL_START_OR_ARM_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_FRESH_AUTHORITY_REFRESH_ONLY_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY",
+      "check_ordinal": 43,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_AM22_GFS_BOOTSTRAP",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-CUTOVER-V1.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json"
+      ],
+      "resolver_ids": [
+        "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY_V1"
+      ],
+      "historical_evidence_policy": "NO_36H_HANDOFF_OR_FORMAL_EFFECT_CARRY_FORWARD",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_START_CHAIN_ENGINEERING_ONLY_V2.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "AM22_POST_CUTOVER_RECOVERY_ENGINEERING_ONLY",
+      "check_ordinal": 44,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_AM22_POST_CUTOVER_RECOVERY",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "AM22_POST_CUTOVER_RECOVERY_ENGINEERING_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-BOOTSTRAP-A0-PLANNING-AUTHORITY-V1.json"
+      ],
+      "resolver_ids": [
+        "AM22_POST_CUTOVER_RECOVERY_SUCCESSOR_V1"
+      ],
+      "historical_evidence_policy": "NO_REUSE_OF_FAILED_BOOTSTRAP_AS_SUCCESS",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_POST_CUTOVER_RECOVERY_SUCCESSOR_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "AM22_GFS_PROGRESS_DIAGNOSTIC_ENGINEERING_ONLY",
+      "check_ordinal": 45,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_AM22_GFS_DIAGNOSTIC",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "FORMAL_V5",
+        "AM22_GFS_PROGRESS_DIAGNOSTIC_ENGINEERING_ONLY"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-PROGRESS-DIAGNOSTIC-V1.md"
+      ],
+      "resolver_ids": [
+        "AM22_GFS_PROGRESS_DIAGNOSTIC_SUCCESSOR_V1"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_ADOPTED_RECOVERY_REPLAY_NO_LIVE_SUCCESS_REUSE",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_AM22_GFS_DIAGNOSTIC_SUCCESSOR_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "FROZEN_V13_REQUALIFICATION_SUCCESSOR_ENGINEERING_ONLY",
+      "check_ordinal": 46,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_FROZEN_RUNTIME_QUALIFICATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13",
+        "FORMAL_V5"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FROZEN-V13-REQUALIFICATION-CONTRACT-V1.json"
+      ],
+      "resolver_ids": [
+        "FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_PREDECESSOR_REPLAY_NO_LIVE_SUCCESS_REUSE",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "CURRENT_CROP_20261010_ADOPTION_SUCCESSOR_ENGINEERING_ONLY",
+      "check_ordinal": 47,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_T4R1_STAGE_ADOPTION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "T4R1",
+        "FORMAL_V5"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-10-10T04Z-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json"
+      ],
+      "resolver_ids": [
+        "CURRENT_CROP_20261010_ADOPTION_SUCCESSOR_V1"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_962FDE08_HISTORICAL_REGISTRATION_REPLAY_AND_REAL_STAGE_EVIDENCE",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "CURRENT_BASELINE_EXECUTION_SUCCESSOR_ENGINEERING_ONLY",
+      "check_ordinal": 48,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_CURRENT_BASELINE_ENTRY_ENGINEERING",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13",
+        "FORMAL_V5"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-BASELINE-PREPARATION-CONTRACT-V1.json"
+      ],
+      "resolver_ids": [
+        "CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_ADOPTED_MAIN_REPLAY_NO_LIVE_SUCCESS_REUSE",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_SUCCESSOR_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "ISOLATED_QUALIFICATION_AUTHORIZATION_20261010_ENGINEERING_GOVERNANCE",
+      "check_ordinal": 49,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_ISOLATED_QUALIFICATION_AUTHORIZATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_ISOLATED_QUALIFICATION_ARM_20261010_V1.json"
+      ],
+      "resolver_ids": [
+        "ISOLATED_QUALIFICATION_AUTHORIZATION_20261010_V1"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_PR3686_PROTECTED_MAIN_REPLAY_NO_HISTORICAL_PROOF_REUSE",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_QUALIFICATION_AUTHORIZATION_SUCCESSOR_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_ENGINEERING_ONLY",
+      "check_ordinal": 50,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_ISOLATED_QUALIFICATION_BUCKET_SEAM",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ISOLATED-PRODUCER-BUCKET-SEAM-20261010-V1.md"
+      ],
+      "resolver_ids": [
+        "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_V1"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_PR3687_AUTHORITY_AND_FAILED_FIRST_EXECUTE_PRESERVED",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_ISOLATED_PRODUCER_BUCKET_SEAM_SUCCESSOR_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "HISTORY_REPLAY_BUDGET_20261010_ENGINEERING_ONLY",
+      "check_ordinal": 51,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_HISTORY_REPLAY_BUDGET",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-HISTORY-REPLAY-BUDGET-20261010-V1.md"
+      ],
+      "resolver_ids": [
+        "HISTORY_REPLAY_BUDGET_20261010_V1"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_PR3688_REPLAY_ALL_ASSERTIONS_PRESERVED",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_HISTORY_REPLAY_BUDGET_SUCCESSOR_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "DISABLED_RETRY_IMPLEMENTATION_20261011_ENGINEERING_ONLY",
+      "check_ordinal": 52,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_DISABLED_RETRY_IMPLEMENTATION",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-DISABLED-RETRY-IMPLEMENTATION-20261011-V1.md"
+      ],
+      "resolver_ids": [
+        "DISABLED_RETRY_IMPLEMENTATION_20261011_V1"
+      ],
+      "historical_evidence_policy": "IMMUTABLE_PR3689_REPLAY_AND_DISABLED_ARM_NO_ACTIVATION",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_DISABLED_RETRY_SUCCESSOR_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY",
+      "check_ordinal": 53,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_LOCAL_CUTOVER_GOVERNANCE",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json"
+      ],
+      "resolver_ids": [
+        "LOCAL_CUTOVER_EXACT_SCOPE_20261011_V1"
+      ],
+      "historical_evidence_policy": "ORIGINAL_RETRY_EVIDENCE_IMMUTABLE_CANDIDATE_SCOPE_NOT_ADOPTION",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_LOCAL_CUTOVER_EXACT_SCOPE_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_ENGINEERING_ONLY",
+      "check_ordinal": 54,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_GOVERNANCE_HISTORY_INHERITANCE",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+      ],
+      "resolver_ids": [
+        "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_V1"
+      ],
+      "historical_evidence_policy": "REPLAY_EXACT_PR3691_PROOF_IN_DISPOSABLE_CLONE_NO_HISTORICAL_REWRITE",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DISABLED_RETRY_HISTORICAL_INHERITANCE_V1.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    },
+    {
+      "check_id": "A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1_ENGINEERING_ONLY",
+      "check_ordinal": 55,
+      "check_revision": "EXACT_CONTROL_PLANE_CHECK_ENTRY_AT_SOURCE_BLOB",
+      "owner": "MCFT_CAP09_ADOPTION_QUALIFICATION_CONTROL_PLANE",
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+      ],
+      "resolver_ids": [
+        "A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_NEW_CANDIDATE_REQUIRES_INDEPENDENT_ADOPTION",
+      "carry_forward_policy": "NONE",
+      "diagnostic_command": "node scripts/cap09_adoption_v1/acceptance.cjs",
+      "required_evidence_ref": null,
+      "required_evidence_digest": null,
+      "evidence_review": "NOT_ADJUDICATED",
+      "result": "BLOCKED",
+      "reason_code": "REAL_ADOPTION_CHECK_EVIDENCE_NOT_INDEPENDENTLY_ADJUDICATED"
+    }
+  ],
+  "non_effects": {
+    "runtime_mutation": false,
+    "production_workflow_activation": false,
+    "formal_database_mutation": false,
+    "provider_request": false,
+    "graduation_effect": false,
+    "mcft_cap09_completed": false
+  }
+}
