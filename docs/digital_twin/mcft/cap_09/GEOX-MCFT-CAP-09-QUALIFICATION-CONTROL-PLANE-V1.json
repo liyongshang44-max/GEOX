@@ -1370,6 +1370,16 @@
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
       ]
+    },
+    "WINDOWS_DEPLOYMENT_RUNNER_20261014_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap09-windows-deployment-runner-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-WINDOWS-DEPLOYMENT-RUNNER-800C-CONFIG-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-WINDOWS-DEPLOYMENT-RUNNER-V1.md",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNNER_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNNER_V1.ps1"
+      ]
     }
   },
   "checks": [
@@ -2954,6 +2964,33 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_LOCAL_CUTOVER_EXACT_SCOPE_V1.cjs"
+    },
+    {
+      "check_id": "WINDOWS_DEPLOYMENT_RUNNER_20261014_ENGINEERING_ONLY",
+      "owner": "MCFT_CAP09_WINDOWS_DEPLOYMENT_GOVERNANCE",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-WINDOWS-DEPLOYMENT-RUNNER-V1.md"
+      ],
+      "resolver_ids": [
+        "WINDOWS_DEPLOYMENT_RUNNER_20261014_V1"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_NEW_ENGINEERING_TOOLING",
+      "execution_workflow": ".github/workflows/mcft-cap09-windows-deployment-runner-v1.yml",
+      "execution_workflow_status": "ENGINEERING_ONLY_NO_LIVE_EXECUTE",
+      "fail_policy": "FAIL_CLOSED_EXACT_FIVE_PATHS_READ_ONLY_LOCAL_ADMISSION_INPUT_NO_EXECUTION_AUTHORITY",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "WINDOWS_DEPLOYMENT_RUNNER_20261014_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNNER_V1.cjs"
     }
   ],
   "non_effects": {

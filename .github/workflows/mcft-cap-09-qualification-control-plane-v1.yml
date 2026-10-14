@@ -532,6 +532,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           const fs = require('node:fs');
+          const cp = require('node:child_process');
           const registryPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
           const outPath = 'acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json';
           const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
@@ -635,13 +636,19 @@ jobs:
                   const subject = '9e4e8132628f2581cbac025f81f7342027660631';
                   const boundary = require(require('node:path').resolve(process.cwd(), 'scripts/governance_acceptance/REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs'))
                     .verifyAdoptedLocalCutoverScopeDiagnostic();
+                  const currentMain = cp.execFileSync('git', ['rev-parse','origin/main'], {encoding:'utf8'}).trim();
+                  const historicalBaseStillAncestor =
+                    cp.spawnSync('git', ['merge-base','--is-ancestor', base, currentMain]).status === 0;
+                  if (!historicalBaseStillAncestor) {
+                    throw new Error('PHASE2_HISTORICAL_BASE_NOT_ANCESTOR_OF_CURRENT_MAIN');
+                  }
                   if (entry.run_id !== 38281449457 ||
                       entry.check_id !== 'PHASE2_EVIDENCE_PROVIDER_MODULES' ||
                       entry.workflow_path !== '.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml' ||
                       entry.subject_sha !== subject ||
                       snapshot.head_sha !== subject || run.head_sha !== subject ||
                       snapshot.base_sha !== base ||
-                      boundary.status !== 'PASS' || boundary.adopted_main_sha !== base ||
+                      boundary.status !== 'PASS' || boundary.adopted_main_sha !== currentMain ||
                       boundary.production_authorized !== false || boundary.execute_authorized !== false ||
                       !(liveRunAssociatedBases.length === 0 ||
                         (liveRunAssociatedBases.length === 1 && liveRunAssociatedBases[0] === base))) {

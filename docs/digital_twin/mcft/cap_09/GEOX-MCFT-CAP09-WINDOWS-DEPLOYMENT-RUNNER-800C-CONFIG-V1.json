@@ -1,0 +1,68 @@
+{
+  "schema_version": "MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNNER_CONFIG_V1",
+  "run_id": "800c023cf337",
+  "subject_commit_sha": "a44b294f684027c0d1dd7a28c3735442fca736a4",
+  "source": {
+    "repo_full_name": "liyongshang44-max/GEOX",
+    "trusted_release_manifest_sha256": "099ae7f99547c68f754f4076020505d5fbff35198da160b526101640e56a1c4a",
+    "expected_release_files": 6414,
+    "expected_entrypoints": [
+      "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_LOCAL_QUALIFICATION_ENTRY_V1.ps1",
+      "scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs",
+      "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
+      "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts",
+      "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts",
+      "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs",
+      "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts"
+    ]
+  },
+  "pg": {
+    "container_name": "mcft-cap09-800c023cf337-pg-dedicated",
+    "host": "127.0.0.1",
+    "port": 55434,
+    "positive_db": "mcft_cap09_requal_800c023cf337_positive",
+    "negative_db": "mcft_cap09_requal_800c023cf337_negative",
+    "roles": {
+      "positive_evidence": "mcft_cap09_800c023cf337_p_evidence",
+      "positive_twin": "mcft_cap09_800c023cf337_p_twin",
+      "negative_evidence": "mcft_cap09_800c023cf337_n_evidence",
+      "negative_twin": "mcft_cap09_800c023cf337_n_twin"
+    },
+    "privilege_roles": {
+      "evidence": "geox_mcft_cap09_evidence_runtime_v1",
+      "twin": "geox_mcft_cap09_twin_runtime_v1"
+    },
+    "expected_acl_digest_sha256": {
+      "evidence": null,
+      "twin": null
+    }
+  },
+  "minio": {
+    "endpoint": "http://127.0.0.1:59000",
+    "endpoint_observation_container": "mcftcap09requal72dc0304a21a-minio-1",
+    "bucket": "mcft-cap09-requal-800c023cf337",
+    "prefix": null,
+    "denied_bucket": "mcft-cap09-requal-72dc0304a21a",
+    "expected_policy_sha256": "47b07f9e6dfbe6377fe628eb972f388c3f7cece28757afe86cc36e75530728b6",
+    "endpoint_container_is_resource_identity": false,
+    "expected_container_id": "952016cb6e18295242b6ea895004ae2541470be460708147ba001521bf907c70",
+    "expected_policy_actions": [
+      "s3:ListBucket",
+      "s3:ListBucketMultipartUploads",
+      "s3:GetBucketLocation",
+      "s3:AbortMultipartUpload",
+      "s3:DeleteObject",
+      "s3:GetObject",
+      "s3:ListMultipartUploadParts",
+      "s3:PutObject"
+    ],
+    "global_list_scope_policy": "DENY_OR_FILTERED_NO_OUT_OF_SCOPE_BUCKETS"
+  },
+  "authority": {
+    "signed_adoption_qualification_valid": false,
+    "execution_authorized": false,
+    "production_authorized": false,
+    "test_only_hold": true,
+    "production_hold": true
+  }
+}
