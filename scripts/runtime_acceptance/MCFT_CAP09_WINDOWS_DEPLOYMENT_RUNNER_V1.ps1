@@ -7,7 +7,7 @@ param(
   [string]$ReleaseArchivePath,
   [string]$ReleaseManifestPath,
   [string]$EvidenceRoot = 'D:\gptdown',
-  [string]$AwsProfile,
+  [string]$MinioCredentialJsonPath,
   [string]$MinioPolicyPath,
   [switch]$SelfTest
 )
@@ -332,10 +332,86 @@ function Assert-Command([string]$Name) {
   if ($null -eq (Get-Command $Name -ErrorAction SilentlyContinue)) { throw ('COMMAND_MISSING:' + $Name) }
 }
 
-function Invoke-External([string]$Exe, [string[]]$Arguments) {
-  $output = & $Exe @Arguments 2>&1
-  $code = $LASTEXITCODE
-  return [ordered]@{ exit_code=$code; text=([string[]]@($output) -join [Environment]::NewLine).Trim() }
+function ConvertTo-ProcessArgument([string]$Arg) {
+  if ($null -eq $Arg) { return '""' }
+  if ($Arg.Length -gt 0 -and $Arg -notmatch '[\s"]') { return $Arg }
+  $sb = New-Object System.Text.StringBuilder
+  [void]$sb.Append('"')
+  $slashes = 0
+  foreach ($ch in $Arg.ToCharArray()) {
+    if ($ch -eq '\') {
+      $slashes++
+      continue
+    }
+    if ($ch -eq '"') {
+      [void]$sb.Append(('\' * ($slashes * 2 + 1)))
+      [void]$sb.Append('"')
+      $slashes = 0
+      continue
+    }
+    if ($slashes -gt 0) {
+      [void]$sb.Append(('\' * $slashes))
+      $slashes = 0
+    }
+    [void]$sb.Append($ch)
+  }
+  if ($slashes -gt 0) { [void]$sb.Append(('\' * ($slashes * 2))) }
+  [void]$sb.Append('"')
+  return $sb.ToString()
+}
+
+function Invoke-External(
+  [string]$Exe,
+  [string[]]$Arguments,
+  [hashtable]$EnvironmentOverrides = $null,
+  [string[]]$EnvironmentRemovals = @(),
+  [int]$TimeoutMs = 30000
+) {
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $psi.FileName = $Exe
+  $psi.UseShellExecute = $false
+  $psi.RedirectStandardOutput = $true
+  $psi.RedirectStandardError = $true
+  $psi.CreateNoWindow = $true
+  $psi.Arguments = (@($Arguments | ForEach-Object { ConvertTo-ProcessArgument ([string]$_) }) -join ' ')
+  foreach ($name in @($EnvironmentRemovals)) {
+    if (-not [string]::IsNullOrWhiteSpace([string]$name)) { [void]$psi.EnvironmentVariables.Remove([string]$name) }
+  }
+  if ($null -ne $EnvironmentOverrides) {
+    foreach ($key in $EnvironmentOverrides.Keys) {
+      $psi.EnvironmentVariables[[string]$key] = [string]$EnvironmentOverrides[$key]
+    }
+  }
+
+  $proc = New-Object System.Diagnostics.Process
+  $proc.StartInfo = $psi
+  try {
+    if (-not $proc.Start()) { throw 'PROCESS_START_RETURNED_FALSE' }
+    $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
+    $stderrTask = $proc.StandardError.ReadToEndAsync()
+    if (-not $proc.WaitForExit($TimeoutMs)) {
+      try { $proc.Kill() } catch {}
+      $proc.WaitForExit()
+      return [ordered]@{
+        exit_code = -1
+        stdout = [string]$stdoutTask.Result
+        stderr = [string]$stderrTask.Result
+        text = ''
+        timed_out = $true
+      }
+    }
+    $stdout = [string]$stdoutTask.Result
+    $stderr = [string]$stderrTask.Result
+    return [ordered]@{
+      exit_code = [int]$proc.ExitCode
+      stdout = $stdout.Trim()
+      stderr = $stderr.Trim()
+      text = (($stdout + [Environment]::NewLine + $stderr).Trim())
+      timed_out = $false
+    }
+  } finally {
+    $proc.Dispose()
+  }
 }
 
 function Invoke-HostInventory($Config) {
@@ -350,7 +426,7 @@ function Invoke-HostInventory($Config) {
   if ($inspect.exit_code -ne 0) {
     Stop-Runner 'DEDICATED_PG_CONTAINER_MISSING' 'The configured run-scoped PostgreSQL container was not found.' 'Restore or select the exact existing run-scoped container; do not reuse an older run container.' 'Container name must include the current Run ID.'
   }
-  $obj = $inspect.text | ConvertFrom-Json
+  $obj = $inspect.stdout | ConvertFrom-Json
   if (-not [bool]$obj[0].State.Running) { Stop-Runner 'DEDICATED_PG_CONTAINER_NOT_RUNNING' 'The exact PostgreSQL container exists but is not running.' 'Stop and obtain operator approval before any restart; this runner never restarts containers.' 'Container restarts are intentionally absent from the runner.' }
   $portsProp = $obj[0].NetworkSettings.Ports.PSObject.Properties['5432/tcp']
   if ($null -eq $portsProp -or $null -eq $portsProp.Value -or @($portsProp.Value).Count -ne 1) {
@@ -362,11 +438,19 @@ function Invoke-HostInventory($Config) {
   }
 
   $minioTransport = 'not_observed'
+  $minioContainerId = $null
   if (-not [string]::IsNullOrWhiteSpace([string]$Config.minio.endpoint_observation_container)) {
     $mi = Invoke-External 'docker' @('inspect',[string]$Config.minio.endpoint_observation_container)
     if ($mi.exit_code -eq 0) {
-      $mobj = $mi.text | ConvertFrom-Json
-      if ([bool]$mobj[0].State.Running) { $minioTransport = 'running_transport_only_not_resource_identity' }
+      $mobj = $mi.stdout | ConvertFrom-Json
+      if ([bool]$mobj[0].State.Running) {
+        $minioTransport = 'running_transport_only_not_resource_identity'
+        $minioContainerId = [string]$mobj[0].Id
+        $expectedContainerId = [string]$Config.minio.expected_container_id
+        if (-not [string]::IsNullOrWhiteSpace($expectedContainerId) -and $minioContainerId -ne $expectedContainerId) {
+          Stop-Runner 'MINIO_SHARED_SERVICE_CONTAINER_ID_DRIFT' 'The shared MinIO transport container ID differs from the reviewed 800c evidence binding.' 'Re-adjudicate the shared-service transport identity before using the run-scoped bucket identity. Do not restart or replace the container from this runner.' 'Container identity drift fails closed; bucket authorization remains a separate scoped-identity proof.'
+        }
+      }
     }
   }
   Add-Stage 'HOST_RESOURCE_IDENTITY' 'PASS' ([ordered]@{
@@ -375,6 +459,7 @@ function Invoke-HostInventory($Config) {
     pg_port = [int]$Config.pg.port
     minio_endpoint = [string]$Config.minio.endpoint
     minio_transport_observation = $minioTransport
+    minio_container_id = $minioContainerId
     minio_transport_is_resource_identity = $false
   })
 }
@@ -506,93 +591,177 @@ function Invoke-PgReadOnly($Config) {
   Add-Stage 'PG_RESTRICTED_IDENTITY_AND_ACL' 'PASS' ([ordered]@{principals=$observed; admin_identity_used=$false; sql_mode='READ_ONLY_AND_CATALOG_SELECT_ONLY'})
 }
 
-function Assert-MinioPolicyReadOnly([string]$Path, [string]$ExpectedSha, [string]$Bucket, [string]$Prefix) {
+function Resolve-MinioPolicyDocument($Raw) {
+  if ($null -ne $Raw.PSObject.Properties['Statement']) { return $Raw }
+  foreach ($name in @('Policy','policy')) {
+    $prop = $Raw.PSObject.Properties[$name]
+    if ($null -eq $prop) { continue }
+    $value = $prop.Value
+    if ($value -is [string]) {
+      try {
+        $parsed = $value | ConvertFrom-Json
+        if ($null -ne $parsed.PSObject.Properties['Statement']) { return $parsed }
+      } catch {}
+    } elseif ($null -ne $value -and $null -ne $value.PSObject.Properties['Statement']) {
+      return $value
+    }
+  }
+  throw 'MINIO_POLICY_DOCUMENT_SHAPE_UNSUPPORTED'
+}
+
+function Assert-MinioPolicyScoped([string]$Path, [string]$ExpectedSha, [string]$Bucket, [string[]]$ExpectedActions) {
   if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw 'MINIO_POLICY_EVIDENCE_REQUIRED' }
   if ([string]::IsNullOrWhiteSpace($ExpectedSha) -or $ExpectedSha -notmatch '^[0-9a-f]{64}$') { throw 'MINIO_POLICY_DIGEST_REQUIRED' }
-  if ([string]::IsNullOrWhiteSpace($Prefix)) { throw 'MINIO_POLICY_PREFIX_REQUIRED' }
   if ((Get-Sha256File $Path) -ne $ExpectedSha.ToLowerInvariant()) { throw 'MINIO_POLICY_DIGEST_MISMATCH' }
-  $policy = Read-JsonFile $Path
+  if (@($ExpectedActions).Count -eq 0) { throw 'MINIO_EXPECTED_ACTION_SET_REQUIRED' }
+
+  $raw = Read-JsonFile $Path
+  $policy = Resolve-MinioPolicyDocument $raw
   $bucketArn = 'arn:aws:s3:::' + $Bucket
-  $prefixBase = $Prefix.TrimStart('/')
-  $objectArnPrefix = $bucketArn + '/' + $prefixBase
-  $allowedActions = @('s3:listbucket','s3:getobject','s3:getobjectversion','s3:getbucketlocation')
+  $objectArn = $bucketArn + '/*'
+  $expected = @($ExpectedActions | ForEach-Object { ([string]$_).ToLowerInvariant() } | Sort-Object -Unique)
+  $observed = @()
 
   foreach ($statement in @($policy.Statement)) {
     if ([string]$statement.Effect -ne 'Allow') { continue }
-    $actions = @($statement.Action)
-    foreach ($action in $actions) {
+    foreach ($action in @($statement.Action)) {
       $a = ([string]$action).ToLowerInvariant()
-      if ($allowedActions -notcontains $a) {
-        throw 'MINIO_ACTION_NOT_READONLY_WHITELISTED'
+      if ($a -eq '*' -or $a -eq 's3:*' -or $a -eq 's3:listallmybuckets') {
+        throw 'MINIO_GLOBAL_OR_WILDCARD_ACTION_FORBIDDEN'
       }
+      if ($expected -notcontains $a) { throw ('MINIO_UNREVIEWED_ALLOW_ACTION:' + $a) }
+      $observed += $a
     }
     foreach ($resource in @($statement.Resource)) {
-      $r = [string]$resource
-      if ($r -eq $bucketArn) { continue }
-      if (-not $r.StartsWith($objectArnPrefix, [System.StringComparison]::Ordinal)) {
-        throw 'MINIO_ALLOW_RESOURCE_OUTSIDE_RUN_PREFIX'
+      $res = [string]$resource
+      if ($res -ne $bucketArn -and $res -ne $objectArn) {
+        throw 'MINIO_ALLOW_RESOURCE_OUTSIDE_RUN_BUCKET'
       }
     }
-    if (@($actions | Where-Object { ([string]$_).ToLowerInvariant() -eq 's3:listbucket' }).Count -gt 0) {
-      if ($null -eq $statement.Condition) { throw 'MINIO_LIST_PREFIX_CONDITION_REQUIRED' }
-      $prefixValues = @()
-      foreach ($group in $statement.Condition.PSObject.Properties) {
-        $prefixProp = $group.Value.PSObject.Properties['s3:prefix']
-        if ($null -ne $prefixProp) { $prefixValues += @($prefixProp.Value) }
-      }
-      if ($prefixValues.Count -eq 0) { throw 'MINIO_LIST_PREFIX_CONDITION_REQUIRED' }
-      foreach ($value in $prefixValues) {
-        $v = [string]$value
-        if (-not $v.StartsWith($prefixBase, [System.StringComparison]::Ordinal)) {
-          throw 'MINIO_LIST_PREFIX_CONDITION_OUTSIDE_RUN_PREFIX'
-        }
-      }
+  }
+  $observed = @($observed | Sort-Object -Unique)
+  if (($observed -join '|') -ne ($expected -join '|')) { throw 'MINIO_EXPECTED_ACTION_SET_MISMATCH' }
+  return [ordered]@{
+    policy_sha256 = Get-Sha256File $Path
+    allow_actions = $observed
+    bucket_arn = $bucketArn
+    object_arn = $objectArn
+    global_list_action_present = $false
+  }
+}
+
+function Get-MinioChildCredentialContext($Config) {
+  if ([string]::IsNullOrWhiteSpace($MinioCredentialJsonPath) -or -not (Test-Path -LiteralPath $MinioCredentialJsonPath -PathType Leaf)) {
+    Stop-Runner 'MINIO_PRIVATE_CREDENTIAL_JSON_REQUIRED' 'The existing run-scoped private credential JSON path was not supplied.' 'Pass -MinioCredentialJsonPath for the already-provisioned 800c private credential file. Do not print, copy, commit, upload or convert it into an AWS profile.' 'Credentials are read in memory and injected only into aws child processes.'
+  }
+  $cred = Read-JsonFile $MinioCredentialJsonPath
+  if ([string]$cred.run_id -ne [string]$Config.run_id) {
+    Stop-Runner 'MINIO_CREDENTIAL_RUN_BINDING_MISMATCH' 'The private credential file belongs to a different Run ID.' 'Use only the existing credential file whose run_id exactly equals the current config run_id.' 'Old-Run credential contamination fails before any S3 request.'
+  }
+  foreach ($name in @('access_key','secret_key','principal')) {
+    if ([string]::IsNullOrWhiteSpace([string]$cred.$name)) {
+      Stop-Runner 'MINIO_PRIVATE_CREDENTIAL_FIELD_MISSING' ('Required private credential field is absent: ' + $name) 'Recover the original protected run-scoped credential JSON; do not synthesize or reset credentials.' 'Credential contents are never written into result evidence.'
     }
+  }
+  $envMap = @{
+    AWS_ACCESS_KEY_ID = [string]$cred.access_key
+    AWS_SECRET_ACCESS_KEY = [string]$cred.secret_key
+    AWS_DEFAULT_REGION = 'us-east-1'
+    AWS_REGION = 'us-east-1'
+    AWS_EC2_METADATA_DISABLED = 'true'
+  }
+  if ($null -ne $cred.PSObject.Properties['session_token'] -and -not [string]::IsNullOrWhiteSpace([string]$cred.session_token)) {
+    $envMap['AWS_SESSION_TOKEN'] = [string]$cred.session_token
+  }
+  return [ordered]@{
+    principal = [string]$cred.principal
+    environment = $envMap
+    removals = @('AWS_PROFILE','AWS_DEFAULT_PROFILE')
   }
 }
 
 function Invoke-MinioReadOnly($Config) {
   $script:CurrentStage = 'MINIO_RESTRICTED_IDENTITY_AND_SCOPE'
-  $profile = if (-not [string]::IsNullOrWhiteSpace($AwsProfile)) { $AwsProfile } else { [string]$Config.minio.aws_profile }
   $bucket = [string]$Config.minio.bucket
-  $prefix = [string]$Config.minio.prefix
   $deniedBucket = [string]$Config.minio.denied_bucket
-  if ([string]::IsNullOrWhiteSpace($profile) -or [string]::IsNullOrWhiteSpace($bucket) -or [string]::IsNullOrWhiteSpace($prefix) -or [string]::IsNullOrWhiteSpace($deniedBucket)) {
-    Stop-Runner 'MINIO_SCOPED_RESTRICTED_INPUT_REQUIRED' 'Run-scoped restricted profile, bucket, prefix, or explicit denied-scope bucket is still unresolved.' 'Recover these values from the authoritative 800c provisioning record. Do not use MinIO root/admin and do not infer them from the old 72dc endpoint container.' 'Transport endpoint and resource identity are separate; all four scoped inputs are mandatory.'
+  if ([string]::IsNullOrWhiteSpace($bucket) -or [string]::IsNullOrWhiteSpace($deniedBucket)) {
+    Stop-Runner 'MINIO_SCOPED_RESTRICTED_INPUT_REQUIRED' 'Run-scoped target bucket or known old-run denied bucket is unresolved.' 'Recover the exact resource names from the reviewed 800c provisioning/evidence record. Do not infer authorization from the shared service container name.' 'Transport identity and bucket/principal authorization are separate.'
   }
   if ($deniedBucket -eq $bucket) {
-    Stop-Runner 'MINIO_DENIED_BUCKET_MUST_BE_DISTINCT' 'Negative-scope bucket equals the allowed run bucket.' 'Use a known existing out-of-scope bucket for the restricted identity denial probe.' 'Negative proof cannot target the allowed resource.'
-  }
-  try {
-    Assert-MinioPolicyReadOnly $MinioPolicyPath ([string]$Config.minio.expected_policy_sha256) $bucket $prefix
-  } catch {
-    Stop-Runner 'MINIO_POLICY_READONLY_CONTRACT_FAILED' $_.Exception.Message 'Use the reviewed non-secret IAM policy evidence for the restricted run identity and pin its digest. Do not call mc admin or change policy from this runner.' 'Policy bytes are digest-bound and Allow statements are rejected if they contain write/admin actions or resources outside the run bucket.'
+    Stop-Runner 'MINIO_DENIED_BUCKET_MUST_BE_DISTINCT' 'Negative-scope bucket equals the allowed run bucket.' 'Use the known existing prior-Run bucket for the same ListObjectsV2 negative probe.' 'Negative proof cannot target the allowed resource.'
   }
 
-  $base = @('--profile',$profile,'--region','us-east-1','--endpoint-url',[string]$Config.minio.endpoint,'--no-cli-pager','s3api')
-  $head = Invoke-External 'aws' ($base + @('head-bucket','--bucket',$bucket))
-  if ($head.exit_code -ne 0) {
-    Stop-Runner 'MINIO_IN_SCOPE_HEAD_FAILED' 'Restricted profile cannot head the configured run bucket.' 'Verify the already-provisioned restricted identity and endpoint. No root/admin fallback is permitted.' 'Positive proof runs only under an explicitly named restricted AWS profile.'
+  $policyProof = $null
+  try {
+    $policyProof = Assert-MinioPolicyScoped $MinioPolicyPath ([string]$Config.minio.expected_policy_sha256) $bucket @($Config.minio.expected_policy_actions)
+  } catch {
+    Stop-Runner 'MINIO_POLICY_SCOPED_CONTRACT_FAILED' $_.Exception.Message 'Use the reviewed non-secret 800c policy snapshot with the pinned digest. Do not change IAM from this runner.' 'Policy may authorize required target-bucket writes, but wildcard/global-list/out-of-bucket permissions are rejected and the runner itself implements no write call.'
   }
-  $list = Invoke-External 'aws' ($base + @('list-objects-v2','--bucket',$bucket,'--prefix',$prefix,'--max-keys','1','--query','{KeyCount:KeyCount,IsTruncated:IsTruncated}','--output','json'))
-  if ($list.exit_code -ne 0) {
-    Stop-Runner 'MINIO_IN_SCOPE_LIST_FAILED' 'Restricted profile cannot list the configured run prefix.' 'Reconcile the exact prefix policy from provisioning; do not widen the IAM policy in this runner.' 'Only non-mutating head/list operations are implemented.'
+
+  $credContext = Get-MinioChildCredentialContext $Config
+  $awsEnv = $credContext.environment
+  $awsRemove = @($credContext.removals)
+  $base = @('--region','us-east-1','--endpoint-url',[string]$Config.minio.endpoint,'--no-cli-pager','s3api')
+
+  $targetArgs = $base + @('list-objects-v2','--bucket',$bucket,'--max-keys','1','--query','{KeyCount:KeyCount,IsTruncated:IsTruncated}','--output','json')
+  if (-not [string]::IsNullOrWhiteSpace([string]$Config.minio.prefix)) {
+    $targetArgs += @('--prefix',[string]$Config.minio.prefix)
   }
-  $deny = Invoke-External 'aws' ($base + @('head-bucket','--bucket',$deniedBucket))
-  if ($deny.exit_code -eq 0 -or $deny.text -notmatch '(?i)(AccessDenied|Forbidden|403)') {
-    Stop-Runner 'MINIO_OUT_OF_SCOPE_EXPLICIT_DENIAL_NOT_PROVEN' 'The negative bucket probe was not an explicit authorization denial.' 'Choose a known existing out-of-scope bucket and verify the restricted policy. NoSuchBucket, timeout, or success are not ACL denial evidence.' 'Negative scope requires AccessDenied/Forbidden/403 under the same restricted principal.'
+  $target = Invoke-External 'aws' $targetArgs $awsEnv $awsRemove 30000
+  if ($target.timed_out -or $target.exit_code -ne 0) {
+    Stop-Runner 'MINIO_IN_SCOPE_LIST_FAILED' 'The restricted 800c child process could not list the configured target bucket scope.' 'Verify the already-provisioned run-scoped credential, endpoint and policy evidence. No root/admin or profile fallback is permitted.' 'Only ListObjectsV2 is used for the positive live probe.'
   }
+
+  $deny = Invoke-External 'aws' ($base + @('list-objects-v2','--bucket',$deniedBucket,'--max-keys','1','--output','json')) $awsEnv $awsRemove 30000
+  if ($deny.timed_out -or $deny.exit_code -eq 0 -or $deny.text -notmatch '(?i)(AccessDenied|Forbidden|403)') {
+    Stop-Runner 'MINIO_OLD_RUN_EXPLICIT_DENIAL_NOT_PROVEN' 'The prior-Run bucket probe was not an explicit authorization denial.' 'Verify the exact 800c principal/policy binding. NoSuchBucket, timeout, InternalError, transport failure, or success are not accepted as ACL-denial evidence.' 'Negative proof requires AccessDenied/Forbidden/403 from ListObjectsV2 against the known existing old bucket.'
+  }
+
+  $global = Invoke-External 'aws' ($base + @('list-buckets','--query','Buckets[].Name','--output','json')) $awsEnv $awsRemove 30000
+  $globalVerdict = $null
+  $globalCounts = [ordered]@{ target = 0; old_run = 0; other = 0; total = 0 }
+  if ($global.timed_out) {
+    Stop-Runner 'MINIO_GLOBAL_LIST_TIMEOUT_NOT_VERIFIED' 'ListBuckets timed out, so response-scope visibility is unknown.' 'Repeat only the read-only scoped-identity diagnostic after transport stability is restored.' 'Timeout is not treated as AccessDenied.'
+  } elseif ($global.exit_code -ne 0) {
+    if ($global.text -match '(?i)(AccessDenied|Forbidden|403)') {
+      $globalVerdict = 'EXPLICIT_DENIAL'
+    } else {
+      Stop-Runner 'MINIO_GLOBAL_LIST_ERROR_NOT_VERIFIED' 'ListBuckets failed without an explicit authorization denial.' 'Classify the exact S3-compatible error without changing IAM.' 'InternalError, NoSuchBucket, parser error or other non-authorization failures remain HOLD.'
+    }
+  } else {
+    try {
+      $names = @($global.stdout | ConvertFrom-Json)
+    } catch {
+      Stop-Runner 'MINIO_GLOBAL_LIST_RESPONSE_PARSE_FAILED' 'ListBuckets returned success but the bounded JSON name list could not be parsed.' 'Preserve the raw command only locally and correct the read-only parser; do not expose bucket names in shared evidence.' 'Successful HTTP/API status alone is not scoped-visibility proof.'
+    }
+    foreach ($name in $names) {
+      $n = [string]$name
+      $globalCounts.total++
+      if ($n -eq $bucket) { $globalCounts.target++ }
+      elseif ($n -eq $deniedBucket) { $globalCounts.old_run++ }
+      else { $globalCounts.other++ }
+    }
+    if ($globalCounts.old_run -gt 0 -or $globalCounts.other -gt 0) {
+      Stop-Runner 'MINIO_GLOBAL_LIST_EXPOSES_OUT_OF_SCOPE_BUCKETS' 'ListBuckets succeeded and exposed one or more out-of-scope bucket names.' 'Raise a least-privilege finding and review effective user/group/default policies before any IAM change.' 'Shared evidence stores counts only; out-of-scope bucket names are suppressed.'
+    }
+    $globalVerdict = 'FILTERED_NO_OUT_OF_SCOPE_BUCKETS'
+  }
+
   Add-Stage 'MINIO_RESTRICTED_IDENTITY_AND_SCOPE' 'PASS' ([ordered]@{
     endpoint=[string]$Config.minio.endpoint
     bucket=$bucket
-    prefix=$prefix
-    restricted_profile_name=$profile
-    in_scope_head='PASS'
-    in_scope_list='PASS'
-    out_of_scope_bucket='EXPLICIT_ACCESS_DENIED'
-    policy_sha256=Get-Sha256File $MinioPolicyPath
+    prefix=if ([string]::IsNullOrWhiteSpace([string]$Config.minio.prefix)) { $null } else { [string]$Config.minio.prefix }
+    restricted_principal=$credContext.principal
+    credential_transport='EPHEMERAL_CHILD_PROCESS_ENV_ONLY'
+    target_list_objects_v2='PASS'
+    old_run_list_objects_v2='EXPLICIT_ACCESS_DENIED'
+    global_list_scope=$globalVerdict
+    global_list_counts=$globalCounts
+    policy_sha256=$policyProof.policy_sha256
+    reviewed_allow_actions=$policyProof.allow_actions
     write_api_implemented=$false
     admin_api_implemented=$false
+    aws_profile_used=$false
   })
 }
 
@@ -635,13 +804,22 @@ function Invoke-SelfTest {
     }
 
     $policy = Join-Path $tmp 'policy.json'
-    [System.IO.File]::WriteAllText($policy,'{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:ListBucket"],"Resource":["arn:aws:s3:::runbucket"],"Condition":{"StringLike":{"s3:prefix":["scope/*"]}}},{"Effect":"Allow","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::runbucket/scope/*"]}]}',(New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false))
-    Assert-MinioPolicyReadOnly $policy (Get-Sha256File $policy) 'runbucket' 'scope/'
-    $checks++
-    [System.IO.File]::WriteAllText($policy,'{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:PutObject"],"Resource":["arn:aws:s3:::runbucket/scope/*"]}]}',(New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false))
-    try { Assert-MinioPolicyReadOnly $policy (Get-Sha256File $policy) 'runbucket' 'scope/'; throw 'SELFTEST_EXPECTED_POLICY_FAILURE' } catch { if ($_.Exception.Message -eq 'SELFTEST_EXPECTED_POLICY_FAILURE') { throw }; $checks++ }
+    $expectedPolicyActions = @('s3:ListBucket','s3:GetBucketLocation','s3:GetObject','s3:PutObject','s3:DeleteObject')
+    [System.IO.File]::WriteAllText($policy,'{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:ListBucket","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::runbucket"]},{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject"],"Resource":["arn:aws:s3:::runbucket/*"]}]}',(New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false))
+    $proof = Assert-MinioPolicyScoped $policy (Get-Sha256File $policy) 'runbucket' $expectedPolicyActions
+    if (@($proof.allow_actions).Count -ne 5) { throw 'SELFTEST_POLICY_ACTION_COUNT' }
+    $checks += 2
+    [System.IO.File]::WriteAllText($policy,'{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:ListAllMyBuckets"],"Resource":["*"]}]}',(New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false))
+    try { Assert-MinioPolicyScoped $policy (Get-Sha256File $policy) 'runbucket' $expectedPolicyActions; throw 'SELFTEST_EXPECTED_POLICY_FAILURE' } catch { if ($_.Exception.Message -eq 'SELFTEST_EXPECTED_POLICY_FAILURE') { throw }; $checks++ }
 
-    if ($checks -lt 7) { throw 'SELFTEST_CHECK_COUNT' }
+    $native = Invoke-External $env:ComSpec @('/d','/s','/c','echo SYNTH_OUT & echo AccessDenied 1>&2 & exit /b 7') $null @() 5000
+    if ($native.timed_out -or $native.exit_code -ne 7 -or $native.stderr -notmatch 'AccessDenied') { throw 'SELFTEST_NATIVE_NONZERO_CAPTURE' }
+    $checks++
+    $timeout = Invoke-External $env:ComSpec @('/d','/s','/c','ping 127.0.0.1 -n 3 >nul') $null @() 100
+    if (-not $timeout.timed_out) { throw 'SELFTEST_NATIVE_TIMEOUT_CAPTURE' }
+    $checks++
+
+    if ($checks -lt 10) { throw 'SELFTEST_CHECK_COUNT' }
     Write-Host ('WINDOWS_DEPLOYMENT_RUNNER_SELFTEST_PASS checks=' + $checks + ' execution_authorized=false production_authorized=false')
   } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
