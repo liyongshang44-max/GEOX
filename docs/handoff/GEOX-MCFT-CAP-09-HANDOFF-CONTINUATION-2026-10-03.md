@@ -1,3 +1,11 @@
+# 2026-10-14 — third QCP fails from undefined child_process variable; fourth exact-scope fix submitted
+
+Third original QCP run `38545411629`, job `115790111649` COMPLETED/FAILURE. The final CP2 `failures=[]` remains positive evidence of 15-path registration, but immutable Phase2 validation crashed with `ReferenceError: cp is not defined` at generated workflow Node script line 113; previous ancestry check patch accidentally referenced an out-of-scope alias `cp`. Thus third run **DID NOT adjudicate Phase2 ancestry semantics**.
+
+On the same independent Draft PR #3706 branch changed the unique ancestry check call to `require('node:child_process').spawnSync(...)` with otherwise unchanged guard, path resolver and historic evidence IDs. Commit `96810f9948856c1a2665d67f18902e24a09bbb6f`; single exact edit verified. New original QCP run `38545964031` and synthetic/material run `38545964247` both initially IN_PROGRESS. Machine outcomes pending. No merge, proof signing, TEST_ONLY permit, Producer, MinIO or PG changes. `A44_ADOPTION_BLOCKED / LOCAL_ADMISSION_ELIGIBLE=false / TEST_ONLY_HOLD=true / PRODUCTION_HOLD=true`.
+
+---
+
 # 2026-10-14 — Phase2 exact-run historical proof candidate, original QCP third run
 
 On independent Draft PR #3706 only (not main), applied single narrow QCP workflow condition change in commit `67dee038e5b473bf05ebc51f586fe39c7deef43e`. Existing guard for immutable run `38281449457`, historical subject `9e4e8132628f2581cbac025f81f7342027660631`, workflow path and historical base `adfaf9fdbd2c75923fb298e26b5d5d106a0fc61a` remains unchanged. Original guard `boundary.adopted_main_sha === base` conflated current adopted main SHA with the historical run base; replaced only that clause with exact 40-char current adopted main SHA and `git merge-base --is-ancestor base boundary.adopted_main_sha` check. Historical run base exact equality and runtime evidence integrity checks remain. This patch is a candidate, not yet demonstrated PASS or reviewed negative-case proof.
