@@ -42,10 +42,21 @@
     "endpoint_observation_container": "mcftcap09requal72dc0304a21a-minio-1",
     "bucket": "mcft-cap09-requal-800c023cf337",
     "prefix": null,
-    "denied_bucket": null,
-    "aws_profile": null,
-    "expected_policy_sha256": null,
-    "endpoint_container_is_resource_identity": false
+    "denied_bucket": "mcft-cap09-requal-72dc0304a21a",
+    "expected_policy_sha256": "47b07f9e6dfbe6377fe628eb972f388c3f7cece28757afe86cc36e75530728b6",
+    "endpoint_container_is_resource_identity": false,
+    "expected_container_id": "952016cb6e18295242b6ea895004ae2541470be460708147ba001521bf907c70",
+    "expected_policy_actions": [
+      "s3:ListBucket",
+      "s3:ListBucketMultipartUploads",
+      "s3:GetBucketLocation",
+      "s3:AbortMultipartUpload",
+      "s3:DeleteObject",
+      "s3:GetObject",
+      "s3:ListMultipartUploadParts",
+      "s3:PutObject"
+    ],
+    "global_list_scope_policy": "DENY_OR_FILTERED_NO_OUT_OF_SCOPE_BUCKETS"
   },
   "authority": {
     "signed_adoption_qualification_valid": false,
