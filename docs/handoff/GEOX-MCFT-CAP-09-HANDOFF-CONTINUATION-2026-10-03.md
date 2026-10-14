@@ -1,3 +1,11 @@
+# 2026-10-14 — Phase2 exact-run historical proof candidate, original QCP third run
+
+On independent Draft PR #3706 only (not main), applied single narrow QCP workflow condition change in commit `67dee038e5b473bf05ebc51f586fe39c7deef43e`. Existing guard for immutable run `38281449457`, historical subject `9e4e8132628f2581cbac025f81f7342027660631`, workflow path and historical base `adfaf9fdbd2c75923fb298e26b5d5d106a0fc61a` remains unchanged. Original guard `boundary.adopted_main_sha === base` conflated current adopted main SHA with the historical run base; replaced only that clause with exact 40-char current adopted main SHA and `git merge-base --is-ancestor base boundary.adopted_main_sha` check. Historical run base exact equality and runtime evidence integrity checks remain. This patch is a candidate, not yet demonstrated PASS or reviewed negative-case proof.
+
+New native existing QCP workflow triggered as run `38545411629`, initially QUEUED; existing synthetic workflow run `38545410332` initially QUEUED. Prior second-run CP2 final `failures=[]` but immutable evidence resolution failed with `PHASE2_CURRENT_MAIN_EXACT_RUN_PROOF_INVALID`; signed A44 adoption still BLOCKED. Do not merge, issue signer/permit, deploy, launch or modify runtime/DB. Local IAM group authorization remains pending. Holds: `LOCAL_ADMISSION_ELIGIBLE=false / TEST_ONLY_HOLD=true / PRODUCTION_HOLD=true`.
+
+---
+
 # 2026-10-14 — PR3706 second original QCP fails AFTER CP2 unknown paths close; Phase2 historical exact-run proof
 
 Second PR #3706 candidate commit `a0903f9fd290b85ca69ed6e445677f1a4f7d5818`. Original governance QCP run `38540800723` job `115774765687` completed **FAILURE**. The machine's final CP2 section now has `failures: []` (all 15 exact candidate paths are known under current resolver). However, a later immutable-evidence resolution step exited 1 at `2026-10-14T09:16:14Z` with `Error: PHASE2_CURRENT_MAIN_EXACT_RUN_PROOF_INVALID`. Thus **CP2 path block removed**, **whole QCP not PASS**, do not sign/adopt.
