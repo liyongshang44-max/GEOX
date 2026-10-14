@@ -46,5 +46,12 @@ test('permit_observation_binding',()=>{const f=fixture(),r=verify(f),bundle={obs
 test('permit_cannot_outlive_qualification',()=>{const f=fixture(),r=verify(f);assert.throws(()=>v.bindObserved(r,{observed:{adoption_binding:{qualification_digest:r.adoption_digest,material_digest:r.material_digest}},permit:{payload:{expires_at:new Date(f.now+120000).toISOString()}}}));});
 test('real_dispatch_rejects_offline_marker_without_governed_retry',()=>{const runner=path.resolve(__dirname,'../runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs');const r=cp.spawnSync(process.execPath,[runner,'--operator-authorized','--preflight-only','--all'],{encoding:'utf8',env:{...process.env,MCFT_CAP09_ADOPTION_REQUEST:path.join(tmp,'missing.json')}});assert.equal(r.status,1);assert.match(r.stderr,/OFFLINE_ADOPTION_REQUIRES_GOVERNED_RETRY/);});
 test('empty_offline_marker_cannot_fall_back',()=>{const runner=path.resolve(__dirname,'../runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs');const r=cp.spawnSync(process.execPath,[runner,'--operator-authorized','--preflight-only','--all'],{encoding:'utf8',env:{...process.env,MCFT_CAP09_ADOPTION_REQUEST:''}});assert.equal(r.status,1);assert.match(r.stderr,/OFFLINE_ADOPTION_REQUIRES_GOVERNED_RETRY/);});
+test('real_host_offline_proof_precedes_legacy_execution_import',()=>{
+ const host=fs.readFileSync(path.resolve(__dirname,'../runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'),'utf8');
+ const start=host.indexOf('function hostBundle(file)');
+ const offline=host.indexOf('offline.load(offlineFile,ROOT)',start);
+ const legacy=host.indexOf('const execution=require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs")',start);
+ assert(start>=0&&offline>start&&legacy>offline,'OFFLINE_PROOF_MUST_PRECEDE_LEGACY_EXECUTION_IMPORT');
+});
 test('fixed_production_policy_disabled',()=>{assert.equal(c.read(v.POLICY).adopted,false);assert.throws(()=>v.load(path.join(tmp,'missing.json'),tmp));});
 console.log(JSON.stringify({status:'PASS',checks,synthetic_material_and_signer:true,real_execution_authorized:false,windows_host_attested:false}));
