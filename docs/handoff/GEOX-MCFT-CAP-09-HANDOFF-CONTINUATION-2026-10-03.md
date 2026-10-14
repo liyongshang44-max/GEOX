@@ -1,3 +1,15 @@
+# 2026-10-14 — Stop legacy QCP edits; independent A44 check mapping materialized
+
+User confirms architecture sequence: freeze old QCP workflow editing; read fourth run 38545964031 and preserve its evidence; map legacy checks to A44 adoption qualification separately from Windows offline Local Admission; no real signer/permit until evidence-backed adoption and host authorization.
+
+As of most recent GitHub readback, fourth original QCP run `38545964031` still IN_PROGRESS; fourth adoption/offline synthetic workflow `38545964247` COMPLETED/SUCCESS. No claim of original QCP overall PASS. Created separate standalone branch `qualification/mcft-cap09-a44-adoption-mapping-isolated-20261014` at commit `96810f9948856c1a2665d67f18902e24a09bbb6f`, with **no PR and no native QCP trigger**. Materialized file `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-A44-ADOPTION-CHECK-MAPPING-CANDIDATE-20261014-V1.json`, commit `edef55831f5e5c1f5cbf9bb45939391b86ab722b`. It enumerates the then-current candidate control plane's **55** full check IDs with owner, generation, applicability, authority_refs, resolver_ids, carry-forward policy, diagnostics, ordered provenance and source Git blob `347609bb8220e9128c1de06811f27888d017de70`. Note the **original A44 snapshot listed 54 QCP checks**, so the additional engineering check is candidate-only and cannot be claimed as A44 historic check success. All 55 entries have `BLOCKED` and no invented raw evidence digest; `ADOPTION_INCOMPLETE`, `overall_pass_issuance_allowed=false`; this is an evidence mapping candidate, NOT proof or signable adoption.
+
+Read original `scripts/cap09_adoption_v1/verifier.cjs` and signer; their existing qualification format restricts `valid_for` to `SYNTHETIC_ONLY`, so success of synthetic workflow does not authorize a real trust root, adoption signature or TEST_ONLY. Real Windows host collector, ACL/MinIO group closure, frozen package material binding and separately authorized permit workflow are still prerequisites; no live verification result is claimed. No signing keys, trust registry, nonce, permissions, deployment, live host, schema, Producer or runtime touched.
+
+New scope: do not edit legacy QCP workflow again; next review fourth-run machine outcome and individually attach original immutable evidence and applicability decisions to each check, including 52 historical/65 entry/108 frozen path boundaries. Keep `A44_ADOPTION_BLOCKED; LOCAL_ADMISSION_ELIGIBLE=false; TEST_ONLY_HOLD=true; PRODUCTION_HOLD=true`.
+
+---
+
 # 2026-10-14 — third QCP fails from undefined child_process variable; fourth exact-scope fix submitted
 
 Third original QCP run `38545411629`, job `115790111649` COMPLETED/FAILURE. The final CP2 `failures=[]` remains positive evidence of 15-path registration, but immutable Phase2 validation crashed with `ReferenceError: cp is not defined` at generated workflow Node script line 113; previous ancestry check patch accidentally referenced an out-of-scope alias `cp`. Thus third run **DID NOT adjudicate Phase2 ancestry semantics**.
