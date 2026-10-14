@@ -1,0 +1,46 @@
+{
+  "schema_version": "MCFT_CAP09_ADOPTION_MATERIAL_CHECKPOINT_V1",
+  "adoption_manifest_sha256": "8f84c990496bd47cf804ec4188539c1cbcd24f5f03da99a9ce7f15c19d6c3c63",
+  "entry_checks": 65,
+  "execution_authorized": false,
+  "first_parent_commits": 31,
+  "frozen_paths": 108,
+  "frozen_unchanged": 108,
+  "historical_checks": 52,
+  "overall_pass_issuance_allowed": false,
+  "production_authorized": false,
+  "qcp_adoption_blocked": 54,
+  "qcp_checks": 54,
+  "release_binding_sha256": "099ae7f99547c68f754f4076020505d5fbff35198da160b526101640e56a1c4a",
+  "release_files": 6414,
+  "release_verification": {
+    "execution_authorized": false,
+    "files_verified": 6414,
+    "host_configuration_verified": false,
+    "installed_dependencies_verified": false,
+    "loaded_paths_verified": [
+      "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_LOCAL_QUALIFICATION_ENTRY_V1.ps1",
+      "scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs",
+      "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
+      "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts",
+      "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts",
+      "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs",
+      "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts"
+    ],
+    "manifest_sha256": "099ae7f99547c68f754f4076020505d5fbff35198da160b526101640e56a1c4a",
+    "production_authorized": false,
+    "status": "RELEASE_SOURCE_BYTES_MATCH_EXECUTE_HOLD",
+    "subject_commit_sha": "a44b294f684027c0d1dd7a28c3735442fca736a4"
+  },
+  "subject_commit_sha": "a44b294f684027c0d1dd7a28c3735442fca736a4",
+  "ci_source": {
+    "run_id": 38442436228,
+    "job_id": 115452167618,
+    "conclusion": "failure",
+    "codes": [
+      "CP2_SUCCESSOR_CHAIN_CANDIDATE_UNKNOWN_PATH",
+      "CP2_SUCCESSOR_CHAIN_UNKNOWN_OUTSIDE_ACCEPTED_ANCHOR"
+    ]
+  },
+  "boundary": "Candidate a44b294f only. Current QCP conclusions BLOCKED; 108 frozen byte comparisons PASS. Source package is not installed-dependency/host attestation."
+}

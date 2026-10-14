@@ -31,3 +31,32 @@ jobs:
           name: synthetic-proof-${{ matrix.os }}-${{ github.event.pull_request.head.sha }}
           path: synthetic-proof-bundle/
           if-no-files-found: error
+  release-material-binding:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Real candidate content, evidence mapping and offline negative tests
+        run: python -B -m unittest discover -s scripts/cap09_adoption_v1 -p test_material_binding.py -v
+      - name: Export fixed candidate objects without running historical qualification
+        run: >-
+          python -B scripts/cap09_adoption_v1/build_evidence.py
+          --repo . --subject a44b294f684027c0d1dd7a28c3735442fca736a4
+          --output candidate-material
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: candidate-material-${{ matrix.os }}-${{ github.event.pull_request.head.sha }}
+          path: candidate-material/
+          if-no-files-found: error
