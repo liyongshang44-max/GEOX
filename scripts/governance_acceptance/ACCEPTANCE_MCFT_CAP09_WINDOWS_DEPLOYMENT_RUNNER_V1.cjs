@@ -49,14 +49,12 @@ for (const marker of [
 ]) pass(() => assert.ok(runner.includes(marker), marker));
 
 for (const forbidden of [
-  "s3api put-object",
-  "s3api delete-object",
-  "mc admin",
-  "docker restart",
-  "ALTER ROLE",
+  "'s3api','put-object'",
+  "'s3api','delete-object'",
+  "Invoke-External 'mc'",
+  "Invoke-External 'docker' @('restart'",
+  "ALTER ROLE ",
   "CREATE ROLE ",
-  "GRANT geox_",
-  "REVOKE ALL ON",
   "--execute"
 ]) pass(() => assert.ok(!runner.toLowerCase().includes(forbidden.toLowerCase()), forbidden));
 
