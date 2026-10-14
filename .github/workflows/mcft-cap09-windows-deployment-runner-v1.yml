@@ -1,0 +1,35 @@
+name: MCFT CAP-09 Windows deployment runner V1
+
+on:
+  pull_request:
+    paths:
+      - "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNNER_V1.ps1"
+      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNNER_V1.cjs"
+      - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-WINDOWS-DEPLOYMENT-RUNNER-800C-CONFIG-V1.json"
+      - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-WINDOWS-DEPLOYMENT-RUNNER-V1.md"
+      - ".github/workflows/mcft-cap09-windows-deployment-runner-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+      - run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNNER_V1.cjs
+
+  powershell-selftest:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell 5.1 no-effect self-test
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNNER_V1.ps1 -SelfTest
