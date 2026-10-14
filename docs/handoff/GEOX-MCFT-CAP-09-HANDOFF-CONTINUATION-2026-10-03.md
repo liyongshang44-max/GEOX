@@ -1,3 +1,15 @@
+# 2026-10-14 — Windows MinIO subprocess regression PASS; live GLOBAL_LIST ALLOWED (FAIL_CLOSED)
+
+**Immediately observed on actual Windows host (Run `800c023cf337`):** `D:\gptdown\MCFT-CAP09-MINIO-NEGATIVE-REGRESSION-V1\run-windows.ps1` standalone regression all **6/6 PASS**, including exit 0, AccessDenied, InternalError, NoSuchBucket, bare HTTP 403 and timeout. `NO_POWERSHELL_NATIVE_COMMAND_ERROR`. Subsequently `run-windows.ps1 -Live` again regression 6/6 PASS; live `TARGET=ALLOWED; VERDICT=PASS; EXIT=0`, `OLD_RUN=DENIED; VERDICT=PASS; EXIT=254`, but `GLOBAL_LIST=ALLOWED; VERDICT=FAIL_CLOSED; EXIT=0`. Overall `MINIO_LIVE=FAIL_CLOSED`, `LOCAL_ADMISSION_ELIGIBLE=FALSE`; TEST_ONLY/PRODUCTION HOLD remain. Evidence at `D:\gptdown\MCFT-CAP09-800c-MINIO-READONLY-20261014T061228347Z.json`.
+
+**Interpretation:** old Run bucket's ListObjectsV2 is explicitly denied, establishing that tested negative action; target bucket list allowed. ListBuckets success alone does not establish ability to read other bucket contents; determine whether it is an actual policy violation. Current harness presumes GLOBAL_LIST must deny, yet frozen policy applicability for ListBuckets not independently confirmed. Treat as `GLOBAL_BUCKET_ENUMERATION_POLICY_ADJUDICATION_PENDING` and **fail closed**. No IAM modification or credential rotation/provisioning without reviewed authority. Need inspect the already captured non-secret effective scoped policy and any attached/group/default policies, specifically `s3:ListAllMyBuckets`, resource `*`, identity/policy binding and whether S3-compatible server permits global list under this identity. No repeat of passed host tests; read existing JSON/policy receipt first.
+
+Historic scoped MinIO PASS receipt SHA256 `fa44b022e86a09b8f2558ded948f9337b7b18102e0a9ef082974636e842d1f5b`, policy name `mcft800c023cf337bucketonly`, container ID `952016cb6e18295242b6ea895004ae2541470be460708147ba001521bf907c70` matched current container. Do not print secrets. This is not Adoption qualification or real signed A44 Local Admission.
+
+**Deployment-handoff rule:** immediately prepend actual new result and discovered new blocker into the same second active Handoff (PR #3298), retaining history; freeze corrective action until policy evidence reviewed.
+
+---
+
 # 2026-10-14 — MinIO native subprocess negative-path regression prepared; host live check HOLD
 
 - Preceding checkpoint records the PowerShell `NativeCommandError` defect in both negative-test attempts. New recovery package: `MCFT-CAP09-MINIO-NEGATIVE-REGRESSION-V1.zip` (conversation attachment; copy into Windows `D:\gptdown\MCFT-CAP09-MINIO-NEGATIVE-REGRESSION-V1\`; not yet checked in as executable source). `runner.py` uses Python `subprocess.run(shell=False)` with captured stdout/stderr, timeout and explicit exit code, avoiding PowerShell native stderr exceptions.
