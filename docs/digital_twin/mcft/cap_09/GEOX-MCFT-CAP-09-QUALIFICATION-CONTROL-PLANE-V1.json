@@ -1370,6 +1370,33 @@
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
       ]
+    },
+    "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DISABLED_RETRY_HISTORICAL_INHERITANCE_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_DISABLED_RETRY_HISTORICAL_INHERITANCE_V1.cjs"
+      ]
+    },
+    "A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap09-adoption-local-synthetic-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ADR-ADOPTION-QUALIFICATION-LOCAL-EXECUTION-ADMISSION-V1.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-MATERIAL-CHECKPOINT-A44-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-MIGRATION-INVENTORY-V1.json",
+        "scripts/cap09_adoption_v1/MATERIAL-BINDING.md",
+        "scripts/cap09_adoption_v1/README.md",
+        "scripts/cap09_adoption_v1/acceptance.cjs",
+        "scripts/cap09_adoption_v1/build_evidence.py",
+        "scripts/cap09_adoption_v1/contract.cjs",
+        "scripts/cap09_adoption_v1/evidence_review.py",
+        "scripts/cap09_adoption_v1/material_binding.py",
+        "scripts/cap09_adoption_v1/signer.cjs",
+        "scripts/cap09_adoption_v1/synthetic-launcher.cjs",
+        "scripts/cap09_adoption_v1/test_material_binding.py",
+        "scripts/cap09_adoption_v1/verifier.cjs"
+      ]
     }
   },
   "checks": [
@@ -2954,6 +2981,59 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_LOCAL_CUTOVER_EXACT_SCOPE_V1.cjs"
+    },
+    {
+      "check_id": "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_ENGINEERING_ONLY",
+      "owner": "MCFT_CAP09_GOVERNANCE_HISTORY_INHERITANCE",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+      ],
+      "resolver_ids": [
+        "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_V1"
+      ],
+      "historical_evidence_policy": "REPLAY_EXACT_PR3691_PROOF_IN_DISPOSABLE_CLONE_NO_HISTORICAL_REWRITE",
+      "execution_workflow": ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+      "execution_workflow_status": "ENGINEERING_ONLY_NO_EXECUTION_AUTHORIZATION",
+      "fail_policy": "FAIL_CLOSED_FIRST_PARENT_MERGE_TREE_HISTORICAL_CHECKS_AND_FROZEN_RUNTIME",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DISABLED_RETRY_HISTORICAL_INHERITANCE_V1.cjs"
+    },
+    {
+      "check_id": "A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1_ENGINEERING_ONLY",
+      "owner": "MCFT_CAP09_ADOPTION_QUALIFICATION_CONTROL_PLANE",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+      ],
+      "resolver_ids": [
+        "A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_NEW_CANDIDATE_REQUIRES_INDEPENDENT_ADOPTION",
+      "execution_workflow": ".github/workflows/mcft-cap09-adoption-local-synthetic-v1.yml",
+      "execution_workflow_status": "SYNTHETIC_ONLY_NO_EXECUTION_AUTHORIZATION",
+      "fail_policy": "FAIL_CLOSED_UNKNOWN_PATH_OR_REQUIRED_EVIDENCE",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "A44_ADOPTION_LOCAL_SYNTHETIC_BOUNDARY_20261014_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/cap09_adoption_v1/acceptance.cjs"
     }
   ],
   "non_effects": {

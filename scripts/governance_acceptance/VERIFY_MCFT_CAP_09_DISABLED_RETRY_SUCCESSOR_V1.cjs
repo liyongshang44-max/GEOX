@@ -35,6 +35,13 @@ const ROUTE = ' const retrySuccessor=path.join(ROOT,"' + SELF + '");\n' +
 const git = (...args) => cp.execFileSync("git", args,
   {cwd: ROOT, encoding: "utf8", timeout: 120000, maxBuffer: 16 * 1024 * 1024}).trim();
 function verifySuccessor() {
+  // Adopted successors do not re-apply the PR #3691 parent assertion to
+  // today's main. Prove the unchanged original in an isolated historical clone.
+  const originMain=git("rev-parse","origin/main");
+  if(originMain!=="0d62e7fa4f0905151b38c25964b48d672187e6d3"){
+    return require("./MCFT_CAP09_DISABLED_RETRY_HISTORICAL_INHERITANCE_V1.cjs")
+      .verifyInheritedSuccessor();
+  }
   const head = git("rev-parse", "HEAD"), main = git("rev-parse", "origin/main");
   git("merge-base", "--is-ancestor", BASE, head);
   let stage = "SUCCESSOR_SUBJECT_PRE_MERGE";
