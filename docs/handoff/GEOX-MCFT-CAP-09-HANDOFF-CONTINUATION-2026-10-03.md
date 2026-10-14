@@ -1,3 +1,13 @@
+# 2026-10-14 — Fourth original QCP SUCCESS and A44 adoption mapping provenance bound, not signed
+
+Read completed original QCP run `38545964031`, job `115791966308`: GitHub status completed, conclusion **success** on independent governance candidate `96810f9948856c1a2665d67f18902e24a09bbb6f`. Original uploaded artifact ID `11885016966`, digest `sha256:c972ae653469047365ab7135dd48a6b763399557170a2d47738cac514ad4e00a`; machine log indicates CP2 `failures=[]`. Synthetic/offline workflow run `38545964247` completed success. These prove governing candidate pipeline passes; they do **not** prove immutable A44 subject `a44b294f684027c0d1dd7a28c3735442fca736a4` qualified or signed.
+
+Updated independent A44 55-check mapping branch `qualification/mcft-cap09-a44-adoption-mapping-isolated-20261014` with exact QCP run/job/artifact hash, explicit subject mismatch and role. Commit `d586c7fc34aa54558c1d630a92cf0e4562bb169f`. All 55 required-check entries remain `BLOCKED` until per-check real evidence provenance and applicability are independently adjudicated. No edit to old QCP workflow, no new PR, no merge, signing/trust root, permit, deployment, host execution, schema or resources. Existing `verifier.cjs` accepts `SYNTHETIC_ONLY` only; cannot be promoted to real TEST_ONLY. Windows current-host ACL/group, material and permit prerequisite remain open.
+
+Next exact delivery: translate candidate QCP artifact check-by-check to immutable A44 historic 54-item snapshot, attach original evidence digests with scope/subject matching and separate 55th engineering check; preserve 52 historical/65 entry/108 frozen path constraints. Then independently review and authorize signer/trust management and host read-only admission without replaying history each run. `A44_ADOPTION=BLOCKED; LOCAL_ADMISSION_ELIGIBLE=false; TEST_ONLY_HOLD=true; PRODUCTION_HOLD=true`.
+
+---
+
 # 2026-10-14 — Stop legacy QCP edits; independent A44 check mapping materialized
 
 User confirms architecture sequence: freeze old QCP workflow editing; read fourth run 38545964031 and preserve its evidence; map legacy checks to A44 adoption qualification separately from Windows offline Local Admission; no real signer/permit until evidence-backed adoption and host authorization.
