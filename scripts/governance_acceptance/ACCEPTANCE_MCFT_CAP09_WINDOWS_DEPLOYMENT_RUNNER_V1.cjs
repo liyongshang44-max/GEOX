@@ -32,8 +32,12 @@ pass(() => assert.equal(config.authority.production_hold, true));
 pass(() => assert.equal(config.pg.expected_acl_digest_sha256.evidence, null));
 pass(() => assert.equal(config.pg.expected_acl_digest_sha256.twin, null));
 pass(() => assert.equal(config.minio.prefix, null));
-pass(() => assert.equal(config.minio.aws_profile, null));
-pass(() => assert.equal(config.minio.expected_policy_sha256, null));
+pass(() => assert.equal(config.minio.denied_bucket, "mcft-cap09-requal-72dc0304a21a"));
+pass(() => assert.equal(config.minio.expected_container_id, "952016cb6e18295242b6ea895004ae2541470be460708147ba001521bf907c70"));
+pass(() => assert.equal(config.minio.expected_policy_sha256, "47b07f9e6dfbe6377fe628eb972f388c3f7cece28757afe86cc36e75530728b6"));
+pass(() => assert.ok(config.minio.expected_policy_actions.includes("s3:PutObject")));
+pass(() => assert.ok(config.minio.expected_policy_actions.includes("s3:DeleteObject")));
+pass(() => assert.ok(!config.minio.expected_policy_actions.includes("s3:ListAllMyBuckets")));
 
 for (const marker of [
   "execution_authorized = $false",
@@ -43,7 +47,12 @@ for (const marker of [
   "PG_FROZEN_ACL_DIGEST_REQUIRED",
   "MINIO_SCOPED_RESTRICTED_INPUT_REQUIRED",
   "list-objects-v2",
-  "head-bucket",
+  "list-buckets",
+  "System.Diagnostics.ProcessStartInfo",
+  "RedirectStandardError",
+  "MINIO_GLOBAL_LIST_EXPOSES_OUT_OF_SCOPE_BUCKETS",
+  "EPHEMERAL_CHILD_PROCESS_ENV_ONLY",
+  "MinioCredentialJsonPath",
   "mutable_checkout_used = $false",
   "operator_supplied_exact_archive",
   "github_exact_commit_archive",
@@ -65,6 +74,9 @@ pass(() => assert.match(workflow, /-SelfTest/));
 pass(() => assert.match(workflow, /ACCEPTANCE_MCFT_CAP09_WINDOWS_DEPLOYMENT_RUNNER_V1\.cjs/));
 pass(() => assert.match(doc, /never starts Producer/i));
 pass(() => assert.match(doc, /does not issue or consume a permit/i));
+pass(() => assert.match(doc, /private credential JSON/i));
+pass(() => assert.match(doc, /ProcessStartInfo/i));
+pass(() => assert.match(doc, /ListBuckets/i));
 pass(() => assert.match(doc, /FullReadOnly/i));
 
 const runnerResolverId = "WINDOWS_DEPLOYMENT_RUNNER_20261014_V1";
