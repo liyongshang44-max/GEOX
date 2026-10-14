@@ -45,7 +45,13 @@ reject('wrong_material_root',f=>f.request.material.root=path.dirname(f.root),tru
 
 function formalFixture(){
  const base=fixture(),qcpPath=path.resolve(__dirname,'../../docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json');
- const qcp=JSON.parse(fs.readFileSync(qcpPath,'utf8'));
+ // The formal fixture must install the real QCP definition inside its immutable material root.
+ const qcpBytes=fs.readFileSync(qcpPath);
+ const installedQcpPath=path.join(base.root,...v.QCP_REL.split('/'));
+ fs.mkdirSync(path.dirname(installedQcpPath),{recursive:true});
+ fs.writeFileSync(installedQcpPath,qcpBytes,{flag:'wx'});
+ base.request.material.files=m.inventory(base.root);
+ const qcp=JSON.parse(qcpBytes.toString('utf8'));
  const engineering='A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_ENGINEERING_ONLY';
  const definitions=qcp.checks.filter(x=>x.check_id!==engineering);assert.equal(definitions.length,54);
  const allowedNA=new Set(['V13_PRODUCER_DRIVEN_QUALIFICATION','END_TO_END_EVIDENCE_SUPPLY_DEADLINE','EXACT_ONE_PRODUCTION_OWNER','FORMAL_V5_ACTIVATION','V13_RUNTIME_HARNESS_RESOLVER_MIGRATION']);
