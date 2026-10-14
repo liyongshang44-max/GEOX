@@ -1,3 +1,13 @@
+# 2026-10-14 — live IAM and A44 adoption prioritized, no repeat S3/QCP
+
+GitHub current `PR #3704` verified `OPEN / DRAFT / UNMERGED` at HEAD `unknown`, PR description says Windows historical first-parent verifier and main ALL_BLOCKERS remain mandatory, explicitly no QCP PASS and execute/production HOLD. PR #3704 is a historical inheritance repair, NOT a signed A44 Adoption Qualification. No new authoritative A44 adoption PASS was identified in this review; historic A44 manifest still `ADOPTION_INCOMPLETE`.
+
+A narrow **read-only** operator-side current MinIO IAM inspector was generated and syntax-checked in this conversation: `MCFT-CAP09-800c-LIVE-IAM-READONLY-V1.py`. It uses the existing running MinIO container's environment only for metadata reads (`mc admin user info` and `mc admin policy info`), pins the expected container ID and exact 800c app user/policy, checks full current policy JSON against the old immutable snapshot, checks user direct binding and explicitly declared group membership, outputs only redacted metadata/verdict. It does not use admin as the application identity, does not print secret, does not rerun S3, does not mutate policy or groups. If group field is absent, result stays PENDING. This script has NOT been run on the operator's Windows host, and no live MinIO attestation is claimed.
+
+Keep 19-entry A44 evidence index as assembled only; do not conflate host PASS checks or synthetic 54/54 with actual adoption. `LIVE_IAM_ATTESTATION_PENDING`; `A44_REAL_ADOPTION_BLOCKED`; `LOCAL_ADMISSION_ELIGIBLE=false`; `TEST_ONLY_HOLD=true`; `PRODUCTION_HOLD=true`.
+
+---
+
 # 2026-10-14 — A44 Local Admission consolidated evidence index ASSEMBLED / admission still BLOCKED
 
 Created standalone read-only deliverables in the conversation filesystem: `MCFT-CAP09-A44-LOCAL-ADMISSION-EVIDENCE-INDEX-V1.json` (19 entries, SHA256 `79828de6d831c6785dbca9dfc391c70d10ab670e0f5d8dd7ed8cf9ef414fe03b`), `MCFT-CAP09-A44-LOCAL-ADMISSION-DECISION-V1.md` (SHA256 `8c23e76f2b468481eefd08a6cdbb5ec8a553b789b50444f7bac0ac93e3cf6ea1`). Raw source files were mounted in this conversation: `MCFT-CAP09-A44-ADOPTION-AND-RELEASE-V1(1).zip`, `qualification-closure-v2_1-20261012T150717-80ca8deb(1).zip`, `MCFT-CAP09-800c023cf337-READONLY-AUDIT-RESULT.json`, `MCFT-CAP09-800c023cf337-QUALIFICATION-READONLY-RESULT.json`, `MCFT-CAP09-RETRY-TRUST-REVIEW.json`. The index includes content SHA256 for these supplied exact bytes and archive members; no hashes were guessed for Windows-only files.
