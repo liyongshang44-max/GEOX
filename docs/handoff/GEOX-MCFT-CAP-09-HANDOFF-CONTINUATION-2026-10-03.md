@@ -1,3 +1,11 @@
+# 2026-10-14 — MinIO scoped policy document inspected; global ListBuckets discrepancy still HOLD
+
+Read-only operator-provided `minio-policy.json` policyInfo: policy `mcft800c023cf337bucketonly`, Version `2012-10-17`, CreateDate/UpdateDate `2026-10-12T11:21:06.911Z`. First Allow statement: `s3:ListBucket`, `s3:ListBucketMultipartUploads`, `s3:GetBucketLocation` on exact `arn:aws:s3:::mcft-cap09-requal-800c023cf337`. Second Allow: `s3:AbortMultipartUpload`, `s3:DeleteObject`, `s3:GetObject`, `s3:ListMultipartUploadParts`, `s3:PutObject` on `arn:aws:s3:::mcft-cap09-requal-800c023cf337/*`. **No `s3:ListAllMyBuckets` statement and no global `*` resource in this specific policy.** Policy authorizes target-bucket WRITE/DELETE (not read-only identity); this is a policy review, NOT a write test.
+
+Host results remain `TARGET=ALLOWED/PASS`, `OLD_RUN=DENIED/PASS`, `GLOBAL_LIST=ALLOWED/FAIL_CLOSED`. Therefore the observed global ListBuckets success is not explained by the scoped policy document alone. Check LIVE effective user identity, policy attachments/group/inherited authorization and MinIO's actual ListBuckets response semantics and server configuration using READ ONLY inspection, no access key/root secret display; do not assume historical policyInfo is current effective policy. Other old/shared audit was `READ_ONLY_EVIDENCE_COLLECTED_NOT_QUALIFIED`. Do not modify IAM without explicit approval. `LOCAL_ADMISSION_ELIGIBLE=FALSE`, `TEST_ONLY_HOLD=TRUE`, `PRODUCTION_HOLD=TRUE`.
+
+---
+
 # 2026-10-14 — Windows MinIO subprocess regression PASS; live GLOBAL_LIST ALLOWED (FAIL_CLOSED)
 
 **Immediately observed on actual Windows host (Run `800c023cf337`):** `D:\gptdown\MCFT-CAP09-MINIO-NEGATIVE-REGRESSION-V1\run-windows.ps1` standalone regression all **6/6 PASS**, including exit 0, AccessDenied, InternalError, NoSuchBucket, bare HTTP 403 and timeout. `NO_POWERSHELL_NATIVE_COMMAND_ERROR`. Subsequently `run-windows.ps1 -Live` again regression 6/6 PASS; live `TARGET=ALLOWED; VERDICT=PASS; EXIT=0`, `OLD_RUN=DENIED; VERDICT=PASS; EXIT=254`, but `GLOBAL_LIST=ALLOWED; VERDICT=FAIL_CLOSED; EXIT=0`. Overall `MINIO_LIVE=FAIL_CLOSED`, `LOCAL_ADMISSION_ELIGIBLE=FALSE`; TEST_ONLY/PRODUCTION HOLD remain. Evidence at `D:\gptdown\MCFT-CAP09-800c-MINIO-READONLY-20261014T061228347Z.json`.
