@@ -1,3 +1,11 @@
+# 2026-10-15 — Windows cb773984 Runtime hardlink materialization PASS; formal material collection next
+
+Actual operator output on independent `D:\gptdown\MCFT-CAP09-RUNTIME-cb773984`: `FILES_TO_MATERIALIZE=11944`, `REQUIRED_COPY_BYTES=145264807`, `AVAILABLE_DISK_BYTES=66462355456`, 11k+ intermediate progress, `FINAL_FILE_COUNT=20884`, `MATERIALIZED_FILES=11944`, `REMAINING_SPECIAL_OR_MULTILINK_FILES=0`, `HARDLINK_MATERIALIZATION=PASS`. All changed files were individually copied to distinct temporary filesystem identities, SHA256 checked, then replaced in this candidate Runtime; original exact source Release and pnpm cache were not intentionally modified. Previously all 12 Workspace Junctions materialized; no remaining known links. This establishes candidate local file identity PASS, **not formal installed-material profile acceptance**.
+
+**Immediate next:** run repository formal `scripts/cap09_adoption_v1/installed-material.cjs` from independent Runtime root with Windows Python3.12 `MCFT_PYTHON_EXECUTABLE` and PowerShell executable, output a fresh write-once material profile outside Runtime, check `INSTALLED_MATERIAL_COLLECTED_AND_SELF_VERIFIED` and actual file count/hash; DO NOT assume expected count exactly 20884 (directory scanning may include other generated files). On PASS, issue fresh time-limited independent signed TEST_ONLY Adoption for the *new installed Runtime*, independent offline verify, then independent one-shot Local Execution Admission & fresh isolated Run ID; no Producer/Timing/production attempt yet. Do not rescan old DB or rerun QCP absent change. Preserve `EXECUTE_HOLD` until actual signed admission.
+
+---
+
 # 2026-10-15 — cb773984 Runtime installed-material refusal narrowed to 11,944 NTFS hardlink files
 
 Operator-reported Windows read-only Python 3.12 lstat audit on independent runtime `D:\gptdown\MCFT-CAP09-RUNTIME-cb773984`: `TOTAL_FILES=20884`, `MULTIPLE_LINK_FILES=11944`, `SPECIAL_FILES=0`, `SPECIAL_DIRECTORIES=0`, `TOTAL_FAILURES=11944`; examples in `apps/server/node_modules/nanoid/*` and `node_modules/@babel/*`, nlink values from 7 to 213. Formal `installed-material.cjs` returned `INSTALLED_MATERIAL_COLLECTION_REJECTED: MATERIAL_SPECIAL_FILE`, as its policy explicitly enforces `s.isFile() && s.nlink===1`. Prior 12 workspace Junctions were fully materialized and none remain.
