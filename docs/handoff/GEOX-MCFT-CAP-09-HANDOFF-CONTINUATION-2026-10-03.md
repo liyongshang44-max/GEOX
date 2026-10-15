@@ -1,3 +1,13 @@
+# 2026-10-15 — #3704 CI systematic first-failure triage; independent issuer PASS, dedicated PG regression fixed, QCP unknown path GOVERNANCE HOLD
+
+Actual #3704 HEAD `3ef3a63e71488314605c8c43aee3db0643a6c2ea`: independent issuer dedicated workflow `38681604071` **SUCCESS**. Failing QCP `38681604287`, post-merge-v13 `38681604277`, EA5E2 dependency `38681604165`, Formal-v5 readiness `38681604155`, local cutover `38681604241`; generic CI was in progress. Examined actual job logs. QCP generator explicitly returned `CP2_SUCCESSOR_CHAIN_CANDIDATE_UNKNOWN_PATH` and `CP2_SUCCESSOR_CHAIN_UNKNOWN_OUTSIDE_ACCEPTED_ANCHOR` on these three NEW paths: `.github/workflows/mcft-cap09-independent-retry-issuer-v1.yml`, `scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs`, `scripts/runtime_acceptance/MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs`. These are substantive new governance surfaces NOT present in accepted chain; cannot resolve by masking unknown paths, falsifying proof, or silently declaring N/A. Need reviewed successor applicability/acceptance of changed scope and renewed exact-HEAD qualification; this is a REAL gate blocking adoption.
+
+Local cutover exact run log: `ACCEPTANCE_MCFT_CAP09_DEDICATED_PG_ENDPOINT_V1.cjs:38` expected trust issuers count 1 but now valid registry has 2; committed precise update `348e31a86b5fcbb488c3afb59210dedd6fb28a8b` preserving disabled trust and adding independent issuer role/identity/fingerprint. No evidence new HEAD CI has passed after that commit.
+
+No runtime or frozen cb773984 changes, no re-running old QCP, no production start, no new run-scoped resources, permit or six-stage. EXECUTE_HOLD. Next: establish governed adoption/applicability path for exactly three new files rather than weakening CP2; check new CI and remaining failures and proceed incrementally.
+
+---
+
 # 2026-10-15 — #3704 new HEAD CI investigated: independent issuer test failure fixed; incremental qualification pending
 
 User ordered CI + incremental qualification for new public trust registration before new immutable signed Runtime. Checked PR #3704 `da9ddf0ea413795e89179c405ce49a5a30553d95`: dedicated `MCFT CAP-09 independent retry issuer v1` workflow run `38681322999` FAILED on both Windows and Ubuntu; exact logs showed NEW independent issuer negative suite **PASS 12**, but preexisting `ACCEPTANCE_MCFT_CAP09_RETRY_PERMIT_V1.cjs` asserted `disabled.issuers.length===1` at line 65, now legitimately 2 after public registration. Existing post-merge-v13-control-plane, local-cutover-candidate and EA5E2 dependency graph were also failed, and general `ci` / QCP still in progress on that HEAD; DO NOT claim PR globally green.
