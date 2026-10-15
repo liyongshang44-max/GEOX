@@ -1,3 +1,11 @@
+# 2026-10-15 — cb773984 Runtime installed-material refusal narrowed to 11,944 NTFS hardlink files
+
+Operator-reported Windows read-only Python 3.12 lstat audit on independent runtime `D:\gptdown\MCFT-CAP09-RUNTIME-cb773984`: `TOTAL_FILES=20884`, `MULTIPLE_LINK_FILES=11944`, `SPECIAL_FILES=0`, `SPECIAL_DIRECTORIES=0`, `TOTAL_FAILURES=11944`; examples in `apps/server/node_modules/nanoid/*` and `node_modules/@babel/*`, nlink values from 7 to 213. Formal `installed-material.cjs` returned `INSTALLED_MATERIAL_COLLECTION_REJECTED: MATERIAL_SPECIAL_FILE`, as its policy explicitly enforces `s.isFile() && s.nlink===1`. Prior 12 workspace Junctions were fully materialized and none remain.
+
+**Current task:** On isolated mutable runtime ONLY, transform those 11,944 hardlinked file paths to independent physical copies while preserving file contents. Use same-directory temporary file, shutil.copy2, SHA256 before/after copy and after os.replace, verify nlink=1, disk capacity, and final full-tree counts; fail closed. No evidence yet of operator running this transformation, and no new formal material PASS. A source-only signed Adoption proof does NOT cover installed runtime. Next collect installed-material from exact Runtime, fresh sign and offline verify, then fresh Run ID / permit / six-stage TEST_ONLY. No production authority or database writes. Avoid QCP re-run and modifying original exact Release.
+
+---
+
 # 2026-10-15 — cb773984 Windows Runtime link-free Workspace materialization PASS; installed-material admission still pending
 
 Operator-reported actual Windows PowerShell completion in independent, mutable TEST_ONLY candidate `D:\gptdown\MCFT-CAP09-RUNTIME-cb773984`: `PRECHECK_PASS=12`, `STAGING_PASS=12`, `REMAINING_LINKS=0`, `MATERIALIZED_WORKSPACE_PACKAGES=12`, `WORKSPACE_MATERIALIZATION=PASS`. Each of 12 internal @geox pnpm Junctions was staged as a physical workspace package directory (nested node_modules excluded) and replaced; original signed source-only `D:\gptdown\MCFT-CAP09-RELEASE-cb773984` unchanged. Preceding builds @geox/contracts, @geox/control-kernel, @geox/device-skills succeeded, three expected dist entries exist.
