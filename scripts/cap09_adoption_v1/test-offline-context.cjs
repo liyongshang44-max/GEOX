@@ -91,6 +91,56 @@ function formalFixture(){
   envelope.signature_base64=crypto.sign(null,Buffer.from(v.ADOPTION_DOMAIN+c.canonical(q)),pair.privateKey).toString('base64');
  }};
 }
+function mergedFormalFixture(){
+ const f=formalFixture(),subject=f.q.subject_sha,source='a'.repeat(40),base='c'.repeat(40),tree='d'.repeat(40),e=f.request.evidence_root;
+ const archive=Buffer.from('synthetic-QCP-ZIP-bytes-only');fs.writeFileSync(path.join(e,'source-qcp-artifact.zip'),archive);
+ const sourceArtifactSha=c.sha(archive);
+ const metadata={schema:'MCFT_CAP09_MERGED_QCP_SOURCE_V1',repository:'liyongshang44-max/GEOX',observed_main_sha:subject,
+  pull_request:{merged:true,base_ref:'main',base_sha:base,head_sha:source,merge_commit_sha:subject},
+  workflow_run:{id:17,head_sha:source,status:'completed',conclusion:'success',path:'.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'},
+  artifact:{id:19,digest:'sha256:'+sourceArtifactSha,expired:false}};
+ fs.writeFileSync(path.join(e,'source-metadata.json'),c.canonical(metadata)+'\n');
+ const merge={schema:'MCFT_CAP09_ZERO_DELTA_MERGE_QCP_DERIVATION_V1',subject_sha:subject,source_subject_sha:source,base_sha:base,observed_main_sha:subject,source_and_subject_tree:tree,
+  parents:[base,source],source_artifact_id:19,source_workflow_run_id:17,source_artifact_sha256:sourceArtifactSha,source_metadata_sha256:c.digest(metadata),
+  generator_sources_sha256:{'build_evidence.py':'f'.repeat(64),'material_binding.py':'e'.repeat(64)},
+  method:'EXACT_TWO_PARENT_ZERO_TREE_DELTA_WITH_VALIDATED_SOURCE_QCP',qcp_executed_at_subject:false,raw_reports_rewritten:false,
+  additional_first_parent_hops:1,execution_authorized:false,production_authorized:false};
+ const mergeBytes=c.canonical(merge)+'\n';fs.writeFileSync(path.join(e,'merge-derivation.json'),mergeBytes);
+ const extra={qualification_method:'ZERO_DELTA_MERGE_DERIVATION',qcp_execution_subject_sha:source,merge_derivation_ref:'merge-derivation.json',
+  merge_derivation_sha256:c.sha(mergeBytes),qcp_executed_at_subject:false,raw_reports_rewritten:false};
+ const proofFile=path.join(e,f.q.qcp_proof_ref),proof=c.read(proofFile);
+ Object.assign(proof,extra,{qcp_artifact_sha256:sourceArtifactSha,first_parent_hop_count:2});
+ fs.writeFileSync(proofFile,JSON.stringify(proof));f.q.qcp_proof_sha256=c.sha(fs.readFileSync(proofFile));
+ for(const row of f.q.checks){
+  const checkFile=path.join(e,row.evidence_ref),data=c.read(checkFile);Object.assign(data,extra,{qcp_artifact_sha256:sourceArtifactSha});
+  fs.writeFileSync(checkFile,JSON.stringify(data));row.sha256=c.sha(fs.readFileSync(checkFile));
+ }
+ f.sign();return {f,extra,proofFile,e};
+}
+test('merged_formal_sign_verify_roundtrip',()=>{
+ const {f,extra,proofFile,e}=mergedFormalFixture();
+ const candidate={subject_sha:f.q.subject_sha,...extra};
+ assert.equal(v.validateMergedDerivation(f.q.subject_sha,c.read(proofFile),f.q.checks,e,candidate),true);
+ const result=v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment});
+ assert.equal(result.production_authorized,false);assert.equal(v.isFormalVerified(result),true);
+});
+test('merged_formal_rejects_source_zip_tamper',()=>{
+ const {f,e}=mergedFormalFixture();fs.appendFileSync(path.join(e,'source-qcp-artifact.zip'),'tamper');
+ assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}),/OFFLINE_MERGE_SOURCE_ARTIFACT_DRIFT/);
+});
+test('merged_formal_rejects_derived_check_tamper_even_with_resigned_row',()=>{
+ const {f,e}=mergedFormalFixture(),row=f.q.checks[0],file=path.join(e,row.evidence_ref),data=c.read(file);
+ data.qcp_execution_subject_sha='9'.repeat(40);fs.writeFileSync(file,JSON.stringify(data));row.sha256=c.sha(fs.readFileSync(file));f.sign();
+ assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}),/OFFLINE_MERGE_CHECK_NOT_BOUND/);
+});
+test('merged_formal_rejects_forged_first_parent_even_with_resigned_proof',()=>{
+ const {f,proofFile,e}=mergedFormalFixture(),file=path.join(e,'merge-derivation.json'),merge=c.read(file),proof=c.read(proofFile);
+ merge.parents.reverse();fs.writeFileSync(file,c.canonical(merge)+'\n');proof.merge_derivation_sha256=c.sha(fs.readFileSync(file));
+ fs.writeFileSync(proofFile,JSON.stringify(proof));f.q.qcp_proof_sha256=c.sha(fs.readFileSync(proofFile));
+ for(const row of f.q.checks){const p=path.join(e,row.evidence_ref),ev=c.read(p);ev.merge_derivation_sha256=proof.merge_derivation_sha256;fs.writeFileSync(p,JSON.stringify(ev));row.sha256=c.sha(fs.readFileSync(p));}
+ f.sign();
+ assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));
+});
 test('formal_signed_adoption_activates_test_only_without_repo_boolean',()=>{
  const f=formalFixture(),r=v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment});
  assert.equal(v.isFormalVerified(r),true);assert.equal(r.scope,'TEST_ONLY');assert.equal(r.execution_authorized,true);assert.equal(r.production_authorized,false);
