@@ -15,6 +15,16 @@
       "not_after": "2026-11-13T00:00:00.000Z",
       "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAbvpUDWBt+TOQqEwiHrxG/eA5eM+h/epg7+TecimHkis=\n-----END PUBLIC KEY-----\n",
       "spki_sha256": "223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365"
+    },
+    {
+      "issuer_id": "mcft_cap09_independent_retry_governance",
+      "key_id": "cap09_retry_ed25519_20261015",
+      "role": "INDEPENDENT_RETRY_GOVERNANCE",
+      "revoked": false,
+      "not_before": "2026-10-15T04:17:21.950Z",
+      "not_after": "2026-11-14T04:22:22.010Z",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAfp6ss+UEFeuabXsx1M9Wx6xlE7stIFBMa6O3LnP8MQs=\n-----END PUBLIC KEY-----\n",
+      "spki_sha256": "ef7459a5918e35c90913532a7c8af545fbca4fec0b7dc95916797db3303fa870"
     }
   ],
   "real_delay_controller_adopted": false,
