@@ -1,3 +1,11 @@
+# 2026-10-15 — cb773984 FULL Runtime TEST_ONLY Adoption signed; separate offline verification still pending
+
+Actual Windows signer stdout: `SIGNED_ADOPTION_QUALIFICATION_V1_ISSUED_TEST_ONLY`, `RUNTIME_ADOPTION_SIGNING=PASS`, `qualification_id=mcft_cap09_adoption_cb77398404ed_v1`, `subject_sha=cb77398404edfbc223350d1c74a46323efe9fd3e`, independent issuer `mcft_cap09_independent_adoption_governance`, key id `cap09_adoption_ed25519_20261015`; `expires_at=2026-10-15T06:02:41.933Z` (Beijing 14:02:41.933); `adoption_digest=480e6df39faceac35486b7e5a8fba9301140477d3f7919506cfc80b6cfdf1ff9`; `material_digest=e30462f98a6538b136cd8697493df3a390f84befcc35c015857a3dab9123adeb`; signed proof `D:\gptdown\MCFT-CAP09-SIGNED-RUNTIME-ADOPTION-cb773984.json`; signer `execution_authorized=true`, `production_authorized=false`.
+
+Critical qualifier: proof issuance succeeded with built 20,884-file Windows Runtime, but independent `offline-context.cjs.load(proof, Runtime)` as a separate execution is NOT YET observed. This signature is TEST_ONLY Adoption only, not run-scoped Local Execution Admission, one-shot permit, fresh DB/MinIO ACL readback, actual Provider/Producer/Timing, or production authorization. Verify offline signature under same environment and while unexpired before attempting Local Admission. Keep EXECUTE_HOLD until all subsequent gates are satisfied. Never upload private PEM or reuse original 6426-file profile.
+
+---
+
 # 2026-10-15 — cb773984 complete Windows installed Runtime material profile officially PASS
 
 Operator actual Windows PowerShell stdout from formal `scripts/cap09_adoption_v1/installed-material.cjs` on independent Runtime `D:\gptdown\MCFT-CAP09-RUNTIME-cb773984`: `status=INSTALLED_MATERIAL_COLLECTED_AND_SELF_VERIFIED`, `profile_sha256=e30462f98a6538b136cd8697493df3a390f84befcc35c015857a3dab9123adeb`, `file_count=20884`, material profile `D:\gptdown\MCFT-CAP09-RUNTIME-MATERIAL-FINAL-cb773984.json`, `FORMAL_RUNTIME_MATERIAL=PASS`. Verifier explicitly reports `execution_authorized=false`, `production_authorized=false`. This closes filesystem/material-profile blocker: 12 Junctions and 11,944 hardlinked files had been materialized in the independent Runtime only, not signed source-only Release.
