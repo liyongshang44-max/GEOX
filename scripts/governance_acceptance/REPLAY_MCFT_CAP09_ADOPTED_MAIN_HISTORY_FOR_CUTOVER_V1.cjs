@@ -207,6 +207,20 @@ function verifyAdoptedLocalCutoverScopeDiagnostic() {
   production_authorized:false,execute_authorized:false,
   historical_manifest_mutated:false};
 }
-module.exports={verifyCandidateBoundary,replayAdoptedHistoryForCutoverCandidate,verifyAdoptedLocalCutoverScopeDiagnostic,
+// Recognize ONLY the retained Phase2 evidence base. This result is not a
+// qualification of intervening commits, current changed paths, or execution.
+function verifyPhase2HistoricalBase(boundary, base) {
+ assert.equal(base,"adfaf9fdbd2c75923fb298e26b5d5d106a0fc61a","PHASE2_FIXED_EVIDENCE_BASE_REQUIRED");
+ assert.equal(boundary.status,"PASS","PHASE2_HISTORICAL_BOUNDARY_REQUIRED");
+ assert.equal(boundary.reason_code,"HISTORICAL_3692_EXACT_SCOPE_VERIFIED_AT_ADOPTED_SUBJECT","PHASE2_HISTORICAL_SCOPE_REQUIRED");
+ assert.equal(boundary.historical_candidate_subject_sha,ADOPTED_LOCAL_CUTOVER_SUBJECT,"PHASE2_HISTORICAL_SUBJECT_REQUIRED");
+ assert.equal(boundary.historical_candidate_base_sha,CURRENT_BASE,"PHASE2_HISTORICAL_BASE_REQUIRED");
+ assert.equal(boundary.production_authorized,false,"PHASE2_NO_PRODUCTION_AUTHORITY");
+ assert.equal(boundary.execute_authorized,false,"PHASE2_NO_EXECUTION_AUTHORITY");
+ assert(/^[0-9a-f]{40}$/.test(boundary.adopted_main_sha||""),"PHASE2_MAIN_SHA_REQUIRED");
+ assert(isAncestor(base,boundary.adopted_main_sha),"PHASE2_BASE_ANCESTRY_REQUIRED");
+ return {historical_base_recognized:true,current_candidate_qualified:false,execute_authorized:false};
+}
+module.exports={verifyPhase2HistoricalBase,verifyCandidateBoundary,replayAdoptedHistoryForCutoverCandidate,verifyAdoptedLocalCutoverScopeDiagnostic,
  runHistoricalDiagnosticForCutoverCandidate,isAdoptedMainLegacyDiagnostic,runAdoptedMainLegacyDiagnostic,runAdoptedMainWorkflowGate};
 if(require.main===module){try{console.log(JSON.stringify(replayAdoptedHistoryForCutoverCandidate()));}catch(e){console.error(e.stack||String(e));process.exitCode=1;}}

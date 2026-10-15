@@ -54,6 +54,7 @@ function formalFixture(){
  // Add inert source files to this synthetic fixture; real source hashes stay Git-derived.
  const frozenDir=path.join(base.root,'scripts','frozen');fs.mkdirSync(frozenDir,{recursive:true});
  for(let i=0;i<106;i++)fs.writeFileSync(path.join(frozenDir,'f'+String(i).padStart(3,'0')+'.cjs'),'// frozen synthetic test only\n');
+ for(const rel of v.REQUIRED_STAGE_MATERIAL){const file=path.join(base.root,...rel.split('/'));fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,'// synthetic controller material; never executed\n');}
  base.request.material.files=m.inventory(base.root);
  const qcp=JSON.parse(qcpBytes.toString('utf8'));
  const engineering='A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_ENGINEERING_ONLY';
@@ -115,6 +116,44 @@ test('formal_signed_adoption_rejects_tampered_release_inventory',()=>{
  assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}),/OFFLINE_RELEASE_INVENTORY_DIGEST_CHANGED/);
 });
 test('formal_signed_adoption_rejects_qcp_blocker',()=>{const f=formalFixture(),file=path.join(f.request.evidence_root,f.q.qcp_proof_ref),proof=JSON.parse(fs.readFileSync(file,'utf8'));proof.blocker_count=1;fs.writeFileSync(file,JSON.stringify(proof));f.q.qcp_proof_sha256=c.sha(fs.readFileSync(file));f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
+
+// A valid signer and internally consistent digests must not excuse missing controllers.
+for(const rel of v.REQUIRED_STAGE_MATERIAL)test('formal_rejects_omitted_stage_material:'+rel,()=>{
+ const f=formalFixture(),file=path.join(f.request.evidence_root,f.q.release_binding_ref),release=c.read(file);
+ release.files=release.files.filter(row=>row.path!==rel);
+ release.content_inventory_sha256=c.digest(release.files);
+ fs.writeFileSync(file,JSON.stringify(release));f.q.release_binding_sha256=c.sha(fs.readFileSync(file));f.sign();
+ assert.throws(()=>verify(f),/OFFLINE_STAGE_MATERIAL_NOT_BOUND/);
+});
+for(const rel of v.REQUIRED_STAGE_MATERIAL)test('formal_rejects_changed_stage_bytes:'+rel,()=>{
+ const f=formalFixture();fs.appendFileSync(path.join(f.root,...rel.split('/')),'changed');
+ assert.throws(()=>verify(f));
+});
+test('formal_signature_alone_cannot_replace_retry_permit',()=>{
+ const f=formalFixture(),context=verify(f);
+ const host=require('../runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs');
+ const trust={...c.read(path.resolve(__dirname,'../runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json')),adopted:true,execution_enabled:true};
+ const plan={schema_version:'geox_mcft_cap09_retry_stage_plan_v2',stages:host.STAGES.map(([id])=>({id,timeout_ms:1000}))};
+ assert.throws(()=>host.validateBundle({arm:{},observed:{},permit:null,plan,files:{}},trust,context));
+});
+
+test('signed_controller_gate_requires_verified_context_not_boolean',()=>{
+ const f=formalFixture(),context=verify(f),host=require('../runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs');
+ const trust={real_delay_controller_adopted:false,stage_capability_adopted:false,real_provider_transport_delay_adopted:false,real_pipeline_delay_adopted:false};
+ host.assertControllerAdoption({signedActivation:true,context,trust});
+ assert.throws(()=>host.assertControllerAdoption({signedActivation:true,context:{...context},trust}),/OFFLINE_ADOPTION_VERIFICATION_REQUIRED/);
+ assert.throws(()=>host.assertControllerAdoption({signedActivation:false,context,trust}),/REAL_DELAY_CONTROLLER_NOT_ADOPTED/);
+ const adopted=Object.fromEntries(Object.keys(trust).map(k=>[k,true]));
+ host.assertControllerAdoption({signedActivation:false,trust:adopted});
+ for(const key of Object.keys(adopted))assert.throws(()=>host.assertControllerAdoption({signedActivation:false,trust:{...adopted,[key]:false}}));
+ const source=fs.readFileSync(path.resolve(__dirname,'../runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'),'utf8');
+ for(const [start,end] of [['async function main','function childTargets'],['function childTargets','module.exports']]){
+  const body=source.slice(source.indexOf(start),source.indexOf(end));
+  const gate=body.indexOf('assertControllerAdoption(h);');assert(gate>=0);
+  const consumption=body.indexOf(start==='async function main'?'permitApi.consumePermit':'stageCap.consumeStageCapability');
+  assert(consumption>gate,'CONTROLLER_ADOPTION_MUST_PRECEDE_CONSUMPTION');
+ }
+});
 
 test('permit_observation_binding',()=>{const f=fixture(),r=verify(f),bundle={observed:{adoption_binding:{qualification_digest:r.adoption_digest,material_digest:r.material_digest}},permit:{payload:{expires_at:f.q.expires_at}}};v.bindObserved(r,bundle);bundle.observed.adoption_binding.material_digest='0'.repeat(64);assert.throws(()=>v.bindObserved(r,bundle));});
 test('permit_cannot_outlive_qualification',()=>{const f=fixture(),r=verify(f);assert.throws(()=>v.bindObserved(r,{observed:{adoption_binding:{qualification_digest:r.adoption_digest,material_digest:r.material_digest}},permit:{payload:{expires_at:new Date(f.now+120000).toISOString()}}}));});

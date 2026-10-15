@@ -7,6 +7,23 @@ const DOMAIN='GEOX_CAP09_ADOPTED_EXECUTION_CONTEXT_V1\n';
 const ADOPTION_DOMAIN='GEOX_MCFT_CAP09_ADOPTION_QUALIFICATION_V1\n';
 const QCP_REL='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
 const ENGINEERING_ONLY_CHECK='A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_ENGINEERING_ONLY';
+// These are the implementations replacing the four legacy controller-adoption flags.
+// They must occur in the signed release inventory, not merely in an installed profile.
+const REQUIRED_STAGE_MATERIAL=Object.freeze([
+ 'MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs',
+ 'RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts',
+ 'RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts',
+ 'MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs',
+ 'AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts',
+ 'MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs',
+ 'MCFT_CAP09_STAGE_CAPABILITY_V1.cjs',
+ 'MCFT_CAP09_PARENT_STAGE_DISPATCH_V1.cjs',
+ 'MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs',
+ 'MCFT_CAP09_REAL_PIPELINE_DELAY_V1.cjs',
+ 'MCFT_CAP09_RETRY_PERMIT_V1.cjs',
+ 'MCFT_CAP09_STAGE_RECEIPTS_V1.cjs',
+ 'MCFT_CAP09_STAGE_START_CLOCK_V1.cjs'
+].map(file=>'scripts/runtime_acceptance/'+file));
 const verifiedFormalContexts=new WeakSet();
 
 function safeRef(root,rel){
@@ -61,6 +78,7 @@ function verifyReleaseSourceBinding(release,profile){
   assert.equal(materialFiles.get(row.path),row.sha256,'OFFLINE_RELEASE_SOURCE_DRIFT:'+row.path);
  }
  assert(seen.has(QCP_REL.toLowerCase()),'OFFLINE_RELEASE_QCP_NOT_BOUND');
+ for(const file of REQUIRED_STAGE_MATERIAL)assert(release.files.some(row=>row.path===file),'OFFLINE_STAGE_MATERIAL_NOT_BOUND:'+file);
 }
 
 function validateFormal(request,policy,root,{now=Date.now(),host=os.hostname(),environment=process.env}={}){
@@ -170,4 +188,4 @@ function bindObserved(context,bundle){
  assert.equal(bundle.observed.adoption_binding.material_digest,context.material_digest,'OFFLINE_PERMIT_MATERIAL_MISMATCH');
  assert(c.epoch(bundle.permit.payload.expires_at)<=c.epoch(context.qualification_expires_at),'PERMIT_OUTLIVES_ADOPTION');
 }
-module.exports={DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,verifyReleaseSourceBinding,load,isFormalVerified,bindObserved};
+module.exports={REQUIRED_STAGE_MATERIAL,DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,verifyReleaseSourceBinding,load,isFormalVerified,bindObserved};

@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - 'scripts/cap09_adoption_v1/**'
+      - 'scripts/governance_acceptance/REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
       - 'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/*ADOPTION*'
@@ -22,6 +25,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20.11.1'
@@ -32,6 +36,8 @@ jobs:
           node scripts/cap09_adoption_v1/test-offline-context.cjs
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_DISPATCH_GUARD_V1.cjs
+      - name: Historical ancestry does not qualify current changes
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs --historical-ancestry-selftest
       - name: Registered independent issuer acceptance
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs
       - uses: actions/upload-artifact@v4

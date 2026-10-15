@@ -642,8 +642,7 @@ jobs:
                       snapshot.head_sha !== subject || run.head_sha !== subject ||
                       snapshot.base_sha !== base ||
                       boundary.status !== 'PASS' ||
-                       !/^[0-9a-f]{40}$/.test(boundary.adopted_main_sha || '') ||
-                       require('node:child_process').spawnSync('git', ['merge-base', '--is-ancestor', base, boundary.adopted_main_sha], {stdio:'ignore'}).status !== 0 ||
+                      require(require('node:path').resolve(process.cwd(), 'scripts/governance_acceptance/REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs')).verifyPhase2HistoricalBase(boundary, base).historical_base_recognized !== true ||
                       boundary.production_authorized !== false || boundary.execute_authorized !== false ||
                       !(liveRunAssociatedBases.length === 0 ||
                         (liveRunAssociatedBases.length === 1 && liveRunAssociatedBases[0] === base))) {

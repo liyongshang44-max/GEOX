@@ -129,6 +129,18 @@ function stageEnvironment(h,id,bundleFile){
  if(id.startsWith("TIMING_")){const n=Number(id.slice(-1));env.MCFT_TIMING_SAMPLE_ID="sample"+n;env.MCFT_TIMING_BASE_TARGET=new Date(Date.parse(h.arm.qualification_first_base)+(n-1)*3600000).toISOString();}
  return env;
 }
+function assertControllerAdoption(h){
+ if(h.signedActivation){
+  assert.equal(require("../cap09_adoption_v1/offline-context.cjs").isFormalVerified(h.context),true,"OFFLINE_ADOPTION_VERIFICATION_REQUIRED");
+  assert.equal(h.context.execution_authorized,true,"OFFLINE_TEST_ONLY_NOT_AUTHORIZED");
+  assert.equal(h.context.production_authorized,false,"OFFLINE_PRODUCTION_AUTHORITY_FORBIDDEN");
+ }else{
+  assert.equal(h.trust.real_delay_controller_adopted,true,"EXECUTE_HOLD: REAL_DELAY_CONTROLLER_NOT_ADOPTED");
+  assert.equal(h.trust.stage_capability_adopted,true,"EXECUTE_HOLD: STAGE_CAPABILITY_NOT_ADOPTED");
+  assert.equal(h.trust.real_provider_transport_delay_adopted,true,"EXECUTE_HOLD: REAL_PROVIDER_TRANSPORT_DELAY_NOT_ADOPTED");
+  assert.equal(h.trust.real_pipeline_delay_adopted,true,"EXECUTE_HOLD: REAL_PIPELINE_DELAY_NOT_ADOPTED");
+ }
+}
 async function main(args){
  const options=parseArgs(args),h=hostBundle(options.file);
  assert(!fs.existsSync(h.targets.out),"RETRY_NEW_OUTPUT_REQUIRED");
@@ -138,15 +150,7 @@ async function main(args){
  // Preflight EVERYTHING before irreversible single-use parent permit consumption.
  // On the migrated path, these exact controller/stage bytes are covered by the signed
  // Adoption qualification; legacy execution still requires its repository adoption flags.
- if(h.signedActivation){
-  assert.equal(h.context.execution_authorized,true,"OFFLINE_TEST_ONLY_NOT_AUTHORIZED");
-  assert.equal(h.context.production_authorized,false,"OFFLINE_PRODUCTION_AUTHORITY_FORBIDDEN");
- }else{
-  assert.equal(h.trust.real_delay_controller_adopted,true,"EXECUTE_HOLD: REAL_DELAY_CONTROLLER_NOT_ADOPTED");
-  assert.equal(h.trust.stage_capability_adopted,true,"EXECUTE_HOLD: STAGE_CAPABILITY_NOT_ADOPTED");
-  assert.equal(h.trust.real_provider_transport_delay_adopted,true,"EXECUTE_HOLD: REAL_PROVIDER_TRANSPORT_DELAY_NOT_ADOPTED");
-  assert.equal(h.trust.real_pipeline_delay_adopted,true,"EXECUTE_HOLD: REAL_PIPELINE_DELAY_NOT_ADOPTED");
- }
+ assertControllerAdoption(h);
  const scripts=STAGES.map(([id,file,artifact],i)=>{
    const script=path.join(__dirname,file);
    const stat=fs.lstatSync(script);
@@ -187,15 +191,7 @@ function childTargets(){
  assert.equal(path.resolve(process.argv[1]),path.join(__dirname,stage[1]),"RETRY_CHILD_WRONG_SCRIPT");
  // Every TypeScript child and the scratch-delay child must burn the exact
  // parent-signed stage ticket before Provider, DB, or output effects.
- if(h.signedActivation){
-  assert.equal(h.context.execution_authorized,true,"OFFLINE_TEST_ONLY_NOT_AUTHORIZED");
-  assert.equal(h.context.production_authorized,false,"OFFLINE_PRODUCTION_AUTHORITY_FORBIDDEN");
- }else{
-  assert.equal(h.trust.real_delay_controller_adopted,true,"EXECUTE_HOLD: REAL_DELAY_CONTROLLER_NOT_ADOPTED");
-  assert.equal(h.trust.stage_capability_adopted,true,"EXECUTE_HOLD: STAGE_CAPABILITY_NOT_ADOPTED");
-  assert.equal(h.trust.real_provider_transport_delay_adopted,true,"EXECUTE_HOLD: REAL_PROVIDER_TRANSPORT_DELAY_NOT_ADOPTED");
-  assert.equal(h.trust.real_pipeline_delay_adopted,true,"EXECUTE_HOLD: REAL_PIPELINE_DELAY_NOT_ADOPTED");
- }
+ assertControllerAdoption(h);
  const ticket=process.env.MCFT_GOVERNED_RETRY_TICKET;
  const previous=process.env.MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256;
  assert(ticket&&previous,"RETRY_CHILD_ONE_TIME_CAPABILITY_REQUIRED");
@@ -207,4 +203,4 @@ function childTargets(){
  assert.equal(claim.status,"STAGE_CAPABILITY_CONSUMED_NO_RETRY");
  return h.targets;
 }
-module.exports={STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};
+module.exports={assertControllerAdoption,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};

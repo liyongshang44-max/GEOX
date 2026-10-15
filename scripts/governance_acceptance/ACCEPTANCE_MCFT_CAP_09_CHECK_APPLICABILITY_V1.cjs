@@ -1174,8 +1174,40 @@ function main() {
   process.stdout.write(JSON.stringify(proof, null, 2) + "\n");
 }
 
+function acceptHistoricalAncestrySeparation() {
+  const {verifyPhase2HistoricalBase}=require('./REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs');
+  const base='adfaf9fdbd2c75923fb298e26b5d5d106a0fc61a';
+  const boundary={status:'PASS',reason_code:'HISTORICAL_3692_EXACT_SCOPE_VERIFIED_AT_ADOPTED_SUBJECT',
+    historical_candidate_subject_sha:'3857b91b8ab2b4eddff9e7b1b0b30f9bc37d7358',
+    historical_candidate_base_sha:'5945e459edb212da39b9fe107f87cc07782dd93c',
+    adopted_main_sha:base,production_authorized:false,execute_authorized:false};
+  // Real local Git ancestry: exact base and a known descendant are accepted, reversed ancestry is not.
+  assert.equal(verifyPhase2HistoricalBase(boundary,base).current_candidate_qualified,false);
+  const descendant={...boundary,adopted_main_sha:cp.execFileSync('git',['rev-parse','HEAD'],{cwd:ROOT,encoding:'utf8'}).trim()};
+  assert.equal(verifyPhase2HistoricalBase(descendant,base).historical_base_recognized,true);
+  assert.throws(()=>verifyPhase2HistoricalBase({...boundary,adopted_main_sha:boundary.historical_candidate_subject_sha},base));
+  for(const [key,value] of [['status','FAIL'],['execute_authorized',true],['production_authorized',true],
+    ['historical_candidate_subject_sha','a'.repeat(40)],['historical_candidate_base_sha',base],['reason_code','GENERIC_PASS'],['adopted_main_sha','not-a-sha']])
+    assert.throws(()=>verifyPhase2HistoricalBase({...boundary,[key]:value},base));
+  assert.throws(()=>verifyPhase2HistoricalBase(boundary,'a'.repeat(40)));
+  // Crucially, historical recognition cannot grant current candidate qualification.
+  const authority=readJson(AUTHORITY_PATH),registry=readJson(REGISTRY_PATH);
+  const unknownPath='scripts/runtime_acceptance/UNREGISTERED_AFTER_ADOPTED_BASE.cjs';
+  const unknown=plan(authority,registry,[unknownPath]);
+  assert.equal(unknown.status,'FAIL');assert(unknown.unknown_changed_paths.includes(unknownPath));
+  const controller='scripts/runtime_acceptance/MCFT_CAP09_REAL_PIPELINE_DELAY_V1.cjs';
+  const changed=plan(authority,registry,[controller]);
+  const decision=byId(changed,'LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY');
+  assert(['REQUALIFY','REQUIRED'].includes(decision.status),'ANCESTRY_MUST_NOT_CARRY_FORWARD_CHANGED_CONTROLLER');
+  assert(decision.changed_dependencies.includes(controller));
+  return {status:'PASS',historical_base_recognition_only:true,unknown_descendant_path_rejected:true,
+    changed_controller_requires_qualification:true,current_candidate_qualified:false,execute_authorized:false};
+}
+
 try {
-  if (process.argv.includes("--t0-successor-selftest")) {
+  if (process.argv.includes("--historical-ancestry-selftest")) {
+    process.stdout.write(JSON.stringify(acceptHistoricalAncestrySeparation())+"\n");
+  } else if (process.argv.includes("--t0-successor-selftest")) {
     process.stdout.write(JSON.stringify(acceptT0SuccessorDependencyPreservation()) + "\n");
   } else {
     main();
