@@ -296,6 +296,17 @@
       "not_after": "2026-11-13T00:00:00.000Z",
       "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAbvpUDWBt+TOQqEwiHrxG/eA5eM+h/epg7+TecimHkis=\n-----END PUBLIC KEY-----\n",
       "spki_sha256": "223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365"
+    },
+    {
+      "issuer_id": "mcft_cap09_independent_adoption_governance",
+      "key_id": "cap09_adoption_ed25519_20261015",
+      "purpose": "ADOPTION",
+      "role": "INDEPENDENT_GOVERNANCE",
+      "revoked": false,
+      "not_before": "2026-10-15T00:00:00.000Z",
+      "not_after": "2026-11-12T23:00:00.000Z",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAwS5qR6spDfy/XR4ar95jpAgacRiA9SDUVpu7jFvdRGY=\n-----END PUBLIC KEY-----\n",
+      "spki_sha256": "80e7897b28faf31da8973badad04a9d2e9b69f3f4cc82683dc67f0b4f3f48479"
     }
   ]
 }
