@@ -1,3 +1,11 @@
+# 2026-10-15 — #3704 independent retry issuer Windows+Ubuntu CI SUCCESS; real issuer ceremony now required
+
+Checked #3704 HEAD `dbfcfd61258b0d05e0c54c1435b51b616972f9f4`: dedicated workflow `MCFT CAP-09 independent retry issuer v1`, GitHub Actions run `38680613064`, `completed/success`. This covers new offline Windows issuer provisioning candidate code, signature/expiry/run/host/digest synthetic negative tests and existing retry permit acceptance under workflow. NOT live independent issuer registration or real one-shot permit. At same exact SHA `mcft-cap-09-post-merge-v13-control-plane-v1` is `completed/failure` and various workflows still running; whole PR NOT green.
+
+Next action is independent Windows signer-controlled ceremony using **new exact HEAD worktree** (do not modify qualified cb773984 Runtime), external fresh folder and write-once `retry-private.pem`, `retry-public-registration.json`; only PUBLIC JSON/registration fingerprint may be shared. Strict new signing key separate from Adoption; independent role must reflect real control, not merely different key ID. Before writing new static public trust entry, compare public fingerprint/schema/dates against actual registration, preserve `adopted=false`, `execution_enabled=false`, run scoped negative checks and PR CI. This produces new immutable version requiring incremental adoption. No database/minio/permit/producer/Timing operations, EXECUTE_HOLD.
+
+---
+
 # 2026-10-15 — #3704 independent retry issuer implementation moved to CI; real public issuer pending
 
 At owner instruction "continue", checked #3704 branch `fix/mcft-cap09-disabled-retry-historical-inheritance-20261013`: prior new provisioning candidate commit `28fd4399`, negative tests `f0d87ed2`, and new Windows+Ubuntu matrix workflow `.github/workflows/mcft-cap09-independent-retry-issuer-v1.yml` commit `dbfcfd61258b0d05e0c54c1435b51b616972f9f4`. Workflow now explicitly invokes Node syntax checks, new independent issuer synthetic negative acceptance, and existing permit acceptance. At last check workflow for newest commit was not yet returned; tests NOT YET observed PASS. Earlier CI on predecessor f0d87ed2 had mixed success/in-progress and one post-merge-v13-control-plane failure. This is NOT an approved new immutable Runtime or independent signed permit.
