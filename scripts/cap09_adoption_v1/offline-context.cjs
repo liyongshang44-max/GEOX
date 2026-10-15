@@ -115,9 +115,9 @@ function validateMergedDerivation(subject,proof,checks,evidenceRoot,candidate=nu
  for(const hash of Object.values(m.generator_sources_sha256))c.hash(hash);
  const metadataFile=safeRef(evidenceRoot,'source-metadata.json'),archiveFile=safeRef(evidenceRoot,'source-qcp-artifact.zip');
  const metadata=fs.readFileSync(metadataFile),archive=fs.readFileSync(archiveFile);
- assert.equal(c.sha(metadata),m.source_metadata_sha256,'OFFLINE_MERGE_SOURCE_METADATA_DRIFT');
  assert.equal(c.sha(archive),m.source_artifact_sha256,'OFFLINE_MERGE_SOURCE_ARTIFACT_DRIFT');
  const meta=c.read(metadataFile);
+ assert.equal(c.digest(meta),m.source_metadata_sha256,'OFFLINE_MERGE_SOURCE_METADATA_DRIFT');
  assert.equal(meta.schema,'MCFT_CAP09_MERGED_QCP_SOURCE_V1');
  assert.equal(meta.repository,'liyongshang44-max/GEOX');
  assert.equal(meta.observed_main_sha,subject);
