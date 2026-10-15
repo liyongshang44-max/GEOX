@@ -1,3 +1,13 @@
+# 2026-10-15 — #3704 new HEAD CI investigated: independent issuer test failure fixed; incremental qualification pending
+
+User ordered CI + incremental qualification for new public trust registration before new immutable signed Runtime. Checked PR #3704 `da9ddf0ea413795e89179c405ce49a5a30553d95`: dedicated `MCFT CAP-09 independent retry issuer v1` workflow run `38681322999` FAILED on both Windows and Ubuntu; exact logs showed NEW independent issuer negative suite **PASS 12**, but preexisting `ACCEPTANCE_MCFT_CAP09_RETRY_PERMIT_V1.cjs` asserted `disabled.issuers.length===1` at line 65, now legitimately 2 after public registration. Existing post-merge-v13-control-plane, local-cutover-candidate and EA5E2 dependency graph were also failed, and general `ci` / QCP still in progress on that HEAD; DO NOT claim PR globally green.
+
+Minimal isolated regression fix committed #3704 `3ef3a63e71488314605c8c43aee3db0643a6c2ea`: update old retry permit synthetic acceptance from one issuer to two and verify registered independent issuer ID/key/role/nonrevocation/independent operator and SPKI SHA256, while preserving original operator assertions, `adopted=false`, `execution_enabled=false`, other production controls. New HEAD CI results not yet known. Do not modify baseline trust to bypass tests. New code SHA changes adoption subject; old cb773984 full installed 20,884-file PASS evidence retained only as previous version; new incremental qualification + new immutable Runtime material/signature pending.
+
+No independent retry private key shared, no real permit signed/consumed, no run-specific DB/MinIO created and no Producer/Timing/production action. EXECUTE_HOLD/PRODUCTION_HOLD. Next inspect newly launched dedicated CI and true first failures of remaining checks; don't start source requalification or Windows mutation before precise accepted commit and governance verdict.
+
+---
+
 # 2026-10-15 — #3704 PUBLIC independent retry issuer registered; trust remains disabled; CI pending
 
 Actual Windows offline independent retry issuer provisioning operator stdout: `INDEPENDENT_RETRY_ISSUER_PROVISION=PASS`, public registration `D:\gptdown\MCFT-CAP09-INDEPENDENT-RETRY-KEY-20261015\retry-public-registration.json`, private key `retry-private.pem` retained on Windows (private bytes NEVER received, shared, or committed); `issuer_id=mcft_cap09_independent_retry_governance`, `key_id=cap09_retry_ed25519_20261015`, `not_before=2026-10-15T04:17:21.950Z`, `not_after=2026-11-14T04:22:22.010Z`, Ed25519 public SPKI SHA256 `ef7459a5918e35c90913532a7c8af545fbca4fec0b7dc95916797db3303fa870`. Public PEM base64 DER independently SHA256-confirmed.
