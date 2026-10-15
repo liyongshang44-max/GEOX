@@ -1,0 +1,308 @@
+{
+  "schema_version": "MCFT_CAP09_ADOPTION_MIGRATION_INVENTORY_V1",
+  "source_commit_sha": "939592731e6244e1764eed716d7275a56dbc8554",
+  "status": "ADOPTION_INCOMPLETE",
+  "inventory_scope": "AM19/PHASE5/DISABLED_RETRY scripts and ALL_BLOCKERS entry; not a complete historical assertion manifest",
+  "reported_blockers": [
+    {
+      "code": "PHASE2_CURRENT_MAIN_EXACT_RUN_PROOF_INVALID",
+      "provenance": "ADR at source_commit_sha; not independently rerun in this change",
+      "result": "BLOCKED"
+    }
+  ],
+  "remaining_contracts": [
+    {
+      "contract": "AM19",
+      "result": "BLOCKED",
+      "reason": "Exact assertion membership, revisions and evidence equivalence require adoption review."
+    },
+    {
+      "contract": "Phase5",
+      "result": "BLOCKED",
+      "reason": "Exact assertion membership, revisions and evidence equivalence require adoption review."
+    },
+    {
+      "contract": "QCP_52",
+      "result": "BLOCKED",
+      "reason": "Exact assertion membership, revisions and evidence equivalence require adoption review."
+    },
+    {
+      "contract": "QCP_65",
+      "result": "BLOCKED",
+      "reason": "Exact assertion membership, revisions and evidence equivalence require adoption review."
+    },
+    {
+      "contract": "frozen_108",
+      "result": "BLOCKED",
+      "reason": "Exact assertion membership, revisions and evidence equivalence require adoption review."
+    },
+    {
+      "contract": "first_parent_assertions",
+      "result": "BLOCKED",
+      "reason": "Exact assertion membership, revisions and evidence equivalence require adoption review."
+    }
+  ],
+  "source_inventory": [
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_GEOX_AM19_CONTROLLED_CAPTURE_PLATFORM_PROFILE_V1.cjs",
+      "git_blob_sha": "db8d2ba66d5a5e51f9d78d488868d4d1330b407d",
+      "sha256": "d15d59d466e0bfd0866e88740af1baa1c46b34ae5732bb155014479aae734e7d",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_GEOX_AM19_PERSISTENT_24T_QUALIFICATION_MIGRATION_V1.cjs",
+      "git_blob_sha": "2bc0c68bb6b999dd2b6561ad34670d997e6a7a7f",
+      "sha256": "9428d673988b94c13e9177c7bb3fa6ab646f574a6b9777b1f6178135ef964092",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_GEOX_AM19_PERSISTENT_24T_QUALIFICATION_MIGRATION_V4.cjs",
+      "git_blob_sha": "6c2b001c9a77f3369e58b8ef9dd0332cc2e99ef6",
+      "sha256": "c0665344b5d4031606fbe7ffc302f42f4742405eaf0355aed45ce33d82062a41",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_GEOX_AM19_PERSISTENT_24T_QUALIFICATION_MIGRATION_V5.cjs",
+      "git_blob_sha": "a61fcad7add6589b5dabdd9ba7fda0921480456b",
+      "sha256": "07b21ad73c0f23ed638e22be073e10830d8e766260ed41e6faa4a6e65cfbf313",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DISABLED_RETRY_HISTORICAL_INHERITANCE_V1.cjs",
+      "git_blob_sha": "d77c5dd04b5bbff87ca7b10eb03d629e89969ff1",
+      "sha256": "e5bd33daff54f06c451a1fd24d9df4e7314debddc29c9a5b8837b09d6c5f913a",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_VERIFIED_DELIVERY_REGISTRATION_V1.cjs",
+      "git_blob_sha": "3903ee514eb45d982b39e07a906aec27353a7693",
+      "sha256": "730a8e4bdbf322afb4fe4bd5d0c226c9b62e4fb50a946e7ab2822b8c225b228a",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CAUSAL_TEMPORAL_SUPERSESSION_CONTRACT_V1.cjs",
+      "git_blob_sha": "f0a5dd211067a8539326d8fff76849f331942a71",
+      "sha256": "0d383934f3ed1dd42e1e12f04688d344361e862866e33d2aa10748a84236427a",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/governance_acceptance/MCFT_CAP09_DISABLED_RETRY_HISTORICAL_INHERITANCE_V1.cjs",
+      "git_blob_sha": "41a431470eb300573d582077190f2fedc25e514a",
+      "sha256": "48bf7f8d9131d4bdafd027e2b968449f97527ad4b31f7457816f6636b7d05b21",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+      "git_blob_sha": "bfa88253879154dcb27254a97fe167ac8936c7f5",
+      "sha256": "48b3247122be46e2dd328db1e2c11bf4c3b3b3e15881d2120f88b0fa6ac6bcf9",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_DISABLED_RETRY_SUCCESSOR_V1.cjs",
+      "git_blob_sha": "4e96a117fc0c1f146b9c4c14d61ecfc193a1ea4b",
+      "sha256": "aa1bd197abbb1958f04764c5cf5cccb6c1f77a3c03c42a11a3617df45191b786",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/PROVE_MCFT_CAP09_AM19_HISTORICAL_LOGICAL_AUTHORITY_V1.cjs",
+      "git_blob_sha": "b0057f713a537c9f051c4932e13ad466a6d4a729",
+      "sha256": "ecf216faccf7e8573dc0973150c56738627c6b047d9562b14eccc2101394c58b",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/PROVISION_MCFT_CAP09_AM19_RUN_SCOPED_DATABASES_INNER_V1.cjs",
+      "git_blob_sha": "80be618af01672a5d913f4334eca665447c91abf",
+      "sha256": "589813c0f32aa1621b05ce0f61ab520d79d8706e2f01a40e1c773b494a00d5c8",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/PROVISION_MCFT_CAP09_AM19_RUN_SCOPED_DATABASES_V1.cjs",
+      "git_blob_sha": "d1e1bb2135a0d733d0b400d902e7138cca1fa56e",
+      "sha256": "5c661f2e501a98ac55e64988264588815e61d1128245c8b8d4f490bae9597b93",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PREFLIGHT_V1.cjs",
+      "git_blob_sha": "9bce1bf225801568c330295cef24bd24f7b5eef6",
+      "sha256": "160b02591a690a72c1f2c2880049840a0205ae715285e34965663883809f6663",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/RUN_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_V1.cjs",
+      "git_blob_sha": "301c4093c4487eb0207053466f65eff26aefb12f",
+      "sha256": "7ea80420ddb2a3aeac9d7d7f5e3151131b504ce035a2dbd0ad604fa8b25aaa3e",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/RUN_GEOX_AM19_PERSISTENT_24T_QUALIFICATION_V1.cjs",
+      "git_blob_sha": "46c67bbbabac1ee08182cbea60f3cbd0419c4045",
+      "sha256": "96e46736ca79db0183fc3fb7f71c66cad08d782c39afea89e1626739a4d48ed7",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/VERIFY_GEOX_AM19_HISTORICAL_LOGICAL_SUCCESSOR_RECONCILIATION_V1.cjs",
+      "git_blob_sha": "d06dc701ae1724ae5631177a83cae0266e4d4cbe",
+      "sha256": "94b5dc42b21bd262c6ae85f53760aec09d8f2f600f56b5a88234bd6598fc10a5",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/VERIFY_MCFT_CAP09_AM19_HISTORICAL_RETAINED_RAW_INVENTORY_V1.cjs",
+      "git_blob_sha": "4a84cddd55f002176017a574a91c2f8fa8d7ad78",
+      "sha256": "d08f7f94b58ad6de3187887dd6e279b25dccd5b189267b2332721ab862d603e8",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/adapters/EXECUTE_MCFT_CAP_09_AM19_HISTORICAL_LOGICAL_PERSISTENT_CONTROLLED_V1.ts",
+      "git_blob_sha": "7280260e94827ec65d139a5b51d9d7b74ab69d92",
+      "sha256": "54576e290ae2a43ba94dd09853dfc5cd683b1f593ca08c1e93fbbe2485e60257",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/adapters/EXECUTE_MCFT_CAP_09_AM19_PERSISTENT_24T_CONTROLLED_V1.ts",
+      "git_blob_sha": "64fd0e573d656f61da46ba5ad1b768b12d7753f7",
+      "sha256": "03906f0398431718a346c55d32317d0cbd84aecbd8993d6aa433c4ecb29b2c84",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/adapters/RUN_MCFT_CAP_09_AM19_HISTORICAL_LOGICAL_REHYDRATION_V1.ts",
+      "git_blob_sha": "b708d067eb5ce2828b6cfb8a8a0bf569e6c2fda4",
+      "sha256": "0f4d6f09c2b0b10cbf10bc2cdeada53f25f088a0d2e9c6fbd23cafc49e779c42",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/adapters/RUN_MCFT_CAP_09_AM19_HISTORICAL_LOGICAL_REHYDRATION_V2.ts",
+      "git_blob_sha": "094ea7b5fd0444d826a293bac5ca3357cbdbfe5f",
+      "sha256": "7d414da523880bbf940527b59ff02257884725c2b1c2eacf061083bce17c5cc7",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/adapters/RUN_MCFT_CAP_09_AM19_HISTORICAL_LOGICAL_REHYDRATION_V3.ts",
+      "git_blob_sha": "ed3435d65c678ba4e678ee4199639096b88017f3",
+      "sha256": "4ba0eacd48874e89f88342e6b9d51190a837b98830812252d97c6475d79f3af4",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/contracts/MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_PROFILE_V1.json",
+      "git_blob_sha": "52766cbb51053fc386b1cc2264ada8e31c4f0fdd",
+      "sha256": "936c8ab687912602b349993fd75e69ea4a47e3da67e390ad478d97cffb52ffde",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/contracts/MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_RECONCILIATION_BINDINGS_V1.json",
+      "git_blob_sha": "bfcb997a39a13cdd4b5f4c148cd6cbe29118e39a",
+      "sha256": "33bc0a8a7ca136489d2970208d5e6a43c2fe7eee94d82ed26e822e1b42f9ba5c",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1.json",
+      "git_blob_sha": "9aa69bf6b6aae2eb0f856e2ed5c5d24f83e33af8",
+      "sha256": "49dc2b541e045024d9ef0aebb9238247a9fad201971c9675fc68a0e0148dd320",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_V1.json",
+      "git_blob_sha": "ca15efb07553d44a934f03a942ec153c6d6ad171",
+      "sha256": "e4a8596b8785c324d23ee3560731f1532da54bd61833036f2522b4db49adb3b3",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts",
+      "git_blob_sha": "410eb5c79d0043e601d29cb05138f561ded5c90e",
+      "sha256": "25b603739d89c9aa9a218febe7166ef14df3a00dfa7d540eb4ee93cc15ff9c7a",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts",
+      "git_blob_sha": "72db3273b98c7a848bab6496011396f2fe3fd026",
+      "sha256": "ce1797c25879b40ab6d69dba515c3f2f8914905ebf1925db1871fdc6f9bb75d0",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts",
+      "git_blob_sha": "11de3ffe391a3e222a6cfa8e94ff7278531d278e",
+      "sha256": "def5936e928b4b8f9e49f95da1225e1532a74c6a089af10dc359cf6ab4cf2221",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts",
+      "git_blob_sha": "cb9be23f8a836c04189bc6f35868fcea3cc69ff5",
+      "sha256": "9360bc12944b5ed0bd119f5db60b5f259094c88f0db764af64fff9f94ea99072",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts",
+      "git_blob_sha": "82a52fe7578dd7ea4027b428fccf4f8d65400151",
+      "sha256": "99723bf624814d690264287723fd8752949df0dfd6c0a3c3ae6c59a524706b5f",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_CANONICAL_FACT_WRITER_V1.ts",
+      "git_blob_sha": "430333205653e621dd74e164477584a32c4e03c7",
+      "sha256": "977c736c434c39b0cde73436b07bd388b10667ffade8165eaf74653ce9ee90b4",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts",
+      "git_blob_sha": "4e4538283f2f76d4acd4eb22ab33646258fbb95e",
+      "sha256": "4fcf205c7b7226d57393f86d7a9295f9a497a9922fa6d0e9aa31504eb264bf1b",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs",
+      "git_blob_sha": "b667cee5a4621749fa53df33146eb0573314051e",
+      "sha256": "2d398547874da431a45d65b9bdb0e447e3ca7c46387cc0f32652ca9e48316542",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts",
+      "git_blob_sha": "a525c2cc9e27f15b550b816b25bc6cd1f4afeede",
+      "sha256": "710589df5a93168589f91ee113b30985255071f04efa3af5f2b83f81e25d5120",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    },
+    {
+      "path": "scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts",
+      "git_blob_sha": "e0eac471fdbc8835b9fc74983b6c7c0a8101f330",
+      "sha256": "0f7866d1559f20d7bdf54a68f0d63326d91c0aa6a58407435efa9698b42268c3",
+      "migration_result": "BLOCKED",
+      "reason": "Source provenance inventoried; check-by-check equivalence and current adoption evidence not yet adjudicated."
+    }
+  ],
+  "execution_authorized": false,
+  "production_authorized": false
+}

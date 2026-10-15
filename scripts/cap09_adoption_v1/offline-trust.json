@@ -1,0 +1,312 @@
+{
+  "schema": "CAP09_OFFLINE_ADOPTION_TRUST_V1",
+  "activation_mode": "SIGNED_ADOPTION_REQUIRED",
+  "adopted": false,
+  "subject_sha": null,
+  "host_id": "LAPTOP-STN2A2P1",
+  "operator_id": "mcft_cap09_operator_mylr1",
+  "valid_until": "2026-11-13T00:00:00.000Z",
+  "checks": [
+    {
+      "check_id": "CONTROL_PLANE_INTEGRITY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "V13_HOLISTIC_SCHEMA",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "V13_NEXT_TICK_VIABILITY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "EA5E2_RUNTIME_DEPENDENCY_GRAPH",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "LEGACY_AM19_PERSISTENT_24T",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "PHASE1_TYPED_RUNTIME_COMPOSITION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": true
+    },
+    {
+      "check_id": "END_TO_END_EVIDENCE_SUPPLY_DEADLINE",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": true
+    },
+    {
+      "check_id": "EXACT_ONE_PRODUCTION_OWNER",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": true
+    },
+    {
+      "check_id": "FORMAL_V5_H6_SUCCESSOR_SEAM",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "FORMAL_V5_AMENDMENT21_STAGE_HANDOFF",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "FORMAL_V5_ACTIVATION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": true
+    },
+    {
+      "check_id": "V13_RUNTIME_HARNESS_RESOLVER_MIGRATION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": true
+    },
+    {
+      "check_id": "T4R1_BIOLOGICAL_STAGE_AUTHORITY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "T4R1_CURRENT_CROP_ROLLING_REFRESH",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "PRODUCTION_RUNTIME_OWNER_CUTOVER",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "T4R1_CURRENT_CROP_ROLLING_CANDIDATE",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "PROTECTED_MAIN_LINEAGE_ADVANCEMENT_ADJUDICATION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "FORMAL_V5_G11_PRODUCTIONIZATION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "FORMAL_V5_R6_STAGE_ADMISSION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "FORMAL_V5_FINAL_READBACK",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "FORMAL_V5_COMPLETION_ADJUDICATION",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "FORMAL_ARM_RETIREMENT_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "AM22_PREQUALIFICATION_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "AM22_START_CHAIN_ENGINEERING_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "AM22_HOST_MEASUREMENT_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "AM22_FRESH_AUTHORITY_APPEND_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "AM22_GFS_BOOTSTRAP_ORCHESTRATION_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "AM22_POST_CUTOVER_RECOVERY_ENGINEERING_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "AM22_GFS_PROGRESS_DIAGNOSTIC_ENGINEERING_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "FROZEN_V13_REQUALIFICATION_SUCCESSOR_ENGINEERING_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "CURRENT_CROP_20261010_ADOPTION_SUCCESSOR_ENGINEERING_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "CURRENT_BASELINE_EXECUTION_SUCCESSOR_ENGINEERING_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "ISOLATED_QUALIFICATION_AUTHORIZATION_20261010_ENGINEERING_GOVERNANCE",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "ISOLATED_PRODUCER_BUCKET_SEAM_20261010_ENGINEERING_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "HISTORY_REPLAY_BUDGET_20261010_ENGINEERING_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "DISABLED_RETRY_IMPLEMENTATION_20261011_ENGINEERING_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    },
+    {
+      "check_id": "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_ENGINEERING_ONLY",
+      "check_revision": "LOCAL_QCP_DEFINITION_SHA256",
+      "allow_not_applicable": false
+    }
+  ],
+  "allowed_not_applicable_ids": [
+    "V13_PRODUCER_DRIVEN_QUALIFICATION",
+    "END_TO_END_EVIDENCE_SUPPLY_DEADLINE",
+    "EXACT_ONE_PRODUCTION_OWNER",
+    "FORMAL_V5_ACTIVATION",
+    "V13_RUNTIME_HARNESS_RESOLVER_MIGRATION"
+  ],
+  "issuers": [
+    {
+      "issuer_id": "mcft_cap09_operator_mylr1",
+      "key_id": "mcft_cap09_ed25519_223c806e",
+      "purpose": "ADOPTION",
+      "role": "ACCOUNTABLE_SINGLE_OPERATOR",
+      "revoked": false,
+      "not_before": "2026-10-13T00:00:00.000Z",
+      "not_after": "2026-11-13T00:00:00.000Z",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAbvpUDWBt+TOQqEwiHrxG/eA5eM+h/epg7+TecimHkis=\n-----END PUBLIC KEY-----\n",
+      "spki_sha256": "223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365"
+    },
+    {
+      "issuer_id": "mcft_cap09_independent_adoption_governance",
+      "key_id": "cap09_adoption_ed25519_20261015",
+      "purpose": "ADOPTION",
+      "role": "INDEPENDENT_GOVERNANCE",
+      "revoked": false,
+      "not_before": "2026-10-15T00:00:00.000Z",
+      "not_after": "2026-11-12T23:00:00.000Z",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAwS5qR6spDfy/XR4ar95jpAgacRiA9SDUVpu7jFvdRGY=\n-----END PUBLIC KEY-----\n",
+      "spki_sha256": "80e7897b28faf31da8973badad04a9d2e9b69f3f4cc82683dc67f0b4f3f48479"
+    }
+  ]
+}

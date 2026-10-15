@@ -11,6 +11,7 @@ async function main() {
     const result=await require("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs").main(args);
     console.log(JSON.stringify(result));return;
   }
+  assert(!Object.hasOwn(process.env,"MCFT_CAP09_ADOPTION_REQUEST"),"OFFLINE_ADOPTION_REQUIRES_GOVERNED_RETRY");
   rejectUnadoptedRetry(args);
   assert(args.includes("--operator-authorized"), "CURRENT_QUALIFICATION_OPERATOR_AUTHORIZATION_REQUIRED");
   assert(args.includes("--execute") !== args.includes("--preflight-only"), "CURRENT_QUALIFICATION_SELECT_ONE_MODE");

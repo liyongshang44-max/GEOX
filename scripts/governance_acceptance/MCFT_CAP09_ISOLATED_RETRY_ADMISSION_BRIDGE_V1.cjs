@@ -10,7 +10,7 @@ const fs=require("node:fs");
 const {assessIsolatedReadiness}=require("./MCFT_CAP09_ISOLATED_EVIDENCE_DRIVEN_CLOCK_V1.cjs");
 const {ANCHORS}=require("./MCFT_CAP_09_ISOLATED_RETRY_AUTHORITY_POLICY_V1.cjs");
 const {HASHES:HISTORICAL_HASHES,verifyHistoricalEvidence}=require("./MCFT_CAP09_RETRY_HISTORICAL_EVIDENCE_V1.cjs");
-const {assertDedicatedPgEndpoint}=require("./MCFT_CAP09_DEDICATED_PG_ENDPOINT_V1.cjs");
+const {dedicatedContract,assertDedicatedPgEndpoint}=require("./MCFT_CAP09_DEDICATED_PG_ENDPOINT_V1.cjs");
 const SHA=/^[0-9a-f]{64}$/;
 const RUN=/^[0-9a-f]{12}$/;
 const HEAD=/^[0-9a-f]{40}$/;
@@ -52,13 +52,14 @@ function admitProposedRetry(arm,observed) {
   for(const [key,value] of Object.entries(hashes)) assert.equal(observed.evidence_sha256?.[key],value,"EVIDENCE_HASH_MISMATCH:"+key);
   const resource=arm.resources;
   // Preserve the existing synthetic/structural retry contract for unrelated run IDs.
-  // Only this evidence-qualified run may claim the dedicated 55434 endpoint.
-  if(arm.run_id==="800c023cf337") assertDedicatedPgEndpoint(arm.run_id,resource);
+  // Registered runs bind all endpoints together; this grants no execution authority.
+  const contract=dedicatedContract(arm.run_id);
+  if(contract) assertDedicatedPgEndpoint(arm.run_id,resource);
   else assert(resource && resource.database_host==="127.0.0.1"&&resource.database_port===55432,"LOCAL_DB_REQUIRED");
-  assert.equal(resource.audit_user,arm.run_id==="800c023cf337"?"qual_dedicated_admin":"qual_admin","AUDIT_USER_RUN_BINDING_MISMATCH");
+  assert.equal(resource.audit_user,contract?contract.audit_user:"qual_admin","AUDIT_USER_RUN_BINDING_MISMATCH");
   assert.equal(resource.positive_database,"mcft_cap09_requal_"+arm.run_id+"_positive","FRESH_POSITIVE_DB_REQUIRED");
   assert.equal(resource.negative_database,"mcft_cap09_requal_"+arm.run_id+"_negative","FRESH_NEGATIVE_DB_REQUIRED");
-  assert.equal(resource.bucket_endpoint,"http://127.0.0.1:59000","LOOPBACK_BUCKET_REQUIRED");
+  assert.equal(resource.bucket_endpoint,contract?contract.bucket_endpoint:"http://127.0.0.1:59000","LOOPBACK_BUCKET_REQUIRED");
   assert.equal(resource.bucket,"mcft-cap09-requal-"+arm.run_id,"RUN_SCOPED_BUCKET_REQUIRED");
   assert.deepEqual(observed.resources,resource,"RESOURCE_READBACK_MISMATCH");
   assert.equal(observed.fresh_readback?.status,"PASS","FRESH_RESOURCE_READBACK_REQUIRED");

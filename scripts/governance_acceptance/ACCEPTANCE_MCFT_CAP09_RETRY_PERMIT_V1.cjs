@@ -62,7 +62,17 @@ try {
  assert.equal(disabled.host_id,"LAPTOP-STN2A2P1");
  assert.equal(disabled.operator_id,"mcft_cap09_operator_mylr1");
  assert.equal(disabled.ledger_root,"D:\\gptdown\\MCFT-CAP09-AUTHORITY-LEDGER");
- assert.equal(disabled.issuers.length,1);
+ assert.equal(disabled.issuers.length,2);
+ const independent=disabled.issuers[1];
+ assert.equal(independent.issuer_id,"mcft_cap09_independent_retry_governance");
+ assert.equal(independent.key_id,"cap09_retry_ed25519_20261015");
+ assert.equal(independent.role,"INDEPENDENT_RETRY_GOVERNANCE");
+ assert.equal(independent.revoked,false);
+ assert.notEqual(independent.issuer_id,disabled.operator_id);
+ assert.equal(independent.spki_sha256,"ef7459a5918e35c90913532a7c8af545fbca4fec0b7dc95916797db3303fa870");
+ const independentKey=crypto.createPublicKey(independent.public_key_pem);
+ assert.equal(independentKey.asymmetricKeyType,"ed25519");
+ assert.equal(sha(independentKey.export({type:"spki",format:"der"})),independent.spki_sha256);
  const registered=disabled.issuers[0];
  assert.equal(registered.issuer_id,disabled.operator_id);
  assert.equal(registered.role,"ACCOUNTABLE_SINGLE_OPERATOR");

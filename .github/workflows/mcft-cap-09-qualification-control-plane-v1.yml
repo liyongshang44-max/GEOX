@@ -641,7 +641,8 @@ jobs:
                       entry.subject_sha !== subject ||
                       snapshot.head_sha !== subject || run.head_sha !== subject ||
                       snapshot.base_sha !== base ||
-                      boundary.status !== 'PASS' || boundary.adopted_main_sha !== base ||
+                      boundary.status !== 'PASS' ||
+                      require(require('node:path').resolve(process.cwd(), 'scripts/governance_acceptance/REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1.cjs')).verifyPhase2HistoricalBase(boundary, base).historical_base_recognized !== true ||
                       boundary.production_authorized !== false || boundary.execute_authorized !== false ||
                       !(liveRunAssociatedBases.length === 0 ||
                         (liveRunAssociatedBases.length === 1 && liveRunAssociatedBases[0] === base))) {

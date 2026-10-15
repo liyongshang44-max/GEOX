@@ -63,6 +63,10 @@ jobs:
           node-version: '20.11.1'
       - name: No destructive SQL or retained database in controlled delay proposals
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONDESTRUCTIVE_REAL_DELAY_BOUNDARY_V1.cjs
+      - name: Exact run resource contracts and Host URL guards
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DEDICATED_PG_ENDPOINT_V1.cjs
+      - name: Fresh run structural admission and resource substitution negatives
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_ISOLATED_RETRY_ADMISSION_BRIDGE_V1.cjs
       - name: Actual runner and child retry dispatch reject unadopted trust
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs
       - name: Original Windows evidence bytes and missing-adjudication boundaries

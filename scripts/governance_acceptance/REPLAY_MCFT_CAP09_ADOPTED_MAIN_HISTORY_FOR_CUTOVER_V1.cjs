@@ -9,11 +9,36 @@ const PARSER_PATH="scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLA
 const MANIFEST="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-LOCAL-CUTOVER-EXACT-SCOPE-CANDIDATE-20261011-V1.json";
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const CHECK="LOCAL_CUTOVER_EXACT_SCOPE_20261011_ENGINEERING_ONLY";
+function recordDiagnosticTrace(event, command, checkout, childFlag) {
+ const file=process.env.MCFT_CAP09_QCP_TRACE_PATH;
+ if (!file) return;
+ fs.appendFileSync(file,JSON.stringify({
+   event,command,check_id:process.env.MCFT_CAP09_QCP_CHECK_ID || "HISTORICAL_REPLAY",
+   caller:"REPLAY_MCFT_CAP09_ADOPTED_MAIN_HISTORY_FOR_CUTOVER_V1",
+   checkout,child_flag:childFlag,at:new Date().toISOString()
+ })+String.fromCharCode(10));
+}
+
 function git(...args){return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8",timeout:120000,maxBuffer:16*1024*1024}).trim();}
 function historicalCheckout(checkout, ref=BASE){
- cp.execFileSync("git",["clone","--shared","--no-checkout",ROOT,checkout],{stdio:"pipe",timeout:120000});
+ // Independent remote object graph: a shared local clone can silently inherit
+ // missing blobs and yield a dirty historical checkout on Windows.
+ const remote=git("remote","get-url","origin");
+ cp.execFileSync("git",["clone","--no-local","--no-checkout",remote,checkout],{stdio:"pipe",timeout:600000});
  const run=(...args)=>cp.execFileSync("git",args,{cwd:checkout,stdio:"pipe",timeout:120000});
  run("checkout","--detach",ref);
+ // Fail closed if the disposable clone materialized an incomplete historical tree.
+ // Recover only the exact tracked workflow from HEAD when checkout left it deleted;
+ // never ignore other changes and always compare the on-disk bytes to the Git blob.
+ const workflow=".github/workflows/mcft-cap-09-current-baseline-entry-engineering-v1.yml";
+ const trackedStatus=()=>cp.execFileSync("git",["status","--porcelain","--untracked-files=no"],{cwd:checkout,encoding:"utf8"}).split(/\\r?\\n/).filter(Boolean);
+ const before=trackedStatus();
+ if(before.length===1 && before[0]===" D "+workflow){
+   const expected=cp.execFileSync("git",["show",ref+":"+workflow],{cwd:checkout});
+   run("restore","--source=HEAD","--worktree","--",workflow);
+   assert.deepEqual(fs.readFileSync(path.join(checkout,workflow)),expected,"HISTORICAL_WORKFLOW_RESTORED_BYTES_DIFFER");
+ }
+ assert.deepEqual(trackedStatus(),[],"HISTORICAL_CLONE_DIRTY_AFTER_CHECKOUT");
  // Clone-local ref: historic verifiers retain their adopted-main context.
  // Never change the caller's origin/main or replay old assertions on a new tree.
  run("update-ref","refs/remotes/origin/main",BASE);
@@ -97,8 +122,10 @@ function runHistoricalDiagnosticForCutoverCandidate(command, extraEnv={}) {
  const checkout=path.join(temp,"historic");let attached=false;
  try {
   historicalCheckout(checkout,historicalBase);attached=true;
+  recordDiagnosticTrace("HISTORICAL_CHILD_START",command,checkout,"1");
   const out=cp.spawnSync(command,{cwd:checkout,encoding:"utf8",shell:true,
     timeout:240000,env:{...process.env,...extraEnv,MCFT_CAP09_ALL_BLOCKERS_CHILD:"1"}});
+  recordDiagnosticTrace("HISTORICAL_CHILD_END",command,checkout,"1");
   return {status:out.status===0?"PASS":"FAIL",exit_code:out.status,signal:out.signal||null,
    stdout_tail:String(out.stdout||"").slice(-4000),stderr_tail:String(out.stderr||"").slice(-4000),
    historical_subject_sha:historicalBase,adopted_main_sha:main,candidate_proven:true};
@@ -180,6 +207,20 @@ function verifyAdoptedLocalCutoverScopeDiagnostic() {
   production_authorized:false,execute_authorized:false,
   historical_manifest_mutated:false};
 }
-module.exports={verifyCandidateBoundary,replayAdoptedHistoryForCutoverCandidate,verifyAdoptedLocalCutoverScopeDiagnostic,
+// Recognize ONLY the retained Phase2 evidence base. This result is not a
+// qualification of intervening commits, current changed paths, or execution.
+function verifyPhase2HistoricalBase(boundary, base) {
+ assert.equal(base,"adfaf9fdbd2c75923fb298e26b5d5d106a0fc61a","PHASE2_FIXED_EVIDENCE_BASE_REQUIRED");
+ assert.equal(boundary.status,"PASS","PHASE2_HISTORICAL_BOUNDARY_REQUIRED");
+ assert.equal(boundary.reason_code,"HISTORICAL_3692_EXACT_SCOPE_VERIFIED_AT_ADOPTED_SUBJECT","PHASE2_HISTORICAL_SCOPE_REQUIRED");
+ assert.equal(boundary.historical_candidate_subject_sha,ADOPTED_LOCAL_CUTOVER_SUBJECT,"PHASE2_HISTORICAL_SUBJECT_REQUIRED");
+ assert.equal(boundary.historical_candidate_base_sha,CURRENT_BASE,"PHASE2_HISTORICAL_BASE_REQUIRED");
+ assert.equal(boundary.production_authorized,false,"PHASE2_NO_PRODUCTION_AUTHORITY");
+ assert.equal(boundary.execute_authorized,false,"PHASE2_NO_EXECUTION_AUTHORITY");
+ assert(/^[0-9a-f]{40}$/.test(boundary.adopted_main_sha||""),"PHASE2_MAIN_SHA_REQUIRED");
+ assert(isAncestor(base,boundary.adopted_main_sha),"PHASE2_BASE_ANCESTRY_REQUIRED");
+ return {historical_base_recognized:true,current_candidate_qualified:false,execute_authorized:false};
+}
+module.exports={verifyPhase2HistoricalBase,verifyCandidateBoundary,replayAdoptedHistoryForCutoverCandidate,verifyAdoptedLocalCutoverScopeDiagnostic,
  runHistoricalDiagnosticForCutoverCandidate,isAdoptedMainLegacyDiagnostic,runAdoptedMainLegacyDiagnostic,runAdoptedMainWorkflowGate};
 if(require.main===module){try{console.log(JSON.stringify(replayAdoptedHistoryForCutoverCandidate()));}catch(e){console.error(e.stack||String(e));process.exitCode=1;}}

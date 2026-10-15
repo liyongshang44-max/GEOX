@@ -1,0 +1,276 @@
+{
+  "schema": "MCFT_CAP09_A44_ENTRY_MATERIAL_BOUNDARY_DECISION_V1",
+  "subject_commit_sha": "a44b294f684027c0d1dd7a28c3735442fca736a4",
+  "reviewed_branch_head": "00df7341bd4bda6e61caaa2a23d6842de74f33c3",
+  "release_manifest_sha256": "099ae7f99547c68f754f4076020505d5fbff35198da160b526101640e56a1c4a",
+  "status": "SOURCE_BOUNDARY_REVIEW_COMPLETE_EXECUTION_MATERIAL_INCOMPLETE",
+  "source_files_verified": 6414,
+  "entrypoints": [
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_LOCAL_QUALIFICATION_ENTRY_V1.ps1",
+      "sha256": "3b1288a000657f06ed6f90626b9e95d3cf354898c128ea318aae9f7d6f3586ae",
+      "role": "Windows launch wrapper; node selected through shell command resolution"
+    },
+    {
+      "path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs",
+      "sha256": "8b42a1777b77838776b5765137bcecb6a73e33ec9e0140897f3ec78f45ea00d7",
+      "role": "Legacy/retry dispatcher; governed retry delegates to host"
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
+      "sha256": "5eebbdbc660b1e3cf65a065b06ff1a5f072886471859ab163ffccacd2c4bc902",
+      "role": "Governed host; six fixed stages, Node process.execPath, TS via --import tsx"
+    },
+    {
+      "path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts",
+      "sha256": "77b7ae72063fa534936800b0572cbadc0fa9ab8047db22b12a448c76e034e322",
+      "role": "Producer child; pg and production composition imports"
+    },
+    {
+      "path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts",
+      "sha256": "4282c49c2efe5c82d730bd6fc947e4023f55a7638538d5121b9c91b390406d77",
+      "role": "Timing child; same file invoked three times"
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs",
+      "sha256": "215639fa11c2b9598eaab76f19f3acefb5bb030f9c1fcefd3e548e0c3df9c527",
+      "role": "Controlled delay child; validates provider/pipeline evidence"
+    },
+    {
+      "path": "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts",
+      "sha256": "8be989f51822c79c1b32c8997b1721969151c66bc20124a17a01555a15d2841f",
+      "role": "Aggregate child; collects timing/delay evidence"
+    }
+  ],
+  "stages": [
+    "PRODUCER",
+    "TIMING_1",
+    "TIMING_2",
+    "TIMING_3",
+    "CONTROLLED_DELAY",
+    "AGGREGATE"
+  ],
+  "source_anchors": [
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_LOCAL_QUALIFICATION_ENTRY_V1.ps1",
+      "sha256": "3b1288a000657f06ed6f90626b9e95d3cf354898c128ea318aae9f7d6f3586ae",
+      "token": "& node $runner",
+      "matches": [
+        {
+          "line": 23,
+          "text": "& node $runner '--operator-authorized' '--governed-retry' $mode '--all' '--retry-bundle' $RetryBundle"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
+      "sha256": "5eebbdbc660b1e3cf65a065b06ff1a5f072886471859ab163ffccacd2c4bc902",
+      "token": "const STAGES=",
+      "matches": [
+        {
+          "line": 15,
+          "text": "const STAGES=Object.freeze(["
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
+      "sha256": "5eebbdbc660b1e3cf65a065b06ff1a5f072886471859ab163ffccacd2c4bc902",
+      "token": "execution.sourceContext()",
+      "matches": [
+        {
+          "line": 68,
+          "text": "const context=execution.sourceContext();"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
+      "sha256": "5eebbdbc660b1e3cf65a065b06ff1a5f072886471859ab163ffccacd2c4bc902",
+      "token": "process.env.NODE_OPTIONS",
+      "matches": [
+        {
+          "line": 66,
+          "text": "assert(!process.env.NODE_OPTIONS&&!process.env.NODE_PATH,\"RETRY_NODE_INJECTION_FORBIDDEN\");"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
+      "sha256": "5eebbdbc660b1e3cf65a065b06ff1a5f072886471859ab163ffccacd2c4bc902",
+      "token": "process.execPath",
+      "matches": [
+        {
+          "line": 121,
+          "text": "return {id,script,artifact:path.join(h.targets.out,artifact),cwd:ROOT,executable:process.execPath,args,env};"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
+      "sha256": "5eebbdbc660b1e3cf65a065b06ff1a5f072886471859ab163ffccacd2c4bc902",
+      "token": "--import",
+      "matches": [
+        {
+          "line": 118,
+          "text": "const args=file.endsWith(\".ts\")?[\"--import\",\"tsx\",script]:[script];"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
+      "sha256": "5eebbdbc660b1e3cf65a065b06ff1a5f072886471859ab163ffccacd2c4bc902",
+      "token": "MCFT_PYTHON_EXECUTABLE",
+      "matches": [
+        {
+          "line": 126,
+          "text": "const check=cp.spawnSync(process.env.MCFT_PYTHON_EXECUTABLE||\"python\","
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
+      "sha256": "5eebbdbc660b1e3cf65a065b06ff1a5f072886471859ab163ffccacd2c4bc902",
+      "token": "permitApi.consumePermit",
+      "matches": [
+        {
+          "line": 130,
+          "text": "const consumed=permitApi.consumePermit(h.verified);"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+      "sha256": "49712e5dfdfa4a631803d1702e764ff94254eb49051435b43cac1d06cea3fea6",
+      "token": "function sourceContext()",
+      "matches": [
+        {
+          "line": 65,
+          "text": "function sourceContext() {"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+      "sha256": "49712e5dfdfa4a631803d1702e764ff94254eb49051435b43cac1d06cea3fea6",
+      "token": "ls-remote",
+      "matches": [
+        {
+          "line": 77,
+          "text": "const main = git([\"ls-remote\", \"origin\", \"refs/heads/main\"]).split(/\\s+/)[0];"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+      "sha256": "49712e5dfdfa4a631803d1702e764ff94254eb49051435b43cac1d06cea3fea6",
+      "token": "frozenRuntimePaths(ROOT",
+      "matches": [
+        {
+          "line": 81,
+          "text": "const paths = frozenRuntimePaths(ROOT, q);"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+      "sha256": "49712e5dfdfa4a631803d1702e764ff94254eb49051435b43cac1d06cea3fea6",
+      "token": "merge-base",
+      "matches": [
+        {
+          "line": 86,
+          "text": "base_ancestor: cp.spawnSync(\"git\", [\"merge-base\", \"--is-ancestor\", BASE, head],"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs",
+      "sha256": "8b42a1777b77838776b5765137bcecb6a73e33ec9e0140897f3ec78f45ea00d7",
+      "token": "MCFT_CAP09_GOVERNED_RETRY_HOST",
+      "matches": [
+        {
+          "line": 11,
+          "text": "const result=await require(\"./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs\").main(args);"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs",
+      "sha256": "8b42a1777b77838776b5765137bcecb6a73e33ec9e0140897f3ec78f45ea00d7",
+      "token": "MCFT_PYTHON_EXECUTABLE",
+      "matches": [
+        {
+          "line": 26,
+          "text": "const check = cp.spawnSync(process.env.MCFT_PYTHON_EXECUTABLE || \"python\", [\"apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py\", \"selftest\"], {cwd: ROOT, stdio: \"inherit\"});"
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs",
+      "sha256": "8b42a1777b77838776b5765137bcecb6a73e33ec9e0140897f3ec78f45ea00d7",
+      "token": "--import",
+      "matches": [
+        {
+          "line": 31,
+          "text": "const r = cp.spawnSync(process.execPath, [\"--import\", \"tsx\", \"scripts/runtime_acceptance/\" + file], {cwd: ROOT, env: {...env, ...extra}, stdio: \"inherit\"});"
+        }
+      ]
+    },
+    {
+      "path": "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts",
+      "sha256": "8ab4ef65e3ca5ee6e36f3199bf55768a720895ebfa89ab50e654573c13a7a62b",
+      "token": "config.python_executable",
+      "matches": [
+        {
+          "line": 116,
+          "text": "this.pythonExecutable = config.python_executable?.trim() || \"python3\";"
+        }
+      ]
+    },
+    {
+      "path": "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts",
+      "sha256": "8ab4ef65e3ca5ee6e36f3199bf55768a720895ebfa89ab50e654573c13a7a62b",
+      "token": "execFileAsync(this.pythonExecutable",
+      "matches": [
+        {
+          "line": 152,
+          "text": "await execFileAsync(this.pythonExecutable, args, {"
+        }
+      ]
+    }
+  ],
+  "engineering_gaps": [
+    {
+      "id": "CAP09-ENTRY-001",
+      "status": "OPEN",
+      "title": "Offline Admission is not integrated into real entry chain",
+      "evidence": "Windows -> dispatcher -> host.hostBundle -> execution.sourceContext; sourceContext invokes git ls-remote, diff and merge-base. Existing cap09_adoption_v1 verifier is a synthetic-only parallel implementation.",
+      "exit": "A successor real launcher verifies adopted proof and exact installed material offline before operational imports/dispatch; children use bound admission/stage authority. Demonstrate invalid proof/material/expiry/replay rejection and valid synthetic dispatch through the SAME launcher without Git/network/history calls. Existing operational network permissions remain scoped to authorized Provider stages."
+    },
+    {
+      "id": "CAP09-MATERIAL-001",
+      "status": "OPEN",
+      "title": "Installed execution material is outside source manifest",
+      "evidence": "6414 payload hashes bind repository bytes, not Node/PowerShell/Python executables, installed tsx/pg/transitive modules, native scientific dependencies, package resolution or environment.",
+      "exit": "Bind resolved executable identities, installed package files/export maps/transitive and native dependencies, resolution roots and permitted environment to the qualified execution profile; verify actual loaded paths against that profile."
+    },
+    {
+      "id": "CAP09-APPLICABILITY-001",
+      "status": "OPEN",
+      "title": "better-sqlite3 non-reachability not proven",
+      "evidence": "Prior static graph does not reach it; absence in that graph and successful pg load do not establish all dynamic/loader/package paths.",
+      "exit": "Adjudicate within the bound seven-entry execution profile including loader, indirect imports and subprocess contracts; return APPLICABLE or NOT_APPLICABLE with evidence, not a guessed package requirement."
+    }
+  ],
+  "scope_exclusions": [
+    "No PostgreSQL checks repeated",
+    "No Windows selftests repeated",
+    "OS side-effect attestation remains separate and unproven",
+    "No full AST or installed-package reachability proof performed in this review"
+  ],
+  "execution_authorized": false,
+  "production_authorized": false,
+  "adoption_qualification": "BLOCKED",
+  "independent_signature_issued": false,
+  "signer_policy": "ACCOUNTABLE_SINGLE_OPERATOR permitted; signing and verification workflows remain separated"
+}

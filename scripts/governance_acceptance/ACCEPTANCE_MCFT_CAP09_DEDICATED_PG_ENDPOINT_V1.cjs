@@ -25,17 +25,36 @@ denied(()=>assertDedicatedPgUrl(RUN,"postgresql://user:password@localhost:55434/
 denied(()=>assertDedicatedPgUrl(RUN,"postgresql://user:password@127.0.0.1:55434/"+neg,pos));
 denied(()=>assertDedicatedPgUrl(RUN,"postgresql://user:password@127.0.0.1:55434/"+pos+"?sslmode=disable",pos));
 denied(()=>assertDedicatedPgUrl(RUN,"http://127.0.0.1:55434/"+pos,pos));
+// Host URL guard: new run succeeds only on its own endpoint and database namespace.
+const freshRun="da9db7129607", freshPos=`mcft_cap09_requal_${freshRun}_positive`;
+pass(()=>assertDedicatedPgEndpoint(freshRun,{...resource,database_port:55445}));
+for(const side of ["positive","negative"]) {
+ const db=`mcft_cap09_requal_${freshRun}_${side}`;
+ pass(()=>assertDedicatedPgUrl(freshRun,`postgresql://user:password@127.0.0.1:55445/${db}`,db));
+}
+for(const port of [55432,55434,5432,59005]) {
+ denied(()=>assertDedicatedPgEndpoint(freshRun,{...resource,database_port:port}));
+ denied(()=>assertDedicatedPgUrl(freshRun,`postgresql://user:password@127.0.0.1:${port}/${freshPos}`,freshPos));
+}
+denied(()=>assertDedicatedPgUrl(freshRun,`postgresql://user:password@127.0.0.1:55445/${pos}`,pos));
+denied(()=>assertDedicatedPgUrl(RUN,`postgresql://user:password@127.0.0.1:55434/${freshPos}`,freshPos));
+denied(()=>assertDedicatedPgUrl("aaaaaaaaaaaa",`postgresql://user:password@127.0.0.1:55445/${freshPos}`,freshPos));
+for(const suffix of ["?host=remote","#fragment"]) denied(()=>assertDedicatedPgUrl(freshRun,`postgresql://user:password@127.0.0.1:55445/${freshPos}${suffix}`,freshPos));
+denied(()=>assertDedicatedPgUrl(freshRun,`postgresql://user:password@localhost:55445/${freshPos}`,freshPos));
 const bridge=fs.readFileSync(path.join(root,"scripts/governance_acceptance/MCFT_CAP09_ISOLATED_RETRY_ADMISSION_BRIDGE_V1.cjs"),"utf8");
 const host=fs.readFileSync(path.join(root,"scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs"),"utf8");
 pass(()=>assert(bridge.includes("assertDedicatedPgEndpoint(arm.run_id,resource);")));
 pass(()=>assert(host.includes("assertDedicatedPgUrl(valid.arm.run_id,env[key],name);")));
-pass(()=>assert(bridge.includes('if(arm.run_id==="800c023cf337") assertDedicatedPgEndpoint(arm.run_id,resource);')));
+pass(()=>assert(bridge.includes('if(contract) assertDedicatedPgEndpoint(arm.run_id,resource);')));
 pass(()=>assert(bridge.includes('else assert(resource && resource.database_host==="127.0.0.1"&&resource.database_port===55432,"LOCAL_DB_REQUIRED");')));
 pass(()=>assert(!host.includes('u.port,"55432"')));
 const trust=JSON.parse(fs.readFileSync(path.join(root,"scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json"),"utf8"));
 pass(()=>assert.equal(trust.execution_enabled,false));
 pass(()=>assert.equal(trust.adopted,false));
-pass(()=>assert.equal(trust.issuers.length,1));
+pass(()=>assert.equal(trust.issuers.length,2));
+pass(()=>assert.equal(trust.issuers[1].role,"INDEPENDENT_RETRY_GOVERNANCE"));
+pass(()=>assert.equal(trust.issuers[1].issuer_id,"mcft_cap09_independent_retry_governance"));
+pass(()=>assert.equal(trust.issuers[1].spki_sha256,"ef7459a5918e35c90913532a7c8af545fbca4fec0b7dc95916797db3303fa870"));
 pass(()=>assert.equal(trust.host_id,"LAPTOP-STN2A2P1"));
 pass(()=>assert.equal(trust.operator_id,"mcft_cap09_operator_mylr1"));
 pass(()=>assert.equal(trust.issuers[0].role,"ACCOUNTABLE_SINGLE_OPERATOR"));
