@@ -1,3 +1,13 @@
+# 2026-10-15 — cb773984 Windows Runtime link-free Workspace materialization PASS; installed-material admission still pending
+
+Operator-reported actual Windows PowerShell completion in independent, mutable TEST_ONLY candidate `D:\gptdown\MCFT-CAP09-RUNTIME-cb773984`: `PRECHECK_PASS=12`, `STAGING_PASS=12`, `REMAINING_LINKS=0`, `MATERIALIZED_WORKSPACE_PACKAGES=12`, `WORKSPACE_MATERIALIZATION=PASS`. Each of 12 internal @geox pnpm Junctions was staged as a physical workspace package directory (nested node_modules excluded) and replaced; original signed source-only `D:\gptdown\MCFT-CAP09-RELEASE-cb773984` unchanged. Preceding builds @geox/contracts, @geox/control-kernel, @geox/device-skills succeeded, three expected dist entries exist.
+
+**Meaning:** The specific 12-Junction `MATERIAL_LINK_FORBIDDEN` blocker is addressed at the filesystem scan level. This does NOT yet constitute formal installed-material acceptance: `scripts/cap09_adoption_v1/installed-material.cjs` must now collect and self-verify all files, reject remaining hardlinks (`nlink !== 1`) / special files, tool/environment drift. Previous original Release signature and profile are NOT valid for the expanded and built Runtime. Do not reuse old qualification, don't claim one-shot permit or real stage success.
+
+**Immediate next:** Set `MCFT_PYTHON_EXECUTABLE` to signed Windows CPython path, run formal installed-material collector against independent Runtime with NEW output path outside Runtime, capture actual exit/status/hash/file count. On PASS, issue fresh independent TEST_ONLY adoption signing for this exact material and root, then offline verify, then fresh run-scoped infra/one-shot Local Admission, six-stage ordered TEST_ONLY. On failure preserve first failure and fix only demonstrated blocker. `EXECUTE_HOLD`, `PRODUCTION_HOLD`; no QCP re-run, no DB/MinIO mutation, no main merge.
+
+---
+
 # 2026-10-15 — cb773984 isolated Runtime: all 3 required Workspace builds PASS; 12 internal Junctions verified
 
 Windows-host reported test-only runtime at `D:\gptdown\MCFT-CAP09-RUNTIME-cb773984` (NOT original signed Release): 12/12 reparse Junction links found, all realpath targets within Runtime, all 12 targets have package.json; read-only audit `JUNCTION_AUDIT_EXIT_CODE=0`. Root CommonJS `require.resolve` had package export restrictions and unbuilt dist entrypoints; these were NOT evidence of dependency corruption.
