@@ -1,3 +1,11 @@
+# 2026-10-15 — cb773984 full Windows Runtime independent offline Adoption verified PASS
+
+Actual Windows PowerShell verification stdout: `status=OFFLINE_ADOPTION_VERIFIED`, `subject_sha=cb77398404edfbc223350d1c74a46323efe9fd3e`, `material_digest=e30462f98a6538b136cd8697493df3a390f84befcc35c015857a3dab9123adeb`, `expires_at=2026-10-15T06:02:41.933Z` (Beijing 14:02:41.933), `execution_authorized=true`, `production_authorized=false`, `INDEPENDENT_OFFLINE_VERIFICATION=PASS`. Verification used corrected no-extra-environment-variable invocation. This closes independent formal TEST_ONLY Adoption for fully materialized built 20884-file Runtime.
+
+**Next mainline gate:** Local Execution Admission only: a fresh Run ID, fresh run-scoped isolated databases and MinIO permissions, independent one-use permit signer and Windows host exact material/identity/timing readback, then six-stage TEST_ONLY under existing frozen contracts and fail-closed authorization. Signed Adoption is NOT a permit or production approval. Qual expires at stated timestamp; if expired, re-sign the same unchanged material with independently held Windows key and fresh write-once output/TTL; do not rerun QCP/installs or extend old proof. Historical DB checks/old Run IDs cannot substitute new scoped admission. Keep EXECUTE_HOLD / PRODUCTION_HOLD until every live condition actually verified.
+
+---
+
 # 2026-10-15 — Windows independent offline verification rejected UNDECLARED_ENVIRONMENT_VARIABLE: diagnostic invocation error
 
 Operator reran independently signed full Runtime adoption verification on Windows Node v24.19.0; `offline-context.cjs.load(...)` raised `UNDECLARED_ENVIRONMENT_VARIABLE` from `installed-material.cjs:30`. Previous assistant verification snippet mistakenly added transient process env vars `MCFT_VERIFY_MODULE`, `MCFT_VERIFY_PROOF`, `MCFT_VERIFY_ROOT` not in signed material's environment.allowed_names. THIS IS A CALLER-SIDE VERIFICATION COMMAND DEFECT, NOT EVIDENCE OF INVALID ED25519 SIGNATURE OR SOURCE FILES. `INDEPENDENT_OFFLINE_VERIFICATION_FAILED` as of this checkpoint; DO NOT CLAIM independent PASS.
