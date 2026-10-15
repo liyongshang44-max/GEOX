@@ -81,6 +81,66 @@ function verifyReleaseSourceBinding(release,profile){
  for(const file of REQUIRED_STAGE_MATERIAL)assert(release.files.some(row=>row.path===file),'OFFLINE_STAGE_MATERIAL_NOT_BOUND:'+file);
 }
 
+// Distinct, fail-closed contract for zero-delta merged QCP evidence.
+// Call from both signing and offline verification; do not rewrite source QCP.
+const MERGED_FIELDS=Object.freeze(['qualification_method','qcp_execution_subject_sha','merge_derivation_ref','merge_derivation_sha256','qcp_executed_at_subject','raw_reports_rewritten']);
+function validateMergedDerivation(subject,proof,checks,evidenceRoot,candidate=null){
+ const derived=proof.qualification_method==='ZERO_DELTA_MERGE_DERIVATION';
+ if(!derived){
+  assert(!Object.keys(proof).some(k=>MERGED_FIELDS.includes(k)),'OFFLINE_UNEXPECTED_MERGE_PROOF_FIELDS');
+  if(candidate)assert(!Object.keys(candidate).some(k=>MERGED_FIELDS.includes(k)),'OFFLINE_UNEXPECTED_MERGE_CANDIDATE_FIELDS');
+  return false;
+ }
+ function fields(x){for(const k of MERGED_FIELDS)assert(Object.hasOwn(x,k),'OFFLINE_MERGE_FIELD_MISSING:'+k);}
+ fields(proof);if(candidate){fields(candidate);for(const k of MERGED_FIELDS)assert.deepEqual(candidate[k],proof[k],'OFFLINE_MERGE_CANDIDATE_PROOF_MISMATCH:'+k);}
+ assert.equal(proof.qcp_executed_at_subject,false,'OFFLINE_MERGE_EXECUTION_MISREPRESENTED');
+ assert.equal(proof.raw_reports_rewritten,false,'OFFLINE_MERGE_RAW_REWRITTEN');
+ assert(/^[a-f0-9]{40}$/.test(proof.qcp_execution_subject_sha)&&proof.qcp_execution_subject_sha!==subject,'OFFLINE_MERGE_SOURCE_INVALID');
+ c.hash(proof.merge_derivation_sha256);
+ const mergeFile=safeRef(evidenceRoot,proof.merge_derivation_ref);
+ assert.equal(c.sha(fs.readFileSync(mergeFile)),proof.merge_derivation_sha256,'OFFLINE_MERGE_DERIVATION_DRIFT');
+ const m=c.read(mergeFile);
+ c.exact(m,['schema','subject_sha','source_subject_sha','base_sha','observed_main_sha','source_and_subject_tree','parents','source_artifact_id','source_workflow_run_id','source_artifact_sha256','source_metadata_sha256','generator_sources_sha256','method','qcp_executed_at_subject','raw_reports_rewritten','additional_first_parent_hops','execution_authorized','production_authorized']);
+ assert.equal(m.schema,'MCFT_CAP09_ZERO_DELTA_MERGE_QCP_DERIVATION_V1');
+ assert.equal(m.subject_sha,subject);assert.equal(m.source_subject_sha,proof.qcp_execution_subject_sha);
+ assert.equal(m.method,'EXACT_TWO_PARENT_ZERO_TREE_DELTA_WITH_VALIDATED_SOURCE_QCP');
+ assert.deepEqual(m.parents,[m.base_sha,m.source_subject_sha]);assert.equal(m.observed_main_sha,subject);
+ assert(/^[a-f0-9]{40}$/.test(m.base_sha));assert(/^[a-f0-9]{40}$/.test(m.source_and_subject_tree));
+ assert.equal(m.additional_first_parent_hops,1);assert.equal(m.qcp_executed_at_subject,false);assert.equal(m.raw_reports_rewritten,false);
+ assert.equal(m.execution_authorized,false);assert.equal(m.production_authorized,false);
+ c.hash(m.source_artifact_sha256);c.hash(m.source_metadata_sha256);
+ assert(Number.isSafeInteger(m.source_artifact_id)&&m.source_artifact_id>0);
+ assert(Number.isSafeInteger(m.source_workflow_run_id)&&m.source_workflow_run_id>0);
+ c.exact(m.generator_sources_sha256,['build_evidence.py','material_binding.py']);
+ for(const hash of Object.values(m.generator_sources_sha256))c.hash(hash);
+ const metadataFile=safeRef(evidenceRoot,'source-metadata.json'),archiveFile=safeRef(evidenceRoot,'source-qcp-artifact.zip');
+ const metadata=fs.readFileSync(metadataFile),archive=fs.readFileSync(archiveFile);
+ assert.equal(c.sha(archive),m.source_artifact_sha256,'OFFLINE_MERGE_SOURCE_ARTIFACT_DRIFT');
+ const meta=c.read(metadataFile);
+ assert.equal(c.digest(meta),m.source_metadata_sha256,'OFFLINE_MERGE_SOURCE_METADATA_DRIFT');
+ assert.equal(meta.schema,'MCFT_CAP09_MERGED_QCP_SOURCE_V1');
+ assert.equal(meta.repository,'liyongshang44-max/GEOX');
+ assert.equal(meta.observed_main_sha,subject);
+ assert.equal(meta.pull_request?.merged,true);assert.equal(meta.pull_request?.base_ref,'main');
+ assert.equal(meta.pull_request?.merge_commit_sha,subject);assert.equal(meta.pull_request?.head_sha,m.source_subject_sha);
+ assert.equal(meta.pull_request?.base_sha,m.base_sha);
+ assert.equal(meta.workflow_run?.id,m.source_workflow_run_id);
+ assert.equal(meta.workflow_run?.head_sha,m.source_subject_sha);
+ assert.equal(meta.workflow_run?.status,'completed');assert.equal(meta.workflow_run?.conclusion,'success');
+ assert.equal(meta.workflow_run?.path,'.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml');
+ assert.equal(meta.artifact?.id,m.source_artifact_id);
+ assert.equal(meta.artifact?.digest,'sha256:'+m.source_artifact_sha256);
+ assert.equal(meta.artifact?.expired,false);
+ assert.equal(proof.qcp_artifact_sha256,m.source_artifact_sha256,'OFFLINE_MERGE_PROOF_ARTIFACT_MISMATCH');
+ assert.equal(proof.first_parent_hop_count,2,'OFFLINE_MERGE_PROOF_HOPS_INVALID');
+ for(const x of checks){
+  const file=safeRef(evidenceRoot,x.evidence_ref),ev=c.read(file);
+  for(const k of MERGED_FIELDS)assert.deepEqual(ev[k],proof[k],'OFFLINE_MERGE_CHECK_NOT_BOUND:'+x.check_id+':'+k);
+  assert.equal(ev.qcp_artifact_sha256,m.source_artifact_sha256);
+ }
+ return true;
+}
+
 function validateFormal(request,policy,root,{now=Date.now(),host=os.hostname(),environment=process.env}={}){
  validateStaticPolicy(policy,now);
  c.exact(request,['qualification','material','evidence_root']);
@@ -122,6 +182,7 @@ function validateFormal(request,policy,root,{now=Date.now(),host=os.hostname(),e
  const proof=c.read(qcpProofFile);
  assert.equal(proof.schema,'MCFT_CAP09_FINAL_QCP_ADOPTION_PROOF_V1');assert.equal(proof.subject_sha,q.subject_sha);
  assert.equal(proof.status,'PASS');assert.equal(proof.total_checks,55);assert.equal(proof.adoption_checks,54);assert.equal(proof.blocker_count,0);
+ validateMergedDerivation(q.subject_sha,proof,q.checks,request.evidence_root);
  const releaseFile=safeRef(request.evidence_root,q.release_binding_ref);
  assert.equal(c.sha(fs.readFileSync(releaseFile)),q.release_binding_sha256,'OFFLINE_RELEASE_BINDING_DRIFT');
  const release=c.read(releaseFile);assert.equal(release.schema_version,'MCFT_CAP09_RELEASE_MATERIAL_BINDING_V1');assert.equal(release.subject_commit_sha,q.subject_sha);
@@ -188,4 +249,4 @@ function bindObserved(context,bundle){
  assert.equal(bundle.observed.adoption_binding.material_digest,context.material_digest,'OFFLINE_PERMIT_MATERIAL_MISMATCH');
  assert(c.epoch(bundle.permit.payload.expires_at)<=c.epoch(context.qualification_expires_at),'PERMIT_OUTLIVES_ADOPTION');
 }
-module.exports={REQUIRED_STAGE_MATERIAL,DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,verifyReleaseSourceBinding,load,isFormalVerified,bindObserved};
+module.exports={validateMergedDerivation,MERGED_FIELDS,REQUIRED_STAGE_MATERIAL,DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,verifyReleaseSourceBinding,load,isFormalVerified,bindObserved};
