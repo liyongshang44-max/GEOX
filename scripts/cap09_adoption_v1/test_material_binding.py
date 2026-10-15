@@ -162,4 +162,91 @@ class FormalQcpPackageTests(unittest.TestCase):
         wrong=set(be.FORMAL_ALLOWED_NA);wrong.remove(next(iter(wrong)));wrong.add('CHECK_00');self._zip(na=wrong)
         with self.assertRaisesRegex(ValueError,'QCP_NOT_APPLICABLE_SET_CHANGED'):be.finalize_qcp_adoption(self.repo,self.subject,self.zip,self.root/'bad2')
 
+class MergedQcpPackageTests(unittest.TestCase):
+    _zip=FormalQcpPackageTests._zip
+    def git(self,*args):
+        return subprocess.check_output(['git',*args],cwd=self.repo,text=True).strip()
+    def setUp(self):
+        FormalQcpPackageTests.setUp(self)
+        self.base=self.subject
+        (self.repo/'scripts/candidate.cjs').write_text('// candidate\n')
+        self.git('add','.');self.git('commit','-qm','candidate');self.subject=self.git('rev-parse','HEAD');self._zip()
+        tree=self.git('rev-parse','HEAD^{tree}')
+        self.merged=self.git('commit-tree',tree,'-p',self.base,'-p',self.subject,'-m','adopt candidate')
+        self.git('update-ref','refs/remotes/origin/main',self.merged)
+        with zipfile.ZipFile(self.zip) as z:self.docs={n:json.loads(z.read(n)) for n in z.namelist()}
+        for name in ['MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json','MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json']:
+            self.docs[name].update(base_sha=self.base,stage='SUCCESSOR_SUBJECT_PRE_MERGE',generation='v13')
+        self.docs['MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json'].update(admitted_base_sha=self.base,current_protected_main_sha=self.base,current_protected_main_match=True,baseline_qualification_carry_forward_authorized=False)
+        self.record={'schema':'MCFT_CAP09_MERGED_QCP_SOURCE_V1','repository':'liyongshang44-max/GEOX','observed_main_sha':self.merged,
+          'pull_request':{'number':1,'merged':True,'base_ref':'main','base_sha':self.base,'head_sha':self.subject,'merge_commit_sha':self.merged},
+          'workflow_run':{'id':2,'repository':'liyongshang44-max/GEOX','event':'pull_request','status':'completed','conclusion':'success','head_sha':self.subject,'path':'.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'},
+          'artifact':{'id':3,'name':'mcft-cap09-qualification-control-plane-'+self.subject,'expired':False,'workflow_run':{'id':2,'head_sha':self.subject}}}
+        self.repack()
+    def repack(self):
+        with zipfile.ZipFile(self.zip,'w') as z:
+            for n,obj in self.docs.items():z.writestr(n,json.dumps(obj))
+        self.record['artifact']['digest']='sha256:'+be.sha(self.zip.read_bytes())
+    def finalize(self):
+        return be.finalize_qcp_adoption(self.repo,self.merged,self.zip,self.root/'merged-out',self.record)
+    def test_zero_delta_merge_preserves_raw_reports(self):
+        before=self.zip.read_bytes();result=self.finalize();out=self.root/'merged-out'
+        self.assertEqual(result['subject_sha'],self.merged);self.assertEqual(result['qcp_execution_subject_sha'],self.subject)
+        self.assertFalse(result['qcp_executed_at_subject']);self.assertFalse(result['execution_authorized'])
+        self.assertEqual((out/'source-qcp-artifact.zip').read_bytes(),before)
+        with zipfile.ZipFile(self.zip) as z:
+            for n in z.namelist():self.assertEqual((out/'raw'/n).read_bytes(),z.read(n))
+        proof=json.loads((out/'qcp-proof.json').read_text());self.assertEqual(proof['first_parent_hop_count'],2)
+        candidate=json.loads((out/'adoption-candidate.json').read_text())
+        for row in candidate['checks']:
+            evidence=json.loads((out/row['evidence_ref']).read_text());self.assertEqual(evidence['subject_sha'],self.merged)
+            self.assertEqual(evidence['qcp_execution_subject_sha'],self.subject)
+            self.assertEqual(evidence['merge_derivation_sha256'],be.sha((out/'merge-derivation.json').read_bytes()))
+    def test_default_exact_subject_check_remains_strict(self):
+        with self.assertRaisesRegex(ValueError,'QCP_SUBJECT_MISMATCH'):be.finalize_qcp_adoption(self.repo,self.merged,self.zip,self.root/'strict-out')
+    def test_renaming_old_heads_is_rejected(self):
+        self.docs['MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json']['head_sha']=self.merged;self.repack()
+        with self.assertRaisesRegex(ValueError,'QCP_SUBJECT_MISMATCH'):self.finalize()
+    def test_changed_merge_tree_rejected(self):
+        (self.repo/'scripts/candidate.cjs').write_text('// changed at merge\n');self.git('add','.')
+        self.merged=self.git('commit-tree',self.git('write-tree'),'-p',self.base,'-p',self.subject,'-m','changed merge')
+        self.record['pull_request']['merge_commit_sha']=self.merged;self.record['observed_main_sha']=self.merged;self.git('update-ref','refs/remotes/origin/main',self.merged)
+        with self.assertRaisesRegex(ValueError,'MERGE_SOURCE_TREE_CHANGED'):self.finalize()
+    def test_unmerged_pr_rejected(self):
+        self.record['pull_request']['merged']=False
+        with self.assertRaisesRegex(ValueError,'MERGE_PR_NOT_ADOPTED'):self.finalize()
+    def test_wrong_parent_rejected(self):
+        self.record['pull_request']['base_sha']=self.subject
+        with self.assertRaisesRegex(ValueError,'MERGE_PARENT_BINDING_MISMATCH'):self.finalize()
+    def test_source_run_failure_rejected(self):
+        self.record['workflow_run']['conclusion']='failure'
+        with self.assertRaisesRegex(ValueError,'MERGE_SOURCE_RUN_NOT_SUCCESS'):self.finalize()
+    def test_wrong_workflow_rejected(self):
+        self.record['workflow_run']['path']='other.yml'
+        with self.assertRaisesRegex(ValueError,'MERGE_SOURCE_WORKFLOW_MISMATCH'):self.finalize()
+    def test_artifact_digest_rejected(self):
+        self.record['artifact']['digest']='sha256:'+'0'*64
+        with self.assertRaisesRegex(ValueError,'MERGE_ARTIFACT_DIGEST_MISMATCH'):self.finalize()
+    def test_artifact_run_rejected(self):
+        self.record['artifact']['workflow_run']['id']=99
+        with self.assertRaisesRegex(ValueError,'MERGE_ARTIFACT_RUN_MISMATCH'):self.finalize()
+    def test_unknown_main_snapshot_rejected(self):
+        self.record['observed_main_sha']=self.subject
+        with self.assertRaisesRegex(ValueError,'MERGE_MAIN_SNAPSHOT_MISMATCH'):self.finalize()
+    def test_unadopted_merge_rejected(self):
+        self.git('update-ref','refs/remotes/origin/main',self.base);self.record['observed_main_sha']=self.base
+        with self.assertRaisesRegex(ValueError,'MERGE_SUBJECT_NOT_ADOPTED_FIRST_PARENT'):self.finalize()
+    def test_source_qcp_base_mismatch_rejected(self):
+        self.docs['MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json']['base_sha']=self.subject;self.repack()
+        with self.assertRaisesRegex(ValueError,'MERGE_QCP_BASE_MISMATCH'):self.finalize()
+    def test_first_parent_proof_mismatch_rejected(self):
+        self.docs['MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json']['admitted_base_sha']=self.subject;self.repack()
+        with self.assertRaisesRegex(ValueError,'MERGE_FIRST_PARENT_PROOF_BASE_MISMATCH'):self.finalize()
+    def test_source_blocker_still_rejected(self):
+        self.docs['MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json']['status']='FAIL';self.repack()
+        with self.assertRaisesRegex(ValueError,'QCP_ALL_BLOCKERS_NOT_PASS'):self.finalize()
+    def test_no_overwrite(self):
+        self.finalize()
+        with self.assertRaisesRegex(ValueError,'OUTPUT_EXISTS'):self.finalize()
+
 if __name__=='__main__':unittest.main()

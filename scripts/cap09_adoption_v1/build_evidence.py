@@ -262,18 +262,59 @@ FORMAL_QCP_MEMBERS={
  'MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json','MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json',
  'MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json','MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json'}
 
-def finalize_qcp_adoption(repo,subject,artifact_zip,output):
+def verify_merged_qcp_source(repo, subject, artifact_bytes, record, docs):
+    """Read-only, zero-delta merge derivation. Metadata is evidence, never signing authority."""
+    ensure(record.get('schema')=='MCFT_CAP09_MERGED_QCP_SOURCE_V1','MERGE_SOURCE_SCHEMA_INVALID')
+    ensure(record.get('repository')=='liyongshang44-max/GEOX','MERGE_SOURCE_REPOSITORY_INVALID')
+    pr=record.get('pull_request') or {};run=record.get('workflow_run') or {};artifact=record.get('artifact') or {}
+    source=pr.get('head_sha');base=pr.get('base_sha');main=record.get('observed_main_sha')
+    for value in [subject,source,base,main]:ensure(isinstance(value,str) and re.fullmatch(r'[0-9a-f]{40}',value) is not None,'MERGE_SOURCE_SHA_INVALID')
+    ensure(pr.get('merged') is True and pr.get('base_ref')=='main' and pr.get('merge_commit_sha')==subject,'MERGE_PR_NOT_ADOPTED')
+    ensure(type(pr.get('number')) is int and pr['number']>0,'MERGE_PR_ID_INVALID')
+    ensure(run.get('repository')==record['repository'] and run.get('event')=='pull_request' and run.get('status')=='completed' and run.get('conclusion')=='success','MERGE_SOURCE_RUN_NOT_SUCCESS')
+    ensure(run.get('head_sha')==source and run.get('path')=='.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml','MERGE_SOURCE_WORKFLOW_MISMATCH')
+    ensure(type(run.get('id')) is int and run['id']>0 and type(artifact.get('id')) is int and artifact['id']>0,'MERGE_SOURCE_ID_INVALID')
+    ensure(artifact.get('name')=='mcft-cap09-qualification-control-plane-'+source and artifact.get('expired') is False,'MERGE_SOURCE_ARTIFACT_INVALID')
+    ensure(artifact.get('workflow_run')=={'id':run['id'],'head_sha':source},'MERGE_ARTIFACT_RUN_MISMATCH')
+    ensure(artifact.get('digest')=='sha256:'+sha(artifact_bytes),'MERGE_ARTIFACT_DIGEST_MISMATCH')
+    git=GitObjects(repo)
+    ensure(git.git('rev-parse','origin/main').decode().strip()==main,'MERGE_MAIN_SNAPSHOT_MISMATCH')
+    ensure(subject in git.git('rev-list','--first-parent',main).decode().splitlines(),'MERGE_SUBJECT_NOT_ADOPTED_FIRST_PARENT')
+    parents=git.git('show','-s','--format=%P',subject).decode().split()
+    ensure(parents==[base,source],'MERGE_PARENT_BINDING_MISMATCH')
+    target_tree=git.git('rev-parse',subject+'^{tree}').decode().strip()
+    ensure(target_tree==git.git('rev-parse',source+'^{tree}').decode().strip(),'MERGE_SOURCE_TREE_CHANGED')
+    ensure(git.git('diff','--name-only',source,subject)==b'','MERGE_SOURCE_DELTA_NOT_EMPTY')
+    for name in ['MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json','MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json']:
+        ensure(docs[name].get('base_sha')==base,'MERGE_QCP_BASE_MISMATCH')
+        ensure(docs[name].get('stage')=='SUCCESSOR_SUBJECT_PRE_MERGE' and docs[name].get('generation')=='v13','MERGE_QCP_STAGE_MISMATCH')
+    first=docs['MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json']
+    ensure(first.get('admitted_base_sha')==base and first.get('current_protected_main_sha')==base and first.get('current_protected_main_match') is True,'MERGE_FIRST_PARENT_PROOF_BASE_MISMATCH')
+    ensure(first.get('baseline_qualification_carry_forward_authorized') is False,'MERGE_SOURCE_MUST_NOT_SELF_PROMOTE')
+    ensure(type(first.get('hop_count')) is int and first['hop_count']>=1,'MERGE_FIRST_PARENT_HOPS_INVALID')
+    return {'schema':'MCFT_CAP09_ZERO_DELTA_MERGE_QCP_DERIVATION_V1','subject_sha':subject,
+        'source_subject_sha':source,'base_sha':base,'observed_main_sha':main,'source_and_subject_tree':target_tree,
+        'parents':parents,'source_artifact_id':artifact['id'],'source_workflow_run_id':run['id'],
+        'source_artifact_sha256':sha(artifact_bytes),'source_metadata_sha256':sha(canonical(record)),
+        'generator_sources_sha256':{name:sha((Path(__file__).parent/name).read_bytes()) for name in ['build_evidence.py','material_binding.py']},
+        'method':'EXACT_TWO_PARENT_ZERO_TREE_DELTA_WITH_VALIDATED_SOURCE_QCP',
+        'qcp_executed_at_subject':False,'raw_reports_rewritten':False,
+        'additional_first_parent_hops':1,'execution_authorized':False,'production_authorized':False}
+
+def finalize_qcp_adoption(repo,subject,artifact_zip,output,merged_source=None):
     ensure(re.fullmatch(r'[0-9a-f]{40}',subject) is not None,'SUBJECT_INVALID')
     out=Path(output).resolve();ensure(not out.exists(),'OUTPUT_EXISTS');out.mkdir(parents=True)
     artifact_bytes=Path(artifact_zip).read_bytes();artifact_sha=sha(artifact_bytes)
     with zipfile.ZipFile(artifact_zip) as z:
-        ensure(set(z.namelist())==FORMAL_QCP_MEMBERS,'QCP_ARTIFACT_MEMBER_SET_CHANGED')
+        ensure(len(z.namelist())==len(FORMAL_QCP_MEMBERS) and set(z.namelist())==FORMAL_QCP_MEMBERS,'QCP_ARTIFACT_MEMBER_SET_CHANGED')
         raw={n:z.read(n) for n in z.namelist()}
     docs={n:json.loads(b) for n,b in raw.items()}
+    merge_proof=verify_merged_qcp_source(repo,subject,artifact_bytes,merged_source,docs) if merged_source is not None else None
+    evidence_subject=merge_proof['source_subject_sha'] if merge_proof else subject
     cp2=docs['MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json'];plan=docs['MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json']
     blockers=docs['MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json'];immutable=docs['MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json']
     first=docs['MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json'];semantics=docs['MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json']
-    for obj,name in [(cp2,'CP2'),(plan,'PLAN'),(blockers,'ALL_BLOCKERS')]:ensure(obj.get('head_sha')==subject,'QCP_SUBJECT_MISMATCH:'+name)
+    for obj,name in [(cp2,'CP2'),(plan,'PLAN'),(blockers,'ALL_BLOCKERS')]:ensure(obj.get('head_sha')==evidence_subject,'QCP_SUBJECT_MISMATCH:'+name)
     ensure(semantics.get('status')=='PASS','QCP_SEMANTICS_NOT_PASS');ensure(cp2.get('status')=='PASS' and cp2.get('failures')==[],'QCP_CP2_NOT_PASS')
     ensure(plan.get('status')=='PASS' and plan.get('unknown_changed_paths')==[] and plan.get('authority_errors')==[] and plan.get('resolver_errors')==[],'QCP_PLAN_NOT_CLOSED')
     counts=blockers.get('counts') or {};ensure(blockers.get('status')=='PASS' and blockers.get('blockers')==[],'QCP_ALL_BLOCKERS_NOT_PASS')
@@ -292,12 +333,23 @@ def finalize_qcp_adoption(repo,subject,artifact_zip,output):
     for cid in FORMAL_ALLOWED_NA:ensure(result_by[cid].get('reason_code')=='STAGE_NOT_APPLICABLE','QCP_NA_REASON_CHANGED:'+cid)
     frozen=q['dependency_resolvers']['V13_RUNTIME_SEMANTIC_CLOSURE'];frozen_paths=sorted(closure(files,frozen['roots'])|set(frozen['additional_exact_paths']));ensure(len(frozen_paths)==108,'FROZEN_108_CHANGED')
 
+    derivation={}
+    if merge_proof:
+        proof_bytes=canonical(merge_proof)+b'\n';write_new(out/'merge-derivation.json',proof_bytes)
+        write_new(out/'source-metadata.json',canonical(merged_source)+b'\n')
+        write_new(out/'source-qcp-artifact.zip',artifact_bytes)
+        derivation={'qualification_method':'ZERO_DELTA_MERGE_DERIVATION','qcp_execution_subject_sha':evidence_subject,
+            'merge_derivation_ref':'merge-derivation.json','merge_derivation_sha256':sha(proof_bytes),
+            'qcp_executed_at_subject':False,'raw_reports_rewritten':False}
     rows=[]
     for index,definition in enumerate(formal,1):
         cid=definition['check_id'];decision=result_by[cid];status=decision.get('status');ensure(status in ('PASS','NOT_APPLICABLE'),'FORMAL_CHECK_NOT_CLOSED:'+cid)
         revision=sha(canonical(definition));rel=f'checks/{index:02d}-{cid}.json';ev={'schema':'MCFT_CAP09_ADOPTION_CHECK_EVIDENCE_V1','subject_sha':subject,'check_id':cid,'revision':revision,'result':status,'reason':decision.get('reason_code') or status,'qcp_applicability':decision.get('applicability'),'qcp_reason_code':decision.get('reason_code'),'dependency_digest':decision.get('dependency_digest'),'qcp_artifact_sha256':artifact_sha}
+        ev.update(derivation)
         data=canonical(ev)+b'\n';write_new(out/rel,data);rows.append({'check_id':cid,'revision':revision,'result':status,'reason':ev['reason'],'evidence_ref':rel,'sha256':sha(data)})
     proof={'schema':'MCFT_CAP09_FINAL_QCP_ADOPTION_PROOF_V1','subject_sha':subject,'status':'PASS','stage':blockers.get('stage'),'generation':blockers.get('generation'),'total_checks':55,'adoption_checks':54,'blocker_count':0,'not_applicable_ids':sorted(FORMAL_ALLOWED_NA),'engineering_check_id':FORMAL_ENGINEERING_CHECK,'engineering_check_status':'PASS','qcp_artifact_sha256':artifact_sha,'qcp_artifact_members':{n:sha(raw[n]) for n in sorted(raw)},'immutable_evidence_status':'PASS','first_parent_status':'PASS','first_parent_hop_count':first.get('hop_count'),'frozen_paths':108,'runtime_mutation':False,'execution_authorized':False,'production_authorized':False}
+    proof.update(derivation)
+    if merge_proof:proof['first_parent_hop_count']+=merge_proof['additional_first_parent_hops']
     proof_bytes=canonical(proof)+b'\n';write_new(out/'qcp-proof.json',proof_bytes)
     for n in sorted(raw):write_new(out/'raw'/n,raw[n])
 
@@ -310,16 +362,20 @@ def finalize_qcp_adoption(repo,subject,artifact_zip,output):
     binding={'schema_version':SCHEMA,'subject_commit_sha':subject,'source_tree_git_sha':git.git('rev-parse',subject+'^{tree}').decode().strip(),'scope_version':'CONSERVATIVE_REPOSITORY_SOURCE_V1','scope_description':'Exact Git-object source binding for formal Adoption; installed dependency/interpreter bytes are separately host-bound.','files':payload_rows,'content_inventory_sha256':sha(canonical(payload_rows)),'execution_entrypoints':ENTRYPOINTS,'category_counts':dict(Counter(x['category'] for x in payload_rows)),'installed_material_separately_required':True,'execution_authorized':False,'production_authorized':False}
     binding_bytes=canonical(binding)+b'\n';write_new(out/'release-material-binding.json',binding_bytes)
     candidate={'schema':'MCFT_CAP09_ADOPTION_CANDIDATE_V1','subject_sha':subject,'scope':'TEST_ONLY','checks':rows,'frozen_paths':108,'first_parent_proven':True,'qcp_proof_ref':'qcp-proof.json','qcp_proof_sha256':sha(proof_bytes),'qcp_artifact_sha256':artifact_sha,'engineering_check_id':FORMAL_ENGINEERING_CHECK,'release_binding_ref':'release-material-binding.json','release_binding_sha256':sha(binding_bytes),'installed_material_required':True,'signature_required':True,'execution_authorized':False,'production_authorized':False}
+    candidate.update(derivation)
     candidate_bytes=canonical(candidate)+b'\n';write_new(out/'adoption-candidate.json',candidate_bytes)
     summary={'status':'FINAL_QCP_ADOPTION_PACKAGE_PREPARED_UNSIGNED','subject_sha':subject,'formal_checks':54,'frozen_paths':108,'engineering_check':'PASS','not_applicable_ids':sorted(FORMAL_ALLOWED_NA),'qcp_artifact_sha256':artifact_sha,'candidate_sha256':sha(candidate_bytes),'release_binding_sha256':sha(binding_bytes),'execution_authorized':False,'production_authorized':False}
+    summary.update(derivation)
     write_new(out/'summary.json',canonical(summary)+b'\n');return summary
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--repo',required=True);parser.add_argument('--subject',required=True)
-    parser.add_argument('--output',required=True);parser.add_argument('--ci-capture');parser.add_argument('--formal-qcp-artifact')
+    parser.add_argument('--output',required=True);parser.add_argument('--ci-capture');parser.add_argument('--formal-qcp-artifact');parser.add_argument('--merged-qcp-source',help='Read-only GitHub provenance JSON for an exact two-parent, tree-identical adopted merge')
     a=parser.parse_args()
     try:
-        result=finalize_qcp_adoption(a.repo,a.subject,a.formal_qcp_artifact,a.output) if a.formal_qcp_artifact else build(a.repo,a.subject,a.output,a.ci_capture)
+        ensure(not a.merged_qcp_source or a.formal_qcp_artifact,'MERGE_SOURCE_REQUIRES_QCP_ARTIFACT')
+        metadata=json.loads(Path(a.merged_qcp_source).read_text()) if a.merged_qcp_source else None
+        result=finalize_qcp_adoption(a.repo,a.subject,a.formal_qcp_artifact,a.output,metadata) if a.formal_qcp_artifact else build(a.repo,a.subject,a.output,a.ci_capture)
         print(json.dumps(result))
     except Exception as e:
         print(json.dumps({'status':'ADOPTION_BUILD_FAILED_PRESERVE_OUTPUT','reason_code':str(e).split(':')[0] if isinstance(e,ValueError) else type(e).__name__,'execution_authorized':False}),file=sys.stderr)

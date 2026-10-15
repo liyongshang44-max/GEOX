@@ -1,3 +1,76 @@
+# Merged-subject QCP derivation candidate — 2026-10-15
+
+The additive `build_evidence.py --merged-qcp-source <metadata.json>` mode fixes the
+PR-head versus adopted-merge subject gap without relabeling a historical QCP run.
+It is adoption tooling, run outside the retained Runtime. The tooling revision and
+the requested qualification subject are separate: adopting this tool later does not
+require rebuilding the `91835fa0` Runtime merely to produce its evidence package.
+The generated package is unsigned. This candidate contract requires review/adoption
+before an issuer may rely on its derived qualification. It does not create a Retry
+Permit, alter static trust, qualify resources, or activate TEST_ONLY/Production.
+
+## Exact contract
+
+The original mode still requires CP2, plan and ALL_BLOCKERS `head_sha` to equal the
+requested subject. The new mode accepts only an adopted two-parent merge with:
+
+- GitHub metadata binding a merged PR targeting main to precisely the requested
+  merge, its first parent (PR base), and second parent (qualified PR head).
+- A completed successful PR QCP workflow from this repository, with the expected
+  workflow path, artifact name, run/subject identity and original ZIP SHA-256.
+- The requested merge on the first-parent line of the observed `origin/main`,
+  and metadata/local main snapshots agreeing. No ref is modified by this tool.
+- Identical candidate/merge Git Trees and an empty Git diff, including file modes.
+  A squash, cherry-pick, additional merge-resolution change, wrong parent, or merely
+  reachable candidate is insufficient.
+- Source plan/blocker base equal to the actual first parent, v13 premerge stage,
+  and source first-parent proof ending at that same base. The source proof's own
+  `baseline_qualification_carry_forward_authorized=false` is retained; this separate
+  candidate contract is the proposed authority for the new derivation.
+- All existing source QCP gates: 55 exact checks, 50 PASS / 5 explicit stage N/A,
+  zero blockers, source-head consistency, immutable evidence, frozen 108 paths,
+  and the engineering check. No check result is converted from FAIL/UNKNOWN/N/A
+  to PASS. The merge adds exactly one independently checked first-parent hop.
+
+A whole-tree match alone is not enough: parent, main, workflow, artifact and all
+source QCP conditions must also pass. This does not qualify substantive changes
+between versions. Time-sensitive resource readiness and actual Provider/Timing
+results are not inferred from the merge; local admission and runtime evidence
+remain separate gates.
+
+## Provenance and outputs
+
+`MCFT_CAP09_MERGED_QCP_SOURCE_V1` metadata contains `repository`, `observed_main_sha`,
+`pull_request` (number, merged, base_ref, base_sha, head_sha, merge_commit_sha),
+`workflow_run` (id, repository, event, status, conclusion, head_sha, path), and
+`artifact` (id, name, digest, expired, workflow_run: id/head_sha).
+Collect these from GitHub through authenticated read-only access and fetch the
+original artifact. Metadata JSON is not itself a signature or an authenticated
+network response. The reviewer must independently verify its source; an arbitrary
+caller-supplied JSON record is not independent governance approval.
+
+The derived evidence carries `qualification_method=ZERO_DELTA_MERGE_DERIVATION`,
+`qcp_execution_subject_sha`, `qcp_executed_at_subject=false`, and
+`raw_reports_rewritten=false`. The output includes the unchanged source ZIP,
+unchanged raw members, metadata, generator-source hashes, a separate merge proof,
+54 derived evidence rows, and a release binding read from the target Git objects.
+The merge proof digest is bound into each row and the final QCP proof. All are
+covered when the independent issuer subsequently signs their qualification hashes.
+This is not a new GitHub QCP Artifact/run for the merge SHA, and must not be reported
+as one. Existing exact-subject CLI behavior and signature verification remain intact.
+
+Example after contract review (paths are placeholders; output must not exist):
+
+```text
+python build_evidence.py --repo <git-repo> --subject <adopted-merge-sha> --formal-qcp-artifact <original-candidate.zip> --merged-qcp-source <verified-github-metadata.json> --output <new-unsigned-package>
+```
+
+The 91835fa0 package produced during development is a review preview, not an adopted
+qualification or authorization. No full history, PostgreSQL or Windows selftest was
+rerun for this change; original source QCP bytes were fully validated.
+
+---
+
 # PR #3704 review boundary addendum — 2026-10-15
 
 This addendum supersedes the candidate-state descriptions below for code behavior only.
