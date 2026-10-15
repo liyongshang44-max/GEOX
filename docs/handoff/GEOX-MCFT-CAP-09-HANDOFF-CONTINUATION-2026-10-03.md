@@ -1,3 +1,13 @@
+# 2026-10-15 — cb773984 isolated Runtime: all 3 required Workspace builds PASS; 12 internal Junctions verified
+
+Windows-host reported test-only runtime at `D:\gptdown\MCFT-CAP09-RUNTIME-cb773984` (NOT original signed Release): 12/12 reparse Junction links found, all realpath targets within Runtime, all 12 targets have package.json; read-only audit `JUNCTION_AUDIT_EXIT_CODE=0`. Root CommonJS `require.resolve` had package export restrictions and unbuilt dist entrypoints; these were NOT evidence of dependency corruption.
+
+Operator then ran `pnpm --filter @geox/contracts run build`, `pnpm --filter @geox/control-kernel run build`, `pnpm --filter @geox/device-skills run build` from independent Runtime. ALL THREE returned exit code 0, and paths `packages/contracts/dist/index.js`, `packages/control-kernel/dist/index.js`, `packages/device-skills/dist/packages/device-skills/src/index.js` all exist. Workspace `packages/skill-registry/src/index.ts` exists. Code source Release `D:\gptdown\MCFT-CAP09-RELEASE-cb773984` remains untouched; only independent Runtime has generated dist outputs.
+
+Remaining admission block: `installed-material.cjs` rejects any symlink/Junction (`MATERIAL_LINK_FORBIDDEN`) and multi-linked files (`MATERIAL_SPECIAL_FILE`); **DO NOT** remove Junctions blindly or change adopted contract. Next: link-free materialization of exactly 12 runtime-internal @geox Workspace links into independent physical package directories (exclude nested node_modules to avoid cycles), validate exports/entrypoints and full file/symlink/hardlink inventory, then fresh material collection, independent fresh Adoption signature and offline verification under new time bounds. Signed old source-only Release profile/signature cannot be reused for mutated runtime. No Run ID resources, permit, six-stage, Producer or production action yet. Keep EXECUTE_HOLD, no QCP rerun.
+
+---
+
 # 2026-10-15 — CAP-09 cb773984 signed Adoption verified; Windows local admission dependency/Junction HOLD
 
 **Status / source:** Operator-reported actual Windows PowerShell outputs, plus signed Adoption envelope uploaded to the engineering conversation and separately inspected; not a completed live six-stage run. PR #3704 subject `cb77398404edfbc223350d1c74a46323efe9fd3e`; THIS #3298 HANDOFF REMAINS DRAFT/OPEN/UNMERGED. No production authority, merge, formal-v5 ARM, Provider execution, PostgreSQL or MinIO write, Timing run, or one-shot permit use is established.
