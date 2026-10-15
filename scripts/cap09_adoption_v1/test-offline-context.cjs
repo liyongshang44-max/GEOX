@@ -124,6 +124,14 @@ test('merged_formal_sign_verify_roundtrip',()=>{
  const result=v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment});
  assert.equal(result.production_authorized,false);assert.equal(v.isFormalVerified(result),true);
 });
+test('merged_formal_accepts_real_historical_first_parent_hops',()=>{
+ const {f,proofFile}=mergedFormalFixture(),proof=c.read(proofFile);
+ // The real source QCP reports hop_count=92, and merged proof increments by one.
+ proof.first_parent_hop_count=93;fs.writeFileSync(proofFile,JSON.stringify(proof));
+ f.q.qcp_proof_sha256=c.sha(fs.readFileSync(proofFile));f.sign();
+ const result=v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment});
+ assert.equal(v.isFormalVerified(result),true);
+});
 test('merged_formal_rejects_source_zip_tamper',()=>{
  const {f,e}=mergedFormalFixture();fs.appendFileSync(path.join(e,'source-qcp-artifact.zip'),'tamper');
  assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}),/OFFLINE_MERGE_SOURCE_ARTIFACT_DRIFT/);
