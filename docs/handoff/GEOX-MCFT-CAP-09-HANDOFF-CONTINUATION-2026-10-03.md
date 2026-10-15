@@ -1,3 +1,11 @@
+# 2026-10-15 — #3704 independent retry issuer implementation moved to CI; real public issuer pending
+
+At owner instruction "continue", checked #3704 branch `fix/mcft-cap09-disabled-retry-historical-inheritance-20261013`: prior new provisioning candidate commit `28fd4399`, negative tests `f0d87ed2`, and new Windows+Ubuntu matrix workflow `.github/workflows/mcft-cap09-independent-retry-issuer-v1.yml` commit `dbfcfd61258b0d05e0c54c1435b51b616972f9f4`. Workflow now explicitly invokes Node syntax checks, new independent issuer synthetic negative acceptance, and existing permit acceptance. At last check workflow for newest commit was not yet returned; tests NOT YET observed PASS. Earlier CI on predecessor f0d87ed2 had mixed success/in-progress and one post-merge-v13-control-plane failure. This is NOT an approved new immutable Runtime or independent signed permit.
+
+Critical blocker: real independent permit issuer public registration is NOT YET collected from Windows key ceremony; no independent private key created/received by assistant, and existing `MCFT_CAP09_RETRY_TRUST_V1.json` still only lists operator issuer; `adopted=false`, `execution_enabled=false` frozen. Next obtain valid Windows-generated public registration (only public key + fingerprint and window) from separately controlled signer; review change to static public trust; CI & incremental qualification on new exact HEAD; do not touch 20884-file cb773984 runtime, QCP or existing Adoption signature. Separate private key must never be shared. No fresh run-scoped DB/MinIO provision, no one-shot permit, no six stages. EXECUTE_HOLD/PRODUCTION_HOLD.
+
+---
+
 # 2026-10-15 — #3704 incremental independent retry permit issuer provisioning candidate committed (UNQUALIFIED)
 
 User approved pursuing real Local Execution Admission in this exact order: independent public retry issuer registration while static trust adopted=false/execution_enabled=false; private signing key Windows-only and separate from Adoption; negative issuer/permit tests; incremental change qualification/new immutable version; new run-scoped DB/MinIO with low-privilege ACL; signed one-shot permit and Host --preflight-only; six-stage TEST_ONLY only after all gates.
