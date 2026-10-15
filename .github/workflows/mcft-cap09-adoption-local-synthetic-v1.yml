@@ -32,6 +32,8 @@ jobs:
           node scripts/cap09_adoption_v1/test-offline-context.cjs
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_DISPATCH_GUARD_V1.cjs
+      - name: Registered independent issuer acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

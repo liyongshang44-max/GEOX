@@ -7,6 +7,16 @@ const path=require("node:path");
 const crypto=require("node:crypto");
 const {provision}=require("../runtime_acceptance/MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs");
 const {verifyPermit,DOMAIN,canonical,sha}=require("../runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs");
+// Exact QCP ownership is required; adding a workflow must not leave an unknown path.
+const qcp=JSON.parse(fs.readFileSync(path.resolve(__dirname,"../../docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"),"utf8"));
+const issuerResolver=qcp.dependency_resolvers.A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_V1;
+assert.equal(issuerResolver.kind,"EXACT_PATH_SET");
+const issuerPaths=[".github/workflows/mcft-cap09-independent-retry-issuer-v1.yml", "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs", "scripts/runtime_acceptance/MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs"];
+for(const file of issuerPaths)assert.equal(issuerResolver.paths.filter(p=>p===file).length,1,"ISSUER_EXACT_QCP_REGISTRATION_REQUIRED:"+file);
+assert(issuerResolver.paths.every(p=>!p.includes('*')&&!p.includes('?')),"ISSUER_WILDCARD_REGISTRATION_FORBIDDEN");
+const engineering=qcp.checks.find(c=>c.check_id==="A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_ENGINEERING_ONLY");
+assert(engineering.resolver_ids.includes("A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_V1"));
+assert.equal(engineering.carry_forward_policy,"NONE");
 const fixedTrust=JSON.parse(fs.readFileSync(path.resolve(__dirname,"../runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json"),"utf8"));
 assert.equal(fixedTrust.adopted,false,"STATIC_ADOPTION_MUST_REMAIN_DISABLED");
 assert.equal(fixedTrust.execution_enabled,false,"STATIC_EXECUTION_MUST_REMAIN_DISABLED");

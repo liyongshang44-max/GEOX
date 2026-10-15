@@ -2,6 +2,7 @@ name: MCFT CAP-09 independent retry issuer v1
 on:
   pull_request:
     paths:
+      - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
       - "scripts/runtime_acceptance/MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json"
