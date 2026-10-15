@@ -80,4 +80,21 @@ for(const bad of [
  {...dedicatedResources,positive_database:resources.positive_database},
  {...dedicatedResources,bucket:resources.bucket}
 ]) {assert.throws(()=>admitProposedRetry({...dedicatedArm,resources:bad},{...dedicatedObserved,resources:bad}));count++;}
+// Fresh Compose run uses a separate exact resource tuple; all evidence remains required.
+const freshRun="da9db7129607";
+const freshResources={...resources,database_port:55445,bucket_endpoint:"http://127.0.0.1:59005",
+ positive_database:`mcft_cap09_requal_${freshRun}_positive`,negative_database:`mcft_cap09_requal_${freshRun}_negative`,bucket:`mcft-cap09-requal-${freshRun}`};
+const freshArm={...arm,run_id:freshRun,resources:freshResources,retry_adjudication:{...arm.retry_adjudication,run_id:freshRun}};
+const freshObserved={...observed,resources:freshResources,fresh_readback:{...observed.fresh_readback,run_id:freshRun}};
+assert.equal(admitProposedRetry(freshArm,freshObserved).execute_authorized,false);count++;
+for(const [key,value] of [["database_port",55432],["database_port",55434],["database_host","0.0.0.0"],
+ ["audit_user","postgres"],["audit_user","qual_dedicated_admin"],["bucket_endpoint","http://127.0.0.1:59000"],
+ ["bucket_endpoint","http://localhost:59005"],["positive_database",resources.positive_database],
+ ["negative_database",dedicatedResources.negative_database],["bucket",dedicatedResources.bucket]]) {
+ const bad={...freshResources,[key]:value};
+ assert.throws(()=>admitProposedRetry({...freshArm,resources:bad},{...freshObserved,resources:bad}));count++;
+}
+assert.throws(()=>admitProposedRetry(freshArm,{...freshObserved,resources:dedicatedResources}));count++;
+assert.throws(()=>admitProposedRetry(freshArm,{...freshObserved,fresh_readback_current:false}));count++;
+assert.throws(()=>admitProposedRetry(freshArm,{...freshObserved,qcp_blocker_count:1}));count++;
 console.log(JSON.stringify({status:"PASS",negative_and_boundary_test_count:count,execute_authorized:false,authority_adopted:false,production_runtime_unchanged:true}));
