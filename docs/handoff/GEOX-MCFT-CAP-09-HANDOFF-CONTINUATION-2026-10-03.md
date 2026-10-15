@@ -1,3 +1,11 @@
+# 2026-10-15 — Windows independent offline verification rejected UNDECLARED_ENVIRONMENT_VARIABLE: diagnostic invocation error
+
+Operator reran independently signed full Runtime adoption verification on Windows Node v24.19.0; `offline-context.cjs.load(...)` raised `UNDECLARED_ENVIRONMENT_VARIABLE` from `installed-material.cjs:30`. Previous assistant verification snippet mistakenly added transient process env vars `MCFT_VERIFY_MODULE`, `MCFT_VERIFY_PROOF`, `MCFT_VERIFY_ROOT` not in signed material's environment.allowed_names. THIS IS A CALLER-SIDE VERIFICATION COMMAND DEFECT, NOT EVIDENCE OF INVALID ED25519 SIGNATURE OR SOURCE FILES. `INDEPENDENT_OFFLINE_VERIFICATION_FAILED` as of this checkpoint; DO NOT CLAIM independent PASS.
+
+Corrected verification: remove only those three transient Env entries; compare existing environment variable names against signed allowed_names before running; send offline module/proof/root as `node - "$Module" "$Proof" "$Runtime"` argv with JS stdin; no newly introduced env names. If time-window expires, perform legitimate fresh sign with existing external private key and new write-once output file; never alter TTL timestamps or skip material verifier. Formal signed TEST_ONLY Adoption still NOT equivalent to fresh Run ID/one-shot Local Admission; EXECUTE_HOLD / production HOLD.
+
+---
+
 # 2026-10-15 — cb773984 FULL Runtime TEST_ONLY Adoption signed; separate offline verification still pending
 
 Actual Windows signer stdout: `SIGNED_ADOPTION_QUALIFICATION_V1_ISSUED_TEST_ONLY`, `RUNTIME_ADOPTION_SIGNING=PASS`, `qualification_id=mcft_cap09_adoption_cb77398404ed_v1`, `subject_sha=cb77398404edfbc223350d1c74a46323efe9fd3e`, independent issuer `mcft_cap09_independent_adoption_governance`, key id `cap09_adoption_ed25519_20261015`; `expires_at=2026-10-15T06:02:41.933Z` (Beijing 14:02:41.933); `adoption_digest=480e6df39faceac35486b7e5a8fba9301140477d3f7919506cfc80b6cfdf1ff9`; `material_digest=e30462f98a6538b136cd8697493df3a390f84befcc35c015857a3dab9123adeb`; signed proof `D:\gptdown\MCFT-CAP09-SIGNED-RUNTIME-ADOPTION-cb773984.json`; signer `execution_authorized=true`, `production_authorized=false`.
