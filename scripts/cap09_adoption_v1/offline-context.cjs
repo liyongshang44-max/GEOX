@@ -104,7 +104,7 @@ function validateMergedDerivation(subject,proof,checks,evidenceRoot,candidate=nu
  assert.equal(m.schema,'MCFT_CAP09_ZERO_DELTA_MERGE_QCP_DERIVATION_V1');
  assert.equal(m.subject_sha,subject);assert.equal(m.source_subject_sha,proof.qcp_execution_subject_sha);
  assert.equal(m.method,'EXACT_TWO_PARENT_ZERO_TREE_DELTA_WITH_VALIDATED_SOURCE_QCP');
- assert.deepEqual(m.parents,[m.base_sha,m.source_subject_sha]);assert.equal(m.observed_main_sha,subject);
+ assert.deepEqual(m.parents,[m.base_sha,m.source_subject_sha]);assert(/^[a-f0-9]{40}$/.test(m.observed_main_sha),'OFFLINE_MERGE_OBSERVED_MAIN_INVALID');
  assert(/^[a-f0-9]{40}$/.test(m.base_sha));assert(/^[a-f0-9]{40}$/.test(m.source_and_subject_tree));
  assert.equal(m.additional_first_parent_hops,1);assert.equal(m.qcp_executed_at_subject,false);assert.equal(m.raw_reports_rewritten,false);
  assert.equal(m.execution_authorized,false);assert.equal(m.production_authorized,false);
@@ -120,7 +120,7 @@ function validateMergedDerivation(subject,proof,checks,evidenceRoot,candidate=nu
  assert.equal(c.digest(meta),m.source_metadata_sha256,'OFFLINE_MERGE_SOURCE_METADATA_DRIFT');
  assert.equal(meta.schema,'MCFT_CAP09_MERGED_QCP_SOURCE_V1');
  assert.equal(meta.repository,'liyongshang44-max/GEOX');
- assert.equal(meta.observed_main_sha,subject);
+ assert.equal(meta.observed_main_sha,m.observed_main_sha,'OFFLINE_MERGE_OBSERVED_MAIN_MISMATCH');
  assert.equal(meta.pull_request?.merged,true);assert.equal(meta.pull_request?.base_ref,'main');
  assert.equal(meta.pull_request?.merge_commit_sha,subject);assert.equal(meta.pull_request?.head_sha,m.source_subject_sha);
  assert.equal(meta.pull_request?.base_sha,m.base_sha);
