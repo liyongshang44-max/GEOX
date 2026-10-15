@@ -1,3 +1,9 @@
+## 2026-10-15 — PR #3704 engineering review submitted; APPROVAL NOT GRANTED
+
+Reviewed all 41 PR changed-file patches at exact head 674fca57b973164fc0ec1dc5f2ceb3afe9ba58d1, formal CI/QCP prior PASS. Submitted GitHub PR review action COMMENT id 5531327198, NOT APPROVE. Two review closure items: (1) governed retry Host signedActivation skips former four adopted capability booleans in parent and child; need equivalence proof for real six-stage signed plan/permit/material semantics, not synthetic-only acceptance. (2) QCP workflow weakened `boundary.adopted_main_sha===base` to `git merge-base --is-ancestor base boundary.adopted_main_sha`; need independent negative test that a descendant with unadopted paths cannot qualify. Independent signer key registration != actual independent human governance control or authorized CODEOWNER reviewer. Positive findings: disabled-by-default trust, scoped Run ID endpoints/negative tests, preserved isolated historical proof and separate one-time permit. Protected main not merged; no permission for DB/MinIO irreversible bootstrap yet under current sequence; production and TEST_ONLY HOLD. Do not represent this COMMENT as independent APPROVED review.
+
+---
+
 ## 2026-10-15 — PR #3704 promoted from Draft to Ready for Review (not merged)
 
 After verifying all available candidate CI/QCP and separate signed Adoption, GitHub `mark_pull_request_ready_for_review` returned PR 3704 OPEN, draft=false, head 674fca57b973164fc0ec1dc5f2ceb3afe9ba58d1, main cfaf55f10f2ce7e995ffeb95fe4d5675f1a893a4. No approved review observed as of preceding readback. This is review-state progression ONLY, not branch protection bypass, independent reviewer approval, merge or active Host authority. Database/bucket zero-state creation remains pending exact protected main adoption and resource receipt gates; production and TEST_ONLY remain HOLD.
