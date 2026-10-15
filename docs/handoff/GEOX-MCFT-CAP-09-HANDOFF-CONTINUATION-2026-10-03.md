@@ -1,3 +1,9 @@
+## 2026-10-15 — PR #3704 promoted from Draft to Ready for Review (not merged)
+
+After verifying all available candidate CI/QCP and separate signed Adoption, GitHub `mark_pull_request_ready_for_review` returned PR 3704 OPEN, draft=false, head 674fca57b973164fc0ec1dc5f2ceb3afe9ba58d1, main cfaf55f10f2ce7e995ffeb95fe4d5675f1a893a4. No approved review observed as of preceding readback. This is review-state progression ONLY, not branch protection bypass, independent reviewer approval, merge or active Host authority. Database/bucket zero-state creation remains pending exact protected main adoption and resource receipt gates; production and TEST_ONLY remain HOLD.
+
+---
+
 ## 2026-10-15 — Formal adoption decision for #3704: HOLD pending review
 
 Live GitHub: PR #3704 Draft/Open/Unmerged, mergeable=true, exact HEAD 674fca57b973164fc0ec1dc5f2ceb3afe9ba58d1, protected main cfaf55f10f2ce7e995ffeb95fe4d5675f1a893a4, ahead 52 behind 0, merge base main. PR reviews=[] and review threads=[]. All previously checked 674fca57 CI and formal QCP SUCCESS, separately Windows installed 20889-file Runtime and signed Adoption verified. PR description explicitly forbids merge absent reviewer approval. Engineering qualification is not protected-main adoption; no authorized merge occurred, no database or S3 create attempted. New run da9db7129607 protected-main exact SHA guard remains blocking. Need independent reviewer approval and normal Ready-for-review transition/merge through branch protection; then verify protected main authoritative SHA (merge commit may differ from candidate and require reviewed requalification of newly adopted source), not bypass exact main check. Only after adopted exact SHA is reconciled with run-bound resource/installer contracts should run-scoped PG DB/bucket provisioning and immutable fresh zero-state receipts proceed. TEST_ONLY and PRODUCTION HOLD.
