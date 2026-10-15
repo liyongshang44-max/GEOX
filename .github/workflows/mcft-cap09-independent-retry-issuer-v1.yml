@@ -1,0 +1,32 @@
+name: MCFT CAP-09 independent retry issuer v1
+on:
+  pull_request:
+    paths:
+      - "scripts/runtime_acceptance/MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json"
+      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs"
+      - ".github/workflows/mcft-cap09-independent-retry-issuer-v1.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-issuer:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Syntax verify (provisioner)
+        run: node --check scripts/runtime_acceptance/MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs
+      - name: Syntax verify (acceptance)
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs
+      - name: Independent issuer synthetic negative acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs
+      - name: Existing retry permit synthetic acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_PERMIT_V1.cjs
