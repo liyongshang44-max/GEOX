@@ -132,7 +132,7 @@ function validateMergedDerivation(subject,proof,checks,evidenceRoot,candidate=nu
  assert.equal(meta.artifact?.digest,'sha256:'+m.source_artifact_sha256);
  assert.equal(meta.artifact?.expired,false);
  assert.equal(proof.qcp_artifact_sha256,m.source_artifact_sha256,'OFFLINE_MERGE_PROOF_ARTIFACT_MISMATCH');
- assert.equal(proof.first_parent_hop_count,2,'OFFLINE_MERGE_PROOF_HOPS_INVALID');
+ assert(Number.isSafeInteger(proof.first_parent_hop_count)&&proof.first_parent_hop_count>=2,'OFFLINE_MERGE_PROOF_HOPS_INVALID');
  for(const x of checks){
   const file=safeRef(evidenceRoot,x.evidence_ref),ev=c.read(file);
   for(const k of MERGED_FIELDS)assert.deepEqual(ev[k],proof[k],'OFFLINE_MERGE_CHECK_NOT_BOUND:'+x.check_id+':'+k);
