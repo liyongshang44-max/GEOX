@@ -91,16 +91,16 @@ function formalFixture(){
   envelope.signature_base64=crypto.sign(null,Buffer.from(v.ADOPTION_DOMAIN+c.canonical(q)),pair.privateKey).toString('base64');
  }};
 }
-function mergedFormalFixture(){
+function mergedFormalFixture(observedMain=null){
  const f=formalFixture(),subject=f.q.subject_sha,source='a'.repeat(40),base='c'.repeat(40),tree='d'.repeat(40),e=f.request.evidence_root;
  const archive=Buffer.from('synthetic-QCP-ZIP-bytes-only');fs.writeFileSync(path.join(e,'source-qcp-artifact.zip'),archive);
  const sourceArtifactSha=c.sha(archive);
- const metadata={schema:'MCFT_CAP09_MERGED_QCP_SOURCE_V1',repository:'liyongshang44-max/GEOX',observed_main_sha:subject,
+ const metadata={schema:'MCFT_CAP09_MERGED_QCP_SOURCE_V1',repository:'liyongshang44-max/GEOX',observed_main_sha:observedMain||subject,
   pull_request:{merged:true,base_ref:'main',base_sha:base,head_sha:source,merge_commit_sha:subject},
   workflow_run:{id:17,head_sha:source,status:'completed',conclusion:'success',path:'.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'},
   artifact:{id:19,digest:'sha256:'+sourceArtifactSha,expired:false}};
  fs.writeFileSync(path.join(e,'source-metadata.json'),c.canonical(metadata)+'\n');
- const merge={schema:'MCFT_CAP09_ZERO_DELTA_MERGE_QCP_DERIVATION_V1',subject_sha:subject,source_subject_sha:source,base_sha:base,observed_main_sha:subject,source_and_subject_tree:tree,
+ const merge={schema:'MCFT_CAP09_ZERO_DELTA_MERGE_QCP_DERIVATION_V1',subject_sha:subject,source_subject_sha:source,base_sha:base,observed_main_sha:observedMain||subject,source_and_subject_tree:tree,
   parents:[base,source],source_artifact_id:19,source_workflow_run_id:17,source_artifact_sha256:sourceArtifactSha,source_metadata_sha256:c.digest(metadata),
   generator_sources_sha256:{'build_evidence.py':'f'.repeat(64),'material_binding.py':'e'.repeat(64)},
   method:'EXACT_TWO_PARENT_ZERO_TREE_DELTA_WITH_VALIDATED_SOURCE_QCP',qcp_executed_at_subject:false,raw_reports_rewritten:false,
@@ -123,6 +123,13 @@ test('merged_formal_sign_verify_roundtrip',()=>{
  assert.equal(v.validateMergedDerivation(f.q.subject_sha,c.read(proofFile),f.q.checks,e,candidate),true);
  const result=v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment});
  assert.equal(result.production_authorized,false);assert.equal(v.isFormalVerified(result),true);
+});
+test('merged_formal_accepts_successor_observed_main_distinct_from_subject',()=>{
+ const {f,proofFile,e}=mergedFormalFixture('f'.repeat(40));
+ const proof=c.read(proofFile);
+ assert.equal(v.validateMergedDerivation(f.q.subject_sha,proof,f.q.checks,e),true);
+ const result=v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment});
+ assert.equal(v.isFormalVerified(result),true);
 });
 test('merged_formal_accepts_real_historical_first_parent_hops',()=>{
  const {f,proofFile}=mergedFormalFixture(),proof=c.read(proofFile);
