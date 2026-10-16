@@ -1,0 +1,48 @@
+{
+  "schema_version": "mcft_cap09_da9_retry_evidence_file_mapping_review_v1",
+  "run_id": "da9db7129607",
+  "subject_sha": "91835fa0997730c85c5f3869dd530f4c9a3ca82d",
+  "mapping_status": "HISTORICAL_SIX_LOCATED_VERIFY_RAW_BYTES_ON_WINDOWS",
+  "paths_relative_to": "D:\\gptdown\\MCFT-CAP09-RUNTIME-91835fa0",
+  "files": {
+    "first_failed_receipt": {
+      "path": "D:\\gptdown\\MCFT-CAP09-ISOLATED-INFRA-20261010\\qualification-evidence-72dc0304a21a-20261011T00Z\\MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2_RESULT.json",
+      "sha256": "00a5eb698fcd9ed0d18689fdd6e25df9e4b2e321e412d8565fec12a04b39b9c8"
+    },
+    "first_started": {
+      "path": "D:\\gptdown\\MCFT-CAP09-ISOLATED-INFRA-20261010\\qualification-evidence-72dc0304a21a-20261011T00Z\\started.json",
+      "sha256": "5b6ab70a869002f3b9841acf9e55231315b35144979f252b6ad2a4623fb4ec19"
+    },
+    "audit_v1": {
+      "path": "D:\\gptdown\\MCFT-CAP09-ISOLATED-INFRA-20261010\\failed-first-execute-readonly-audit-v1.json",
+      "sha256": "47553066e96e8b259f4a7c0d9d91b8531109184011d2a68b6fb6ef0c19526a05"
+    },
+    "audit_v2": {
+      "path": "docs\\digital_twin\\mcft\\cap_09\\evidence\\retry-history-20261011\\failed-first-execute-readonly-audit-v2.json",
+      "sha256": "4f1dfce2d859a9d9be29f615d88cb3c325d48c07c1920ed17e2f0965b6cc6cd9"
+    },
+    "postflight_v4": {
+      "path": "docs\\digital_twin\\mcft\\cap_09\\evidence\\retry-history-20261011\\post3689-windows-postflight-closure-v4.json",
+      "sha256": "549622fd350df3b09729aed5beec840c154803d6bf34f97b044e43ce809bf46a"
+    },
+    "artifact_closure_v5": {
+      "path": "docs\\digital_twin\\mcft\\cap_09\\evidence\\retry-history-20261011\\post3689-windows-artifact-closure-v5.json",
+      "sha256": "3580789b38fa0e428953b27dea6a3a08d096e420fefaeaec88d3361c63a3150e"
+    }
+  },
+  "additional_required_file": {
+    "key": "retry_adjudication",
+    "status": "MISSING_APPROVED_DECISION_DO_NOT_BIND_CANDIDATE",
+    "candidate_repo_path": "docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-RETRY-ADJUDICATION-REVIEW-CANDIDATE-20261016.json"
+  },
+  "independent_review": {
+    "status": "NOT_APPROVED",
+    "historical_denial_superseded": false,
+    "reason": "No authenticated accountable approval or current host proof",
+    "first_execution_provider_calls": null,
+    "failed_stage": "PRODUCER",
+    "first_failure_phase": "UNKNOWN",
+    "code_seam": "SOURCE_ROUTING_CONFIRMED_NOT_HOST_EXECUTION",
+    "production_authorized": false
+  }
+}
