@@ -29,12 +29,70 @@ function draft(decisionId){
  evidence_sha256:{...HISTORY},retry_admissible:false,prior_denial_explicitly_superseded:false,production_authorized:false,
  review_status:'REVIEW_REQUIRED',reviewer_id:null,authorized_at:null};
 }
-function construct(input,context,now=Date.now()){
+// Retry adjudication is a separately signed input, never inferred from
+// review_status, role registration, or the later execution Permit signature.
+const REVIEW_DOMAIN='GEOX_MCFT_CAP09_RETRY_ADJUDICATION_V1\\n';
+const FAILURE_CODE='POSTMERGE_V13_PRODUCER_CORE_FORMAL_RAW_BUCKET_REQUIRED';
+function reviewPayload(decision) {
+ const d=structuredClone(decision);delete d.review_signature;return d;
+}
+function verifyReviewedDecision(decision,trust,now=Date.now()){
+ assert(decision&&trust&&Array.isArray(trust.issuers),'REVIEW_TRUST_REQUIRED');
+ // policy_digest is a key-registry binding, without changing adopted/execution flags.
+ const d=reviewPayload(decision);
+ const expected=permit.sha(permit.canonical(trust));
+ assert.equal(d.review_policy_sha256,expected,'REVIEW_TRUST_DIGEST_MISMATCH');
+ // Validate all required fields without deriving authorization from any booleans alone.
+ assert.equal(d.run_id,RUN,'REVIEW_RUN_MISMATCH');
+ assert.equal(d.parent_run_id,'72dc0304a21a','REVIEW_PARENT_MISMATCH');
+ assert.equal(d.attempt_ordinal,2,'REVIEW_ATTEMPT_INVALID');
+ assert.equal(d.protected_main_sha,SUBJECT,'REVIEW_SUBJECT_INVALID');
+ assert.equal(d.scope,'TEST_ONLY','REVIEW_SCOPE_INVALID');
+ assert.equal(d.production_authorized,false,'REVIEW_PRODUCTION_FORBIDDEN');
+ assert.equal(d.first_execution_provider_calls,null,'REVIEW_PROVIDER_COUNT_UNKNOWN');
+ assert.equal(d.first_failure_phase,'UNKNOWN','REVIEW_FIRST_PHASE_UNKNOWN');
+ assert.equal(d.first_failure_code,FAILURE_CODE,'REVIEW_ERROR_NOT_PRESERVED');
+ assert.equal(d.unknown_provider_count_acknowledged,true,'REVIEW_UNKNOWN_PROVIDER_NOT_ACKNOWLEDGED');
+ assert.deepEqual(d.evidence_sha256,HISTORY,'REVIEW_HISTORICAL_DIGESTS_CHANGED');
+ assert.equal(d.prior_denial_sha256,HISTORY.first_failed_receipt,'REVIEW_DENIAL_ANCHOR_CHANGED');
+ assert.equal(d.review_status,'APPROVED','REVIEW_NOT_APPROVED');
+ assert.equal(d.retry_admissible,true,'REVIEW_RETRY_NOT_APPROVED');
+ assert.equal(d.prior_denial_explicitly_superseded,true,'REVIEW_DENIAL_NOT_SUPERSEDED');
+ c.id(d.reviewer_id);c.id(d.decision_id);
+ assert(typeof d.review_authority_ref==='string'&&d.review_authority_ref.length>=12&&d.review_authority_ref.length<=512,'REVIEW_AUTHORITY_PROVENANCE_MISSING');
+ assert(typeof d.supersession_rationale==='string'&&d.supersession_rationale.length>=100&&d.supersession_rationale.length<=4000,'REVIEW_REASON_MISSING');
+ for(const x of [FAILURE_CODE,'TEST_ONLY','unknown','isolated'])assert(d.supersession_rationale.includes(x),'REVIEW_RATIONALE_INCOMPLETE:'+x);
+ const issued=c.epoch(d.review_issued_at);
+ assert(issued<=now&&now-issued<=86400000,'REVIEW_SIGNATURE_TIME_INVALID');
+ assert.equal(d.authorized_at,d.review_issued_at,'REVIEW_AUTHORIZATION_TIME_CHANGED');
+ const sig=decision.review_signature;
+ c.exact(sig,['issuer_id','key_id','signature_base64']);
+ assert.equal(sig.issuer_id,d.reviewer_id,'REVIEW_SIGNER_NOT_REVIEWER');
+ c.id(sig.key_id);
+ const issuers=trust.issuers.filter(x=>x.issuer_id===sig.issuer_id&&x.key_id===sig.key_id);
+ assert.equal(issuers.length,1,'REVIEW_UNKNOWN_ISSUER');
+ const issuer=issuers[0];
+ assert.equal(issuer.revoked,false,'REVIEW_ISSUER_REVOKED');
+ assert(['ACCOUNTABLE_SINGLE_OPERATOR','INDEPENDENT_RETRY_GOVERNANCE'].includes(issuer.role),'REVIEW_ISSUER_ROLE_FORBIDDEN');
+ if(issuer.role==='ACCOUNTABLE_SINGLE_OPERATOR')assert.equal(issuer.issuer_id,trust.operator_id,'REVIEW_OPERATOR_ROLE_MISMATCH');
+ else assert.notEqual(issuer.issuer_id,trust.operator_id,'REVIEW_INDEPENDENT_ROLE_MISMATCH');
+ assert(c.epoch(issuer.not_before)<=issued&&issued<=c.epoch(issuer.not_after),'REVIEW_ISSUER_EXPIRED');
+ const key=crypto.createPublicKey(issuer.public_key_pem);
+ assert.equal(key.asymmetricKeyType,'ed25519','REVIEW_ED25519_REQUIRED');
+ assert.equal(c.sha(key.export({type:'spki',format:'der'})),issuer.spki_sha256,'REVIEW_KEY_FINGERPRINT_MISMATCH');
+ const bytes=Buffer.from(sig.signature_base64,'base64');
+ assert.equal(bytes.length,64,'REVIEW_SIGNATURE_LENGTH_INVALID');
+ assert.equal(bytes.toString('base64'),sig.signature_base64,'REVIEW_SIGNATURE_ENCODING_INVALID');
+ assert(crypto.verify(null,Buffer.from(REVIEW_DOMAIN+permit.canonical(d)),key,bytes),'REVIEW_SIGNATURE_INVALID');
+ return {status:'REVIEW_SIGNATURE_VERIFIED_NOT_POLICY_ADOPTION',decision_id:d.decision_id,run_id:RUN,production_authorized:false};
+}
+function construct(input,context,now=Date.now(),reviewTrust){
  c.exact(input,['decision_file','files','observed','plan','authorized_at','expires_at','qualification_first_base','output_directory']);
  assert.equal(offline.isFormalVerified(context),true,'VERIFIED_ADOPTION_CONTEXT_REQUIRED');
  assert.equal(context.head,SUBJECT);assert.equal(context.main,SUBJECT);assert.equal(context.scope,'TEST_ONLY');assert.equal(context.production_authorized,false);
  assert(path.isAbsolute(input.output_directory),'ABSOLUTE_NEW_OUTPUT_REQUIRED');assert(!fs.existsSync(input.output_directory),'NEW_OUTPUT_REQUIRED');
  const decision=c.read(input.decision_file);assert.equal(input.files.retry_adjudication,input.decision_file);
+ verifyReviewedDecision(decision,reviewTrust,now);
  assert.equal(decision.run_id,RUN);assert.equal(decision.protected_main_sha,SUBJECT);assert.equal(decision.parent_run_id,'72dc0304a21a');assert.equal(decision.attempt_ordinal,2);
  assert.equal(decision.scope,'TEST_ONLY');assert.equal(decision.first_execution_provider_calls,null);assert.equal(decision.first_failure_phase,'UNKNOWN');
  assert.equal(decision.review_status,'APPROVED','AUTHENTICATED_REVIEW_REQUIRED');c.id(decision.reviewer_id);c.id(decision.decision_id);
@@ -76,7 +134,7 @@ function sign(inputFile,adoptionFile,runtimeRoot,keyFile,issuerId,keyId,output){
  assert(require('./installed-material.cjs').outside(runtimeRoot,output),'BUNDLE_OUTPUT_INSIDE_RUNTIME');
  assertHostVerifierMaterial(runtimeRoot);
  const context=offline.load(adoptionFile,runtimeRoot),trust=c.read(permit.TRUST_PATH),now=Date.now();
- assert.equal(context.host_id,trust.host_id);const unsigned=construct(c.read(inputFile),context,now);
+ assert.equal(context.host_id,trust.host_id);const unsigned=construct(c.read(inputFile),context,now,trust);
  const candidates=trust.issuers.filter(x=>x.issuer_id===issuerId&&x.key_id===keyId&&x.revoked===false);assert.equal(candidates.length,1,'REGISTERED_ISSUER_REQUIRED');
  const issuer=candidates[0];assert(['ACCOUNTABLE_SINGLE_OPERATOR','INDEPENDENT_RETRY_GOVERNANCE'].includes(issuer.role));
  // Explicit signing action by the registered custodian attests the supplied review; assembly itself cannot approve it.
@@ -91,5 +149,5 @@ function sign(inputFile,adoptionFile,runtimeRoot,keyFile,issuerId,keyId,output){
  assert(!fs.existsSync(path.join(trust.ledger_root,'run-'+RUN)),'RUN_ALREADY_CONSUMED');
  c.writeOnce(output,bundle);return {status:'SIGNED_BUNDLE_READY_FOR_OFFICIAL_PREFLIGHT',run_id:RUN,bundle_sha256:c.sha(fs.readFileSync(output)),execution_authorized:false,production_authorized:false};
 }
-module.exports={RUN,SUBJECT,HISTORY,RESOURCES,draft,fresh,construct,assertHostVerifierMaterial,sign};
+module.exports={RUN,SUBJECT,HISTORY,RESOURCES,REVIEW_DOMAIN,draft,fresh,construct,verifyReviewedDecision,assertHostVerifierMaterial,sign};
 if(require.main===module){try{const [mode,...a]=process.argv.slice(2);if(mode==='draft'){assert.equal(a.length,2);c.writeOnce(a[1],draft(a[0]));console.log(JSON.stringify({status:'REVIEW_REQUIRED',execution_authorized:false,production_authorized:false}));}else if(mode==='sign'){assert.equal(a.length,7);console.log(JSON.stringify(sign(...a)));}else throw Error('MODE_REQUIRED');}catch(e){console.error(JSON.stringify({status:'EXECUTE_HOLD',code:e.code||'BUNDLE_REJECTED',execution_authorized:false,production_authorized:false}));process.exitCode=1;}}
