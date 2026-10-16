@@ -12,4 +12,16 @@ test('official_v2_plan',()=>{const p={schema_version:'geox_mcft_cap09_retry_stag
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'da9-bundle-'));try{
  test('draft_cli_and_no_overwrite',()=>{const out=path.join(dir,'review.json'),script=path.join(__dirname,'da9-retry-bundle.cjs');const first=cp.spawnSync(process.execPath,[script,'draft','review_da9',out],{encoding:'utf8'});assert.equal(first.status,0,first.stderr);const bytes=fs.readFileSync(out);const second=cp.spawnSync(process.execPath,[script,'draft','review_da9',out],{encoding:'utf8'});assert.equal(second.status,1);assert.deepEqual(fs.readFileSync(out),bytes);assert.deepEqual(fs.readdirSync(dir),['review.json']);});
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
+// No signing or permit consumption: reject verifier drift on immutable target.
+const compatRoot=fs.mkdtempSync(path.join(os.tmpdir(),'da9-host-'));
+try{
+ const verifier=path.join(compatRoot,'scripts/cap09_adoption_v1/offline-context.cjs');
+ const entry=path.join(compatRoot,'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs');
+ fs.mkdirSync(path.dirname(verifier),{recursive:true});fs.mkdirSync(path.dirname(entry),{recursive:true});
+ fs.copyFileSync(path.join(__dirname,'offline-context.cjs'),verifier);
+ fs.writeFileSync(entry,'// fixture entry, no execution\\n');
+ test('same_verifier_bytes_required',()=>assert.equal(typeof b.assertHostVerifierMaterial(compatRoot).host_verifier_sha256,'string'));
+ test('frozen_verifier_drift_fails_closed',()=>{fs.appendFileSync(verifier,'// old verification rule\\n');assert.throws(()=>b.assertHostVerifierMaterial(compatRoot),/FROZEN_HOST_VERIFIER_INCOMPATIBLE_NO_PERMIT/);});
+ test('missing_host_entry_rejected',()=>{fs.copyFileSync(path.join(__dirname,'offline-context.cjs'),verifier);fs.unlinkSync(entry);assert.throws(()=>b.assertHostVerifierMaterial(compatRoot),/ENOENT|FROZEN_HOST_ENTRY_MISSING/);});
+}finally{fs.rmSync(compatRoot,{recursive:true,force:true});}
 console.log(JSON.stringify({status:'PASS',checks,live_signing_tested:false,provider_calls:0,database_connections:0,permit_consumed:false}));
