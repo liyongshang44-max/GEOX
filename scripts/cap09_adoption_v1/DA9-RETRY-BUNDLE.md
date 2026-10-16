@@ -31,10 +31,12 @@ authorized `--execute`; do not automate that transition or retry.
 
 ## Remaining adoption and live integration blockers
 
-- Main's formal Adoption signer/verifier still require INDEPENDENT_GOVERNANCE.
-  This candidate does not override that policy or pretend the registered
-  ACCOUNTABLE_SINGLE_OPERATOR retry key satisfies formal Adoption. A reviewed
-  scope-specific policy/code successor is needed for that route.
+- The protected main/frozen 91835fa0 verifier requires INDEPENDENT_GOVERNANCE.
+  This PR's newer signer/verifier candidate supports ACCOUNTABLE_SINGLE_OPERATOR
+  **only** with an exact bound formal_adoption_scope, but no actual scoped trust
+  registration has been adopted. The old installed verifier remains ineligible.
+  An independently qualified, versioned successor execution material is needed;
+  changing old installed bytes or faking an independent human reviewer is forbidden.
 - Current Host code loads its verifier from inside the Runtime. A newer external
   verifier is not automatically the verifier used by the retained 91835fa0 host.
   Preserve the Runtime; prove/adopt the actual loader integration before claiming
