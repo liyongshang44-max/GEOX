@@ -117,21 +117,44 @@ function construct(input,context,now=Date.now(),reviewTrust){
 // Safety gate: external verification is not transferable to the immutable Host's
 // private WeakSet. Require identical verifier *bytes* at its resolved path before
 // signing a single-use permit. This is necessary, not sufficient, for host adoption.
-function assertHostVerifierMaterial(runtimeRoot){
+const FROZEN_VERIFIER_GIT_BLOB='b2fb3022546f61db32615087fac95d5c9e0e7938';
+function gitBlobSha(bytes) {
+ return crypto.createHash('sha1').update('blob '+bytes.length+'\\0').update(bytes).digest('hex');
+}
+function assertHostVerifierMaterial(runtimeRoot,adoptionFile=null){
+ // Both source paths are checked before any private-key use, nonce, signature,
+ // or filesystem write. No in-place mutation/preload of the frozen release.
  const rel='scripts/cap09_adoption_v1/offline-context.cjs';
  const installed=path.resolve(runtimeRoot,...rel.split('/'));
  const tool=path.resolve(__dirname,'offline-context.cjs');
  c.noLinks(installed);c.noLinks(tool);
  assert(fs.statSync(installed).isFile(),'FROZEN_HOST_VERIFIER_MISSING');
- assert.equal(c.sha(fs.readFileSync(installed)),c.sha(fs.readFileSync(tool)),'FROZEN_HOST_VERIFIER_INCOMPATIBLE_NO_PERMIT');
+ const oldBytes=fs.readFileSync(installed),newBytes=fs.readFileSync(tool);
  const hosted=path.resolve(runtimeRoot,'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs');
  c.noLinks(hosted);assert(fs.statSync(hosted).isFile(),'FROZEN_HOST_ENTRY_MISSING');
  const expectedHost=path.resolve(__dirname,'../runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs');
  c.noLinks(expectedHost);
  assert.equal(c.sha(fs.readFileSync(hosted)),c.sha(fs.readFileSync(expectedHost)),'FROZEN_HOST_ENTRY_INCOMPATIBLE_NO_PERMIT');
- return {host_verifier_sha256:c.sha(fs.readFileSync(installed)),host_sha256:c.sha(fs.readFileSync(hosted))};
+ const hashes={host_verifier_sha256:c.sha(oldBytes),host_sha256:c.sha(fs.readFileSync(hosted))};
+ if(oldBytes.equals(newBytes))return {...hashes,mode:'EXACT_VERIFIER_BYTES'};
+ // Special known immutable 91835fa0 exception, NEVER for single-operator
+ // Formal Adoption. The old Host itself must freshly reverify the real proof;
+ // identifying a registered independent key is only a preliminary screen.
+ assert.equal(gitBlobSha(oldBytes),FROZEN_VERIFIER_GIT_BLOB,'FROZEN_HOST_VERIFIER_INCOMPATIBLE_NO_PERMIT');
+ assert(typeof adoptionFile==='string'&&path.isAbsolute(adoptionFile),'FROZEN_HOST_VERIFIER_INCOMPATIBLE_NO_PERMIT');
+ const oldPolicyFile=path.resolve(runtimeRoot,'scripts/cap09_adoption_v1/offline-trust.json');
+ c.noLinks(oldPolicyFile);
+ const registered=c.read(oldPolicyFile),reference=c.read(offline.POLICY);
+ assert.deepEqual(registered,reference,'FROZEN_ADOPTION_TRUST_CHANGED');
+ const envelope=c.read(adoptionFile),qualification=envelope.qualification?.payload;
+ assert(qualification&&typeof qualification==='object','FROZEN_ADOPTION_ENVELOPE_REQUIRED');
+ const eligible=registered.issuers.filter(i=>i.issuer_id===qualification.issuer_id&&i.key_id===qualification.key_id&&i.purpose==='ADOPTION');
+ assert.equal(eligible.length,1,'FROZEN_INDEPENDENT_SIGNER_REQUIRED');
+ assert.equal(eligible[0].revoked,false,'FROZEN_ISSUER_REVOKED');
+ assert.equal(eligible[0].role,'INDEPENDENT_GOVERNANCE','FROZEN_INDEPENDENT_SIGNER_REQUIRED');
+ assert.notEqual(eligible[0].issuer_id,registered.operator_id,'FROZEN_INDEPENDENT_SIGNER_REQUIRED');
+ return {...hashes,mode:'FROZEN_91835FA0_INDEPENDENT_ONLY',installed_verifier:installed};
 }
-
 // Pure cryptographic path shared by the Windows review CLI and CI fixtures.
 // No byte of an unsigned review is promoted from HOLD by this function.
 function signReviewPayload(unsigned,trust,privateKey,issuerId,keyId,now=Date.now()){
@@ -170,8 +193,17 @@ function sign(inputFile,adoptionFile,runtimeRoot,keyFile,issuerId,keyId,output){
  assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'WINDOWS_OFFLINE_ONLY');
  assert(require('./installed-material.cjs').outside(runtimeRoot,keyFile),'PRIVATE_KEY_INSIDE_RUNTIME');
  assert(require('./installed-material.cjs').outside(runtimeRoot,output),'BUNDLE_OUTPUT_INSIDE_RUNTIME');
- assertHostVerifierMaterial(runtimeRoot);
+ const compatibility=assertHostVerifierMaterial(runtimeRoot,adoptionFile);
  const context=offline.load(adoptionFile,runtimeRoot),trust=c.read(permit.TRUST_PATH),now=Date.now();
+ if(compatibility.mode==='FROZEN_91835FA0_INDEPENDENT_ONLY'){
+  // Instantiate the actual installed verifier with its own private WeakSet.
+  // The real Host will do this again in every parent/child admission process.
+  const installedVerifier=require(compatibility.installed_verifier);
+  const installedContext=installedVerifier.load(adoptionFile,runtimeRoot);
+  assert.equal(installedVerifier.isFormalVerified(installedContext),true,'FROZEN_ADOPTION_NOT_VERIFIED');
+  assert.equal(installedContext.adoption_digest,context.adoption_digest,'FROZEN_ADOPTION_DIGEST_DIVERGED');
+  assert.equal(installedContext.material_digest,context.material_digest,'FROZEN_MATERIAL_DIGEST_DIVERGED');
+ }
  assert.equal(context.host_id,trust.host_id);const unsigned=construct(c.read(inputFile),context,now,trust);
  const candidates=trust.issuers.filter(x=>x.issuer_id===issuerId&&x.key_id===keyId&&x.revoked===false);assert.equal(candidates.length,1,'REGISTERED_ISSUER_REQUIRED');
  const issuer=candidates[0];assert(['ACCOUNTABLE_SINGLE_OPERATOR','INDEPENDENT_RETRY_GOVERNANCE'].includes(issuer.role));
