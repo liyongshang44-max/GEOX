@@ -72,13 +72,27 @@ change fixed trust defaults, grant production authority or consume a permit.
 Synthetic acceptance includes the actual formal signing function followed by
 formal verification, plus signing refusal for each of the five scope mismatches.
 
-Frozen Host compatibility remains **unimplemented**. The frozen Host loads its
-own offline verifier, including in child-stage admission. A context produced by
-an external module cannot replace that verifier's private verified-context set.
-A passing external verification alone therefore cannot establish actual Host
-admission. No module-cache injection, preload or frozen-file replacement is used.
-A separately qualified execution-material integration is required before this
-bundle can be admitted by the real Host.
+Frozen Host interoperability now has TWO bounded, fail-closed candidates.
+For a new versioned execution material, the *installed* Host and offline verifier
+must byte-match the vetted controller/verifier and also satisfy signed release
+material qualification. For the original immutable `91835fa0` verifier, the
+tool recognizes only its exact pinned Git blob and an unchanged trust registry.
+That grandfathered verifier accepts only a REAL `INDEPENDENT_GOVERNANCE` formal
+Adoption signature, never an `ACCOUNTABLE_SINGLE_OPERATOR` adoption. The
+signer checks signer role/registry on the old release, verifies Adoption with the
+new verifier, then independently loads and verifies the same signed Adoption
+using the *installed* frozen verifier and compares proof/material digests.
+The Host and each child will repeat their own verification under their own
+private verified-context set. No WeakSet injection, preload, module-cache spoof,
+or frozen file replacement is used.
+
+The independent route is technically compatible **only if genuinely authorized
+independent governance custody and a valid old-version Adoption exist**; key
+registration alone is not evidence of that. With only the accountable operator
+key, the original frozen Host remains blocked. A separately qualified and
+adopted versioned successor with a fresh source/material subject is still
+required for the single-operator path. No new subject/Run ID or authorization
+is silently invented by this change, and neither branch grants execution.
 
 The retained MinIO probe objects remain a separate unresolved precondition.
 The current contract requires the entire target bucket, versions and pending
@@ -147,5 +161,14 @@ Existing static trust stays disabled. There is no automatic promotion from signe
 
 Critical sequence: authenticated Retry Adjudication → fresh signed Adoption and six-stage budget → fresh
 resource/Provider causal readback → signed one-time Permit → official preflight → six-stage Windows execution.
-Old frozen 91835fa0 Host remains incompatible with the new single-operator verifier; neither this signature
-nor the current MinIO inventory can resolve that versioned material blocker without an accepted successor.
+Old frozen 91835fa0 Host remains incompatible with the *single-operator* formal verifier.
+Only a genuinely authorized independent Adoption, verified by both signed-proof
+verifiers, is a potential unchanged-frozen-Host route; else use a qualified
+new-subject versioned successor. Neither a signed review nor a MinIO inventory
+resolves those gates.
+
+Windows and Ubuntu CI now include a bounded `git show` of exactly the
+retained 91835fa0 verifier blob (not historical replay), with positive
+independent-role precheck and explicit operator-role, trust-file drift, missing
+adoption request, and modified verifier rejection. This tests compatibility
+eligibility only; no authentic Adoption was signed or loaded on the Windows host.
