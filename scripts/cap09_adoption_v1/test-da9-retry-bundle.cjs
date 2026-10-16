@@ -82,7 +82,7 @@ test('historical_provider_count_null_enforced',()=>{
 test('unknown_reviewer_role_rejected',()=>{
  const t=structuredClone(trust);t.issuers[0].role='ANY_ROLE';
  const d=reviewedFixture();d.review_policy_sha256=permit.sha(permit.canonical(t));
- assert.throws(()=>b.verifyReviewedDecision(signedReview(d),t,now),/REVIEW_ISSUER_ROLE_FORBIDDEN/);
+ assert.throws(()=>b.verifyReviewedDecision(signedReview(d,t),t,now),/REVIEW_ISSUER_ROLE_FORBIDDEN/);
 });
 test('expired_review_rejected',()=>{
  const d=reviewedFixture();d.review_issued_at=iso(now-86400001);d.authorized_at=d.review_issued_at;
