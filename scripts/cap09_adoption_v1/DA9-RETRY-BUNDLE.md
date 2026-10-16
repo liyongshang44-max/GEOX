@@ -123,3 +123,29 @@ Denied or partial list operations, missing pagination markers, excess pages and 
 The local list is not an independent archival signature or atomic transaction snapshot.
 No probe object is to be erased or excluded until an authorized evidence-preserving disposition is verified.
 Pure parsing/signing contract tests run in CI on Ubuntu and Windows; CI makes no real S3 request.
+
+## Separately signed Retry Adjudication — required before Adoption/Permit
+
+Candidate code now refuses an unsigned APPROVED JSON decision, even if its boolean flags were manually set.
+The separate `review-sign` command requires an intentionally completed review JSON and the authorized signer's private Ed25519 key, outside the immutable Runtime:
+`node scripts/cap09_adoption_v1/da9-retry-bundle.cjs review-sign ABSOLUTE_REVIEWED_JSON ABSOLUTE_PRIVATE_KEY REGISTERED_ISSUER_ID REGISTERED_KEY_ID NEW_SIGNED_DECISION_JSON`
+
+The input must already contain `review_status=APPROVED`, `retry_admissible=true`,
+`prior_denial_explicitly_superseded=true`, an attributable `reviewer_id`, exact `review_issued_at` / `authorized_at`,
+`review_authority_ref` (authorizing governance provenance), an explicit >=100 character `supersession_rationale`
+explaining the exact formal bucket constraint, the isolated TEST_ONLY successor, and UNKNOWN Provider call count.
+Required historical anchor digests remain unchanged; `prior_denial_sha256` must equal the first failed receipt hash.
+The `review_policy_sha256` must match the SHA-256 of the canonical fixed retry trust registry;
+the signing principal must match the registered live signer. The signed file cannot overwrite the review input.
+
+`review-sign` creates a separately domain-separated Ed25519 signature over the complete decision payload.
+`sign` now verifies that independent review signature, signer role and key fingerprint, trust digest,
+exact run/subject, denial anchor, scope, rationale, clock and first Provider count (`null`) BEFORE assembling
+a one-shot Permit. Editing `APPROVED`, changing any rationale, or replacing the file fails closed.
+Cryptographic review verification is explicitly NOT an adopted authorization policy or Windows Host execution proof.
+Existing static trust stays disabled. There is no automatic promotion from signed review to Admission.
+
+Critical sequence: authenticated Retry Adjudication → fresh signed Adoption and six-stage budget → fresh
+resource/Provider causal readback → signed one-time Permit → official preflight → six-stage Windows execution.
+Old frozen 91835fa0 Host remains incompatible with the new single-operator verifier; neither this signature
+nor the current MinIO inventory can resolve that versioned material blocker without an accepted successor.
