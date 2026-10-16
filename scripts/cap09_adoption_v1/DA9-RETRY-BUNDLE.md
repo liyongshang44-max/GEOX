@@ -102,3 +102,22 @@ set or issue a permit before actual Host-verified admission. Three negative/
 byte-equivalence fixture checks were added to the DA9 test entrypoint.
 The MinIO probe-object conflict remains HOLD until a read-only real inventory
 and approved evidence-preserving disposition are available.
+
+## DA9 MinIO full read-only inventory (candidate, not admission)
+
+Script: scripts/cap09_adoption_v1/da9-minio-readonly-inventory.cjs
+Fixed S3 endpoint: http://127.0.0.1:59005 ; exact bucket: mcft-cap09-requal-da9db7129607.
+It makes SigV4-signed GET requests only, enumerating current objects, versions, delete markers and multipart uploads, with bounded pagination.
+It never deletes, migrates, empties, puts, changes policy, or grants any run authority.
+
+Windows-only operator invocation: node scripts/cap09_adoption_v1/da9-minio-readonly-inventory.cjs D:\gptdown\MCFT-CAP09-da9db7129607-MINIO-INVENTORY.json
+Output must not already exist. Supply dedicated run-scoped credentials via MCFT_CAP09_DA9_MINIO_ACCESS_KEY and MCFT_CAP09_DA9_MINIO_SECRET_KEY;
+optional MCFT_CAP09_DA9_MINIO_REGION (defaults to us-east-1) and MCFT_CAP09_DA9_MINIO_SESSION_TOKEN.
+The tool never prints or saves secrets. A local exclusive JSON report records object keys, version IDs, upload IDs and readback time.
+
+Any retained object, historical version, delete marker or pending upload yields BUCKET_NOT_EMPTY_HOLD.
+A complete empty inventory yields only EMPTY_READBACK_CANDIDATE_ONLY, never Admission PASS or execution authority.
+Denied or partial list operations, missing pagination markers, excess pages and timeouts fail closed.
+The local list is not an independent archival signature or atomic transaction snapshot.
+No probe object is to be erased or excluded until an authorized evidence-preserving disposition is verified.
+Pure parsing/signing contract tests run in CI on Ubuntu and Windows; CI makes no real S3 request.
