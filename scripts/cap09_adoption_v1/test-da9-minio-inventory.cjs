@@ -19,4 +19,36 @@ check('s3_error_rejected',()=>assert.throws(()=>inv.parsePage('current','<Error>
 check('canonical_sigv4_query',()=>assert.equal(inv.encodeQuery({'versions':'','key-marker':'a b'}),'key-marker=a%20b&versions='));
 check('signed_get_host_scope',()=>{const h=inv.signHeaders('list-type=2&max-keys=1000',{access:'EXAMPLEACCESSKEY',secret:'test-example-secret-long',region:'us-east-1'},new Date('2026-10-16T12:00:00.000Z'));assert.equal(h.host,'127.0.0.1:59005');assert.equal(h['x-amz-date'],'20261016T120000Z');assert(h.authorization.startsWith('AWS4-HMAC-SHA256 Credential=EXAMPLEACCESSKEY/20261016/us-east-1/s3/aws4_request'));});
 check('incomplete_truncation_value_rejected',()=>assert.throws(()=>inv.parsePage('current','<ListBucketResult></ListBucketResult>'),/INVENTORY_TRUNCATION_UNKNOWN/));
-console.log(JSON.stringify({status:'PASS',checks:n,live_bucket_access:false,permit_consumed:false,execution_authorized:false}));
+
+async function asynchronousAcceptance(){
+ const xmlEmpty={
+  current:'<ListBucketResult><IsTruncated>false</IsTruncated></ListBucketResult>',
+  versions:'<ListVersionsResult><IsTruncated>false</IsTruncated></ListVersionsResult>',
+  multipart:'<ListMultipartUploadsResult><IsTruncated>false</IsTruncated></ListMultipartUploadsResult>'
+ };
+ const calls=[];
+ const empty=await inv.snapshot({},async(q)=>{
+  calls.push(q);return q.includes('list-type=2')?xmlEmpty.current:q.includes('versions=')?xmlEmpty.versions:xmlEmpty.multipart;
+ });
+ assert.equal(calls.length,3);assert.equal(empty.counts.status,'EMPTY_READBACK_CANDIDATE_ONLY');assert.equal(empty.counts.test_only_admission,'HOLD');
+ console.log('PASS complete_three_list_empty_readback_not_authority');n++;
+ const pages=[];
+ const result=await inv.snapshot({},async(q)=>{
+  pages.push(q);
+  if(q.includes('list-type=2'))return q.includes('continuation-token=PAGE2')
+   ?'<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>probeB</Key></Contents></ListBucketResult>'
+   :'<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>PAGE2</NextContinuationToken><Contents><Key>probeA</Key></Contents></ListBucketResult>';
+  return q.includes('versions=')?xmlEmpty.versions:xmlEmpty.multipart;
+ });
+ assert.equal(result.counts.current,2);assert.equal(result.counts.status,'BUCKET_NOT_EMPTY_HOLD');assert.equal(pages.length,4);
+ console.log('PASS full_paginated_list_detects_objects');n++;
+ await assert.rejects(()=>inv.snapshot({},async q=>q.includes('list-type=2')
+   ?'<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>LOOP</NextContinuationToken></ListBucketResult>'
+   :(q.includes('versions=')?xmlEmpty.versions:xmlEmpty.multipart)),/INVENTORY_PAGINATION_LOOP/);
+ console.log('PASS pagination_loop_rejected');n++;
+ await assert.rejects(()=>inv.snapshot({},async()=>{throw Error('INVENTORY_HTTP_403');}),/INVENTORY_HTTP_403/);
+ console.log('PASS denied_bucket_inventory_rejected');n++;
+ console.log(JSON.stringify({status:'PASS',checks:n,live_bucket_access:false,permit_consumed:false,execution_authorized:false}));
+}
+asynchronousAcceptance().catch(e=>{console.error(e);process.exitCode=1;});
+
