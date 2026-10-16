@@ -1,3 +1,11 @@
+## 2026-10-16 — CAP-09 DA9 no-Permit Windows Host signed Adoption audit candidate (LATEST)
+
+PR #3710 code `4c635b54969501bed385fd2394dc108d03a1c751`: adds `audit-host-adoption` CLI to the existing `scripts/cap09_adoption_v1/da9-retry-bundle.cjs` entry. It is Windows-local-only and is designed to take the actual immutable Runtime root and **authentic signed Adoption JSON**. It checks exact Host/verifier bytes, signed and bound installed material, and full candidate/retained verifier proof, with strict subject `91835fa0997730c85c5f3869dd530f4c9a3ca82d`, `scope=TEST_ONLY`, and `production_authorized=false`. Output is a read-only diagnostic: `ADOPTION_DUAL_VERIFIED_READONLY_NOT_EXECUTION_AUTHORITY`. It neither takes the private key nor signs/issues/consumes a Permit, issues a nonce, touches PG/MinIO, or launches any child. The frozen 91835fa0 route only accepts an honestly authorized independent Adoption issuer; it does **not** turn operator custody into an independent signer. The operator-only Formal Adoption successor still needs newly adopted versioned material.
+
+The CI fixture enforces rejection outside the Windows operator context. This local audit cannot show PASS until a genuine signed Adoption and the actual Windows installed Runtime are available; synthetic tests do not establish Host eligibility. Latest exact-head CI should be independently read before release. No new formal approval was recorded, MinIO retained objects have not been moved/deleted, original Provider calls remain `null` (UNKNOWN), and original six historical files remain 6/6 PASS. **Retry Adjudication HOLD / TEST_ONLY HOLD / Production HOLD.**
+
+---
+
 ## 2026-10-16 — DA9 frozen-Host dual-verifier compatibility engineering closure (LATEST)
 
 **This is NOT a Retry approval or execution receipt.** Scope: run `da9db7129607`, failed parent `72dc0304a21a`, attempt 2, frozen subject `91835fa0997730c85c5f3869dd530f4c9a3ca82d`; six historical source files retain 6/6 PASS; original Provider calls remain `null`. PR #3710 remains Draft/Open/Unmerged; no signature, permit, nonce or Windows live stage was issued/consumed.
