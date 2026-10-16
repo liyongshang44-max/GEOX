@@ -20,6 +20,11 @@ check('canonical_sigv4_query',()=>assert.equal(inv.encodeQuery({'versions':'','k
 check('signed_get_host_scope',()=>{const h=inv.signHeaders('list-type=2&max-keys=1000',{access:'EXAMPLEACCESSKEY',secret:'test-example-secret-long',region:'us-east-1'},new Date('2026-10-16T12:00:00.000Z'));assert.equal(h.host,'127.0.0.1:59005');assert.equal(h['x-amz-date'],'20261016T120000Z');assert(h.authorization.startsWith('AWS4-HMAC-SHA256 Credential=EXAMPLEACCESSKEY/20261016/us-east-1/s3/aws4_request'));});
 check('incomplete_truncation_value_rejected',()=>assert.throws(()=>inv.parsePage('current','<ListBucketResult></ListBucketResult>'),/INVENTORY_TRUNCATION_UNKNOWN/));
 
+check('xml_missing_root_close_rejected',()=>assert.throws(()=>inv.parsePage('current','<ListBucketResult><IsTruncated>false</IsTruncated>'),/INVENTORY_S3_LIST_DOCUMENT_INCOMPLETE/));
+check('xml_wrong_root_close_rejected',()=>assert.throws(()=>inv.parsePage('versions','<ListVersionsResult><IsTruncated>false</IsTruncated></ListBucketResult>'),/INVENTORY_S3_LIST_DOCUMENT_INCOMPLETE/));
+check('xml_doctype_rejected',()=>assert.throws(()=>inv.parsePage('current','<!DOCTYPE ListBucketResult><ListBucketResult><IsTruncated>false</IsTruncated></ListBucketResult>')));
+check('version_id_absent_rejected',()=>assert.throws(()=>inv.parsePage('versions','<ListVersionsResult><IsTruncated>false</IsTruncated><Version><Key>retained</Key></Version></ListVersionsResult>'),/INVENTORY_VERSION_ID_REQUIRED/));
+check('upload_id_absent_rejected',()=>assert.throws(()=>inv.parsePage('multipart','<ListMultipartUploadsResult><IsTruncated>false</IsTruncated><Upload><Key>retained</Key></Upload></ListMultipartUploadsResult>'),/INVENTORY_UPLOAD_ID_REQUIRED/));
 async function asynchronousAcceptance(){
  const xmlEmpty={
   current:'<ListBucketResult><IsTruncated>false</IsTruncated></ListBucketResult>',
