@@ -26,6 +26,38 @@ try{
  test('frozen_verifier_drift_fails_closed',()=>{fs.appendFileSync(verifier,'// old verification rule\\n');assert.throws(()=>b.assertHostVerifierMaterial(compatRoot),/FROZEN_HOST_VERIFIER_INCOMPATIBLE_NO_PERMIT/);});
  test('host_entry_byte_drift_fails_closed',()=>{fs.copyFileSync(path.join(__dirname,'offline-context.cjs'),verifier);fs.appendFileSync(entry,'// incompatible host version\n');assert.throws(()=>b.assertHostVerifierMaterial(compatRoot),/FROZEN_HOST_ENTRY_INCOMPATIBLE_NO_PERMIT/);});
  test('missing_host_entry_rejected',()=>{fs.unlinkSync(entry);assert.throws(()=>b.assertHostVerifierMaterial(compatRoot),/ENOENT|FROZEN_HOST_ENTRY_MISSING/);});
+
+ test('old_frozen_verifier_independent_only_precheck',()=>{
+  // Read precisely one historical Git blob. No first-parent walk or remote Git.
+  const frozenSha='91835fa0997730c85c5f3869dd530f4c9a3ca82d';
+  const old=cp.execFileSync('git',['show',frozenSha+':scripts/cap09_adoption_v1/offline-context.cjs'],{
+   cwd:path.resolve(__dirname,'../..'),maxBuffer:2*1024*1024});
+  const blob=crypto.createHash('sha1').update('blob '+old.length).update(Buffer.from([0])).update(old).digest('hex');
+  assert.equal(blob,'b2fb3022546f61db32615087fac95d5c9e0e7938');
+  fs.copyFileSync(path.join(__dirname,'../runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'),entry);
+  fs.writeFileSync(verifier,old);
+  const policyPath=path.join(compatRoot,'scripts/cap09_adoption_v1/offline-trust.json');
+  fs.copyFileSync(path.join(__dirname,'offline-trust.json'),policyPath);
+  const policy=JSON.parse(fs.readFileSync(policyPath,'utf8'));
+  const fixturePath=path.join(compatRoot,'fixture-adoption.json');
+  const issuer=policy.issuers.find(x=>x.role==='INDEPENDENT_GOVERNANCE');
+  const operator=policy.issuers.find(x=>x.role==='ACCOUNTABLE_SINGLE_OPERATOR');
+  assert(issuer&&operator);
+  fs.writeFileSync(fixturePath,JSON.stringify({qualification:{payload:{issuer_id:issuer.issuer_id,key_id:issuer.key_id}}}));
+  assert.throws(()=>b.assertHostVerifierMaterial(compatRoot),/FROZEN_HOST_VERIFIER_INCOMPATIBLE_NO_PERMIT/);
+  // Positive mode is ONLY a role/key compatibility precheck, not signature or Host admission.
+  const positive=b.assertHostVerifierMaterial(compatRoot,fixturePath);
+  assert.equal(positive.mode,'FROZEN_91835FA0_INDEPENDENT_ONLY');
+  fs.writeFileSync(fixturePath,JSON.stringify({qualification:{payload:{issuer_id:operator.issuer_id,key_id:operator.key_id}}}));
+  assert.throws(()=>b.assertHostVerifierMaterial(compatRoot,fixturePath),/FROZEN_INDEPENDENT_SIGNER_REQUIRED/);
+  // Do not accept caller-provided trust-file overrides to convert the frozen verifier.
+  const trustModified={...policy,operator_id:'forged_operator'};
+  fs.writeFileSync(policyPath,JSON.stringify(trustModified));
+  assert.throws(()=>b.assertHostVerifierMaterial(compatRoot,fixturePath),/FROZEN_ADOPTION_TRUST_CHANGED/);
+  fs.copyFileSync(path.join(__dirname,'offline-trust.json'),policyPath);
+  fs.appendFileSync(verifier,'\n// unrecognized modified old verifier');
+  assert.throws(()=>b.assertHostVerifierMaterial(compatRoot,fixturePath),/FROZEN_HOST_VERIFIER_INCOMPATIBLE_NO_PERMIT/);
+ });
 }finally{fs.rmSync(compatRoot,{recursive:true,force:true});}
 // Real Ed25519 signing fixture: historical hashes are treated as immutable constants.
 const pair=crypto.generateKeyPairSync('ed25519');
