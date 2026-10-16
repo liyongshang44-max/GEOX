@@ -1,0 +1,30 @@
+{
+  "schema_version": "mcft_cap09_da9_retry_adjudication_review_candidate_v1",
+  "run_id": "da9db7129607",
+  "parent_run_id": "72dc0304a21a",
+  "attempt_ordinal": 2,
+  "protected_main_sha": "91835fa0997730c85c5f3869dd530f4c9a3ca82d",
+  "first_failure_phase": "UNKNOWN",
+  "first_execution_provider_calls": null,
+  "first_failure_code": "POSTMERGE_V13_PRODUCER_CORE_FORMAL_RAW_BUCKET_REQUIRED",
+  "historical_receipt_sha256": "00a5eb698fcd9ed0d18689fdd6e25df9e4b2e321e412d8565fec12a04b39b9c8",
+  "historical_started_sha256": "5b6ab70a869002f3b9841acf9e55231315b35144979f252b6ad2a4623fb4ec19",
+  "historical_audit_sha256": "47553066e96e8b259f4a7c0d9d91b8531109184011d2a68b6fb6ef0c19526a05",
+  "source_isolated_producer_composition_present": true,
+  "source_prod_canonical_wrapper_unchanged": true,
+  "static_infrastructure_v2_sha256": "af4dcafe52fca08d12dc913f369d97ea64dbfff7b159fa702fdd57c13777899e",
+  "review_status": "REVIEW_REQUIRED",
+  "prior_denial_explicitly_superseded": false,
+  "retry_admissible": false,
+  "unknown_provider_count_acknowledged": true,
+  "pending": [
+    "IDENTIFIED_REVIEWER_APPROVAL_AND_PROVENANCE",
+    "CURRENT_HOST_ISOLATED_COMPOSITION_FILE_DIGEST",
+    "FRESH_DATABASE_MINIO_ACL_READBACK",
+    "FRESH_VALID_SIGNED_ADOPTION_AND_MATERIAL",
+    "REAL_PROVIDER_CAUSAL_VISIBILITY_AND_MEASURED_BUDGET",
+    "ONE_TIME_SIGNED_RETRY_PERMIT",
+    "OFFICIAL_PREFLIGHT"
+  ],
+  "production_authorized": false
+}
