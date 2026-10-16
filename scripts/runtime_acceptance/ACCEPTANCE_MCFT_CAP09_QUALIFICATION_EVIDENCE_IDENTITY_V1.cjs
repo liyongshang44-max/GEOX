@@ -1,0 +1,16 @@
+"use strict";
+const assert=require("node:assert/strict");
+const {test}=require("node:test");
+const {expectedEvidenceLogin,LEGACY}=require("./MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs");
+const run="da9db7129607",positive=`mcft_cap09_requal_${run}_positive`,negative=`mcft_cap09_requal_${run}_negative`;
+const url=(user,db)=>`postgresql://${user}:not-a-real-secret@127.0.0.1:55445/${db}`;
+const check=(stage,db,user,extra={})=>expectedEvidenceLogin({stage,positive,negative,database:db,connectionString:url(user,db),...extra});
+test("normal mode preserves legacy login",()=>assert.equal(check(undefined,positive,"other"),LEGACY));
+test("governed positive role",()=>assert.equal(check("PRODUCER",positive,`cap09_${run}_p_evidence`),`cap09_${run}_p_evidence`));
+test("governed negative role",()=>assert.equal(check("PRODUCER",negative,`cap09_${run}_n_evidence`),`cap09_${run}_n_evidence`));
+test("reject twin on positive",()=>assert.throws(()=>check("PRODUCER",positive,`cap09_${run}_p_twin`)));
+test("reject role from wrong side",()=>assert.throws(()=>check("PRODUCER",positive,`cap09_${run}_n_evidence`)));
+test("reject legacy production login in governed scope",()=>assert.throws(()=>check("PRODUCER",positive,LEGACY)));
+test("reject different run",()=>assert.throws(()=>check("PRODUCER",negative,`cap09_111111111111_n_evidence`)));
+test("reject mismatched DB pair",()=>assert.throws(()=>check("PRODUCER",positive,`cap09_${run}_p_evidence`,{negative:"other"})));
+test("reject forged database",()=>assert.throws(()=>check("PRODUCER",positive,`cap09_${run}_p_evidence`,{database:"postgres"})));
