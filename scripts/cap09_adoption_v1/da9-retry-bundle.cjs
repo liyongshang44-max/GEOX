@@ -53,11 +53,25 @@ function construct(input,context,now=Date.now()){
  assert(c.epoch(input.qualification_first_base)>now,'FIRST_BASE_NOT_FUTURE');
  return {arm,observed,plan:structuredClone(input.plan),files:structuredClone(input.files)};
 }
+// Safety gate: external verification is not transferable to the immutable Host's
+// private WeakSet. Require identical verifier *bytes* at its resolved path before
+// signing a single-use permit. This is necessary, not sufficient, for host adoption.
+function assertHostVerifierMaterial(runtimeRoot){
+ const rel='scripts/cap09_adoption_v1/offline-context.cjs';
+ const installed=path.resolve(runtimeRoot,...rel.split('/'));
+ const tool=path.resolve(__dirname,'offline-context.cjs');
+ c.noLinks(installed);c.noLinks(tool);
+ assert(fs.statSync(installed).isFile(),'FROZEN_HOST_VERIFIER_MISSING');
+ assert.equal(c.sha(fs.readFileSync(installed)),c.sha(fs.readFileSync(tool)),'FROZEN_HOST_VERIFIER_INCOMPATIBLE_NO_PERMIT');
+ const hosted=path.resolve(runtimeRoot,'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs');
+ c.noLinks(hosted);assert(fs.statSync(hosted).isFile(),'FROZEN_HOST_ENTRY_MISSING');
+ return {host_verifier_sha256:c.sha(fs.readFileSync(installed)),host_sha256:c.sha(fs.readFileSync(hosted))};
+}
 function sign(inputFile,adoptionFile,runtimeRoot,keyFile,issuerId,keyId,output){
  assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'WINDOWS_OFFLINE_ONLY');
  assert(require('./installed-material.cjs').outside(runtimeRoot,keyFile),'PRIVATE_KEY_INSIDE_RUNTIME');
  assert(require('./installed-material.cjs').outside(runtimeRoot,output),'BUNDLE_OUTPUT_INSIDE_RUNTIME');
- const context=offline.load(adoptionFile,runtimeRoot),trust=c.read(permit.TRUST_PATH),now=Date.now();
+ const compatibility=assertHostVerifierMaterial(runtimeRoot);\n const context=offline.load(adoptionFile,runtimeRoot),trust=c.read(permit.TRUST_PATH),now=Date.now();
  assert.equal(context.host_id,trust.host_id);const unsigned=construct(c.read(inputFile),context,now);
  const candidates=trust.issuers.filter(x=>x.issuer_id===issuerId&&x.key_id===keyId&&x.revoked===false);assert.equal(candidates.length,1,'REGISTERED_ISSUER_REQUIRED');
  const issuer=candidates[0];assert(['ACCOUNTABLE_SINGLE_OPERATOR','INDEPENDENT_RETRY_GOVERNANCE'].includes(issuer.role));
@@ -73,5 +87,5 @@ function sign(inputFile,adoptionFile,runtimeRoot,keyFile,issuerId,keyId,output){
  assert(!fs.existsSync(path.join(trust.ledger_root,'run-'+RUN)),'RUN_ALREADY_CONSUMED');
  c.writeOnce(output,bundle);return {status:'SIGNED_BUNDLE_READY_FOR_OFFICIAL_PREFLIGHT',run_id:RUN,bundle_sha256:c.sha(fs.readFileSync(output)),execution_authorized:false,production_authorized:false};
 }
-module.exports={RUN,SUBJECT,HISTORY,RESOURCES,draft,fresh,construct,sign};
+module.exports={RUN,SUBJECT,HISTORY,RESOURCES,draft,fresh,construct,assertHostVerifierMaterial,sign};
 if(require.main===module){try{const [mode,...a]=process.argv.slice(2);if(mode==='draft'){assert.equal(a.length,2);c.writeOnce(a[1],draft(a[0]));console.log(JSON.stringify({status:'REVIEW_REQUIRED',execution_authorized:false,production_authorized:false}));}else if(mode==='sign'){assert.equal(a.length,7);console.log(JSON.stringify(sign(...a)));}else throw Error('MODE_REQUIRED');}catch(e){console.error(JSON.stringify({status:'EXECUTE_HOLD',code:e.code||'BUNDLE_REJECTED',execution_authorized:false,production_authorized:false}));process.exitCode=1;}}
