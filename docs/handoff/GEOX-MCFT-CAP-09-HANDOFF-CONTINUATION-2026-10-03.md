@@ -1,3 +1,11 @@
+## 2026-10-16 — MinIO exact policy qualification PASS
+
+Run **da9db7129607**: the host-side machine comparison of the captured MinIO policy JSON against the frozen minimum-permission contract passed for both sides. Results: **EXACT_POLICY=PASS:positive**, **EXACT_POLICY=PASS:negative**, **MINIO_EXACT_POLICY_QUALIFICATION=PASS**. The audit also verified the previously captured readback SHA256 **BE871F3AFD3DE54F48F2EDC1D500C2C8F676780C3F8F14B10BF8B9BDD2486A94** before parsing. This closes the static policy-content gate only; it does not upgrade the un-versioned bucket to immutable storage and does not replace live outside-bucket/root denial evidence.
+
+Current frontier remains: (1) complete non-mutating live S3 denial evidence for bucket root and another bucket/outside target while preserving raw HTTP/S3 status; (2) independently tamper-evident archive/signature of the database/IAM/S3 evidence and receipt hashes; (3) verify latest protected-main adoption/runtime binding and independent signer custody with an unexpired credential; (4) issue and consume a run-scoped one-time TEST_ONLY Admission permit; only then execute isolated Producer/Timing. **Production HOLD; TEST_ONLY HOLD until those gates pass.**
+
+---
+
 ## 2026-10-16 — da9db7129607 isolated infrastructure qualified by host evidence; TEST_ONLY ADMISSION HOLD
 
 Scope / evidence classification: Windows operator-provided terminal receipts only; not an independent rerun by GitHub or production. Run ID **da9db7129607**; frozen subject **91835fa0997730c85c5f3869dd530f4c9a3ca82d**; isolated Postgres container `mcftcap09-da9db7129607-postgres-1` at loopback port 55445, MinIO `mcftcap09-da9db7129607-minio-1` at loopback port 59005. Preserve all earlier run IDs, immutable runtime, historical handoff and existing proofs. Local V13 failures and remediation below are historical, not current operational failures.
