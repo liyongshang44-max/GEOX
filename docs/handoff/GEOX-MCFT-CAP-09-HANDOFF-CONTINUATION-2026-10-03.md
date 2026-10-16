@@ -1,3 +1,11 @@
+## 2026-10-16 — da9db7129607 live MinIO bucket-root/outside-bucket boundary PASS
+
+Operator-run live S3 SigV4 validation on the isolated MinIO localhost endpoint: created and preserved dedicated EMPTY deny-control bucket `mcft-cap09-deny-control-da9db7129607` (only new sidecar resource; original business bucket, IAM and PostgreSQL unchanged). Positive and Negative principals each received **HTTP 403 AccessDenied** for unprefixed root list of `mcft-cap09-requal-da9db7129607` and list of the deny-control bucket; HEAD of deny-control bucket returned **HTTP 403** for both. Terminal marker **MINIO_BUCKET_BOUNDARY_AUDIT=PASS**. Evidence `D:\\gptdown\\MCFT-CAP09-da9db7129607-INFRA-AUDIT-V1\\minio-bucket-boundary-result-v1.txt` SHA256 **1A69A6E7CAA983301CD122E9D5E2DD3392DFB3721A61876F0761356536A20B7A**; auditor SHA256 **C62B1F9331DFE905D0B3783EC52C89789EAF99DF6915DFF01997B65E4BB789F5**. This closes tested root-list and outside-bucket list/HEAD denial; **outside-bucket PUT denial remains untested**. Preserve control bucket; do not rerun non-idempotent setup or clear resources.
+
+Follow-on exact path: verify outside-bucket PutObject negative with a never-used target key and confirm absent as admin; capture new receipt addendum (never overwrite original), independently archive/sign evidence manifest; recheck fresh Adoption/QCP and signer custody, then only authorized run-scoped one-time TEST_ONLY admission. The existing local receipt is hash-verifiable but not immutable. **TEST_ONLY HOLD; Production HOLD**.
+
+---
+
 ## 2026-10-16 — MinIO exact policy qualification PASS
 
 Run **da9db7129607**: the host-side machine comparison of the captured MinIO policy JSON against the frozen minimum-permission contract passed for both sides. Results: **EXACT_POLICY=PASS:positive**, **EXACT_POLICY=PASS:negative**, **MINIO_EXACT_POLICY_QUALIFICATION=PASS**. The audit also verified the previously captured readback SHA256 **BE871F3AFD3DE54F48F2EDC1D500C2C8F676780C3F8F14B10BF8B9BDD2486A94** before parsing. This closes the static policy-content gate only; it does not upgrade the un-versioned bucket to immutable storage and does not replace live outside-bucket/root denial evidence.
