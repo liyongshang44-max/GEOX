@@ -33,13 +33,14 @@ function draft(decisionId){
 }
 // Retry adjudication is a separately signed input, never inferred from
 // review_status, role registration, or the later execution Permit signature.
-const REVIEW_DOMAIN='GEOX_MCFT_CAP09_RETRY_ADJUDICATION_V1\\n';
+const REVIEW_DOMAIN='GEOX_MCFT_CAP09_RETRY_ADJUDICATION_V1\n';
 const FAILURE_CODE='POSTMERGE_V13_PRODUCER_CORE_FORMAL_RAW_BUCKET_REQUIRED';
 function reviewPayload(decision) {
  const d=structuredClone(decision);delete d.review_signature;return d;
 }
 function verifyReviewedDecision(decision,trust,now=Date.now()){
  assert(decision&&trust&&Array.isArray(trust.issuers),'REVIEW_TRUST_REQUIRED');
+ assert.equal(trust.schema_version,'geox_mcft_cap09_retry_trust_v1','REVIEW_TRUST_SCHEMA_INVALID');
  // policy_digest is a key-registry binding, without changing adopted/execution flags.
  const d=reviewPayload(decision);
  const expected=permit.sha(permit.canonical(trust));
