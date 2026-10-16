@@ -1,0 +1,22 @@
+'use strict';
+const assert=require('node:assert/strict');
+const inv=require('./da9-minio-readonly-inventory.cjs');
+let n=0;
+function check(name,fn){fn();n++;console.log('PASS '+name);}
+const bucket='<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>probe&#x2F;a</Key><Size>3</Size><ETag>"abc"</ETag><LastModified>2026-10-16T00:00:00Z</LastModified></Contents><Contents><Key>probe-b</Key><Size>5</Size></Contents></ListBucketResult>';
+const versions='<ListVersionsResult><IsTruncated>false</IsTruncated><Version><Key>probe/a</Key><VersionId>01</VersionId><IsLatest>true</IsLatest></Version><DeleteMarker><Key>probe-b</Key><VersionId>02</VersionId></DeleteMarker></ListVersionsResult>';
+const uploads='<ListMultipartUploadsResult><IsTruncated>false</IsTruncated><Upload><Key>probe/a</Key><UploadId>upload-xyz</UploadId></Upload></ListMultipartUploadsResult>';
+check('current_parsed',()=>{const p=inv.parsePage('current',bucket);assert.equal(p.items.length,2);assert.equal(p.items[0].Key,'probe/a');assert.equal(p.truncated,false);});
+check('version_delete_marker_parsed',()=>{const p=inv.parsePage('versions',versions);assert.equal(p.items.length,2);assert.equal(p.items[1].delete_marker,true);});
+check('multipart_upload_parsed',()=>assert.equal(inv.parsePage('multipart',uploads).items.length,1));
+check('nonempty_bucket_hold',()=>{const info=inv.classify({current:inv.parsePage('current',bucket).items,versions:inv.parsePage('versions',versions).items,multipart:inv.parsePage('multipart',uploads).items});assert.deepEqual([info.current,info.versions,info.delete_markers,info.multipart],[2,1,1,1]);assert.equal(info.status,'BUCKET_NOT_EMPTY_HOLD');});
+check('zero_every_category_does_not_authorize',()=>{const r=inv.classify({current:[],versions:[],multipart:[]});assert.equal(r.status,'EMPTY_READBACK_CANDIDATE_ONLY');assert.equal(r.test_only_admission,'HOLD');});
+check('incomplete_inventory_rejected',()=>assert.throws(()=>inv.classify({current:[],versions:[]}),/INVENTORY_INCOMPLETE/));
+check('missing_pagination_marker_rejected',()=>assert.throws(()=>inv.parsePage('current','<ListBucketResult><IsTruncated>true</IsTruncated></ListBucketResult>'),/INVENTORY_PAGINATION_MARKER_REQUIRED/));
+check('truncated_continuation_token',()=>{const p=inv.parsePage('current','<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>one&amp;two</NextContinuationToken></ListBucketResult>');assert.equal(p.next['continuation-token'],'one&two');});
+check('wrong_s3_response_rejected',()=>assert.throws(()=>inv.parsePage('versions',bucket),/INVENTORY_WRONG_LIST_KIND/));
+check('s3_error_rejected',()=>assert.throws(()=>inv.parsePage('current','<Error><Code>AccessDenied</Code></Error>')));
+check('canonical_sigv4_query',()=>assert.equal(inv.encodeQuery({'versions':'','key-marker':'a b'}),'key-marker=a%20b&versions='));
+check('signed_get_host_scope',()=>{const h=inv.signHeaders('list-type=2&max-keys=1000',{access:'EXAMPLEACCESSKEY',secret:'test-example-secret-long',region:'us-east-1'},new Date('2026-10-16T12:00:00.000Z'));assert.equal(h.host,'127.0.0.1:59005');assert.equal(h['x-amz-date'],'20261016T120000Z');assert(h.authorization.startsWith('AWS4-HMAC-SHA256 Credential=EXAMPLEACCESSKEY/20261016/us-east-1/s3/aws4_request'));});
+check('incomplete_truncation_value_rejected',()=>assert.throws(()=>inv.parsePage('current','<ListBucketResult></ListBucketResult>'),/INVENTORY_TRUNCATION_UNKNOWN/));
+console.log(JSON.stringify({status:'PASS',checks:n,live_bucket_access:false,permit_consumed:false,execution_authorized:false}));
