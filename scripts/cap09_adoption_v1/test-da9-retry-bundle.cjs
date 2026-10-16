@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),cp=require('node:child_process');
+const b=require('./da9-retry-bundle.cjs'),host=require('../runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs');
+let checks=0;function test(name,fn){fn();checks++;console.log('PASS '+name);}
+const now=Date.now(),iso=n=>new Date(n).toISOString();
+const observed={resources:{...b.RESOURCES},fresh_readback:{status:'PASS',run_id:b.RUN,started_at:iso(now-1000),completed_at:iso(now),all_rows_zero:true,bucket_empty_including_versions_multipart:true,production_bindings_present:false}};
+test('fresh_real_contract_shape',()=>b.fresh(observed,now));
+for(const [name,change] of Object.entries({stale:x=>x.fresh_readback.started_at=iso(now-300001),future:x=>x.fresh_readback.completed_at=iso(now+1),inverted:x=>x.fresh_readback.started_at=iso(now+1),nonempty:x=>x.fresh_readback.bucket_empty_including_versions_multipart=false,rows:x=>x.fresh_readback.all_rows_zero=false,wrongrun:x=>x.fresh_readback.run_id='800c023cf337',wrongport:x=>x.resources.database_port=55434,wrongbucket:x=>x.resources.bucket='geox-mcft-cap09-formal-raw-v1',wrongaudit:x=>x.resources.audit_user='postgres',production:x=>x.fresh_readback.production_bindings_present=true,failed:x=>x.fresh_readback.status='FAIL'}))test(name,()=>{const x=structuredClone(observed);change(x);assert.throws(()=>b.fresh(x,now));});
+test('draft_never_approves',()=>{const d=b.draft('review_da9');assert.equal(d.retry_admissible,false);assert.equal(d.prior_denial_explicitly_superseded,false);assert.equal(d.production_authorized,false);assert.equal(d.first_execution_provider_calls,null);assert.equal(d.first_failure_phase,'UNKNOWN');assert.equal(Object.keys(d.evidence_sha256).length,6);});
+test('fabricated_adoption_context_rejected',()=>assert.throws(()=>b.construct({decision_file:'x',files:{},observed,plan:{},authorized_at:iso(now),expires_at:iso(now+60000),qualification_first_base:iso(now+3600000),output_directory:'x'},{head:b.SUBJECT,scope:'TEST_ONLY',execution_authorized:true}),/VERIFIED_ADOPTION_CONTEXT_REQUIRED/));
+test('official_v2_plan',()=>{const p={schema_version:'geox_mcft_cap09_retry_stage_plan_v2',stages:host.STAGES.map(x=>({id:x[0],timeout_ms:1000}))};host.validatePlan(p);p.stages.reverse();assert.throws(()=>host.validatePlan(p));});
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'da9-bundle-'));try{
+ test('draft_cli_and_no_overwrite',()=>{const out=path.join(dir,'review.json'),script=path.join(__dirname,'da9-retry-bundle.cjs');const first=cp.spawnSync(process.execPath,[script,'draft','review_da9',out],{encoding:'utf8'});assert.equal(first.status,0,first.stderr);const bytes=fs.readFileSync(out);const second=cp.spawnSync(process.execPath,[script,'draft','review_da9',out],{encoding:'utf8'});assert.equal(second.status,1);assert.deepEqual(fs.readFileSync(out),bytes);assert.deepEqual(fs.readdirSync(dir),['review.json']);});
+}finally{fs.rmSync(dir,{recursive:true,force:true});}
+console.log(JSON.stringify({status:'PASS',checks,live_signing_tested:false,provider_calls:0,database_connections:0,permit_consumed:false}));

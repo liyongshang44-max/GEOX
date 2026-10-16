@@ -34,6 +34,7 @@ jobs:
       - name: Offline context, installed material and real dispatch rejection
         run: |
           node scripts/cap09_adoption_v1/test-offline-context.cjs
+          node scripts/cap09_adoption_v1/test-da9-retry-bundle.cjs
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_DISPATCH_GUARD_V1.cjs
       - name: Historical ancestry does not qualify current changes
