@@ -189,6 +189,28 @@ function signReviewedDecision(reviewFile,keyFile,issuerId,keyId,output){
  return {...verified,status:'SIGNED_RETRY_REVIEW_NOT_ADOPTION_OR_PERMIT',
    decision_sha256:c.sha(fs.readFileSync(output)),retry_execution_authorized:false,production_authorized:false};
 }
+function auditInstalledAdoption(runtimeRoot,adoptionFile){
+ assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'AUDIT_WINDOWS_LOCAL_ONLY');
+ assert(path.isAbsolute(runtimeRoot)&&path.isAbsolute(adoptionFile),'AUDIT_ABSOLUTE_PATHS_REQUIRED');
+ const compatibility=assertHostVerifierMaterial(runtimeRoot,adoptionFile);
+ const candidate=offline.load(adoptionFile,runtimeRoot);
+ assert.equal(offline.isFormalVerified(candidate),true,'AUDIT_CANDIDATE_ADOPTION_NOT_VERIFIED');
+ let installed=candidate;
+ if(compatibility.mode==='FROZEN_91835FA0_INDEPENDENT_ONLY'){
+  const old=require(compatibility.installed_verifier);
+  installed=old.load(adoptionFile,runtimeRoot);
+  assert.equal(old.isFormalVerified(installed),true,'AUDIT_INSTALLED_ADOPTION_NOT_VERIFIED');
+ }
+ assert.equal(installed.adoption_digest,candidate.adoption_digest,'AUDIT_ADOPTION_DIGEST_DIFFERENT');
+ assert.equal(installed.material_digest,candidate.material_digest,'AUDIT_MATERIAL_DIGEST_DIFFERENT');
+ assert.equal(installed.head,SUBJECT,'AUDIT_WRONG_FROZEN_SUBJECT');
+ assert.equal(installed.scope,'TEST_ONLY','AUDIT_SCOPE_INVALID');
+ assert.equal(installed.production_authorized,false,'AUDIT_PRODUCTION_FORBIDDEN');
+ return {status:'ADOPTION_DUAL_VERIFIED_READONLY_NOT_EXECUTION_AUTHORITY',
+  compatibility_mode:compatibility.mode,run_id:RUN,subject_sha:SUBJECT,
+  adoption_digest:candidate.adoption_digest,material_digest:candidate.material_digest,
+  permit_issued:false,permit_consumed:false,execution_authorized:false,production_authorized:false};
+}
 function sign(inputFile,adoptionFile,runtimeRoot,keyFile,issuerId,keyId,output){
  assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'WINDOWS_OFFLINE_ONLY');
  assert(require('./installed-material.cjs').outside(runtimeRoot,keyFile),'PRIVATE_KEY_INSIDE_RUNTIME');
@@ -219,5 +241,5 @@ function sign(inputFile,adoptionFile,runtimeRoot,keyFile,issuerId,keyId,output){
  assert(!fs.existsSync(path.join(trust.ledger_root,'run-'+RUN)),'RUN_ALREADY_CONSUMED');
  c.writeOnce(output,bundle);return {status:'SIGNED_BUNDLE_READY_FOR_OFFICIAL_PREFLIGHT',run_id:RUN,bundle_sha256:c.sha(fs.readFileSync(output)),execution_authorized:false,production_authorized:false};
 }
-module.exports={RUN,SUBJECT,HISTORY,RESOURCES,REVIEW_DOMAIN,draft,fresh,construct,verifyReviewedDecision,signReviewPayload,signReviewedDecision,assertHostVerifierMaterial,sign};
-if(require.main===module){try{const [mode,...a]=process.argv.slice(2);if(mode==='draft'){assert.equal(a.length,2);c.writeOnce(a[1],draft(a[0]));console.log(JSON.stringify({status:'REVIEW_REQUIRED',execution_authorized:false,production_authorized:false}));}else if(mode==='review-sign'){assert.equal(a.length,5);console.log(JSON.stringify(signReviewedDecision(...a)));}else if(mode==='sign'){assert.equal(a.length,7);console.log(JSON.stringify(sign(...a)));}else throw Error('MODE_REQUIRED');}catch(e){console.error(JSON.stringify({status:'EXECUTE_HOLD',code:e.code||'BUNDLE_REJECTED',execution_authorized:false,production_authorized:false}));process.exitCode=1;}}
+module.exports={RUN,SUBJECT,HISTORY,RESOURCES,REVIEW_DOMAIN,draft,fresh,construct,verifyReviewedDecision,signReviewPayload,signReviewedDecision,assertHostVerifierMaterial,auditInstalledAdoption,sign};
+if(require.main===module){try{const [mode,...a]=process.argv.slice(2);if(mode==='draft'){assert.equal(a.length,2);c.writeOnce(a[1],draft(a[0]));console.log(JSON.stringify({status:'REVIEW_REQUIRED',execution_authorized:false,production_authorized:false}));}else if(mode==='audit-host-adoption'){assert.equal(a.length,2);console.log(JSON.stringify(auditInstalledAdoption(...a)));}else if(mode==='review-sign'){assert.equal(a.length,5);console.log(JSON.stringify(signReviewedDecision(...a)));}else if(mode==='sign'){assert.equal(a.length,7);console.log(JSON.stringify(sign(...a)));}else throw Error('MODE_REQUIRED');}catch(e){console.error(JSON.stringify({status:'EXECUTE_HOLD',code:e.code||'BUNDLE_REJECTED',execution_authorized:false,production_authorized:false}));process.exitCode=1;}}
