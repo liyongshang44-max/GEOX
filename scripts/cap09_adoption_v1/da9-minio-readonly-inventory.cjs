@@ -97,7 +97,7 @@ function classify(inventory) {
   status:current+versions+deleteMarkers+multipart===0?'EMPTY_READBACK_CANDIDATE_ONLY':'BUCKET_NOT_EMPTY_HOLD',
   test_only_admission:'HOLD',production_admission:'HOLD'};
 }
-async function snapshot(credentials) {
+async function snapshot(credentials,read=readGet) {
  const results={};const started_at=new Date().toISOString();
  for(const kind of ['current','versions','multipart']) {
   const all=[],visited=new Set();
@@ -106,7 +106,7 @@ async function snapshot(credentials) {
    const query={...(kind==='current'?{'list-type':2,'max-keys':LIMIT}:kind==='versions'?{'versions':'','max-keys':LIMIT}:{'uploads':'','max-uploads':LIMIT}),...cursor};
    const canonical=encodeQuery(query);
    assert(!visited.has(canonical),'INVENTORY_PAGINATION_LOOP');visited.add(canonical);
-   const page=parsePage(kind,await readGet(canonical,credentials));
+   const page=parsePage(kind,await read(canonical,credentials));
    all.push(...page.items);assert(all.length<=100000,'INVENTORY_TOO_MANY_ITEMS');
    if(!page.truncated){results[kind]=all;break;}
    cursor=Object.fromEntries(Object.entries(page.next).filter(([,v])=>v!==null));
