@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 const currentExecution = createRequire(import.meta.url)("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
 const currentTargets = currentExecution.qualificationTargets();
+const isolatedLogin = createRequire(import.meta.url)("./MCFT_CAP09_ISOLATED_LOGIN_IDENTITY_V1.cjs");
 const responseDelay = createRequire(import.meta.url)("./MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs");
 const pipelineDelay = createRequire(import.meta.url)("./MCFT_CAP09_REAL_PIPELINE_DELAY_V1.cjs");
 import assert from "node:assert/strict";
@@ -63,7 +64,10 @@ async function runBlockedNegative(input: { url: string; subject: string }): Prom
   const epoch = "epoch_mcft_cap09_v13_blocked_qual_" + input.subject.slice(0, 12);
   const pastBase = canonicalHour(Date.now() - 3_600_000);
   try {
-    assert.equal(await currentRole(pool), EVIDENCE_LOGIN_ROLE, "V13_BLOCKED_QUALIFICATION_EVIDENCE_LOGIN_ROLE_REQUIRED");
+    if (currentTargets.isolated_login_run_id) await isolatedLogin.verifyEvidenceLogin(pool, currentTargets, EXPECTED_BLOCKED_DB);
+    else {
+      assert.equal(await currentRole(pool), EVIDENCE_LOGIN_ROLE, "V13_BLOCKED_QUALIFICATION_EVIDENCE_LOGIN_ROLE_REQUIRED");
+    }
     assert.equal(await publicTableCount(pool), 29, "V13_BLOCKED_QUALIFICATION_29_TABLES_REQUIRED");
     const lifecycle = new PostgresExternalFormalForcingControllerLifecycleV1(pool, {
       scope: MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
@@ -155,7 +159,15 @@ async function main(): Promise<void> {
   const samples: Array<Record<string, unknown>> = [];
 
   try {
-    assert.equal(await currentRole(pool), EVIDENCE_LOGIN_ROLE, "V13_LIVE_QUALIFICATION_EVIDENCE_LOGIN_ROLE_REQUIRED");
+    if (currentTargets.isolated_login_run_id) {
+      await isolatedLogin.verifyEvidenceLogin(pool, currentTargets, EXPECTED_V13_DB);
+      // Reject a misbound negative DB before the positive pipeline has any effects.
+      const negativePreflight = new Pool({connectionString: blockedUrl, max: 1});
+      try { await isolatedLogin.verifyEvidenceLogin(negativePreflight, currentTargets, EXPECTED_BLOCKED_DB); }
+      finally { await negativePreflight.end(); }
+    } else {
+      assert.equal(await currentRole(pool), EVIDENCE_LOGIN_ROLE, "V13_LIVE_QUALIFICATION_EVIDENCE_LOGIN_ROLE_REQUIRED");
+    }
     assert.equal(await publicTableCount(pool), 29, "V13_LIVE_QUALIFICATION_29_TABLES_REQUIRED");
     assert.equal(await functionExists(pool), true, "V13_LIVE_QUALIFICATION_FENCED_WRITER_REQUIRED");
 

@@ -201,6 +201,6 @@ function childTargets(){
   subject_sha:h.arm.protected_main_sha,envelope_sha256:h.verified.envelope_sha256,
   script:path.join(__dirname,stage[1]),previous_sha256:previous});
  assert.equal(claim.status,"STAGE_CAPABILITY_CONSUMED_NO_RETRY");
- return h.targets;
+ return {...h.targets,isolated_login_run_id:h.arm.run_id};
 }
 module.exports={assertControllerAdoption,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};

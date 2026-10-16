@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 const currentExecution = createRequire(import.meta.url)("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
 const currentTargets = currentExecution.qualificationTargets();
+const isolatedLogin = createRequire(import.meta.url)("./MCFT_CAP09_ISOLATED_LOGIN_IDENTITY_V1.cjs");
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -124,7 +125,10 @@ async function main(): Promise<void> {
   let candidateWriteCount = 0;
 
   try {
-    assert.equal(await currentRole(pool), EVIDENCE_ROLE, "V13_TIMING_SAMPLE_EVIDENCE_ROLE_REQUIRED");
+    if (currentTargets.isolated_login_run_id) await isolatedLogin.verifyEvidenceLogin(pool, currentTargets, EXPECTED_V13_DB);
+    else {
+      assert.equal(await currentRole(pool), EVIDENCE_ROLE, "V13_TIMING_SAMPLE_EVIDENCE_ROLE_REQUIRED");
+    }
     assert.equal(await publicTableCount(pool), 29, "V13_TIMING_SAMPLE_29_TABLES_REQUIRED");
     assert.equal(await functionExists(pool), true, "V13_TIMING_SAMPLE_FENCED_WRITER_REQUIRED");
 

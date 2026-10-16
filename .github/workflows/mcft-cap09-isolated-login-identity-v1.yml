@@ -1,0 +1,46 @@
+name: MCFT CAP09 isolated login identity
+on:
+  pull_request:
+    paths:
+      - 'scripts/**/*MCFT_CAP09_ISOLATED_LOGIN_IDENTITY*'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts'
+      - '.github/workflows/mcft-cap09-isolated-login-identity-v1.yml'
+permissions:
+  contents: read
+jobs:
+  login-boundary:
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_ISOLATED_LOGIN_IDENTITY_V1.cjs
+      - run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs
+  postgres-16:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16.4-alpine
+        env:
+          POSTGRES_PASSWORD: disposable-ci-only
+        ports:
+          - 55439:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - run: npm install --prefix "$RUNNER_TEMP/cap09-pg" --ignore-scripts --no-audit --no-fund pg@8.16.3
+      - run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_ISOLATED_LOGIN_IDENTITY_PG16_V1.cjs
+        env:
+          NODE_PATH: ${{ runner.temp }}/cap09-pg/node_modules
+          CAP09_DISPOSABLE_PG16: CI_FIXTURE_ONLY
