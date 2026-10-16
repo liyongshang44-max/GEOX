@@ -172,3 +172,11 @@ retained 91835fa0 verifier blob (not historical replay), with positive
 independent-role precheck and explicit operator-role, trust-file drift, missing
 adoption request, and modified verifier rejection. This tests compatibility
 eligibility only; no authentic Adoption was signed or loaded on the Windows host.
+
+## Windows pre-sign dual-verifier read-only gate
+
+Run on the local Windows machine with an authentic already signed Adoption and the exact installed immutable Runtime:
+
+`node scripts/cap09_adoption_v1/da9-retry-bundle.cjs audit-host-adoption ABSOLUTE_RUNTIME_ROOT ABSOLUTE_SIGNED_ADOPTION_JSON`
+
+This command checks the pinned Host and verifier, resolves the actual installed verifier, verifies the Adoption and material profile with the candidate and (for historical 91835fa0) the old installed verifier, and compares both digests. It explicitly checks subject, TEST_ONLY scope and no production authority. It does **not** use private keys, generate nonce, issue Permit, change trust, connect to MinIO or authorize execution. Failure is an execution HOLD; a PASS only establishes pre-sign compatibility, not Retry Adjudication, Provider, budget or resource Admission. Do not run with synthetic credentials, synthetic Adoption or against production.
