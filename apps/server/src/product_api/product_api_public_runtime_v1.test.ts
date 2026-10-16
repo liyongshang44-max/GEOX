@@ -8,6 +8,7 @@ import {
 
 const KEYS = [
   "GEOX_PRODUCT_DATABASE_URL",
+  "GEOX_PRODUCT_FORMAL_V5_DATABASE_URL",
   "GEOX_PRODUCT_API_TOKENS_JSON",
   "GEOX_PRODUCT_ALLOWED_ORIGINS",
   "GEOX_RUNTIME_ENV",
@@ -55,7 +56,9 @@ function tokenSource(role = "client", token = "product-test-token-0123456789abcd
 
 const BASE_ENV = {
   GEOX_PRODUCT_DATABASE_URL:
-    "postgresql://geox_product_readonly_v1:strong-product-db-password@db.example.invalid/geox?sslmode=require",
+    "postgresql://geox_product_readonly_v1:strong-product-db-password@db.example.invalid/geox_identity?sslmode=require",
+  GEOX_PRODUCT_FORMAL_V5_DATABASE_URL:
+    "postgresql://geox_product_readonly_v1:strong-product-db-password@db.example.invalid/geox_formal_v5?sslmode=require",
   GEOX_PRODUCT_API_TOKENS_JSON: tokenSource(),
   GEOX_PRODUCT_ALLOWED_ORIGINS: "https://geox-customer-portal-test.example.invalid",
   PORT: "3000",
@@ -67,6 +70,8 @@ test("public Product runtime accepts only product-specific scoped configuration"
     assert.equal(config.port, 3000);
     assert.equal(config.allowedOrigins.length, 1);
     assert.match(config.databaseUrl, /geox_product_readonly_v1/);
+    assert.match(config.formalDatabaseUrl, /geox_product_readonly_v1/);
+    assert.notEqual(config.databaseUrl, config.formalDatabaseUrl);
     assert.match(config.tokenSourceJson, /"role":"client"/);
   });
 });
@@ -80,6 +85,18 @@ test("public Product runtime rejects known MCFT/runtime writer database roles", 
     assert.throws(
       () => resolveProductApiPublicRuntimeConfigV1(),
       /PRODUCT_API_DATABASE_WRITER_ROLE_FORBIDDEN/,
+    );
+  });
+});
+
+test("public Product runtime requires distinct identity and Formal-v5 databases", async () => {
+  await withEnv({
+    ...BASE_ENV,
+    GEOX_PRODUCT_FORMAL_V5_DATABASE_URL: BASE_ENV.GEOX_PRODUCT_DATABASE_URL,
+  }, () => {
+    assert.throws(
+      () => resolveProductApiPublicRuntimeConfigV1(),
+      /PRODUCT_API_DUAL_DATABASES_REQUIRED/,
     );
   });
 });
@@ -121,7 +138,7 @@ test("public Product runtime rejects wildcard or non-HTTPS browser origins", asy
 test("isolated public Product app exposes health but no legacy/admin surface", async () => {
   await withEnv(BASE_ENV, async () => {
     const config = resolveProductApiPublicRuntimeConfigV1();
-    const { app, pool } = createProductApiPublicAppV1(config);
+    const { app, pool, formalPool } = createProductApiPublicAppV1(config);
     try {
       await app.ready();
 
@@ -146,6 +163,7 @@ test("isolated public Product app exposes health but no legacy/admin surface", a
     } finally {
       await app.close();
       await pool.end();
+      await formalPool.end();
     }
   });
 });
