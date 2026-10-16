@@ -44,9 +44,8 @@ function reviewedFixture(){
  review_policy_sha256:permit.sha(permit.canonical(trust))});
  return d;
 }
-function signedReview(input=reviewedFixture()){
- const sig=crypto.sign(null,Buffer.from(b.REVIEW_DOMAIN+permit.canonical(input)),pair.privateKey).toString('base64');
- return {...input,review_signature:{issuer_id:reviewer,key_id:'test_review',signature_base64:sig}};
+function signedReview(input=reviewedFixture(),signerTrust=trust){
+ return b.signReviewPayload(input,signerTrust,pair.privateKey,reviewer,'test_review',now);
 }
 test('separate_adjudication_ed25519_roundtrip_no_execution_authority',()=>{
  const result=b.verifyReviewedDecision(signedReview(),trust,now);
@@ -88,6 +87,15 @@ test('unknown_reviewer_role_rejected',()=>{
 test('expired_review_rejected',()=>{
  const d=reviewedFixture();d.review_issued_at=iso(now-86400001);d.authorized_at=d.review_issued_at;
  assert.throws(()=>b.verifyReviewedDecision(signedReview(d),trust,now),/REVIEW_SIGNATURE_TIME_INVALID/);
+});
+test('review_signer_rejects_mismatched_private_key',()=>{
+ const pair2=crypto.generateKeyPairSync('ed25519');
+ assert.throws(()=>b.signReviewPayload(reviewedFixture(),trust,pair2.privateKey,reviewer,'test_review',now),/REVIEW_SIGNER_KEY_MISMATCH/);
+});
+test('review_signer_does_not_set_approval_booleans',()=>{
+ const d=b.draft('UNAPPROVED_TEST');
+ assert.throws(()=>b.signReviewPayload(d,trust,pair.privateKey,reviewer,'test_review',now));
+ assert.equal(d.retry_admissible,false);assert.equal(d.prior_denial_explicitly_superseded,false);
 });
 test('no_windows_review_signature_from_ci',()=>assert.throws(()=>b.signReviewedDecision('a','b','c','d','e'),/REVIEW_WINDOWS_OPERATOR_ONLY/));
 console.log(JSON.stringify({status:'PASS',checks,live_signing_tested:false,provider_calls:0,database_connections:0,permit_consumed:false}));
