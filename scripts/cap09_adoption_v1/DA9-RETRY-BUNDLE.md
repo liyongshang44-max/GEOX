@@ -83,3 +83,22 @@ The current contract requires the entire target bucket, versions and pending
 uploads to be empty; this candidate still rejects a nonempty bucket. It neither
 excludes probe keys nor deletes or migrates evidence. Original object/version
 metadata must be reviewed before changing any resource or admission contract.
+
+## Frozen-Host byte-identity safety gate (2026-10-16)
+
+Before the external signer can mint a nonce or a signed permit, it now checks
+the *installed* Runtime's `scripts/cap09_adoption_v1/offline-context.cjs`
+against the externally used verifier's exact SHA-256 bytes and requires the
+installed Host entry to be present. If the frozen target is an earlier verifier,
+signing fails with `FROZEN_HOST_VERIFIER_INCOMPATIBLE_NO_PERMIT`.
+This is a **necessary, not sufficient** compatibility condition. It does not
+patch, preload, replace, authorize or execute the frozen Runtime. Matching
+bytes alone cannot establish a qualified six-stage Host handoff.
+
+The existing `91835fa0` installed Runtime is expected to reject the newer
+scoped-operator verifier unless a separately adopted execution-material
+successor is established. Do not attempt to bypass the private verified-context
+set or issue a permit before actual Host-verified admission. Three negative/
+byte-equivalence fixture checks were added to the DA9 test entrypoint.
+The MinIO probe-object conflict remains HOLD until a read-only real inventory
+and approved evidence-preserving disposition are available.
