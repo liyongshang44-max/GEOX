@@ -119,7 +119,7 @@ function construct(input,context,now=Date.now(),reviewTrust){
 // signing a single-use permit. This is necessary, not sufficient, for host adoption.
 const FROZEN_VERIFIER_GIT_BLOB='b2fb3022546f61db32615087fac95d5c9e0e7938';
 function gitBlobSha(bytes) {
- return crypto.createHash('sha1').update('blob '+bytes.length+'\\0').update(bytes).digest('hex');
+ return crypto.createHash('sha1').update('blob '+bytes.length).update(Buffer.from([0])).update(bytes).digest('hex');
 }
 function assertHostVerifierMaterial(runtimeRoot,adoptionFile=null){
  // Both source paths are checked before any private-key use, nonce, signature,
