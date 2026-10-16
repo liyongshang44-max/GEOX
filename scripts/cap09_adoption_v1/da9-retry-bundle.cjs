@@ -65,6 +65,9 @@ function assertHostVerifierMaterial(runtimeRoot){
  assert.equal(c.sha(fs.readFileSync(installed)),c.sha(fs.readFileSync(tool)),'FROZEN_HOST_VERIFIER_INCOMPATIBLE_NO_PERMIT');
  const hosted=path.resolve(runtimeRoot,'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs');
  c.noLinks(hosted);assert(fs.statSync(hosted).isFile(),'FROZEN_HOST_ENTRY_MISSING');
+ const expectedHost=path.resolve(__dirname,'../runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs');
+ c.noLinks(expectedHost);
+ assert.equal(c.sha(fs.readFileSync(hosted)),c.sha(fs.readFileSync(expectedHost)),'FROZEN_HOST_ENTRY_INCOMPATIBLE_NO_PERMIT');
  return {host_verifier_sha256:c.sha(fs.readFileSync(installed)),host_sha256:c.sha(fs.readFileSync(hosted))};
 }
 function sign(inputFile,adoptionFile,runtimeRoot,keyFile,issuerId,keyId,output){
