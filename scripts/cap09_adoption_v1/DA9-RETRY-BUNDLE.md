@@ -52,3 +52,34 @@ resources, nonempty bucket rejection, production rejection, default-unapproved
 draft, forged Adoption context, official stage order and exclusive output.
 These are unit/negative tests, not a positive live qualification claim. CI adds
 these tests on Windows and Ubuntu; existing tests remain intact.
+
+## Scoped formal Adoption candidate (not activation)
+
+The formal signer and offline verifier now share `assertFormalIssuer`. Independent
+issuers retain the identity-separation requirement. An accountable operator is
+eligible only when its ADOPTION registration contains an exact
+`formal_adoption_scope` with `subject_sha`, `material_digest`, `host_id`,
+`operator_id`, and `scope: TEST_ONLY`. All five values must match the signed
+qualification; unknown scope fields are rejected. The policy digest covers this
+registration. The signer selects the unique non-revoked registered public key
+matching the supplied private key, then applies the same eligibility rule as the
+verifier. Existing unscoped operator registrations remain ineligible.
+
+No real registration scope has been added. This change does not issue Adoption,
+change fixed trust defaults, grant production authority or consume a permit.
+Synthetic acceptance includes the actual formal signing function followed by
+formal verification, plus signing refusal for each of the five scope mismatches.
+
+Frozen Host compatibility remains **unimplemented**. The frozen Host loads its
+own offline verifier, including in child-stage admission. A context produced by
+an external module cannot replace that verifier's private verified-context set.
+A passing external verification alone therefore cannot establish actual Host
+admission. No module-cache injection, preload or frozen-file replacement is used.
+A separately qualified execution-material integration is required before this
+bundle can be admitted by the real Host.
+
+The retained MinIO probe objects remain a separate unresolved precondition.
+The current contract requires the entire target bucket, versions and pending
+uploads to be empty; this candidate still rejects a nonempty bucket. It neither
+excludes probe keys nor deletes or migrates evidence. Original object/version
+metadata must be reviewed before changing any resource or admission contract.

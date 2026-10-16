@@ -192,14 +192,27 @@ function validateFormal(request,policy,root,{now=Date.now(),host=os.hostname(),e
  verifyReleaseSourceBinding(release,request.material);
  return {q,checked};
 }
+// Shared signer/verifier rule. Operator eligibility requires an explicit, digest-bound
+// registration scope; merely registering an operator key never enables formal Adoption.
+function assertFormalIssuer(issuer,policy,q){
+ assert.equal(issuer.purpose,'ADOPTION','OFFLINE_ADOPTION_PURPOSE_REQUIRED');
+ assert.equal(issuer.revoked,false,'OFFLINE_ISSUER_REVOKED');
+ if(issuer.role==='INDEPENDENT_GOVERNANCE'){
+  assert.notEqual(issuer.issuer_id,policy.operator_id,'OFFLINE_INDEPENDENCE_REQUIRED');return;
+ }
+ assert(issuer.role==='ACCOUNTABLE_SINGLE_OPERATOR'&&issuer.issuer_id===policy.operator_id&&issuer.formal_adoption_scope,'OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
+ const scope=issuer.formal_adoption_scope;
+ c.exact(scope,['subject_sha','material_digest','host_id','operator_id','scope']);
+ assert.equal(scope.scope,'TEST_ONLY','OFFLINE_OPERATOR_SCOPE_INVALID');
+ for(const key of ['subject_sha','material_digest','host_id','operator_id','scope'])assert.equal(q[key],scope[key],'OFFLINE_OPERATOR_SCOPE_MISMATCH');
+ assert.equal(scope.host_id,policy.host_id,'OFFLINE_OPERATOR_HOST_MISMATCH');
+ assert.equal(scope.operator_id,policy.operator_id,'OFFLINE_OPERATOR_ID_MISMATCH');
+}
 function verifyFormal(request,policy,root,options={}){
  const {q,checked}=validateFormal(request,policy,root,options);
- // Formal TEST_ONLY activation requires a purpose-separated independent signer.
- // The existing ACCOUNTABLE_SINGLE_OPERATOR key may only serve legacy/synthetic contracts.
- const independent=policy.issuers.filter(x=>x.issuer_id===q.issuer_id&&x.key_id===q.key_id&&x.purpose==='ADOPTION');
- assert.equal(independent.length,1,'OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
- assert.equal(independent[0].role,'INDEPENDENT_GOVERNANCE','OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
- assert.notEqual(independent[0].issuer_id,policy.operator_id,'OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
+ const issuers=policy.issuers.filter(x=>x.issuer_id===q.issuer_id&&x.key_id===q.key_id&&x.purpose==='ADOPTION');
+ assert.equal(issuers.length,1,'OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
+ assertFormalIssuer(issuers[0],policy,q);
  verifySignature(request.qualification,policy,ADOPTION_DOMAIN);
  const now=options.now??Date.now(),host=options.host??os.hostname(),environment=options.environment??process.env;
  const result=Object.freeze({head:q.subject_sha,main:q.subject_sha,clean:true,base_ancestor:true,frozen_runtime_identical:true,
@@ -249,4 +262,4 @@ function bindObserved(context,bundle){
  assert.equal(bundle.observed.adoption_binding.material_digest,context.material_digest,'OFFLINE_PERMIT_MATERIAL_MISMATCH');
  assert(c.epoch(bundle.permit.payload.expires_at)<=c.epoch(context.qualification_expires_at),'PERMIT_OUTLIVES_ADOPTION');
 }
-module.exports={validateMergedDerivation,MERGED_FIELDS,REQUIRED_STAGE_MATERIAL,DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,verifyReleaseSourceBinding,load,isFormalVerified,bindObserved};
+module.exports={assertFormalIssuer,validateMergedDerivation,MERGED_FIELDS,REQUIRED_STAGE_MATERIAL,DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,verifyReleaseSourceBinding,load,isFormalVerified,bindObserved};

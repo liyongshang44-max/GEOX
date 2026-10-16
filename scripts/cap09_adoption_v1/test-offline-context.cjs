@@ -160,6 +160,37 @@ test('formal_signed_adoption_activates_test_only_without_repo_boolean',()=>{
  const f=formalFixture(),r=v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment});
  assert.equal(v.isFormalVerified(r),true);assert.equal(r.scope,'TEST_ONLY');assert.equal(r.execution_authorized,true);assert.equal(r.production_authorized,false);
 });
+function scopedOperatorFixture(){
+ const f=formalFixture(),i=f.policy.issuers[0];i.role='ACCOUNTABLE_SINGLE_OPERATOR';i.issuer_id=f.policy.operator_id;f.q.issuer_id=i.issuer_id;
+ i.formal_adoption_scope=Object.fromEntries(['subject_sha','material_digest','host_id','operator_id','scope'].map(k=>[k,f.q[k]]));f.sign();return f;
+}
+test('scoped_operator_formal_signature_roundtrip',()=>{const f=scopedOperatorFixture();v.assertFormalIssuer(f.policy.issuers[0],f.policy,f.q);assert.equal(v.isFormalVerified(verify(f)),true);});
+for(const field of ['subject_sha','material_digest','host_id','operator_id','scope'])test('operator_scope_rejects_'+field,()=>{
+ const f=scopedOperatorFixture();f.policy.issuers[0].formal_adoption_scope[field]='wrong';f.sign();
+ assert.throws(()=>v.assertFormalIssuer(f.policy.issuers[0],f.policy,f.q));assert.throws(()=>verify(f));
+});
+test('formal_signer_to_offline_verifier_scoped_operator',()=>{
+ const f=scopedOperatorFixture(),dir=fs.mkdtempSync(path.join(tmp,'signer-')),toolRoot=path.join(dir,'tooling','scripts','cap09_adoption_v1');fs.mkdirSync(toolRoot,{recursive:true});
+ // Copy tools into an isolated synthetic repository; never edit the real trust file.
+ for(const name of ['signer.cjs','offline-context.cjs','installed-material.cjs','contract.cjs'])fs.copyFileSync(path.join(__dirname,name),path.join(toolRoot,name));
+ f.policy.host_id=os.hostname();f.q.host_id=os.hostname();f.policy.issuers[0].formal_adoption_scope.host_id=os.hostname();f.sign();
+ fs.writeFileSync(path.join(toolRoot,'offline-trust.json'),JSON.stringify(f.policy));
+ const q=f.q,candidate={schema:'MCFT_CAP09_ADOPTION_CANDIDATE_V1',subject_sha:q.subject_sha,scope:q.scope,checks:q.checks,frozen_paths:108,first_parent_proven:true,qcp_proof_ref:q.qcp_proof_ref,qcp_proof_sha256:q.qcp_proof_sha256,qcp_artifact_sha256:'a'.repeat(64),engineering_check_id:'A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_ENGINEERING_ONLY',release_binding_ref:q.release_binding_ref,release_binding_sha256:q.release_binding_sha256,installed_material_required:true,signature_required:true,execution_authorized:false,production_authorized:false};
+ const candidatePath=path.join(f.request.evidence_root,'candidate.json'),materialPath=path.join(dir,'material.json'),keyPath=path.join(dir,'synthetic-key.pem'),out=path.join(dir,'signed.json');
+ fs.writeFileSync(candidatePath,JSON.stringify(candidate));fs.writeFileSync(materialPath,JSON.stringify(f.request.material));fs.writeFileSync(keyPath,f.pair.privateKey.export({type:'pkcs8',format:'pem'}));
+ const child=path.join(dir,'sign.cjs');fs.writeFileSync(child,`const s=require(${JSON.stringify(path.join(toolRoot,'signer.cjs'))});s.formalAdoption(...JSON.parse(process.argv[2]));`);
+ const result=cp.spawnSync(process.execPath,[child,JSON.stringify([candidatePath,materialPath,f.root,keyPath,1,out,f.now])],{encoding:'utf8',env:f.environment});assert.equal(result.status,0,result.stderr);
+ const verified=v.verifyFormal(c.read(out),f.policy,f.root,{now:f.now,host:os.hostname(),environment:f.environment});assert.equal(v.isFormalVerified(verified),true);assert.equal(verified.production_authorized,false);
+ for(const field of ['subject_sha','material_digest','host_id','operator_id','scope']){
+  const changed=structuredClone(f.policy);changed.issuers[0].formal_adoption_scope[field]='wrong';fs.writeFileSync(path.join(toolRoot,'offline-trust.json'),JSON.stringify(changed));
+  const deniedOut=path.join(dir,'denied-'+field+'.json');
+  const denied=cp.spawnSync(process.execPath,[child,JSON.stringify([candidatePath,materialPath,f.root,keyPath,1,deniedOut,f.now])],{encoding:'utf8',env:f.environment});
+  assert.notEqual(denied.status,0,field);assert.equal(fs.existsSync(deniedOut),false,field);
+ }
+});
+test('operator_scope_unknown_field_rejected',()=>{const f=scopedOperatorFixture();f.policy.issuers[0].formal_adoption_scope.extra=true;f.sign();assert.throws(()=>verify(f));});
+test('operator_scope_policy_tamper_rejected',()=>{const f=scopedOperatorFixture();f.policy.issuers[0].formal_adoption_scope.host_id='other';assert.throws(()=>verify(f));});
+test('operator_scope_revoked_rejected',()=>{const f=scopedOperatorFixture();f.policy.issuers[0].revoked=true;f.sign();assert.throws(()=>verify(f));});
 test('formal_context_cannot_be_fabricated',()=>{assert.equal(v.isFormalVerified(Object.freeze({execution_authorized:true,production_authorized:false})),false);});
 test('formal_signed_adoption_rejects_policy_self_activation',()=>{const f=formalFixture();f.policy.adopted=true;f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
 test('formal_signed_adoption_rejects_legacy_operator_issuer',()=>{
