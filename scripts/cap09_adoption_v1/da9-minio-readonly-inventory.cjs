@@ -64,6 +64,10 @@ function xmlEntries(xml,name,fields) {
 function parsePage(kind,xml) {
  assert(typeof xml==='string'&&xml.length<2*1024*1024,'INVENTORY_XML_SIZE_INVALID');
  assert(/<List(?:BucketResult|VersionsResult|MultipartUploadsResult)\b/.test(xml),'INVENTORY_S3_LIST_ROOT_INVALID');
+ const expectedRoot=kind==='current'?'ListBucketResult':kind==='versions'?'ListVersionsResult':kind==='multipart'?'ListMultipartUploadsResult':null;
+ assert(expectedRoot,'INVENTORY_KIND_INVALID');
+ assert(new RegExp('^\\s*(?:<\\?xml[^>]*>\\s*)?<' + expectedRoot + '(?:\\s[^>]*)?>[\\s\\S]*<\\/' + expectedRoot + '>\\s*$').test(xml),'INVENTORY_S3_LIST_DOCUMENT_INCOMPLETE');
+ assert(!/<!DOCTYPE|<!ENTITY/i.test(xml),'INVENTORY_XML_ENTITY_DECLARATION_FORBIDDEN');
  assert(!/<(?:Error|Exception)\b/.test(xml),'INVENTORY_S3_ERROR');
  const truncated=xmlOne(xml,'IsTruncated');
  assert(truncated==='true'||truncated==='false','INVENTORY_TRUNCATION_UNKNOWN');
@@ -85,6 +89,8 @@ function parsePage(kind,xml) {
   assert(next[Object.keys(next)[0]],'INVENTORY_PAGINATION_MARKER_REQUIRED');
  }
  for(const item of items)assert(typeof item.Key==='string'&&item.Key.length>0,'INVENTORY_OBJECT_KEY_MISSING');
+ if(kind==='versions')for(const item of items)assert(typeof item.VersionId==='string'&&item.VersionId.length>0,'INVENTORY_VERSION_ID_REQUIRED');
+ if(kind==='multipart')for(const item of items)assert(typeof item.UploadId==='string'&&item.UploadId.length>0,'INVENTORY_UPLOAD_ID_REQUIRED');
  return {truncated:truncated==='true',items,next};
 }
 function classify(inventory) {
