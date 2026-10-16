@@ -8,6 +8,7 @@ import {
 
 const KEYS = [
   "GEOX_PRODUCT_DATABASE_URL",
+  "GEOX_PRODUCT_MCFT_DATABASE_URL",
   "GEOX_PRODUCT_API_TOKENS_JSON",
   "GEOX_PRODUCT_ALLOWED_ORIGINS",
   "GEOX_RUNTIME_ENV",
@@ -145,7 +146,44 @@ test("isolated public Product app exposes health but no legacy/admin surface", a
       assert.equal(unauthenticated.statusCode, 401);
     } finally {
       await app.close();
-      await pool.end();
     }
+  });
+});
+
+const MCFT_URL = "postgresql://geox_product_readonly_v1:test-password@db.example.invalid/geox_mcft_cap09_s6_formal_t4r1_24h_v5?sslmode=require";
+
+test("optional MCFT connection is validated separately without replacing identity connection", async () => {
+  await withEnv({...BASE_ENV, GEOX_PRODUCT_MCFT_DATABASE_URL: MCFT_URL}, () => {
+    const config = resolveProductApiPublicRuntimeConfigV1();
+    assert.equal(config.databaseUrl, BASE_ENV.GEOX_PRODUCT_DATABASE_URL);
+    assert.equal(config.mcftDatabaseUrl, MCFT_URL);
+  });
+  await withEnv({...BASE_ENV, GEOX_PRODUCT_MCFT_DATABASE_URL: MCFT_URL.replace("geox_product_readonly_v1", "geox_mcft_cap09_twin_runtime_login_v1")}, () => {
+    assert.throws(() => resolveProductApiPublicRuntimeConfigV1(), /WRITER_ROLE_FORBIDDEN/);
+  });
+});
+
+test("readiness checks both stores and fails when the configured MCFT store cannot connect", async () => {
+  await withEnv({...BASE_ENV, GEOX_PRODUCT_MCFT_DATABASE_URL: MCFT_URL}, async () => {
+    const {app, pool, mcftPool} = createProductApiPublicAppV1(resolveProductApiPublicRuntimeConfigV1());
+    assert.notEqual(pool, mcftPool);
+    (pool as any).query = async () => ({rows: [{transaction_read_only: "on"}]});
+    (mcftPool as any).query = async () => {throw new Error("TEST_MCFT_OFFLINE");};
+    try {
+      assert.equal((await app.inject({method: "GET", url: "/ready"})).statusCode, 503);
+      (mcftPool as any).query = async (sql: string, params: any[]) => sql.includes("to_regclass")
+        ? {rows: params[0].map((name: string) => ({name, present: true, can_select: true}))}
+        : {rows: [{transaction_read_only: "on"}]};
+      const ready = await app.inject({method: "GET", url: "/ready"});
+      assert.equal(ready.statusCode, 200);
+      assert.equal(ready.json().mcft_database_connectivity, "READY");
+      assert.equal(ready.json().mcft_session_default_read_only, true);
+      (mcftPool as any).query = async (sql: string, params: any[]) => sql.includes("to_regclass")
+        ? {rows: params[0].map((name: string) => ({name, present: !name.includes("visibility"), can_select: true}))}
+        : {rows: [{transaction_read_only: "on"}]};
+      const incompatible = await app.inject({method: "GET", url: "/ready"});
+      assert.equal(incompatible.statusCode, 503);
+      assert.equal(incompatible.json().error, "MCFT_READ_STORE_NOT_READY");
+    } finally {await app.close();}
   });
 });

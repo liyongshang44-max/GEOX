@@ -100,6 +100,8 @@ export class CustomerProductProjectionReadErrorV1 extends Error {
 }
 
 export type CustomerProductProjectionBuilderOptionsV1 = {
+  // Field identity remains in the Product store; all MCFT reads use this store when configured.
+  mcftPool?: Pool;
   readApi?: McftFieldTwinReadApiV1;
   now?: () => string;
 };
@@ -429,6 +431,7 @@ function mapMcftReadFailureV1(error: unknown): { status: "LIMITED" | "UNAVAILABL
 }
 
 export class PostgresCustomerProductProjectionBuilderV1 {
+  private readonly mcftPool: Pool;
   private readonly readApi: McftFieldTwinReadApiV1;
   private readonly now: () => string;
 
@@ -436,7 +439,8 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     private readonly pool: Pool,
     options: CustomerProductProjectionBuilderOptionsV1 = {},
   ) {
-    this.readApi = options.readApi ?? new PostgresMcftFieldTwinS4ReadApiV1(pool);
+    this.mcftPool = options.mcftPool ?? pool;
+    this.readApi = options.readApi ?? new PostgresMcftFieldTwinS4ReadApiV1(this.mcftPool);
     this.now = options.now ?? (() => new Date().toISOString());
   }
 
@@ -515,7 +519,7 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     | { status: "NONE"; scope: null; reason_codes: readonly string[] }
     | { status: "AMBIGUOUS"; scope: null; reason_codes: readonly string[] }
   > {
-    const result = await this.pool.query<RuntimeScopeRowV1>(
+    const result = await this.mcftPool.query<RuntimeScopeRowV1>(
       `SELECT season_id, zone_id, active_lineage_ref, updated_at
          FROM public.twin_active_lineage_index_v1
         WHERE tenant_id = $1
@@ -562,7 +566,7 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     if (!stateRef) {
       throw new CustomerProductProjectionReadErrorV1("MCFT_CURRENT_STATE_REF_MISSING", 409);
     }
-    const result = await this.pool.query<StateProjectionRowV1>(
+    const result = await this.mcftPool.query<StateProjectionRowV1>(
       `SELECT canonical_payload, logical_time, determinism_hash, source_fact_id
          FROM public.twin_state_history_projection_v1
         WHERE tenant_id = $1

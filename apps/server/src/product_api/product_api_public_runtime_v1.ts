@@ -8,6 +8,7 @@ import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
 import { Pool } from "pg";
 
+import { PostgresCustomerProductProjectionBuilderV1 } from "../product_projection/customer/customer_product_projection_builder_v1.js";
 import { registerProductV1Routes } from "../routes/product_v1.js";
 
 export const PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1 =
@@ -25,6 +26,32 @@ const FORBIDDEN_DATABASE_ROLES_V1 = new Set([
 
 const SQL_WRITE_OR_DDL_V1 =
   /\b(?:INSERT|UPDATE|DELETE|MERGE|UPSERT|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|COMMENT|COPY|VACUUM|ANALYZE|CLUSTER|REINDEX|REFRESH|CALL|DO|EXECUTE)\b/i;
+
+// Required by the canonical CAP-07 runtime graph and its optional domain summaries.
+const MCFT_PRODUCT_READ_RELATIONS_V1 = [
+  "facts", "twin_fact_visibility_epoch_v1", "twin_fact_visibility_index_v1",
+  "twin_active_lineage_index_v1", "twin_runtime_checkpoint_latest_index_v1",
+  "twin_object_idempotency_index_v1", "twin_state_history_projection_v1",
+  "twin_forecast_success_latest_index_v1", "twin_scenario_latest_index_v1",
+  "twin_scenario_set_projection_v1", "twin_action_feedback_projection_v1",
+  "twin_forecast_residual_projection_v1", "twin_calibration_candidate_projection_v1",
+  "twin_shadow_evaluation_projection_v1", "twin_decision_record_projection_v1",
+  "twin_approved_plan_binding_projection_v1",
+] as const;
+
+async function assertMcftProductReadStoreV1(pool: Pool): Promise<void> {
+  const result = await pool.query<{ name: string; present: boolean; can_select: boolean }>(`
+    SELECT name, relation IS NOT NULL AS present,
+           CASE WHEN relation IS NULL THEN false
+                ELSE pg_catalog.has_table_privilege(current_user, relation, 'SELECT') END AS can_select
+      FROM (SELECT name, pg_catalog.to_regclass('public.' || name) AS relation
+              FROM pg_catalog.unnest($1::text[]) AS name) required
+  `, [[...MCFT_PRODUCT_READ_RELATIONS_V1]]);
+  if (result.rows.length !== MCFT_PRODUCT_READ_RELATIONS_V1.length
+      || result.rows.some(row => !row.present || !row.can_select)) {
+    throw new Error("PRODUCT_API_MCFT_READ_STORE_INCOMPATIBLE");
+  }
+}
 
 function nonEmptyEnvV1(name: string): string {
   const value = String(process.env[name] ?? "").trim();
@@ -148,6 +175,7 @@ export type ProductApiPublicRuntimeConfigV1 = {
   host: string;
   port: number;
   databaseUrl: string;
+  mcftDatabaseUrl?: string;
   allowedOrigins: string[];
   tokenSourceJson: string;
 };
@@ -155,6 +183,8 @@ export type ProductApiPublicRuntimeConfigV1 = {
 export function resolveProductApiPublicRuntimeConfigV1(): ProductApiPublicRuntimeConfigV1 {
   const databaseUrl = nonEmptyEnvV1("GEOX_PRODUCT_DATABASE_URL");
   parseProductDatabaseUrlV1(databaseUrl);
+  const mcftDatabaseUrl = String(process.env.GEOX_PRODUCT_MCFT_DATABASE_URL ?? "").trim() || undefined;
+  if (mcftDatabaseUrl) parseProductDatabaseUrlV1(mcftDatabaseUrl);
 
   const tokenSourceJson = parseProductTokenSourceV1(
     nonEmptyEnvV1("GEOX_PRODUCT_API_TOKENS_JSON"),
@@ -179,6 +209,7 @@ export function resolveProductApiPublicRuntimeConfigV1(): ProductApiPublicRuntim
     host: String(process.env.HOST ?? "0.0.0.0"),
     port,
     databaseUrl,
+    mcftDatabaseUrl,
     allowedOrigins,
     tokenSourceJson,
   };
@@ -186,7 +217,7 @@ export function resolveProductApiPublicRuntimeConfigV1(): ProductApiPublicRuntim
 
 export function createProductApiPublicAppV1(
   config: ProductApiPublicRuntimeConfigV1,
-): { app: FastifyInstance; pool: Pool } {
+): { app: FastifyInstance; pool: Pool; mcftPool: Pool } {
   // The existing auth module consumes GEOX_TOKENS_JSON. Public Product Runtime accepts only
   // the narrower GEOX_PRODUCT_API_TOKENS_JSON source and mirrors it in-process after validation.
   process.env.GEOX_RUNTIME_ENV = "production";
@@ -213,6 +244,9 @@ export function createProductApiPublicAppV1(
   });
 
   const pool = createProductApiReadOnlyPoolV1(config.databaseUrl);
+  const mcftPool = config.mcftDatabaseUrl
+    ? createProductApiReadOnlyPoolV1(config.mcftDatabaseUrl)
+    : pool;
 
   app.get("/health", async () => ({
     ok: true,
@@ -226,11 +260,17 @@ export function createProductApiPublicAppV1(
       const result = await pool.query<{ transaction_read_only: string }>(
         "SELECT pg_catalog.current_setting('transaction_read_only') AS transaction_read_only",
       );
+      const mcftResult = mcftPool === pool ? result : await mcftPool.query<{ transaction_read_only: string }>(
+        "SELECT pg_catalog.current_setting('transaction_read_only') AS transaction_read_only",
+      );
+      if (mcftPool !== pool) await assertMcftProductReadStoreV1(mcftPool);
       return reply.code(200).send({
         ok: true,
         schema_version: PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1,
         database_connectivity: "READY",
         session_default_read_only: result.rows[0]?.transaction_read_only === "on",
+        mcft_database_connectivity: "READY",
+        mcft_session_default_read_only: mcftResult.rows[0]?.transaction_read_only === "on",
         authority_ceiling: "NON_AUTHORITATIVE_PRODUCT_PROJECTION_ONLY",
       });
     } catch (error) {
@@ -238,12 +278,19 @@ export function createProductApiPublicAppV1(
       return reply.code(503).send({
         ok: false,
         schema_version: PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1,
-        error: "PRODUCT_DATABASE_NOT_READY",
+        error: error instanceof Error && error.message === "PRODUCT_API_MCFT_READ_STORE_INCOMPATIBLE"
+          ? "MCFT_READ_STORE_NOT_READY" : "PRODUCT_DATABASE_NOT_READY",
       });
     }
   });
 
-  registerProductV1Routes(app, pool);
+  registerProductV1Routes(app, pool, {
+    builder: new PostgresCustomerProductProjectionBuilderV1(pool, { mcftPool }),
+  });
+
+  app.addHook("onClose", async () => {
+    await Promise.all(Array.from(new Set([pool, mcftPool])).map((source) => source.end()));
+  });
 
   app.setNotFoundHandler((_request, reply) => {
     reply.code(404).send({
@@ -252,12 +299,12 @@ export function createProductApiPublicAppV1(
     });
   });
 
-  return { app, pool };
+  return { app, pool, mcftPool };
 }
 
 export async function runProductApiPublicRuntimeV1(): Promise<void> {
   const config = resolveProductApiPublicRuntimeConfigV1();
-  const { app, pool } = createProductApiPublicAppV1(config);
+  const { app } = createProductApiPublicAppV1(config);
 
   let closing = false;
   const shutdown = async (signal: string) => {
@@ -265,7 +312,6 @@ export async function runProductApiPublicRuntimeV1(): Promise<void> {
     closing = true;
     app.log.info({ signal }, "Product API public runtime shutting down");
     await app.close().catch(() => undefined);
-    await pool.end().catch(() => undefined);
   };
 
   process.once("SIGTERM", () => void shutdown("SIGTERM"));
