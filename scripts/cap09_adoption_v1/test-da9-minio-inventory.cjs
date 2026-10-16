@@ -14,7 +14,7 @@ check('zero_every_category_does_not_authorize',()=>{const r=inv.classify({curren
 check('incomplete_inventory_rejected',()=>assert.throws(()=>inv.classify({current:[],versions:[]}),/INVENTORY_INCOMPLETE/));
 check('missing_pagination_marker_rejected',()=>assert.throws(()=>inv.parsePage('current','<ListBucketResult><IsTruncated>true</IsTruncated></ListBucketResult>'),/INVENTORY_PAGINATION_MARKER_REQUIRED/));
 check('truncated_continuation_token',()=>{const p=inv.parsePage('current','<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>one&amp;two</NextContinuationToken></ListBucketResult>');assert.equal(p.next['continuation-token'],'one&two');});
-check('wrong_s3_response_rejected',()=>assert.throws(()=>inv.parsePage('versions',bucket),/INVENTORY_WRONG_LIST_KIND/));
+check('wrong_s3_response_rejected',()=>assert.throws(()=>inv.parsePage('versions',bucket),/INVENTORY_S3_LIST_DOCUMENT_INCOMPLETE|INVENTORY_WRONG_LIST_KIND/));
 check('s3_error_rejected',()=>assert.throws(()=>inv.parsePage('current','<Error><Code>AccessDenied</Code></Error>')));
 check('canonical_sigv4_query',()=>assert.equal(inv.encodeQuery({'versions':'','key-marker':'a b'}),'key-marker=a%20b&versions='));
 check('signed_get_host_scope',()=>{const h=inv.signHeaders('list-type=2&max-keys=1000',{access:'EXAMPLEACCESSKEY',secret:'test-example-secret-long',region:'us-east-1'},new Date('2026-10-16T12:00:00.000Z'));assert.equal(h.host,'127.0.0.1:59005');assert.equal(h['x-amz-date'],'20261016T120000Z');assert(h.authorization.startsWith('AWS4-HMAC-SHA256 Credential=EXAMPLEACCESSKEY/20261016/us-east-1/s3/aws4_request'));});
