@@ -19,9 +19,10 @@ try{
  const entry=path.join(compatRoot,'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs');
  fs.mkdirSync(path.dirname(verifier),{recursive:true});fs.mkdirSync(path.dirname(entry),{recursive:true});
  fs.copyFileSync(path.join(__dirname,'offline-context.cjs'),verifier);
- fs.writeFileSync(entry,'// fixture entry, no execution\\n');
+ fs.copyFileSync(path.join(__dirname,'../runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'),entry);
  test('same_verifier_bytes_required',()=>assert.equal(typeof b.assertHostVerifierMaterial(compatRoot).host_verifier_sha256,'string'));
  test('frozen_verifier_drift_fails_closed',()=>{fs.appendFileSync(verifier,'// old verification rule\\n');assert.throws(()=>b.assertHostVerifierMaterial(compatRoot),/FROZEN_HOST_VERIFIER_INCOMPATIBLE_NO_PERMIT/);});
- test('missing_host_entry_rejected',()=>{fs.copyFileSync(path.join(__dirname,'offline-context.cjs'),verifier);fs.unlinkSync(entry);assert.throws(()=>b.assertHostVerifierMaterial(compatRoot),/ENOENT|FROZEN_HOST_ENTRY_MISSING/);});
+ test('host_entry_byte_drift_fails_closed',()=>{fs.copyFileSync(path.join(__dirname,'offline-context.cjs'),verifier);fs.appendFileSync(entry,'// incompatible host version\n');assert.throws(()=>b.assertHostVerifierMaterial(compatRoot),/FROZEN_HOST_ENTRY_INCOMPATIBLE_NO_PERMIT/);});
+ test('missing_host_entry_rejected',()=>{fs.unlinkSync(entry);assert.throws(()=>b.assertHostVerifierMaterial(compatRoot),/ENOENT|FROZEN_HOST_ENTRY_MISSING/);});
 }finally{fs.rmSync(compatRoot,{recursive:true,force:true});}
 console.log(JSON.stringify({status:'PASS',checks,live_signing_tested:false,provider_calls:0,database_connections:0,permit_consumed:false}));
