@@ -130,4 +130,5 @@ test('review_signer_does_not_set_approval_booleans',()=>{
  assert.equal(d.retry_admissible,false);assert.equal(d.prior_denial_explicitly_superseded,false);
 });
 test('no_windows_review_signature_from_ci',()=>assert.throws(()=>b.signReviewedDecision('a','b','c','d','e'),/REVIEW_WINDOWS_OPERATOR_ONLY/));
+test('host_readonly_audit_never_runs_in_ci',()=>assert.throws(()=>b.auditInstalledAdoption('a','b'),/AUDIT_WINDOWS_LOCAL_ONLY/));
 console.log(JSON.stringify({status:'PASS',checks,live_signing_tested:false,provider_calls:0,database_connections:0,permit_consumed:false}));
