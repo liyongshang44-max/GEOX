@@ -26,8 +26,10 @@ function draft(decisionId){
  c.id(decisionId);
  return {decision_id:decisionId,run_id:RUN,parent_run_id:'72dc0304a21a',attempt_ordinal:2,protected_main_sha:SUBJECT,scope:'TEST_ONLY',
  first_execution_provider_calls:null,first_failure_phase:'UNKNOWN',unknown_provider_count_acknowledged:true,
- evidence_sha256:{...HISTORY},retry_admissible:false,prior_denial_explicitly_superseded:false,production_authorized:false,
- review_status:'REVIEW_REQUIRED',reviewer_id:null,authorized_at:null};
+ evidence_sha256:{...HISTORY},prior_denial_sha256:HISTORY.first_failed_receipt,first_failure_code:FAILURE_CODE,
+ retry_admissible:false,prior_denial_explicitly_superseded:false,production_authorized:false,
+ review_status:'REVIEW_REQUIRED',reviewer_id:null,review_authority_ref:null,supersession_rationale:null,
+ review_policy_sha256:null,review_issued_at:null,authorized_at:null};
 }
 // Retry adjudication is a separately signed input, never inferred from
 // review_status, role registration, or the later execution Permit signature.
@@ -128,6 +130,33 @@ function assertHostVerifierMaterial(runtimeRoot){
  assert.equal(c.sha(fs.readFileSync(hosted)),c.sha(fs.readFileSync(expectedHost)),'FROZEN_HOST_ENTRY_INCOMPATIBLE_NO_PERMIT');
  return {host_verifier_sha256:c.sha(fs.readFileSync(installed)),host_sha256:c.sha(fs.readFileSync(hosted))};
 }
+
+function signReviewedDecision(reviewFile,keyFile,issuerId,keyId,output){
+ assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'REVIEW_WINDOWS_OPERATOR_ONLY');
+ const releaseRoot=path.resolve(__dirname,'../..');
+ for(const file of [reviewFile,keyFile,output]) {
+  assert(path.isAbsolute(file),'REVIEW_ABSOLUTE_FILE_REQUIRED');
+  assert(require('./installed-material.cjs').outside(releaseRoot,file),'REVIEW_INPUT_OR_OUTPUT_INSIDE_RELEASE');
+ }
+ assert(path.resolve(reviewFile)!==path.resolve(output),'REVIEW_OUTPUT_MUST_BE_SEPARATE');
+ assert(!fs.existsSync(output),'REVIEW_OUTPUT_EXISTS');
+ c.noLinks(keyFile);
+ const trust=c.read(permit.TRUST_PATH),unsigned=c.read(reviewFile);
+ assert(!Object.hasOwn(unsigned,'review_signature'),'REVIEW_ALREADY_SIGNED');
+ assert.equal(unsigned.reviewer_id,issuerId,'REVIEW_OPERATOR_ID_MISMATCH');
+ assert.equal(unsigned.review_policy_sha256,permit.sha(permit.canonical(trust)),'REVIEW_TRUST_DIGEST_MISMATCH');
+ const issuers=trust.issuers.filter(x=>x.issuer_id===issuerId&&x.key_id===keyId&&x.revoked===false);
+ assert.equal(issuers.length,1,'REVIEW_SIGNER_NOT_REGISTERED');
+ const privateKey=crypto.createPrivateKey(fs.readFileSync(keyFile));
+ assert.equal(privateKey.asymmetricKeyType,'ed25519','REVIEW_ED25519_REQUIRED');
+ assert.equal(c.sha(crypto.createPublicKey(privateKey).export({type:'spki',format:'der'})),issuers[0].spki_sha256,'REVIEW_SIGNER_KEY_MISMATCH');
+ const signature_base64=crypto.sign(null,Buffer.from(REVIEW_DOMAIN+permit.canonical(unsigned)),privateKey).toString('base64');
+ const decision={...unsigned,review_signature:{issuer_id:issuerId,key_id:keyId,signature_base64}};
+ const verified=verifyReviewedDecision(decision,trust);
+ c.writeOnce(output,decision);
+ return {...verified,status:'SIGNED_RETRY_REVIEW_NOT_ADOPTION_OR_PERMIT',
+   decision_sha256:c.sha(fs.readFileSync(output)),retry_execution_authorized:false,production_authorized:false};
+}
 function sign(inputFile,adoptionFile,runtimeRoot,keyFile,issuerId,keyId,output){
  assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'WINDOWS_OFFLINE_ONLY');
  assert(require('./installed-material.cjs').outside(runtimeRoot,keyFile),'PRIVATE_KEY_INSIDE_RUNTIME');
@@ -149,5 +178,5 @@ function sign(inputFile,adoptionFile,runtimeRoot,keyFile,issuerId,keyId,output){
  assert(!fs.existsSync(path.join(trust.ledger_root,'run-'+RUN)),'RUN_ALREADY_CONSUMED');
  c.writeOnce(output,bundle);return {status:'SIGNED_BUNDLE_READY_FOR_OFFICIAL_PREFLIGHT',run_id:RUN,bundle_sha256:c.sha(fs.readFileSync(output)),execution_authorized:false,production_authorized:false};
 }
-module.exports={RUN,SUBJECT,HISTORY,RESOURCES,REVIEW_DOMAIN,draft,fresh,construct,verifyReviewedDecision,assertHostVerifierMaterial,sign};
-if(require.main===module){try{const [mode,...a]=process.argv.slice(2);if(mode==='draft'){assert.equal(a.length,2);c.writeOnce(a[1],draft(a[0]));console.log(JSON.stringify({status:'REVIEW_REQUIRED',execution_authorized:false,production_authorized:false}));}else if(mode==='sign'){assert.equal(a.length,7);console.log(JSON.stringify(sign(...a)));}else throw Error('MODE_REQUIRED');}catch(e){console.error(JSON.stringify({status:'EXECUTE_HOLD',code:e.code||'BUNDLE_REJECTED',execution_authorized:false,production_authorized:false}));process.exitCode=1;}}
+module.exports={RUN,SUBJECT,HISTORY,RESOURCES,REVIEW_DOMAIN,draft,fresh,construct,verifyReviewedDecision,signReviewedDecision,assertHostVerifierMaterial,sign};
+if(require.main===module){try{const [mode,...a]=process.argv.slice(2);if(mode==='draft'){assert.equal(a.length,2);c.writeOnce(a[1],draft(a[0]));console.log(JSON.stringify({status:'REVIEW_REQUIRED',execution_authorized:false,production_authorized:false}));}else if(mode==='review-sign'){assert.equal(a.length,5);console.log(JSON.stringify(signReviewedDecision(...a)));}else if(mode==='sign'){assert.equal(a.length,7);console.log(JSON.stringify(sign(...a)));}else throw Error('MODE_REQUIRED');}catch(e){console.error(JSON.stringify({status:'EXECUTE_HOLD',code:e.code||'BUNDLE_REJECTED',execution_authorized:false,production_authorized:false}));process.exitCode=1;}}
