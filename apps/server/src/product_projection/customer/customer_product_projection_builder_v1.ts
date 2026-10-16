@@ -6,6 +6,7 @@
 // recommendation inference, no command authority, and no field-level aggregation across multiple zones.
 
 import type { Pool } from "pg";
+import { isAllowedFormalV5ResearchFieldV1 } from "./customer_formal_v5_readiness_v1.js";
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_json_v1.js";
 import type {
   FieldTwinScopeV1,
@@ -102,6 +103,9 @@ export class CustomerProductProjectionReadErrorV1 extends Error {
 export type CustomerProductProjectionBuilderOptionsV1 = {
   readApi?: McftFieldTwinReadApiV1;
   now?: () => string;
+  // An explicit second PostgreSQL connection is permitted only for the frozen
+  // single-field research scope. No scope or state fallback is performed.
+  canonicalPool?: Pool;
 };
 
 function safeIsoNowV1(now: () => string): string {
@@ -431,12 +435,16 @@ function mapMcftReadFailureV1(error: unknown): { status: "LIMITED" | "UNAVAILABL
 export class PostgresCustomerProductProjectionBuilderV1 {
   private readonly readApi: McftFieldTwinReadApiV1;
   private readonly now: () => string;
+  private readonly canonicalPool: Pool;
+  private readonly formalResearchMode: boolean;
 
   constructor(
     private readonly pool: Pool,
     options: CustomerProductProjectionBuilderOptionsV1 = {},
   ) {
-    this.readApi = options.readApi ?? new PostgresMcftFieldTwinS4ReadApiV1(pool);
+    this.canonicalPool = options.canonicalPool ?? pool;
+    this.formalResearchMode = options.canonicalPool !== undefined;
+    this.readApi = options.readApi ?? new PostgresMcftFieldTwinS4ReadApiV1(this.canonicalPool);
     this.now = options.now ?? (() => new Date().toISOString());
   }
 
@@ -515,7 +523,10 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     | { status: "NONE"; scope: null; reason_codes: readonly string[] }
     | { status: "AMBIGUOUS"; scope: null; reason_codes: readonly string[] }
   > {
-    const result = await this.pool.query<RuntimeScopeRowV1>(
+    if (this.formalResearchMode && !isAllowedFormalV5ResearchFieldV1(scope,fieldId)) {
+      return {status: "NONE", scope: null, reason_codes: ["PRODUCT_FORMAL_V5_FIELD_SCOPE_NOT_ADMITTED"]};
+    }
+    const result = await this.canonicalPool.query<RuntimeScopeRowV1>(
       `SELECT season_id, zone_id, active_lineage_ref, updated_at
          FROM public.twin_active_lineage_index_v1
         WHERE tenant_id = $1
@@ -562,7 +573,7 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     if (!stateRef) {
       throw new CustomerProductProjectionReadErrorV1("MCFT_CURRENT_STATE_REF_MISSING", 409);
     }
-    const result = await this.pool.query<StateProjectionRowV1>(
+    const result = await this.canonicalPool.query<StateProjectionRowV1>(
       `SELECT canonical_payload, logical_time, determinism_hash, source_fact_id
          FROM public.twin_state_history_projection_v1
         WHERE tenant_id = $1

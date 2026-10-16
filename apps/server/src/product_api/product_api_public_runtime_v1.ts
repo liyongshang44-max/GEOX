@@ -9,6 +9,12 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { Pool } from "pg";
 
 import { registerProductV1Routes } from "../routes/product_v1.js";
+import { PostgresCustomerProductProjectionBuilderV1 } from "../product_projection/customer/customer_product_projection_builder_v1.js";
+import {
+  PRODUCT_FORMAL_V5_READ_MODE_V1,
+  assertProductFormalV5CrossDatabaseUrisV1,
+  verifyProductFormalV5ReadinessV1,
+} from "../product_projection/customer/customer_formal_v5_readiness_v1.js";
 
 export const PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1 =
   "geox.product-api.public-runtime.v1" as const;
@@ -148,6 +154,8 @@ export type ProductApiPublicRuntimeConfigV1 = {
   host: string;
   port: number;
   databaseUrl: string;
+  formalCanonicalDatabaseUrl?: string | null;
+  formalReadMode?: "OFF" | typeof PRODUCT_FORMAL_V5_READ_MODE_V1;
   allowedOrigins: string[];
   tokenSourceJson: string;
 };
@@ -155,6 +163,20 @@ export type ProductApiPublicRuntimeConfigV1 = {
 export function resolveProductApiPublicRuntimeConfigV1(): ProductApiPublicRuntimeConfigV1 {
   const databaseUrl = nonEmptyEnvV1("GEOX_PRODUCT_DATABASE_URL");
   parseProductDatabaseUrlV1(databaseUrl);
+
+  const formalReadModeRaw = String(process.env.GEOX_PRODUCT_FORMAL_READ_MODE ?? "OFF").trim();
+  if (formalReadModeRaw !== "OFF" && formalReadModeRaw !== PRODUCT_FORMAL_V5_READ_MODE_V1) {
+    throw new Error("PRODUCT_FORMAL_V5_READ_MODE_NOT_ALLOWED");
+  }
+  const formalReadMode = formalReadModeRaw as "OFF" | typeof PRODUCT_FORMAL_V5_READ_MODE_V1;
+  const formalCanonicalDatabaseUrl = String(process.env.GEOX_PRODUCT_FORMAL_DATABASE_URL ?? "").trim() || null;
+  if (formalReadMode === "OFF" && formalCanonicalDatabaseUrl) {
+    throw new Error("PRODUCT_FORMAL_V5_DATABASE_URL_NOT_ADMITTED");
+  }
+  if (formalReadMode === PRODUCT_FORMAL_V5_READ_MODE_V1) {
+    if (!formalCanonicalDatabaseUrl) throw new Error("PRODUCT_FORMAL_V5_DATABASE_URL_REQUIRED");
+    assertProductFormalV5CrossDatabaseUrisV1(databaseUrl, formalCanonicalDatabaseUrl);
+  }
 
   const tokenSourceJson = parseProductTokenSourceV1(
     nonEmptyEnvV1("GEOX_PRODUCT_API_TOKENS_JSON"),
@@ -179,6 +201,8 @@ export function resolveProductApiPublicRuntimeConfigV1(): ProductApiPublicRuntim
     host: String(process.env.HOST ?? "0.0.0.0"),
     port,
     databaseUrl,
+    formalReadMode,
+    formalCanonicalDatabaseUrl,
     allowedOrigins,
     tokenSourceJson,
   };
@@ -186,7 +210,7 @@ export function resolveProductApiPublicRuntimeConfigV1(): ProductApiPublicRuntim
 
 export function createProductApiPublicAppV1(
   config: ProductApiPublicRuntimeConfigV1,
-): { app: FastifyInstance; pool: Pool } {
+): { app: FastifyInstance; pool: Pool; canonicalPool: Pool | null } {
   // The existing auth module consumes GEOX_TOKENS_JSON. Public Product Runtime accepts only
   // the narrower GEOX_PRODUCT_API_TOKENS_JSON source and mirrors it in-process after validation.
   process.env.GEOX_RUNTIME_ENV = "production";
@@ -213,6 +237,13 @@ export function createProductApiPublicAppV1(
   });
 
   const pool = createProductApiReadOnlyPoolV1(config.databaseUrl);
+  const canonicalPool = config.formalReadMode === PRODUCT_FORMAL_V5_READ_MODE_V1
+    ? createProductApiReadOnlyPoolV1(config.formalCanonicalDatabaseUrl!)
+    : null;
+  const builder = new PostgresCustomerProductProjectionBuilderV1(
+    pool,
+    canonicalPool ? { canonicalPool } : {},
+  );
 
   app.get("/health", async () => ({
     ok: true,
@@ -226,6 +257,18 @@ export function createProductApiPublicAppV1(
       const result = await pool.query<{ transaction_read_only: string }>(
         "SELECT pg_catalog.current_setting('transaction_read_only') AS transaction_read_only",
       );
+      if (canonicalPool) {
+        const checked = await verifyProductFormalV5ReadinessV1(pool, canonicalPool);
+        if (checked.status !== "PASS_PRECONDITIONS_ONLY") {
+          // Public readiness must not disclose relation names or ACL metadata.
+          app.log.warn({ reason_codes: checked.reason_codes }, "Product Formal read-only source blocked");
+          return reply.code(503).send({
+            ok: false,
+            schema_version: PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1,
+            error: "PRODUCT_FORMAL_V5_CANONICAL_READ_NOT_READY",
+          });
+        }
+      }
       return reply.code(200).send({
         ok: true,
         schema_version: PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1,
@@ -243,7 +286,12 @@ export function createProductApiPublicAppV1(
     }
   });
 
-  registerProductV1Routes(app, pool);
+  if (canonicalPool) {
+    registerProductV1Routes(app, pool, { builder });
+  } else {
+    // Preserve the exact frozen Wave-02 single-DB route-registration surface.
+    registerProductV1Routes(app, pool);
+  }
 
   app.setNotFoundHandler((_request, reply) => {
     reply.code(404).send({
@@ -252,12 +300,12 @@ export function createProductApiPublicAppV1(
     });
   });
 
-  return { app, pool };
+  return { app, pool, canonicalPool };
 }
 
 export async function runProductApiPublicRuntimeV1(): Promise<void> {
   const config = resolveProductApiPublicRuntimeConfigV1();
-  const { app, pool } = createProductApiPublicAppV1(config);
+  const { app, pool, canonicalPool } = createProductApiPublicAppV1(config);
 
   let closing = false;
   const shutdown = async (signal: string) => {
@@ -266,6 +314,7 @@ export async function runProductApiPublicRuntimeV1(): Promise<void> {
     app.log.info({ signal }, "Product API public runtime shutting down");
     await app.close().catch(() => undefined);
     await pool.end().catch(() => undefined);
+    await canonicalPool?.end().catch(() => undefined);
   };
 
   process.once("SIGTERM", () => void shutdown("SIGTERM"));
