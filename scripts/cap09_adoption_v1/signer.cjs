@@ -28,7 +28,7 @@ function permit(payload, qualificationEnvelope, materials, evidence, context, ke
 
 const ROOT=path.resolve(__dirname,'../..');
 function outsideRepo(file){const rel=path.relative(ROOT,path.resolve(file));return rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel);}
-function formalAdoption(candidateFile,materialFile,releaseRoot,keyFile,ttlMinutes,outputFile,now=Date.now()){
+function formalAdoption(candidateFile,materialFile,releaseRoot,keyFile,ttlMinutes,outputFile,now=Date.now(),scopeGrantFile=null){
  const offline=require('./offline-context.cjs'),policy=c.read(offline.POLICY),candidate=c.read(candidateFile),material=c.read(materialFile),evidenceRoot=path.dirname(path.resolve(candidateFile));
  releaseRoot=fs.realpathSync(path.resolve(releaseRoot));outputFile=path.resolve(outputFile);c.noLinks(keyFile);c.noLinks(releaseRoot);assert(outsideRepo(keyFile),'ADOPTION_PRIVATE_KEY_MUST_BE_OUTSIDE_REPOSITORY');
  const coreFields=['schema','subject_sha','scope','checks','frozen_paths','first_parent_proven','qcp_proof_ref','qcp_proof_sha256','qcp_artifact_sha256','engineering_check_id','release_binding_ref','release_binding_sha256','installed_material_required','signature_required','execution_authorized','production_authorized'];
@@ -44,12 +44,36 @@ function formalAdoption(candidateFile,materialFile,releaseRoot,keyFile,ttlMinute
  const registered=policy.issuers.filter(x=>x.purpose==='ADOPTION'&&x.spki_sha256===fingerprint&&x.revoked===false);
  assert.equal(registered.length,1,'ADOPTION_PRIVATE_KEY_NOT_REGISTERED');const issuer=registered[0];
  assert.equal(publicKey.export({type:'spki',format:'pem'}),issuer.public_key_pem,'ADOPTION_PUBLIC_KEY_MISMATCH');
- offline.assertFormalIssuer(issuer,policy,{subject_sha:candidate.subject_sha,material_digest:c.digest(material),host_id:policy.host_id,operator_id:policy.operator_id,scope:candidate.scope});
+ const scopeGrant=scopeGrantFile===null?null:c.read(scopeGrantFile);
+ if(scopeGrantFile!==null){assert(path.isAbsolute(scopeGrantFile)&&outsideRepo(scopeGrantFile),'SCOPE_GRANT_MUST_BE_OUTSIDE_REPOSITORY');}
+ // Issuer role and grant are independently reverified with the final qualification window below.
  const issued=new Date(now).toISOString(),expires=new Date(now+ttl*60000).toISOString();assert(c.epoch(issuer.not_before)<=now&&Date.parse(expires)<=c.epoch(issuer.not_after),'ADOPTION_KEY_LIFETIME_TOO_SHORT');assert(Date.parse(expires)<=c.epoch(policy.valid_until),'ADOPTION_POLICY_LIFETIME_TOO_SHORT');
  const q={qualification_id:'mcft_cap09_adoption_'+candidate.subject_sha.slice(0,12)+'_v1',schema:'MCFT_CAP09_ADOPTION_QUALIFICATION_V1',subject_sha:candidate.subject_sha,scope:'TEST_ONLY',issued_at:issued,expires_at:expires,issuer_id:issuer.issuer_id,key_id:issuer.key_id,policy_digest:c.digest(policy),material_digest:c.digest(material),checks:candidate.checks,frozen_paths:108,first_parent_proven:true,host_id:policy.host_id,operator_id:policy.operator_id,qcp_proof_ref:candidate.qcp_proof_ref,qcp_proof_sha256:candidate.qcp_proof_sha256,release_binding_ref:candidate.release_binding_ref,release_binding_sha256:candidate.release_binding_sha256};
- const envelope={payload:q,signature_base64:crypto.sign(null,Buffer.from(offline.ADOPTION_DOMAIN+c.canonical(q)),privateKey).toString('base64')};const request={qualification:envelope,material,evidence_root:evidenceRoot};const verified=offline.verifyFormal(request,policy,releaseRoot,{now,host:os.hostname(),environment:process.env});
+ offline.assertFormalIssuer(issuer,policy,q,scopeGrant,now);
+ const envelope={payload:q,signature_base64:crypto.sign(null,Buffer.from(offline.ADOPTION_DOMAIN+c.canonical(q)),privateKey).toString('base64')};const request={qualification:envelope,material,evidence_root:evidenceRoot,...(scopeGrant?{operator_scope_grant:scopeGrant}:{})};const verified=offline.verifyFormal(request,policy,releaseRoot,{now,host:os.hostname(),environment:process.env});
  assert.equal(offline.isFormalVerified(verified),true);assert.equal(verified.execution_authorized,true);assert.equal(verified.production_authorized,false);c.writeOnce(outputFile,request);
  return {status:'SIGNED_ADOPTION_QUALIFICATION_V1_ISSUED_TEST_ONLY',qualification_id:q.qualification_id,subject_sha:q.subject_sha,issuer_id:q.issuer_id,key_id:q.key_id,expires_at:q.expires_at,adoption_digest:verified.adoption_digest,material_digest:verified.material_digest,output:path.resolve(outputFile),execution_authorized:true,production_authorized:false};
+}
+// Explicit review-to-signature conversion, separate from formal Adoption issuance.
+// The immutable policy provides the trusted public key; unsigned scope data alone
+// cannot be loaded as authority or mutate the release.
+function signReviewedScopeGrant(payloadFile,keyFile,outputFile,now=Date.now()){
+ const offline=require('./offline-context.cjs'),policy=c.read(offline.POLICY),g=c.read(payloadFile);
+ assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'SCOPE_GRANT_WINDOWS_ONLY');
+ for(const file of [payloadFile,keyFile,outputFile])assert(path.isAbsolute(file)&&outsideRepo(file),'SCOPE_GRANT_FILES_OUTSIDE_REPOSITORY');
+ assert(!fs.existsSync(outputFile),'SCOPE_GRANT_OUTPUT_EXISTS');
+ const issuer=policy.issuers.find(i=>i.issuer_id===g.issuer_id&&i.key_id===g.key_id&&i.purpose==='ADOPTION');
+ assert(issuer&&issuer.role==='ACCOUNTABLE_SINGLE_OPERATOR'&&issuer.issuer_id===policy.operator_id&&!issuer.revoked,'SCOPE_GRANT_REGISTERED_OPERATOR_REQUIRED');
+ c.noLinks(keyFile);
+ const privateKey=crypto.createPrivateKey(fs.readFileSync(keyFile));
+ assert.equal(privateKey.asymmetricKeyType,'ed25519','SCOPE_GRANT_ED25519_REQUIRED');
+ assert.equal(c.sha(crypto.createPublicKey(privateKey).export({type:'spki',format:'der'})),issuer.spki_sha256,'SCOPE_GRANT_SIGNER_FINGERPRINT_MISMATCH');
+ const grant={payload:g,signature_base64:crypto.sign(null,Buffer.from(offline.SCOPE_GRANT_DOMAIN+c.canonical(g)),privateKey).toString('base64')};
+ // Validate using a hypothetical short-lived Adoption at this exact instant;
+ // the genuine Adoption must still match its own material and validity window.
+ offline.verifyOperatorScopeGrant(grant,issuer,policy,{subject_sha:g.subject_sha,material_digest:g.material_digest,host_id:g.host_id,operator_id:g.operator_id,scope:g.scope,issued_at:new Date(now).toISOString(),expires_at:new Date(now+60000).toISOString()},now);
+ c.writeOnce(outputFile,grant);
+ return {status:'SIGNED_OPERATOR_SCOPE_GRANT_NOT_ADOPTION_OR_PERMIT',subject_sha:g.subject_sha,grant_sha256:c.sha(fs.readFileSync(outputFile)),execution_authorized:false,production_authorized:false};
 }
 function provisionAdoptionKey(issuerId,keyId,notBefore,notAfter,privateOut,registrationOut){
  const offline=require('./offline-context.cjs'),policy=c.read(offline.POLICY);c.id(issuerId);c.id(keyId);assert.notEqual(issuerId,policy.operator_id,'INDEPENDENT_SIGNER_MUST_DIFFER_FROM_OPERATOR');assert(c.epoch(notBefore)<c.epoch(notAfter),'SIGNER_KEY_WINDOW_INVALID');
@@ -60,8 +84,9 @@ function provisionAdoptionKey(issuerId,keyId,notBefore,notAfter,privateOut,regis
 }
 if(require.main===module){try{const args=process.argv.slice(2),kind=args[0];
  if(['qualification','permit'].includes(kind)){assert(args.length===5,'USAGE: signer kind request policy private-key output');const r=c.read(args[1]),policy=c.read(args[2]);c.noLinks(args[3]);const key=fs.readFileSync(args[3],'utf8');const result=kind==='qualification'?qualification(r.report,r.materials,r.evidence,key,policy):permit(r.payload,r.qualification,r.materials,r.evidence,r.context,key,policy);c.writeOnce(args[4],result);console.log(JSON.stringify({status:'SYNTHETIC_ARTIFACT_SIGNED',execution_authorized:false,production_authorized:false}));}
- else if(kind==='formal-adoption'){assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'FORMAL_ADOPTION_WINDOWS_OFFLINE_ONLY');assert(args.length===7,'USAGE: formal-adoption candidate material release-root private-key ttl-minutes output');console.log(JSON.stringify(formalAdoption(args[1],args[2],args[3],args[4],args[5],args[6])));}
+ else if(kind==='formal-adoption'){assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'FORMAL_ADOPTION_WINDOWS_OFFLINE_ONLY');assert(args.length===7||args.length===8,'USAGE: formal-adoption candidate material release-root private-key ttl-minutes output [signed-scope-grant]');console.log(JSON.stringify(formalAdoption(args[1],args[2],args[3],args[4],args[5],args[6],Date.now(),args[7]??null)));}
+ else if(kind==='scope-grant-sign'){assert(args.length===4,'USAGE: scope-grant-sign reviewed-payload private-key new-signed-output');console.log(JSON.stringify(signReviewedScopeGrant(args[1],args[2],args[3])));}
  else if(kind==='provision-adoption-key'){assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'SIGNER_PROVISION_WINDOWS_OFFLINE_ONLY');assert(args.length===7,'USAGE: provision-adoption-key issuer key-id not-before not-after private-key registration');console.log(JSON.stringify(provisionAdoptionKey(args[1],args[2],args[3],args[4],args[5],args[6])));}
  else throw new Error('SIGNER_MODE_REQUIRED');
 }catch{console.error(JSON.stringify({status:'ADOPTION_INCOMPLETE',reason_code:'SIGNING_REJECTED',execution_authorized:false,production_authorized:false}));process.exitCode=1;}}
-module.exports={qualification,permit,formalAdoption,provisionAdoptionKey,outsideRepo};
+module.exports={qualification,permit,formalAdoption,signReviewedScopeGrant,provisionAdoptionKey,outsideRepo};
