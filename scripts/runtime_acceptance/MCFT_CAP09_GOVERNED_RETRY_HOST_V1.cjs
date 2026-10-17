@@ -24,7 +24,7 @@ function validatePlan(plan){
  scheduler.validateStagePlan(plan);
  assert.deepEqual(STAGES.map(x=>x[0]),scheduler.STAGES,"RETRY_STAGE_IMPLEMENTATION_ORDER_MISMATCH");
 }
-function validateBundle(bundle,trust,context){
+function validateBundle(bundle,trust,context,{ticketedStage=false}={}){
  assert.equal(trust.adopted,true,"EXECUTE_HOLD: GOVERNED_RETRY_ACTIVATION_NOT_ADOPTED");
  assert.equal(trust.execution_enabled,true,"EXECUTE_HOLD: GOVERNED_RETRY_EXECUTION_DISABLED");
  assert.deepEqual(Object.keys(bundle).sort(),["arm","files","observed","permit","plan"],"RETRY_BUNDLE_KEYS_INVALID");
@@ -41,13 +41,16 @@ function validateBundle(bundle,trust,context){
  assert.equal(arm.execute_authorized,true,"RETRY_EXECUTE_NOT_APPROVED");
  assert.equal(arm.retry_authorized,true,"RETRY_NOT_APPROVED");
  const observation={...observed,head:context.head,protected_main:context.main,source_clean:context.clean,now_utc:context.now};
- admitProposedRetry(arm,observation);
+ // Fresh admission and the full remaining budget belong to the parent only.
+ // A child consumes a single-use stage capability after this signature/material
+ // validation. It cannot demand the original full budget again hours later.
+ if(!ticketedStage)admitProposedRetry(arm,observation);
  const base=Date.parse(arm.qualification_first_base);
  assert(Number.isFinite(base)&&new Date(base).toISOString()===arm.qualification_first_base&&arm.qualification_first_base.endsWith(":00:00.000Z"),"RETRY_BASE_INVALID");
- assert(base>Date.parse(context.now),"RETRY_BASE_MUST_BE_FUTURE");
+ if(!ticketedStage)assert(base>Date.parse(context.now),"RETRY_BASE_MUST_BE_FUTURE");
  const budget=plan.stages.reduce((n,s)=>n+s.timeout_ms,0);
  assert(budget<=observed.measured_worst_case_ms,"RETRY_PLAN_EXCEEDS_REVIEWED_BUDGET");
- assert(Date.parse(arm.expires_at)>Date.parse(context.now)+budget+observed.deadline_safety_margin_ms,"RETRY_PERMIT_LIFETIME_INSUFFICIENT");
+ if(!ticketedStage)assert(Date.parse(arm.expires_at)>Date.parse(context.now)+budget+observed.deadline_safety_margin_ms,"RETRY_PERMIT_LIFETIME_INSUFFICIENT");
  assert.deepEqual(Object.keys(bundle.files).sort(),Object.keys(arm.evidence_sha256).sort(),"RETRY_LOCAL_EVIDENCE_SET_MISMATCH");
  for(const [key,expected] of Object.entries(arm.evidence_sha256)) {
   assert(path.isAbsolute(bundle.files[key]),"RETRY_EVIDENCE_ABSOLUTE_PATH_REQUIRED");
@@ -65,6 +68,12 @@ function validateSuccessorReview(bundle,trust,context,now=Date.now()){
   const v2=require('../cap09_adoption_v1/da9-retry-bundle-v2.cjs');
   v2.verifyReviewedDecision(bundle.arm.retry_adjudication,trust,now,v2.subjectBinding(context));
  }
+}
+function stageContinuationMode(stage,ticket,previous){
+ if(!stage)return false;
+ assert(typeof stage==='string'&&/^(PRODUCER|TIMING_[123]|CONTROLLED_DELAY|AGGREGATE)$/.test(stage),'DA9_CHILD_STAGE_INVALID');
+ assert(typeof ticket==='string'&&ticket.length>0&&typeof previous==='string'&&previous.length>0,'DA9_CHILD_STAGE_TICKET_REQUIRED');
+ return true;
 }
 function hostBundle(file){
  const trust=readJson(permitApi.TRUST_PATH);
@@ -104,7 +113,18 @@ function hostBundle(file){
  const bundle=readJson(file);
  if(offline)offline.bindObserved(context,bundle);
  validateSuccessorReview(bundle,trust,context);
- const valid=validateBundle(bundle,effectiveTrust,context);
+ if(bundle.arm?.run_id==='da9db7129607'&&bundle.arm.protected_main_sha!=='91835fa0997730c85c5f3869dd530f4c9a3ca82d'){
+  const closureApi=require('../cap09_adoption_v1/da9-minio-closure-v1.cjs');
+  // Only signed parent dispatch children with a stage ticket may consume historical
+  // closure after the initial 300s Admission clock. Parent Preflight requires fresh evidence.
+  const child=stageContinuationMode(process.env.MCFT_GOVERNED_RETRY_STAGE,process.env.MCFT_GOVERNED_RETRY_TICKET,process.env.MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256);
+  const closure=child
+    ?closureApi.verifyHistoricalReference(bundle.observed.da9_minio_closure,trust,bundle.arm.protected_main_sha)
+    :closureApi.verifyReference(bundle.observed.da9_minio_closure,trust,bundle.arm.protected_main_sha);
+  assert.equal(closure.status,child?'CLOSURE_HISTORICAL_RETAINED_FOR_CONSUMED_STAGE':'CLOSURE_VERIFIED_FOR_DA9_ADMISSION','DA9_DISPOSITION_CLOSURE_REQUIRED');
+ }
+ const ticketedStage=stageContinuationMode(process.env.MCFT_GOVERNED_RETRY_STAGE,process.env.MCFT_GOVERNED_RETRY_TICKET,process.env.MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256);
+ const valid=validateBundle(bundle,effectiveTrust,context,{ticketedStage});
  const env={...process.env,MCFT_QUALIFICATION_FIRST_BASE:valid.arm.qualification_first_base,
   MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR:valid.arm.output_directory};
  for(const [key,name] of [["DATABASE_URL",valid.arm.resources.positive_database],["BLOCKED_DATABASE_URL",valid.arm.resources.negative_database]]) {
@@ -152,6 +172,7 @@ function assertControllerAdoption(h){
  }
 }
 async function main(args){
+ assert(!process.env.MCFT_GOVERNED_RETRY_STAGE&&!process.env.MCFT_GOVERNED_RETRY_TICKET,'DA9_PARENT_CANNOT_USE_CHILD_ADMISSION_PATH');
  const options=parseArgs(args),h=hostBundle(options.file);
  assert(!fs.existsSync(h.targets.out),"RETRY_NEW_OUTPUT_REQUIRED");
  const observedAt=Date.parse(h.bundle.observed.fresh_readback.completed_at);
@@ -213,4 +234,4 @@ function childTargets(){
  assert.equal(claim.status,"STAGE_CAPABILITY_CONSUMED_NO_RETRY");
  return h.targets;
 }
-module.exports={validateSuccessorReview,assertControllerAdoption,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};
+module.exports={stageContinuationMode,validateSuccessorReview,assertControllerAdoption,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};
