@@ -211,6 +211,84 @@ test('formal_signer_to_offline_verifier_scoped_operator',()=>{
   const denied=cp.spawnSync(process.execPath,[child,JSON.stringify([candidatePath,materialPath,f.root,keyPath,1,deniedOut,f.now])],{encoding:'utf8',env:f.environment});
   assert.notEqual(denied.status,0,field);assert.equal(fs.existsSync(deniedOut),false,field);
  }
+ // Genuine signer module + verifier roundtrip with scope DETACHED from the
+ // immutable policy; no unreviewed production or Host authority is created.
+ delete f.policy.issuers[0].formal_adoption_scope;
+ f.sign();
+ fs.writeFileSync(path.join(toolRoot,'offline-trust.json'),JSON.stringify(f.policy));
+ const g={schema:'MCFT_CAP09_OPERATOR_ADOPTION_SCOPE_GRANT_V1',issuer_id:f.q.issuer_id,key_id:f.policy.issuers[0].key_id,
+  subject_sha:f.q.subject_sha,material_digest:f.q.material_digest,host_id:f.q.host_id,operator_id:f.q.operator_id,
+  scope:'TEST_ONLY',policy_digest:c.digest(f.policy),not_before:new Date(f.now-1000).toISOString(),
+  not_after:new Date(f.now+120000).toISOString(),production_authorized:false,authority_ref:'fixture-review-verified-operator-authority'};
+ const grant={payload:g,signature_base64:crypto.sign(null,Buffer.from(v.SCOPE_GRANT_DOMAIN+c.canonical(g)),f.pair.privateKey).toString('base64')};
+ const grantFile=path.join(dir,'synthetic-scope-grant.json'),detachedOut=path.join(dir,'detached-adoption.json');
+ fs.writeFileSync(grantFile,JSON.stringify(grant));
+ const detached=cp.spawnSync(process.execPath,[child,JSON.stringify([candidatePath,materialPath,f.root,keyPath,1,detachedOut,f.now,grantFile])],{encoding:'utf8',env:f.environment});
+ assert.equal(detached.status,0,detached.stderr);
+ const adopted=c.read(detachedOut);
+ assert.deepEqual(adopted.operator_scope_grant,grant);
+ const actual=v.verifyFormal(adopted,f.policy,f.root,{now:f.now,host:os.hostname(),environment:f.environment});
+ assert.equal(v.isFormalVerified(actual),true);
+ const absentOut=path.join(dir,'no-grant-adoption.json');
+ const absent=cp.spawnSync(process.execPath,[child,JSON.stringify([candidatePath,materialPath,f.root,keyPath,1,absentOut,f.now])],{encoding:'utf8',env:f.environment});
+ assert.notEqual(absent.status,0);assert.equal(fs.existsSync(absentOut),false);
+});
+// Exact signed scope is detached from the immutable policy, so the frozen
+// release need not hash its own post-qualification material digest recursively.
+function detachedOperatorFixture(){
+ const f=scopedOperatorFixture(),issuer=f.policy.issuers[0];
+ delete issuer.formal_adoption_scope;
+ f.sign();
+ const g={schema:'MCFT_CAP09_OPERATOR_ADOPTION_SCOPE_GRANT_V1',
+  issuer_id:issuer.issuer_id,key_id:issuer.key_id,subject_sha:f.q.subject_sha,
+  material_digest:f.q.material_digest,host_id:f.q.host_id,
+  operator_id:f.q.operator_id,scope:'TEST_ONLY',policy_digest:c.digest(f.policy),
+  not_before:new Date(f.now-1000).toISOString(),not_after:new Date(f.now+120000).toISOString(),
+  production_authorized:false,authority_ref:'fixture-reviewed-single-operator-exact-scope'};
+ f.request.operator_scope_grant={payload:g,signature_base64:crypto.sign(null,Buffer.from(v.SCOPE_GRANT_DOMAIN+c.canonical(g)),f.pair.privateKey).toString('base64')};
+ return f;
+}
+test('detached_scope_signed_operator_verified_without_modifying_policy',()=>{
+ const f=detachedOperatorFixture(),r=verify(f);
+ assert.equal(f.policy.issuers[0].formal_adoption_scope,undefined);
+ assert.equal(v.isFormalVerified(r),true);
+ assert.equal(r.production_authorized,false);
+});
+test('detached_scope_missing_grant_rejected',()=>{
+ const f=detachedOperatorFixture();delete f.request.operator_scope_grant;assert.throws(()=>verify(f),/SCOPE_GRANT_REQUIRED/);
+});
+test('detached_scope_unsigned_payload_rejected',()=>{
+ const f=detachedOperatorFixture();f.request.operator_scope_grant.signature_base64='';assert.throws(()=>verify(f));
+});
+for(const field of ['subject_sha','material_digest','host_id','operator_id','scope','policy_digest','issuer_id','key_id','authority_ref'])
+ test('detached_scope_tamper_'+field,()=>{
+  const f=detachedOperatorFixture();f.request.operator_scope_grant.payload[field]='corrupted';
+  assert.throws(()=>verify(f));
+ });
+test('detached_scope_resigned_wrong_material_rejected',()=>{
+ const f=detachedOperatorFixture(),g=f.request.operator_scope_grant.payload;
+ g.material_digest='f'.repeat(64);
+ f.request.operator_scope_grant.signature_base64=crypto.sign(null,Buffer.from(v.SCOPE_GRANT_DOMAIN+c.canonical(g)),f.pair.privateKey).toString('base64');
+ assert.throws(()=>verify(f),/SCOPE_GRANT_BINDING_MISMATCH/);
+});
+test('detached_scope_expired_rejected',()=>{
+ const f=detachedOperatorFixture();f.request.operator_scope_grant.payload.not_after=new Date(f.now-1).toISOString();
+ assert.throws(()=>verify(f));
+});
+test('detached_scope_policy_self_activation_rejected',()=>{
+ const f=detachedOperatorFixture();f.policy.adopted=true;f.sign();assert.throws(()=>verify(f));
+});
+test('detached_scope_revoked_issuer_rejected',()=>{
+ const f=detachedOperatorFixture();f.policy.issuers[0].revoked=true;f.sign();assert.throws(()=>verify(f));
+});
+test('detached_scope_production_grant_rejected',()=>{
+ const f=detachedOperatorFixture(),g=f.request.operator_scope_grant.payload;
+ g.production_authorized=true;
+ f.request.operator_scope_grant.signature_base64=crypto.sign(null,Buffer.from(v.SCOPE_GRANT_DOMAIN+c.canonical(g)),f.pair.privateKey).toString('base64');
+ assert.throws(()=>verify(f),/PRODUCTION_FORBIDDEN/);
+});
+test('detached_scope_independent_issuer_rejects_unneeded_grant',()=>{
+ const f=detachedOperatorFixture();f.policy.issuers[0].role='INDEPENDENT_GOVERNANCE';f.q.issuer_id=f.policy.issuers[0].issuer_id;f.sign();assert.throws(()=>verify(f));
 });
 test('operator_scope_unknown_field_rejected',()=>{const f=scopedOperatorFixture();f.policy.issuers[0].formal_adoption_scope.extra=true;f.sign();assert.throws(()=>verify(f));});
 test('operator_scope_policy_tamper_rejected',()=>{const f=scopedOperatorFixture();f.policy.issuers[0].formal_adoption_scope.host_id='other';assert.throws(()=>verify(f));});
