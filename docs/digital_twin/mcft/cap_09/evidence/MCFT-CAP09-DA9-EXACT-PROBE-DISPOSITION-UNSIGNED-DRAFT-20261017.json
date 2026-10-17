@@ -35,8 +35,9 @@
     "retain_until_utc": "2027-10-16T17:29:54.041Z",
     "remote_readback_sha256": "6dbb1ffe417174dfc45450e695d0fd28cd2eacce0b85523a7a6c71d5f44ee62e",
     "independent_host_receipt_path": "D:\\gptdown\\MCFT-CAP09-DA9-WORM-READONLY-RECHECK-47e648ddd8be4ad688aacfe9f73307d1\\independent-readonly-recheck.json",
-    "receipt_sha256": null,
-    "original_upload_receipt_missing": true
+    "receipt_sha256": "6a26a91fe10d0a67bcbdf0509261101dfeae3c7bbef22292f6d3f43b85694d81",
+    "original_upload_receipt_missing": true,
+    "receipt_sha256_provenance": "Windows host Get-FileHash SHA256 on independent-readonly-recheck.json, user-reported 2026-10-17; original receipt not available in repository"
   },
   "review": {
     "reviewer_id": null,
