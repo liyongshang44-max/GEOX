@@ -1404,7 +1404,7 @@
         "scripts/cap09_adoption_v1/acceptance.cjs",
         "scripts/cap09_adoption_v1/build_evidence.py",
         "scripts/cap09_adoption_v1/contract.cjs",
-        "scripts/cap09_adoption_v1/da9-minio-readonly-inventory.cjs",
+        "scripts/cap09_adoption_v1/da9-minio-readonly-inventory.cjs",\n        "scripts/cap09_adoption_v1/da9-minio-disposition-v1.cjs",
         "scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs",
         "scripts/cap09_adoption_v1/da9-retry-bundle.cjs",
         "scripts/cap09_adoption_v1/evidence_review.py",
