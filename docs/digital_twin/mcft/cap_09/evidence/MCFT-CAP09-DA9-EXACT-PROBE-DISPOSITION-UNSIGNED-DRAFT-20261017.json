@@ -77,5 +77,18 @@
     "do_not_approve_from_this_document": true,
     "do_not_reuse_old_retry_signature": true,
     "execution_authorized": false
+  },
+  "governance_route": {
+    "user_instruction_date": "2026-10-17",
+    "independent_second_review_account_required": false,
+    "accountable_single_operator_candidate": "mcft_cap09_operator_mylr1",
+    "registered_retry_role": "ACCOUNTABLE_SINGLE_OPERATOR",
+    "registered_public_key_fingerprint_sha256": "223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365",
+    "role_registration_is_authorization": false,
+    "policy_source": "docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-OWNER-OPERATOR-AUTHORITY-DETERMINATION-20261016.md",
+    "candidate_signature_route": "owner-held Ed25519 signer plus independent code-path verifier; no second human account",
+    "disposition_approval_status": "NOT_SIGNED_NOT_ADOPTED",
+    "required_authorization": "specific reviewed single-operator source-object disposition policy, attributable exact-key scope, current source inventory, signature and independent verification",
+    "must_not_impersonate_independent_issuer": true
   }
 }
