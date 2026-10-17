@@ -104,6 +104,10 @@ function hostBundle(file){
  const bundle=readJson(file);
  if(offline)offline.bindObserved(context,bundle);
  validateSuccessorReview(bundle,trust,context);
+ if(bundle.arm?.run_id==='da9db7129607'&&bundle.arm.protected_main_sha!=='91835fa0997730c85c5f3869dd530f4c9a3ca82d'){
+  const closure=require('../cap09_adoption_v1/da9-minio-closure-v1.cjs').verifyReference(bundle.observed.da9_minio_closure,trust,bundle.arm.protected_main_sha);
+  assert.equal(closure.status,'CLOSURE_VERIFIED_FOR_DA9_ADMISSION','DA9_DISPOSITION_CLOSURE_REQUIRED');
+ }
  const valid=validateBundle(bundle,effectiveTrust,context);
  const env={...process.env,MCFT_QUALIFICATION_FIRST_BASE:valid.arm.qualification_first_base,
   MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR:valid.arm.output_directory};

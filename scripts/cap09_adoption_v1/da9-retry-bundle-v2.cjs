@@ -119,6 +119,8 @@ function construct(input,context,now=Date.now(),reviewTrust){
  assert.equal(decision.review_status,'APPROVED','AUTHENTICATED_REVIEW_REQUIRED');c.id(decision.reviewer_id);c.id(decision.decision_id);
  assert.equal(decision.production_authorized,false);assert.deepEqual(decision.evidence_sha256,HISTORY);assert.equal(decision.authorized_at,input.authorized_at);
  const hashes=evidence(input.files);const observed=structuredClone(input.observed);fresh(observed,now);host.validatePlan(input.plan);
+ const closure=require('./da9-minio-closure-v1.cjs').verifyReference(observed.da9_minio_closure,reviewTrust,SUBJECT,now);
+ assert.equal(closure.status,'CLOSURE_VERIFIED_FOR_DA9_ADMISSION','DA9_DISPOSITION_CLOSURE_NOT_ADMISSIBLE');
  assert.deepEqual(observed.evidence_sha256,hashes,'OBSERVATION_EVIDENCE_CHANGED');assert.equal(observed.output_directory,input.output_directory);
  const arm={schema_version:'geox_mcft_cap09_isolated_retry_arm_v1',mode:'ISOLATED_QUALIFICATION',run_id:RUN,parent_run_id:'72dc0304a21a',attempt_ordinal:2,protected_main_sha:SUBJECT,
  armed:true,execute_authorized:true,retry_authorized:true,authorized_at:input.authorized_at,expires_at:input.expires_at,qualification_first_base:input.qualification_first_base,
