@@ -37,6 +37,9 @@ async function execute(o,{command=cmd,snapshot=inv.snapshot}={}) {
   assert.equal(got.stdout.length,item.size_bytes,'DA9_SOURCE_SIZE_CHANGED:'+item.key);
   assert.equal(c.sha(got.stdout),item.content_sha256,'DA9_SOURCE_BYTES_CHANGED:'+item.key);
  }
+
+ // The pre-delete signature and inventory window must remain current after all GETs.
+ d.verifySigned(signed,trust,evidence,Date.now());
  const ledgerId='da9_minio_'+sha(o.signed).slice(0,32),ledger=path.join(trust.ledger_root,ledgerId);
  c.noLinks(trust.ledger_root);assert(fs.statSync(trust.ledger_root).isDirectory(),'DA9_LEDGER_ROOT_REQUIRED');
  fs.mkdirSync(ledger,{recursive:false,mode:0o700});
@@ -45,6 +48,7 @@ async function execute(o,{command=cmd,snapshot=inv.snapshot}={}) {
  const startFile=path.join(ledger,'STARTED.json');c.writeOnce(startFile,startReceipt);
  const operations=[];
  for(let idx=0;idx<d.OBJECTS.length;idx++){
+  assert(Date.now()<c.epoch(signed.payload.expires_at_utc),'DA9_AUTHORIZATION_EXPIRED_BEFORE_DELETE');
   const object=d.OBJECTS[idx],begun=time();
   const deletion=command(o.client,o.config,['rm',bucket+'/'+object.key]);
   const finished=time(),row={key:object.key,version_id:null,content_sha256:object.content_sha256,started_at_utc:begun,finished_at_utc:finished,exit_code:deletion.status===null?-1:deletion.status,operation:'DELETE_EXACT_KEY'};

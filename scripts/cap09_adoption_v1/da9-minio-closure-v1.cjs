@@ -5,7 +5,7 @@ const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=requ
 const c=require('./contract.cjs'),d=require('./da9-minio-disposition-v1.cjs');
 const DOMAIN='GEOX_MCFT_CAP09_DA9_DISPOSITION_CLOSURE_V1\n';
 const PAYLOAD=['schema_version','run_id','subject_sha','scope','signed_disposition_sha256','pre_inventory_sha256','capture_sha256','worm_recheck_sha256','worm_zip_sha256','delete_log_sha256','post_inventory_sha256','closed_at_utc','exact_two_source_objects_deleted','test_only_admission_authorized','execution_authorized','production_authorized'];
-const KEYS=['closure_file','closure_sha256','signed_disposition_file','pre_inventory_file','capture_file','worm_recheck_file','worm_zip_file','delete_log_file','post_inventory_file','current_inventory_file','current_inventory_sha256'];
+const KEYS=['started_file','closure_file','closure_sha256','signed_disposition_file','pre_inventory_file','capture_file','worm_recheck_file','worm_zip_file','delete_log_file','post_inventory_file','current_inventory_file','current_inventory_sha256'];
 const SHA=x=>c.sha(x), read=f=>{assert(path.isAbsolute(f),'CLOSURE_ABSOLUTE_PATH_REQUIRED');return c.read(f);};
 const shaFile=f=>{assert(path.isAbsolute(f),'CLOSURE_ABSOLUTE_PATH_REQUIRED');c.noLinks(f);const s=fs.statSync(f);assert(s.isFile()&&s.size<=32*1024*1024,'CLOSURE_FILE_INVALID');return SHA(fs.readFileSync(f));};
 function fourZero(i){
@@ -16,14 +16,23 @@ function fourZero(i){
  const a=c.epoch(i.started_at),b=c.epoch(i.completed_at);assert(a<=b,'CLOSURE_INVENTORY_TIME_INVALID');return {a,b};
 }
 function historical(e,trust,now){
- assert(e&&e.signed&&e.pre&&e.capture&&e.worm&&e.log&&e.post,'CLOSURE_HISTORY_REQUIRED');
- for(const k of ['signed_sha','pre_sha','capture_sha','worm_sha','zip_sha','log_sha','post_sha'])c.hash(e[k]);
+ assert(e&&e.signed&&e.pre&&e.capture&&e.worm&&e.log&&e.post&&e.started,'CLOSURE_HISTORY_REQUIRED');
+ for(const k of ['signed_sha','pre_sha','capture_sha','worm_sha','zip_sha','log_sha','post_sha','started_sha'])c.hash(e[k]);
  assert.equal(e.zip_sha,d.WORM.archive_sha256,'CLOSURE_WORM_BYTES_CHANGED');
  const log=e.log;
  c.exact(log,['schema_version','run_id','subject_sha','signed_disposition_sha256','verified_at_utc','started_at_utc','finished_at_utc','one_shot_ledger_id','one_shot_started_sha256','source_versioning_status','operations','source_only','execution_authorized','production_authorized']);
  assert.equal(log.schema_version,'DA9_MINIO_EXACT_DELETE_LOG_V1');assert.equal(log.run_id,d.RUN);
  assert.equal(log.subject_sha,e.signed.payload.subject_sha);assert.equal(log.signed_disposition_sha256,e.signed_sha);
  c.id(log.one_shot_ledger_id);c.hash(log.one_shot_started_sha256);assert.equal(log.source_versioning_status,'UNVERSIONED');
+ c.exact(e.started,['schema_version','run_id','subject_sha','ledger_id','signed_disposition_sha256','verified_at_utc','started_at_utc','source_bucket','execution_authorized','production_authorized']);
+ assert.equal(e.started.schema_version,'DA9_MINIO_SOURCE_DELETE_STARTED_V1');
+ assert.equal(e.started.run_id,d.RUN);assert.equal(e.started.subject_sha,log.subject_sha);
+ assert.equal(e.started.ledger_id,log.one_shot_ledger_id);
+ assert.equal(e.started.signed_disposition_sha256,e.signed_sha);
+ assert.equal(e.started.verified_at_utc,log.verified_at_utc);assert.equal(e.started.started_at_utc,log.started_at_utc);
+ assert.equal(e.started.source_bucket,d.SOURCE_BUCKET);
+ assert.equal(e.started.execution_authorized,false);assert.equal(e.started.production_authorized,false);
+ assert.equal(log.one_shot_started_sha256,e.started_sha,'CLOSURE_IMMUTABLE_START_RECEIPT_CHANGED');
  assert.equal(log.source_only,true);assert.equal(log.execution_authorized,false);assert.equal(log.production_authorized,false);
  const v=c.epoch(log.verified_at_utc),start=c.epoch(log.started_at_utc),end=c.epoch(log.finished_at_utc);
  const preStart=c.epoch(e.pre.started_at),preEnd=c.epoch(e.pre.completed_at),post=fourZero(e.post);
@@ -86,7 +95,7 @@ function verifyAdmission(envelope,e,trust,current,subject,now=Date.now()){
  return {...verified,status:'CLOSURE_VERIFIED_FOR_DA9_ADMISSION',current_four_zero:true,test_only_admission_authorized:false};
 }
 function loadRaw(paths){
- const p=paths;return {signed:read(p.signed_disposition_file),pre:read(p.pre_inventory_file),capture:read(p.capture_file),worm:read(p.worm_recheck_file),log:read(p.delete_log_file),post:read(p.post_inventory_file),signed_sha:shaFile(p.signed_disposition_file),pre_sha:shaFile(p.pre_inventory_file),capture_sha:shaFile(p.capture_file),worm_sha:shaFile(p.worm_recheck_file),zip_sha:shaFile(p.worm_zip_file),log_sha:shaFile(p.delete_log_file),post_sha:shaFile(p.post_inventory_file)};
+ const p=paths;return {signed:read(p.signed_disposition_file),pre:read(p.pre_inventory_file),capture:read(p.capture_file),worm:read(p.worm_recheck_file),log:read(p.delete_log_file),post:read(p.post_inventory_file),started:read(p.started_file),signed_sha:shaFile(p.signed_disposition_file),pre_sha:shaFile(p.pre_inventory_file),capture_sha:shaFile(p.capture_file),worm_sha:shaFile(p.worm_recheck_file),zip_sha:shaFile(p.worm_zip_file),log_sha:shaFile(p.delete_log_file),post_sha:shaFile(p.post_inventory_file),started_sha:shaFile(p.started_file)};
 }
 function verifyReference(ref,trust,subject,now=Date.now()){
  c.exact(ref,[...KEYS,'closure_sha256','current_inventory_sha256'].filter((x,i,a)=>a.indexOf(x)===i));
@@ -101,16 +110,16 @@ function cli(){
  const [mode,...args]=process.argv.slice(2),trust=c.read(d.TRUST_PATH);
  if(mode==='sign'){
   assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'CLOSURE_SIGN_LOCAL_ONLY');
-  assert.equal(args.length,11,'CLOSURE_SIGN_ARGS_REQUIRED');
-  const [signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,delete_log_file,post_inventory_file,keyFile,issuerId,keyId,output]=args;
+  assert.equal(args.length,12,'CLOSURE_SIGN_ARGS_REQUIRED');
+  const [signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,started_file,delete_log_file,post_inventory_file,keyFile,issuerId,keyId,output]=args;
   assert(path.isAbsolute(keyFile)&&path.isAbsolute(output)&&!fs.existsSync(output),'CLOSURE_OUTPUT_MUST_BE_NEW');
-  c.noLinks(keyFile);const e=loadRaw({signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,delete_log_file,post_inventory_file});
+  c.noLinks(keyFile);const e=loadRaw({signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,started_file,delete_log_file,post_inventory_file});
   const signature=sign(e,trust,crypto.createPrivateKey(fs.readFileSync(keyFile)),issuerId,keyId,new Date().toISOString());
   c.writeOnce(output,signature);console.log(JSON.stringify({status:'CLOSURE_SIGNED_NOT_ADMISSION',sha256:shaFile(output),execution_authorized:false,production_authorized:false}));
  }else if(mode==='verify'){
-  assert.equal(args.length,8,'CLOSURE_VERIFY_ARGS_REQUIRED');
-  const [closure_file,signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,delete_log_file,post_inventory_file]=args;
-  console.log(JSON.stringify(verifyHistorical(read(closure_file),loadRaw({signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,delete_log_file,post_inventory_file}),trust)));
+  assert.equal(args.length,9,'CLOSURE_VERIFY_ARGS_REQUIRED');
+  const [closure_file,signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,started_file,delete_log_file,post_inventory_file]=args;
+  console.log(JSON.stringify(verifyHistorical(read(closure_file),loadRaw({signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,started_file,delete_log_file,post_inventory_file}),trust)));
  }else throw Error('CLOSURE_MODE_INVALID');
 }
 module.exports={DOMAIN,fourZero,historical,payload,sign,verifyHistorical,verifyAdmission,verifyReference,loadRaw};
