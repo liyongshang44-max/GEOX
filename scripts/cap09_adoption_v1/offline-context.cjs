@@ -190,7 +190,7 @@ function validateFormal(request,policy,root,{now=Date.now(),host=os.hostname(),e
  assert.equal(q.material_digest,c.digest(request.material),'OFFLINE_MATERIAL_BINDING_CHANGED');
  const checked=material.verify(request.material,root,environment);
  verifyReleaseSourceBinding(release,request.material);
- return {q,checked};
+ return {q,checked,release};
 }
 // Shared signer/verifier rule. Operator eligibility requires an explicit, digest-bound
 // registration scope; merely registering an operator key never enables formal Adoption.
@@ -209,7 +209,7 @@ function assertFormalIssuer(issuer,policy,q){
  assert.equal(scope.operator_id,policy.operator_id,'OFFLINE_OPERATOR_ID_MISMATCH');
 }
 function verifyFormal(request,policy,root,options={}){
- const {q,checked}=validateFormal(request,policy,root,options);
+ const {q,checked,release}=validateFormal(request,policy,root,options);
  const issuers=policy.issuers.filter(x=>x.issuer_id===q.issuer_id&&x.key_id===q.key_id&&x.purpose==='ADOPTION');
  assert.equal(issuers.length,1,'OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
  assertFormalIssuer(issuers[0],policy,q);
@@ -218,6 +218,9 @@ function verifyFormal(request,policy,root,options={}){
  const result=Object.freeze({head:q.subject_sha,main:q.subject_sha,clean:true,base_ancestor:true,frozen_runtime_identical:true,
   host_id:host,now:new Date(now).toISOString(),platform:process.platform,ci:Boolean(environment.CI||environment.GITHUB_ACTIONS),
   source:'SIGNED_ADOPTION_NOT_LIVE_REMOTE_MAIN',scope:'TEST_ONLY',adoption_digest:c.digest(request.qualification),material_digest:checked.digest,
+  da9_v2_entry_sha256:release.files.find(x=>x.path==='scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs')?.sha256??null,
+  scoped_evidence_identity_sha256:release.files.find(x=>x.path==='scripts/runtime_acceptance/MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs')?.sha256??null,
+  subject_tree_digest:release.source_tree_git_sha??null,release_inventory_sha256:release.content_inventory_sha256,
   qualification_id:q.qualification_id,qualification_expires_at:q.expires_at,execution_authorized:true,production_authorized:false});
  verifiedFormalContexts.add(result);return result;
 }
