@@ -216,7 +216,10 @@
         "scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_V1.json",
         "scripts/qualification/contracts/MCFT_CAP09_CAUSAL_REVISION_TEMPORAL_V1.json",
         "scripts/qualification/materializers/MATERIALIZE_MCFT_CAP09_WINDOWS_ECCODES_FILE_HANDLE_BRIDGE_V1.cjs",
-        "scripts/qualification/qualification_core_v1.cjs"
+        "scripts/qualification/qualification_core_v1.cjs",
+        ".github/workflows/mcft-cap09-scoped-evidence-identity-v1.yml",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {
