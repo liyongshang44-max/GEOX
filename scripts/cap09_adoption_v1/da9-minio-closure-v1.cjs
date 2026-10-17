@@ -97,14 +97,23 @@ function verifyAdmission(envelope,e,trust,current,subject,now=Date.now()){
 function loadRaw(paths){
  const p=paths;return {signed:read(p.signed_disposition_file),pre:read(p.pre_inventory_file),capture:read(p.capture_file),worm:read(p.worm_recheck_file),log:read(p.delete_log_file),post:read(p.post_inventory_file),started:read(p.started_file),signed_sha:shaFile(p.signed_disposition_file),pre_sha:shaFile(p.pre_inventory_file),capture_sha:shaFile(p.capture_file),worm_sha:shaFile(p.worm_recheck_file),zip_sha:shaFile(p.worm_zip_file),log_sha:shaFile(p.delete_log_file),post_sha:shaFile(p.post_inventory_file),started_sha:shaFile(p.started_file)};
 }
-function verifyReference(ref,trust,subject,now=Date.now()){
+function verifyHistoricalReference(ref,trust,subject,now=Date.now()){
+ const {closure,e}=loadReference(ref);
+ const result=verifyHistorical(closure,e,trust,now);
+ assert.equal(result.subject_sha,subject,'CLOSURE_CHILD_SUBJECT_MISMATCH');
+ return {...result,status:'CLOSURE_HISTORICAL_RETAINED_FOR_CONSUMED_STAGE',test_only_admission_authorized:false};
+}
+function loadReference(ref){
  c.exact(ref,[...KEYS,'closure_sha256','current_inventory_sha256'].filter((x,i,a)=>a.indexOf(x)===i));
  for(const x of ['closure_sha256','current_inventory_sha256'])c.hash(ref[x]);
  for(const k of KEYS.filter(x=>x.endsWith('_file')))assert(path.isAbsolute(ref[k]),'CLOSURE_REFERENCE_NOT_ABSOLUTE:'+k);
  assert.equal(shaFile(ref.closure_file),ref.closure_sha256,'CLOSURE_REFERENCED_SIGNATURE_BYTES_CHANGED');
  assert.equal(shaFile(ref.current_inventory_file),ref.current_inventory_sha256,'CLOSURE_CURRENT_INVENTORY_BYTES_CHANGED');
- const e=loadRaw(ref);
- return verifyAdmission(read(ref.closure_file),e,trust,read(ref.current_inventory_file),subject,now);
+ return {closure:read(ref.closure_file),e:loadRaw(ref),fresh:read(ref.current_inventory_file)};
+}
+function verifyReference(ref,trust,subject,now=Date.now()){
+ const {closure,e,fresh}=loadReference(ref);
+ return verifyAdmission(closure,e,trust,fresh,subject,now);
 }
 function cli(){
  const [mode,...args]=process.argv.slice(2),trust=c.read(d.TRUST_PATH);
@@ -122,5 +131,5 @@ function cli(){
   console.log(JSON.stringify(verifyHistorical(read(closure_file),loadRaw({signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,started_file,delete_log_file,post_inventory_file}),trust)));
  }else throw Error('CLOSURE_MODE_INVALID');
 }
-module.exports={DOMAIN,fourZero,historical,payload,sign,verifyHistorical,verifyAdmission,verifyReference,loadRaw};
+module.exports={DOMAIN,fourZero,historical,payload,sign,verifyHistorical,verifyAdmission,verifyReference,verifyHistoricalReference,loadReference,loadRaw};
 if(require.main===module){try{cli();}catch(e){console.error(JSON.stringify({status:'CLOSURE_HOLD',reason:String(e.message).slice(0,200),execution_authorized:false,production_authorized:false}));process.exitCode=1;}}

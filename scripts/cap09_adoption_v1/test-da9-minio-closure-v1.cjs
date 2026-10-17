@@ -29,6 +29,7 @@ function fixture(){
  return {now,trust,privateKey,who,keyId,e,closure,fresh,subject:payload.subject_sha,empty};
 }
 test('signed_exact_disposition_historical_closure_and_fresh_admission',()=>{const f=fixture();const x=v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now);assert.equal(x.status,'CLOSURE_VERIFIED_FOR_DA9_ADMISSION');assert.equal(x.test_only_admission_authorized,false);assert.equal(x.production_authorized,false);});
+test('signed_child_stage_may_verify_historical_closure_after_initial_300_seconds',()=>{const f=fixture();const later=f.now+3600000;const v1=v.verifyHistorical(f.closure,f.e,f.trust,later);assert.equal(v1.status,'HISTORICAL_DISPOSITION_CLOSURE_VERIFIED');assert.equal(v1.execution_authorized,false);});
 test('signed_closure_persists_after_short_disposition_authorization_expires',()=>{const f=fixture();const future=f.now+3600000,readback=f.empty(future-1000);const x=v.verifyAdmission(f.closure,f.e,f.trust,readback,f.subject,future);assert.equal(x.current_four_zero,true);});
 test('require_exact_two_source_keys',()=>{const f=fixture();const mutated=structuredClone(f.e);mutated.log.operations[1].key='negative/other';assert.throws(()=>v.historical(mutated,f.trust,f.now));});
 test('reject_partial_delete_result',()=>{const f=fixture();f.e.log.operations[1].exit_code=1;assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now),/CLOSURE_DELETE_FAILED/);});

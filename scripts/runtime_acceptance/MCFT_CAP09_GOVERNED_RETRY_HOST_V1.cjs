@@ -105,8 +105,15 @@ function hostBundle(file){
  if(offline)offline.bindObserved(context,bundle);
  validateSuccessorReview(bundle,trust,context);
  if(bundle.arm?.run_id==='da9db7129607'&&bundle.arm.protected_main_sha!=='91835fa0997730c85c5f3869dd530f4c9a3ca82d'){
-  const closure=require('../cap09_adoption_v1/da9-minio-closure-v1.cjs').verifyReference(bundle.observed.da9_minio_closure,trust,bundle.arm.protected_main_sha);
-  assert.equal(closure.status,'CLOSURE_VERIFIED_FOR_DA9_ADMISSION','DA9_DISPOSITION_CLOSURE_REQUIRED');
+  const closureApi=require('../cap09_adoption_v1/da9-minio-closure-v1.cjs');
+  // Only signed parent dispatch children with a stage ticket may consume historical
+  // closure after the initial 300s Admission clock. Parent Preflight requires fresh evidence.
+  const child=Boolean(process.env.MCFT_GOVERNED_RETRY_STAGE);
+  if(child)assert(process.env.MCFT_GOVERNED_RETRY_TICKET&&process.env.MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256,'DA9_CHILD_STAGE_TICKET_REQUIRED');
+  const closure=child
+    ?closureApi.verifyHistoricalReference(bundle.observed.da9_minio_closure,trust,bundle.arm.protected_main_sha)
+    :closureApi.verifyReference(bundle.observed.da9_minio_closure,trust,bundle.arm.protected_main_sha);
+  assert.equal(closure.status,child?'CLOSURE_HISTORICAL_RETAINED_FOR_CONSUMED_STAGE':'CLOSURE_VERIFIED_FOR_DA9_ADMISSION','DA9_DISPOSITION_CLOSURE_REQUIRED');
  }
  const valid=validateBundle(bundle,effectiveTrust,context);
  const env={...process.env,MCFT_QUALIFICATION_FIRST_BASE:valid.arm.qualification_first_base,
@@ -156,6 +163,7 @@ function assertControllerAdoption(h){
  }
 }
 async function main(args){
+ assert(!process.env.MCFT_GOVERNED_RETRY_STAGE&&!process.env.MCFT_GOVERNED_RETRY_TICKET,'DA9_PARENT_CANNOT_USE_CHILD_ADMISSION_PATH');
  const options=parseArgs(args),h=hostBundle(options.file);
  assert(!fs.existsSync(h.targets.out),"RETRY_NEW_OUTPUT_REQUIRED");
  const observedAt=Date.parse(h.bundle.observed.fresh_readback.completed_at);
