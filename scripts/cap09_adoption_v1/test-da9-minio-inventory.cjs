@@ -25,6 +25,35 @@ check('xml_wrong_root_close_rejected',()=>assert.throws(()=>inv.parsePage('versi
 check('xml_doctype_rejected',()=>assert.throws(()=>inv.parsePage('current','<!DOCTYPE ListBucketResult><ListBucketResult><IsTruncated>false</IsTruncated></ListBucketResult>')));
 check('version_id_absent_rejected',()=>assert.throws(()=>inv.parsePage('versions','<ListVersionsResult><IsTruncated>false</IsTruncated><Version><Key>retained</Key></Version></ListVersionsResult>'),/INVENTORY_VERSION_ID_REQUIRED/));
 check('upload_id_absent_rejected',()=>assert.throws(()=>inv.parsePage('multipart','<ListMultipartUploadsResult><IsTruncated>false</IsTruncated><Upload><Key>retained</Key></Upload></ListMultipartUploadsResult>'),/INVENTORY_UPLOAD_ID_REQUIRED/));
+
+const disp=require('./da9-minio-disposition-v1.cjs');
+const cdisp=require('./contract.cjs');
+const cryptodisp=require('node:crypto');
+function dispositionFixture(){
+ const now=Date.parse('2026-10-17T12:40:00.000Z'),iso=x=>new Date(x).toISOString();
+ const {publicKey,privateKey}=cryptodisp.generateKeyPairSync('ed25519');
+ const spki=publicKey.export({type:'spki',format:'der'}),issuerId='mcft_cap09_operator_mylr1',keyId='test_disposition_key';
+ const trust={schema_version:'geox_mcft_cap09_retry_trust_v1',adopted:false,execution_enabled:false,host_id:'TEST-HOST',operator_id:issuerId,ledger_root:'X',issuers:[{issuer_id:issuerId,key_id:keyId,role:'ACCOUNTABLE_SINGLE_OPERATOR',revoked:false,not_before:iso(now-60000),not_after:iso(now+600000),public_key_pem:publicKey.export({type:'spki',format:'pem'}),spki_sha256:cdisp.sha(spki)}],real_delay_controller_adopted:false,stage_capability_adopted:false,real_provider_transport_delay_adopted:false,real_pipeline_delay_adopted:false};
+ const current=disp.OBJECTS.map((o,j)=>({Key:o.key,Size:String(o.size_bytes),ETag:'"etag-'+j+'"',LastModified:'2026-10-16T01:36:04.00'+j+'Z'}));
+ const versions=disp.OBJECTS.map(o=>({Key:o.key,VersionId:'null',IsLatest:'true'}));
+ const inventory={schema_version:'MCFT_CAP09_DA9_MINIO_READONLY_INVENTORY_V1',run_id:disp.RUN,bucket:disp.SOURCE_BUCKET,endpoint:disp.SOURCE_ENDPOINT,started_at:iso(now-30000),completed_at:iso(now-20000),counts:{current:2,versions:2,delete_markers:0,multipart:0,status:'BUCKET_NOT_EMPTY_HOLD',test_only_admission:'HOLD',production_admission:'HOLD'},entries:{current,versions,multipart:[]},note:'fixture'};
+ const capture={schema_version:'DA9_PROBE_CAPTURE_MANIFEST_V1',run_id:disp.RUN,bucket:disp.SOURCE_BUCKET,objects:disp.OBJECTS.map((o,j)=>({key:o.key,version_id:'null',is_latest:'true',size:o.size_bytes,etag:current[j].ETag,last_modified:current[j].LastModified,content_sha256:o.content_sha256,captured_file:'fixture'})),delete_authorized:false,execution_authorized:false,production_authorized:false};
+ const recheck={schema_version:'geox_mcft_cap09_da9_worm_independent_readonly_recheck_v1',status:'WORM_REMOTE_READONLY_RECHECK_PASS',checked_at_utc:iso(now-60000),endpoint:disp.SOURCE_ENDPOINT,bucket:disp.WORM.bucket,key:disp.WORM.key,version_id:disp.WORM.version_id,retention_mode:disp.WORM.retention_mode,retain_until_utc:disp.WORM.retain_until_utc,content_length:1456,remote_readback_sha256:disp.WORM.archive_sha256,expected_archive_sha256:disp.WORM.archive_sha256,original_receipt_recovered:false,source_deletion_authorized:false,execution_authorized:false};
+ const evidence={inventory,capture,recheck,wormZipSha:disp.WORM.archive_sha256,inventorySha:'a'.repeat(64),captureSha:disp.CAPTURE_SHA,recheckSha:disp.RECHECK_SHA};
+ const draft=disp.buildDraft('f'.repeat(40),evidence,'da9_disposition_test',trust,now),reviewed=structuredClone(draft);
+ reviewed.review_status='APPROVED';reviewed.reviewer_id=issuerId;reviewed.authority_ref='TEST_ONLY_EXACT_TWO_PROBE_OWNER_REVIEW';reviewed.reviewed_at_utc=iso(now-1000);reviewed.expires_at_utc=iso(now+120000);reviewed.source_deletion_authorized=true;
+ return {now,trust,privateKey,issuerId,keyId,evidence,reviewed};
+}
+check('disposition_signed_exact_two_probe_positive',()=>{const f=dispositionFixture(),env=disp.signReviewed(f.reviewed,f.trust,f.privateKey,f.issuerId,f.keyId,f.evidence,f.now);const r=disp.verifySigned(env,f.trust,f.evidence,f.now);assert.equal(r.status,'VERIFIED_EXACT_SOURCE_DELETION_AUTHORITY');assert.equal(r.source_deletion_authorized,true);assert.equal(r.execution_authorized,false);});
+check('disposition_third_object_rejected',()=>{const f=dispositionFixture();f.evidence.inventory.entries.current.push({Key:'other',Size:'1',ETag:'"x"',LastModified:'2026-10-16T01:36:04.999Z'});assert.throws(()=>disp.validateReviewed(f.reviewed,f.trust,f.evidence,f.now),/EXACT_TWO_OBJECTS_REQUIRED|SOURCE_INVENTORY_NOT_EXACT_TWO/);});
+check('disposition_probe_hash_drift_rejected',()=>{const f=dispositionFixture();f.evidence.capture.objects[0].content_sha256='0'.repeat(64);assert.throws(()=>disp.validateReviewed(f.reviewed,f.trust,f.evidence,f.now),/CAPTURE_HASH_CHANGED/);});
+check('disposition_worm_drift_rejected',()=>{const f=dispositionFixture();f.evidence.wormZipSha='0'.repeat(64);assert.throws(()=>disp.validateReviewed(f.reviewed,f.trust,f.evidence,f.now),/WORM_ARCHIVE_CHANGED/);});
+check('disposition_stale_inventory_rejected',()=>{const f=dispositionFixture();f.evidence.inventory.started_at=new Date(f.now-301000).toISOString();assert.throws(()=>disp.validateReviewed(f.reviewed,f.trust,f.evidence,f.now),/SOURCE_INVENTORY_STALE_OR_FUTURE/);});
+check('disposition_unsigned_review_rejected',()=>{const f=dispositionFixture();f.reviewed.review_status='REVIEW_REQUIRED';assert.throws(()=>disp.signReviewed(f.reviewed,f.trust,f.privateKey,f.issuerId,f.keyId,f.evidence,f.now),/DISPOSITION_REVIEW_NOT_APPROVED/);});
+check('disposition_production_authority_rejected',()=>{const f=dispositionFixture();f.reviewed.production_authorized=true;assert.throws(()=>disp.signReviewed(f.reviewed,f.trust,f.privateKey,f.issuerId,f.keyId,f.evidence,f.now),/PRODUCTION_AUTHORITY_FORBIDDEN/);});
+check('disposition_wrong_signer_rejected',()=>{const f=dispositionFixture();assert.throws(()=>disp.signReviewed(f.reviewed,f.trust,f.privateKey,'other_operator',f.keyId,f.evidence,f.now),/DISPOSITION_REVIEWER_SIGNER_MISMATCH/);});
+check('disposition_signature_tamper_rejected',()=>{const f=dispositionFixture(),env=disp.signReviewed(f.reviewed,f.trust,f.privateKey,f.issuerId,f.keyId,f.evidence,f.now);env.payload.authority_ref+='x';assert.throws(()=>disp.verifySigned(env,f.trust,f.evidence,f.now),/DISPOSITION_SIGNATURE_INVALID/);});
+
 async function asynchronousAcceptance(){
  const xmlEmpty={
   current:'<ListBucketResult><IsTruncated>false</IsTruncated></ListBucketResult>',
