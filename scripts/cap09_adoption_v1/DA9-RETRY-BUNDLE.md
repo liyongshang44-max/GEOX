@@ -298,3 +298,58 @@ empty a bucket.
 
 ---
 
+
+## 2026-10-17 DA9 WORM independently verified remote state (follow-up)
+
+**Windows actual operator output:** `WORM_REMOTE_READONLY_RECHECK=PASS` from the known
+DA9 MinIO endpoint `http://127.0.0.1:59005`, with exact archived version
+fetched and hashed. Verified object locator:
+
+- Bucket: `mcft-cap09-da9-evidence-worm-v1`
+- **Actual Key:** `MCFT-CAP09-DA9-PROBE-EVIDENCE-20261016T170707Z.zip`
+  (**not** the historically alleged `custody/mcft-cap09-da9-evidence-worm-v1/...` key,
+  nor the AWS custody script's default prefix).
+- VersionId: `f7dda227-652e-4dc7-ab97-c9d70874731d`
+- Head and separate retention readback: `COMPLIANCE`, retain through
+  `2027-10-16T17:29:54.0410000+00:00`
+- Full version-specific get-object downloaded bytes and SHA-256:
+  `6dbb1ffe417174dfc45450e695d0fd28cd2eacce0b85523a7a6c71d5f44ee62e`,
+  identical to independently validated original 1456-byte ZIP.
+- New *read-only* receipt at
+  `D:\gptdown\MCFT-CAP09-DA9-WORM-READONLY-RECHECK-47e648ddd8be4ad688aacfe9f73307d1\independent-readonly-recheck.json`.
+  This is **new independent verification**, **not** recovered historical WORM upload receipt.
+  It lives on the user's Windows host; this repository does not contain the receipt bytes.
+
+**Decision:** `WORM_REMOTE_READONLY_RECHECK_PASS` supersedes the earlier
+`WORM_REMOTE_READBACK_UNVERIFIED` *for the verified exact locator only*.
+Original receipt remains `ORIGINAL_WORM_RECEIPT_NOT_FOUND`.
+These facts do not authorize deletion of source IAM probes, do not demonstrate
+scoped IAM readback, and do not qualify a new Retry Subject or Permit.
+
+### Exact source-object disposition frontier (still HOLD)
+
+1. Archive the *new* read-only receipt immutably with its SHA-256, raw Head,
+   GetObjectRetention and version-specific GetObject evidence. Verify that it
+   really describes the expected object and not an unrelated archive.
+2. Verify manifest/probe object hashes and source identity from the already
+   preserved ZIP; do not infer that the archive object's VersionId is a source
+   probe VersionId. Source probe objects each had the literal `null` VersionId.
+3. Repeat a **fresh full** source-bucket inventory before any effectful action,
+   including versions, delete markers and multipart uploads. Reject unexpected
+   new objects or changes. Retain the original root inventory as historical.
+4. Obtain a separate attributable, cryptographically verifiable governance
+   disposition specifying **exactly** the two `qualification/iam-probe`
+   source keys, their `null` versions, expected payload digests and the
+   precise permitted source action. Generic WORM PASS or user intent to
+   continue engineering is **not** deletion approval.
+5. Only after such approval, a separately reviewed least-privilege one-shot
+   disposal routine may be considered. Never perform a bulk bucket reset,
+   delete without a fresh inventory or suppress the empty-bucket Bridge gate.
+
+In parallel, new-subject `61ceb797721cbbe9d6a949832afd92910c351a00`
+Retry/Host test preparation can proceed without side effects. Old Subject
+`91835fa0997730c85c5f3869dd530f4c9a3ca82d` signed approval remains
+non-transferable. Execution `HOLD`, production `HOLD`.
+
+---
+
