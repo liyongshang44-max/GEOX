@@ -229,7 +229,7 @@ function assertFormalIssuer(issuer,policy,q,grant=null,now=Date.now()){
  if(issuer.role==='INDEPENDENT_GOVERNANCE'){
   assert.notEqual(issuer.issuer_id,policy.operator_id,'OFFLINE_INDEPENDENCE_REQUIRED');return;
  }
- assert(issuer.role==='ACCOUNTABLE_SINGLE_OPERATOR'&&issuer.issuer_id===policy.operator_id,'OFFLINE_OPERATOR_ISSUER_REQUIRED');
+ assert(issuer.role==='ACCOUNTABLE_SINGLE_OPERATOR'&&issuer.issuer_id===policy.operator_id,'OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
  if(!issuer.formal_adoption_scope){
   assert(grant,'OFFLINE_SIGNED_OPERATOR_SCOPE_GRANT_REQUIRED');
   verifyOperatorScopeGrant(grant,issuer,policy,q,now);
