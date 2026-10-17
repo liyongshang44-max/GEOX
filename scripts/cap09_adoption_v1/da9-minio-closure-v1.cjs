@@ -123,6 +123,8 @@ function cli(){
   assert.equal(args.length,12,'CLOSURE_SIGN_ARGS_REQUIRED');
   const [signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,started_file,delete_log_file,post_inventory_file,keyFile,issuerId,keyId,output]=args;
   assert(path.isAbsolute(keyFile)&&path.isAbsolute(output)&&!fs.existsSync(output),'CLOSURE_OUTPUT_MUST_BE_NEW');
+  const root=path.resolve(__dirname,'../..'),outside=require('./installed-material.cjs').outside;
+  assert(outside(root,keyFile)&&outside(root,output),'CLOSURE_KEY_AND_OUTPUT_MUST_BE_OUTSIDE_QUALIFIED_RELEASE');
   c.noLinks(keyFile);const e=loadRaw({signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,started_file,delete_log_file,post_inventory_file});
   const signature=sign(e,trust,crypto.createPrivateKey(fs.readFileSync(keyFile)),issuerId,keyId,new Date().toISOString());
   c.writeOnce(output,signature);console.log(JSON.stringify({status:'CLOSURE_SIGNED_NOT_ADMISSION',sha256:shaFile(output),execution_authorized:false,production_authorized:false}));

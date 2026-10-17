@@ -19,6 +19,8 @@ async function execute(o,{command=cmd,snapshot=inv.snapshot}={}) {
  assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'DA9_EXACT_DELETE_WINDOWS_ONLY');
  for(const k of ['signed','pre','capture','recheck','zip','client','config','output'])assert(path.isAbsolute(o[k]),'DA9_DELETE_ABSOLUTE_PATH_REQUIRED:'+k);
  c.id(o.alias);assert(!fs.existsSync(o.output),'DA9_DELETE_OUTPUT_ALREADY_EXISTS');
+ const root=path.resolve(__dirname,'../..'),outside=require('./installed-material.cjs').outside;
+ assert(outside(root,o.output)&&outside(root,o.config)&&outside(root,o.client),'DA9_DELETE_MUTABLE_INPUT_MUST_BE_OUTSIDE_RELEASE');
  const trust=c.read(d.TRUST_PATH),signed=c.read(o.signed),pre=c.read(o.pre),cap=c.read(o.capture),worm=c.read(o.recheck);
  const evidence={inventory:pre,capture:cap,recheck:worm,inventorySha:sha(o.pre),captureSha:sha(o.capture),recheckSha:sha(o.recheck),wormZipSha:sha(o.zip)};
  const result=d.verifySigned(signed,trust,evidence,Date.now());
