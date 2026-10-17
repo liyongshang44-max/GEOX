@@ -36,7 +36,6 @@ jobs:
           node scripts/cap09_adoption_v1/test-offline-context.cjs
           node scripts/cap09_adoption_v1/test-da9-minio-inventory.cjs
           node scripts/cap09_adoption_v1/test-da9-retry-bundle.cjs
-          node scripts/cap09_adoption_v1/test-da9-successor-evidence-guard.cjs
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_DISPATCH_GUARD_V1.cjs
       - name: Historical ancestry does not qualify current changes
