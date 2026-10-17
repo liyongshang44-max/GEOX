@@ -211,6 +211,27 @@ test('formal_signer_to_offline_verifier_scoped_operator',()=>{
   const denied=cp.spawnSync(process.execPath,[child,JSON.stringify([candidatePath,materialPath,f.root,keyPath,1,deniedOut,f.now])],{encoding:'utf8',env:f.environment});
   assert.notEqual(denied.status,0,field);assert.equal(fs.existsSync(deniedOut),false,field);
  }
+ // Genuine signer module + verifier roundtrip with scope DETACHED from the
+ // immutable policy; no unreviewed production or Host authority is created.
+ delete f.policy.issuers[0].formal_adoption_scope;
+ f.sign();
+ fs.writeFileSync(path.join(toolRoot,'offline-trust.json'),JSON.stringify(f.policy));
+ const g={schema:'MCFT_CAP09_OPERATOR_ADOPTION_SCOPE_GRANT_V1',issuer_id:f.q.issuer_id,key_id:f.policy.issuers[0].key_id,
+  subject_sha:f.q.subject_sha,material_digest:f.q.material_digest,host_id:f.q.host_id,operator_id:f.q.operator_id,
+  scope:'TEST_ONLY',policy_digest:c.digest(f.policy),not_before:new Date(f.now-1000).toISOString(),
+  not_after:new Date(f.now+120000).toISOString(),production_authorized:false,authority_ref:'fixture-review-verified-operator-authority'};
+ const grant={payload:g,signature_base64:crypto.sign(null,Buffer.from(v.SCOPE_GRANT_DOMAIN+c.canonical(g)),f.pair.privateKey).toString('base64')};
+ const grantFile=path.join(dir,'synthetic-scope-grant.json'),detachedOut=path.join(dir,'detached-adoption.json');
+ fs.writeFileSync(grantFile,JSON.stringify(grant));
+ const detached=cp.spawnSync(process.execPath,[child,JSON.stringify([candidatePath,materialPath,f.root,keyPath,1,detachedOut,f.now,grantFile])],{encoding:'utf8',env:f.environment});
+ assert.equal(detached.status,0,detached.stderr);
+ const adopted=c.read(detachedOut);
+ assert.deepEqual(adopted.operator_scope_grant,grant);
+ const actual=v.verifyFormal(adopted,f.policy,f.root,{now:f.now,host:os.hostname(),environment:f.environment});
+ assert.equal(v.isFormalVerified(actual),true);
+ const absentOut=path.join(dir,'no-grant-adoption.json');
+ const absent=cp.spawnSync(process.execPath,[child,JSON.stringify([candidatePath,materialPath,f.root,keyPath,1,absentOut,f.now])],{encoding:'utf8',env:f.environment});
+ assert.notEqual(absent.status,0);assert.equal(fs.existsSync(absentOut),false);
 });
 // Exact signed scope is detached from the immutable policy, so the frozen
 // release need not hash its own post-qualification material digest recursively.
