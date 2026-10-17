@@ -143,7 +143,7 @@ function validateMergedDerivation(subject,proof,checks,evidenceRoot,candidate=nu
 
 function validateFormal(request,policy,root,{now=Date.now(),host=os.hostname(),environment=process.env}={}){
  validateStaticPolicy(policy,now);
- c.exact(request,['qualification','material','evidence_root']);
+ c.exact(request,['qualification','material','evidence_root',...(Object.hasOwn(request,'operator_scope_grant')?['operator_scope_grant']:[])]);
  const envelope=request.qualification;c.exact(envelope,['payload','signature_base64']);const q=envelope.payload;
  c.exact(q,['qualification_id','schema','subject_sha','scope','issued_at','expires_at','issuer_id','key_id','policy_digest','material_digest','checks','frozen_paths','first_parent_proven','host_id','operator_id','qcp_proof_ref','qcp_proof_sha256','release_binding_ref','release_binding_sha256']);
  assert.equal(q.schema,'MCFT_CAP09_ADOPTION_QUALIFICATION_V1');c.id(q.qualification_id);
@@ -194,13 +194,48 @@ function validateFormal(request,policy,root,{now=Date.now(),host=os.hostname(),e
 }
 // Shared signer/verifier rule. Operator eligibility requires an explicit, digest-bound
 // registration scope; merely registering an operator key never enables formal Adoption.
-function assertFormalIssuer(issuer,policy,q){
+// Detached owner-attested scope resolves the otherwise circular binding between
+// the immutable release's trust registry and its own installed-material digest.
+// A scope is not inferred from an Adoption signature or unsigned JSON.
+const SCOPE_GRANT_DOMAIN='GEOX_MCFT_CAP09_OPERATOR_ADOPTION_SCOPE_GRANT_V1\n';
+function verifyOperatorScopeGrant(grant,issuer,policy,q,now=Date.now()){
+ c.exact(grant,['payload','signature_base64']);
+ const g=grant.payload;
+ c.exact(g,['schema','issuer_id','key_id','subject_sha','material_digest','host_id','operator_id','scope','policy_digest','not_before','not_after','production_authorized','authority_ref']);
+ assert.equal(g.schema,'MCFT_CAP09_OPERATOR_ADOPTION_SCOPE_GRANT_V1','SCOPE_GRANT_SCHEMA_INVALID');
+ assert.equal(g.issuer_id,issuer.issuer_id,'SCOPE_GRANT_ISSUER_MISMATCH');
+ assert.equal(g.key_id,issuer.key_id,'SCOPE_GRANT_KEY_MISMATCH');
+ assert.equal(g.policy_digest,c.digest(policy),'SCOPE_GRANT_TRUST_DRIFT');
+ assert.equal(g.production_authorized,false,'SCOPE_GRANT_PRODUCTION_FORBIDDEN');
+ assert(typeof g.authority_ref==='string'&&g.authority_ref.length>=12&&g.authority_ref.length<=512,'SCOPE_GRANT_AUTHORITY_REF_REQUIRED');
+ assert(c.epoch(g.not_before)<=now&&now<c.epoch(g.not_after),'SCOPE_GRANT_NOT_CURRENT');
+ assert(c.epoch(issuer.not_before)<=c.epoch(g.not_before)&&c.epoch(g.not_after)<=c.epoch(issuer.not_after),'SCOPE_GRANT_ISSUER_LIFETIME');
+ assert(c.epoch(g.not_after)<=c.epoch(policy.valid_until),'SCOPE_GRANT_POLICY_LIFETIME');
+ assert(c.epoch(g.not_before)<=c.epoch(q.issued_at)&&c.epoch(q.expires_at)<=c.epoch(g.not_after),'SCOPE_GRANT_ADOPTION_LIFETIME');
+ for(const key of ['subject_sha','material_digest','host_id','operator_id','scope'])assert.equal(g[key],q[key],'SCOPE_GRANT_BINDING_MISMATCH:'+key);
+ assert.equal(g.scope,'TEST_ONLY','SCOPE_GRANT_SCOPE_FORBIDDEN');
+ const key=crypto.createPublicKey(issuer.public_key_pem);
+ assert.equal(key.asymmetricKeyType,'ed25519','SCOPE_GRANT_KEY_TYPE');
+ assert.equal(c.sha(key.export({type:'spki',format:'der'})),issuer.spki_sha256,'SCOPE_GRANT_FINGERPRINT_MISMATCH');
+ assert(typeof grant.signature_base64==='string','SCOPE_GRANT_SIGNATURE_REQUIRED');
+ const sig=Buffer.from(grant.signature_base64,'base64');
+ assert(sig.length===64&&sig.toString('base64')===grant.signature_base64,'SCOPE_GRANT_SIGNATURE_INVALID');
+ assert(crypto.verify(null,Buffer.from(SCOPE_GRANT_DOMAIN+c.canonical(g)),key,sig),'SCOPE_GRANT_SIGNATURE_INVALID');
+ return true;
+}
+function assertFormalIssuer(issuer,policy,q,grant=null,now=Date.now()){
  assert.equal(issuer.purpose,'ADOPTION','OFFLINE_ADOPTION_PURPOSE_REQUIRED');
  assert.equal(issuer.revoked,false,'OFFLINE_ISSUER_REVOKED');
  if(issuer.role==='INDEPENDENT_GOVERNANCE'){
   assert.notEqual(issuer.issuer_id,policy.operator_id,'OFFLINE_INDEPENDENCE_REQUIRED');return;
  }
- assert(issuer.role==='ACCOUNTABLE_SINGLE_OPERATOR'&&issuer.issuer_id===policy.operator_id&&issuer.formal_adoption_scope,'OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
+ assert(issuer.role==='ACCOUNTABLE_SINGLE_OPERATOR'&&issuer.issuer_id===policy.operator_id,'OFFLINE_OPERATOR_ISSUER_REQUIRED');
+ if(!issuer.formal_adoption_scope){
+  assert(grant,'OFFLINE_SIGNED_OPERATOR_SCOPE_GRANT_REQUIRED');
+  verifyOperatorScopeGrant(grant,issuer,policy,q,now);
+  return;
+ }
+ assert(!grant,'OFFLINE_AMBIGUOUS_OPERATOR_SCOPE');
  const scope=issuer.formal_adoption_scope;
  c.exact(scope,['subject_sha','material_digest','host_id','operator_id','scope']);
  assert.equal(scope.scope,'TEST_ONLY','OFFLINE_OPERATOR_SCOPE_INVALID');
@@ -212,7 +247,7 @@ function verifyFormal(request,policy,root,options={}){
  const {q,checked,release}=validateFormal(request,policy,root,options);
  const issuers=policy.issuers.filter(x=>x.issuer_id===q.issuer_id&&x.key_id===q.key_id&&x.purpose==='ADOPTION');
  assert.equal(issuers.length,1,'OFFLINE_INDEPENDENT_ADOPTION_ISSUER_REQUIRED');
- assertFormalIssuer(issuers[0],policy,q);
+ assertFormalIssuer(issuers[0],policy,q,request.operator_scope_grant??null,options.now??Date.now());
  verifySignature(request.qualification,policy,ADOPTION_DOMAIN);
  const now=options.now??Date.now(),host=options.host??os.hostname(),environment=options.environment??process.env;
  const result=Object.freeze({head:q.subject_sha,main:q.subject_sha,clean:true,base_ancestor:true,frozen_runtime_identical:true,
@@ -265,4 +300,4 @@ function bindObserved(context,bundle){
  assert.equal(bundle.observed.adoption_binding.material_digest,context.material_digest,'OFFLINE_PERMIT_MATERIAL_MISMATCH');
  assert(c.epoch(bundle.permit.payload.expires_at)<=c.epoch(context.qualification_expires_at),'PERMIT_OUTLIVES_ADOPTION');
 }
-module.exports={assertFormalIssuer,validateMergedDerivation,MERGED_FIELDS,REQUIRED_STAGE_MATERIAL,DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,verifyReleaseSourceBinding,load,isFormalVerified,bindObserved};
+module.exports={verifyOperatorScopeGrant,SCOPE_GRANT_DOMAIN,assertFormalIssuer,validateMergedDerivation,MERGED_FIELDS,REQUIRED_STAGE_MATERIAL,DOMAIN,ADOPTION_DOMAIN,POLICY,QCP_REL,verify,verifyFormal,validateFormal,verifyReleaseSourceBinding,load,isFormalVerified,bindObserved};
