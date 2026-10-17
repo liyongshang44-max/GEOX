@@ -16,14 +16,20 @@
       "version_id_literal": "null",
       "size_bytes": 27,
       "source_payload_sha256": null,
-      "source_payload_sha256_state": "REQUIRES_EXACT_MANIFEST_AND_INDEPENDENT_HOST_RECHECK"
+      "source_payload_sha256_state": "LIVE_SOURCE_OBJECT_GET_AND_HASH_PENDING",
+      "archive_payload_sha256": "9644be2c235939884b2d12dace3c455ea26f6e4ab78fb8f9316da33bf3671a95",
+      "archive_entry_name": "negative-probe.bin",
+      "archive_hash_provenance": "Windows SHA-256 direct stream read of named 27-byte entry in custody ZIP with verified overall ZIP SHA256"
     },
     {
       "key": "positive/qualification/iam-probe-da9db7129607-v1.txt",
       "version_id_literal": "null",
       "size_bytes": 27,
       "source_payload_sha256": null,
-      "source_payload_sha256_state": "REQUIRES_EXACT_MANIFEST_AND_INDEPENDENT_HOST_RECHECK"
+      "source_payload_sha256_state": "LIVE_SOURCE_OBJECT_GET_AND_HASH_PENDING",
+      "archive_payload_sha256": "96b91f40a611b726561cff9e81a7ea60bb8cbc363f75f9e60aad6598ac53a7d8",
+      "archive_entry_name": "positive-probe.bin",
+      "archive_hash_provenance": "Windows SHA-256 direct stream read of named 27-byte entry in custody ZIP with verified overall ZIP SHA256"
     }
   ],
   "custody": {
