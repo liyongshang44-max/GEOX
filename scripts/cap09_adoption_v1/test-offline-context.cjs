@@ -2,20 +2,36 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto'),cp=require('node:child_process');
 const c=require('./contract.cjs'),m=require('./installed-material.cjs'),v=require('./offline-context.cjs');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'cap09-offline-context-'));let checks=0;
+const WINDOWS_INJECTED_ENV=new Set(['SYSTEMROOT','HOMEDRIVE','HOMEPATH','LOGONSERVER','PATH','SYSTEMDRIVE','TEMP','USERDOMAIN','USERNAME','USERPROFILE','WINDIR']);
+let cachedSyntheticChildEnvironment=null;
+function syntheticChildEnvironment(node){
+ if(process.platform!=='win32')return {MCFT_PYTHON_EXECUTABLE:node};
+ if(cachedSyntheticChildEnvironment)return {...cachedSyntheticChildEnvironment};
+ const requested={MCFT_PYTHON_EXECUTABLE:node};
+ const root=process.env.SystemRoot||process.env.SYSTEMROOT;
+ assert(typeof root==='string'&&root.length>0,'WINDOWS_SYSTEMROOT_REQUIRED');
+ requested.SystemRoot=root;
+ const child=cp.spawnSync(node,['-e','process.stdout.write(JSON.stringify(process.env))'],{env:requested,encoding:'utf8',windowsHide:true});
+ assert(!child.error&&child.status===0,'WINDOWS_CHILD_ENV_PROBE_FAILED');
+ const actual=JSON.parse(child.stdout);
+ const expected=new Set(['MCFT_PYTHON_EXECUTABLE',...WINDOWS_INJECTED_ENV]);
+ for(const k of Object.keys(actual))assert(expected.has(k.toUpperCase()),'UNEXPECTED_WINDOWS_CHILD_ENV_NAME:'+k);
+ assert.equal(actual.MCFT_PYTHON_EXECUTABLE,node,'SYNTHETIC_CHILD_PYTHON_ENV_DRIFT');
+ cachedSyntheticChildEnvironment=actual;
+ return {...actual};
+}
 function fixture(){
  const dir=fs.mkdtempSync(path.join(tmp,'case-')),root=path.join(dir,'payload'),evidence=path.join(dir,'evidence');fs.mkdirSync(root);fs.mkdirSync(evidence);fs.writeFileSync(path.join(root,'entry.cjs'),'// fixture; not executed\n');
  const now=Date.now(),iso=x=>new Date(x).toISOString(),pair=crypto.generateKeyPairSync('ed25519');
  const node=fs.realpathSync(process.execPath),tool={path:node,sha256:c.sha(fs.readFileSync(node))};
- // Windows Node may include mandatory SystemRoot in a child process even
- // when its spawnSync env object omits it. Bind that exact public value to
- // synthetic material instead of widening real execution trust.
- const environment={MCFT_PYTHON_EXECUTABLE:node};
- if(process.platform==='win32'){
-  const systemRoot=process.env.SystemRoot||process.env.SYSTEMROOT;
-  assert(typeof systemRoot==='string'&&systemRoot.length>0,'WINDOWS_SYSTEMROOT_REQUIRED');
-  environment.SystemRoot=systemRoot;
- }
- const material={schema:'CAP09_INSTALLED_MATERIAL_V1',root,files:m.inventory(root),tools:{node:tool,python:tool,powershell:tool},environment:{allowed_names:Object.keys(environment),public_values:environment}};
+ // Windows creates a documented fixed set of additional child variables even when
+ // spawnSync(env) provides a minimal environment. Observe the *actual* child
+ // environment once, reject unfamiliar names, and bind only permitted public
+ // values. This is a SYNTHETIC FIXTURE, not a real Host allowlist change.
+ const environment=syntheticChildEnvironment(node);
+ const publicKeys=new Set(['PATH','PATHEXT','SYSTEMROOT','WINDIR','MCFT_PYTHON_EXECUTABLE']);
+ const publicValues=Object.fromEntries(Object.entries(environment).filter(([k])=>publicKeys.has(k.toUpperCase())));
+ const material={schema:'CAP09_INSTALLED_MATERIAL_V1',root,files:m.inventory(root),tools:{node:tool,python:tool,powershell:tool},environment:{allowed_names:Object.keys(environment),public_values:publicValues}};
  const policy={schema:'CAP09_OFFLINE_ADOPTION_TRUST_V1',adopted:true,subject_sha:'a'.repeat(40),host_id:'fixture-host',operator_id:'fixture-operator',valid_until:iso(now+600000),checks:Array.from({length:54},(_,i)=>({check_id:'check_'+i,revision:'fixture-v1',allow_not_applicable:false})),issuers:[{issuer_id:'fixture-operator',key_id:'fixture-key',purpose:'ADOPTION',role:'ACCOUNTABLE_SINGLE_OPERATOR',revoked:false,not_before:iso(now-60000),not_after:iso(now+600000),public_key_pem:pair.publicKey.export({type:'spki',format:'pem'}),spki_sha256:c.sha(pair.publicKey.export({type:'spki',format:'der'}))}]};
  const checkRows=policy.checks.map(x=>{const evidence_ref=x.check_id+'.json',bytes=JSON.stringify({synthetic:true,check_id:x.check_id,result:'PASS'});fs.writeFileSync(path.join(evidence,evidence_ref),bytes);return {check_id:x.check_id,revision:x.revision,result:'PASS',reason:'fixture only',evidence_ref,sha256:c.sha(bytes)};});
  const q={schema:'CAP09_ADOPTED_EXECUTION_CONTEXT_V1',subject_sha:policy.subject_sha,scope:'TEST_ONLY',issued_at:iso(now-1000),expires_at:iso(now+60000),issuer_id:'fixture-operator',key_id:'fixture-key',policy_digest:c.digest(policy),material_digest:c.digest(material),checks:checkRows,frozen_paths:108,first_parent_proven:true,host_id:policy.host_id,operator_id:policy.operator_id};
