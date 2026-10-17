@@ -37,7 +37,7 @@ test('reject_tampered_one_shot_started_ledger',()=>{const f=fixture();f.e.starte
 test('reject_wrong_subject_on_admission',()=>{const f=fixture();assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,'b'.repeat(40),f.now),/CLOSURE_WRONG_SUBJECT/);});
 test('reject_post_inventory_not_four_zero',()=>{const f=fixture();f.e.post.counts.delete_markers=1;assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now));});
 test('reject_new_object_after_closure',()=>{const f=fixture();f.fresh.entries.current.push({Key:'unexpected'});assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now));});
-test('reject_stale_live_admission_readback',()=>{const f=fixture();f.fresh.started_at=iso(f.now-400000);assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now),/CLOSURE_ADMISSION_READBACK_STALE/);});
+test('reject_stale_live_admission_readback',()=>{const f=fixture(),future=f.now+600000;f.fresh=f.empty(future-400000);assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,future),/CLOSURE_ADMISSION_READBACK_STALE/);});
 test('reject_unsigned_or_tampered_closure',()=>{const f=fixture();f.closure.payload.source_bucket='other';assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now));});
 test('reject_modified_signature_bytes',()=>{const f=fixture();f.closure.signature.signature_base64=Buffer.alloc(64).toString('base64');assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now),/CLOSURE_BAD_SIGNATURE/);});
 test('reject_worm_archive_drift',()=>{const f=fixture();f.e.zip_sha='f'.repeat(64);assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now),/CLOSURE_WORM_BYTES_CHANGED/);});
