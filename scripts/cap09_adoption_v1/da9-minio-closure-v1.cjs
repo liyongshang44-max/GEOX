@@ -38,6 +38,7 @@ function historical(e,trust,now){
  const preStart=c.epoch(e.pre.started_at),preEnd=c.epoch(e.pre.completed_at),post=fourZero(e.post);
  assert(preEnd<=v&&v<=start&&start<=end&&end<=post.a&&post.a<=post.b&&post.b<=now,'CLOSURE_HISTORY_TIME_ORDER');
  assert(v-preStart<=300000&&end-start<=300000&&post.a-end<=300000,'CLOSURE_HISTORY_WINDOW');
+ assert(end<=c.epoch(e.signed.payload.expires_at_utc),'CLOSURE_DELETE_AFTER_AUTHORIZATION_EXPIRY');
  assert(Array.isArray(log.operations)&&log.operations.length===2,'CLOSURE_EXACT_TWO_OPERATIONS');
  for(let i=0;i<2;i++){
   const row=log.operations[i],expected=d.OBJECTS[i];

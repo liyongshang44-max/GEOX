@@ -32,6 +32,12 @@ test('signed_exact_disposition_historical_closure_and_fresh_admission',()=>{cons
 test('signed_child_stage_may_verify_historical_closure_after_initial_300_seconds',()=>{const f=fixture();const later=f.now+3600000;const v1=v.verifyHistorical(f.closure,f.e,f.trust,later);assert.equal(v1.status,'HISTORICAL_DISPOSITION_CLOSURE_VERIFIED');assert.equal(v1.execution_authorized,false);});
 test('signed_closure_persists_after_short_disposition_authorization_expires',()=>{const f=fixture();const future=f.now+3600000,readback=f.empty(future-1000);const x=v.verifyAdmission(f.closure,f.e,f.trust,readback,f.subject,future);assert.equal(x.current_four_zero,true);});
 test('require_exact_two_source_keys',()=>{const f=fixture();const mutated=structuredClone(f.e);mutated.log.operations[1].key='negative/other';assert.throws(()=>v.historical(mutated,f.trust,f.now));});
+test('reject_delete_effect_after_signed_authorization_expiry',()=>{const f=fixture(),after=f.now+40000;
+ f.e.log.operations[1].started_at_utc=iso(after-100);f.e.log.operations[1].finished_at_utc=iso(after-20);
+ f.e.log.finished_at_utc=iso(after);f.e.post.started_at=iso(after+100);
+ f.e.post.completed_at=iso(after+200);
+ assert.throws(()=>v.historical(f.e,f.trust,after+500),/CLOSURE_DELETE_AFTER_AUTHORIZATION_EXPIRY/);
+});
 test('reject_partial_delete_result',()=>{const f=fixture();f.e.log.operations[1].exit_code=1;assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now),/CLOSURE_DELETE_FAILED/);});
 test('reject_missing_one_shot_receipt',()=>{const f=fixture();delete f.e.started;assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now));});
 test('reject_tampered_one_shot_started_ledger',()=>{const f=fixture();f.e.started.source_bucket='other';assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now));});
