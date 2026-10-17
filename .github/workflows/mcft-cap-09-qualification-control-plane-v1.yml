@@ -1,5 +1,5 @@
 name: mcft-cap-09-qualification-control-plane-v1
-# Successor synchronization marker: no qualification semantics changed.
+# DA9 final successor qualification trigger (2026-10-17); no qualification semantics changed.
 
 on:
   pull_request:
