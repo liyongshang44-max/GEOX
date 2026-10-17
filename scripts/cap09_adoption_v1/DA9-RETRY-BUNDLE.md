@@ -180,3 +180,121 @@ Run on the local Windows machine with an authentic already signed Adoption and t
 `node scripts/cap09_adoption_v1/da9-retry-bundle.cjs audit-host-adoption ABSOLUTE_RUNTIME_ROOT ABSOLUTE_SIGNED_ADOPTION_JSON`
 
 This command checks the pinned Host and verifier, resolves the actual installed verifier, verifies the Adoption and material profile with the candidate and (for historical 91835fa0) the old installed verifier, and compares both digests. It explicitly checks subject, TEST_ONLY scope and no production authority. It does **not** use private keys, generate nonce, issue Permit, change trust, connect to MinIO or authorize execution. Failure is an execution HOLD; a PASS only establishes pre-sign compatibility, not Retry Adjudication, Provider, budget or resource Admission. Do not run with synthetic credentials, synthetic Adoption or against production.
+
+## 2026-10-17 DA9 real-host WORM recovery and successor gate (NO EXECUTION AUTHORITY)
+
+This checkpoint records observed evidence, not the missing signed approval. See the
+non-merged handoff PR #3298 comment 6230516883. It must not be interpreted as
+a new authorization, a confirmed WORM retention receipt, or an instruction to
+empty a bucket.
+
+### Verified host observations
+
+- The DA9 PostgreSQL and MinIO containers use 127.0.0.1:55445 and
+  127.0.0.1:59005. Do not confuse these with separate run 73b04afb4249
+  on ports 55446/59006.
+- Both DA9 PostgreSQL databases were inspected through the actual container
+  using `qual_admin` and `BEGIN TRANSACTION READ ONLY`: each has 29 public
+  tables and exactly zero rows. This is **not** a substitute for a later fresh
+  resource readback or the scoped Evidence/Twin login/ACL matrix.
+- Actual DA9 MinIO root-identity **read-only inventory** returned
+  `BUCKET_NOT_EMPTY_HOLD`: two current probe objects, two corresponding
+  versions with the literal VersionId string `null`, no delete markers or
+  pending multipart uploads. The objects are precisely:
+  `positive/qualification/iam-probe-da9db7129607-v1.txt` and
+  `negative/qualification/iam-probe-da9db7129607-v1.txt`.
+  Each is 27 bytes. Root inventory must **never** be reported as scoped IAM
+  verification. Host report:
+  `D:\gptdown\MCFT-CAP09-DA9-ROOT-READONLY-INVENTORY-20261017130828.json`,
+  reported receipt SHA-256
+  `3662522a439e52b6ef2fe164e26c03c245f9ca6158a345c9db664f4be9ad3a5e`.
+- Verified local evidence ZIP (including both probe payloads and manifest):
+  `D:\gptdown\MCFT-CAP09-da9db7129607-EVIDENCE-CUSTODY-EXPORT-V1\MCFT-CAP09-DA9-PROBE-EVIDENCE-20261016T170707Z.zip`,
+  1456 bytes, SHA-256
+  `6dbb1ffe417174dfc45450e695d0fd28cd2eacce0b85523a7a6c71d5f44ee62e`.
+  This proves local source custody only; it is **not** independent remote WORM
+  verification.
+
+### Remote WORM identity remains unresolved
+
+- The actual file `D:\gptdown\MCFT-CAP09-DA9-WORM-CUSTODY-V1.ps1` has
+  **mandatory** `-Bucket`, `-Region`, and `-Profile` parameters, with
+  default `KeyPrefix=geox/mcft/cap09/da9/evidence`. Its `put-object`,
+  `head-object`, `get-object`, and `Set-Content` operations must **not**
+  be rerun to reconstruct lost historical evidence.
+- The purported historical WORM destination was
+  `mcft-cap09-da9-evidence-worm-v1` with key
+  `custody/mcft-cap09-da9-evidence-worm-v1/MCFT-CAP09-DA9-PROBE-EVIDENCE-20261016T170707Z.zip`,
+  VersionId `f7dda227-652e-4dc7-ab97-c9d70874731d`,
+  COMPLIANCE retention claimed through `2027-10-16T17:29:54.041Z`.
+  **These are unverified historical claims**, notably inconsistent with the
+  AWS script's default KeyPrefix. Do not silently reconcile them.
+- Local export directory contained only the ZIP and `.sha256.txt`; the
+  expected `DA9-WORM-CUSTODY-RECEIPT-*.json` file is **missing**.
+  `aws configure list-profiles` displayed no configured profiles on the
+  Windows host. The separate
+  `D:\gptdown\MCFT-CAP09-DA9-LOCAL-WORM-V1.ps1` creates bucket/object-lock
+  resources and ends `INDEPENDENT_CUSTODY_RECEIPT=PENDING`, not a
+  replacement for an independent retention receipt.
+- Outcome: `WORM_ORIGINAL_RECEIPT_NOT_FOUND`,
+  `WORM_REMOTE_READBACK_UNVERIFIED`, `SOURCE_DELETE_NOT_AUTHORIZED`.
+
+### Safe recovery procedure (human-controlled, read-only)
+
+1. Determine from an accountable provenance record whether the historical
+   custody target is remote AWS S3 or local MinIO; verify the **exact endpoint,
+   region, bucket, complete key, VersionId and authorized READ-ONLY identity**.
+   An absent AWS profile is not proof the object does not exist. Never use
+   guessed defaults or production root credentials to claim scoped access.
+2. Once a responsible custodian has verified the destination, use **only**
+   `aws s3api head-object`,
+   `aws s3api get-object-retention`, and
+   `aws s3api get-object` with explicit `--bucket`, `--key`,
+   `--version-id`, `--region`, `--profile` and, for S3-compatible
+   storage, its verified `--endpoint-url`. Fetch into an exclusively new
+   local file outside any frozen Runtime; never upload or overwrite.
+3. Require the returned VersionId equals the authorized expected version;
+   verify server-side Object Lock `COMPLIANCE` and retention expiry from
+   authenticated responses; hash the downloaded **bytes** and require exact
+   SHA-256 `6dbb1ffe417174dfc45450e695d0fd28cd2eacce0b85523a7a6c71d5f44ee62e`.
+   Metadata/ETag alone does not prove equal bytes. Record the HTTP command
+   exit status, timestamp, source identifier and digests without credentials.
+4. Save any resulting signed/verified JSON as **NEW INDEPENDENT READONLY
+   RECHECK**, never as the missing historical original. Preserve negative
+   results; no PASS banner unless every independent check actually passed.
+   Lack of verified destination, permissions or match => HOLD.
+5. A later **separately governed exact-object disposition** must enumerate
+   both source IAM-probe keys, each literal `null` VersionId, hashes, fresh
+   inventory and source evidence, with explicit deletion authority and a
+   review of whether deleting unversioned objects is permitted. No
+   WORM receipt by itself authorizes source deletion. Do not bypass
+   `bucket_empty_including_versions_multipart`.
+
+### New-subject Retry/Host path remains separate
+
+- Existing `da9-retry-bundle.cjs` hardcodes the old subject
+  `91835fa0997730c85c5f3869dd530f4c9a3ca82d`. A verified formal
+  Adoption for `61ceb797721cbbe9d6a949832afd92910c351a00`
+  cannot satisfy this old contract, and an old signed retry adjudication
+  cannot be replayed against a new subject.
+- Do **not** simply replace the constant. A versioned successor must bind
+  exact protected main, qualified **installed** Runtime/Host verifier bytes,
+  the historically fixed six evidence digests, fresh separately approved
+  signed Retry Adjudication, host ID, run-scoped resources, immutable permit
+  context, Provider causal availability and measured six-stage time budget.
+  The old denial and UNKNOWN first Provider count must be retained.
+- Required **negative tests**: old-subject signature replay; forged approval;
+  altered six hashes; mismatched installed Host/verifier; expired Adoption;
+  nonempty source bucket; legacy `null` VersionId mishandling; unauthorized
+  role/ACL; expired Provider window; insufficient stage budget; reused
+  nonce/attempt. All must remain HOLD, including on Windows.
+- The older formal Adoption for new material expired
+  `2026-10-17T08:42:09.570Z`; reissue only through authorized real
+  signing custody in the execution window. Fresh post-disposition
+  PostgreSQL/MinIO/ACL/provider readback, new Permit and official preflight
+  remain mandatory before **any** six-stage TEST_ONLY launch.
+- **No source delete, new Retry approval, Permit, or execution is authorized
+  by this documentation change.** Frozen production behavior is untouched.
+
+---
+
