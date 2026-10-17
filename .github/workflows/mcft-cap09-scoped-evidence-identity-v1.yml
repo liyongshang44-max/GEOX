@@ -2,6 +2,8 @@ name: MCFT CAP-09 scoped evidence identity
 on:
   pull_request:
     paths:
+      - 'scripts/cap09_adoption_v1/**'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts'
@@ -14,6 +16,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'

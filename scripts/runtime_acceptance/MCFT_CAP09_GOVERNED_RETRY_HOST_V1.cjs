@@ -57,6 +57,15 @@ function validateBundle(bundle,trust,context){
  assert.deepEqual(decision,arm.retry_adjudication,"RETRY_DECISION_CONTENT_MISMATCH");
  return {verified,arm,plan};
 }
+function validateSuccessorReview(bundle,trust,context,now=Date.now()){
+ if(bundle.arm?.run_id==='da9db7129607'&&bundle.arm.protected_main_sha!=='91835fa0997730c85c5f3869dd530f4c9a3ca82d'){
+  assert.equal(bundle.arm.retry_adjudication?.review_contract_version,2,'DA9_SUCCESSOR_REQUIRES_V2_REVIEW');
+ }
+ if(bundle.arm?.retry_adjudication?.review_contract_version===2){
+  const v2=require('../cap09_adoption_v1/da9-retry-bundle-v2.cjs');
+  v2.verifyReviewedDecision(bundle.arm.retry_adjudication,trust,now,v2.subjectBinding(context));
+ }
+}
 function hostBundle(file){
  const trust=readJson(permitApi.TRUST_PATH);
  // Preserve the legacy no-marker fail-closed gate as the first observable decision.
@@ -94,6 +103,7 @@ function hostBundle(file){
  const size=fs.statSync(file).size;assert(size>0&&size<=4*1024*1024,"RETRY_BUNDLE_SIZE_INVALID");
  const bundle=readJson(file);
  if(offline)offline.bindObserved(context,bundle);
+ validateSuccessorReview(bundle,trust,context);
  const valid=validateBundle(bundle,effectiveTrust,context);
  const env={...process.env,MCFT_QUALIFICATION_FIRST_BASE:valid.arm.qualification_first_base,
   MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR:valid.arm.output_directory};
@@ -203,4 +213,4 @@ function childTargets(){
  assert.equal(claim.status,"STAGE_CAPABILITY_CONSUMED_NO_RETRY");
  return h.targets;
 }
-module.exports={assertControllerAdoption,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};
+module.exports={validateSuccessorReview,assertControllerAdoption,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};

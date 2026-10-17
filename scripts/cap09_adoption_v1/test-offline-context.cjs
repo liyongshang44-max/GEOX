@@ -191,6 +191,25 @@ test('formal_signer_to_offline_verifier_scoped_operator',()=>{
 test('operator_scope_unknown_field_rejected',()=>{const f=scopedOperatorFixture();f.policy.issuers[0].formal_adoption_scope.extra=true;f.sign();assert.throws(()=>verify(f));});
 test('operator_scope_policy_tamper_rejected',()=>{const f=scopedOperatorFixture();f.policy.issuers[0].formal_adoption_scope.host_id='other';assert.throws(()=>verify(f));});
 test('operator_scope_revoked_rejected',()=>{const f=scopedOperatorFixture();f.policy.issuers[0].revoked=true;f.sign();assert.throws(()=>verify(f));});
+test('v2_signed_subject_reaches_actual_host_review_gate',()=>{
+ const f=formalFixture(),identity='scripts/runtime_acceptance/MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs';
+ fs.copyFileSync(path.join(__dirname,'../runtime_acceptance/MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs'),path.join(f.root,identity));
+ const entry='scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs';fs.mkdirSync(path.dirname(path.join(f.root,entry)),{recursive:true});fs.copyFileSync(path.join(__dirname,'da9-retry-bundle-v2.cjs'),path.join(f.root,entry));
+ f.request.material.files=m.inventory(f.root);
+ const releasePath=path.join(f.request.evidence_root,f.q.release_binding_ref),release=c.read(releasePath);
+ release.source_tree_git_sha='d'.repeat(40);release.files.push({...f.request.material.files.find(x=>x.path===identity),mode:'100644',category:'synthetic-fixture'});
+ release.files.push({...f.request.material.files.find(x=>x.path===entry),mode:'100644',category:'synthetic-fixture'});
+ release.content_inventory_sha256=c.digest(release.files);fs.writeFileSync(releasePath,JSON.stringify(release));f.q.release_binding_sha256=c.sha(fs.readFileSync(releasePath));f.sign();
+ const context=verify(f),v2=require('./da9-retry-bundle-v2.cjs'),host=require('../runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs');
+ const binding=v2.subjectBinding(context);assert.equal(binding.subject_sha,f.q.subject_sha);assert.equal(binding.subject_tree_digest,release.source_tree_git_sha);
+ const trust={schema_version:'geox_mcft_cap09_retry_trust_v1',operator_id:'fixture-operator',issuers:[{...f.policy.issuers[0],role:'INDEPENDENT_RETRY_GOVERNANCE'}]};
+ const d=v2.draft('fixture_v2_review',context);Object.assign(d,{review_status:'APPROVED',reviewer_id:trust.issuers[0].issuer_id,review_authority_ref:'synthetic-review-not-live',supersession_rationale:'POSTMERGE_V13_PRODUCER_CORE_FORMAL_RAW_BUCKET_REQUIRED is preserved. The first Provider call count remains unknown. This isolated TEST_ONLY candidate does not claim absence of effects.',review_policy_sha256:c.digest(trust),review_issued_at:new Date(f.now).toISOString(),authorized_at:new Date(f.now).toISOString(),retry_admissible:true,prior_denial_explicitly_superseded:true});
+ const decision=v2.signReviewPayload(d,trust,f.pair.privateKey,d.reviewer_id,trust.issuers[0].key_id,f.now,binding);
+ const bundle={arm:{run_id:v2.RUN,protected_main_sha:f.q.subject_sha,retry_adjudication:decision}};
+ host.validateSuccessorReview(bundle,trust,context,f.now);
+ assert.throws(()=>host.validateSuccessorReview(bundle,trust,{...context},f.now),/VERIFIED_ADOPTION_CONTEXT_REQUIRED/);
+ delete bundle.arm.retry_adjudication.review_contract_version;assert.throws(()=>host.validateSuccessorReview(bundle,trust,context,f.now),/DA9_SUCCESSOR_REQUIRES_V2_REVIEW/);
+});
 test('formal_context_cannot_be_fabricated',()=>{assert.equal(v.isFormalVerified(Object.freeze({execution_authorized:true,production_authorized:false})),false);});
 test('formal_signed_adoption_rejects_policy_self_activation',()=>{const f=formalFixture();f.policy.adopted=true;f.sign();assert.throws(()=>v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment}));});
 test('formal_signed_adoption_rejects_legacy_operator_issuer',()=>{
