@@ -54,6 +54,8 @@ check('disposition_production_authority_rejected',()=>{const f=dispositionFixtur
 check('disposition_wrong_signer_rejected',()=>{const f=dispositionFixture();assert.throws(()=>disp.signReviewed(f.reviewed,f.trust,f.privateKey,'other_operator',f.keyId,f.evidence,f.now),/DISPOSITION_REVIEWER_SIGNER_MISMATCH/);});
 check('disposition_signature_tamper_rejected',()=>{const f=dispositionFixture(),env=disp.signReviewed(f.reviewed,f.trust,f.privateKey,f.issuerId,f.keyId,f.evidence,f.now);env.payload.authority_ref+='x';assert.throws(()=>disp.verifySigned(env,f.trust,f.evidence,f.now),/DISPOSITION_SIGNATURE_INVALID/);});
 
+require('./test-da9-minio-closure-v1.cjs');
+
 async function asynchronousAcceptance(){
  const xmlEmpty={
   current:'<ListBucketResult><IsTruncated>false</IsTruncated></ListBucketResult>',
