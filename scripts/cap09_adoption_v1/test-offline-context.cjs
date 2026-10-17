@@ -6,7 +6,15 @@ function fixture(){
  const dir=fs.mkdtempSync(path.join(tmp,'case-')),root=path.join(dir,'payload'),evidence=path.join(dir,'evidence');fs.mkdirSync(root);fs.mkdirSync(evidence);fs.writeFileSync(path.join(root,'entry.cjs'),'// fixture; not executed\n');
  const now=Date.now(),iso=x=>new Date(x).toISOString(),pair=crypto.generateKeyPairSync('ed25519');
  const node=fs.realpathSync(process.execPath),tool={path:node,sha256:c.sha(fs.readFileSync(node))};
+ // Windows Node may include mandatory SystemRoot in a child process even
+ // when its spawnSync env object omits it. Bind that exact public value to
+ // synthetic material instead of widening real execution trust.
  const environment={MCFT_PYTHON_EXECUTABLE:node};
+ if(process.platform==='win32'){
+  const systemRoot=process.env.SystemRoot||process.env.SYSTEMROOT;
+  assert(typeof systemRoot==='string'&&systemRoot.length>0,'WINDOWS_SYSTEMROOT_REQUIRED');
+  environment.SystemRoot=systemRoot;
+ }
  const material={schema:'CAP09_INSTALLED_MATERIAL_V1',root,files:m.inventory(root),tools:{node:tool,python:tool,powershell:tool},environment:{allowed_names:Object.keys(environment),public_values:environment}};
  const policy={schema:'CAP09_OFFLINE_ADOPTION_TRUST_V1',adopted:true,subject_sha:'a'.repeat(40),host_id:'fixture-host',operator_id:'fixture-operator',valid_until:iso(now+600000),checks:Array.from({length:54},(_,i)=>({check_id:'check_'+i,revision:'fixture-v1',allow_not_applicable:false})),issuers:[{issuer_id:'fixture-operator',key_id:'fixture-key',purpose:'ADOPTION',role:'ACCOUNTABLE_SINGLE_OPERATOR',revoked:false,not_before:iso(now-60000),not_after:iso(now+600000),public_key_pem:pair.publicKey.export({type:'spki',format:'pem'}),spki_sha256:c.sha(pair.publicKey.export({type:'spki',format:'der'}))}]};
  const checkRows=policy.checks.map(x=>{const evidence_ref=x.check_id+'.json',bytes=JSON.stringify({synthetic:true,check_id:x.check_id,result:'PASS'});fs.writeFileSync(path.join(evidence,evidence_ref),bytes);return {check_id:x.check_id,revision:x.revision,result:'PASS',reason:'fixture only',evidence_ref,sha256:c.sha(bytes)};});
