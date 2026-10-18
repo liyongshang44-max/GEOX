@@ -35,7 +35,10 @@ function noLinks(file) {
 function read(file) {
   noLinks(file); const s = fs.statSync(file);
   assert(s.isFile() && s.size <= 16 * 1024 * 1024, 'INPUT_FILE_INVALID');
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
+  const raw = fs.readFileSync(file, 'utf8');
+  // PowerShell 5.1 can emit UTF-8 BOM in historical evidence. Parse without
+  // altering on-disk bytes: callers must still hash and bind the original file.
+  return JSON.parse(raw.charCodeAt(0) === 0xFEFF ? raw.slice(1) : raw);
 }
 function writeOnce(file, data) {
   noLinks(path.dirname(file));
