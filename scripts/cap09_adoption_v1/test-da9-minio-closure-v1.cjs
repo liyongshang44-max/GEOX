@@ -1,11 +1,39 @@
 'use strict';
 // Synthetic end-to-end historical approval -> exact deletion receipts -> 0/0/0/0
 // -> signed closure -> later fresh Host admission. No bucket mutation.
-const assert=require('node:assert/strict'),crypto=require('node:crypto');
+const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const c=require('./contract.cjs'),d=require('./da9-minio-disposition-v1.cjs'),v=require('./da9-minio-closure-v1.cjs');
 const inv=require('./da9-minio-readonly-inventory.cjs'),executor=require('./da9-minio-exact-delete-v1.cjs');
 let n=0;function test(name,fn){fn();n++;console.log('PASS '+name);}
 const iso=x=>new Date(x).toISOString();
+
+test('bom_prefixed_historical_json_parses_without_changing_evidence_bytes',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'cap09-bom-'));
+ try{
+  const file=path.join(dir,'historical.json');
+  const bytes=Buffer.concat([Buffer.from([0xef,0xbb,0xbf]),Buffer.from('{"status":"WORM_REMOTE_READONLY_RECHECK_PASS","original_receipt_recovered":false}\n')]);
+  fs.writeFileSync(file,bytes,{flag:'wx'});
+  const originalDigest=c.sha(bytes);
+  assert.equal(c.read(file).status,'WORM_REMOTE_READONLY_RECHECK_PASS');
+  assert.equal(c.read(file).original_receipt_recovered,false);
+  assert.deepEqual(fs.readFileSync(file),bytes);
+  assert.equal(c.sha(fs.readFileSync(file)),originalDigest,'BOM_EVIDENCE_HASH_MUST_BE_RAW_BYTES');
+  assert.notEqual(originalDigest,c.sha(bytes.subarray(3)),'NORMALIZED_FILE_MUST_NOT_REPLACE_HISTORICAL_BYTES');
+ } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('normal_and_invalid_bom_json_parser_behavior',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'cap09-bom-negative-'));
+ try{
+  const normal=path.join(dir,'normal.json'),invalid=path.join(dir,'invalid.json'),double=path.join(dir,'double.json');
+  fs.writeFileSync(normal,'{"ok":true}');
+  fs.writeFileSync(invalid,Buffer.from([0xef,0xbb,0xbf,0x7b,0x22]));
+  fs.writeFileSync(double,Buffer.concat([Buffer.from([0xef,0xbb,0xbf,0xef,0xbb,0xbf]),Buffer.from('{}')]));
+  assert.deepEqual(c.read(normal),{ok:true});
+  assert.throws(()=>c.read(invalid),SyntaxError);
+  assert.throws(()=>c.read(double),SyntaxError);
+ } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
+
 function fixture(){
  const now=Date.now(),{publicKey,privateKey}=crypto.generateKeyPairSync('ed25519'),who='fixture_operator',keyId='fixture_key';
  const trust={schema_version:'geox_mcft_cap09_retry_trust_v1',operator_id:who,issuers:[{issuer_id:who,key_id:keyId,role:'ACCOUNTABLE_SINGLE_OPERATOR',revoked:false,not_before:iso(now-86400000),not_after:iso(now+86400000),public_key_pem:publicKey.export({type:'spki',format:'pem'}),spki_sha256:c.sha(publicKey.export({type:'spki',format:'der'}))}]};
