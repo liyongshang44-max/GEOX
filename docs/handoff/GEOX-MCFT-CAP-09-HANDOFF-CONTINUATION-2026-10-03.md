@@ -1,3 +1,11 @@
+## 2026-10-19 23:07 +08 — PR #3724 merge-head CI closure PASS (supplement to merged V2 handoff below)
+
+**Verified independently after the earlier merge note:** protected main `130786cb95439e60255e45dfec3e150f901aea9a`; PR #3724 `MERGED` at `2026-10-19T13:44:14Z` (21:44:14 +08) from candidate `92275c23797ac79914c02ed84c3f1c5eded0548f`. Three **push-event** GitHub Actions workflows at the **exact merged main SHA** all completed **SUCCESS**, zero failures/pending: **CI** run `39262700061` (finished 13:54:44Z), **EA5E2 successor-runner qualification** `39262700144`, **Formal-v5 Post-Graduation Readiness** `39262699881`. This closes the pending main-CI acceptance noted in the prior merge checkpoint; do not repeat this check merely because that historical note recorded `running`.
+
+**Execution boundary unchanged:** these are code merge/CI checks, not DA9 dynamic Admission. Original 77cdeeef-signed Release / expired Adoption are NOT transferable to new main `130786cb`; new exact-main material verification/valid Adoption/Permit and real Provider causal and staged safety-budget evidence still required, via **existing** signer and **same** DA9 Run `da9db7129607`. DA9 one-time Permit remains **unissued/unconsumed**; no DB/MinIO/Provider mutation performed by this status check. `DA9_EXECUTE_HOLD`, no independent new Run/signer/approval tier.
+
+---
+
 ## 2026-10-19 +08 — Budget Contract V2 merged, main 130786cb, DA9 still EXECUTE_HOLD (LATEST)
 
 **Engineering disposition (factual, post-merge):** PR [#3724](https://github.com/liyongshang44-max/GEOX/pull/3724) **MERGED**, merge SHA `130786cb95439e60255e45dfec3e150f901aea9a`. Exact protected `main` readback **matches 130786cb**; first parent `77cdeeefc8b27901f3cc44b4edc203d8b8f513a3`, second parent vetted PR head `92275c23797ac79914c02ed84c3f1c5eded0548f`. Normal GitHub protected merge: initial attempt returned HTTP 405 **2 of 8 required checks in progress**; when required checks completed, normal merge succeeded with expected head guard, no override. Before merge: **31 successful GitHub Actions workflows, one conditional SKIPPED, zero failed, 53 check-runs complete, PR clean**. Signed old Release and its adoption deliberately NOT overwritten. This is **code integration, not formal Execution Admission**.
