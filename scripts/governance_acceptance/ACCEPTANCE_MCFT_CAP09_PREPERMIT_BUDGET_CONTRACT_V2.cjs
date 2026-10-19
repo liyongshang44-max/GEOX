@@ -21,14 +21,18 @@ const evidence=[
 // Synthetic raw file fixtures exercise byte-level provenance only; no network.
 const rawGfs=path.join(dir,"gfs.idx"),rawKbs=path.join(dir,"kbs.json");
 fs.writeFileSync(rawGfs,"1:0:d=2026101800:DSWRF:surface:15 hour fcst\\n");
-fs.writeFileSync(rawKbs,JSON.stringify([{time:"2026-10-18T23:30:00.000Z",value:0.32}]));
+fs.writeFileSync(rawKbs,"datetime_utc,solrad_avg,wind_speed,ah,airtmp_107_avg,rain_mm\n2026-10-18 22:00:00,120.0,2.0,1.7,23.0,0.1\n");
 const rawManifestPath=path.join(dir,"raw-manifest.json");
 const manifest={schema_version:"geox_mcft_cap09_provider_two_real_raw_responses_v1",
  run_id:run,subject_sha:subject,first_base:first,observed_at:evidence[2].observed_at,
  responses:[
- {provider:"GFS_INDEX",final_host:"nomads.ncep.noaa.gov",http_status:200,
+ {provider:"GFS_INDEX",final_host:"nomads.ncep.noaa.gov",
+  request_url:"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20261018/12/atmos/gfs.t12z.sfluxgrbf015.grib2.idx",
+  http_status:200,last_modified_utc:"2026-10-18T23:56:00.000Z",
   received_at:"2026-10-18T23:57:00.000Z",raw_file:rawGfs,raw_sha256:sha(fs.readFileSync(rawGfs))},
- {provider:"KBS_SOIL",final_host:"lter.kbs.msu.edu",http_status:200,
+ {provider:"KBS_SOIL",final_host:"lter.kbs.msu.edu",
+  request_url:"https://lter.kbs.msu.edu/datatables/13.csv",
+  http_status:200,last_modified_utc:null,
   received_at:"2026-10-18T23:57:30.000Z",raw_file:rawKbs,raw_sha256:sha(fs.readFileSync(rawKbs))}
  ]};
 fs.writeFileSync(rawManifestPath,JSON.stringify(manifest));
@@ -63,6 +67,24 @@ try{
  rejects(()=>validate(),/RAW_RESPONSE_HASH_MISMATCH/);fs.writeFileSync(rawGfs,originalRaw);
  const fake=path.join(dir,"fake.json");fs.writeFileSync(fake,JSON.stringify({...evidence[0],provider_request_count:0}));
  rejects(()=>validate({...budget,sources:sources.map((s,i)=>i===0?{...s,path:fake,sha256:sha(fs.readFileSync(fake))}:s)}),/GFS_SOURCE_NOT_REAL_PASS/);
+ const savedKbs=fs.readFileSync(rawKbs);fs.writeFileSync(rawKbs,"[{\\"fake\\":true}]");
+ rejects(()=>validate(),/RAW_RESPONSE_HASH_MISMATCH/);fs.writeFileSync(rawKbs,savedKbs);
+ const wrongUrl=path.join(dir,"wrong-url-manifest.json");
+ fs.writeFileSync(wrongUrl,JSON.stringify({...manifest,responses:manifest.responses.map((r,i)=>i===1
+   ?{...r,request_url:"https://example.com/datatables/13.csv"}:r)}));
+ const wrongLive=path.join(dir,"wrong-url-live.json");
+ fs.writeFileSync(wrongLive,JSON.stringify({...evidence[2],
+   raw_response_manifest_path:wrongUrl,raw_response_manifest_sha256:sha(fs.readFileSync(wrongUrl))}));
+ rejects(()=>validate({...budget,sources:sources.map((r,i)=>i===2?{...r,path:wrongLive,sha256:sha(fs.readFileSync(wrongLive))}:r)}),
+   /PROVIDER_HOST_MISMATCH/);
+ const wrongTimeManifest=path.join(dir,"wrong-time-manifest.json");
+ fs.writeFileSync(wrongTimeManifest,JSON.stringify({...manifest,responses:manifest.responses.map((r,i)=>i===0
+   ?{...r,last_modified_utc:"2026-10-19T07:00:00.000Z"}:r)}));
+ const wrongTimeLive=path.join(dir,"wrong-time-live.json");
+ fs.writeFileSync(wrongTimeLive,JSON.stringify({...evidence[2],
+   raw_response_manifest_path:wrongTimeManifest,raw_response_manifest_sha256:sha(fs.readFileSync(wrongTimeManifest))}));
+ rejects(()=>validate({...budget,sources:sources.map((r,i)=>i===2?{...r,path:wrongTimeLive,sha256:sha(fs.readFileSync(wrongTimeLive))}:r)}),
+   /GFS_LAST_MODIFIED_NOT_CAUSAL/);
  const reviewerFile=path.join(dir,"wrong-review.json");fs.writeFileSync(reviewerFile,JSON.stringify({...evidence[3],reviewer_id:"different_signer"}));
  rejects(()=>validate({...budget,sources:sources.map((s,i)=>i===3?{...s,path:reviewerFile,sha256:sha(fs.readFileSync(reviewerFile))}:s)}),/REVIEWER_MUST_BE_EXISTING_SIGNER/);
  rejects(()=>validate({...budget,run_id:"da9db7129607"},plan,{...context,runId:"da9db7129607"}),/DA9_REAL_GFS_DIGEST_MISMATCH/);
