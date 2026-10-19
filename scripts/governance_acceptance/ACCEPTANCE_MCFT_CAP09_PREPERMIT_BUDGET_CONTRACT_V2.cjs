@@ -67,7 +67,7 @@ try{
  rejects(()=>validate(),/RAW_RESPONSE_HASH_MISMATCH/);fs.writeFileSync(rawGfs,originalRaw);
  const fake=path.join(dir,"fake.json");fs.writeFileSync(fake,JSON.stringify({...evidence[0],provider_request_count:0}));
  rejects(()=>validate({...budget,sources:sources.map((s,i)=>i===0?{...s,path:fake,sha256:sha(fs.readFileSync(fake))}:s)}),/GFS_SOURCE_NOT_REAL_PASS/);
- const savedKbs=fs.readFileSync(rawKbs);fs.writeFileSync(rawKbs,"[{\\"fake\\":true}]");
+ const savedKbs=fs.readFileSync(rawKbs);fs.writeFileSync(rawKbs,"FORGED_NON_PRODUCT_BYTES");
  rejects(()=>validate(),/RAW_RESPONSE_HASH_MISMATCH/);fs.writeFileSync(rawKbs,savedKbs);
  const wrongUrl=path.join(dir,"wrong-url-manifest.json");
  fs.writeFileSync(wrongUrl,JSON.stringify({...manifest,responses:manifest.responses.map((r,i)=>i===1
