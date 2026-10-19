@@ -127,8 +127,15 @@ function construct(input,context,now=Date.now(),reviewTrust){
  resources:{...RESOURCES},output_directory:input.output_directory,evidence_sha256:hashes,retry_adjudication:decision,first_execution_provider_calls:null,
  production_recovery_authorized:false,owner_cutover_authorized:false,formal_v5_authorized:false,a0_authorized:false,o00_o23_authorized:false,automatic_retry_authorized:false,historical_reset_authorized:false};
  observed.adoption_binding={qualification_digest:context.adoption_digest,material_digest:context.material_digest};
- bridge.admitProposedRetry(arm,{...observed,head:context.head,protected_main:context.main,source_clean:context.clean,now_utc:new Date(now).toISOString()});
- const budget=input.plan.stages.reduce((n,s)=>n+s.timeout_ms,0);assert(budget<=observed.measured_worst_case_ms,'MEASURED_BUDGET_TOO_SMALL');
+ // V2 is a planned, source-bound upper safety ceiling, NOT an inferred six-stage
+ // measured worst case. It is verified BEFORE issuing any one-shot DA9 Permit.
+ assert(observed.pre_permit_safety_budget,'DA9_V2_PREPERMIT_BUDGET_REQUIRED');
+ assert(!Object.hasOwn(observed,'measured_worst_case_ms'),'DA9_V2_UNSOURCED_MEASUREMENT_FORBIDDEN');
+ bridge.admitProposedRetry(arm,{...observed,head:context.head,protected_main:context.main,source_clean:context.clean,now_utc:new Date(now).toISOString()},{
+   stagePlan:input.plan,adoptionExpiresAt:context.qualification_expires_at,sourceRoot:path.resolve(__dirname,'../..')
+ });
+ const budget=input.plan.stages.reduce((n,s)=>n+s.timeout_ms,0);
+ assert.equal(budget,observed.pre_permit_safety_budget.stage_timeout_sum_ms,'DA9_V2_SIGNED_STAGE_CAP_SUM_MISMATCH');
  assert(c.epoch(input.expires_at)>now+budget+observed.deadline_safety_margin_ms,'PERMIT_WINDOW_TOO_SHORT');
  assert(c.epoch(input.expires_at)<=c.epoch(context.qualification_expires_at),'PERMIT_OUTLIVES_ADOPTION');
  assert(c.epoch(input.qualification_first_base)>now,'FIRST_BASE_NOT_FUTURE');
