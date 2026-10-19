@@ -47,6 +47,9 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
       - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
       - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
+      # The governed parent Host and its readback-clock acceptance change Admission semantics.
+      - 'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'
       - 'scripts/cap09_adoption_v1/contract.cjs'
       - 'scripts/cap09_adoption_v1/test-da9-minio-closure-v1.cjs'
       - '.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'
