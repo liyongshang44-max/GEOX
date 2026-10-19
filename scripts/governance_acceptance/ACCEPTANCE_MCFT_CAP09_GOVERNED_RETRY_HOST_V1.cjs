@@ -12,6 +12,16 @@ try {
  for(const args of [valid.concat("--execute"),valid.concat("--governed-retry"),valid.concat("--unknown"),valid.filter(x=>x!=="--operator-authorized"),valid.slice(0,-1),valid.map(x=>x===file?"relative.json":x)]){
   assert.throws(()=>host.parseArgs(args));tests++;
  }
+ // Parent clock gate must match the signing-side started_at semantics;
+ // no Provider, DB, or Permit activity is possible in this pure negative test.
+ const now=Date.parse("2026-10-19T12:00:00.000Z"),iso=n=>new Date(n).toISOString();
+ const readback=(started,completed)=>({started_at:iso(started),completed_at:iso(completed)});
+ assert.equal(host.assertFreshParentReadback(readback(now-299999,now-5000),now),true);tests++;
+ assert.throws(()=>host.assertFreshParentReadback(readback(now-300001,now-1000),now),/RETRY_READBACK_STALE/);tests++;
+ assert.throws(()=>host.assertFreshParentReadback(readback(now-300001,now+1000),now),/RETRY_READBACK_CLOCK_ORDER_INVALID/);tests++;
+ assert.throws(()=>host.assertFreshParentReadback(readback(now-1000,now-2000),now),/RETRY_READBACK_CLOCK_ORDER_INVALID/);tests++;
+ assert.throws(()=>host.assertFreshParentReadback({started_at:"bad",completed_at:iso(now-1)},now),/RETRY_READBACK_CLOCK_INVALID/);tests++;
+ assert.throws(()=>host.assertFreshParentReadback(null,now),/RETRY_READBACK_REQUIRED/);tests++;
  const plan={schema_version:"geox_mcft_cap09_retry_stage_plan_v2",stages:host.STAGES.map(s=>({id:s[0],timeout_ms:1000}))};
  host.validatePlan(plan);tests++;
  for(const mutate of [p=>p.stages.reverse(),p=>p.stages.pop(),p=>p.stages[0].timeout_ms=0,p=>p.stages[0].command="arbitrary",p=>p.stages[1].id="DROP_SCHEMA"]){
