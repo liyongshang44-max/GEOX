@@ -150,6 +150,19 @@ function hostBundle(file){
  }
  return {...valid,bundle,trust,effectiveTrust,targets,env,context,signedActivation};
 }
+// Parent-only short-lived admission: freshness begins when the multi-resource
+// readback STARTED, not when its final receipt was written. Both sign and Host
+// must use this same origin before any irreversible Permit consumption.
+function assertFreshParentReadback(readback,now=Date.now()){
+ assert(readback&&typeof readback==="object","RETRY_READBACK_REQUIRED");
+ assert(Number.isFinite(now),"RETRY_READBACK_NOW_INVALID");
+ const start=Date.parse(readback.started_at),completed=Date.parse(readback.completed_at);
+ for(const [value,ms] of [[readback.started_at,start],[readback.completed_at,completed]])
+  assert(typeof value==="string"&&Number.isFinite(ms)&&new Date(ms).toISOString()===value,"RETRY_READBACK_CLOCK_INVALID");
+ assert(start<=completed&&completed<=now,"RETRY_READBACK_CLOCK_ORDER_INVALID");
+ assert(now-start<=300000,"RETRY_READBACK_STALE");
+ return true;
+}
 function parseArgs(args){
  assert(args.includes("--operator-authorized")&&args.includes("--governed-retry")&&args.includes("--all"),"RETRY_EXPLICIT_ALL_REQUIRED");
  assert(args.includes("--execute")!==args.includes("--preflight-only"),"RETRY_SELECT_ONE_MODE");
@@ -185,8 +198,7 @@ async function main(args){
  assert(!process.env.MCFT_GOVERNED_RETRY_STAGE&&!process.env.MCFT_GOVERNED_RETRY_TICKET,'DA9_PARENT_CANNOT_USE_CHILD_ADMISSION_PATH');
  const options=parseArgs(args),h=hostBundle(options.file);
  assert(!fs.existsSync(h.targets.out),"RETRY_NEW_OUTPUT_REQUIRED");
- const observedAt=Date.parse(h.bundle.observed.fresh_readback.completed_at);
- assert(Number.isFinite(observedAt)&&observedAt<=Date.now()&&Date.now()-observedAt<=300000,"RETRY_READBACK_STALE");
+ assertFreshParentReadback(h.bundle.observed.fresh_readback);
  if(!options.execute)return {status:"SIGNED_RETRY_PREFLIGHT_PASS_NOT_EXECUTED",execute_authorized:false};
  // Preflight EVERYTHING before irreversible single-use parent permit consumption.
  // On the migrated path, these exact controller/stage bytes are covered by the signed
@@ -259,4 +271,4 @@ function childTargets(){
  assert.equal(claim.status,"STAGE_CAPABILITY_CONSUMED_NO_RETRY");
  return h.targets;
 }
-module.exports={stageContinuationMode,validateSuccessorReview,assertControllerAdoption,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};
+module.exports={stageContinuationMode,validateSuccessorReview,assertControllerAdoption,assertFreshParentReadback,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};
