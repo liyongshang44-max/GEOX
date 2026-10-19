@@ -44,12 +44,22 @@ function validateBundle(bundle,trust,context,{ticketedStage=false}={}){
  // Fresh admission and the full remaining budget belong to the parent only.
  // A child consumes a single-use stage capability after this signature/material
  // validation. It cannot demand the original full budget again hours later.
- if(!ticketedStage)admitProposedRetry(arm,observation);
+ if(!ticketedStage)admitProposedRetry(arm,observation,{
+   stagePlan:plan,adoptionExpiresAt:context.qualification_expires_at,sourceRoot:ROOT
+ });
  const base=Date.parse(arm.qualification_first_base);
  assert(Number.isFinite(base)&&new Date(base).toISOString()===arm.qualification_first_base&&arm.qualification_first_base.endsWith(":00:00.000Z"),"RETRY_BASE_INVALID");
  if(!ticketedStage)assert(base>Date.parse(context.now),"RETRY_BASE_MUST_BE_FUTURE");
  const budget=plan.stages.reduce((n,s)=>n+s.timeout_ms,0);
- assert(budget<=observed.measured_worst_case_ms,"RETRY_PLAN_EXCEEDS_REVIEWED_BUDGET");
+ const budgetV2=arm.run_id==='da9db7129607'&&arm.retry_adjudication?.review_contract_version===2;
+ if(budgetV2) {
+   assert(observed.pre_permit_safety_budget,"DA9_PREPERMIT_SAFETY_BUDGET_V2_REQUIRED");
+   assert(!Object.hasOwn(observed,"measured_worst_case_ms"),"DA9_FAKE_EMPIRICAL_BUDGET_FORBIDDEN");
+   assert.equal(budget,observed.pre_permit_safety_budget.stage_timeout_sum_ms,"DA9_SIGNED_STAGE_CAP_SUM_MISMATCH");
+ } else {
+   // Historical non-DA9 contract: never retroactively reinterpret its evidence.
+   assert(budget<=observed.measured_worst_case_ms,"RETRY_PLAN_EXCEEDS_REVIEWED_BUDGET");
+ }
  if(!ticketedStage)assert(Date.parse(arm.expires_at)>Date.parse(context.now)+budget+observed.deadline_safety_margin_ms,"RETRY_PERMIT_LIFETIME_INSUFFICIENT");
  assert.deepEqual(Object.keys(bundle.files).sort(),Object.keys(arm.evidence_sha256).sort(),"RETRY_LOCAL_EVIDENCE_SET_MISMATCH");
  for(const [key,expected] of Object.entries(arm.evidence_sha256)) {
@@ -208,6 +218,21 @@ async function main(args){
  const audit=await scheduler.executeSixStages({authority,plan:h.plan,steps:scripts,
   dispatch:async (authority,step)=>dispatchConsumedStage(authority,freshStageLaunch(step)),
   assertConsumed:permitApi.assertConsumed});
+ if(h.arm.run_id==='da9db7129607'&&h.arm.retry_adjudication?.review_contract_version===2) {
+   // This sidecar is written ONLY after the genuine six-stage scheduler sealed
+   // actual run-scoped receipts. It is still NOT measurement qualification.
+   const verifier=require('./MCFT_CAP09_POSTEXECUTION_TIMING_ADJUDICATION_V2.cjs');
+   const result=verifier.adjudicatePostExecutionTimingV2({
+     runDirectory:authority.consumed.run_directory,artifactDirectory:h.targets.out,
+     runId:h.arm.run_id,subjectSha:h.arm.protected_main_sha
+   });
+   assert.equal(result.execute_authorized,false,'POSTEXEC_MUST_NOT_GRANT_EXECUTE');
+   assert.equal(result.timing_budget_qualified,false,'POSTEXEC_MUST_NOT_AUTO_QUALIFY');
+   const record=path.join(authority.consumed.run_directory,'POSTEXECUTION_TIMING_REVIEW_V2.json');
+   const fd=fs.openSync(record,'wx',0o600);
+   try{fs.writeFileSync(fd,JSON.stringify(result,null,2)+'\n');fs.fsyncSync(fd);}
+   finally{fs.closeSync(fd);}
+ }
  return {status:audit.status,run_id:h.arm.run_id,stage_count:audit.stage_count,
   final_receipt_sha256:audit.final_receipt_sha256,output:h.targets.out,
   controlled_delay_scratch_only:true,provider_slow_path_proven:false,qualification_pass:false,

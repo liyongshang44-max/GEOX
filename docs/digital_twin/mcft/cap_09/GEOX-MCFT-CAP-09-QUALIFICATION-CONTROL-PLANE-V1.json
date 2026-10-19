@@ -1371,7 +1371,13 @@
         "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_CURRENT_BASELINE_QUALIFICATION_V1.cjs",
-        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts",
+        ".github/workflows/mcft-cap09-prepermit-budget-contract-v2.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-BUDGET-CONTRACT-V2-REPAIR-20261019.md",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_PREPERMIT_BUDGET_CONTRACT_V2.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_PREPERMIT_BUDGET_CONTRACT_V2.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_POSTEXECUTION_TIMING_ADJUDICATION_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_POSTEXECUTION_TIMING_ADJUDICATION_V2.cjs"
       ]
     },
     "DISABLED_RETRY_HISTORY_INHERITANCE_REPAIR_20261013_V1": {
@@ -1425,7 +1431,11 @@
         "scripts/cap09_adoption_v1/test_material_binding.py",
         "scripts/cap09_adoption_v1/verifier.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs",
-        "scripts/runtime_acceptance/MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs"
+        "scripts/runtime_acceptance/MCFT_CAP09_INDEPENDENT_RETRY_ISSUER_PROVISION_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_PREPERMIT_BUDGET_CONTRACT_V2.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_PREPERMIT_BUDGET_CONTRACT_V2.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_POSTEXECUTION_TIMING_ADJUDICATION_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_POSTEXECUTION_TIMING_ADJUDICATION_V2.cjs"
       ]
     }
   },
