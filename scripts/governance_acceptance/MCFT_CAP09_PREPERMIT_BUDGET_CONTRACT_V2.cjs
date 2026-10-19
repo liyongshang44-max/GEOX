@@ -74,6 +74,12 @@ function assessPrePermitSafetyBudgetV2({budget,stagePlan,context,sourceRoot}) {
  assert(typeof budget.review_authority_ref==="string"&&budget.review_authority_ref.length>=16&&budget.review_authority_ref.length<=512,"BUDGET_V2_REVIEW_PROVENANCE_REQUIRED");
  assert(Array.isArray(budget.sources)&&budget.sources.length===4,"BUDGET_V2_FOUR_SOURCES_REQUIRED");
  assert.deepEqual(budget.sources.map(s=>s.kind),SOURCE_TYPES,"BUDGET_V2_SOURCE_ORDER_OR_KIND_INVALID");
+ // Historical DA9 witness bytes are already established by the Windows operator.
+ // Replacing them with synthetic JSON showing '220 / PASS' must never work.
+ if(budget.run_id==="da9db7129607") {
+   assert.equal(budget.sources[0].sha256,"8a89e19dc06023dcc8342b68541c67c7758d0e1ef836d63d68f285a3b29d192a","BUDGET_V2_DA9_REAL_GFS_DIGEST_MISMATCH");
+   assert.equal(budget.sources[1].sha256,"d813093f0321bd56d7e0a43c1dfa66964c4f4dfe8373d665a3139123d49dd86e","BUDGET_V2_DA9_REAL_KBS_DIGEST_MISMATCH");
+ }
  const uniq=new Set(budget.sources.map(s=>path.resolve(s.path).toLowerCase()));
  assert.equal(uniq.size,4,"BUDGET_V2_SOURCE_FILES_NOT_DISTINCT");
  assert(typeof sourceRoot==="string"&&path.isAbsolute(sourceRoot),"BUDGET_V2_RUNTIME_ROOT_REQUIRED");
