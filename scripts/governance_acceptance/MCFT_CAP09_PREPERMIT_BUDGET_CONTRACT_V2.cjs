@@ -124,9 +124,18 @@ function assessPrePermitSafetyBudgetV2({budget,stagePlan,context,sourceRoot}) {
  const allowed=[["GFS_INDEX","nomads.ncep.noaa.gov"],["KBS_SOIL","lter.kbs.msu.edu"]];
  for(let i=0;i<2;i++){
    const row=manifest.responses[i];
-   exact(row,["provider","final_host","http_status","received_at","raw_file","raw_sha256"],
-     "BUDGET_RAW_RESPONSE");
+   exact(row,["provider","final_host","request_url","http_status","received_at",
+     "last_modified_utc","raw_file","raw_sha256"],"BUDGET_RAW_RESPONSE");
    assert.equal(row.provider,allowed[i][0]);assert.equal(row.final_host,allowed[i][1]);
+   const request=new URL(row.request_url);
+   assert.equal(request.protocol,"https:","BUDGET_V2_REAL_HTTPS_REQUEST_REQUIRED");
+   assert.equal(request.username,"");assert.equal(request.password,"");
+   assert.equal(request.hostname,allowed[i][1],"BUDGET_V2_PROVIDER_HOST_MISMATCH");
+   assert(!request.hash&&!request.search,"BUDGET_V2_UNEXPECTED_PROVIDER_QUERY");
+   if(i===0) {
+     assert(/^\/pub\/data\/nccf\/com\/gfs\/prod\/gfs\.\d{8}\/\d{2}\/atmos\/gfs\.t\d{2}z\.sfluxgrbf\d{3}\.grib2\.idx$/.test(request.pathname),
+       "BUDGET_V2_GFS_PRODUCT_IDX_PATH_REQUIRED");
+   } else assert.equal(request.pathname,"/datatables/13.csv","BUDGET_V2_KBS_PRODUCT_CSV_PATH_REQUIRED");
    assert.equal(row.http_status,200,"BUDGET_V2_REAL_HTTP_200_REQUIRED");
    const received=epoch(row.received_at,"BUDGET_V2_RAW_RECEIVED_CLOCK_INVALID");
    const observedTime=epoch(live.observed_at,"BUDGET_V2_RAW_OBSERVED_CLOCK_INVALID");
@@ -139,14 +148,30 @@ function assessPrePermitSafetyBudgetV2({budget,stagePlan,context,sourceRoot}) {
    assert(rawRel===".."||rawRel.startsWith(".."+path.sep)||path.isAbsolute(rawRel),
      "BUDGET_V2_RAW_FILE_INSIDE_RELEASE");
    const rawStat=fs.lstatSync(row.raw_file);
-   assert(rawStat.isFile()&&!rawStat.isSymbolicLink()&&rawStat.size>0&&rawStat.size<=5_000_000,
+   const rawLimit=i===0?20_000_000:110_000_000;
+   assert(rawStat.isFile()&&!rawStat.isSymbolicLink()&&rawStat.size>0&&rawStat.size<=rawLimit,
      "BUDGET_V2_RAW_RESPONSE_BOUNDED_FILE_REQUIRED");
    const raw=fs.readFileSync(row.raw_file);
    assert.equal(sha(raw),row.raw_sha256,"BUDGET_V2_RAW_RESPONSE_HASH_MISMATCH");
-   if(i===0)assert(raw.includes(Buffer.from(":DSWRF:")),
-     "BUDGET_V2_GFS_INDEX_REQUIRED_DSWRF_NOT_FOUND");
-   else assert(Array.isArray(JSON.parse(raw.toString("utf8"))),
-     "BUDGET_V2_KBS_REAL_RAW_ARRAY_REQUIRED");
+   if(i===0) {
+     const stamp=epoch(row.last_modified_utc,"BUDGET_V2_GFS_LAST_MODIFIED_MISSING");
+     assert(stamp<=received&&stamp<first,"BUDGET_V2_GFS_LAST_MODIFIED_NOT_CAUSAL");
+     assert(raw.includes(Buffer.from(":DSWRF:")),
+       "BUDGET_V2_GFS_INDEX_REQUIRED_DSWRF_NOT_FOUND");
+   } else {
+     assert.equal(row.last_modified_utc,null,"BUDGET_V2_KBS_LAST_MODIFIED_UNVERIFIED");
+     // The product KBS source is a UTF-8 CSV, not JSON. The scientific
+     // Python CSV/ET0 decoder remains the authority for semantic continuity.
+     assert(!raw.subarray(0,4).equals(Buffer.from("GRIB")),
+       "BUDGET_V2_KBS_GRIB_NOT_CSV");
+     const text=raw.subarray(0,Math.min(raw.length,32768)).toString("utf8");
+     const lines=text.split(/\r?\n/).slice(0,80);
+     const headers=["datetime_utc","solrad_avg","wind_speed","ah","airtmp_107_avg","rain_mm"];
+     assert(lines.some(line=>headers.every(key=>line.toLowerCase().split(/[,;\t|]/)
+       .some(cell=>cell.trim().toLowerCase()===key))),
+       "BUDGET_V2_KBS_PRODUCT_CSV_HEADER_REQUIRED");
+     assert(raw.includes(10),"BUDGET_V2_KBS_CSV_ROWS_REQUIRED");
+   }
  }
 
  const seen=epoch(live.observed_at,"BUDGET_V2_PROVIDER_OBSERVATION_CLOCK_INVALID");
