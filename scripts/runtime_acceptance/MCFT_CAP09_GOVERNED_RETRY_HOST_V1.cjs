@@ -230,7 +230,7 @@ async function main(args){
    assert.equal(result.timing_budget_qualified,false,'POSTEXEC_MUST_NOT_AUTO_QUALIFY');
    const record=path.join(authority.consumed.run_directory,'POSTEXECUTION_TIMING_REVIEW_V2.json');
    const fd=fs.openSync(record,'wx',0o600);
-   try{fs.writeFileSync(fd,JSON.stringify(result,null,2)+'\\n');fs.fsyncSync(fd);}
+   try{fs.writeFileSync(fd,JSON.stringify(result,null,2)+'\n');fs.fsyncSync(fd);}
    finally{fs.closeSync(fd);}
  }
  return {status:audit.status,run_id:h.arm.run_id,stage_count:audit.stage_count,
