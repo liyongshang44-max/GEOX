@@ -18,6 +18,22 @@ const evidence=[
  reviewed_stage_timeout_ms:Array(6).fill(600000),reviewed_safety_margin_ms:600000,reviewer_id:reviewer,
  review_basis:"The six stage limits are individually reviewed engineering safety upper caps and a positive reserve. They are not observed six-stage worst-case duration and do not issue execution permission."}
 ];
+// Synthetic raw file fixtures exercise byte-level provenance only; no network.
+const rawGfs=path.join(dir,"gfs.idx"),rawKbs=path.join(dir,"kbs.json");
+fs.writeFileSync(rawGfs,"1:0:d=2026101800:DSWRF:surface:15 hour fcst\\n");
+fs.writeFileSync(rawKbs,JSON.stringify([{time:"2026-10-18T23:30:00.000Z",value:0.32}]));
+const rawManifestPath=path.join(dir,"raw-manifest.json");
+const manifest={schema_version:"geox_mcft_cap09_provider_two_real_raw_responses_v1",
+ run_id:run,subject_sha:subject,first_base:first,observed_at:evidence[2].observed_at,
+ responses:[
+ {provider:"GFS_INDEX",final_host:"nomads.ncep.noaa.gov",http_status:200,
+  received_at:"2026-10-18T23:57:00.000Z",raw_file:rawGfs,raw_sha256:sha(fs.readFileSync(rawGfs))},
+ {provider:"KBS_SOIL",final_host:"lter.kbs.msu.edu",http_status:200,
+  received_at:"2026-10-18T23:57:30.000Z",raw_file:rawKbs,raw_sha256:sha(fs.readFileSync(rawKbs))}
+ ]};
+fs.writeFileSync(rawManifestPath,JSON.stringify(manifest));
+evidence[2].raw_response_manifest_path=rawManifestPath;
+evidence[2].raw_response_manifest_sha256=sha(fs.readFileSync(rawManifestPath));
 const sources=b.SOURCE_TYPES.map((kind,i)=>{const p=path.join(dir,"evidence-"+i+".json"),txt=JSON.stringify(evidence[i]);fs.writeFileSync(p,txt);return {kind,path:p,sha256:sha(txt)};});
 const budget={schema_version:b.CONTRACT,classification:b.CLASSIFICATION,scope:"TEST_ONLY",run_id:run,subject_sha:subject,first_base:first,
  provider_deadline_utc:deadline,stage_timeout_sum_ms:3600000,safety_margin_ms:600000,sources,
@@ -42,7 +58,9 @@ try{
  rejects(()=>validate({...budget,sources:sources.map((s,i)=>i===3?{...s,sha256:"0".repeat(64)}:s)}),/SOURCE_CHANGED/);
  rejects(()=>validate({...budget,sources:sources.map((s,i)=>i===3?{...s,path:sources[2].path}:s)}),/SOURCE_FILES_NOT_DISTINCT/);
  const past=path.join(dir,"stale.json");fs.writeFileSync(past,JSON.stringify({...evidence[2],observed_at:"2026-10-18T20:00:00.000Z"}));
- rejects(()=>validate({...budget,sources:sources.map((s,i)=>i===2?{...s,path:past,sha256:sha(fs.readFileSync(past))}:s)}),/PROVIDER_OBSERVATION_STALE/);
+ rejects(()=>validate({...budget,sources:sources.map((s,i)=>i===2?{...s,path:past,sha256:sha(fs.readFileSync(past))}:s)}),/PROVIDER_OBSERVATION_STALE|strictly equal/);
+ const originalRaw=fs.readFileSync(rawGfs);fs.appendFileSync(rawGfs,"TAMPERED");
+ rejects(()=>validate(),/RAW_RESPONSE_HASH_MISMATCH/);fs.writeFileSync(rawGfs,originalRaw);
  const fake=path.join(dir,"fake.json");fs.writeFileSync(fake,JSON.stringify({...evidence[0],provider_request_count:0}));
  rejects(()=>validate({...budget,sources:sources.map((s,i)=>i===0?{...s,path:fake,sha256:sha(fs.readFileSync(fake))}:s)}),/GFS_SOURCE_NOT_REAL_PASS/);
  const reviewerFile=path.join(dir,"wrong-review.json");fs.writeFileSync(reviewerFile,JSON.stringify({...evidence[3],reviewer_id:"different_signer"}));
