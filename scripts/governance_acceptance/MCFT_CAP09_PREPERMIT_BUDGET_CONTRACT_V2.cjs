@@ -93,7 +93,7 @@ function assessPrePermitSafetyBudgetV2({budget,stagePlan,context,sourceRoot}) {
  const live=records[2];
  exact(live,["schema_version","status","run_id","subject_sha","first_base","observed_at",
    "provider_deadline_utc","provider_causal_visibility","gfs_current_index_checked","kbs_current_continuity_checked",
-   "raw_response_manifest_sha256"],"BUDGET_LIVE_WITNESS");
+   "raw_response_manifest_path","raw_response_manifest_sha256"],"BUDGET_LIVE_WITNESS");
  assert.equal(live.schema_version,"geox_mcft_cap09_real_provider_readonly_witness_v1");
  assert.equal(live.status,"PASS","BUDGET_V2_CURRENT_PROVIDER_UNVERIFIED");
  assert.equal(live.run_id,budget.run_id);assert.equal(live.subject_sha,budget.subject_sha);
@@ -102,6 +102,53 @@ function assessPrePermitSafetyBudgetV2({budget,stagePlan,context,sourceRoot}) {
  assert.equal(live.gfs_current_index_checked,true,"BUDGET_V2_CURRENT_GFS_NOT_CHECKED");
  assert.equal(live.kbs_current_continuity_checked,true,"BUDGET_V2_CURRENT_KBS_NOT_CHECKED");
  assert(DIGEST.test(live.raw_response_manifest_sha256),"BUDGET_V2_RAW_MANIFEST_REQUIRED");
+ assert(path.isAbsolute(live.raw_response_manifest_path),"BUDGET_V2_RAW_MANIFEST_PATH_REQUIRED");
+ const manifestPath=fs.realpathSync(live.raw_response_manifest_path);
+ const rootReal=fs.realpathSync(sourceRoot);
+ const manifestRelative=path.relative(rootReal,manifestPath);
+ assert(manifestRelative===".."||manifestRelative.startsWith(".."+path.sep)||path.isAbsolute(manifestRelative),
+   "BUDGET_V2_RAW_MANIFEST_INSIDE_RELEASE");
+ const manifestStat=fs.lstatSync(live.raw_response_manifest_path);
+ assert(manifestStat.isFile()&&!manifestStat.isSymbolicLink()&&manifestStat.size>0&&manifestStat.size<=1_000_000,
+   "BUDGET_V2_RAW_MANIFEST_FILE_INVALID");
+ const manifestBytes=fs.readFileSync(live.raw_response_manifest_path);
+ assert.equal(sha(manifestBytes),live.raw_response_manifest_sha256,"BUDGET_V2_RAW_MANIFEST_CHANGED");
+ const manifest=JSON.parse(manifestBytes.toString("utf8"));
+ exact(manifest,["schema_version","run_id","subject_sha","first_base","observed_at","responses"],
+   "BUDGET_PROVIDER_RAW_MANIFEST");
+ assert.equal(manifest.schema_version,"geox_mcft_cap09_provider_two_real_raw_responses_v1");
+ assert.equal(manifest.run_id,budget.run_id);assert.equal(manifest.subject_sha,budget.subject_sha);
+ assert.equal(manifest.first_base,budget.first_base);assert.equal(manifest.observed_at,live.observed_at);
+ assert(Array.isArray(manifest.responses)&&manifest.responses.length===2,
+   "BUDGET_V2_EXACT_TWO_PROVIDER_RAW_RESPONSES_REQUIRED");
+ const allowed=[["GFS_INDEX","nomads.ncep.noaa.gov"],["KBS_SOIL","lter.kbs.msu.edu"]];
+ for(let i=0;i<2;i++){
+   const row=manifest.responses[i];
+   exact(row,["provider","final_host","http_status","received_at","raw_file","raw_sha256"],
+     "BUDGET_RAW_RESPONSE");
+   assert.equal(row.provider,allowed[i][0]);assert.equal(row.final_host,allowed[i][1]);
+   assert.equal(row.http_status,200,"BUDGET_V2_REAL_HTTP_200_REQUIRED");
+   const received=epoch(row.received_at,"BUDGET_V2_RAW_RECEIVED_CLOCK_INVALID");
+   const observedTime=epoch(live.observed_at,"BUDGET_V2_RAW_OBSERVED_CLOCK_INVALID");
+   assert(received<=observedTime&&observedTime-received<=300000,
+     "BUDGET_V2_RAW_RESPONSE_STALE");
+   assert(DIGEST.test(row.raw_sha256)&&path.isAbsolute(row.raw_file),
+     "BUDGET_V2_RAW_BYTES_FILE_HASH_REQUIRED");
+   const rawReal=fs.realpathSync(row.raw_file);
+   const rawRel=path.relative(rootReal,rawReal);
+   assert(rawRel===".."||rawRel.startsWith(".."+path.sep)||path.isAbsolute(rawRel),
+     "BUDGET_V2_RAW_FILE_INSIDE_RELEASE");
+   const rawStat=fs.lstatSync(row.raw_file);
+   assert(rawStat.isFile()&&!rawStat.isSymbolicLink()&&rawStat.size>0&&rawStat.size<=5_000_000,
+     "BUDGET_V2_RAW_RESPONSE_BOUNDED_FILE_REQUIRED");
+   const raw=fs.readFileSync(row.raw_file);
+   assert.equal(sha(raw),row.raw_sha256,"BUDGET_V2_RAW_RESPONSE_HASH_MISMATCH");
+   if(i===0)assert(raw.includes(Buffer.from(":DSWRF:")),
+     "BUDGET_V2_GFS_INDEX_REQUIRED_DSWRF_NOT_FOUND");
+   else assert(Array.isArray(JSON.parse(raw.toString("utf8"))),
+     "BUDGET_V2_KBS_REAL_RAW_ARRAY_REQUIRED");
+ }
+
  const seen=epoch(live.observed_at,"BUDGET_V2_PROVIDER_OBSERVATION_CLOCK_INVALID");
  assert(seen<=now&&now-seen<=300000,"BUDGET_V2_PROVIDER_OBSERVATION_STALE");
  assert(seen<first,"BUDGET_V2_PROVIDER_OBSERVATION_POST_CUTOFF");
