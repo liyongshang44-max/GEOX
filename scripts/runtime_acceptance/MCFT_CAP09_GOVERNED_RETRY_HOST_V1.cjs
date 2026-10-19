@@ -218,6 +218,21 @@ async function main(args){
  const audit=await scheduler.executeSixStages({authority,plan:h.plan,steps:scripts,
   dispatch:async (authority,step)=>dispatchConsumedStage(authority,freshStageLaunch(step)),
   assertConsumed:permitApi.assertConsumed});
+ if(h.arm.run_id==='da9db7129607'&&h.arm.retry_adjudication?.review_contract_version===2) {
+   // This sidecar is written ONLY after the genuine six-stage scheduler sealed
+   // actual run-scoped receipts. It is still NOT measurement qualification.
+   const verifier=require('./MCFT_CAP09_POSTEXECUTION_TIMING_ADJUDICATION_V2.cjs');
+   const result=verifier.adjudicatePostExecutionTimingV2({
+     runDirectory:authority.consumed.run_directory,artifactDirectory:h.targets.out,
+     runId:h.arm.run_id,subjectSha:h.arm.protected_main_sha
+   });
+   assert.equal(result.execute_authorized,false,'POSTEXEC_MUST_NOT_GRANT_EXECUTE');
+   assert.equal(result.timing_budget_qualified,false,'POSTEXEC_MUST_NOT_AUTO_QUALIFY');
+   const record=path.join(authority.consumed.run_directory,'POSTEXECUTION_TIMING_REVIEW_V2.json');
+   const fd=fs.openSync(record,'wx',0o600);
+   try{fs.writeFileSync(fd,JSON.stringify(result,null,2)+'\\n');fs.fsyncSync(fd);}
+   finally{fs.closeSync(fd);}
+ }
  return {status:audit.status,run_id:h.arm.run_id,stage_count:audit.stage_count,
   final_receipt_sha256:audit.final_receipt_sha256,output:h.targets.out,
   controlled_delay_scratch_only:true,provider_slow_path_proven:false,qualification_pass:false,
