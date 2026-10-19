@@ -14,7 +14,7 @@ const {dedicatedContract,assertDedicatedPgEndpoint}=require("./MCFT_CAP09_DEDICA
 const SHA=/^[0-9a-f]{64}$/;
 const RUN=/^[0-9a-f]{12}$/;
 const HEAD=/^[0-9a-f]{40}$/;
-function admitProposedRetry(arm,observed) {
+function admitProposedRetry(arm,observed,options={}) {
   assert(arm && observed && typeof arm==="object" && typeof observed==="object","RETRY_INPUT_REQUIRED");
   assert.equal(arm.schema_version,"geox_mcft_cap09_isolated_retry_arm_v1");
   assert.equal(arm.mode,"ISOLATED_QUALIFICATION");
@@ -67,15 +67,48 @@ function admitProposedRetry(arm,observed) {
   assert.equal(observed.fresh_readback?.all_rows_zero,true,"RESOURCE_ROWS_NOT_ZERO");
   assert.equal(observed.fresh_readback?.bucket_empty_including_versions_multipart,true,"OBJECT_VERSIONS_OR_UPLOADS_PENDING");
   assert.equal(observed.fresh_readback?.production_bindings_present,false,"PRODUCTION_BINDINGS_FORBIDDEN");
-  const readiness=assessIsolatedReadiness({
-    now_utc:observed.now_utc,authorized_at_utc:arm.authorized_at,expires_at_utc:arm.expires_at,
-    provider_deadline_utc:observed.provider_deadline_utc,source_exact_main:true,
-    source_clean:observed.source_clean,retry_adjudicated:true,prior_attempt_preserved:true,
-    data_available:observed.provider_data_available,provider_observation_causally_visible:observed.provider_causal_visibility,
-    resources_fresh:observed.fresh_readback_current,owner_isolation_verified:observed.owner_isolation_verified,
-    run_output_absent:true,measured_worst_case_ms:observed.measured_worst_case_ms,
-    deadline_safety_margin_ms:observed.deadline_safety_margin_ms
-  });
+  const requiresV2=arm.run_id==='da9db7129607' && arm.retry_adjudication?.review_contract_version===2;
+  if(requiresV2) {
+    assert(observed.pre_permit_safety_budget,'DA9_V2_PREPERMIT_BUDGET_REQUIRED');
+    assert(!Object.hasOwn(observed,'measured_worst_case_ms'),'DA9_V2_UNSOURCED_MEASURED_BUDGET_FORBIDDEN');
+  }
+  let readiness;
+  if(observed.pre_permit_safety_budget) {
+    // The one-shot existing signer will bind the complete Observations digest into
+    // its Permit. This structural check never signs, issues or consumes authority.
+    assert(arm.authorized_at<=observed.now_utc&&observed.now_utc<arm.expires_at,
+      'BUDGET_V2_SHORT_LIVED_ARM_REQUIRED');
+    assert(Date.parse(arm.expires_at)-Date.parse(arm.authorized_at)<=86400000,
+      'BUDGET_V2_MAX_24H_ARM_REQUIRED');
+    assert.equal(observed.source_clean,true,'BUDGET_V2_CLEAN_MAIN_REQUIRED');
+    assert.equal(observed.provider_data_available,true,'BUDGET_V2_REAL_PROVIDER_REQUIRED');
+    assert.equal(observed.provider_causal_visibility,true,'BUDGET_V2_CAUSAL_PROVIDER_REQUIRED');
+    assert.equal(observed.fresh_readback_current,true,'BUDGET_V2_FRESH_RESOURCE_REQUIRED');
+    assert.equal(observed.owner_isolation_verified,true,'BUDGET_V2_OWNER_ISOLATION_REQUIRED');
+    const safety=require('./MCFT_CAP09_PREPERMIT_BUDGET_CONTRACT_V2.cjs');
+    readiness=safety.assessPrePermitSafetyBudgetV2({
+      budget:observed.pre_permit_safety_budget,
+      stagePlan:options.stagePlan,
+      context:{
+        runId:arm.run_id,subjectSha:arm.protected_main_sha,
+        firstBase:arm.qualification_first_base,nowUtc:observed.now_utc,
+        providerDeadlineUtc:observed.provider_deadline_utc,permitExpiresAt:arm.expires_at,
+        adoptionExpiresAt:options.adoptionExpiresAt,
+        safetyMarginMs:observed.deadline_safety_margin_ms,
+        authorizedReviewerId:arm.retry_adjudication.reviewer_id
+      },sourceRoot:options.sourceRoot
+    });
+  } else {
+    readiness=assessIsolatedReadiness({
+      now_utc:observed.now_utc,authorized_at_utc:arm.authorized_at,expires_at_utc:arm.expires_at,
+      provider_deadline_utc:observed.provider_deadline_utc,source_exact_main:true,
+      source_clean:observed.source_clean,retry_adjudicated:true,prior_attempt_preserved:true,
+      data_available:observed.provider_data_available,provider_observation_causally_visible:observed.provider_causal_visibility,
+      resources_fresh:observed.fresh_readback_current,owner_isolation_verified:observed.owner_isolation_verified,
+      run_output_absent:true,measured_worst_case_ms:observed.measured_worst_case_ms,
+      deadline_safety_margin_ms:observed.deadline_safety_margin_ms
+    });
+  }
   // Structural admissibility is not issuer trust, signature verification or
   // the consumption of a single-use nonce. Never mint execution authority.
   return {...readiness,admissibility:"STRUCTURAL_ONLY_ISSUER_AND_SINGLE_USE_NOT_VERIFIED",
