@@ -4,7 +4,10 @@
 const assert=require("node:assert/strict");
 const LEGACY="geox_mcft_cap09_evidence_runtime_login_v1";
 function expectedEvidenceLogin({stage,positive,negative,database,connectionString}){
-  if(stage!=="PRODUCER")return LEGACY;
+  // Signed DA9 parent uses one scoped positive Evidence URL for Producer and
+  // all three Timing children. Un-governed legacy sampling keeps its role.
+  const governed=stage==="PRODUCER"||/^TIMING_[123]$/.test(stage||"");
+  if(!governed)return LEGACY;
   const pos=/^mcft_cap09_requal_([a-f0-9]{12})_positive$/.exec(positive||"");
   assert(pos,"SCOPED_EVIDENCE_POSITIVE_DATABASE_REQUIRED");
   const run=pos[1];
