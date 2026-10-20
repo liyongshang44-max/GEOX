@@ -7,6 +7,16 @@ const url=(user,db)=>`postgresql://${user}:not-a-real-secret@127.0.0.1:55445/${d
 const check=(stage,db,user,extra={})=>expectedEvidenceLogin({stage,positive,negative,database:db,connectionString:url(user,db),...extra});
 test("normal mode preserves legacy login",()=>assert.equal(check(undefined,positive,"other"),LEGACY));
 test("governed positive role",()=>assert.equal(check("PRODUCER",positive,`cap09_${run}_p_evidence`),`cap09_${run}_p_evidence`));
+for(const stage of ["TIMING_1","TIMING_2","TIMING_3"]){
+ test("governed "+stage+" reuses isolated positive Evidence identity",()=>{
+  const expected=`cap09_${run}_p_evidence`;
+  assert.equal(check(stage,positive,expected),expected);
+  assert.throws(()=>check(stage,positive,LEGACY));
+  assert.throws(()=>check(stage,positive,`cap09_${run}_n_evidence`));
+ });
+}
+test("nongoverned timing role unchanged",()=>assert.equal(check(undefined,positive,LEGACY),LEGACY));
+
 test("governed negative role",()=>assert.equal(check("PRODUCER",negative,`cap09_${run}_n_evidence`),`cap09_${run}_n_evidence`));
 test("reject twin on positive",()=>assert.throws(()=>check("PRODUCER",positive,`cap09_${run}_p_twin`)));
 test("reject role from wrong side",()=>assert.throws(()=>check("PRODUCER",positive,`cap09_${run}_n_evidence`)));
