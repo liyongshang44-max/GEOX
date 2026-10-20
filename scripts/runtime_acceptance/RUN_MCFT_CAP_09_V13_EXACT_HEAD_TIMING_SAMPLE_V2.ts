@@ -42,6 +42,7 @@ const EXPECTED_V13_DB = currentTargets.positive;
 const EXPECTED_BUCKET = currentTargets.bucket;
 // Governed TIMING_1/2/3 must authenticate as the same scoped Evidence login
 // as the parent Producer; ungoverned timing keeps the legacy login contract.
+const EVIDENCE_ROLE = "geox_mcft_cap09_evidence_runtime_login_v1";
 
 function required(name: string): string {
   const value = String(process.env[name] ?? "").trim();
@@ -126,14 +127,19 @@ async function main(): Promise<void> {
   let candidateWriteCount = 0;
 
   try {
-    const requiredEvidenceRole = scopedEvidence.expectedEvidenceLogin({
-      stage: process.env.MCFT_GOVERNED_RETRY_STAGE,
-      positive: currentTargets.positive,
-      negative: currentTargets.negative,
-      database: EXPECTED_V13_DB,
-      connectionString: url,
-    });
-    assert.equal(await currentRole(pool), requiredEvidenceRole, "V13_TIMING_SAMPLE_EVIDENCE_ROLE_REQUIRED");
+    if (process.env.MCFT_GOVERNED_RETRY_STAGE) {
+      const requiredEvidenceRole = scopedEvidence.expectedEvidenceLogin({
+        stage: process.env.MCFT_GOVERNED_RETRY_STAGE,
+        positive: currentTargets.positive,
+        negative: currentTargets.negative,
+        database: EXPECTED_V13_DB,
+        connectionString: url,
+      });
+      assert.equal(await currentRole(pool), requiredEvidenceRole, "V13_TIMING_SAMPLE_EVIDENCE_ROLE_REQUIRED");
+    } else {
+      // Preserve this exact historical baseline requirement for non-governed timing.
+      assert.equal(await currentRole(pool), EVIDENCE_ROLE, "V13_TIMING_SAMPLE_EVIDENCE_ROLE_REQUIRED");
+    }
     assert.equal(await publicTableCount(pool), 29, "V13_TIMING_SAMPLE_29_TABLES_REQUIRED");
     assert.equal(await functionExists(pool), true, "V13_TIMING_SAMPLE_FENCED_WRITER_REQUIRED");
 
