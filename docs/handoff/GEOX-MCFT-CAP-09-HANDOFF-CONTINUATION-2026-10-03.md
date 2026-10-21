@@ -1,3 +1,52 @@
+## 2026-10-22 +08 — DA9 EXECUTION-FIRST DISCIPLINE（最高优先级的主线进度与改码准入纪律）
+
+**用户正式裁决 / 当前及后续接手者必须遵守（取代“合并了几个 PR / CI 过了多少项就是进度”的汇报方式）：**
+
+> 停止以代码合并作为进度，转为以真实执行结果作为进度。
+>
+> 任何新的代码修改，都必须先证明它阻断了 DA9 的真实安全执行；否则不进入当前主线。
+
+### A. 唯一主线目标与进度计量（Execution-First, evidence-only）
+
+**唯一当前前线：** 在 Windows 实机使用原 DA9 Run `da9db7129607`，完成已经独立签署的第二次、隔离的 `TEST_ONLY` 官方受控六阶段执行（PRODUCER → TIMING_1 → TIMING_2 → TIMING_3 → CONTROLLED_DELAY → AGGREGATE），取得真实的 stage receipts / outputs、链式时序与结算结果；保留首次失败 Provider calls / phase 为 `UNKNOWN`。任何生产执行、Owner/Formal-v5/A0/O00–O23 副作用仍禁止。
+
+**唯一可计入“DA9 真实执行进度”的证据：**
+1. Windows **真实** Post-Merge Host / installed material / Adoption / Retry Review 的签名验真、Subject 和时效检查，属于“准入资格已取得”，**不等于**实际阶段执行。
+2. 同一实际隔离资源的新鲜 PostgreSQL 两库零行与权限回读、MinIO 四零（current/versions/delete markers/multipart）回读、当前实际 GFS/KBS Provider 原始响应与因果时窗证据、未来 FirstBase/独立截止时间；属于“动态准入事实”，不能由旧/合成 PASS 代替。
+3. 官方 Preflight 的真实 Host 结论，以及签发、**消费**的一次性 Permit；签发与消费分开计量，任何失败都如实记录。
+4. 官方六阶段**每一阶段**的实际启动、成功输出、串接签名/摘要回执及 Aggregate/post-execution 裁决。以 `0/6` 到 `6/6` 的**真实验证回执**报告已完成阶段，缺失即未完成；任何模拟、synthetic、CI 通过不记作运行成果。
+5. 不以工作时长、PR 合并数、代码行数、QCP/CI 成功数替代上述实机结果。合并、验收、工具与签名只是手段或准入前置条件。
+
+**对外固定报告格式：** 当前真实执行阶段（未启动/Permit 已消费/阶段 N/6/完成）；已验证且附可追溯来源的实际回执；当前第一个阻断真实安全执行的 FAIL/CODE；最短的解除动作；未证实之处标记 HOLD/UNKNOWN。只有在执行回执发生实质变化时才上调“DA9 执行进度”。不要把新的 PR、CI 全绿或一份签名文件表述为“DA9 已推进到运行完成”。
+
+### B. 任何新代码修改必须先取得准入证明（No-Change-Without-Proven-Blocker）
+
+**先证明、再改码。** 每一项拟议的源代码/测试/工作流修改，在进入当前 DA9 主线之前，都必须同时明确：
+- **真实阻塞证据：** 哪个现行受保护 Subject + Windows 安装材料 + DA9 实际安全执行前置（或官方 Preflight/Host）被阻断；附原始结果、错误码、相关运行参数/签名绑定与可复核复现路径。若仅是推测、旧环境配置缺失、CI 未触发、文档不完备、工具体验、性能优化、未来兼容或一般技术债，**不准启动修改**。
+- **必要性与替代方案：** 先检查是否可由正确的数据库/MinIO 凭证与 ACL、运行环境、已有合格证据、时窗、现成工具或合法的新鲜回读直接解除；解释为何不修改已冻结源代码就**不可能安全继续**。
+- **影响与安全边界：** 最小改动、对现有已签署 Subject/installed digest/Adoption/Retry Review 的失效成本、一次性 Permit/历史 Ledger 保留、旧版兼容与禁止的生产副作用；必须有针对实际错误的正/负回归与官方 gate，而不是先提 PR 再找用例。
+- **门禁裁决：** 不满足上述证据和必要性证明 ⇒ `OUT_OF_DA9_MAINLINE / NO_CODE_CHANGE`。若确属硬阻塞，才做最小化修复并经原有 CI/QCP 等验收；验收通过仍仅代表阻塞修复候选，不是 DA9 运行进度。
+- **执行复测闭环：** 修复必须最终回到 Windows 实际 Host / Preflight 并证明原阻塞消失、无新阻塞；不准以 PR merged 结束工作。任何新 Subject 重新签署的成本与风险，必须在改码前考虑。严禁借“持续改代码”代替跑一次真实隔离链。
+
+**特别禁止：** 为了让新 Subject 接受旧证据而篡改 Closure、Disposition、WORM、删除日志、Provider 原始字节、首次失败 `UNKNOWN`；重新执行历史两对象删除、重置 one-shot Ledger、伪造 fresh four-zero 或 Provider 时窗、缩短必要安全窗口、跳过签名/ACL/主体校验。历史事实要不可变，真正的安全阻塞要保留 fail-closed。
+
+### C. 此次交接时已经具备的资格（不计入六阶段执行进度）
+
+- 当前已核对受保护 main `136b9401b8d49dfecdf8609055a8402c62e23e3d`。Windows 已实采 18,857 文件 installed-material SHA-256 `d7f864c0a9b8c46b51b64642949f54cc84fb39d198f681c55d8e35d6dcdda377`；完整 QCP `55` checks、`0` blockers，Adoption 检查 `54` 项通过。
+- 该 Subject 的 Windows `TEST_ONLY` Formal Adoption **SIGNED/VERIFIED**，有效期截至 `2026-10-22T04:35:00.376Z`（属于时间敏感证据，**使用前重新检查 UTC 是否过期**）；新 Retry Review **SIGNED/VERIFIED**，SHA-256 `2efefc91a4fa874884e686b1d53422453eac317e2fa6cd8d44617396de10c23f`，24h 签署时效同样必须复核。
+- Windows 静态检查 `STATIC_ADMISSION=HOLD_RESOLVE_STATIC_BEFORE_300S_WITNESS`，8 项：正向 `DATABASE_URL` 指向错误、`BLOCKED_DATABASE_URL` 缺失、正式 MinIO endpoint/bucket/region/access/secret 五项缺失、Closure 尚未被接纳。`MCFT_CAP09_ADOPTION_REQUEST` 尚未设置（profile allowed=true），运行前也必需。正确的两库是 `mcft_cap09_requal_da9db7129607_positive/negative`，127.0.0.1:55445；MinIO `http://127.0.0.1:59005`，桶 `mcft-cap09-requal-da9db7129607`。当前没有新的资源/Provider 实时回读结论。
+- 原始签署 Closure 位于旧 Subject `77cdeeefc8b27901f3cc44b4edc203d8b8f513a3`，签署于 `2026-10-18T14:12:35.567Z`，Windows 已验证原始文件 SHA-256 与 ref 匹配；官方当前校验的 `CLOSURE_WRONG_SUBJECT` 是确定性阻塞（不是历史删除失败）。需不改写历史证据、并保留新主体签名约束来解决。
+- **在途候选** PR [#3728](https://github.com/liyongshang44-max/GEOX/pull/3728) 尝试在真实验证过的 successor Formal Adoption 下，继承原始 77c Closure；CI 与 Windows/Ubuntu synthetic 已 PASS，完整 QCP 在本交接核查时仍在运行，PR **Open/Unmerged**。这项变更有实测 Subject mismatch 依据，但**绝非已解除实机阻塞**；不得将 PR 作为进度事件。若合并产生新的 Subject，必须重新资格绑定与签名，且仍需实机 Preflight 复核。
+- `DA9_SINGLE_USE_PERMIT=NOT_ISSUED / NOT_CONSUMED`；没有本次正式第二尝试的真实六阶段 stage receipts，**已确认实际完成阶段 `0/6`**。此前任何 CI、签名、合成测试或静态检查都不能代替这六份真实回执。
+
+### D. 下一位执行者只按以下最短主线工作
+
+先冻结/核对受保护 main 与官方已验证安装材料；**先不增加新代码**。在无 Provider 调用、无 Permit 消耗的只读检查中，逐一核实当前最早的真阻塞：历史 Closure Subject 的合规继承路径，以及正负两库运行身份、MinIO ACL 与环境缺失。对 PR #3728 只在其证明是解除 DA9 实际执行硬阻塞、且安全回归通过时继续；不要顺势拓展科学 Runtime/平台治理范围。静态阻塞消除后，再一次性安排真正的未来 FirstBase + 独立 Provider deadline 与完整 `180 min` 六阶段 caps + `15 min` margin，执行**短时效**真实 DB/MinIO/Provider 回读、官方 Preflight、经单操作员明示授权签发/消费一次性 Permit，最终六阶段运行并保留完整证据。时效不够即 HOLD，不用更改代码制造虚假的 PASS。
+
+**交接记录与“记忆”的职责划分：** 本条是可核验、可跨会话读取的 GitHub Handoff 工程纪律。接手者必须优先按本条执行，不得被文件内较早“合并即里程碑”的历史描述覆盖。账户 Memory 的异步汇总是否已更新不能通过 GitHub 提交来推定。
+
+---
+
 ## 2026-10-19 23:07 +08 — PR #3724 merge-head CI closure PASS (supplement to merged V2 handoff below)
 
 **Verified independently after the earlier merge note:** protected main `130786cb95439e60255e45dfec3e150f901aea9a`; PR #3724 `MERGED` at `2026-10-19T13:44:14Z` (21:44:14 +08) from candidate `92275c23797ac79914c02ed84c3f1c5eded0548f`. Three **push-event** GitHub Actions workflows at the **exact merged main SHA** all completed **SUCCESS**, zero failures/pending: **CI** run `39262700061` (finished 13:54:44Z), **EA5E2 successor-runner qualification** `39262700144`, **Formal-v5 Post-Graduation Readiness** `39262699881`. This closes the pending main-CI acceptance noted in the prior merge checkpoint; do not repeat this check merely because that historical note recorded `running`.
