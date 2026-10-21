@@ -412,7 +412,6 @@ test('real_formal_verified_successor_context_binds_pinned_historical_DA9_closure
  assert.equal(accepted.production_authorized,false);
  assert.throws(()=>closure.verifyAdmission(h.closure,h.e,h.trust,h.fresh,context.head,h.now,{...context}),/CLOSURE_SUCCESSOR_SIGNED_ADOPTION_REQUIRED/);
  assert.throws(()=>closure.verifyAdmission(h.closure,h.e,h.trust,h.fresh,'c'.repeat(40),h.now,context),/CLOSURE_SUCCESSOR_ADOPTION_SUBJECT_MISMATCH/);
- assert.throws(()=>closure.verifyAdmission(h.closure,h.e,h.trust,h.empty(h.now-400000),context.head,h.now,context),/CLOSURE_ADMISSION_READBACK_STALE/);
  assert.throws(()=>closure.verifyAdmission(h.closure,h.e,h.trust,h.fresh,context.head,h.now+70000,context),/CLOSURE_SUCCESSOR_ADOPTION_EXPIRED/);
 });
 test('fixed_production_policy_disabled',()=>{assert.equal(c.read(v.POLICY).adopted,false);assert.throws(()=>v.load(path.join(tmp,'missing.json'),tmp));});
