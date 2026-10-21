@@ -4,6 +4,9 @@ name: mcft-cap-09-qualification-control-plane-v1
 on:
   pull_request:
     paths:
+      - 'scripts/runtime_acceptance/MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-1E59-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_1E59_V1.cjs'
       - '.github/workflows/mcft-cap-09-production-evidence-target-planner-readiness.yml'
