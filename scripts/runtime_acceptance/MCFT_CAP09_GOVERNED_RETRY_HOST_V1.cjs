@@ -129,8 +129,8 @@ function hostBundle(file){
   // closure after the initial 300s Admission clock. Parent Preflight requires fresh evidence.
   const child=stageContinuationMode(process.env.MCFT_GOVERNED_RETRY_STAGE,process.env.MCFT_GOVERNED_RETRY_TICKET,process.env.MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256);
   const closure=child
-    ?closureApi.verifyHistoricalReference(bundle.observed.da9_minio_closure,trust,bundle.arm.protected_main_sha)
-    :closureApi.verifyReference(bundle.observed.da9_minio_closure,trust,bundle.arm.protected_main_sha);
+    ?closureApi.verifyHistoricalReference(bundle.observed.da9_minio_closure,trust,bundle.arm.protected_main_sha,Date.now(),context)
+    :closureApi.verifyReference(bundle.observed.da9_minio_closure,trust,bundle.arm.protected_main_sha,Date.now(),context);
   assert.equal(closure.status,child?'CLOSURE_HISTORICAL_RETAINED_FOR_CONSUMED_STAGE':'CLOSURE_VERIFIED_FOR_DA9_ADMISSION','DA9_DISPOSITION_CLOSURE_REQUIRED');
  }
  const ticketedStage=stageContinuationMode(process.env.MCFT_GOVERNED_RETRY_STAGE,process.env.MCFT_GOVERNED_RETRY_TICKET,process.env.MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256);
