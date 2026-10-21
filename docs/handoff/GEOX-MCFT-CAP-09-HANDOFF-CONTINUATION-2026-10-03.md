@@ -1,3 +1,21 @@
+## 2026-10-22 +08 — DA9 next T1=04Z dual-KBS triple-GFS budget（已裁决约束，待 Windows one-shot 实采）
+
+**接续下方真实 Windows 5526 readback 和 Provider NO-GO 记录。本条尚未取得下一候选的 Windows 实机五源 GET 结果；禁止把工具单测、旧时间戳或本 Handoff 本身当成实际 Provider PASS。用户要求主线以真实 stage receipts 0/6 为唯一执行进度指标，任何改码先证实真正的安全执行阻塞。**
+
+- **已拒绝的前一窗口** 2026-10-22T03:00Z = 北京 11:00：此前 KBS hourly CSV latest 2026-10-21T04:00Z、真实 age=14.902603h、冻结 6h 新鲜度 FAIL，且独立 Provider deadline 未证明；GFS 12Z f015 只对应 03Z。
+- **下一候选（未获准）** FirstBase 2026-10-22T04:00:00.000Z = 北京 12:00；T1/T2/T3=04Z/05Z/06Z（北京12:00/13:00/14:00）。选择 2026-10-21 12Z 的 GFS f016/f017/f018 三个 SFLUX IDX，各需实际 HTTP 200、匹配 DSWRF forecast hour、Last-Modified 时间合法，并通过真实对应 GRIB Range 206 字节回读。三次 index/Range 只证明目标成员可达，不是 Producer 72h 科学解码。
+- **绝不能混淆两个不同 KBS 原始物理源：** 
+  A. 原始每小时天气与 ET0 CSV：https://lter.kbs.msu.edu/datatables/13.csv；冻结 latest age<=6h、最新 24h 时刻连续、近 36h 至少 24 个有效降雨小时与 24 个完整 ET0 小时。旧实测 latest=10/21T04Z（14.902603h old）, 24h contiguous=true，当前状态 PHYSICAL_KBS_WEATHER_6H_FRESHNESS_FAILED，必须复取一次新数据看是否真实刷新。
+  B. 独立 variate25 土壤湿度 VWC JSON：https://lter.kbs.msu.edu/weather/variates/25；冻结 age<=30min，24h 内至少 24 个 distinct hour buckets，连续窗口 span>=1430min，相邻有效点 max gap<=30min，值 0..1、重复时间不得冲突。尚无用户 Windows 实测结果，状态 UNKNOWN_NOT_TESTED，不能猜测 PASS/FAIL。
+  **Budget V2 的 raw manifest 字段 KBS_SOIL 实际强制读取上述 /datatables/13.csv CSV；不可用 variate25 JSON 替换。** 上面两个源必须分别判定。
+- **GFS 3 实际目标** NOAA GFS 2026-10-21 12Z f016/f017/f018，valid times 10/22 04Z/05Z/06Z；此前仅有 f015 原始捕获，三项目前均 UNTESTED。任何 HTTP 非200、DSWRF 缺失、Last-Modified 时序不对、GRIB Range 无法取得，分别落盘 PHYSICAL 错误，不准制造“可用”。
+- **完整预算合同**：先前旧 130786cb 候选提出过 6 stage upper caps：PRODUCER=3600000ms，TIMING_1/2/3 各 1800000ms，CONTROLLED_DELAY=1200000ms，AGGREGATE=600000ms，总 10800000ms=180min；margin=900000ms=15min，合计 195min。旧候选 stage cap intent **不能转授新 5526**，必须有 5526+当前 FirstBase 绑定的真实 operator reviewed stage plan/review provenance。V2 严格要求 now+195min 早于 FirstBase、独立 Provider deadline、Permit expiry、Adoption expiry 中最早者。04Z 第一时基倒推理论最迟开始 **10/22T00:45Z=北京时间08:45之前**，绝非授权启动时间。5526 Adoption expiry **2026-10-22T06:09:32.419Z=北京14:09:32**。**Provider independent causal deadline UNPROVEN；Permit expiry ABSENT；5526 review currently NOT VERIFIED。任何一个合同事实不成立 => CONTRACT_NO_GO，即使 HTTP 200。** 不允许自行把 Provider deadline 等同 FirstBase。
+- 历史预算原文件应保留：GFS acquisition SHA 8a89e19dc06023dcc8342b68541c67c7758d0e1ef836d63d68f285a3b29d192a；KBS historic SHA d813093f0321bd56d7e0a43c1dfa66964c4f4dfe8373d665a3139123d49dd86e。真实性必须与本机文件 SHA 再核对，历史来源不自动证明未来源新鲜。
+- **一次性 Windows 只读取证工具（新包不是源代码 PR）**：MCFT-CAP09-5526-DA9-NEXT-WINDOW-ONE-SHOT-V1.zip，解压 D:\gptdown 同名目录，运行 MCFT_DA9_5526_NEXT_WINDOW_ONE_SHOT_V1\00-run-one-shot-readonly.ps1；默认 T1=04Z、GFS cycle=21日12Z。2 KBS HTTPS GET +3 GFS IDX GET+最多3 DSWRF GRIB Range GET，不把 KBS 原始值写入证据报告；生成全新 D:\gptdown\MCFT-CAP09-DA9-NEXT-WINDOW-AUDIT-<UTC>.json，逐项按 PHYSICAL/CONTRACT 错误码保存详细 NO_GO 原因及来源/哈希/UTC 时钟。已通过辅助环境的合成正负单元检查，但 **Windows 实机下一候选检查尚未运行**。它始终 fail-closed 标注 NO_GO：只读取证不能授权 Provider deadline、真实 stage review 与一次性 Permit。
+- 下一操作者**只需运行该包一次并拿真实输出**，将全部物理与合同失败码写回同一 Handoff；不再重装 5526、改历史 closure、重签未过期 Adoption、重做 PG/MinIO 静态验收。正式 Permit 前短时效资源回读必须重新取，但这不构成原验证失败。六阶段 0/6，Permit UNISSUED/UNCONSUMED，生产权限 FALSE。
+
+---
+
 ## 2026-10-22 +08 — DA9 Windows real-resource PASS / Provider temporal HOLD（接续 Execution-First 纪律）
 
 **承接下方 2026-10-22「DA9 EXECUTION-FIRST DISCIPLINE」——此记录仅更新该纪律下的实机增量事实，避免重复重签、重装、重验历史 Closure。** 接手时以下新记录优先于下方较早的 136b Subject / #3728 尚未合并 / 静态阻塞 8 项等历史快照；历史原文不可删改。2026-10-22 02:54 北京时间左右最新操作者只读测试已完成；当前执行计数仍 **DA9 real stages 0/6**，Permit **NOT_ISSUED / NOT_CONSUMED**。禁止以本段的 READONLY PASS 冒充官方六阶段成功。
