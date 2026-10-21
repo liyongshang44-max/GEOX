@@ -398,5 +398,21 @@ test('installed_material_collector_allows_exact_signed_child_stage_names',()=>{
  assert.equal(m.verify(profile,root,child).digest,p.profile_sha256);
  child.NODE_OPTIONS='--require untrusted';assert.throws(()=>m.verify(profile,root,child));
 });
+test('real_formal_verified_successor_context_binds_pinned_historical_DA9_closure',()=>{
+ const f=formalFixture(),context=v.verifyFormal(f.request,f.policy,f.root,{now:f.now,host:'fixture-host',environment:f.environment});
+ assert.equal(v.isFormalVerified(context),true);
+ const closure=require('./da9-minio-closure-v1.cjs');
+ const {fixture:historicalFixture}=require('./test-da9-minio-closure-v1.cjs');
+ const h=historicalFixture(closure.HISTORICAL_DA9_CLOSURE_SUBJECT);
+ const accepted=closure.verifyAdmission(h.closure,h.e,h.trust,h.fresh,context.head,h.now,context);
+ assert.equal(accepted.status,'CLOSURE_VERIFIED_FOR_DA9_ADMISSION');
+ assert.equal(accepted.historical_carry_forward,true);
+ assert.equal(accepted.subject_sha,closure.HISTORICAL_DA9_CLOSURE_SUBJECT);
+ assert.equal(accepted.test_only_admission_authorized,false);
+ assert.equal(accepted.production_authorized,false);
+ assert.throws(()=>closure.verifyAdmission(h.closure,h.e,h.trust,h.fresh,context.head,h.now,{...context}),/CLOSURE_SUCCESSOR_SIGNED_ADOPTION_REQUIRED/);
+ assert.throws(()=>closure.verifyAdmission(h.closure,h.e,h.trust,h.fresh,'c'.repeat(40),h.now,context),/CLOSURE_SUCCESSOR_ADOPTION_SUBJECT_MISMATCH/);
+ assert.throws(()=>closure.verifyAdmission(h.closure,h.e,h.trust,h.fresh,context.head,h.now+70000,context),/CLOSURE_SUCCESSOR_ADOPTION_EXPIRED/);
+});
 test('fixed_production_policy_disabled',()=>{assert.equal(c.read(v.POLICY).adopted,false);assert.throws(()=>v.load(path.join(tmp,'missing.json'),tmp));});
 console.log(JSON.stringify({status:'PASS',checks,synthetic_material_and_signer:true,real_execution_authorized:false,windows_host_attested:false}));

@@ -4,6 +4,9 @@
 const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path');
 const c=require('./contract.cjs'),d=require('./da9-minio-disposition-v1.cjs');
 const DOMAIN='GEOX_MCFT_CAP09_DA9_DISPOSITION_CLOSURE_V1\n';
+// The only real DA9 two-probe disposition was sealed on this protected main.
+// Never change its historic signed subject, hash, delete ledger or WORM custody.
+const HISTORICAL_DA9_CLOSURE_SUBJECT='77cdeeefc8b27901f3cc44b4edc203d8b8f513a3';
 const PAYLOAD=['schema_version','run_id','subject_sha','scope','signed_disposition_sha256','pre_inventory_sha256','capture_sha256','worm_recheck_sha256','worm_zip_sha256','delete_log_sha256','post_inventory_sha256','closed_at_utc','exact_two_source_objects_deleted','test_only_admission_authorized','execution_authorized','production_authorized'];
 const KEYS=['started_file','closure_file','closure_sha256','signed_disposition_file','pre_inventory_file','capture_file','worm_recheck_file','worm_zip_file','delete_log_file','post_inventory_file','current_inventory_file','current_inventory_sha256'];
 const SHA=x=>c.sha(x), read=f=>{assert(path.isAbsolute(f),'CLOSURE_ABSOLUTE_PATH_REQUIRED');return c.read(f);};
@@ -87,22 +90,40 @@ function verifyHistorical(envelope,e,trust,now=Date.now()){
  assert(crypto.verify(null,Buffer.from(DOMAIN+c.canonical(envelope.payload)),pub,sig),'CLOSURE_BAD_SIGNATURE');
  return {status:'HISTORICAL_DISPOSITION_CLOSURE_VERIFIED',subject_sha:envelope.payload.subject_sha,execution_authorized:false,production_authorized:false};
 }
-function verifyAdmission(envelope,e,trust,current,subject,now=Date.now()){
+// Historical, completed deletion is a resource fact, not an execution permit.
+// A different current Subject may consume that *unchanged* fact only when the
+// existing offline verifier has authenticated a TEST_ONLY Formal Adoption for it.
+// The private WeakSet check forbids a caller-created context or bare SHA bypass.
+function assertClosureSubject(verified,subject,context,now){
+ if(verified.subject_sha===subject)return {historical_carry_forward:false};
+ assert.equal(verified.subject_sha,HISTORICAL_DA9_CLOSURE_SUBJECT,'CLOSURE_WRONG_SUBJECT');
+ const offline=require('./offline-context.cjs');
+ assert(context&&offline.isFormalVerified(context),'CLOSURE_SUCCESSOR_SIGNED_ADOPTION_REQUIRED');
+ assert.equal(context.source,'SIGNED_ADOPTION_NOT_LIVE_REMOTE_MAIN','CLOSURE_SUCCESSOR_SIGNED_ADOPTION_REQUIRED');
+ assert.equal(context.head,subject,'CLOSURE_SUCCESSOR_ADOPTION_SUBJECT_MISMATCH');
+ assert.equal(context.main,subject,'CLOSURE_SUCCESSOR_ADOPTION_MAIN_MISMATCH');
+ assert.equal(context.scope,'TEST_ONLY','CLOSURE_SUCCESSOR_SCOPE_REQUIRED');
+ assert.equal(context.execution_authorized,true,'CLOSURE_SUCCESSOR_ADOPTION_AUTHORITY_REQUIRED');
+ assert.equal(context.production_authorized,false,'CLOSURE_SUCCESSOR_PRODUCTION_FORBIDDEN');
+ assert(c.epoch(context.qualification_expires_at)>now,'CLOSURE_SUCCESSOR_ADOPTION_EXPIRED');
+ return {historical_carry_forward:true};
+}
+function verifyAdmission(envelope,e,trust,current,subject,now=Date.now(),context=null){
  const verified=verifyHistorical(envelope,e,trust,now);
- assert.equal(verified.subject_sha,subject,'CLOSURE_WRONG_SUBJECT');
+ const binding=assertClosureSubject(verified,subject,context,now);
  const fresh=fourZero(current),post=c.epoch(e.post.completed_at);
  assert(fresh.a>=post,'CLOSURE_READBACK_PREDATES_DELETION');
  assert(fresh.b<=now&&now-fresh.a<=300000,'CLOSURE_ADMISSION_READBACK_STALE');
- return {...verified,status:'CLOSURE_VERIFIED_FOR_DA9_ADMISSION',current_four_zero:true,test_only_admission_authorized:false};
+ return {...verified,...binding,status:'CLOSURE_VERIFIED_FOR_DA9_ADMISSION',current_four_zero:true,test_only_admission_authorized:false};
 }
 function loadRaw(paths){
  const p=paths;return {signed:read(p.signed_disposition_file),pre:read(p.pre_inventory_file),capture:read(p.capture_file),worm:read(p.worm_recheck_file),log:read(p.delete_log_file),post:read(p.post_inventory_file),started:read(p.started_file),signed_sha:shaFile(p.signed_disposition_file),pre_sha:shaFile(p.pre_inventory_file),capture_sha:shaFile(p.capture_file),worm_sha:shaFile(p.worm_recheck_file),zip_sha:shaFile(p.worm_zip_file),log_sha:shaFile(p.delete_log_file),post_sha:shaFile(p.post_inventory_file),started_sha:shaFile(p.started_file)};
 }
-function verifyHistoricalReference(ref,trust,subject,now=Date.now()){
+function verifyHistoricalReference(ref,trust,subject,now=Date.now(),context=null){
  const {closure,e}=loadReference(ref);
  const result=verifyHistorical(closure,e,trust,now);
- assert.equal(result.subject_sha,subject,'CLOSURE_CHILD_SUBJECT_MISMATCH');
- return {...result,status:'CLOSURE_HISTORICAL_RETAINED_FOR_CONSUMED_STAGE',test_only_admission_authorized:false};
+ const binding=assertClosureSubject(result,subject,context,now);
+ return {...result,...binding,status:'CLOSURE_HISTORICAL_RETAINED_FOR_CONSUMED_STAGE',test_only_admission_authorized:false};
 }
 function loadReference(ref){
  c.exact(ref,[...KEYS,'closure_sha256','current_inventory_sha256'].filter((x,i,a)=>a.indexOf(x)===i));
@@ -112,9 +133,9 @@ function loadReference(ref){
  assert.equal(shaFile(ref.current_inventory_file),ref.current_inventory_sha256,'CLOSURE_CURRENT_INVENTORY_BYTES_CHANGED');
  return {closure:read(ref.closure_file),e:loadRaw(ref),fresh:read(ref.current_inventory_file)};
 }
-function verifyReference(ref,trust,subject,now=Date.now()){
+function verifyReference(ref,trust,subject,now=Date.now(),context=null){
  const {closure,e,fresh}=loadReference(ref);
- return verifyAdmission(closure,e,trust,fresh,subject,now);
+ return verifyAdmission(closure,e,trust,fresh,subject,now,context);
 }
 function cli(){
  const [mode,...args]=process.argv.slice(2),trust=c.read(d.TRUST_PATH);
@@ -134,5 +155,5 @@ function cli(){
   console.log(JSON.stringify(verifyHistorical(read(closure_file),loadRaw({signed_disposition_file,pre_inventory_file,capture_file,worm_recheck_file,worm_zip_file,started_file,delete_log_file,post_inventory_file}),trust)));
  }else throw Error('CLOSURE_MODE_INVALID');
 }
-module.exports={DOMAIN,fourZero,historical,payload,sign,verifyHistorical,verifyAdmission,verifyReference,verifyHistoricalReference,loadReference,loadRaw};
+module.exports={DOMAIN,HISTORICAL_DA9_CLOSURE_SUBJECT,fourZero,historical,payload,sign,verifyHistorical,verifyAdmission,verifyReference,verifyHistoricalReference,loadReference,loadRaw};
 if(require.main===module){try{cli();}catch(e){console.error(JSON.stringify({status:'CLOSURE_HOLD',reason:String(e.message).slice(0,200),execution_authorized:false,production_authorized:false}));process.exitCode=1;}}

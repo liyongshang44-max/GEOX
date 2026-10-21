@@ -34,7 +34,7 @@ test('normal_and_invalid_bom_json_parser_behavior',()=>{
  } finally {fs.rmSync(dir,{recursive:true,force:true});}
 });
 
-function fixture(){
+function fixture(subject='a'.repeat(40)){
  const now=Date.now(),{publicKey,privateKey}=crypto.generateKeyPairSync('ed25519'),who='fixture_operator',keyId='fixture_key';
  const trust={schema_version:'geox_mcft_cap09_retry_trust_v1',operator_id:who,issuers:[{issuer_id:who,key_id:keyId,role:'ACCOUNTABLE_SINGLE_OPERATOR',revoked:false,not_before:iso(now-86400000),not_after:iso(now+86400000),public_key_pem:publicKey.export({type:'spki',format:'pem'}),spki_sha256:c.sha(publicKey.export({type:'spki',format:'der'}))}]};
  const current=d.OBJECTS.map((o,i)=>({Key:o.key,Size:String(o.size_bytes),ETag:'"fixture-'+i+'"',LastModified:iso(now-86400000)}));
@@ -43,7 +43,7 @@ function fixture(){
  const capture={schema_version:'DA9_PROBE_CAPTURE_MANIFEST_V1',run_id:d.RUN,bucket:d.SOURCE_BUCKET,objects:d.OBJECTS.map((o,i)=>({key:o.key,version_id:'null',size:o.size_bytes,etag:current[i].ETag,last_modified:current[i].LastModified,content_sha256:o.content_sha256})),delete_authorized:false,execution_authorized:false,production_authorized:false};
  const worm={schema_version:'geox_mcft_cap09_da9_worm_independent_readonly_recheck_v1',status:'WORM_REMOTE_READONLY_RECHECK_PASS',endpoint:d.SOURCE_ENDPOINT,bucket:d.WORM.bucket,key:d.WORM.key,version_id:d.WORM.version_id,retention_mode:'COMPLIANCE',retain_until_utc:d.WORM.retain_until_utc,remote_readback_sha256:d.WORM.archive_sha256,expected_archive_sha256:d.WORM.archive_sha256,original_receipt_recovered:false,source_deletion_authorized:false,execution_authorized:false};
  const de={inventory:pre,capture,recheck:worm,inventorySha:c.sha(JSON.stringify(pre)),captureSha:d.CAPTURE_SHA,recheckSha:d.RECHECK_SHA,wormZipSha:d.WORM.archive_sha256};
- const payload=d.buildDraft('a'.repeat(40),de,'fixture_source_disposition',trust,now-35000);
+ const payload=d.buildDraft(subject,de,'fixture_source_disposition',trust,now-35000);
  Object.assign(payload,{review_status:'APPROVED',reviewer_id:who,authority_ref:'FIXTURE_EXPLICIT_ACCOUNTABLE_EXACT_TWO',reviewed_at_utc:iso(now-30000),expires_at_utc:iso(now+30000),source_deletion_authorized:true});
  const signed=d.signReviewed(payload,trust,privateKey,who,keyId,de,now-29000);
  const signedSha=c.sha(JSON.stringify(signed)),ledgerId='da9_minio_fixture_once';
@@ -72,6 +72,23 @@ test('reject_partial_delete_result',()=>{const f=fixture();f.e.log.operations[1]
 test('reject_missing_one_shot_receipt',()=>{const f=fixture();delete f.e.started;assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now));});
 test('reject_tampered_one_shot_started_ledger',()=>{const f=fixture();f.e.started.source_bucket='other';assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now));});
 test('reject_wrong_subject_on_admission',()=>{const f=fixture();assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,'b'.repeat(40),f.now),/CLOSURE_WRONG_SUBJECT/);});
+
+test('successor_rejects_original_historic_signature_without_verified_adoption',()=>{
+ const f=fixture(v.HISTORICAL_DA9_CLOSURE_SUBJECT);
+ assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,'b'.repeat(40),f.now),/CLOSURE_SUCCESSOR_SIGNED_ADOPTION_REQUIRED/);
+});
+test('successor_rejects_plain_object_masquerading_as_signed_adoption',()=>{
+ const f=fixture(v.HISTORICAL_DA9_CLOSURE_SUBJECT);
+ const fake={head:'b'.repeat(40),main:'b'.repeat(40),scope:'TEST_ONLY',execution_authorized:true,
+  production_authorized:false,source:'SIGNED_ADOPTION_NOT_LIVE_REMOTE_MAIN',
+  qualification_expires_at:iso(f.now+86400000)};
+ assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,fake.head,f.now,fake),/CLOSURE_SUCCESSOR_SIGNED_ADOPTION_REQUIRED/);
+});
+test('successor_rejects_arbitrary_signer_subject_even_with_lookalike_context',()=>{
+ const f=fixture(),fake={head:'b'.repeat(40),main:'b'.repeat(40),scope:'TEST_ONLY'};
+ assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,fake.head,f.now,fake),/CLOSURE_WRONG_SUBJECT/);
+});
+
 test('reject_post_inventory_not_four_zero',()=>{const f=fixture();f.e.post.counts.delete_markers=1;assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now));});
 test('reject_new_object_after_closure',()=>{const f=fixture();f.fresh.entries.current.push({Key:'unexpected'});assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now));});
 test('reject_stale_live_admission_readback',()=>{const f=fixture(),future=f.now+600000;f.fresh=f.empty(future-400000);assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,future),/CLOSURE_ADMISSION_READBACK_STALE/);});
@@ -81,3 +98,4 @@ test('reject_worm_archive_drift',()=>{const f=fixture();f.e.zip_sha='f'.repeat(6
 test('reject_reused_or_extra_source_probe',()=>{const f=fixture();const later={...f.e.pre,entries:{...f.e.pre.entries,current:[...f.e.pre.entries.current,{Key:'third'}]}};assert.throws(()=>executor.checkObjectSet(later,f.e.pre));});
 test('reject_nonexact_inventory_empty_assertion',()=>{const f=fixture();f.fresh.counts.current=1;assert.throws(()=>v.verifyAdmission(f.closure,f.e,f.trust,f.fresh,f.subject,f.now));});
 console.log(JSON.stringify({status:'PASS',checks:n,live_minio_access:false,source_deleted:false,permit_consumed:false,production_authorized:false}));
+module.exports={fixture};
