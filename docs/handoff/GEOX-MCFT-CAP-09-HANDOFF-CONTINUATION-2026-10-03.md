@@ -1,3 +1,47 @@
+## 2026-10-22 +08 — DA9 Windows real-resource PASS / Provider temporal HOLD（接续 Execution-First 纪律）
+
+**承接下方 2026-10-22「DA9 EXECUTION-FIRST DISCIPLINE」——此记录仅更新该纪律下的实机增量事实，避免重复重签、重装、重验历史 Closure。** 接手时以下新记录优先于下方较早的 136b Subject / #3728 尚未合并 / 静态阻塞 8 项等历史快照；历史原文不可删改。2026-10-22 02:54 北京时间左右最新操作者只读测试已完成；当前执行计数仍 **DA9 real stages 0/6**，Permit **NOT_ISSUED / NOT_CONSUMED**。禁止以本段的 READONLY PASS 冒充官方六阶段成功。
+
+### 1. 已正式实证关闭的前置（只读资格 / TEST_ONLY，不计入 0/6）
+
+- 受保护 main 经 GitHub refs/heads/main 实查为 **5526d93f5822c2f333ba997009e9d6605b8959e2**；PR #3728 **MERGED**。这只是已冻结的执行 Subject，后续不得重复改码/提 PR 来推动进度。
+- Windows 新安装由原 CA79 18,857 文件完整校验后，只替换受保护 main **exactly five source paths** 的 Git blob，并验证 SHA、QCP 原始 artifact 3728（SHA-256 **d898e606208d3bda01192d91e869ef306f15660af155887fb5011c423e71af6e**）及合并衍生关系。输出 **5526_QCP_AND_MATERIAL_SELF_VERIFY_PASS_UNSIGNED**：18,857 files、QCP 55、Adoption 54、blockers 0。新材料摘要 **84a835c7c3946fda12ddb7bf464e9953ccebde88b2b8fb162892ead390980c61**；QCP 真实执行的 PR-head 为 125f461698c4fcef92b730df33664fecbcaf2fce，merged main 以原始 artifact 与 zero-delta-merge derivation 复核，不得误称 QCP 原始工作流直接执行于 merged main。
+- **可直接复用，禁止重复安装/重新执行 00**：
+  - Runtime: D:\gptdown\MCFT-CAP09-5526-DA9-QUALIFIED-CANDIDATE-20261021T174308628Z\portable-runtime
+  - Material: D:\gptdown\MCFT-CAP09-5526-DA9-QUALIFIED-CANDIDATE-20261021T174308628Z\installed-material.json
+  - Session: D:\gptdown\MCFT-CAP09-5526-DA9-QUALIFIED-CANDIDATE-20261021T174308628Z\new-release-session.json
+  - 原包/脚本（仅备查）: D:\gptdown\MCFT-CAP09-5526-DA9-EXECUTION-GATE-V1.zip
+- 新 Subject 明示授权后，Windows **TEST_ONLY Scope Grant + Formal Adoption + Retry Review** 均已本机签发且验签通过，未签发 Permit：Adoption digest **b2245e017d8f45935741b1d6bb4e10edbcebef72150b53966dde30839f8357ff**，expiry **2026-10-22T06:09:32.419Z / 北京 14:09:32**（临时、使用前核对实际 UTC）；Retry Review SHA-256 **46f11e9424f7c8a744eef80ed2c7cb5c92b49f43b1fa5c2ab634503349eade4f**。失败首次调用数和阶段继续为 **UNKNOWN**，签发仅限原 Run=da9db7129607 的 TEST_ONLY second attempt。现成签名目录：**D:\gptdown\MCFT-CAP09-5526-DA9-ADOPTION-20261021T180614667Z**，两个入口 formal-adoption-signed.json / retry-review-signed.json。**过期才按照官方已有路径重新资格签发，不可编辑 JSON/替换 Subject**。
+- 原始历史 MinIO Closure Subject **77cdeeefc8b27901f3cc44b4edc203d8b8f513a3** 签名 SHA/来源经真实旧签名验证；新 5526 **DA9_HISTORICAL_CLOSURE_INHERITANCE=PASS_SIGNATURE_AND_SUBJECT_NOT_CURRENT_FOUR_ZERO**。历史 evidence / signed original / WORM / exact-two-delete 记录未变；不要再做删除/闭环/覆盖。此项在实机已经解决，**不得再报 CLOSURE_WRONG_SUBJECT 或重做 #3728 修复**。
+
+### 2. Windows 真实 PostgreSQL / MinIO / 低权限身份 / fresh Closure：全部 PASS at observed time
+
+- 实机 PostgreSQL **127.0.0.1:55445**，真实正负库 mcft_cap09_requal_da9db7129607_positive / _negative，双库 **29 public tables / zero rows**；Positive、Negative 各自 Evidence 低权限登录 **PASS_READONLY**。MinIO **http://127.0.0.1:59005**，bucket mcft-cap09-requal-da9db7129607，Inventory 真实三个 S3 SigV4 GET HTTP **200**，全分页读取 **current=0, versions=0, delete_markers=0, multipart=0**；原始四零 inventory SHA-256 **206d73418b91684519b6b6d4b91114d3245647b13cbc40ab168e19433d46989c**。
+- 官方 5526 联合只读实机输出（最重要可复核回执）：**D:\gptdown\MCFT-CAP09-5526-DA9-REAL-RESOURCE-READONLY-20261021T183831497Z\da9-real-resource-gate-readonly.json**。字段：status=**RESOURCE_READBACK_PASS_NOT_PROVIDER_OR_PERMIT**；pg=PASS_REAL_TWO_DATABASES_29_TABLES_ZERO；positive_login=PASS；negative_login=PASS；minio=PASS_REAL_FOUR_ZERO；closure=PASS_CURRENT_REAL_FOUR_ZERO_AND_IMMUTABLE_HISTORIC_SIGNATURE；short_lived_window=**WITHIN_240_SECONDS_AT_WRITE_ONLY**；real_stage_receipts=0/6；permit_signed=false；permit_consumed=false；production_authorized=false。**新鲜回读只对 2026-10-21T18:38Z 附近观察时刻有效，正式 Permit 前须重新采集 <=300 s，不是永久 Admission。**
+- **切勿重复 MinIO 403/ACL 工单**：初次三个 GET 403 的实际 S3 错误为 SignatureDoesNotMatch，系当时使用错误/旧凭据；用**现有 inventory DPAPI 凭据**恢复后 3×HTTP 200 + full four-zero，未修代码、未改 IAM、未删除桶。正确凭据文件：**D:\gptdown\MCFT-CAP09-DA9-IAM-INVENTORY-bc0d9077fb0b4e4aab3f05070fb746e1\da9-inventory-credential.dpapi.xml**，身份 cap09-da9db7129607-inventory。数据库正负 Evidence 本机 DPAPI 在当前 Windows 用户的 **%LOCALAPPDATA%\GEOX\MCFT-CAP09\da9db7129607\credentials**，文件名 cap09_da9db7129607_p_evidence.dpapi / cap09_da9db7129607_n_evidence.dpapi。**不要上传密钥或管理员口令；不把 MinIO root 当 run-scoped inventory 账户。**
+- 复验辅助脚本（本机曾成功）D:\gptdown\MCFT-CAP09-5526-DA9-RESUME-EXISTING-CREDENTIALS-READONLY-V1.ps1，从 DPAPI 临时加载凭据，调用已安装 DA9 readback 脚本，最后还原 Process env。只有在**真正新的 Permit 预检短时效窗口**才重复这一动态 readback，不要反复跑 18,857-file 资格。
+
+### 3. 真实 Provider HTTPS 已捕获，**当前科学/因果仍 HOLD**
+
+- 2026-10-21T18:44Z 左右 Windows 两个外部 HTTPS GET **HTTP 200**，NOAA GFS SFLUX .grib2.idx **7,049 bytes**；KBS LTER 原始小时气象 CSV **19,662,926 bytes**。原始字节与 SHA 保留于 **D:\gptdown\MCFT-CAP09-5526-DA9-PROVIDER-RAW-READONLY-20261021T184400560Z**，入口 **raw-provider-diagnostic.json**。这是 **RAW_BYTES_CAPTURED_SHAPE_CHECKED_NOT_CAUSAL_ADMISSION**，而非 GFS/KBS 正式因果资格或 6-stage receipt。
+- 本机离线解析实测：GFS selected cycle **2026-10-21T12:00:00Z**，F015 forecast valid **2026-10-22T03:00:00Z**，初选 **FirstBase 2026-10-21T23:00:00Z** 与所捕捉 F015 不匹配；GFS Last-Modified 早于 capture 为 TRUE，并不独立证明合法 deadline。时序证据 **D:\gptdown\MCFT-CAP09-5526-DA9-PROVIDER-TEMPORAL-DIAG-20261021T184955284Z.json**。
+- 同一离线检查：KBS latest observed **2026-10-21T04:00:00.000Z**，在 18:44Z 捕获时数据龄 **14.736 h**；最近 36h 降雨有效 distinct=36h、ET0 完整输入 distinct=37h，覆盖不是阻塞，**新鲜度是真阻塞**。
+- 随后真实 Windows 官方 KBS metadata-only probe（从已安装 5526 runtime 调用 OBSERVE_MCFT_CAP_09_KBS_CURRENT_FRESHNESS_METADATA.py）输出 **latest_raw_hourly_timestamp=2026-10-21T04:00:00.000Z，latest_age_hours=14.902603，within_frozen_6h_authority=False，latest_24h_contiguous=True**。官方冻结 6h 门槛未过，不得扩大到 24h 工程允许年龄或修改代码/伪造 Provider freshness；KBS 尚未刷新，第二次实际检查排除了短时瞬态读取误判。
+- 已安装只读 metadata checker：D:\gptdown\MCFT-CAP09-5526-DA9-QUALIFIED-CANDIDATE-20261021T174308628Z\portable-runtime\scripts\runtime_acceptance\OBSERVE_MCFT_CAP_09_KBS_CURRENT_FRESHNESS_METADATA.py。使用 installed-material.json 所记录的 tools.python.path 运行，无须新装运行时。**不要高频反复下载 KBS 19.7MB**；仅当 KBS 发布状态有更新迹象时复核。
+- 预算 V2 source: scripts/governance_acceptance/MCFT_CAP09_PREPERMIT_BUDGET_CONTRACT_V2.cjs。正式合同要求四类不伪造真实文件：历史 GFS 220-call acquisition（SHA **8a89e19dc06023dcc8342b68541c67c7758d0e1ef836d63d68f285a3b29d192a**）、历史 KBS continuity（SHA **d813093f0321bd56d7e0a43c1dfa66964c4f4dfe8373d665a3139123d49dd86e**）、**当前独立 GFS+KBS 实际来源与原始字节 manifest/causal witness**、具明确依据的 **operator-reviewed six stage caps**。六阶段 timeout 总上限 **180min + 15min margin=195min**；须严格满足 now + sum caps + margin **早于** FirstBase / independent Provider deadline / Permit expiry / Adoption expiry 中**最早**者。历史 GFS 220 calls / 821,997 ms 不是实际六阶段测量，也不能推得当下 Provider 截止。**目前 Provider causal_deadline=UNPROVEN_NO_PERMIT**。
+- 原诊断的理论 FirstBase 23:00Z 只是候选，03:00Z 次候选与本次 GFS f015 预测有效时刻相符但仍需独立证实三时基数据、合法当前 Provider 时窗/KBS 连续新鲜度及真实截止。两者都**未批准**。不能只因 Adoption 的 195min 时间算术容量为 True 就签发 Permit。
+
+### 4. 接手者最短动作，禁止重走已完成事项
+
+1. **以本段真实 evidence 为基线，只维护执行主线**。前置 5526 本机 material / QCP / valid Adoption + Retry / historical Closure inheritance / PG 29-table zero / positive-negative login / MinIO four-zero 已逐项确认；**不得重复重新安装、重新签 Scope Grant、重开 403/Closure/代码修复**。只有短时效自然过期需要在最终窗口重新**只读复采**，不是失败。
+2. 当前**首个实际未解决阻塞**：KBS 官方最新一小时仍停于 **2026-10-21T04Z**，14.902603h 老、6h threshold False；另外 **GFS FirstBase/forecast causal binding 和 independent Provider deadline 未证明**。先等待/取得可核验的 KBS 新发布事实与科学连续性，再确认合法的 future FirstBase + GFS raw-index cycle/time match；不能为了跑而改冻结科学资格。若原始真实源仍滞后，维持 **PROVIDER_HOLD**，不是代码待修。
+3. 若 Provider 真实证据条件满足，**检查当前 Adoption UTC 时效**，生成与当前 Run/Subject/FirstBase 精确绑定的 raw bytes manifest、causal witness、operator engineering stage-cap review，按 V2 的 195min + real provider deadline 验证未来窗口；**同窗口**重取 fresh DB/MinIO/ACL/Provider、官方 Host Preflight，明示签一次性 Permit，再消费并逐步执行官方六阶段；每阶段依实际 sealed receipts 报告 1/6…6/6。任一证据不足 ⇒ **HOLD，不进执行**。若 Adoption 过期，才用**现有真实授权签发**新有效资格，保存所有旧文件；禁止伪造/手改时间。
+4. 始终 **TEST_ONLY**：不做生产 Owner / Formal-v5 / A0 / O00–O23、没有自动重试、没有历史数据清理或权限扩张。执行前台纪律：**任何新代码修改先提交实际阻断安全执行的原始错误与不可替代论证**，否则 OUT_OF_DA9_MAINLINE。
+   
+**状态机简述**：exact-main 5526 / material 18857 PASS → Adoption/Retry SIGNED VERIFIED → immutable historical Closure PASS → REAL DB/ACL/MinIO fresh PASS AT TIME → **KBS FRESHNESS HOLD + GFS/Provider CAUSAL DEADLINE UNPROVEN** → Permit NOT_ISSUED / NOT_CONSUMED → actual six-stage **0/6**。所有历史阶段原封不动保留。
+
+---
+
 ## 2026-10-22 +08 — DA9 EXECUTION-FIRST DISCIPLINE（最高优先级的主线进度与改码准入纪律）
 
 **用户正式裁决 / 当前及后续接手者必须遵守（取代“合并了几个 PR / CI 过了多少项就是进度”的汇报方式）：**
