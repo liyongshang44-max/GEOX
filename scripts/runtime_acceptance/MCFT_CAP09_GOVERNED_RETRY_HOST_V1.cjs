@@ -56,6 +56,14 @@ function validateBundle(bundle,trust,context,{ticketedStage=false}={}){
    assert(observed.pre_permit_safety_budget,"DA9_PREPERMIT_SAFETY_BUDGET_V2_REQUIRED");
    assert(!Object.hasOwn(observed,"measured_worst_case_ms"),"DA9_FAKE_EMPIRICAL_BUDGET_FORBIDDEN");
    assert.equal(budget,observed.pre_permit_safety_budget.stage_timeout_sum_ms,"DA9_SIGNED_STAGE_CAP_SUM_MISMATCH");
+    if(observed.pre_permit_safety_budget.schema_version==="geox_mcft_cap09_prepermit_source_use_budget_v3"){
+      // Both parent and each one-time child must use the adopted scientific code.
+      const v3=require("../governance_acceptance/MCFT_CAP09_DA9_PREPERMIT_SOURCE_USE_BUDGET_V3.cjs");
+      assert.deepEqual(observed.pre_permit_safety_budget.source_code_sha256,
+        v3.pinnedSourceCode(ROOT),"V3_HOST_SCIENTIFIC_SOURCE_CHANGED");
+      assert.equal(observed.pre_permit_safety_budget.source_use_mode,
+        "LIVE_AT_EACH_REAL_CAPTURE_NO_PROVIDER_SLA","V3_HOST_LIVE_SOURCE_USE_REQUIRED");
+    }
  } else {
    // Historical non-DA9 contract: never retroactively reinterpret its evidence.
    assert(budget<=observed.measured_worst_case_ms,"RETRY_PLAN_EXCEEDS_REVIEWED_BUDGET");
