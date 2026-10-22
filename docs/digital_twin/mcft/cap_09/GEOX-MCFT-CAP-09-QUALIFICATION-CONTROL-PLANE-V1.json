@@ -1443,7 +1443,9 @@
       "paths": [
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SOURCE-TIME-CAUSALITY-CONTRACT-V3-20261022.md",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_SOURCE_TIME_CONTRACT_V3.cjs",
-        "scripts/governance_acceptance/MCFT_CAP09_DA9_SOURCE_TIME_CONTRACT_V3.cjs"
+        "scripts/governance_acceptance/MCFT_CAP09_DA9_SOURCE_TIME_CONTRACT_V3.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_DA9_PREPERMIT_SOURCE_USE_BUDGET_V3.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_SIGNED_HOST_BRIDGE_V1.cjs"
       ]
     }
   },
