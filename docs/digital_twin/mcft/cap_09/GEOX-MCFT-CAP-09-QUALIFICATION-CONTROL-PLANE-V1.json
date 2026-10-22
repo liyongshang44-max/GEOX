@@ -750,7 +750,10 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs",
         ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
         ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SOURCE-TIME-CAUSALITY-CONTRACT-V3-20261022.md",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_SOURCE_TIME_CONTRACT_V3.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_DA9_SOURCE_TIME_CONTRACT_V3.cjs"
       ]
     },
     "T4R1_BIOLOGICAL_STAGE_AUTHORITY_V1": {
