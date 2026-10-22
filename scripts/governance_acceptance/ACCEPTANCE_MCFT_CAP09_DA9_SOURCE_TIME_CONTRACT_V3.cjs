@@ -34,7 +34,8 @@ rejects(()=>v.assessCandidate({...input,soil_metadata:{...soil,latest_observatio
 rejects(()=>v.assessCandidate({...input,stage_plan:{...plan,stages:plan.stages.slice().reverse()}}),/STAGE_ORDER/);
 rejects(()=>v.assessCandidate({...input,safety_margin_ms:0}),/MARGIN_REQUIRED/);
 const noAdoption=v.assessCandidate({...input,adoption_expires_utc:null,permit_expires_utc:null});
-pass(noAdoption.budget_arithmetic_pass,true);
+pass(noAdoption.budget_arithmetic_pass,false);
+pass(noAdoption.reference_firstbase_capacity_only,true);
 pass(noAdoption.hold_reasons.includes("V3_SIGNED_ADOPTION_NOT_PROVIDED"),true);
 pass(noAdoption.hold_reasons.includes("V3_SIGNED_PERMIT_NOT_PROVIDED"),true);
 pass(v.assessCandidate({...input,now_utc:"2026-10-22T19:45:00.000Z"}).budget_arithmetic_pass,false);
