@@ -1,3 +1,15 @@
+## 2026-10-22 — DA9 CTO dependency-order correction and cold review kit V2
+
+Execution priority: reviewed six-stage plan then future-base source-specific feasibility, only afterward short-lived Provider/resource/Adoption/Permit/official Host evidence. No more five-source diagnostics while fatal cold contract gates exist. No source-code change without proven DA9 real execute blocker. Real official stages 0/6.
+
+Code-level source adjudication: Frozen DA9 V13 Producer capture uses KBS_SOIL Variate25 VWC (latest <=30min at actual retrieval) plus GFS_BUNDLE same-cycle 72h. Its capture families do NOT include KBS_RAW_HOURLY. Separately, DA9 PREPERMIT_BUDGET_CONTRACT_V2 raw response manifest calls its second source KBS_SOIL but actually demands /datatables/13.csv hourly weather CSV. EA5E2 23Z target projected from ~05:30Z next-day daily batch is planning-only and is not authenticated DA9 pre-T1 Provider deadline. Do not conflate these data semantics or invent deadline.
+
+Prepared standalone no-network, no-signer cold review utility: MCFT-CAP09-5526-DA9-COLD-REVIEW-AND-FUTURE-FEASIBILITY-V2.zip. It validates six-stage 180min reference caps +15min margin, target FirstBase 2026-10-22T23:00Z (Beijing Oct23 07:00) with F011/12/13 from 2026-10-22 12Z GFS cycle, strict theoretical budget-start before 19:45Z, and blocks official Admission because current 5526 cap review not approved, Adoption expired, provider independent deadline unproven, Permit unsigned. Optional operator approval requires local real Windows operator, explicit typed approval, human-written >=250-char risk basis, original historical GFS/KBS SHA verification, and actual installed stage plan validator. It creates official-schema but UNSIGNED operator-review-source and never claims permit issuance, full scientific or live eligibility. Only officially signed Observations/Permit may bind that human-reviewed source. No Windows operator review result has yet been received; no actual cold gate has been passed.
+
+Next: original operator reviews or rejects 60/30/30/30/20/10min caps; source contract owner must identify independent authenticated provider causal deadline and its relation to variate25 VWC and CSV. Neither is resolved by new HTTP pulls. If evidence lacking, hold; do not reissue expired Adoption or fetch 300s resource witness prematurely. Original MinIO/PG/Closure static evidence remains fully preserved.
+
+---
+
 ## 2026-10-22 17:56 +08 — DA9 5/5 Windows provider diagnostic PASS; contract NO-GO
 
 接续下方 2026-10-22 +08 5526 主线 handoff。操作员已运行原 ONE-SHOT 工具，本条为真实 Windows console 原始结论，不是推测；不删除和改写以前记录。当前六阶段执行进度仍为 0/6。
