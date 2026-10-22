@@ -1,3 +1,27 @@
+## 2026-10-22 17:56 +08 — DA9 5/5 Windows provider diagnostic PASS; contract NO-GO
+
+接续下方 2026-10-22 +08 5526 主线 handoff。操作员已运行原 ONE-SHOT 工具，本条为真实 Windows console 原始结论，不是推测；不删除和改写以前记录。当前六阶段执行进度仍为 0/6。
+
+### 新鲜的 Windows 一次性实机证据（五源）
+
+- 执行：MCFT-CAP09-5526-DA9-NEXT-WINDOW-ONE-SHOT-V1 / MCFT_DA9_5526_NEXT_WINDOW_ONE_SHOT_V1 / 00-run-one-shot-readonly.ps1，目标 FirstBase=2026-10-22T04:00:00.000Z（北京时间 10/22 12:00）；T2=05Z / T3=06Z。
+- 执行回执：D:\gptdown\MCFT-CAP09-DA9-NEXT-WINDOW-AUDIT-20261022T095621157Z.json，SHA-256=2e5c6bb5f85bffce2a0425141f63df7b9e6f50943832f927e84f98402a5c9438；文件名 UTC 09:56:21 = 北京 17:56:21。当前只有 operator console 摘要，ChatGPT 尚未读取完整 JSON。不要杜撰原始 KBS latest 或 GRIB 206 明细。
+- 五个真实只读 CHECK 均输出 PASS_DIAGNOSTIC_ONLY：kbs_weather_csv、kbs_soil_variate25_json、GFS_TARGET_1/F016、GFS_TARGET_2/F017、GFS_TARGET_3/F018。早前 KBS 小时天气 14.9h、6h 限制失败在此次诊断不再报 FAIL，但仍不可把诊断级 PASS 冒充正式 Provider 因果 Admission、Producer/72h 科学解码。两种 KBS 原始物理源（weather datatables/13.csv 与 soil variates/25 JSON）必须分别保留。
+- 只读结果 AUDIT_RESULT=NO_GO_NO_PERMIT、PHYSICAL_AND_CONTRACT_CAUSES=2：两个主要阻塞均为合同约束。
+  1) CONTRACT_REVIEWED_STAGE_CAPS=5526_REVIEWED_SIX_STAGE_PLAN_NOT_PROVIDED，缺失属于 5526+选定 FirstBase 的真实 operator reviewed six-stage upper caps 与 reviewer 授权来源。
+  2) CONTRACT_SAFETY_BUDGET=FIRST_BASE_NOT_FUTURE：目标 12:00 北京，audit 17:56 北京，已经过去约 5h56m。
+- ADDITIONAL_FAILURE 原样记录：5526_ADOPTION_EXPIRED（到期 2026-10-22T06:09:32.419Z=北京 14:09:32）；KNOWN_195MIN_BUDGET_OVERLAPS_FIRSTBASE_OR_ADOPTION；REVIEWED_5526_STAGE_CAPS_NOT_VERIFIED；STAGE_CAP_REVIEW_ISSUER_AUTHORITY_NOT_VERIFIED；INDEPENDENT_PROVIDER_CAUSAL_DEADLINE_UNPROVEN；PERMIT_EXPIRY_AND_SIGNATURE_ABSENT。工具进程退出 0 仅代表报告正常完成，不代表 DA9 执行放行。
+- Permit SIGNED=false / CONSUMED=false；无数据库写、MinIO 写、签名器、Host、Producer 或六阶段执行。本轮真正成果仅为五源 PHYSICAL DIAGNOSTIC PASS；CONTRACT NO-GO。无证据说明需改 GEOX 源码。
+
+### 接手从这里继续，不允许回到起点
+
+1. 保留本次完整 JSON/SHA，并读取 JSON 中的非敏感 KBS 时间与科学连续性、GFS 每个 IDX/Range 的真实回执；不可把摘要代替详细证据，更不可上传 KBS 受限原始数值。
+2. 当前实际 UTC/北京时间核对后，只能选新的真正未来 FirstBase，重新验证三个新的相邻目标小时与两个 KBS 源；已逾时的 04Z 不能手改/重跑冒充未来窗口。
+3. 已签 5526 Adoption 已过期；如有可行新窗口，仅使用既有官方 operator 授权与真实签名路径获得新的有效 TEST_ONLY Adoption，原始文件保留不覆盖。现成 Retry Review 要核对其时效与精确 subject，不得臆断可继承。
+4. 由授权者真实审查并签署 5526 新窗口六阶段工程上限（180min 六阶段上限 + 15min margin=195min 仅为既有候选预算，不得未经审核直接转化当前 5526 权威）；独立 Provider causal deadline 必须有可验证的事实来源，不能从 HTTP 200 或 FirstBase 推定；Permit 期限/签名在真正签发前不应写成存在。严格满足 now+195min < min(future FirstBase, provider deadline, permit expiry, valid adoption expiry)。
+5. 只有全部合同条件真正满足，才在同一窗口获取新的 DB/MinIO/ACL/Provider 短时效回读、官方 preflight、明示一次性 Permit/实际消费，进入真实 6 stage。否则维持 NO-GO + 不改源码；无需重新做 18,857-file release/QCP、历史 Closure 签名继承、旧两库和 MinIO 403 修复。
+
+---
 ## 2026-10-22 +08 — DA9 next T1=04Z dual-KBS triple-GFS budget（已裁决约束，待 Windows one-shot 实采）
 
 **接续下方真实 Windows 5526 readback 和 Provider NO-GO 记录。本条尚未取得下一候选的 Windows 实机五源 GET 结果；禁止把工具单测、旧时间戳或本 Handoff 本身当成实际 Provider PASS。用户要求主线以真实 stage receipts 0/6 为唯一执行进度指标，任何改码先证实真正的安全执行阻塞。**
