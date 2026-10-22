@@ -77,7 +77,8 @@ function assessCandidate({run_id,subject_sha,first_base_utc,now_utc,stage_plan,s
   const permit=permit_expires_utc==null?null:epoch(permit_expires_utc,"V3_PERMIT_END");
   const hardDeadline=Math.min(base,adoption??Infinity,permit??Infinity);
   const beforeBase=base>now;
-  const budgetFits=beforeBase && now+caps.full < hardDeadline;
+  const firstBaseOnlyCapacity=beforeBase && now+caps.full < base;
+  const budgetFits=adoption!==null && permit!==null && beforeBase && now+caps.full < hardDeadline;
   const currentSoil=soil.retrieval_fresh&&soil.continuity_structural_candidate&&
     now>=epoch(soil_metadata.retrieved_at_utc,"V3_SOIL_RETRIEVAL")&&
     now-epoch(soil_metadata.retrieved_at_utc,"V3_SOIL_RETRIEVAL")<=5*60_000;
@@ -96,6 +97,7 @@ function assessCandidate({run_id,subject_sha,first_base_utc,now_utc,stage_plan,s
     reserved_total_ms:caps.full,strict_budget_start_before_utc:iso(base-caps.full),
     deadline_role:"PERMIT_ADOPTION_FIRST_BASE_ONLY_NO_UNAUTHENTICATED_PROVIDER_DEADLINE",
     gfs,soil,
+    reference_firstbase_capacity_only:firstBaseOnlyCapacity,
     budget_arithmetic_pass:budgetFits,soil_metadata_current:currentSoil,
     provider_future_update_guaranteed:false,
     raw_hourly_csv_is_producer_soil_source:false,
