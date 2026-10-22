@@ -1415,6 +1415,7 @@
         "scripts/cap09_adoption_v1/da9-minio-closure-v1.cjs",
         "scripts/cap09_adoption_v1/da9-minio-exact-delete-v1.cjs",
         "scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs",
+        "scripts/cap09_adoption_v1/da9-budget-v3-prepare.cjs",
         "scripts/cap09_adoption_v1/da9-retry-bundle.cjs",
         "scripts/cap09_adoption_v1/evidence_review.py",
         "scripts/cap09_adoption_v1/installed-material.cjs",
