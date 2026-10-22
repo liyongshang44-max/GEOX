@@ -130,6 +130,14 @@ function construct(input,context,now=Date.now(),reviewTrust){
  // V2 is a planned, source-bound upper safety ceiling, NOT an inferred six-stage
  // measured worst case. It is verified BEFORE issuing any one-shot DA9 Permit.
  assert(observed.pre_permit_safety_budget,'DA9_V2_PREPERMIT_BUDGET_REQUIRED');
+ if(observed.pre_permit_safety_budget.schema_version==='geox_mcft_cap09_prepermit_source_use_budget_v3'){
+   const v3=require('../governance_acceptance/MCFT_CAP09_DA9_PREPERMIT_SOURCE_USE_BUDGET_V3.cjs');
+   assert.deepEqual(observed.pre_permit_safety_budget.source_code_sha256,
+     v3.pinnedSourceCode(path.resolve(__dirname,'../..')),'DA9_V3_SIGNER_SOURCE_DIGEST_MISMATCH');
+   // Proposed Permit expiry is reviewed now; Host checks real Ed25519 expiry later.
+   assert(!Object.hasOwn(observed,'provider_deadline_utc'),'DA9_V3_SIGNER_FORGED_PROVIDER_DEADLINE_FORBIDDEN');
+   assert(!Object.hasOwn(observed,'provider_causal_visibility'),'DA9_V3_SIGNER_FAKE_CAUSAL_FLAG_FORBIDDEN');
+ }
  assert(!Object.hasOwn(observed,'measured_worst_case_ms'),'DA9_V2_UNSOURCED_MEASUREMENT_FORBIDDEN');
  bridge.admitProposedRetry(arm,{...observed,head:context.head,protected_main:context.main,source_clean:context.clean,now_utc:new Date(now).toISOString()},{
    stagePlan:input.plan,adoptionExpiresAt:context.qualification_expires_at,sourceRoot:path.resolve(__dirname,'../..')
