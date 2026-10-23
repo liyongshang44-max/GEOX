@@ -179,6 +179,28 @@ try{
  reject("bad_signature",()=>{
   const b=bundle();b.permit.signature_base64=Buffer.alloc(64).toString("base64");validate(b);
  },/PERMIT_BAD_SIGNATURE/);
+ // The replay scenario uses a DIFFERENT synthetic ledger after the non-consuming
+ // parent structural preflight. It does not issue or consume any Windows Permit.
+ test("separate_synthetic_nonce_single_use_and_replay_denied",()=>{
+  const ledger=path.join(tmp,"replay-only-ledger");fs.mkdirSync(ledger);
+  const replayTrust={...trust,ledger_root:ledger};
+  const permitContext={...context,
+   arm_sha256:permit.sha(permit.canonical(arm)),
+   observations_sha256:permit.sha(permit.canonical(observed)),
+   plan_sha256:permit.sha(permit.canonical(plan))};
+  const realNow=Date.now;
+  Date.now=()=>Date.parse(now);
+  try{
+   const verified=permit.verifyPermit(signature(),replayTrust,permitContext);
+   const consumed=permit.consumePermit(verified);
+   assert.equal(consumed.execute_authorized,false);
+   assert(permit.assertConsumed(consumed));
+   assert.throws(()=>permit.consumePermit(verified),/PERMIT_VERIFICATION_REQUIRED/);
+   const newVerified=permit.verifyPermit(signature(),replayTrust,permitContext);
+   assert.throws(()=>permit.consumePermit(newVerified),/EEXIST/);
+   assert(fs.existsSync(path.join(ledger,"run-"+run,"CONSUMED.json")));
+  }finally{Date.now=realNow;}
+ });
  test("synthetic_parent_still_has_zero_consumed_permits",()=>{
   assert.equal(fs.readdirSync(trust.ledger_root).length,0);
   assert.equal(fs.existsSync(out),false);
