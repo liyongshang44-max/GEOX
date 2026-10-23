@@ -1,3 +1,16 @@
+## 2026-10-23 — DA9 loader static 16 entrypoints PASS (LATEST)
+
+Operator's Windows PowerShell console from `D:\gptdown\MCFT-CAP09-77CDEEEF-QUALIFICATION-KIT` reports **`DA9_LOADER_STATIC_PATHS_PASS_NOT_FULL_IMPORT_EXECUTION`** for exact merged subject `2b63652297bb285f21c4d4c63c37d247d009142c` and previously verified installed digest **`a68e32fef887e2c22525269bb7839010b9b77e43a0c843c32c93f3ee937e8150`**. This confirms only static module resolution and hashed bytes, NOT running the application or verifying the entire transitive import graph.
+
+- Installed Runtime fixed: `D:\gptdown\MCFT-CAP09-DA9-2b636522-INSTALLED-20261023T072259804Z\portable-runtime`; profile `D:\gptdown\MCFT-CAP09-DA9-2b636522-INSTALLED-20261023T072259804Z\installed-material.json`.
+- Read-only external probe package `MCFT-CAP09-DA9-LOADER-STATIC-READONLY-2b636522.zip` under operator's `D:\gptdown\MCFT-CAP09-DA9-LOADER-STATIC-PROBE-2b636522`, no active Stage import, Provider, PG, MinIO or Permit.
+- `checked_entrypoints=16`. Verified `tsx` from Runtime cwd and Host resolves `node_modules/tsx/dist/loader.mjs`; `pg` from Producer and Timing resolves `node_modules/pg/lib/index.js`; `esbuild` from TSX's context resolves `node_modules/tsx/node_modules/esbuild/lib/main.js`. `native_binary_files_hashed=2`. Node/Python/PowerShell executable bytes checked against the installed profile. `runtime_imports_executed=false`.
+- **Remains HOLD:** dynamic ESM/TSX loader and compiler actually working under the pinned Node runtime; Python GRIB/eccodes scientific selftest; native-loaded dependency closure and full application module imports; current host admission / Adoption signatures / one-shot Permit. `full_import_closure_verified=false`, `python_scientific_selftest_executed=false`, `host_admission=false`, `adoption_signed=false`, `permit_signed=false`, `permit_consumed=false`, `execution_authorized=false`, `production_authorized=false`.
+- **Next exact action**: run a safe, external read-only loader fixture with original runtime's `node --import tsx` and Python `mcft_cap09_gfs_scientific_core_v1.py selftest` under bound interpreters, retaining genuine stdout/stderr and hashes. Synthetic loader success is not a complete runtime import-closure proof. Do NOT launch Provider/Producer/TIMING/stage host/official Permit in these pre-Adoption checks. If incomplete, preserve HOLD, do not regenerate 18,863 material or make new source PR.
+- Current mainline execution **0/6**, Run ID `da9db7129607`, existing historical evidence/one-shot ledger preserved. Leave handoff PR #3298 **Draft/Open/Unmerged**.
+
+---
+
 ## 2026-10-23 — Windows exact 18,863-file Installed Material VERIFIED (LATEST)
 
 **Operator Windows PowerShell results; not a local reread of JSON bytes by ChatGPT.** Run `da9db7129607`; protected merged main still `2b63652297bb285f21c4d4c63c37d247d009142c`. Do not rebuild source/QCP or copy a 5526 signed material. Mainline actual official six-stage execution **0/6**, Permit **NOT SIGNED / NOT CONSUMED**, production prohibited.
