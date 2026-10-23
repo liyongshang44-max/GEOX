@@ -1,3 +1,17 @@
+## 2026-10-23 — DA9 V3 historical evidence 2/2 exact SHA PASS on Windows (LATEST; unsigned V3 budgeting next)
+
+Windows operator executed external read-only 118-JSON SHA256 search, 0 directory errors, current clock `2026-10-23T14:24:37.6585731+00:00`, immutable signed Formal Adoption expiry `2026-10-23T22:04:41.173Z`. Report `195MIN_CAPACITY_REMAINS=True` **at that instant only**. V3 requires renewed independent capacity check at actual future permit signing/Host dispatch, `now + capSum + margin < min(FirstBase, real Permit expiry, valid Adoption expiry)`.
+
+Found **both genuine byte-matching V3 mandatory historical records**:
+- **GFS 220-call historical acquisition** SHA-256 `8a89e19dc06023dcc8342b68541c67c7758d0e1ef836d63d68f285a3b29d192a` at `D:\gptdown\MCFT-CAP09-DA9-FULL-GFS-e17ed8fb3a6c4075b2851aaff5f1ed88\GFS_FULL_72H_META.json`.
+- **KBS historical continuity/window record** SHA-256 `d813093f0321bd56d7e0a43c1dfa66964c4f4dfe8373d665a3139123d49dd86e` at `D:\gptdown\MCFT-CAP09-DA9-WINDOW-AUDIT-081efe5031cf42cea1f7c3840aaad2ea\DA9_PROVIDER_WINDOW_BUDGET_READONLY_RESULT.json`.
+
+Both original files MUST be passed by absolute path directly to installed official `scripts/cap09_adoption_v1/da9-budget-v3-prepare.cjs` and retained, not copied or rewritten. Actual current KBS Variate25 freshness/continuity and GFS latest complete same-cycle source are **not proven by the historical file hash**; historical continuity source may contain an admission HOLD but is accepted by V3 as provenance only, so never treat this as live source PASS.
+
+Next: responsible operator reviews exact six caps (suggested engineering ceilings **[60,30,30,30,20,10] minutes = 180** and **15-minute margin**, based on published synthetic contract only; not empirically measured full run), chooses a fresh future canonical-hour FirstBase that also respects `AdoptionExpiresAt` (currently 22:04:41Z), and attests non-template human explanation. Official read-only/unsigned builder expects exactly `STAGE_PLAN HIST_GFS HIST_KBS CAP_REVIEW_SIGNED_RETRY_DECISION NEW_OUTPUT`; proper order is `plan, gfs, kbs, review, decision, budget output`. The **third source is new explicitly human-approved engineering budget review**, not a fabricated Provider SLA or historical timing measurement. Conclude only `UNSIGNED_V3_BUDGET_ENVELOPE_CREATED_NOT_ADMISSION`, and optionally pass official `v3.evaluate` with **clearly hypothetical proposed** Permit expiry, never call it a genuine Permit/Admission. Do not start fresh 300s DB/MinIO/Owner readbacks until close to genuine Permit window; no six stages yet 0/6. Handoff #3298 Draft/Open/Unmerged, protected main subject `2b63652297bb285f21c4d4c63c37d247d009142c`.
+
+---
+
 ## 2026-10-23 — Windows DA9 Retry Adjudication V2 signed + independent verification PASS (LATEST; 0/6)
 
 **Actual operator Windows PowerShell console** with current exact protected `main=2b63652297bb285f21c4d4c63c37d247d009142c` and Run ID `da9db7129607`:
