@@ -152,6 +152,9 @@ try{
  },/V3_REVIEW_NOT_REGISTERED_SIGNER/);
  reject("stale_adoption_boundary",()=>{
   const ctx={...context,qualification_expires_at:"2026-10-23T14:00:00.000Z"};validate(bundle(),ctx);
+ },/V3_PERMIT_OUTLIVES_ADOPTION/);
+ reject("late_preflight_budget_cannot_fit_first_base",()=>{
+  validate(bundle(),{...context,now:"2026-10-23T15:00:00.000Z"});
  },/V3_HARD_DEADLINE_CAPACITY_INSUFFICIENT/);
  reject("tampered_observation_signature",()=>{
   const obs={...observed,owner_isolation_verified:false};
