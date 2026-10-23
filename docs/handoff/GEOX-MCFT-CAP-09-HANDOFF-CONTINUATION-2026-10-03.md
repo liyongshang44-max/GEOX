@@ -1,3 +1,25 @@
+## 2026-10-23 — DA9 Adoption eligibility Path-only environment difference diagnosed (LATEST; action pending)
+
+Actual Windows PowerShell operator read-only differential against fixed immutable `installed-material.json`:
+```text
+Variable               Match ExpectedLength ActualLength
+MCFT_PYTHON_EXECUTABLE  True              65          65
+PATHEXT                 True              58          58
+Path                   False            1054         994
+SystemRoot              True              10          10
+windir                  True              10          10
+ENVIRONMENT_MISMATCH_COUNT=1
+ENVIRONMENT_MISMATCH_KEYS=Path
+READONLY_DIAGNOSTIC_COMPLETE_NO_MATERIAL_CHANGE
+```
+**First actual failing gate** remains `ADOPTION_READONLY_PRECHECK_HOLD / EXECUTION_ENVIRONMENT_DRIFT`; this narrows exact discrepancy to process-level `Path` only. Difference 60 UTF-16 character positions (length, not an assumed literal substring). It does not indicate mismatched QCP, 6,455 source bytes or 18,863-file installed profile; those previously passed independently. No private paths or full PATH values printed in chat.
+
+**Next and only action:** In a PowerShell `try/finally`, capture original `[Environment]::GetEnvironmentVariable('Path','Process')`, read captured `Path` from `D:\gptdown\MCFT-CAP09-DA9-2b636522-INSTALLED-20261023T072259804Z\installed-material.json` profile `environment.public_values`, confirm it is nonempty and length 1054 and its `MCFT_PYTHON_EXECUTABLE` equals pinned profile tools.python.path, set **process-only Path** to that legitimate captured installation-time value, run existing V2 tool `D:\gptdown\MCFT-DA9-ADOPTION-ELIGIBILITY-V2-2b636522\RUN-DA9-ADOPTION-ELIGIBILITY-PS51.ps1` and always restore previous process Path in `finally`. Existing V2 tool generates new exclusive evidence directory; never overwrite the earlier V1/V2 HOLD logs. Do NOT set machine/user PATH or edit installed-material.json or introduce a mock environment to the verifier. Do NOT claim PASS prior to actual V2 machine output; failures stay HOLD.
+ 
+On genuine `ADOPTION_READONLY_INTEGRITY_PASS_HUMAN_SCOPE_REVIEW_REQUIRED` (only then), review the new exact-Subject/18,863-material Scope Grant and registered operator Ed25519 key fingerprint, then obtain explicit operator approval for official signing; do not auto-sign Adoption/Retry/Permit. First attempt Provider calls and phase UNKNOWN; real stage receipts **0/6**; production authority FALSE; Handoff PR #3298 Draft/Open/Unmerged.
+
+---
+
 ## 2026-10-23 — DA9 Adoption eligibility V2 real Windows environment drift HOLD (LATEST; Run da9db7129607; real stages 0/6)
 
 **Observed actual Windows console from operator**, distinct from earlier V1 missing-function helper bug. Exact subject `2b63652297bb285f21c4d4c63c37d247d009142c`, fixed installed material digest `a68e32fef887e2c22525269bb7839010b9b77e43a0c843c32c93f3ee937e8150`. Operator ran V2 external read-only `RUN-DA9-ADOPTION-ELIGIBILITY-PS51.ps1` from `D:\gptdown\MCFT-DA9-ADOPTION-ELIGIBILITY-V2-2b636522`. Pinned Node exactly `C:\Users\mylr1\AppData\Local\Volta\tools\image\node\24.19.0\node.exe`. V2 created exclusive evidence root `D:\gptdown\MCFT-CAP09-DA9-ADOPTION-ELIGIBILITY-2b636522-20261023T091221072Z` with `eligibility.json`.
