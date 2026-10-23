@@ -1,3 +1,17 @@
+## 2026-10-23 — DA9 2b636522 Release exact 6455 Git blobs VERIFIED on Windows (LATEST)
+
+Operator's 2026-10-23 Windows PowerShell output confirms the external exporter V2 now **PASS**, superseding the earlier V1 `BATCH_GIT_BLOB_TRUNCATED` HOLD below. Preserve that failed attempt and partial V1 output as immutable diagnostics, **do not retry V1 or change Git/worktree line endings**.
+
+- Current exact protected main, unchanged: `2b63652297bb285f21c4d4c63c37d247d009142c`.
+- The V2 exporter detected known `CRLF_CHECKOUT_CONVERSION` in five PowerShell checkout files and bypassed the checkout, exported **6,455 exact Git Blob files** in read_exact() batches with progress at 1000/2000/3000/4000/5000/6000; official `material_binding.py` emitted `RELEASE_SOURCE_BYTES_MATCH_EXECUTE_HOLD`.
+- Original trusted release manifest digest `800a3fcf042a3fa4e1dec382de4110d07868ab9ae3a3626b5389c8126de5d7e4`; `files_verified=6455`, `RELEASE_SCOPED_TOTAL_BYTES=48562088`; `loaded_paths_verified=[]`. New exact source directory `D:\gptdown\MCFT-CAP09-DA9-2b636522-EXACT-RELEASE-SOURCE-V2`. Existing successful unsigned QCP directory remains `D:\gptdown\MCFT-CAP09-DA9-QCP-2b636522-20261023T054723422Z`. Keep both stable, no overwrites.
+- **The Release source-byte gate is now CLOSED/PASS**, not the Installed Runtime gate. Official machine fields still say `installed_dependencies_verified=false`, `host_configuration_verified=false`, `execution_authorized=false`, `production_authorized=false`, `ADOPTION_SIGNED=false`, `PERMIT_SIGNED=false`, `PERMIT_CONSUMED=false`. Do not report a full Runtime PASS or TEST_ONLY execution from source-only success.
+- Next engineering stage: build a **new, distinct Windows portable Runtime** by taking exact new Release source bytes + individually verified old dependency files; independently collect/verify the COMPLETE installed material including Node/Python/PowerShell binaries and actual host environment. Three earlier runtimes have different Host bytes; never transfer old material digest/signature/Adoption, never edit the old directories or use original checkout-converted `.ps1` bytes as trusted sources. Resolve any extra executable/generated artifact by evidence, rather than silently reusing untracked old code. No GitHub source PR required for an external material builder.
+- After full Installed Material & loaded dependency closure: fresh exact-subject signed Scope Grant / Formal Adoption / signed Retry Review (actual signer on Windows, no synthetic keys); human reviewed stage-cap/FirstBase V3 budget; dynamic PG+MinIO+ACL+Owner+GFS/KBS; official Host `--preflight-only`; separately authorized one-shot Permit and actual stages. Preserve Run ID `da9db7129607`, first failed attempt evidence (Provider calls/phase UNKNOWN), historical Closure/WORM/nonce ledger.
+- **Actual six-stage real receipts remain 0/6**. Handoff PR #3298 remains Draft/Open/Unmerged (DO NOT MERGE).
+
+---
+
 ## 2026-10-23 — DA9 2b636522 post-merge Windows QCP / Release pipeline checkpoint (LATEST; execution 0/6)
 
 **This is the current exact frontier, superseding earlier 5526 V2 Provider-deadline and PR-unmerged instructions below. Historic entries remain immutable.** The user requested this entry specifically to prevent fresh engineers from repeating completed QCP, reusing obsolete Runtime, or mistaking the source exporter bug for invalid Git evidence. Evidence comprises GitHub main/PR and the operator's original Windows PowerShell console; no unshown Windows files have been inspected by the handoff writer.
