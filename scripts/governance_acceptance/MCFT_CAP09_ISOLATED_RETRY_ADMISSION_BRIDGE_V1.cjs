@@ -68,6 +68,12 @@ function admitProposedRetry(arm,observed,options={}) {
   assert.equal(observed.fresh_readback?.bucket_empty_including_versions_multipart,true,"OBJECT_VERSIONS_OR_UPLOADS_PENDING");
   assert.equal(observed.fresh_readback?.production_bindings_present,false,"PRODUCTION_BINDINGS_FORBIDDEN");
   const requiresV2=arm.run_id==='da9db7129607' && arm.retry_adjudication?.review_contract_version===2;
+  const requiresV3=requiresV2 && observed.pre_permit_safety_budget?.schema_version==='geox_mcft_cap09_prepermit_source_use_budget_v3';
+  if(requiresV3){
+    assert(!Object.hasOwn(observed,'provider_deadline_utc'),'V3_SYNTHETIC_PROVIDER_DEADLINE_FORBIDDEN');
+    assert(!Object.hasOwn(observed,'provider_causal_visibility'),'V3_SYNTHETIC_PROVIDER_CAUSAL_FLAG_FORBIDDEN');
+    assert(!Object.hasOwn(observed,'provider_data_available'),'V3_PREEXECUTION_PROVIDER_SUCCESS_GUARANTEE_FORBIDDEN');
+  }
   if(requiresV2) {
     assert(observed.pre_permit_safety_budget,'DA9_V2_PREPERMIT_BUDGET_REQUIRED');
     assert(!Object.hasOwn(observed,'measured_worst_case_ms'),'DA9_V2_UNSOURCED_MEASURED_BUDGET_FORBIDDEN');
@@ -81,19 +87,23 @@ function admitProposedRetry(arm,observed,options={}) {
     assert(Date.parse(arm.expires_at)-Date.parse(arm.authorized_at)<=86400000,
       'BUDGET_V2_MAX_24H_ARM_REQUIRED');
     assert.equal(observed.source_clean,true,'BUDGET_V2_CLEAN_MAIN_REQUIRED');
-    assert.equal(observed.provider_data_available,true,'BUDGET_V2_REAL_PROVIDER_REQUIRED');
-    assert.equal(observed.provider_causal_visibility,true,'BUDGET_V2_CAUSAL_PROVIDER_REQUIRED');
+    if(!requiresV3){
+      assert.equal(observed.provider_data_available,true,'BUDGET_V2_REAL_PROVIDER_REQUIRED');
+      assert.equal(observed.provider_causal_visibility,true,'BUDGET_V2_CAUSAL_PROVIDER_REQUIRED');
+    }
     assert.equal(observed.fresh_readback_current,true,'BUDGET_V2_FRESH_RESOURCE_REQUIRED');
     assert.equal(observed.owner_isolation_verified,true,'BUDGET_V2_OWNER_ISOLATION_REQUIRED');
-    const safety=require('./MCFT_CAP09_PREPERMIT_BUDGET_CONTRACT_V2.cjs');
-    readiness=safety.assessPrePermitSafetyBudgetV2({
+    const safety=requiresV3
+      ?require('./MCFT_CAP09_DA9_PREPERMIT_SOURCE_USE_BUDGET_V3.cjs')
+      :require('./MCFT_CAP09_PREPERMIT_BUDGET_CONTRACT_V2.cjs');
+    readiness=(requiresV3?safety.evaluate:safety.assessPrePermitSafetyBudgetV2)({
       budget:observed.pre_permit_safety_budget,
       stagePlan:options.stagePlan,
       context:{
         runId:arm.run_id,subjectSha:arm.protected_main_sha,
         firstBase:arm.qualification_first_base,nowUtc:observed.now_utc,
-        providerDeadlineUtc:observed.provider_deadline_utc,permitExpiresAt:arm.expires_at,
-        adoptionExpiresAt:options.adoptionExpiresAt,
+        ...(requiresV3?{}:{providerDeadlineUtc:observed.provider_deadline_utc}),
+        permitExpiresAt:arm.expires_at,adoptionExpiresAt:options.adoptionExpiresAt,
         safetyMarginMs:observed.deadline_safety_margin_ms,
         authorizedReviewerId:arm.retry_adjudication.reviewer_id
       },sourceRoot:options.sourceRoot

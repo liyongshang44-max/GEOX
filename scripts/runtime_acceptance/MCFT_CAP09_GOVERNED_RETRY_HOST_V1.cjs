@@ -56,6 +56,14 @@ function validateBundle(bundle,trust,context,{ticketedStage=false}={}){
    assert(observed.pre_permit_safety_budget,"DA9_PREPERMIT_SAFETY_BUDGET_V2_REQUIRED");
    assert(!Object.hasOwn(observed,"measured_worst_case_ms"),"DA9_FAKE_EMPIRICAL_BUDGET_FORBIDDEN");
    assert.equal(budget,observed.pre_permit_safety_budget.stage_timeout_sum_ms,"DA9_SIGNED_STAGE_CAP_SUM_MISMATCH");
+    if(observed.pre_permit_safety_budget.schema_version==="geox_mcft_cap09_prepermit_source_use_budget_v3"){
+      // Both parent and each one-time child must use the adopted scientific code.
+      const v3=require("../governance_acceptance/MCFT_CAP09_DA9_PREPERMIT_SOURCE_USE_BUDGET_V3.cjs");
+      assert.deepEqual(observed.pre_permit_safety_budget.source_code_sha256,
+        v3.pinnedSourceCode(ROOT),"V3_HOST_SCIENTIFIC_SOURCE_CHANGED");
+      assert.equal(observed.pre_permit_safety_budget.source_use_mode,
+        "LIVE_AT_EACH_REAL_CAPTURE_NO_PROVIDER_SLA","V3_HOST_LIVE_SOURCE_USE_REQUIRED");
+    }
  } else {
    // Historical non-DA9 contract: never retroactively reinterpret its evidence.
    assert(budget<=observed.measured_worst_case_ms,"RETRY_PLAN_EXCEEDS_REVIEWED_BUDGET");
@@ -150,6 +158,44 @@ function hostBundle(file){
  }
  return {...valid,bundle,trust,effectiveTrust,targets,env,context,signedActivation};
 }
+// Parent-only admission freshness is measured from the START of the complete
+// multi-resource readback, matching the signed DA9 bundle. A late completion
+// cannot extend the original 300-second trust window.
+function assertFreshParentReadback(readback,now=Date.now()){
+ assert(readback&&typeof readback==="object"&&!Array.isArray(readback),"RETRY_READBACK_REQUIRED");
+ assert(Number.isFinite(now),"RETRY_READBACK_NOW_INVALID");
+ const canonical=s=>typeof s==="string"&&Number.isFinite(Date.parse(s))&&new Date(Date.parse(s)).toISOString()===s;
+ assert(canonical(readback.started_at)&&canonical(readback.completed_at),"RETRY_READBACK_CLOCK_INVALID");
+ const start=Date.parse(readback.started_at),end=Date.parse(readback.completed_at);
+ assert(start<=end&&end<=now,"RETRY_READBACK_CLOCK_ORDER_INVALID");
+ assert(now-start<=300000,"RETRY_READBACK_STALE");
+ return true;
+}
+// The official parent calls this no-effects boundary AFTER hostBundle completed
+// signature, historical source, Adoption and full V3 budget admission checks.
+// Synthetic acceptance calls the identical boundary only with fixture state.
+function assertParentPreflightNoEffects(h,now=Date.now()){
+ assert(h&&h.targets&&h.bundle,"RETRY_PARENT_PREFLIGHT_CONTEXT_REQUIRED");
+ assert(!fs.existsSync(h.targets.out),"RETRY_NEW_OUTPUT_REQUIRED");
+ assertFreshParentReadback(h.bundle.observed.fresh_readback,now);
+ return true;
+}
+// V3's source-at-use safety budget must still fit when the parent actually
+// burns its one-shot Permit, not merely when preflight began. This is V3-only:
+// legacy signed V2 semantics are unchanged.
+function assertV3FinalParentClock(h,now=Date.now()){
+ const b=h.bundle?.observed?.pre_permit_safety_budget;
+ if(b?.schema_version!=="geox_mcft_cap09_prepermit_source_use_budget_v3")return true;
+ assert(Number.isFinite(now),"V3_FINAL_PARENT_CLOCK_INVALID");
+ const ceiling=h.plan.stages.reduce((sum,s)=>sum+s.timeout_ms,0);
+ assert.equal(ceiling,b.stage_timeout_sum_ms,"V3_FINAL_PARENT_SIGNED_CAPS_CHANGED");
+ const bound=Math.min(Date.parse(h.arm.qualification_first_base),
+  Date.parse(h.arm.expires_at),Date.parse(h.context.qualification_expires_at));
+ assert(Number.isFinite(bound)&&now+ceiling+b.safety_margin_ms<bound,
+  "V3_FINAL_PARENT_BUDGET_EXPIRED_BEFORE_PERMIT_CONSUMPTION");
+ assertFreshParentReadback(h.bundle.observed.fresh_readback,now);
+ return true;
+}
 function parseArgs(args){
  assert(args.includes("--operator-authorized")&&args.includes("--governed-retry")&&args.includes("--all"),"RETRY_EXPLICIT_ALL_REQUIRED");
  assert(args.includes("--execute")!==args.includes("--preflight-only"),"RETRY_SELECT_ONE_MODE");
@@ -184,9 +230,7 @@ function assertControllerAdoption(h){
 async function main(args){
  assert(!process.env.MCFT_GOVERNED_RETRY_STAGE&&!process.env.MCFT_GOVERNED_RETRY_TICKET,'DA9_PARENT_CANNOT_USE_CHILD_ADMISSION_PATH');
  const options=parseArgs(args),h=hostBundle(options.file);
- assert(!fs.existsSync(h.targets.out),"RETRY_NEW_OUTPUT_REQUIRED");
- const observedAt=Date.parse(h.bundle.observed.fresh_readback.completed_at);
- assert(Number.isFinite(observedAt)&&observedAt<=Date.now()&&Date.now()-observedAt<=300000,"RETRY_READBACK_STALE");
+ assertParentPreflightNoEffects(h);
  if(!options.execute)return {status:"SIGNED_RETRY_PREFLIGHT_PASS_NOT_EXECUTED",execute_authorized:false};
  // Preflight EVERYTHING before irreversible single-use parent permit consumption.
  // On the migrated path, these exact controller/stage bytes are covered by the signed
@@ -208,6 +252,7 @@ async function main(args){
    [path.join(ROOT,"apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py"),"selftest"],
    {cwd:ROOT,timeout:60000,encoding:"utf8",maxBuffer:1024*1024});
  assert.equal(check.status,0,"RETRY_SCIENTIFIC_SELFTEST_REQUIRED:"+String(check.stderr||"").slice(-350));
+ assertV3FinalParentClock(h);
  const consumed=permitApi.consumePermit(h.verified);
  const authority=stageCap.initializeStageAuthority(consumed,h.verified.payload);
  fs.mkdirSync(h.targets.out,{recursive:false,mode:0o700});
@@ -259,4 +304,4 @@ function childTargets(){
  assert.equal(claim.status,"STAGE_CAPABILITY_CONSUMED_NO_RETRY");
  return h.targets;
 }
-module.exports={stageContinuationMode,validateSuccessorReview,assertControllerAdoption,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};
+module.exports={stageContinuationMode,validateSuccessorReview,assertControllerAdoption,assertFreshParentReadback,assertParentPreflightNoEffects,assertV3FinalParentClock,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};
