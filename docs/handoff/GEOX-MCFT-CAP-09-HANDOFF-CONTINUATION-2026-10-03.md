@@ -1,3 +1,17 @@
+## 2026-10-23 — DA9 TSX / pg / GFS no-effect loader smoke real Windows PASS (LATEST; execution 0/6)
+
+Operator Windows PowerShell run confirmed **`DA9_NOEFFECT_LOADER_TSX_PG_GFS_SELFTEST_PASS_NOT_FULL_IMPORT_CLOSURE`**, against exact protected merged subject `2b63652297bb285f21c4d4c63c37d247d009142c`, immutable new Installed Material profile digest `a68e32fef887e2c22525269bb7839010b9b77e43a0c843c32c93f3ee937e8150`; actual evidence root `D:\gptdown\MCFT-CAP09-DA9-LOADER-NOEFFECT-2b636522-20261023T075103573Z-48ff14` outside installed Runtime. Report `schema=DA9_LOADER_NONSEALED_SELFTEST_V1`, `started_at=2026-10-23T07:51:03.576Z`, `completed_at=2026-10-23T07:51:06.907Z`.
+
+- Actual `node --import tsx` TypeScript transformation via **external fixture only**: `TSX_REAL_TRANSFORM_PASS_NO_STAGE_IMPORT`.
+- Actual installed `pg` package constructor import with no pool, network or DB connection: `PG_IMPORT_PASS_NO_CONNECTION`.
+- Official installed Python GFS scientific core `selftest`: `GFS_SCIENTIFIC_CORE_SELFTEST_PASS_NO_PROVIDER`; 72 points as coded scientific fixture, NOT a live 72h GFS source capture.
+- Machine report: `tsx_real_transformation=true`, `pg_package_import_without_connection=true`, `scientific_selftest=true`, `source_postchecks_pass=true`, `provider_calls=0`, `database_connection_attempts=0`, `s3_calls=0`, `stage_launches=0`; `execution_authorized=false`, `production_authorized=false`.
+- Critical remaining gates: `full_import_closure_verified=false`, `python_site_packages_fully_bound=false`, `full_material_reverification_now=false`, `host_admission=false`, `adoption_signed=false`, `permit_signed=false`, `permit_consumed=false`. Do not promote three no-effect smoke tests to full loaded-stage closure or formal Adoption. No real run-stage receipts: **0/6**.
+- Next action: single bounded external-only read-only review of **actual transitive Stage module graph** from frozen 2b636522 Host / Producer / Timing / Delay / Aggregate entrances; confirm all touched module bytes and native dependencies match the signed installed profile, including Python `eccodes` + CFFI/native GRIB runtime binding, without executing stage entrypoints or opening Provider/PG/S3. Inspect any uncovered dynamically loaded paths and HOLD if unresolved; keep current 18,863-file material unchanged. Only after this clearance may real exact-subject Scope Grant / Formal Adoption be proposed via existing authorized Windows signers.
+- Do not repeat passed QCP (54 checks), Release (6455 files), Installed Material (18863 files), static module resolution (16 entries), TSX/PG/GFS smoke. Stay TEST_ONLY, Run `da9db7129607`; old 5526/130786cb signed evidence and previous failed attempt remain archived without forgery or deletion. Handoff #3298 remains Draft/Open/Unmerged.
+
+---
+
 ## 2026-10-23 — DA9 loader static 16 entrypoints PASS (LATEST)
 
 Operator's Windows PowerShell console from `D:\gptdown\MCFT-CAP09-77CDEEEF-QUALIFICATION-KIT` reports **`DA9_LOADER_STATIC_PATHS_PASS_NOT_FULL_IMPORT_EXECUTION`** for exact merged subject `2b63652297bb285f21c4d4c63c37d247d009142c` and previously verified installed digest **`a68e32fef887e2c22525269bb7839010b9b77e43a0c843c32c93f3ee937e8150`**. This confirms only static module resolution and hashed bytes, NOT running the application or verifying the entire transitive import graph.
