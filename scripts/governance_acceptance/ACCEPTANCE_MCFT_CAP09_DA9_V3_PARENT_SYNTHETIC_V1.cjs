@@ -191,12 +191,12 @@ try{
   const realNow=Date.now;
   Date.now=()=>Date.parse(now);
   try{
-   const verified=permit.verifyPermit(signature(),replayTrust,permitContext);
+   const verified=permit.verifyPermit(signature(arm,observed,plan),replayTrust,permitContext);
    const consumed=permit.consumePermit(verified);
    assert.equal(consumed.execute_authorized,false);
    assert(permit.assertConsumed(consumed));
    assert.throws(()=>permit.consumePermit(verified),/PERMIT_VERIFICATION_REQUIRED/);
-   const newVerified=permit.verifyPermit(signature(),replayTrust,permitContext);
+   const newVerified=permit.verifyPermit(signature(arm,observed,plan),replayTrust,permitContext);
    assert.throws(()=>permit.consumePermit(newVerified),/EEXIST/);
    assert(fs.existsSync(path.join(ledger,"run-"+run,"CONSUMED.json")));
   }finally{Date.now=realNow;}
