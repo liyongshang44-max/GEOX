@@ -178,7 +178,7 @@ function assertParentPreflightNoEffects(h,now=Date.now()){
  assert(h&&h.targets&&h.bundle,"RETRY_PARENT_PREFLIGHT_CONTEXT_REQUIRED");
  assert(!fs.existsSync(h.targets.out),"RETRY_NEW_OUTPUT_REQUIRED");
  assertFreshParentReadback(h.bundle.observed.fresh_readback,now);
- return {status:"SIGNED_RETRY_PREFLIGHT_PASS_NOT_EXECUTED",execute_authorized:false};
+ return true;
 }
 function parseArgs(args){
  assert(args.includes("--operator-authorized")&&args.includes("--governed-retry")&&args.includes("--all"),"RETRY_EXPLICIT_ALL_REQUIRED");
@@ -214,8 +214,8 @@ function assertControllerAdoption(h){
 async function main(args){
  assert(!process.env.MCFT_GOVERNED_RETRY_STAGE&&!process.env.MCFT_GOVERNED_RETRY_TICKET,'DA9_PARENT_CANNOT_USE_CHILD_ADMISSION_PATH');
  const options=parseArgs(args),h=hostBundle(options.file);
- const preflight=assertParentPreflightNoEffects(h);
- if(!options.execute)return preflight;
+ assertParentPreflightNoEffects(h);
+ if(!options.execute)return {status:"SIGNED_RETRY_PREFLIGHT_PASS_NOT_EXECUTED",execute_authorized:false};
  // Preflight EVERYTHING before irreversible single-use parent permit consumption.
  // On the migrated path, these exact controller/stage bytes are covered by the signed
  // Adoption qualification; legacy execution still requires its repository adoption flags.

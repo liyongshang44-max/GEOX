@@ -141,8 +141,7 @@ try{
   assert.equal(result.verified.payload.subject_sha,subject);
   assert.equal(host.assertFreshParentReadback(observed.fresh_readback,Date.parse(now)),true);
   const preflight=host.assertParentPreflightNoEffects({targets:{out},bundle:{observed}},Date.parse(now));
-  assert.equal(preflight.status,"SIGNED_RETRY_PREFLIGHT_PASS_NOT_EXECUTED");
-  assert.equal(preflight.execute_authorized,false);
+  assert.equal(preflight,true,"SYNTHETIC_PARENT_BOUNDARY_ONLY_NOT_OFFICIAL_SIGNED_PREFLIGHT");
   assert.equal(fs.readdirSync(trust.ledger_root).length,0,"PREFLIGHT_MUST_NOT_CONSUME_NONCE");
   assert(!fs.existsSync(out),"PREFLIGHT_MUST_NOT_CREATE_OUTPUT");
  });
