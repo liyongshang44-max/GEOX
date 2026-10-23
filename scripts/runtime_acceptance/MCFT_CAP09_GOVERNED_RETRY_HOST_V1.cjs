@@ -171,6 +171,15 @@ function assertFreshParentReadback(readback,now=Date.now()){
  assert(now-start<=300000,"RETRY_READBACK_STALE");
  return true;
 }
+// The official parent calls this no-effects boundary AFTER hostBundle completed
+// signature, historical source, Adoption and full V3 budget admission checks.
+// Synthetic acceptance calls the identical boundary only with fixture state.
+function assertParentPreflightNoEffects(h,now=Date.now()){
+ assert(h&&h.targets&&h.bundle,"RETRY_PARENT_PREFLIGHT_CONTEXT_REQUIRED");
+ assert(!fs.existsSync(h.targets.out),"RETRY_NEW_OUTPUT_REQUIRED");
+ assertFreshParentReadback(h.bundle.observed.fresh_readback,now);
+ return {status:"SIGNED_RETRY_PREFLIGHT_PASS_NOT_EXECUTED",execute_authorized:false};
+}
 function parseArgs(args){
  assert(args.includes("--operator-authorized")&&args.includes("--governed-retry")&&args.includes("--all"),"RETRY_EXPLICIT_ALL_REQUIRED");
  assert(args.includes("--execute")!==args.includes("--preflight-only"),"RETRY_SELECT_ONE_MODE");
@@ -205,9 +214,8 @@ function assertControllerAdoption(h){
 async function main(args){
  assert(!process.env.MCFT_GOVERNED_RETRY_STAGE&&!process.env.MCFT_GOVERNED_RETRY_TICKET,'DA9_PARENT_CANNOT_USE_CHILD_ADMISSION_PATH');
  const options=parseArgs(args),h=hostBundle(options.file);
- assert(!fs.existsSync(h.targets.out),"RETRY_NEW_OUTPUT_REQUIRED");
- assertFreshParentReadback(h.bundle.observed.fresh_readback);
- if(!options.execute)return {status:"SIGNED_RETRY_PREFLIGHT_PASS_NOT_EXECUTED",execute_authorized:false};
+ const preflight=assertParentPreflightNoEffects(h);
+ if(!options.execute)return preflight;
  // Preflight EVERYTHING before irreversible single-use parent permit consumption.
  // On the migrated path, these exact controller/stage bytes are covered by the signed
  // Adoption qualification; legacy execution still requires its repository adoption flags.
@@ -279,4 +287,4 @@ function childTargets(){
  assert.equal(claim.status,"STAGE_CAPABILITY_CONSUMED_NO_RETRY");
  return h.targets;
 }
-module.exports={stageContinuationMode,validateSuccessorReview,assertControllerAdoption,assertFreshParentReadback,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};
+module.exports={stageContinuationMode,validateSuccessorReview,assertControllerAdoption,assertFreshParentReadback,assertParentPreflightNoEffects,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};

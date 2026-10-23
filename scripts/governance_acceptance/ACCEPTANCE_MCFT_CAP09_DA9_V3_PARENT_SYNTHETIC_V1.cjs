@@ -140,9 +140,21 @@ try{
   const result=validate();
   assert.equal(result.verified.payload.subject_sha,subject);
   assert.equal(host.assertFreshParentReadback(observed.fresh_readback,Date.parse(now)),true);
+  const preflight=host.assertParentPreflightNoEffects({targets:{out},bundle:{observed}},Date.parse(now));
+  assert.equal(preflight.status,"SIGNED_RETRY_PREFLIGHT_PASS_NOT_EXECUTED");
+  assert.equal(preflight.execute_authorized,false);
   assert.equal(fs.readdirSync(trust.ledger_root).length,0,"PREFLIGHT_MUST_NOT_CONSUME_NONCE");
   assert(!fs.existsSync(out),"PREFLIGHT_MUST_NOT_CREATE_OUTPUT");
  });
+ reject("parent_readback_stale_start_even_when_completed_recently",()=>{
+  host.assertParentPreflightNoEffects({targets:{out},bundle:{observed:{
+   ...observed,fresh_readback:{...observed.fresh_readback,started_at:"2026-10-23T11:54:00.000Z",completed_at:"2026-10-23T11:59:59.000Z"}
+  }}},Date.parse(now));
+ },/RETRY_READBACK_STALE/);
+ reject("parent_preflight_output_reuse",()=>{
+  const existing=path.join(tmp,"existing-output");fs.mkdirSync(existing);
+  host.assertParentPreflightNoEffects({targets:{out:existing},bundle:{observed}},Date.parse(now));
+ },/RETRY_NEW_OUTPUT_REQUIRED/);
  reject("forged_provider_deadline_forbidden",()=>{
   const obs={...observed,provider_deadline_utc:"2026-10-24T00:00:00.000Z"};
   validate(bundle(arm,obs));},/V3_SYNTHETIC_PROVIDER_DEADLINE_FORBIDDEN/);
