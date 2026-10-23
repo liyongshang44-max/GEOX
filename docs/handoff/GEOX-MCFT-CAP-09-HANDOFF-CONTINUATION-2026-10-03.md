@@ -1,3 +1,23 @@
+## 2026-10-23 — Windows exact 18,863-file Installed Material VERIFIED (LATEST)
+
+**Operator Windows PowerShell results; not a local reread of JSON bytes by ChatGPT.** Run `da9db7129607`; protected merged main still `2b63652297bb285f21c4d4c63c37d247d009142c`. Do not rebuild source/QCP or copy a 5526 signed material. Mainline actual official six-stage execution **0/6**, Permit **NOT SIGNED / NOT CONSUMED**, production prohibited.
+
+Latest completed:
+- Prerequisite exact Git Blob Release source `D:\gptdown\MCFT-CAP09-DA9-2b636522-EXACT-RELEASE-SOURCE-V2`, 6,455 SHA-checked source files, trusted Binding SHA-256 `800a3fcf042a3fa4e1dec382de4110d07868ab9ae3a3626b5389c8126de5d7e4`, original official result `RELEASE_SOURCE_BYTES_MATCH_EXECUTE_HOLD`.
+- Separate new Windows Runtime: `D:\gptdown\MCFT-CAP09-DA9-2b636522-INSTALLED-20261023T072259804Z\portable-runtime`. Material file: `D:\gptdown\MCFT-CAP09-DA9-2b636522-INSTALLED-20261023T072259804Z\installed-material.json`. Assembly report: same parent `assembly-report.json`.
+- Real builder output `PREBUILD_VERIFIED`: donor 18,857 files; 6,455 current-scoped source files; 12,408 hashed inherited dependency files; 0 ignored non-scoped old files; recomposed material **18,863** files. Importing old version's immutable *file bytes* was allowed for dependency reuse only after hashing; this does NOT inherit old Adoption or scientific qualification. New exact Host entrypoint separately matched trusted release bytes; official `material_binding.py` returned 6455 PASS plus loaded Host entrypoint PASS.
+- Real official `installed-material.cjs` collection result `INSTALLED_MATERIAL_COLLECTED_AND_SELF_VERIFIED`, then independent **`INSTALLED_MATERIAL_REVERIFIED`** with complete 18,863 inventory and digest **`a68e32fef887e2c22525269bb7839010b9b77e43a0c843c32c93f3ee937e8150`**. Windows host collection bound tools `C:\Users\mylr1\AppData\Local\Programs\Python\Python312\python.exe` and `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`, as well as executing Node program/tool digest and collector environment (not included verbatim in handoff).
+- Remaining explicit negative flags **`loaded_import_closure_verified=false`, `host_admission=false`, `adoption_signed=false`, `permit_signed=false`, `execution_authorized=false`, `production_authorized=false`**. No official Windows Host Preflight, fresh resource witness, signed Retry V3 Permit or six-stage stage receipts were supplied.
+
+Next only:
+1) Preserve installed Runtime, release source, QCP and all old evidence read-only; **do not rerun builder or regenerate installed-material.json** (environment/tool path and digest would shift). Verify current node/tsx/native/Python dependency resolution at this *same installed root*, fail closed on changes or imports leaving the trusted payload, with read-only/external evidence. Do not run Producer/Provider/DB/MinIO or Permit consumption in this static check.
+2) Once loaded dependency closure and local authority invariants are fully evidenced, use **actual existing Windows signing path** for exact-subject Operator Scope Grant / Formal Adoption / signed Retry Review, while independently checking issuer fingerprint and validity. Older 5526/130786cb signatures cannot apply.
+3) Only then coordinate future FirstBase, actual operator-reviewed six-stage V3 caps+15-minute margin, current GFS/KBS source-at-use scientific validity, short-lived two-PG/MinIO-four-zero/ACL/Owner readbacks, signed Permit and official parent Preflight before any authorized isolated TEST_ONLY execution. Never invent Provider future availability deadline or silently backdate. Stage success only based on true receipts 1/6...6/6.
+
+**Current state:** QCP PASS; Release 6455 PASS; new Installed Material 18863 PASS; **loader/native/environment execution closure still HOLD**; Adoption/Permit NOT SIGNED; official stages **0/6**. Leave Handoff PR #3298 Draft/Open/Unmerged.
+
+---
+
 ## 2026-10-23 — DA9 2b636522 Release exact 6455 Git blobs VERIFIED on Windows (LATEST)
 
 Operator's 2026-10-23 Windows PowerShell output confirms the external exporter V2 now **PASS**, superseding the earlier V1 `BATCH_GIT_BLOB_TRUNCATED` HOLD below. Preserve that failed attempt and partial V1 output as immutable diagnostics, **do not retry V1 or change Git/worktree line endings**.
