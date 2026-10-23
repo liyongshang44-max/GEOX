@@ -169,7 +169,7 @@ try{
   const changed={...budget,source_code_sha256:{...budget.source_code_sha256,
    "apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts":"0".repeat(64)}};
   const obs={...observed,pre_permit_safety_budget:changed};validate(bundle(arm,obs));
- },/V3_HOST_SCIENTIFIC_SOURCE_CHANGED/);
+ },/V3_FROZEN_SCIENTIFIC_SOURCE_CHANGED|V3_HOST_SCIENTIFIC_SOURCE_CHANGED/);
  reject("tampered_historical_fixture_bytes",()=>{
   fs.appendFileSync(gfsFile,"TAMPER");
   try{testV3.evaluate({budget,stagePlan:plan,context:budgetContext,sourceRoot:ROOT});}
