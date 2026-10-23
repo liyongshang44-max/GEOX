@@ -1,3 +1,13 @@
+## 2026-10-23 — DA9 operator Scope Grant approval prompt rejected doubled confirmation (LATEST; 0/6)
+
+Actual Windows operator console shows `OFFICIAL_DIGEST_CALCULATION_PASS` from immutable official `contract.cjs`; exact subject `2b63652297bb285f21c4d4c63c37d247d009142c`, installed-material digest `a68e32fef887e2c22525269bb7839010b9b77e43a0c843c32c93f3ee937e8150`, host `LAPTOP-STN2A2P1`, operator `mcft_cap09_operator_mylr1`, `SCOPE=TEST_ONLY`, proposed grant 24h, `PRODUCTION_AUTHORIZED=false`, `PERMIT_AUTHORIZED=false`.
+
+The human-confirmation Read-Host received **the sentinel repeated twice concatenated with no separator**: `APPROVE_DA9_SCOPE_2B636522APPROVE_DA9_SCOPE_2B636522`. The fail-closed exact comparison deliberately returned `NO_APPROVAL_NO_SIGNATURE`. This is NOT an Ed25519 signing failure, not a cryptographic authorization receipt, and not a material or policy defect. The script creates output directory and payload **only after** the exact confirmed prompt, therefore this attempt left no grant/payload/signed output by its designed control flow.
+
+**Next minimal step:** operator reruns the unchanged reviewed script and types/pastes exactly ONE `APPROVE_DA9_SCOPE_2B636522` at the prompt (no duplicate). Observe official `SIGNED_OPERATOR_SCOPE_GRANT_NOT_ADOPTION_OR_PERMIT` plus new exclusive signed file location/hash. If the operator does not intend to approve, STOP; no signature. No source code/Material/QCP/Path changes, no extra independent approval, no attempts to infer approval from the repeated text and bypass machine check. Only after real grant confirmation use official Formal Adoption signing and cryptographic verification under frozen process PATH. Run `da9db7129607`, original Provider calls/phase UNKNOWN, true stage count **0/6**, no Adoption/Permit/signatures as of this attempt. Keep Handoff #3298 Draft/Open/Unmerged.
+
+---
+
 ## 2026-10-23 — Operator Scope Grant signing helper node -e PowerShell quoting HOLD (LATEST; 0/6)
 
 User ran previously supplied **operator-interactive grant review PowerShell** but it failed **before prompting for approval** or calling any signer: Windows PowerShell argument quoting transformed `node -e` JavaScript `const fs = require("fs");` into `const fs = require(fs);`, yielding Node 24.19.0 `ReferenceError: Cannot access 'fs' before initialization`. Operator's script immediately threw `OFFICIAL_DIGEST_CALCULATION_FAILED`, prior to computing the official `contract.cjs` policy/material canonical SHA-256 digest. **No signed Scope Grant, no Formal Adoption, no Retry Review, no Permit, and no DA9 stage launch occurred.** This is an external helper quoting issue, not a defect in frozen GEOX source, installed material or signer.
