@@ -180,6 +180,22 @@ function assertParentPreflightNoEffects(h,now=Date.now()){
  assertFreshParentReadback(h.bundle.observed.fresh_readback,now);
  return true;
 }
+// V3's source-at-use safety budget must still fit when the parent actually
+// burns its one-shot Permit, not merely when preflight began. This is V3-only:
+// legacy signed V2 semantics are unchanged.
+function assertV3FinalParentClock(h,now=Date.now()){
+ const b=h.bundle?.observed?.pre_permit_safety_budget;
+ if(b?.schema_version!=="geox_mcft_cap09_prepermit_source_use_budget_v3")return true;
+ assert(Number.isFinite(now),"V3_FINAL_PARENT_CLOCK_INVALID");
+ const ceiling=h.plan.stages.reduce((sum,s)=>sum+s.timeout_ms,0);
+ assert.equal(ceiling,b.stage_timeout_sum_ms,"V3_FINAL_PARENT_SIGNED_CAPS_CHANGED");
+ const bound=Math.min(Date.parse(h.arm.qualification_first_base),
+  Date.parse(h.arm.expires_at),Date.parse(h.context.qualification_expires_at));
+ assert(Number.isFinite(bound)&&now+ceiling+b.safety_margin_ms<bound,
+  "V3_FINAL_PARENT_BUDGET_EXPIRED_BEFORE_PERMIT_CONSUMPTION");
+ assertFreshParentReadback(h.bundle.observed.fresh_readback,now);
+ return true;
+}
 function parseArgs(args){
  assert(args.includes("--operator-authorized")&&args.includes("--governed-retry")&&args.includes("--all"),"RETRY_EXPLICIT_ALL_REQUIRED");
  assert(args.includes("--execute")!==args.includes("--preflight-only"),"RETRY_SELECT_ONE_MODE");
@@ -236,6 +252,7 @@ async function main(args){
    [path.join(ROOT,"apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py"),"selftest"],
    {cwd:ROOT,timeout:60000,encoding:"utf8",maxBuffer:1024*1024});
  assert.equal(check.status,0,"RETRY_SCIENTIFIC_SELFTEST_REQUIRED:"+String(check.stderr||"").slice(-350));
+ assertV3FinalParentClock(h);
  const consumed=permitApi.consumePermit(h.verified);
  const authority=stageCap.initializeStageAuthority(consumed,h.verified.payload);
  fs.mkdirSync(h.targets.out,{recursive:false,mode:0o700});
@@ -287,4 +304,4 @@ function childTargets(){
  assert.equal(claim.status,"STAGE_CAPABILITY_CONSUMED_NO_RETRY");
  return h.targets;
 }
-module.exports={stageContinuationMode,validateSuccessorReview,assertControllerAdoption,assertFreshParentReadback,assertParentPreflightNoEffects,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};
+module.exports={stageContinuationMode,validateSuccessorReview,assertControllerAdoption,assertFreshParentReadback,assertParentPreflightNoEffects,assertV3FinalParentClock,STAGES,validatePlan,validateBundle,parseArgs,hostBundle,stageEnvironment,main,childTargets};

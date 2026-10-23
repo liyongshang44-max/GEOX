@@ -150,6 +150,21 @@ try{
    ...observed,fresh_readback:{...observed.fresh_readback,started_at:"2026-10-23T11:54:00.000Z",completed_at:"2026-10-23T11:59:59.000Z"}
   }}},Date.parse(now));
  },/RETRY_READBACK_STALE/);
+ test("v3_final_clock_pass_at_true_earliest_safe_boundary",()=>{
+  const ms=Date.parse(first)-10800000-900000-1;
+  const fresh={...observed,fresh_readback:{...observed.fresh_readback,
+   started_at:new Date(ms-120000).toISOString(),completed_at:new Date(ms-1000).toISOString()}};
+  assert.equal(host.assertV3FinalParentClock({arm,context,plan,bundle:{observed:fresh}},ms),true);
+ });
+ reject("v3_final_clock_deny_even_if_original_preflight_was_valid",()=>{
+  const ms=Date.parse(first)-10800000-900000;
+  const fresh={...observed,fresh_readback:{...observed.fresh_readback,
+   started_at:new Date(ms-120000).toISOString(),completed_at:new Date(ms-1000).toISOString()}};
+  host.assertV3FinalParentClock({arm,context,plan,bundle:{observed:fresh}},ms);
+ },/V3_FINAL_PARENT_BUDGET_EXPIRED_BEFORE_PERMIT_CONSUMPTION/);
+ test("v2_signed_historical_final_clock_not_reinterpreted",()=>{
+  assert.equal(host.assertV3FinalParentClock({bundle:{observed:{pre_permit_safety_budget:{schema_version:"geox_mcft_cap09_prepermit_budget_v2"}}}},Date.parse(now)),true);
+ });
  reject("parent_preflight_output_reuse",()=>{
   const existing=path.join(tmp,"existing-output");fs.mkdirSync(existing);
   host.assertParentPreflightNoEffects({targets:{out:existing},bundle:{observed}},Date.parse(now));
