@@ -53,6 +53,7 @@ on:
       # An Admission-semantic change requires the full QCP, not CI-only green.
       - 'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_PARENT_SYNTHETIC_V1.cjs'
       - 'scripts/cap09_adoption_v1/contract.cjs'
       - 'scripts/cap09_adoption_v1/test-da9-minio-closure-v1.cjs'
       - '.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'

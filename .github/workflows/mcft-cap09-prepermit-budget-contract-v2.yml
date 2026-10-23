@@ -6,6 +6,7 @@ on:
       - "scripts/governance_acceptance/MCFT_CAP09_DA9_SOURCE_TIME_CONTRACT_V3.cjs"
       - "scripts/governance_acceptance/MCFT_CAP09_DA9_PREPERMIT_SOURCE_USE_BUDGET_V3.cjs"
       - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_SIGNED_HOST_BRIDGE_V1.cjs"
+      - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_PARENT_SYNTHETIC_V1.cjs"
       - "scripts/governance_acceptance/MCFT_CAP09_ISOLATED_RETRY_ADMISSION_BRIDGE_V1.cjs"
       - "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_PREPERMIT_BUDGET_CONTRACT_V2.cjs"
       - "scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs"
@@ -42,5 +43,7 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_SIGNED_HOST_BRIDGE_V1.cjs
       - name: Parent Admission Readback Start-Time Boundary (Strictly No I/O)
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs
+      - name: DA9 V3 Synthetic Parent Budget/Permit Validation (NO REAL AUTHORITY)
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_PARENT_SYNTHETIC_V1.cjs
       - name: DA9 Signed Review V2 Regression
         run: node scripts/cap09_adoption_v1/test-da9-retry-bundle-v2.cjs
