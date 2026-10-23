@@ -1,3 +1,13 @@
+## 2026-10-24 — Corrected Renewal tool raw-byte vs canonical Material digest
+
+- Actual Windows initial integrated renewal HOLD: IMMUTABLE_BYTE_SHA_MISMATCH:installed-material.json, without signing Adoption/Permit or launching stages. Original process Path/Python restored. This was an EXTERNAL HELPER defect, not a frozen Runtime material mismatch.
+- Root cause: helper SHA.profile a68e32fef887e2c22525269bb7839010b9b77e43a0c843c32c93f3ee937e8150 is official canonical c.digest(material), NOT file-byte sha256. Original code incorrectly compared it with sha(fs.readFileSync(profile)). Verified official frozen contract.cjs digest(v)=sha(canonical(v)).
+- Fixed external helper ZIP MCFT-CAP09-DA9-2B636522-RENEW-ADOPTION-AND-V3-REVIEW-FIXED-V2.zip, sha256 e5bddf3bcfb31fe5f1af361cefa46ea1d4b98d66175142607d2aeb69c04e9639. JS sha256 34bb19d85c54fc25f81a1a151bcd9f4c45ebddcde6cdce0faf409e89e5bea8ce. Removed profile from raw-byte SHA set only; retained official canonical profile digest assertion and genuine frozen signer/offline verification; all other signed/historical file-byte anchors remain fixed.
+- Node syntax, ZIP CRC, static regression guard and dynamic proposal tests PASS locally; Windows V2 execution NOT YET OBSERVED. Existing real DB/MinIO/Closure diagnostic PASS, ACL catalogue obtained but ACL policy/Owner/prod-boundary unverified. Fresh 300s resource witness and Permit do not exist.
+- New operator Windows action: download V2 ZIP; check exact ZIP SHA; extract to NEW D:\gptdown\MCFT-CAP09-DA9-RENEW-V3-FIXED-V2; run RUN-DA9-RENEW-ADOPTION-AND-V3-PS51.ps1; review and genuinely approve TEST_ONLY new Adoption+unsigned V3 reviewed plan. Preserve old prior 19Z plan; use actual new strict capacity cutoff.
+- Next after signed renewed Adoption is not another isolated static diagnostic: complete genuine ACL/Owner/prod binding source evaluation, official complete V2 Observations / short lived genuine 300s witness, one shot signed Permit, official --preflight-only, explicit six-stage --execute under strict current budget. Never invent booleans or consume an expired Permit. 0/6 stages, production false.
+
+---
 ## 2026-10-23 — Real 2b636522 Windows PG/MinIO/Closure READONLY diagnostic PASS, dynamic Admission still HOLD (LATEST; actual stages 0/6)
 
 Operator actual Windows shell at approx **2026-10-23T15:37Z**, after accurate existing `qual_admin` password entered *privately* (not revealed), using the exact external 2b636522 helper completed genuine resources:
