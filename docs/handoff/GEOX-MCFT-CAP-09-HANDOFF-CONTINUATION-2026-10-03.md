@@ -1,3 +1,25 @@
+## 2026-10-23 — Real 2b636522 Windows PG/MinIO/Closure READONLY diagnostic PASS, dynamic Admission still HOLD (LATEST; actual stages 0/6)
+
+Operator actual Windows shell at approx **2026-10-23T15:37Z**, after accurate existing `qual_admin` password entered *privately* (not revealed), using the exact external 2b636522 helper completed genuine resources:
+```text
+DA9_2B636522_SIGNED_INPUTS=VERIFIED_TEST_ONLY_NOT_PERMIT
+DA9_REAL_PG_TWO_DATABASES_29_TABLES_ZERO=PASS
+DA9_POSITIVE_EVIDENCE_LOGIN=PASS_READONLY
+DA9_NEGATIVE_EVIDENCE_LOGIN=PASS_READONLY
+DA9_REAL_MINIO_FOUR_ZERO=PASS
+DA9_2B636522_REAL_FRESH_CLOSURE_CHECK=PASS_AT_OBSERVED_TIME_NOT_PERMIT
+status=REAL_PG_MINIO_CLOSURE_DIAGNOSTIC_PASS_NOT_ADMISSION
+```
+Diagnostic output `D:\gptdown\MCFT-CAP09-DA9-2B636522-REAL-READONLY-DIAGNOSTIC-20261023T153700794Z\da9-real-resource-gate-readonly.json`, exact SHA256 **`53bfd03a949a42c76bded3a6ef8241252a7e906daf875758c97e8ddf135b9c13`**; real child exit code **0**; original PowerShell process env restored. Tests used actual signed Adoption & Retry V2; immutable historical MinIO Closure signature bound to a new 4-zero snapshot; both DA9 dedicated PostgreSQL databases 29 tables, all zero rows and 2 routines, plus login proof for independent positive/negative low-privilege Evidence accounts. Freshness was reported `WITHIN_240_SECONDS_AT_WRITE_ONLY` at the time the report was written. This receipt is **not** a renewable 300s Admission and will be stale by the next signing attempt if more than 300s from start.
+
+**Explicit still-HOLD:** Report truthfully states `full_dynamic_admission=false, owner_isolation_verified=false, production_bindings_verified=false, acl_matrix_verified=false, permit_signed=false, permit_consumed=false, real_stage_receipts=0/6, production_authorized=false`. These are not booleans to manually change: no full table-role privilege matrix, no independent current production owner cutover/bindings audit or Owner isolation proof, and no true signed V3 Permit/Host preflight. Previous routine/historical DB and MinIO evidence must not be erased or treated as unconditional authorization. Original first attempt Provider call count/phase UNKNOWN.
+
+**Next investigation and new external helper prepared:** `MCFT-CAP09-DA9-2B636522-ACL-CATALOG-READONLY-V1.zip` SHA256 **`54d79d65a278ff04985660361a75a368a008c63c87d3548bbd196f753cc21cb8`** containing a self-contained PowerShell 5.1 runner and Node `DA9-2B636522-ACL-CATALOG-READONLY.cjs`, README. It uses only the *existing Windows DPAPI protected* 2 Evidence login URLs, no audit password or MinIO keys, transient stdin secret delivery, read-only catalog queries on localhost:55445. Produces exact 2-DB/29 table public ownership + effective SELECT/INSERT/UPDATE/DELETE rights *for each authenticated Evidence role*, 2 public routines, visible run-local role properties and potential PG foreign servers/foreign-table/dblink links. No DB/S3 write, Provider, Permit, output overwrites or stages. Node syntax, ZIP integrity, offline fake PG positive 29/2 + negative endpoint/DB mismatch tests PASS; **NOT yet run on genuine Windows**, no real ACL conclusion. Crucial: its status always `READONLY_PG_ACL_CATALOG_CAPTURED_REVIEW_REQUIRED_NOT_ADMISSION` and `owner_isolation_verified=false`, `production_bindings_verified=false`, `acl_matrix_verified=false` until separately reviewed role matrix, Twin ACL and owner/production provenance. Never reuse this catalog snapshot as last-300s full Admission.
+
+**Temporal hard stop:** current 19:00Z FirstBase with 180+15min budget expires strictly **before 15:45:00Z** for official final Permit consumption; existing official Adoption expires **22:04:41.173Z**. Check current real Windows time before all further steps. If strict cutoff missed, do NOT sign/consume or use old 19Z unsigned V3 plan; new FirstBase and reviewed budget required, and likely *freshly signed Adoption* under existing valid Scope Grant because current Adoption cannot cover three later timing base hours and full cap. No new Runtime/Subject/QCP/material/Retry signing unless policy actually requires. Handoff #3298 remains Draft/Open/Unmerged; main still 2b636522.
+
+---
+
 ## 2026-10-23 — Actual 5526 legacy JS verifier uploaded; current 2b636522 read-only diagnostic adapter built (NOT WINDOWS RUN) — stages 0/6
 
 User uploaded actual `D:\gptdown\MCFT-CAP09-DA9-LIVE-VERIFIER-SOURCE.zip`. Local ZIP integrity **PASS**, exact ZIP SHA-256 **`6c4ad6ddf95c72c4f9f7c1054ea4b3bd9f266d8bcbe1f6efc5380de29db8d612`**, sole `verify-live-resources.cjs` (12,338 bytes) SHA-256 **`24a294d884c66b45ef4f01614515f4c9853abbe80d1feeef79eb4a794098e1c5`** exactly matches user Windows. Cross-inspected along with two earlier original 5526 `.ps1` byte-verified scripts.
