@@ -9,6 +9,14 @@ Operator's Windows PowerShell console from `D:\gptdown\MCFT-CAP09-77CDEEEF-QUALI
 - **Next exact action**: run a safe, external read-only loader fixture with original runtime's `node --import tsx` and Python `mcft_cap09_gfs_scientific_core_v1.py selftest` under bound interpreters, retaining genuine stdout/stderr and hashes. Synthetic loader success is not a complete runtime import-closure proof. Do NOT launch Provider/Producer/TIMING/stage host/official Permit in these pre-Adoption checks. If incomplete, preserve HOLD, do not regenerate 18,863 material or make new source PR.
 - Current mainline execution **0/6**, Run ID `da9db7129607`, existing historical evidence/one-shot ledger preserved. Leave handoff PR #3298 **Draft/Open/Unmerged**.
 
+
+### Prepared next no-effect loader / GFS selftest bundle (NOT YET RUN on Windows)
+
+External ZIP `MCFT-CAP09-DA9-LOADER-NOEFFECT-SMOKE-2b636522.zip`, SHA-256 `391297544a1d1d0a7f7c501171ca174ef350beedf3e90afbbfebe95886515ee8`. Contains PS5.1 launcher, bounded Node probe, external TypeScript enum transform fixture, external pg constructor import-only fixture and README. Node CJS syntax / ZIP integrity checked in tool builder environment, but **operator has not run this ZIP**, so actual TSX/PG/Python result UNKNOWN.
+
+Run in new external directory `D:\gptdown\MCFT-CAP09-DA9-NOEFFECT-LOADER-PROBE-2b636522` via `RUN-DA9-LOADER-NOEFFECT-PS51.ps1`. It pins existing `a68e32fe...` installed root and tool binary hashes. Checks real `node --import tsx` on external enum fixture, `pg` constructor export import using Producer resolution context WITHOUT Pool construction or DB connection, and frozen GFS scientific Python `selftest` using installed Python `-B`. Outputs exclusive external-only JSON receipts. No real stage import, no Provider/S3/DB/Permit actions. PASS only closes these smoke gates, NOT full transitive stage import closure or native Python site-package binding. All errors preserve HOLD and no adoption authority.
+
+
 ---
 
 ## 2026-10-23 — Windows exact 18,863-file Installed Material VERIFIED (LATEST)
