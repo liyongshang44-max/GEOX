@@ -247,6 +247,13 @@ async function main(args){
  // On the migrated path, these exact controller/stage bytes are covered by the signed
  // Adoption qualification; legacy execution still requires its repository adoption flags.
  assertControllerAdoption(h);
+ // Unconditional *execute* boundary: also covers any legacy non-offline
+ // activation route. Every parent run must present the signed physical proof.
+ require("../governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs").verify({
+  binding:h.bundle.observed.non_authorized_full_chain_evidence,
+  trust:h.trust,subjectSha:h.arm.protected_main_sha,
+  attemptRunId:h.arm.run_id,sourceRoot:ROOT,now:Date.now()
+ });
  const scripts=STAGES.map(([id,file,artifact],i)=>{
    const script=path.join(__dirname,file);
    const stat=fs.lstatSync(script);
