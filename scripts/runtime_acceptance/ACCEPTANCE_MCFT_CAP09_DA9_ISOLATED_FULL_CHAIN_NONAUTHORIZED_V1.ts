@@ -90,7 +90,14 @@ async function reset(pool:Pool):Promise<void>{
   await pool.query("DROP SCHEMA public CASCADE");
   await pool.query("CREATE SCHEMA public");
   await pool.query(fs.readFileSync(ROOT+"/docker/postgres/init/001_schema.sql","utf8"));
-  for(const path of V13_MIGRATIONS)await pool.query(fs.readFileSync(ROOT+"/"+path,"utf8"));
+  for(const path of V13_MIGRATIONS) {
+    if(path.endsWith("2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql")) {
+      // This disposable PG instance does not inherit production service roles.
+      // Provision only the same NOLOGIN privilege role before the real writer ACL.
+      await pool.query("DO $evidence$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='geox_mcft_cap09_evidence_runtime_v1') THEN CREATE ROLE geox_mcft_cap09_evidence_runtime_v1 NOLOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; END IF; END $evidence$");
+    }
+    await pool.query(fs.readFileSync(ROOT+"/"+path,"utf8"));
+  }
 }
 async function dbFutureHour(pool:Pool):Promise<string>{
   const row=(await pool.query<{value:string|Date}>(
@@ -240,13 +247,30 @@ async function main():Promise<void>{
       || dbUrl.search || dbUrl.hash) {
     throw new Error("CAP09_NONAUTHORIZED_E2E_DEDICATED_TEST_PG_REQUIRED");
   }
-  const pool=new Pool({connectionString:databaseUrl,max:8});
+  const adminPool=new Pool({connectionString:databaseUrl,max:2});
+  const serviceRole="cap09_non_auth_e2e_"+TEST_RUN_ID;
+  const servicePassword=required("CAP09_E2E_PG_ROLE_PASSWORD");
+  if(servicePassword.length<16)throw new Error("CAP09_E2E_DISPOSABLE_PG_PASSWORD_TOO_SHORT");
+  const serviceUrl=new URL(databaseUrl);
+  serviceUrl.username=serviceRole;
+  serviceUrl.password=servicePassword;
+  const pool=new Pool({connectionString:serviceUrl.toString(),max:8});
   try {
-    const actualDb = String((await pool.query("SELECT current_database() AS db")).rows[0]?.db ?? "");
+    const actualDb = String((await adminPool.query("SELECT current_database() AS db")).rows[0]?.db ?? "");
     if (actualDb !== "mcft_cap09_non_auth_e2e_"+TEST_RUN_ID) {
       throw new Error("CAP09_NONAUTHORIZED_E2E_PG_CONNECTION_REBIND_FORBIDDEN");
     }
-    await reset(pool);
+    await reset(adminPool);
+    // All actual controller, candidate, fenced writer and readback operations
+    // below run as the restricted Evidence login, never as provisioning admin.
+    const quotedPassword=servicePassword.replace(/'/g,"''");
+    await adminPool.query(`CREATE ROLE ${serviceRole} LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${quotedPassword}'`);
+    await adminPool.query(`GRANT geox_mcft_cap09_evidence_runtime_v1 TO ${serviceRole}`);
+    const acl=(await pool.query(`SELECT current_user::text AS role,
+      has_table_privilege(current_user,'public.facts','INSERT') AS direct_insert,
+      has_function_privilege(current_user,'public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)','EXECUTE') AS can_execute`)).rows[0];
+    if(acl?.role!==serviceRole||acl.direct_insert!==false||acl.can_execute!==true)
+      throw new Error("CAP09_E2E_REAL_EVIDENCE_LOGIN_ACL_REQUIRED");
     const base=await dbFutureHour(pool);
     const now=Date.now();
     const availableAt=iso(now-60_000);
@@ -511,6 +535,9 @@ async function main():Promise<void>{
       schema_version:"geox_mcft_cap09_isolated_non_authorized_full_chain_contract_v1",
       source_files_sha256:sourceHashes,
       private_raw_retention_real_s3_verified:true,
+      evidence_login_restricted:true,
+      evidence_direct_fact_insert_allowed:false,
+      evidence_fenced_writer_execute_allowed:true,
       post_commit_physical_readback_verified:attested.status==="PASS"&&attested.physical_visibility_before_base===true,
 
       authorization:"NON_AUTHORIZED_ISOLATED_ENGINEERING_TEST_ONLY",
@@ -557,6 +584,7 @@ async function main():Promise<void>{
     process.stdout.write(JSON.stringify(proof)+"\n");
   }finally{
     await pool.end();
+    await adminPool.end();
   }
 }
 main().catch((error)=>{
