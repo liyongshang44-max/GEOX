@@ -26,11 +26,11 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: disposable-only-not-production
-          POSTGRES_DB: mcft_cap09_non_auth_e2e_abcdef012345
+          POSTGRES_DB: mcft_cap09_requal_abcdef012345_positive
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres -d mcft_cap09_non_auth_e2e_abcdef012345"
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_requal_abcdef012345_positive"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
@@ -38,7 +38,7 @@ jobs:
       CI: 'true'
       CAP09_NONAUTHORIZED_E2E_EXCLUSIVE_DESTRUCTIVE_TEST: '1'
       CAP09_NONAUTHORIZED_E2E_RUN_ID: abcdef012345
-      DATABASE_URL: postgres://postgres:disposable-only-not-production@127.0.0.1:5432/mcft_cap09_non_auth_e2e_abcdef012345
+      DATABASE_URL: postgres://postgres:disposable-only-not-production@127.0.0.1:5432/mcft_cap09_requal_abcdef012345_positive
       CAP09_E2E_PG_ROLE_PASSWORD: isolated-e2e-password-no-production
       PHASE7_PRIVATE_S3_ENDPOINT: http://127.0.0.1:9000
       PHASE7_PRIVATE_S3_BUCKET: mcft-cap09-requal-abcdef012345
@@ -111,7 +111,7 @@ jobs:
           const p=JSON.parse(fs.readFileSync("acceptance-output/MCFT_CAP09_DA9_ISOLATED_NONAUTHORIZED_FULL_CHAIN_V1_RESULT.json","utf8"));
           if(p.status!=="PASS"||p.schema_version!=="geox_mcft_cap09_isolated_non_authorized_full_chain_contract_v1")throw Error("NOT_REAL_INTEGRATION_PASS");
           if(p.subject_sha!=="${{ github.event.pull_request.head.sha || github.sha }}")throw Error("E2E_HEAD_MISMATCH");
-          if(p.isolated_s3_bucket!=="mcft-cap09-requal-abcdef012345"||p.pg_database!=="mcft_cap09_non_auth_e2e_abcdef012345")throw Error("TEST_RESOURCE_ID_CHANGED");
+          if(p.isolated_s3_bucket!=="mcft-cap09-requal-abcdef012345"||p.pg_database!=="mcft_cap09_requal_abcdef012345_positive")throw Error("TEST_RESOURCE_ID_CHANGED");
           for(const k of ["evidence_login_restricted","private_raw_retention_real_s3_verified","candidate_manifest_private_readback",
             "post_commit_physical_readback_verified","real_postgres_fenced_promotion",
             "exact_three_facts_single_fenced_transaction","controller_attestation_after_promotion",
