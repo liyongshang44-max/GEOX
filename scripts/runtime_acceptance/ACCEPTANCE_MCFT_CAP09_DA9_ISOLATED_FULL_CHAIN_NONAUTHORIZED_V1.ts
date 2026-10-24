@@ -520,8 +520,8 @@ async function main():Promise<void>{
     }
     if(!failClosed)throw new Error("PHASE7_COMPOSITION_PREMUTATION_FAILURE_MUST_FAIL_CLOSED");
 
-    const sourcePaths=(createRequire(import.meta.url)(
-      "../governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs"
+    const sourcePaths=(createRequire(path.join(ROOT,"package.json"))(
+      "./scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs"
     ) as {SOURCE_PATHS:readonly string[]}).SOURCE_PATHS;
     const sourceHashes=Object.fromEntries(sourcePaths.map(file=>[
       file,crypto.createHash("sha256").update(fs.readFileSync(ROOT+"/"+file)).digest("hex"),
