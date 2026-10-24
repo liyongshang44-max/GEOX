@@ -258,7 +258,7 @@ async function main():Promise<void>{
   const pool=new Pool({connectionString:serviceUrl.toString(),max:8});
   try {
     const actualDb = String((await adminPool.query("SELECT current_database() AS db")).rows[0]?.db ?? "");
-    if (actualDb !== "mcft_cap09_requal_"+TEST_RUN_ID) {
+    if (actualDb !== "mcft_cap09_requal_"+TEST_RUN_ID+"_positive") {
       throw new Error("CAP09_NONAUTHORIZED_E2E_PG_CONNECTION_REBIND_FORBIDDEN");
     }
     await reset(adminPool);
@@ -538,7 +538,7 @@ async function main():Promise<void>{
       authorization:"NON_AUTHORIZED_ISOLATED_ENGINEERING_TEST_ONLY",
       test_run_id:TEST_RUN_ID,
       isolated_s3_bucket:s3.bucket,
-      pg_database:"mcft_cap09_requal_"+TEST_RUN_ID,
+      pg_database:"mcft_cap09_requal_"+TEST_RUN_ID+"_positive",
       permit_signed:false,
       permit_consumed:false,
       stage_count:0,
