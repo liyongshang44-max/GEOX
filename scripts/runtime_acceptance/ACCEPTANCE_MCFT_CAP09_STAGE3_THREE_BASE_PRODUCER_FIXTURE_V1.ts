@@ -160,10 +160,10 @@ class FixtureDecoder implements ExternalEvidenceDecoderPortV1{
     if(this.kind==="SOIL"){
       return [{
         role:"SOIL_MOISTURE_OBSERVATION",
-        source_record_id:"phase7-composition-soil-001",
+        source_record_id:"phase7-composition-soil-" + this.base.replace(/[^0-9]/g,""),
         binding_id:MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
         origin_source_kind:"CONTROLLED_ENGINEERING_FIXTURE",
-        origin_source_id:"phase7-composition-soil",
+        origin_source_id:"phase7-composition-soil-"+this.base.replace(/[^0-9]/g,""),
         epistemic_class:"OBSERVED",
         ...common,
         role_time:{observed_at:addHours(this.base,-3),ingested_at:this.ingestedAt},
@@ -173,10 +173,10 @@ class FixtureDecoder implements ExternalEvidenceDecoderPortV1{
     return [
       {
         role:"FUTURE_WEATHER_ASSUMPTION",
-        source_record_id:"phase7-composition-weather-001",
+        source_record_id:"phase7-composition-weather-" + this.base.replace(/[^0-9]/g,""),
         binding_id:MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
         origin_source_kind:"CONTROLLED_ENGINEERING_FIXTURE",
-        origin_source_id:"phase7-composition-weather",
+        origin_source_id:"phase7-composition-weather-"+this.base.replace(/[^0-9]/g,""),
         epistemic_class:"ASSUMED",
         ...common,
         role_time:{
@@ -197,10 +197,10 @@ class FixtureDecoder implements ExternalEvidenceDecoderPortV1{
       },
       {
         role:"FUTURE_ET0_ASSUMPTION",
-        source_record_id:"phase7-composition-et0-001",
+        source_record_id:"phase7-composition-et0-" + this.base.replace(/[^0-9]/g,""),
         binding_id:MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
         origin_source_kind:"CONTROLLED_ENGINEERING_FIXTURE",
-        origin_source_id:"phase7-composition-et0",
+        origin_source_id:"phase7-composition-et0-"+this.base.replace(/[^0-9]/g,""),
         epistemic_class:"ASSUMED",
         ...common,
         role_time:{
@@ -340,13 +340,13 @@ async function main():Promise<void>{
       "https://kbs.example.invalid/soil",
       "application/json",
       availableAt,
-      Buffer.from("phase7-composition-soil-raw-v1","utf8"),
+      Buffer.from("phase7-composition-soil-raw-v1:"+firstBase,"utf8"),
     );
     const gfsTransport=new FixtureTransport(
       "https://nomads.example.invalid/gfs",
       "application/x-tar",
       availableAt,
-      Buffer.from("phase7-composition-gfs-raw-v1","utf8"),
+      Buffer.from("phase7-composition-gfs-raw-v1:"+firstBase,"utf8"),
     );
     const workFactory={
       buildForTarget(input:{
