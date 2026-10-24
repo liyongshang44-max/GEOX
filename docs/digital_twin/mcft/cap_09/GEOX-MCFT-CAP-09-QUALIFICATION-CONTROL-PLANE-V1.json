@@ -1458,6 +1458,7 @@
         "apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-CONSUMED-ATTEMPT-AUDIT-2026-10-24.md",
         "scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs",
         "scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs",
         "scripts/governance_acceptance/SIGN_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_ATTESTATION_V1.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts",
