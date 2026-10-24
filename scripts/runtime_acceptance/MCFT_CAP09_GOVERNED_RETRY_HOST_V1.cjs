@@ -176,6 +176,17 @@ function assertFreshParentReadback(readback,now=Date.now()){
 // Synthetic acceptance calls the identical boundary only with fixture state.
 function assertParentPreflightNoEffects(h,now=Date.now()){
  assert(h&&h.targets&&h.bundle,"RETRY_PARENT_PREFLIGHT_CONTEXT_REQUIRED");
+ // Irreversible Permit consumption is forbidden until a *separately signed*
+ // real S3 -> candidate -> PG commit -> readback test has been reviewed.
+ // CI green, constructor tests and an unsigned PASS boolean are not authority.
+ // Parent only; no stage child can synthesize or waive this requirement.
+ if(h.signedActivation){
+  require("../governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs").verify({
+   binding:h.bundle.observed.non_authorized_full_chain_evidence,
+   trust:h.trust,subjectSha:h.arm.protected_main_sha,
+   attemptRunId:h.arm.run_id,sourceRoot:ROOT,now
+  });
+ }
  assert(!fs.existsSync(h.targets.out),"RETRY_NEW_OUTPUT_REQUIRED");
  assertFreshParentReadback(h.bundle.observed.fresh_readback,now);
  return true;
