@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
+import {createRequire} from "node:module";
 import { Pool } from "pg";
 
 import {
@@ -519,15 +520,9 @@ async function main():Promise<void>{
     }
     if(!failClosed)throw new Error("PHASE7_COMPOSITION_PREMUTATION_FAILURE_MUST_FAIL_CLOSED");
 
-    const sourcePaths=[
-      "apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts",
-      "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts",
-      "scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts",
-      "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts",
-      "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts",
-      "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts",
-      "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
-    ];
+    const sourcePaths=(createRequire(import.meta.url)(
+      "../governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs"
+    ) as {SOURCE_PATHS:readonly string[]}).SOURCE_PATHS;
     const sourceHashes=Object.fromEntries(sourcePaths.map(file=>[
       file,crypto.createHash("sha256").update(fs.readFileSync(ROOT+"/"+file)).digest("hex"),
     ]));
