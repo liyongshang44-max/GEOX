@@ -1449,6 +1449,22 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_SIGNED_HOST_BRIDGE_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_PARENT_SYNTHETIC_V1.cjs"
       ]
+    },
+    "DA9_NONAUTHORIZED_PHYSICAL_FULL_CHAIN_PREPERMIT_20261024_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap09-da9-nonauthorized-real-s3-pg-full-chain.yml",
+        "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts",
+        "apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-CONSUMED-ATTEMPT-AUDIT-2026-10-24.md",
+        "scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs",
+        "scripts/governance_acceptance/SIGN_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_ATTESTATION_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts"
+      ]
     }
   },
   "checks": [
@@ -3089,6 +3105,33 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/cap09_adoption_v1/acceptance.cjs --bundle synthetic-proof-bundle"
+    },
+    {
+      "check_id": "DA9_NONAUTHORIZED_PHYSICAL_FULL_CHAIN_PREPERMIT_ENGINEERING_ONLY",
+      "owner": "MCFT_CAP09_ISOLATED_QUALIFICATION_PHYSICAL_INTEGRATION",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-CONSUMED-ATTEMPT-AUDIT-2026-10-24.md"
+      ],
+      "resolver_ids": [
+        "DA9_NONAUTHORIZED_PHYSICAL_FULL_CHAIN_PREPERMIT_20261024_V1"
+      ],
+      "historical_evidence_policy": "CONSUMED_DA9_IMMUTABLE_READONLY_NO_S3_PG_REPLAY_AND_NO_PERMIT_REUSE",
+      "execution_workflow": ".github/workflows/mcft-cap09-da9-nonauthorized-real-s3-pg-full-chain.yml",
+      "execution_workflow_status": "NONAUTHORIZED_REAL_MINIO_POSTGRES_ENGINEERING_ONLY_NOT_EXECUTION_AUTHORITY",
+      "fail_policy": "FAIL_CLOSED_REAL_S3_CANDIDATE_FENCED_PG_COMMIT_POSTCOMMIT_READBACK_PLUS_ED25519_ATTESTATION",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "DA9_NONAUTHORIZED_PHYSICAL_FULL_CHAIN_PREPERMIT_20261024_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts"
     }
   ],
   "non_effects": {
