@@ -1,0 +1,132 @@
+name: mcft-cap09-da9-nonauthorized-real-s3-pg-full-chain
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts'
+      - 'scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'
+      - 'scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs'
+      - '.github/workflows/mcft-cap09-da9-nonauthorized-real-s3-pg-full-chain.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-nonauthorized-s3-to-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable-only-not-production
+          POSTGRES_DB: mcft_cap09_non_auth_e2e_abcdef012345
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_non_auth_e2e_abcdef012345"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CI: 'true'
+      CAP09_NONAUTHORIZED_E2E_EXCLUSIVE_DESTRUCTIVE_TEST: '1'
+      CAP09_NONAUTHORIZED_E2E_RUN_ID: abcdef012345
+      DATABASE_URL: postgres://postgres:disposable-only-not-production@127.0.0.1:5432/mcft_cap09_non_auth_e2e_abcdef012345
+      PHASE7_PRIVATE_S3_ENDPOINT: http://127.0.0.1:9000
+      PHASE7_PRIVATE_S3_BUCKET: mcft-cap09-requal-abcdef012345
+      PHASE7_PRIVATE_S3_REGION: us-east-1
+      PHASE7_PRIVATE_S3_ACCESS_KEY_ID: cap09testonly
+      PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY: disposable-s3-key-no-production-001
+    steps:
+      - name: Checkout exact candidate (never production)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+          cache: pnpm
+      - name: Install exact locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Reject authorization or production namespace
+        run: |
+          set -euo pipefail
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${MCFT_GOVERNED_RETRY_TICKET:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+          test -z "${MCFT_CAP09_FORMAL_RAW_BUCKET:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:-}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+      - name: Compile exact changed graph
+        run: |
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts \
+            apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts
+      - name: Test production strict guard and isolated negative cases
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts
+      - name: Start throwaway real MinIO (no production account or storage)
+        run: |
+          set -euo pipefail
+          docker run -d --name cap09-da9-nonauthorized-contract-minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=cap09testonly \
+            -e MINIO_ROOT_PASSWORD=disposable-s3-key-no-production-001 \
+            ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
+          docker run --rm --network host --entrypoint /bin/sh \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -ceu '
+              mc alias set nonauth http://127.0.0.1:9000 cap09testonly disposable-s3-key-no-production-001
+              mc mb nonauth/mcft-cap09-requal-abcdef012345
+              mc anonymous set private nonauth/mcft-cap09-requal-abcdef012345
+            '
+      - name: Real S3 retention, candidate readback, fenced PG commit, physical attestation
+        env:
+          CAP09_E2E_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts
+      - name: Independently validate physical evidence and no Permit
+        shell: node {0}
+        run: |
+          const fs=require("node:fs");
+          const p=JSON.parse(fs.readFileSync("acceptance-output/MCFT_CAP09_DA9_ISOLATED_NONAUTHORIZED_FULL_CHAIN_V1_RESULT.json","utf8"));
+          if(p.status!=="PASS"||p.schema_version!=="geox_mcft_cap09_isolated_non_authorized_full_chain_contract_v1")throw Error("NOT_REAL_INTEGRATION_PASS");
+          if(p.subject_sha!=="${{ github.event.pull_request.head.sha || github.sha }}")throw Error("E2E_HEAD_MISMATCH");
+          if(p.isolated_s3_bucket!=="mcft-cap09-requal-abcdef012345"||p.pg_database!=="mcft_cap09_non_auth_e2e_abcdef012345")throw Error("TEST_RESOURCE_ID_CHANGED");
+          for(const k of ["private_raw_retention_real_s3_verified","candidate_manifest_private_readback",
+            "post_commit_physical_readback_verified","real_postgres_fenced_promotion",
+            "exact_three_facts_single_fenced_transaction","controller_attestation_after_promotion",
+            "cursor_advanced_only_after_attestation"])if(p[k]!==true)throw Error("FULL_CHAIN_MISSING:"+k);
+          for(const k of ["permit_signed","permit_consumed","production_authorized","production_owner_activation","formal_v5_armed","o00_started"])if(p[k]!==false)throw Error("ACCIDENTAL_AUTHORITY:"+k);
+          if(p.real_postgres_formal_fact_present_count!==3||p.capture_raw_object_count!==2
+             ||p.candidate_semantic_record_count!==3||p.stage_count!==0)throw Error("FULL_CHAIN_WRONG_CARDINALITY");
+          console.log("REAL_NONAUTHORIZED_S3_PG_FULL_CHAIN_PHYSICAL_RECEIPT_PASS_NOT_EXECUTION_AUTHORITY");
+      - name: Stop throwaway MinIO
+        if: always()
+        run: docker rm -f cap09-da9-nonauthorized-contract-minio >/dev/null 2>&1 || true
+      - name: Retain real physical receipt for independent review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: da9-nonauthorized-physical-full-chain-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP09_DA9_ISOLATED_NONAUTHORIZED_FULL_CHAIN_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
