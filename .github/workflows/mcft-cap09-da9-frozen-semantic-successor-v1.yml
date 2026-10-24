@@ -16,7 +16,7 @@ permissions:
 jobs:
   review-candidate-isolated-scope-not-adoption:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,6 +40,7 @@ jobs:
       - name: Collect real six-workflow run and artifact metadata without signing
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          DA9_EVIDENCE_WAIT_SECONDS: "1600"
         shell: bash
         run: |
           set -euo pipefail

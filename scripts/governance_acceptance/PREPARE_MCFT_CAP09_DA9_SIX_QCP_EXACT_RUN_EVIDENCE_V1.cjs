@@ -59,34 +59,49 @@ async function proofAtExactRun(check,runId,subject){
  const candidates=(artifacts.artifacts||[]).filter(a=>a.workflow_run?.id===runId&&!a.expired
   &&typeof a.digest==="string"&&/^sha256:[a-f0-9]{64}$/.test(a.digest));
  assert(candidates.length>0,"IMMUTABLE_GITHUB_ARTIFACT_MISSING");
- const selected=candidates.sort((a,b)=>a.id-b.id)[0];
+ assert.equal(candidates.length,1,"AMBIGUOUS_EXACT_RUN_ARTIFACTS");
+ const selected=candidates[0];
  return {id:runId,workflow_path:run.path,artifact_id:selected.id,artifact_name:selected.name,artifact_sha256:selected.digest.slice(7),url:run.html_url};
 }
 async function collect(output){
  assert.equal(process.env.CI,"true","EVIDENCE_COLLECTION_CI_ONLY");
  const h=head(),d=decisions(),cfg=read(C);
+ const seconds=Number(process.env.DA9_EVIDENCE_WAIT_SECONDS||0);
+ assert(Number.isInteger(seconds)&&seconds>=0&&seconds<=1800,"WAIT_BOUND_INVALID");
+ const deadline=Date.now()+seconds*1000;
  const data={schema_version:"geox_mcft_cap09_da9_six_qcp_unsigned_workflow_review_request_v1",
-  status:"HOLD_PENDING_INDEPENDENT_OPERATOR_SIGNATURE",subject_sha:h,base_sha:BASE,run_candidates:[],missing:[],
+  status:"HOLD_MISSING_EXACT_HEAD_FULL_PROOFS",subject_sha:h,base_sha:BASE,run_candidates:[],missing:[],
   authorization:false,permit_signed:false,permit_consumed:false};
- const runs=await api("/actions/runs?head_sha="+h+"&event=pull_request&per_page=100");
- for(const id of verify.required){
-  const match=(runs.workflow_runs||[]).filter(x=>x.path===cfg.proof_workflow_by_check[id]&&x.head_sha===h&&x.conclusion==="success");
-  if(match.length!==1){data.missing.push({check_id:id,reason:"ZERO_OR_AMBIGUOUS_EXACT_HEAD_SUCCEEDED_RUNS",count:match.length});continue;}
-  try{
-   const ci=await proofAtExactRun(id,match[0].id,h),dep=d.get(id);
-   assert(dep,"QCP_DECISION_NOT_PRESENT");
-   data.run_candidates.push({check_id:id,subject_sha:h,stage:"SUCCESSOR_SUBJECT_PRE_MERGE",
-    dependency_digest:dep.dependency_digest,source_blob_sha256:materialDigest(id,h),
-    run_head_sha:h,run_base_sha:BASE,run_conclusion:"success",run_id:ci.id,workflow_path:ci.workflow_path,
-    artifact_sha256:ci.artifact_sha256,artifact_id:ci.artifact_id,artifact_name:ci.artifact_name,source_url:ci.url,
-    operator_review_status:"UNSIGNED_NOT_AUTHORITY"});
-  }catch(error){data.missing.push({check_id:id,reason:String(error.message||error)});}
+ for(;;){
+  data.run_candidates=[];data.missing=[];
+  const response=await api("/actions/runs?head_sha="+h+"&event=pull_request&per_page=100");
+  for(const id of verify.required){
+   const runs=(response.workflow_runs||[]).filter(r=>r.path===cfg.proof_workflow_by_check[id]&&r.head_sha===h)
+    .sort((a,b)=>b.id-a.id);
+   const latest=runs[0];
+   if(!latest){data.missing.push({check_id:id,reason:"EXACT_HEAD_WORKFLOW_NOT_VISIBLE"});continue;}
+   if(latest.status!=="completed"){data.missing.push({check_id:id,reason:"LATEST_RUN_NOT_TERMINAL",run_id:latest.id,status:latest.status});continue;}
+   if(latest.conclusion!=="success"){data.missing.push({check_id:id,reason:"LATEST_RUN_NOT_SUCCESS",run_id:latest.id,conclusion:latest.conclusion});continue;}
+   try{
+    const ci=await proofAtExactRun(id,latest.id,h),dep=d.get(id);
+    assert(dep&&/^sha256:[a-f0-9]{64}$/.test(dep.dependency_digest||""),"DEPENDENCY_DIGEST_NOT_CURRENT");
+    data.run_candidates.push({check_id:id,subject_sha:h,stage:"SUCCESSOR_SUBJECT_PRE_MERGE",
+     dependency_digest:dep.dependency_digest,source_blob_sha256:materialDigest(id,h),
+     run_head_sha:h,run_base_sha:BASE,run_conclusion:"success",run_id:ci.id,workflow_path:ci.workflow_path,
+     artifact_sha256:ci.artifact_sha256,artifact_id:ci.artifact_id,artifact_name:ci.artifact_name,
+     source_url:ci.url,operator_review_status:"UNSIGNED_NOT_AUTHORITY"});
+   }catch(e){data.missing.push({check_id:id,reason:String(e.message||e)});}
+  }
+  if(!data.missing.length||Date.now()>=deadline)break;
+  await new Promise(resolve=>setTimeout(resolve,20000));
  }
+ data.status=data.missing.length?"HOLD_MISSING_EXACT_HEAD_FULL_PROOFS":"HOLD_PENDING_INDEPENDENT_OPERATOR_SIGNATURE";
  assert(path.isAbsolute(output)&&path.resolve(output).startsWith(path.join(ROOT,"acceptance-output")+path.sep),"OUTPUT_MUST_BE_IN_ACCEPTANCE_OUTPUT");
  fs.mkdirSync(path.dirname(output),{recursive:true});
  fs.writeFileSync(output,JSON.stringify(data,null,2)+"\n",{flag:"wx",mode:0o600});
- console.log(JSON.stringify({status:data.status,exact_subject_sha:h,candidates:data.run_candidates.length,
-  missing:data.missing,output,permit_signed:false}));
+ console.log(JSON.stringify({status:data.status,subject_sha:h,candidates:data.run_candidates.length,
+  missing:data.missing,output,permit_signed:false,permit_consumed:false}));
+ if(data.missing.length)process.exitCode=1;
 }
 async function assemble(inputDir,output){
  const sc=verify.scope(),h=head(),d=decisions(),reg=read(E),all=[];
