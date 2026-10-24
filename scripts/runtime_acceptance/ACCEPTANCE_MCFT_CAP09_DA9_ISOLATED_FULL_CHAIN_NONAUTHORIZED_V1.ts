@@ -235,7 +235,7 @@ async function main():Promise<void>{
   const databaseUrl=required("DATABASE_URL");
   const dbUrl=new URL(databaseUrl);
   if (!["127.0.0.1","localhost","[::1]"].includes(dbUrl.hostname)
-      || decodeURIComponent(dbUrl.pathname.replace(/^\\/+/, "")) !== "mcft_cap09_non_auth_e2e_"+TEST_RUN_ID
+      || decodeURIComponent(dbUrl.pathname.slice(1)) !== "mcft_cap09_non_auth_e2e_"+TEST_RUN_ID
       || dbUrl.search || dbUrl.hash) {
     throw new Error("CAP09_NONAUTHORIZED_E2E_DEDICATED_TEST_PG_REQUIRED");
   }
