@@ -27,7 +27,8 @@ function verifySource(root=ROOT){
   const historical=cp.execFileSync("git",["rev-parse",c.frozen_pr_3730_head_sha+":"+item.original_entry_script],{cwd:root,encoding:"utf8"}).trim();
   assert.equal(historical,item.original_entry_git_blob_sha,"ORIGINAL_FROZEN_STAGE_BLOB_INVALID:"+item.id);
   assert.equal(git,historical,"CURRENT_STAGE_BODY_CHANGED:"+item.id);
-  assert(sha(real(source)).length===64);
+  const workingBlob=cp.execFileSync("git",["hash-object","--",item.original_entry_script],{cwd:root,encoding:"utf8"}).trim();
+  assert.equal(workingBlob,historical,"STAGE3_ORIGINAL_WORKTREE_ENTRY_BYTES_CHANGED:"+item.id);
  }
  return c;
 }
@@ -91,9 +92,9 @@ function verifyReceipt(root,dir,opts={}){
   prev=sha(real(receiptFile));stages.push(stage.id);
  }
  return {...result,stage_count:6,real_bodies_verified:stages,
-  status:"SIX_REAL_BODY_RECEIPTS_STRUCTURALLY_VALID_AWAITING_INDEPENDENT_HOST_REVIEW",
+  status:"SIX_CLAIMED_BODY_RECEIPTS_STRUCTURALLY_VALID_NOT_INDEPENDENT_EXECUTION_PROOF",
   reason_code:"STRUCTURAL_RECEIPTS_NOT_AUTHORIZATION",
-  qualified:false,operator_signature_required:true,real_provider_pipeline_delay_proven:false};
+  qualified:false,operator_signature_required:true,execution_process_identity_verified:false,real_provider_pipeline_delay_proven:false};
 }
 module.exports={verifySource,verifyReceipt,CONTRACT};
 if(require.main===module){
