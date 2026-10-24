@@ -23,10 +23,11 @@ const api=async p=>{
 function decisions(){
  const sc=verify.scope(),h=head(),p=require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs");
  const authority=read(Q),registry=read("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json");
- const changed=git("diff","--name-only",authority.frozen_successor_subject_sha+"..."+h).split(/\r?\n/).filter(Boolean);
+ assert.equal(git("merge-base",BASE,h),BASE,"EXACT_DA9_ADOPTED_MAIN_BASE_NOT_ANCESTOR");
+ const changed=git("diff","--name-only",BASE+"..."+h).split(/\r?\n/).filter(Boolean);
  const ctx=p.prepareApplicabilityContext({root:ROOT,authority,registry,generation:"v13",headSha:h});
  const result=p.planApplicability({root:ROOT,authority,registry,changedPaths:changed,
- stage:"SUCCESSOR_SUBJECT_PRE_MERGE",generation:"v13",baseSha:authority.frozen_successor_subject_sha,headSha:h,preparedContext:ctx});
+ stage:"SUCCESSOR_SUBJECT_PRE_MERGE",generation:"v13",baseSha:BASE,headSha:h,preparedContext:ctx});
  assert.equal(result.status,"PASS","GOVERNED_APPLICABILITY_PLAN_NOT_PASS:"+JSON.stringify({
   unknown_changed_paths:result.unknown_changed_paths,
   authority_errors:result.authority_errors,
