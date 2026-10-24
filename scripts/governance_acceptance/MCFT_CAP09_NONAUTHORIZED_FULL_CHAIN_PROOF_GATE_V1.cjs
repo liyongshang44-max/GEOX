@@ -29,6 +29,9 @@ const SOURCE_PATHS=Object.freeze([
   "scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
   "scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs",
+  ".github/workflows/mcft-cap09-da9-nonauthorized-real-s3-pg-full-chain.yml",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs",
+  "scripts/governance_acceptance/SIGN_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_ATTESTATION_V1.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs",
   "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
 ]);
