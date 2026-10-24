@@ -1,33 +1,160 @@
 {
   "schema_version": "geox_mcft_cap09_da9_six_check_evidence_v1",
   "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-FROZEN-SEMANTIC-SUCCESSOR-V1.json",
-  "registration_state": "EVIDENCE_PENDING_NOT_QUALIFIED",
+  "registration_state": "SIX_SIGNED_EXACT_SOURCE_CHECKS_CANDIDATE_FOR_PR_REVIEW",
   "subject_source_sha": "ff0183347e783d9e2d35ebdee91c28d4d903aac2",
   "checks": {
     "V13_AUTONOMOUS_FORCING_FOUNDATION": {
-      "status": "PENDING",
-      "verified_evidence_ref": null
+      "status": "SIGNED_REVIEW_VERIFIED",
+      "verified_evidence_ref": "208d208cc7f3e976338749309af7fda0b322bca925f606499a4e64a09dac2dcf"
     },
     "V13_HOLISTIC_SCHEMA": {
-      "status": "PENDING",
-      "verified_evidence_ref": null
+      "status": "SIGNED_REVIEW_VERIFIED",
+      "verified_evidence_ref": "70619f5313e7bdde93c7a2efad099acb891fe6b822ff3c4ef260a96cc86f651e"
     },
     "V13_NEXT_TICK_VIABILITY": {
-      "status": "PENDING",
-      "verified_evidence_ref": null
+      "status": "SIGNED_REVIEW_VERIFIED",
+      "verified_evidence_ref": "7edc2a65bb33f898d95ffdb463d90c186d58b3ebc01bf6c4da6ec0b94f2b226b"
     },
     "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS": {
-      "status": "PENDING",
-      "verified_evidence_ref": null
+      "status": "SIGNED_REVIEW_VERIFIED",
+      "verified_evidence_ref": "a7420629b26a95e781f32f1aa75121c07bc65ffc5f6d6467dbb8bf3638100f45"
     },
     "PHASE3_EVIDENCE_RUNTIME_FOUNDATION": {
-      "status": "PENDING",
-      "verified_evidence_ref": null
+      "status": "SIGNED_REVIEW_VERIFIED",
+      "verified_evidence_ref": "14ed90a2d702979a75bf2023195eed1a7439b7b18e3bf39fc1f65c8d0112075a"
     },
     "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION": {
-      "status": "PENDING",
-      "verified_evidence_ref": null
+      "status": "SIGNED_REVIEW_VERIFIED",
+      "verified_evidence_ref": "992b71fbb188f1476ff112588b26dde7256a444b0db886ff216ddbd67ee00dc7"
     }
   },
-  "entries": []
+  "entries": [
+    {
+      "payload": {
+        "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+        "subject_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "dependency_digest": "sha256:08361c4ee5a17a95c2834bcd48d5b67a1a8a68d3c1875132785d60db496c0e14",
+        "workflow_path": ".github/workflows/mcft-cap09-da9-ea5c1-semantic-successor-ephemeral-v1.yml",
+        "run_id": 40079523451,
+        "run_head_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "run_base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+        "run_conclusion": "success",
+        "artifact_sha256": "a7420629b26a95e781f32f1aa75121c07bc65ffc5f6d6467dbb8bf3638100f45",
+        "source_blob_sha256": "5a641ca1ff15762243e9d86f26c62eb28a3bce8229cf0cf8da82bc5e693543ab",
+        "signed_at": "2026-10-24T09:08:45.236Z",
+        "issuer_id": "mcft_cap09_operator_mylr1",
+        "key_id": "mcft_cap09_ed25519_223c806e",
+        "production_authorized": false,
+        "permit_consumed": false
+      },
+      "signature_base64": "0XsX9/6K6667E9zIKGQ2V8ph4Epky1+tcBK4+k4myhYe56GcNOzwkQYd/Asn+V09rcooYdj1iFFXbd0VD7PgBw=="
+    },
+    {
+      "payload": {
+        "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+        "subject_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "dependency_digest": "sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+        "run_id": 40079523329,
+        "run_head_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "run_base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+        "run_conclusion": "success",
+        "artifact_sha256": "14ed90a2d702979a75bf2023195eed1a7439b7b18e3bf39fc1f65c8d0112075a",
+        "source_blob_sha256": "eb54bf64d15a01659d8ab5df4c23efc76b0a4aeb898e415536ef98581a10caaf",
+        "signed_at": "2026-10-24T09:08:45.237Z",
+        "issuer_id": "mcft_cap09_operator_mylr1",
+        "key_id": "mcft_cap09_ed25519_223c806e",
+        "production_authorized": false,
+        "permit_consumed": false
+      },
+      "signature_base64": "aq/rxqxzwEexycG2PJtqGMPQNmV/D7HYrp3HBLTpZQzgPJSX1aTTN5vOOQ+jCMLruQaPSDPuEIA3RFc2RhR9AA=="
+    },
+    {
+      "payload": {
+        "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+        "subject_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "dependency_digest": "sha256:bd264e15a0591ccf281bb67d7c465ca5a8169e246a73b6e7c3be533e0364c81b",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
+        "run_id": 40079523570,
+        "run_head_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "run_base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+        "run_conclusion": "success",
+        "artifact_sha256": "992b71fbb188f1476ff112588b26dde7256a444b0db886ff216ddbd67ee00dc7",
+        "source_blob_sha256": "59d4f1b8ec220cf7d91948ebc5944aa3af01267ec7fb8cb789819e941412f4b7",
+        "signed_at": "2026-10-24T09:08:45.238Z",
+        "issuer_id": "mcft_cap09_operator_mylr1",
+        "key_id": "mcft_cap09_ed25519_223c806e",
+        "production_authorized": false,
+        "permit_consumed": false
+      },
+      "signature_base64": "wnRG0eLtoCzdUnQQE05DGEXy17J60nsOQxSZd7dOPEWBw7U2vf0kcVTMVnesVbtNPi/AMzzxjwkleqSbv2NpCA=="
+    },
+    {
+      "payload": {
+        "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+        "subject_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "dependency_digest": "sha256:9efd03705e32adb877378b62e47597f5a6eaf7c0005df89eb956ad8320cbd1e5",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+        "run_id": 40079523539,
+        "run_head_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "run_base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+        "run_conclusion": "success",
+        "artifact_sha256": "208d208cc7f3e976338749309af7fda0b322bca925f606499a4e64a09dac2dcf",
+        "source_blob_sha256": "4609ab8800265f97e6839b60f01cbcdf8df899c555b916fde6c78f26c1c5ddd1",
+        "signed_at": "2026-10-24T09:08:45.210Z",
+        "issuer_id": "mcft_cap09_operator_mylr1",
+        "key_id": "mcft_cap09_ed25519_223c806e",
+        "production_authorized": false,
+        "permit_consumed": false
+      },
+      "signature_base64": "GbDFfbKLblV4Ble7yAtOLyuplLWV5mgcITdCccXA5yIvv6qrwwl/vH9DVAeS/WcLgAKxJXOeIs4BZNCplGmsCw=="
+    },
+    {
+      "payload": {
+        "check_id": "V13_HOLISTIC_SCHEMA",
+        "subject_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "dependency_digest": "sha256:9efd03705e32adb877378b62e47597f5a6eaf7c0005df89eb956ad8320cbd1e5",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+        "run_id": 40079523369,
+        "run_head_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "run_base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+        "run_conclusion": "success",
+        "artifact_sha256": "70619f5313e7bdde93c7a2efad099acb891fe6b822ff3c4ef260a96cc86f651e",
+        "source_blob_sha256": "4609ab8800265f97e6839b60f01cbcdf8df899c555b916fde6c78f26c1c5ddd1",
+        "signed_at": "2026-10-24T09:08:45.235Z",
+        "issuer_id": "mcft_cap09_operator_mylr1",
+        "key_id": "mcft_cap09_ed25519_223c806e",
+        "production_authorized": false,
+        "permit_consumed": false
+      },
+      "signature_base64": "iXid+I84YHChRlacTGSC24By7eHLK4jyWsUPvYjS11Sv7SA15SZIaf6PfCsMJ18xyi5diw65p/Qi2vqPL0GTAQ=="
+    },
+    {
+      "payload": {
+        "check_id": "V13_NEXT_TICK_VIABILITY",
+        "subject_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "dependency_digest": "sha256:9efd03705e32adb877378b62e47597f5a6eaf7c0005df89eb956ad8320cbd1e5",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+        "run_id": 40079523501,
+        "run_head_sha": "0d9c24a8495d5afdd680bda16531bbd39c542350",
+        "run_base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+        "run_conclusion": "success",
+        "artifact_sha256": "7edc2a65bb33f898d95ffdb463d90c186d58b3ebc01bf6c4da6ec0b94f2b226b",
+        "source_blob_sha256": "4609ab8800265f97e6839b60f01cbcdf8df899c555b916fde6c78f26c1c5ddd1",
+        "signed_at": "2026-10-24T09:08:45.236Z",
+        "issuer_id": "mcft_cap09_operator_mylr1",
+        "key_id": "mcft_cap09_ed25519_223c806e",
+        "production_authorized": false,
+        "permit_consumed": false
+      },
+      "signature_base64": "o63UexNWuMfNrnQCJHF274KRsBP8DvJLTTO98pgekVlNnIA7Czu3jf38wYardYTyDYzwGelixw+4XgH1romVCQ=="
+    }
+  ]
 }
