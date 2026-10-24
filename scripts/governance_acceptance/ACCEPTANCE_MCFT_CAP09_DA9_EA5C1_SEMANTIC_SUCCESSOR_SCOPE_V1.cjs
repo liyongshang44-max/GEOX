@@ -20,7 +20,7 @@ for(const k of forbidden)assert(!process.env[k],"EA5C1_SUCCESSOR_AUTHORIZED_RUNT
 const head=git("rev-parse","HEAD");
 assert(/^[a-f0-9]{40}$/.test(head));assert.equal(git("merge-base",BASE,head),BASE,"ADOPTED_BASE_NOT_ANCESTOR");
 const scoped=require("./VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs").scope();
-assert.equal(scoped.status,"ISOLATED_SEMANTIC_DELTA_PINN_NOT_QCP_PASS");
+assert.equal(scoped.status,"ISOLATED_SEMANTIC_DELTA_PINNED_NOT_QCP_PASS");
 assert.equal(scoped.subject_sha,head);
 const bindings=files.map(file=>{
  const old=git("rev-parse",BASE+":"+file),fresh=git("rev-parse",head+":"+file);

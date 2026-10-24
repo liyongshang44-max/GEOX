@@ -27,7 +27,13 @@ function decisions(){
  const ctx=p.prepareApplicabilityContext({root:ROOT,authority,registry,generation:"v13",headSha:h});
  const result=p.planApplicability({root:ROOT,authority,registry,changedPaths:changed,
  stage:"SUCCESSOR_SUBJECT_PRE_MERGE",generation:"v13",baseSha:authority.frozen_successor_subject_sha,headSha:h,preparedContext:ctx});
- assert.equal(result.status,"PASS","GOVERNED_APPLICABILITY_PLAN_NOT_PASS");
+ assert.equal(result.status,"PASS","GOVERNED_APPLICABILITY_PLAN_NOT_PASS:"+JSON.stringify({
+  unknown_changed_paths:result.unknown_changed_paths,
+  authority_errors:result.authority_errors,
+  resolver_errors:result.resolver_errors,
+  blockers:result.blockers,
+  generation_context:result.generation_context,
+}).slice(0,2400));
  assert.equal(sc.subject_sha,h);
  return new Map(result.decisions.filter(x=>verify.required.includes(x.check_id)).map(x=>[x.check_id,x]));
 }
