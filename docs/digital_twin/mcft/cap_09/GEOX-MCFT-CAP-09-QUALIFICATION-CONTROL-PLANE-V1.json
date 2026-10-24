@@ -1463,6 +1463,7 @@
         "scripts/governance_acceptance/SIGN_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_ATTESTATION_V1.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_SIX_STAGE_CHAIN_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts"
       ]
