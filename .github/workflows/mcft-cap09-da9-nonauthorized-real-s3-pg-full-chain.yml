@@ -59,7 +59,7 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v4
         with:
-          node-version: '24.19.0'
+          node-version: '20.11.1'
           cache: pnpm
       - name: Install exact locked dependencies
         run: pnpm install --frozen-lockfile
