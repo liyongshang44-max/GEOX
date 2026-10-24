@@ -61,7 +61,7 @@ try{
  const options={binding,trust,subjectSha:SUBJECT,attemptRunId:ATTEMPT,sourceRoot:ROOT,now};
  const valid=gate.verify(options);
  assert.equal(valid.status,"FULL_CHAIN_PHYSICAL_INTEGRATION_SIGNED_REVIEW_VERIFIED_NOT_PERMIT_AUTHORITY");
- assert.equal(valid.execution_authorized,false);checks++;
+ assert.equal(valid.execute_authorized,false);assert.equal(valid.production_authorized,false);checks++;
  reject(()=>gate.verify({...options,binding:null}),/SIGNED_NONAUTHORIZED_EVIDENCE_REQUIRED/);
  reject(()=>gate.verify({...options,subjectSha:"e".repeat(40)}),/SUBJECT_CHANGED/);
  reject(()=>gate.verify({...options,attemptRunId:RUN}),/TEST_MUST_NOT_REUSE_EXECUTION/);
