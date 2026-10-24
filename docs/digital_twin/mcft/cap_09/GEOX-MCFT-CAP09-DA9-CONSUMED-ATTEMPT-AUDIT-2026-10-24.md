@@ -41,6 +41,13 @@ Required non-destructive readbacks, performed on the original Windows host **wit
 
 Readbacks confirm the counts described above; detailed mutation histories and independent signed forensic closure remain `NOT_FULLY_VERIFIED`. Do not report bucket four-zero after the failure or treat a zero facts count as zero operational mutation.
 
+## 2026-10-24 integration progression — exact subject and qualification boundaries
+- GitHub Actions `40065477424` **SUCCESS**, predecessor candidate `4b078abb61148957960d2cb1a660cac289609617`. The test ran **the real isolated Composer constructor and its actual production-primitive retention, candidate, raw-read and fenced PostgreSQL components**, with synthetic external transport/decoder fixtures and disposable MinIO/Postgres. Production exact-bucket guard and the accountable-signature negative proof test passed. This is proof of the S3-to-Postgres *component execution path*, not Windows-host equivalence or Provider live operation.
+- The earlier physical PASS at `1aaf0b2d` is separately retained; never carry it forward to an untested newer HEAD.
+- New `ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_SIX_STAGE_CHAIN_V1.cjs` uses the exact Scheduler and Stage Receipts modules, **only** an explicitly fake isolated scratch marker, and synthetic child stage bodies. It checks order, stage seals, chained digests, timing scratch signal and fail-closed stop at all six positions. **It does not invoke real Producer/Timing/Controlled Delay/Aggregate bodies**, real signed stage tickets, Permit signing, or Permit consumption.
+- Therefore the required Windows Node-24 host six-stage non-authorized rehearsal with REAL stage body adapters remains `NOT_PROVEN`. This is intentionally **not a Permit-ready full six-stage result**.
+- At no point may test success, unsigned fixture boolean, an approved PR, or green CI create a third-attempt governance right.
+
 ## New mandatory pre-Permit acceptance standard
 CI green, QCP PASS, isolated Composer creation, offline unit tests, credentials and signed Adoption are **necessary but not sufficient**. Prior to ANY new one-shot Permit:
 - In a separate non-authorized disposable test DB and isolated S3 bucket, exercise **the same scoped isolated Composer/retention/candidate/fenced-promotion implementation and configuration contract**, including genuine S3 PUT/HEAD and candidate GET, real PostgreSQL fenced routine, transaction COMMIT, read-after-commit physical visibility and cursor attestation. Controlled fixture provider inputs are allowed; replay of prior GFS/KBS or production capture is not needed.
