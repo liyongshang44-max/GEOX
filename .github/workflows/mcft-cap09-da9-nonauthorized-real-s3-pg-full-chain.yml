@@ -39,6 +39,7 @@ jobs:
       CAP09_NONAUTHORIZED_E2E_EXCLUSIVE_DESTRUCTIVE_TEST: '1'
       CAP09_NONAUTHORIZED_E2E_RUN_ID: abcdef012345
       DATABASE_URL: postgres://postgres:disposable-only-not-production@127.0.0.1:5432/mcft_cap09_non_auth_e2e_abcdef012345
+      CAP09_E2E_PG_ROLE_PASSWORD: isolated-e2e-password-no-production
       PHASE7_PRIVATE_S3_ENDPOINT: http://127.0.0.1:9000
       PHASE7_PRIVATE_S3_BUCKET: mcft-cap09-requal-abcdef012345
       PHASE7_PRIVATE_S3_REGION: us-east-1
@@ -111,11 +112,12 @@ jobs:
           if(p.status!=="PASS"||p.schema_version!=="geox_mcft_cap09_isolated_non_authorized_full_chain_contract_v1")throw Error("NOT_REAL_INTEGRATION_PASS");
           if(p.subject_sha!=="${{ github.event.pull_request.head.sha || github.sha }}")throw Error("E2E_HEAD_MISMATCH");
           if(p.isolated_s3_bucket!=="mcft-cap09-requal-abcdef012345"||p.pg_database!=="mcft_cap09_non_auth_e2e_abcdef012345")throw Error("TEST_RESOURCE_ID_CHANGED");
-          for(const k of ["private_raw_retention_real_s3_verified","candidate_manifest_private_readback",
+          for(const k of ["evidence_login_restricted","private_raw_retention_real_s3_verified","candidate_manifest_private_readback",
             "post_commit_physical_readback_verified","real_postgres_fenced_promotion",
             "exact_three_facts_single_fenced_transaction","controller_attestation_after_promotion",
             "cursor_advanced_only_after_attestation"])if(p[k]!==true)throw Error("FULL_CHAIN_MISSING:"+k);
           for(const k of ["permit_signed","permit_consumed","production_authorized","production_owner_activation","formal_v5_armed","o00_started"])if(p[k]!==false)throw Error("ACCIDENTAL_AUTHORITY:"+k);
+          if(p.evidence_direct_fact_insert_allowed!==false||p.evidence_fenced_writer_execute_allowed!==true)throw Error("EVIDENCE_WRITER_ACL_BYPASSED");
           if(p.real_postgres_formal_fact_present_count!==3||p.capture_raw_object_count!==2
              ||p.candidate_semantic_record_count!==3||p.stage_count!==0)throw Error("FULL_CHAIN_WRONG_CARDINALITY");
           console.log("REAL_NONAUTHORIZED_S3_PG_FULL_CHAIN_PHYSICAL_RECEIPT_PASS_NOT_EXECUTION_AUTHORITY");
