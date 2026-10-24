@@ -1095,6 +1095,17 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
     };
     return { entry, checks, valid: Object.values(checks).every(Boolean) };
   });
+  // The DA9 isolated-retention semantic successor never inherits the zero-delta
+  // 108-file historical Frozen V13 assertion. Six precisely named checks
+  // require independently signed, exact-head evidence; pending means HOLD.
+  // No existing legacy check is reclassified as PASS by this path.
+  const da9SemanticVerifier = path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs");
+  if (fs.existsSync(da9SemanticVerifier)) {
+    const successor = require("./VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs");
+    if (successor.required.includes(decision.check_id)) {
+      return successor.verifyRegisteredEvidence({decision,stage,head});
+    }
+  }
   const frozenSection = registry.frozen_v13_requalification_v1;
   if (frozenSection && fs.existsSync(path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs"))) {
     const fresh = require("./VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs").resolveFreshEvidence(decision, frozenSection, stage, head);
@@ -1538,6 +1549,23 @@ function main() {
           check_id: decision.check_id,
           detail: evidence,
         });
+      } else if (
+        decision.check_id === "PHASE3_EVIDENCE_RUNTIME_FOUNDATION" &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "2b63652297bb285f21c4d4c63c37d247d009142c" &&
+        fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs"))
+      ) {
+        // The historical 24cd4b59 Phase3 digest is not evidence for this DA9
+        // semantic successor. Missing current signed proof must stay HOLD.
+        const evidence=resolveRequalificationEvidence(decision,authority,registry,stage,args.head||null);
+        result={...common,execution:"DA9_PHASE3_SIGNED_EXACT_WORKFLOW_ARTIFACT",
+          status:evidence.status,reason_code:evidence.reason_code,
+          evidence_id:evidence.evidence_id??null,evidence_run_id:evidence.run_id??null,
+          evidence_subject_sha:evidence.subject_sha??null,
+          historical_successor_chain_fallback_used:false};
+        if(evidence.status!=="PASS")blockers.push({
+          blocker_class:"INVALID_OR_MISSING_DA9_PHASE3_SIGNED_REQUALIFICATION",
+          check_id:decision.check_id,detail:evidence});
       } else if (
         decision.check_id === SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_V1.check_id &&
         successorChainAdmissionActive &&

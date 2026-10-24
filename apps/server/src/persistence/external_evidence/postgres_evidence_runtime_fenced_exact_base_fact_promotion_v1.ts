@@ -14,6 +14,7 @@ import {
 import {
   MCFT_CAP09_EXACT_BASE_FACT_PROMOTION_ID_V1,
   validateExternalFormalExactBasePromotionInputV1,
+  type ExternalFormalExactBaseRetentionAuthorityV1,
   type ExternalFormalExactBaseSemanticManifestRowV1,
 } from "../../runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.js";
 import type {
@@ -38,6 +39,7 @@ export type EvidenceRuntimeFencedExactBaseFactPromotionConfigV1 = {
   scope: TwinScopeKeyV1;
   epoch_id: string;
   subject_sha: string;
+  retention_authority?: ExternalFormalExactBaseRetentionAuthorityV1;
 };
 
 export type EvidenceRuntimeFencedExactBaseFactPromotionReceiptV1 =
@@ -79,7 +81,21 @@ function validateConfig(
   const epoch = required(input.epoch_id, "V13_EVIDENCE_FENCED_EPOCH_REQUIRED");
   const subject = required(input.subject_sha, "V13_EVIDENCE_FENCED_SUBJECT_REQUIRED");
   if (!/^[0-9a-f]{40}$/.test(subject)) throw new Error("V13_EVIDENCE_FENCED_SUBJECT_INVALID");
-  return { scope: { ...input.scope }, epoch_id: epoch, subject_sha: subject };
+  if (input.retention_authority !== undefined) {
+    const a = input.retention_authority;
+    if (a.mode !== "ISOLATED_QUALIFICATION_ONLY"
+        || a.subject_sha !== subject
+        || !/^[a-f0-9]{12}$/.test(a.run_id)
+        || a.bucket !== `mcft-cap09-requal-${a.run_id}`) {
+      throw new Error("V13_EVIDENCE_FENCED_ISOLATED_RETENTION_AUTHORITY_MISMATCH");
+    }
+  }
+  return {
+    scope: { ...input.scope }, epoch_id: epoch, subject_sha: subject,
+    ...(input.retention_authority === undefined ? {} : {
+      retention_authority: { ...input.retention_authority },
+    }),
+  };
 }
 function validateAuthority(
   config: EvidenceRuntimeFencedExactBaseFactPromotionConfigV1,
@@ -154,6 +170,7 @@ export class PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1 {
         base_target_t: base,
         results: input.results,
         expected_semantic_manifest: input.expected_semantic_manifest,
+        retention_authority: this.config.retention_authority,
       });
       rows = validated.results.map((result) => ({
         result,

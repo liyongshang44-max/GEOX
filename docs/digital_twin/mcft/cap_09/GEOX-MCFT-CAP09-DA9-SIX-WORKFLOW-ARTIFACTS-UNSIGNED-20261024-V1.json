@@ -1,0 +1,74 @@
+{
+  "schema_version": "geox_mcft_cap09_da9_six_workflow_artifact_inventory_unsigned_v1",
+  "state": "GH_VERIFIED_EXACT_HEAD_ARTIFACT_METADATA_UNSIGNED_NOT_QCP_PASS",
+  "subject_sha": "baaf0a0387c64cf31038a5bf6413ad37fa552c6d",
+  "protected_main_base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+  "proof_scope": "READONLY_METADATA_VERIFIED; GITHUB_SHA_FOR_ARTIFACT_NAME_MAY_BE_PR_SYNTHETIC_MERGE_NOT_HEAD",
+  "signed": false,
+  "reviewed": false,
+  "permit_authorized": false,
+  "permit_consumed": false,
+  "third_attempt_authorized": false,
+  "rows": [
+    {
+      "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+      "run_id": 40072381979,
+      "artifact_id": 12551583902,
+      "artifact_digest": "sha256:6e746e42f847c1fee208c07405fb91647b2fa34c1d5c001174b2a4b01adbd882",
+      "run_head_sha": "baaf0a0387c64cf31038a5bf6413ad37fa552c6d",
+      "base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+      "conclusion": "success",
+      "source": "GITHUB_ACTIONS_RUNS_AND_ARTIFACTS_API"
+    },
+    {
+      "check_id": "V13_HOLISTIC_SCHEMA",
+      "run_id": 40072381691,
+      "artifact_id": 12552175803,
+      "artifact_digest": "sha256:4cfa8e46c3b2ab102d5325bfa7a2d6a34fe777e4c3bc6b305a61b624b4530eeb",
+      "run_head_sha": "baaf0a0387c64cf31038a5bf6413ad37fa552c6d",
+      "base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+      "conclusion": "success",
+      "source": "GITHUB_ACTIONS_RUNS_AND_ARTIFACTS_API"
+    },
+    {
+      "check_id": "V13_NEXT_TICK_VIABILITY",
+      "run_id": 40072381992,
+      "artifact_id": 12552036504,
+      "artifact_digest": "sha256:a4ea23c1448fd028ffa71f32006f1fa6a00c539e35d34da61058fa52986b0a31",
+      "run_head_sha": "baaf0a0387c64cf31038a5bf6413ad37fa552c6d",
+      "base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+      "conclusion": "success",
+      "source": "GITHUB_ACTIONS_RUNS_AND_ARTIFACTS_API"
+    },
+    {
+      "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+      "run_id": 40072382035,
+      "artifact_id": 12551961058,
+      "artifact_digest": "sha256:c5fa2dfd8c9e71ab51cbc6119f3221e97e08055067fc3aa995e00fe9acc14efa",
+      "run_head_sha": "baaf0a0387c64cf31038a5bf6413ad37fa552c6d",
+      "base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+      "conclusion": "success",
+      "source": "GITHUB_ACTIONS_RUNS_AND_ARTIFACTS_API"
+    },
+    {
+      "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+      "run_id": 40072381972,
+      "artifact_id": 12551469480,
+      "artifact_digest": "sha256:5bf6c5b95498e7409b62649e516869969b4c2cf772e0503c40002408fe3f95bd",
+      "run_head_sha": "baaf0a0387c64cf31038a5bf6413ad37fa552c6d",
+      "base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+      "conclusion": "success",
+      "source": "GITHUB_ACTIONS_RUNS_AND_ARTIFACTS_API"
+    },
+    {
+      "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+      "run_id": 40072381964,
+      "artifact_id": 12551743103,
+      "artifact_digest": "sha256:c43bd5532416f48046d5ce0517562d5bb27920119bd67092fcc1908eaa30a250",
+      "run_head_sha": "baaf0a0387c64cf31038a5bf6413ad37fa552c6d",
+      "base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+      "conclusion": "success",
+      "source": "GITHUB_ACTIONS_RUNS_AND_ARTIFACTS_API"
+    }
+  ]
+}

@@ -47,6 +47,12 @@ export function composeIsolatedMcftCap09V13ProducerCoreV1(input: {
       scope:MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
       epoch_id:input.epoch_id,
       subject_sha:input.subject_sha,
+      retention_authority:{
+        mode:"ISOLATED_QUALIFICATION_ONLY",
+        run_id:input.isolated_run_id,
+        subject_sha:input.subject_sha,
+        bucket,
+      },
     });
   const capturePromotion = new ExternalFormalPrivateCandidateCapturePromotionV1({
     subject_sha:input.subject_sha,
