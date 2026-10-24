@@ -1,0 +1,39 @@
+name: mcft-cap09-da9-frozen-semantic-successor-v1
+on:
+  pull_request:
+    paths:
+      - 'scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-FROZEN-SEMANTIC-SUCCESSOR-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIX-CHECK-EVIDENCE-V1.json'
+      - '.github/workflows/mcft-cap09-da9-frozen-semantic-successor-v1.yml'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review-candidate-isolated-scope-not-adoption:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Freeze actual exact-head and disallow execution environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${MCFT_GOVERNED_RETRY_TICKET:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+      - name: Independent frozen semantic delta checker, not historical PASS
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs
+      - name: Six missing/replaced/unsigned checks reject; no Permit
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs

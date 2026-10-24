@@ -1,0 +1,34 @@
+{
+  "schema_version": "geox_mcft_cap09_da9_frozen_semantic_successor_contract_v1",
+  "contract_id": "MCFT_CAP09_DA9_ISOLATED_RETENTION_FROZEN_SEMANTIC_SUCCESSOR_V1",
+  "scope": "NONAUTHORIZED_ENGINEERING_ONLY_NOT_HISTORICAL_FROZEN_REQUALIFICATION",
+  "adopted_base_sha": "2b63652297bb285f21c4d4c63c37d247d009142c",
+  "historical_frozen_runtime_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+  "expected_changed_frozen_paths": {
+    "apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts": {
+      "base": "cda8c7412c36ef4e2fe29145c75f998d19076420",
+      "candidate": "68ad42eb41047fa550bf742b312a9b3c83a07f89"
+    },
+    "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts": {
+      "base": "a415f9e4a0ca6e05857e1d032ed4098c68b0cf0e",
+      "candidate": "fcd429cad9fe3aeeb1570649289384188a9f7cde"
+    }
+  },
+  "expected_unchanged_isolated_composer_git_blob_sha": "7e74b1df502e159dd49ceb21889cbfff86408e50",
+  "exact_qualification_check_ids": [
+    "V13_AUTONOMOUS_FORCING_FOUNDATION",
+    "V13_HOLISTIC_SCHEMA",
+    "V13_NEXT_TICK_VIABILITY",
+    "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+    "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+    "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"
+  ],
+  "proof_workflow_path": ".github/workflows/mcft-cap09-da9-frozen-semantic-successor-v1.yml",
+  "required_execution": "EXACT_SOURCE_WITH_REAL_INDEPENDENT_EVIDENCE_PER_CHECK",
+  "historical_frozen_zero_delta_claim": false,
+  "old_frozen_verifier_must_remain_fail_closed": true,
+  "permit_signing_allowed": false,
+  "permit_consumption_allowed": false,
+  "production_writes_allowed": false,
+  "third_attempt_authorized": false
+}

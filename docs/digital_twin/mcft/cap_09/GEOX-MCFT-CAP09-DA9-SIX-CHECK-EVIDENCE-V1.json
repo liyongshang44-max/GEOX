@@ -1,0 +1,33 @@
+{
+  "schema_version": "geox_mcft_cap09_da9_six_check_evidence_v1",
+  "contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-FROZEN-SEMANTIC-SUCCESSOR-V1.json",
+  "registration_state": "EVIDENCE_PENDING_NOT_QUALIFIED",
+  "subject_source_sha": "ff0183347e783d9e2d35ebdee91c28d4d903aac2",
+  "checks": {
+    "V13_AUTONOMOUS_FORCING_FOUNDATION": {
+      "status": "PENDING",
+      "verified_evidence_ref": null
+    },
+    "V13_HOLISTIC_SCHEMA": {
+      "status": "PENDING",
+      "verified_evidence_ref": null
+    },
+    "V13_NEXT_TICK_VIABILITY": {
+      "status": "PENDING",
+      "verified_evidence_ref": null
+    },
+    "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS": {
+      "status": "PENDING",
+      "verified_evidence_ref": null
+    },
+    "PHASE3_EVIDENCE_RUNTIME_FOUNDATION": {
+      "status": "PENDING",
+      "verified_evidence_ref": null
+    },
+    "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION": {
+      "status": "PENDING",
+      "verified_evidence_ref": null
+    }
+  },
+  "entries": []
+}
