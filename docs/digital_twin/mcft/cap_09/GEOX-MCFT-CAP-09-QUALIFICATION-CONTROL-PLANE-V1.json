@@ -1449,7 +1449,8 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-FROZEN-SEMANTIC-SUCCESSOR-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIX-CHECK-EVIDENCE-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs",
-        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs"
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs",
+        ".github/workflows/mcft-cap09-da9-ea5c1-semantic-successor-ephemeral-v1.yml"
       ]
     },
     "DA9_SOURCE_TIME_CONTRACT_V3_CANDIDATE_ONLY": {
