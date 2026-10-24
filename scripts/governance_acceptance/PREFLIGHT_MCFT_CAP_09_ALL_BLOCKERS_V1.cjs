@@ -1095,6 +1095,17 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
     };
     return { entry, checks, valid: Object.values(checks).every(Boolean) };
   });
+  // The DA9 isolated-retention semantic successor never inherits the zero-delta
+  // 108-file historical Frozen V13 assertion. Six precisely named checks
+  // require independently signed, exact-head evidence; pending means HOLD.
+  // No existing legacy check is reclassified as PASS by this path.
+  const da9SemanticVerifier = path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs");
+  if (fs.existsSync(da9SemanticVerifier)) {
+    const successor = require("./VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs");
+    if (successor.required.includes(decision.check_id)) {
+      return successor.verifyRegisteredEvidence({decision,stage,head});
+    }
+  }
   const frozenSection = registry.frozen_v13_requalification_v1;
   if (frozenSection && fs.existsSync(path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs"))) {
     const fresh = require("./VERIFY_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_SUCCESSOR_V1.cjs").resolveFreshEvidence(decision, frozenSection, stage, head);

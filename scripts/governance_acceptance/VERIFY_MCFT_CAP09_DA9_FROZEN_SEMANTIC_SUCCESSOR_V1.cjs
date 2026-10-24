@@ -4,7 +4,7 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("n
 const ROOT=path.resolve(__dirname,"../.."),BASE="2b63652297bb285f21c4d4c63c37d247d009142c";
 const CONTRACT="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-FROZEN-SEMANTIC-SUCCESSOR-V1.json",EVIDENCE="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIX-CHECK-EVIDENCE-V1.json",Q="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const TRUST="scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json";
-const DOMAIN="GEOX_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_SIX_CHECK_V1\\n";
+const DOMAIN="GEOX_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_SIX_CHECK_V1\n";
 const read=p=>JSON.parse(fs.readFileSync(path.join(ROOT,p),"utf8"));
 const git=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",maxBuffer:32*1024*1024}).trim();
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
@@ -21,7 +21,7 @@ function scope(){
  assert.deepEqual(resolver.errors,[],"SUCCESSOR_DEPENDENCY_RESOLVERS_INVALID");
  const paths=resolver.resolved.V13_RUNTIME_SEMANTIC_CLOSURE.paths;
  assert.equal(paths.length,108,"HISTORICAL_FROZEN_RUNTIME_PATH_COUNT_CHANGED");
- const changed=git("diff","--name-only",BASE,head,"--",...paths).split(/\\r?\\n/).filter(Boolean).sort();
+ const changed=git("diff","--name-only",BASE,head,"--",...paths).split(/\r?\n/).filter(Boolean).sort();
  const expectedPaths=Object.keys(c.expected_changed_frozen_paths).sort();
  assert.deepEqual(changed,expectedPaths,"UNREVIEWED_FROZEN_RUNTIME_CHANGED");
  for(const file of expectedPaths){
@@ -35,7 +35,7 @@ function scope(){
  const promo=fs.readFileSync(path.join(ROOT,expectedPaths.find(x=>x.includes("twin_runtime/external_formal"))),"utf8");
  assert(promo.includes("if (authority === undefined) return MCFT_CAP09_FORMAL_RAW_BUCKET_V1;"),"PRODUCTION_DEFAULT_BUCKET_GUARD_REMOVED");
  assert(promo.includes('mode: "ISOLATED_QUALIFICATION_ONLY"'),"ISOLATED_MODE_MISSING");
- assert(promo.includes("key !== \`\\${MCFT_CAP09_FORMAL_RAW_RETENTION_PREFIX_V1}/\\${rawSha.slice(7)}\\`"),"EXACT_CONTENT_ADDRESS_GUARD_MISSING");
+ assert(promo.includes("key !== `${MCFT_CAP09_FORMAL_RAW_RETENTION_PREFIX_V1}/${rawSha.slice(7)}`"),"EXACT_CONTENT_ADDRESS_GUARD_MISSING");
  return {status:"ISOLATED_SEMANTIC_DELTA_PINNED_NOT_QCP_PASS",subject_sha:head,changed_frozen_paths:changed,original_frozen_zero_delta_not_claimed:true,production_authorized:false,permit_issued:false,third_attempt_authorized:false};
 }
 function checkEnvelope(e,decision,stage,head){
