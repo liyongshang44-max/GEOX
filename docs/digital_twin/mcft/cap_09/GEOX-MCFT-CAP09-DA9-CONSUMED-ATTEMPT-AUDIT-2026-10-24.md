@@ -16,8 +16,22 @@ Date: 2026-10-24. Scope: TEST_ONLY. This is a forensic audit note, **not** a rec
 - The fenced promoter identifies this specific validation failure as `NO_FORMAL_MUTATION`, i.e. it failed **before its fact-write transaction**. This does not establish zero object writes, zero controller/lease updates, zero candidate artifacts, or zero other persistent mutations in the entire run.
 - No Timing 1/2/3, Controlled Delay or Aggregate PASS has been demonstrated. The single-use Permit and Producer stage capability must be treated as burned. No third attempt is approved.
 
+## 2026-10-24 postfailure Windows READ-ONLY evidence update (operator output; no new execution)
+The host operator ran the existing MinIO read-only inventory using the dedicated Inventory identity and verified:
+- Isolated DA9 bucket `mcft-cap09-requal-da9db7129607`: `current=224`, `versions=224`, `delete_markers=0`, `multipart=0`. This indicates **224 current objects with 224 reported object-version entries**, not 448 different objects. This state is `BUCKET_NOT_EMPTY_HOLD`.
+- Inventory persisted at `D:\\gptdown\\MCFT-CAP09-DA9-POSTFAIL-READONLY-AUDIT-20261024T043236514Z-4fd5a1e6\\DA9_MINIO_POSTFAIL_READONLY_INVENTORY.json`, SHA-256 `7c0911ef2fb3cf969656f6e3b997dae73725ea3bf16a17330c94b363e0c8bdc2`.
+- Original Ledger and Producer artifact SHA-256 validation completed before inventory.
+- PostgreSQL Docker container `mcftcap09-da9db7129607-postgres-1`, container PostgreSQL 16.4. Existing `qual_admin` credential; `BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY`; `transaction_read_only=on`; `COMMIT` and zero command exit for **each** DB.
+- Positive `mcft_cap09_requal_da9db7129607_positive`: `facts_total=0`; `facts_formal=0`; `target_PROMOTING=1`; `cursor_completed_false=1`; `controller_ACTIVE=1`.
+- Negative `mcft_cap09_requal_da9db7129607_negative`: `facts_total=0`; `facts_formal=0`; no rows in grouped target, cursor or controller state queries.
+- Combined conclusion: Producer persisted isolated S3 data and PG coordination/lease state but **no formal fact was committed** in either isolated PG database. Positive cursor remains incomplete and exactly one target is at `PROMOTING`. These data corroborate the pretransaction guard failure. They DO NOT imply that all side effects are absent or that 224 objects are eligible for reuse.
+- This PG evidence is currently an operator transcript; no machine-readable PG readback receipt hash has been provided. Do not invent a signed forensic closure.
+
+Keep immutable DA9 Permit, consumed nonce, stage receipt, 224 S3 objects and all PG coordination state unchanged. No clean/reset/retry. No third attempt permitted.
+
+## Prior pending-audit checklist (superseded in part by readbacks above)
 ## Unverified live-postfailure residue — still HOLD
-The evidence above does **not** include a fresh postfailure read-only inventory of the DA9 isolated MinIO bucket (current objects, versions, delete markers, multipart), nor a fresh postfailure query of both dedicated DA9 PG databases (facts, forcing targets/cursors/controller leases and negative evidence). Historic pre-run four-zero/29-table readbacks MUST NOT be carried forward as postfailure zero claims.
+The postfailure S3 counts and both PG database readbacks are now recorded above. The exact object metadata/claim-lease values and signed independent forensic closure remain unverified. Historic pre-run four-zero/29-table readbacks MUST NOT be carried forward as postfailure zero claims.
 
 Required non-destructive readbacks, performed on the original Windows host **without** resetting any state:
 1. Independently hash and archive `CONSUMED.json`, nonce mirror, `PRODUCER/COMPLETED.json`, stage claim, Producer result, stdout/stderr; verify the stage receipt's hashes.
@@ -25,7 +39,7 @@ Required non-destructive readbacks, performed on the original Windows host **wit
 3. In read-only PG transactions on `127.0.0.1:55445`, inventory both `mcft_cap09_requal_da9db7129607_positive` and `..._negative`: public fact count, formal source count, controller lease states, forcing target/cursor state, failed claims, sessions, transaction timestamps. Do not rewrite leases or rows.
 4. Compare S3 content-address keys and candidate refs to ledger timing; distinguish what was committed vs what was rejected. Preserve all raw evidence and the failed Receipt WORM.
 
-Until these genuine readbacks are obtained, artifact mutation scope is `UNKNOWN`; do not report database/bucket four-zero after the failure.
+Readbacks confirm the counts described above; detailed mutation histories and independent signed forensic closure remain `NOT_FULLY_VERIFIED`. Do not report bucket four-zero after the failure or treat a zero facts count as zero operational mutation.
 
 ## New mandatory pre-Permit acceptance standard
 CI green, QCP PASS, isolated Composer creation, offline unit tests, credentials and signed Adoption are **necessary but not sufficient**. Prior to ANY new one-shot Permit:
