@@ -12,6 +12,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   review-candidate-isolated-scope-not-adoption:
     runs-on: ubuntu-24.04
@@ -35,6 +36,23 @@ jobs:
           test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
       - name: Independent frozen semantic delta checker, not historical PASS
         run: node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs
+
+      - name: Collect real six-workflow run and artifact metadata without signing
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          node scripts/governance_acceptance/PREPARE_MCFT_CAP09_DA9_SIX_QCP_EXACT_RUN_EVIDENCE_V1.cjs --collect "$PWD/acceptance-output/DA9_SIX_QCP_EXACT_RUN_UNSIGNED_REVIEW_REQUEST.json"
+      - name: Publish unsigned request (not qualification authority)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: da9-six-qcp-unsigned-review-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/DA9_SIX_QCP_EXACT_RUN_UNSIGNED_REVIEW_REQUEST.json
+          if-no-files-found: warn
+          retention-days: 90
       - name: Syntax-check evidence collector and require no privileged signing on CI
         run: node --check scripts/governance_acceptance/PREPARE_MCFT_CAP09_DA9_SIX_QCP_EXACT_RUN_EVIDENCE_V1.cjs
       - name: Six missing/replaced/unsigned checks reject; no Permit
