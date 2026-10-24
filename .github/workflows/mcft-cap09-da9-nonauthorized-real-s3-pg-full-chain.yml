@@ -8,6 +8,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts'
       - 'scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'
       - 'scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs'
       - '.github/workflows/mcft-cap09-da9-nonauthorized-real-s3-pg-full-chain.yml'
@@ -81,6 +82,8 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts
       - name: Test production strict guard and isolated negative cases
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts
+      - name: Negative proofs for absent, forged, stale, wrong-run physical attestation
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs
       - name: Start throwaway real MinIO (no production account or storage)
         run: |
           set -euo pipefail
