@@ -166,7 +166,7 @@ class FixtureDecoder implements ExternalEvidenceDecoderPortV1{
         origin_source_id:"phase7-composition-soil-"+this.base.replace(/[^0-9]/g,""),
         epistemic_class:"OBSERVED",
         ...common,
-        role_time:{observed_at:addHours(this.base,-3),ingested_at:this.ingestedAt},
+        role_time:{observed_at:addHours(this.base,-6),ingested_at:this.ingestedAt},
         canonical_payload:{quantity_kind:"VOLUMETRIC_WATER_CONTENT",value:0.25,unit:"fraction"},
       }];
     }
