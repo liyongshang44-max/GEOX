@@ -244,7 +244,7 @@ async function main():Promise<void>{
   const databaseUrl=required("DATABASE_URL");
   const dbUrl=new URL(databaseUrl);
   if (!["127.0.0.1","localhost","[::1]"].includes(dbUrl.hostname)
-      || decodeURIComponent(dbUrl.pathname.slice(1)) !== "mcft_cap09_non_auth_e2e_"+TEST_RUN_ID
+      || decodeURIComponent(dbUrl.pathname.slice(1)) !== "mcft_cap09_requal_"+TEST_RUN_ID+"_positive"
       || dbUrl.search || dbUrl.hash) {
     throw new Error("CAP09_NONAUTHORIZED_E2E_DEDICATED_TEST_PG_REQUIRED");
   }
@@ -258,7 +258,7 @@ async function main():Promise<void>{
   const pool=new Pool({connectionString:serviceUrl.toString(),max:8});
   try {
     const actualDb = String((await adminPool.query("SELECT current_database() AS db")).rows[0]?.db ?? "");
-    if (actualDb !== "mcft_cap09_non_auth_e2e_"+TEST_RUN_ID) {
+    if (actualDb !== "mcft_cap09_requal_"+TEST_RUN_ID) {
       throw new Error("CAP09_NONAUTHORIZED_E2E_PG_CONNECTION_REBIND_FORBIDDEN");
     }
     await reset(adminPool);
@@ -538,7 +538,7 @@ async function main():Promise<void>{
       authorization:"NON_AUTHORIZED_ISOLATED_ENGINEERING_TEST_ONLY",
       test_run_id:TEST_RUN_ID,
       isolated_s3_bucket:s3.bucket,
-      pg_database:"mcft_cap09_non_auth_e2e_"+TEST_RUN_ID,
+      pg_database:"mcft_cap09_requal_"+TEST_RUN_ID,
       permit_signed:false,
       permit_consumed:false,
       stage_count:0,
