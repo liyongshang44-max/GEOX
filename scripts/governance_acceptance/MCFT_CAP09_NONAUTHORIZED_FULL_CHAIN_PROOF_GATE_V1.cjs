@@ -69,6 +69,9 @@ function verify({binding,trust,subjectSha,attemptRunId,sourceRoot,now=Date.now()
     "production_owner_activation","formal_v5_armed","o00_started"]){
     assert.equal(receipt[k],false,"FULL_CHAIN_FORBIDDEN_AUTHORITY:"+k);
   }
+  assert.equal(receipt.evidence_login_restricted,true,"FULL_CHAIN_RESTRICTED_EVIDENCE_LOGIN_REQUIRED");
+  assert.equal(receipt.evidence_direct_fact_insert_allowed,false,"FULL_CHAIN_DIRECT_FACT_INSERT_FORBIDDEN");
+  assert.equal(receipt.evidence_fenced_writer_execute_allowed,true,"FULL_CHAIN_FENCED_WRITER_EXECUTE_REQUIRED");
   assert.equal(receipt.real_postgres_formal_fact_present_count,3,"FULL_CHAIN_EXACT_THREE_FORMAL_FACTS_REQUIRED");
   assert.equal(receipt.capture_raw_object_count,2,"FULL_CHAIN_TWO_REAL_S3_RAW_OBJECTS_REQUIRED");
   assert.equal(receipt.candidate_semantic_record_count,3,"FULL_CHAIN_THREE_CANONICAL_RECORDS_REQUIRED");
