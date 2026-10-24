@@ -67,7 +67,7 @@ function verify({binding,trust,subjectSha,attemptRunId,sourceRoot,now=Date.now()
   assert.equal(receipt.test_run_id,a.test_run_id,"FULL_CHAIN_RECEIPT_RUN_CHANGED");
   assert.equal(receipt.authorization,"NON_AUTHORIZED_ISOLATED_ENGINEERING_TEST_ONLY");
   assert.equal(receipt.isolated_s3_bucket,"mcft-cap09-requal-"+a.test_run_id);
-  assert.equal(receipt.pg_database,"mcft_cap09_non_auth_e2e_"+a.test_run_id);
+  assert.equal(receipt.pg_database,"mcft_cap09_requal_"+a.test_run_id+"_positive");
   for(const k of ["real_postgres_fenced_promotion","candidate_manifest_private_readback",
     "exact_three_facts_single_fenced_transaction","post_commit_physical_readback_verified",
     "controller_attestation_after_promotion","cursor_advanced_only_after_attestation",
