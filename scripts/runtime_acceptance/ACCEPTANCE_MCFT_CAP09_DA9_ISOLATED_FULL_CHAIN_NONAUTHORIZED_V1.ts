@@ -32,13 +32,8 @@ import {
   MCFT_CAP09_GFS_BUNDLE_SOURCE_FAMILY_V1,
 } from "../../apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.js";
 import { MCFT_CAP09_KBS_SOIL_DATASET_ID_V1 } from "../../apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.js";
-import { S3CompatiblePrivateCandidateManifestStoreV1 } from "../../apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.js";
-import { S3CompatiblePrivateRetainedRawReaderV1 } from "../../apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.js";
 
-import { S3CompatiblePrivateRawEvidenceRetentionAdapterV1 } from "../../apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.js";
-import {
-  PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1,
-} from "../../apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.js";
+import {composeIsolatedMcftCap09V13ProducerCoreV1} from "./MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.js";
 import {
   ExternalFormalExactBasePromotionFailureV1,
 } from "../../apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.js";
@@ -332,9 +327,19 @@ async function main():Promise<void>{
         || s3.bucket !== "mcft-cap09-requal-"+TEST_RUN_ID) {
       throw new Error("CAP09_NONAUTHORIZED_E2E_EXACT_ISOLATED_S3_REQUIRED");
     }
-    const retention=new S3CompatiblePrivateRawEvidenceRetentionAdapterV1(s3);
-    const candidateStore=new S3CompatiblePrivateCandidateManifestStoreV1(s3);
-    const rawReader=new S3CompatiblePrivateRetainedRawReaderV1(s3);
+    // Instantiate the actual isolated production-primitive Composer, not a
+    // hand-wired copy of its retention/fenced-promotion configuration.
+    // Only the external transport/decoders are replaced by controlled fixtures.
+    const isolated=composeIsolatedMcftCap09V13ProducerCoreV1({
+      pool,epoch_id:EPOCH,subject_sha:SUBJECT,isolated_run_id:TEST_RUN_ID,
+      private_store:s3,
+    });
+    if(isolated.isolated_composition_id!=="MCFT_CAP09_V13_ISOLATED_QUALIFICATION_COMPOSITION_V1"
+        ||isolated.production_wrapper_composer_reused!==false
+        ||isolated.production_canonical_primitive_implementations_reused!==true) {
+      throw new Error("CAP09_NONAUTHORIZED_E2E_ACTUAL_ISOLATED_COMPOSER_REQUIRED");
+    }
+    const {retention,candidate_store:candidateStore,raw_reader:rawReader,fenced_promotion:fenced}=isolated;
 
     const soilTransport=new FixtureTransport(
       "https://kbs.example.invalid/soil",
@@ -411,19 +416,6 @@ async function main():Promise<void>{
       },
     };
 
-    const fenced=new PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1(
-      pool,
-      retention,
-      {
-        scope:{...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1},
-        epoch_id:EPOCH,
-        subject_sha:SUBJECT,
-        retention_authority:{
-          mode:"ISOLATED_QUALIFICATION_ONLY",
-          run_id:TEST_RUN_ID,subject_sha:SUBJECT,bucket:s3.bucket,
-        },
-      },
-    );
     const composition=new ExternalFormalPrivateCandidateCapturePromotionV1({
       subject_sha:SUBJECT,
       work_item_factory:workFactory,
@@ -531,6 +523,7 @@ async function main():Promise<void>{
       schema_version:"geox_mcft_cap09_isolated_non_authorized_full_chain_contract_v1",
       source_files_sha256:sourceHashes,
       private_raw_retention_real_s3_verified:true,
+      actual_isolated_composer_exercised:true,
       evidence_login_restricted:true,
       evidence_direct_fact_insert_allowed:false,
       evidence_fenced_writer_execute_allowed:true,
