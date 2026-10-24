@@ -74,16 +74,50 @@ function recordKind(recordType: string): ExternalFormalPhysicalFactIdentityV1["k
   throw new Error(`EXACT_BASE_FACT_PROMOTION_RECORD_TYPE_FORBIDDEN:${recordType}`);
 }
 
-function exactFormalRetention(result: CanonicalizedExternalEvidenceResultV1): void {
+
+/**
+ * Qualification-only namespace authority. Production callers omit this value
+ * and retain the fixed canonical formal-raw bucket. This descriptor grants no
+ * S3 permission, runtime execution or Permit authority.
+ */
+export type ExternalFormalExactBaseRetentionAuthorityV1 = {
+  mode: "ISOLATED_QUALIFICATION_ONLY";
+  run_id: string;
+  subject_sha: string;
+  bucket: string;
+};
+
+function retentionBucketForPromotionV1(authority?: ExternalFormalExactBaseRetentionAuthorityV1): string {
+  if (authority === undefined) return MCFT_CAP09_FORMAL_RAW_BUCKET_V1;
+  if (authority.mode !== "ISOLATED_QUALIFICATION_ONLY"
+      || !/^[a-f0-9]{12}$/.test(authority.run_id)
+      || !/^[a-f0-9]{40}$/.test(authority.subject_sha)
+      || authority.bucket !== `mcft-cap09-requal-${authority.run_id}`
+      || authority.bucket === MCFT_CAP09_FORMAL_RAW_BUCKET_V1) {
+    throw new Error("EXACT_BASE_FACT_PROMOTION_ISOLATED_RETENTION_AUTHORITY_INVALID");
+  }
+  return authority.bucket;
+}
+
+function exactFormalRetention(result: CanonicalizedExternalEvidenceResultV1, authority?: ExternalFormalExactBaseRetentionAuthorityV1): void {
   let parsed: URL;
   try { parsed = new URL(result.raw_provenance.retention_ref); }
   catch { throw new Error("EXACT_BASE_FACT_PROMOTION_FORMAL_RETENTION_REF_INVALID"); }
-  if (parsed.protocol !== "s3-private:" || parsed.hostname !== MCFT_CAP09_FORMAL_RAW_BUCKET_V1) {
+  if (parsed.protocol !== "s3-private:" || parsed.hostname !== retentionBucketForPromotionV1(authority) || parsed.username || parsed.password || parsed.port || parsed.search || parsed.hash) {
     throw new Error("EXACT_BASE_FACT_PROMOTION_PRIVATE_FORMAL_RETENTION_REQUIRED");
   }
   const key = parsed.pathname.replace(/^\/+/, "");
   if (!key.startsWith(`${MCFT_CAP09_FORMAL_RAW_RETENTION_PREFIX_V1}/`)) {
     throw new Error("EXACT_BASE_FACT_PROMOTION_CONTENT_ADDRESS_FORMAL_RAW_REQUIRED");
+  }
+  if (authority !== undefined) {
+    // A run-scoped qualification reference must point to the exact content-
+    // addressed object. No foreign bucket, generic prefix or digest alias.
+    const rawSha = result.raw_provenance.raw_sha256;
+    if (typeof rawSha !== "string" || !/^sha256:[a-f0-9]{64}$/.test(rawSha)
+        || key !== `${MCFT_CAP09_FORMAL_RAW_RETENTION_PREFIX_V1}/${rawSha.slice(7)}`) {
+      throw new Error("EXACT_BASE_FACT_PROMOTION_ISOLATED_CONTENT_ADDRESS_MISMATCH");
+    }
   }
   if (key.includes("mcft-cap09-ea5e2-readiness-transient-v1")) {
     throw new Error("EXACT_BASE_FACT_PROMOTION_TRANSIENT_RETENTION_FORBIDDEN");
@@ -98,6 +132,7 @@ export function validateExternalFormalExactBasePromotionInputV1(input: {
   base_target_t: string;
   results: readonly CanonicalizedExternalEvidenceResultV1[];
   expected_semantic_manifest: readonly ExternalFormalExactBaseSemanticManifestRowV1[];
+  retention_authority?: ExternalFormalExactBaseRetentionAuthorityV1;
 }): { base: string; results: CanonicalizedExternalEvidenceResultV1[] } {
   const base = canonicalHour(input.base_target_t, "EXACT_BASE_FACT_PROMOTION_BASE_INVALID");
   const results = [...input.results].sort((a, b) => a.record.record_type.localeCompare(b.record.record_type));
@@ -114,7 +149,7 @@ export function validateExternalFormalExactBasePromotionInputV1(input: {
   }
 
   for (const result of results) {
-    exactFormalRetention(result);
+    exactFormalRetention(result, input.retention_authority);
     const record = result.record as any;
     if (record.record_type === "future_weather_assumption_v1" || record.record_type === "future_et0_assumption_v1") {
       if (record.role_time?.valid_from !== base) throw new Error(`EXACT_BASE_FACT_PROMOTION_VALID_FROM_MISMATCH:${record.record_type}`);
