@@ -60,6 +60,14 @@ function verifyPhysical(r,id,runId){
  assert.equal(r.evidence_direct_fact_insert_allowed,false);
  assert.equal(r.evidence_fenced_writer_execute_allowed,true);
  assert(r.source_files_sha256&&typeof r.source_files_sha256==="object");
+ const sourceSet=require("../governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs").SOURCE_PATHS;
+ assert.deepEqual(Object.keys(r.source_files_sha256).sort(),[...sourceSet].sort(),
+  "STAGE3_FULL_PHYSICAL_SOURCE_PROVENANCE_SET_INVALID");
+ for(const src of sourceSet){
+  assert(SHA.test(r.source_files_sha256[src]),"STAGE3_SOURCE_DIGEST_INVALID:"+src);
+  assert.equal(r.source_files_sha256[src],sha(safeFile(path.join(ROOT,src))),
+   "STAGE3_CURRENT_CANDIDATE_SOURCE_BYTES_DID_NOT_EXECUTE:"+src);
+ }
  // Parent must not claim this is an original stage-entry execution.
  return {id,physical_primitives_verified:true,original_governed_stage_entry_executed:false,
    direct_source_identity:r.source_files_sha256[SOURCE]};

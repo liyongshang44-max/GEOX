@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_BODIES_V1.cjs'
+      - 'scripts/runtime_acceptance/AGGREGATE_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_EVIDENCE_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVES_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-FOUR-PHYSICAL-PRIMITIVES-V1.json'
       - '.github/workflows/mcft-cap09-da9-stage3-four-real-physical-primitives-v1.yml'
@@ -116,3 +117,40 @@ jobs:
       - name: Stop only disposable CI MinIO
         if: always()
         run: docker rm -f cap09-stage3-minio-${{ matrix.run_id }} >/dev/null 2>&1 || true
+
+  aggregate-four-real-physical-only:
+    name: Aggregate four observed physical primitive roles (NOT V13 Aggregate)
+    needs: [four-actual-s3-pg-physical-primitive-executions]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact candidate source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Node 24 for independent receipt-only verification
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Download all four actual physical run artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: cap09-stage3-real-physical-primitives-*
+          merge-multiple: false
+          path: ${{ runner.temp }}/cap09-stage3-four
+      - name: Validate real physical business body source hashes and ordered role set
+        run: |
+          set -euo pipefail
+          node --check scripts/runtime_acceptance/AGGREGATE_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_EVIDENCE_V1.cjs
+          node scripts/runtime_acceptance/AGGREGATE_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_EVIDENCE_V1.cjs \
+            "$RUNNER_TEMP/cap09-stage3-four" \
+            "$RUNNER_TEMP/MCFT_CAP09_STAGE3_FOUR_PHYSICAL_AGGREGATE_OBSERVATION_V1.json"
+      - name: Upload independently validated four-role physical aggregate, NOT Permit
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-four-role-real-physical-aggregate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/MCFT_CAP09_STAGE3_FOUR_PHYSICAL_AGGREGATE_OBSERVATION_V1.json
+          if-no-files-found: error
+          retention-days: 90
