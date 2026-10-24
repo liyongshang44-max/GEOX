@@ -9,6 +9,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts'
       - 'scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_SIX_STAGE_CHAIN_V1.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs'
       - 'scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs'
       - '.github/workflows/mcft-cap09-da9-nonauthorized-real-s3-pg-full-chain.yml'
@@ -107,6 +108,10 @@ jobs:
         env:
           CAP09_E2E_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts
+      - name: Synthetic nonauthorized six-stage receipt chain and failure-at-each-stage negative matrix
+        run: |
+          node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_SIX_STAGE_CHAIN_V1.cjs \
+            "$PWD/acceptance-output/MCFT_CAP09_DA9_ISOLATED_NONAUTHORIZED_FULL_CHAIN_V1_RESULT.json"
       - name: Independently validate physical evidence and no Permit
         shell: node {0}
         run: |
