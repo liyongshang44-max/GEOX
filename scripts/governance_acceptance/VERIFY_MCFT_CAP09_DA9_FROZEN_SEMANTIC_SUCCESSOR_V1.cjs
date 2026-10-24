@@ -62,6 +62,8 @@ function checkEnvelope(e,decision,stage,head){
  assert(rows,"SIX_CHECK_QCP_DECISION_MISSING");
  const dependency=[...new Set(rows.resolver_ids.flatMap(id=>bound.resolved[id]?.paths||[]))];
  assert(dependency.length>0,"SIX_CHECK_DEPENDENCY_PATHS_MISSING");
+ const files=dependency.map(p=>[p,git("rev-parse",a.subject_sha+":"+p)]).sort((a,b)=>a[0].localeCompare(b[0]));
+ assert.equal(sha(Buffer.from(JSON.stringify(files))),a.source_blob_sha256,"SIX_CHECK_ACTUAL_SOURCE_GRAPH_DIGEST_MISMATCH");
  assert.equal(git("diff","--name-only",a.subject_sha,head,"--",...dependency),"","SIX_CHECK_POST_RUN_DEPENDENCY_DRIFT");
  const t=Date.parse(a.signed_at);assert(Number.isFinite(t)&&new Date(t).toISOString()===a.signed_at,"SIX_CHECK_SIGNED_TIME_INVALID");
  const tr=read(TRUST),issuer=(tr.issuers||[]).filter(i=>i.issuer_id===a.issuer_id&&i.key_id===a.key_id&&!i.revoked);
@@ -103,5 +105,5 @@ function verifyAll(planned,stage,head){
   scope:"ISOLATED_SEMANTIC_SUCCESSOR_ONLY_NOT_HISTORICAL_FROZEN",
   six_checks:results,permit_authorized:false,production_authorized:false};
 }
-module.exports={required,scope,verifyRegisteredEvidence,verifyAll};
+module.exports={required,scope,checkEnvelope,verifyRegisteredEvidence,verifyAll};
 if(require.main===module){const result=scope();if(process.argv.includes("--require-six")){const s=require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs");throw Error("REQUIRE_SIX_NEEDS_QCP_PLANNED_DECISIONS_AND_VERIFIED_SIGNED_RUNS")}console.log(JSON.stringify(result,null,2));}
