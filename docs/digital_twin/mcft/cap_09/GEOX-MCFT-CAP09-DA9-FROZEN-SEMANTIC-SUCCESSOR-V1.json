@@ -30,5 +30,15 @@
   "permit_signing_allowed": false,
   "permit_consumption_allowed": false,
   "production_writes_allowed": false,
-  "third_attempt_authorized": false
+  "third_attempt_authorized": false,
+  "evidence_source_anchor_sha": "ff0183347e783d9e2d35ebdee91c28d4d903aac2",
+  "proof_workflow_by_check": {
+    "V13_AUTONOMOUS_FORCING_FOUNDATION": ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+    "V13_HOLISTIC_SCHEMA": ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+    "V13_NEXT_TICK_VIABILITY": ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+    "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS": ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml",
+    "PHASE3_EVIDENCE_RUNTIME_FOUNDATION": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+    "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION": ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml"
+  },
+  "proof_scope_note": "Scope-workflow PASS is never evidence of any of six full dedicated qualification workflows."
 }

@@ -49,17 +49,26 @@ function checkEnvelope(e,decision,stage,head){
  assert(goodHex(a.subject_sha,40)); assert.equal(a.run_head_sha,a.subject_sha,"SIX_CHECK_RUN_SUBJECT_MISMATCH");
  assert(goodHex(a.run_base_sha,40));assert.equal(a.run_base_sha,BASE,"SIX_CHECK_RUN_BASE_CHANGED");
  assert.equal(a.dependency_digest,decision.dependency_digest,"SIX_CHECK_DEPENDENCY_DIGEST_CHANGED");
- assert.equal(a.workflow_path,read(CONTRACT).proof_workflow_path,"SIX_CHECK_WORKFLOW_CHANGED");
+ assert.equal(a.workflow_path,read(CONTRACT).proof_workflow_by_check[decision.check_id],"SIX_CHECK_DEDICATED_WORKFLOW_REQUIRED");
  assert(a.run_conclusion==="success"&&Number.isSafeInteger(a.run_id)&&a.run_id>0,"SIX_CHECK_RUN_NOT_SUCCESS");
  assert(goodHex(a.artifact_sha256,64),"SIX_CHECK_ARTIFACT_DIGEST_MISSING");
  assert(goodHex(a.source_blob_sha256,64),"SIX_CHECK_SOURCE_MANIFEST_DIGEST_MISSING");
  assert.equal(a.production_authorized,false);assert.equal(a.permit_consumed,false);
- assert.equal(a.subject_sha,head,"SIX_CHECK_EXACT_HEAD_REQUIRED");
+ assert(goodHex(head,40),"SIX_CHECK_HEAD_INVALID");
+ cp.execFileSync("git",["merge-base","--is-ancestor",a.subject_sha,head],{cwd:ROOT});
+ const config=read(Q);
+ const bound=require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs").resolveDependencyResolvers(ROOT,config);
+ const rows=(config.checks||[]).find(x=>x.check_id===a.check_id);
+ assert(rows,"SIX_CHECK_QCP_DECISION_MISSING");
+ const dependency=[...new Set(rows.resolver_ids.flatMap(id=>bound.resolved[id]?.paths||[]))];
+ assert(dependency.length>0,"SIX_CHECK_DEPENDENCY_PATHS_MISSING");
+ assert.equal(git("diff","--name-only",a.subject_sha,head,"--",...dependency),"","SIX_CHECK_POST_RUN_DEPENDENCY_DRIFT");
  const t=Date.parse(a.signed_at);assert(Number.isFinite(t)&&new Date(t).toISOString()===a.signed_at,"SIX_CHECK_SIGNED_TIME_INVALID");
  const tr=read(TRUST),issuer=(tr.issuers||[]).filter(i=>i.issuer_id===a.issuer_id&&i.key_id===a.key_id&&!i.revoked);
  assert.equal(issuer.length,1,"SIX_CHECK_TRUSTED_REVIEWER_REQUIRED");
  assert(["ACCOUNTABLE_SINGLE_OPERATOR","INDEPENDENT_RETRY_GOVERNANCE"].includes(issuer[0].role),"SIX_CHECK_REVIEWER_ROLE_INVALID");
  assert(t>=Date.parse(issuer[0].not_before)&&t<=Date.parse(issuer[0].not_after),"SIX_CHECK_REVIEW_KEY_TIME_INVALID");
+ assert(t<=Date.now()&&Date.now()-t<7*86400000,"SIX_CHECK_REVIEW_EXPIRED_OR_FUTURE");
  const key=crypto.createPublicKey(issuer[0].public_key_pem);
  assert.equal(sha(key.export({type:"spki",format:"der"})),issuer[0].spki_sha256,"SIX_CHECK_TRUST_KEY_MISMATCH");
  const sig=Buffer.from(e.signature_base64,"base64");
@@ -73,7 +82,8 @@ function verifyRegisteredEvidence({decision,stage,head}){
  try{
   const sc=scope();assert.equal(head,sc.subject_sha,"SIX_CHECK_EXACT_CHECKOUT_REQUIRED");
   const reg=read(EVIDENCE);assert.equal(reg.contract_ref,CONTRACT,"SIX_CHECK_CONTRACT_REF_INVALID");
-  assert.equal(reg.subject_source_sha,head,"SIX_CHECK_REGISTRY_SUBJECT_CHANGED");
+  assert.equal(reg.subject_source_sha,read(CONTRACT).evidence_source_anchor_sha,"SIX_CHECK_SOURCE_ANCHOR_CHANGED");
+  cp.execFileSync("git",["merge-base","--is-ancestor",reg.subject_source_sha,head],{cwd:ROOT});
   assert.deepEqual(Object.keys(reg.checks).sort(),[...required].sort(),"SIX_CHECK_REGISTRATION_SET_CHANGED");
   assert(Array.isArray(reg.entries),"SIX_CHECK_REGISTRY_ENTRIES_REQUIRED");
   const ent=reg.entries.filter(e=>e?.payload?.check_id===decision.check_id);
