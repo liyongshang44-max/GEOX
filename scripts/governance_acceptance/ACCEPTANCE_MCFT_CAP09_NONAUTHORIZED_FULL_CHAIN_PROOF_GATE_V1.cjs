@@ -35,7 +35,7 @@ try{
   evidence_login_restricted:true,evidence_direct_fact_insert_allowed:false,
   evidence_fenced_writer_execute_allowed:true,
   real_postgres_fenced_promotion:true,real_postgres_formal_fact_present_count:3,
-  private_raw_retention_real_s3_verified:true,candidate_manifest_private_readback:true,
+  actual_isolated_composer_exercised:true,private_raw_retention_real_s3_verified:true,candidate_manifest_private_readback:true,
   exact_three_facts_single_fenced_transaction:true,post_commit_physical_readback_verified:true,
   controller_attestation_after_promotion:true,cursor_advanced_only_after_attestation:true,
   capture_raw_object_count:2,candidate_semantic_record_count:3,promotion_provider_refetch_count:0,
