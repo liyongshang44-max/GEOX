@@ -64,7 +64,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24.19.0
+          node-version: 20.11.1 # Lockfile native better-sqlite3 ABI; Windows Node 24 host rehearsal is a separate later gate
           cache: pnpm
 
       - uses: actions/setup-go@v6
