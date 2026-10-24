@@ -115,7 +115,7 @@ jobs:
           if(p.status!=="PASS"||p.schema_version!=="geox_mcft_cap09_isolated_non_authorized_full_chain_contract_v1")throw Error("NOT_REAL_INTEGRATION_PASS");
           if(p.subject_sha!=="${{ github.event.pull_request.head.sha || github.sha }}")throw Error("E2E_HEAD_MISMATCH");
           if(p.isolated_s3_bucket!=="mcft-cap09-requal-abcdef012345"||p.pg_database!=="mcft_cap09_requal_abcdef012345_positive")throw Error("TEST_RESOURCE_ID_CHANGED");
-          for(const k of ["evidence_login_restricted","private_raw_retention_real_s3_verified","candidate_manifest_private_readback",
+          for(const k of ["actual_isolated_composer_exercised","evidence_login_restricted","private_raw_retention_real_s3_verified","candidate_manifest_private_readback",
             "post_commit_physical_readback_verified","real_postgres_fenced_promotion",
             "exact_three_facts_single_fenced_transaction","controller_attestation_after_promotion",
             "cursor_advanced_only_after_attestation"])if(p[k]!==true)throw Error("FULL_CHAIN_MISSING:"+k);
