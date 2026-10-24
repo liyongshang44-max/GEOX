@@ -17,6 +17,15 @@ const SOURCE_PATHS=Object.freeze([
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts",
   "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts",
   "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts",
+  "apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts",
+  "apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts",
+  "apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts",
+  "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
+  "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts",
+  "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts",
+  "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
+  "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
+  "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
   "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
 ]);
 function regular(file){
