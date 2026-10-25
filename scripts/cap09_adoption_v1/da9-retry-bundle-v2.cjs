@@ -119,6 +119,13 @@ function construct(input,context,now=Date.now(),reviewTrust){
  assert.equal(decision.review_status,'APPROVED','AUTHENTICATED_REVIEW_REQUIRED');c.id(decision.reviewer_id);c.id(decision.decision_id);
  assert.equal(decision.production_authorized,false);assert.deepEqual(decision.evidence_sha256,HISTORY);assert.equal(decision.authorized_at,input.authorized_at);
  const hashes=evidence(input.files);const observed=structuredClone(input.observed);fresh(observed,now);host.validatePlan(input.plan);
+ // No one-shot Permit may be signed before a separate non-authorized
+ // full-chain physical receipt, source hash and registered Ed25519 review.
+ require('../governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs').verify({
+  binding:observed.non_authorized_full_chain_evidence,
+  trust:reviewTrust,subjectSha:SUBJECT,
+  attemptRunId:RUN,sourceRoot:path.resolve(__dirname,'../..'),now
+ });
  const closure=require('./da9-minio-closure-v1.cjs').verifyReference(observed.da9_minio_closure,reviewTrust,SUBJECT,now,context);
  assert.equal(closure.status,'CLOSURE_VERIFIED_FOR_DA9_ADMISSION','DA9_DISPOSITION_CLOSURE_NOT_ADMISSIBLE');
  assert.deepEqual(observed.evidence_sha256,hashes,'OBSERVATION_EVIDENCE_CHANGED');assert.equal(observed.output_directory,input.output_directory);
