@@ -13,8 +13,8 @@ permissions:
   actions: read
   pull-requests: read
 concurrency:
-  group: stage3-six-native-${{ github.event.pull_request.head.sha }}
-  cancel-in-progress: false
+  group: stage3-six-native-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 jobs:
   six-successor-contract-and-phase3-audit:
     runs-on: ubuntu-24.04
