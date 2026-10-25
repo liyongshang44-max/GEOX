@@ -57,5 +57,30 @@
       "expected_artifact_name": "MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2_RESULT.json",
       "expected_artifact_schema": "geox_mcft_cap09_v13_exact_head_timing_measurement_v2"
     }
-  ]
+  ],
+  "fenced_pg_admission_review_20261025": {
+    "evidence_level": "SOURCE_REVIEW_AND_ORIGINAL_WINDOWS_OFFLINE_REPLAY_TEST_ONLY",
+    "status": "HOLD_NEW_ISOLATED_FENCED_PG_NOT_ADMITTED",
+    "prior_windows_raw_semantic_replay": "PASS_OPERATOR_OBSERVED_ORIGINAL_PHASE7_SOURCE_GUARDED",
+    "prior_receipt_sha256": "sha256:591534ce9c58746b29e39f5727152b958526760755dc83b0b29e7e2adcb6bf7e",
+    "prior_receipt_scope": "ORIGINAL_RAW_AND_CANDIDATE_ONLY_NOT_NEW_CANDIDATE_OR_PG",
+    "original_run_id": "b06f28c950ce",
+    "expired_old_controller_or_target_lease_reuse_allowed": false,
+    "expired_old_candidate_reuse_allowed": false,
+    "old_pg_write_allowed": false,
+    "source_provider_refetch_authorized": false,
+    "separate_new_disposable_pg_database_and_minio_bucket_required": true,
+    "new_run_epoch_subject_and_idempotency_identity_required": true,
+    "fresh_controller_and_target_claim_leases_required": true,
+    "actual_scientific_source_timestamp_and_target_causality_revalidation_required": true,
+    "regenerated_candidate_from_verified_raw_under_new_identity_required": true,
+    "existing_windows_fenced_pg_harness_uses_live_provider_capture": true,
+    "offline_no_provider_new_fenced_pg_positive_harness_implemented": false,
+    "evidence_acl_negative_and_positive_matrix_required": true,
+    "minio_runtime_least_privilege_acl_and_negative_probe_required": true,
+    "actual_windows_fenced_pg_three_facts_and_cursor_readback_observed": false,
+    "original_v13_timing_delay_aggregate_qualified": false,
+    "governed_host_permit_authorized": false,
+    "qualification_readiness": "ENGINEERING_SCOPE_ONLY_NO_EXECUTION"
+  }
 }
