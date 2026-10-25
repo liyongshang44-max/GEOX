@@ -475,7 +475,7 @@ jobs:
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs
 
       - name: Independently pin unchanged EA5C1 source under NEW Composer successor; refuse old signed evidence
-        run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --ea5c1-scope
+        run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --ea5c1-scope --out=acceptance-output/MCFT_CAP09_STAGE3_EA5C1_SOURCE_SCOPE_V2.json
 
       - name: Re-prove CAP08 G3 frozen-core successor compatibility
         # Successor G3 mode compares every frozen-core blob directly to the accepted G3 merge.
@@ -570,19 +570,20 @@ jobs:
         shell: node {0}
         run: |
           const fs = require('fs');
-          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP09_DA9_EA5C1_SEMANTIC_SUCCESSOR_SCOPE_RESULT.json','utf8'));
-          if (r.status !== 'PASS') throw new Error('EA5C1_GOVERNANCE_PASS_REQUIRED');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP09_STAGE3_EA5C1_SOURCE_SCOPE_V2.json','utf8'));
+          if (r.status !== 'PASS_NEW_COMPOSER_EA5C1_ADOPTED_SOURCE_SCOPE_ONLY') throw new Error('EA5C1_SUCCESSOR_SCOPE_PASS_REQUIRED');
           if (r.current_ea5c1_source_preserved_against_adopted_main !== true || r.historical_ea5c1_predecessor_only_gate_purposely_not_promoted !== true) throw new Error('EA5C1_SEMANTIC_SUCCESSOR_SCOPE_NOT_PROVEN');
           if (r.historical_authority_requalified !== false || r.production_authorized !== false || r.permit_signed !== false || r.permit_consumed !== false) throw new Error('EA5C1_PREMATURE_SUCCESSOR_EFFECT');
           if (r.production_write_performed !== false || r.provider_calls !== 0 || r.third_attempt_authorized !== false) throw new Error('EA5C1_NONCLAIM_REQUIRED');
-          console.log(JSON.stringify({status:'PASS',ea5c1:true,ea5c_complete:false,formal_neon_write:false,ea5d:false,ea5e:false,o00:false,cap09:false}));
+          if (r.legacy_old_composer_contract_reused !== false || r.old_six_signatures_reused !== false || r.permit !== false) throw new Error('EA5C1_OLD_SOURCE_OR_PERMIT_REUSE');
+          console.log(JSON.stringify({status:'PASS_NEW_COMPOSER_SCOPE_WITH_NATIVE_EA5C1_PG_S3_JOB_ONLY',ea5c1:true,old_signatures_valid:false,formal_neon_write:false,permit:false,cap09:false}));
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mcft-cap-09-ea5c1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
-            acceptance-output/MCFT_CAP09_DA9_EA5C1_SEMANTIC_SUCCESSOR_SCOPE_RESULT.json
+            acceptance-output/MCFT_CAP09_STAGE3_EA5C1_SOURCE_SCOPE_V2.json
             acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json
             acceptance-output/EA5C1_SERVER_TYPECHECK.log
             acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
