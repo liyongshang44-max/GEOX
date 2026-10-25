@@ -2,14 +2,32 @@
 // Fail closed before actual Controlled Delay / original Aggregate. Do not
 // promote live HTTPS directory probes or local fixture PG timings to the
 // original V13 timing semantics, genuine 72h Provider, or Permit authority.
-const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
+const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto"),cp=require("node:child_process");
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
 const ORIGINAL="scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts";
 const PHASES=["wake_delay_ms","job_start_setup_ms","provider_capture_ms","retained_raw_and_candidate_ms",
 "promotion_queue_and_setup_ms","rehydration_promotion_commit_readback_ms"];
 const STATUS="HOLD_ORIGINAL_TIMING_AND_PROVIDER_SEMANTICS_NOT_EQUIVALENT";
 function read(file){const s=fs.lstatSync(file);assert(s.isFile()&&!s.isSymbolicLink()&&s.size<2_000_000);return JSON.parse(fs.readFileSync(file,"utf8"));}
+const FROZEN_SHA="12dcbba6750879f0349c5730f477cb04cd23b560";
+const FROZEN_ENTRIES=[
+ ["scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts","4b30a11186b80b9d37da252b735332202ef94a9d"],
+ ["scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts","830900fcca5a858cd7cc54612bdd41721d88ef55"],
+ ["scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs","11f57189a6d6bd236aea21f31259027bbbe095c4"]
+];
+function originalEntriesUnchanged(root=path.resolve(__dirname,"../..")){
+ for(const [file,want] of FROZEN_ENTRIES){
+  const historic=cp.execFileSync("git",["rev-parse",FROZEN_SHA+":"+file],{cwd:root,encoding:"utf8"}).trim();
+  const candidate=cp.execFileSync("git",["rev-parse","HEAD:"+file],{cwd:root,encoding:"utf8"}).trim();
+  const working=cp.execFileSync("git",["hash-object",file],{cwd:root,encoding:"utf8"}).trim();
+  assert.equal(historic,want,"STAGE3_ORIGINAL_ENTRY_PIN_MISMATCH:"+file);
+  assert.equal(candidate,want,"STAGE3_ORIGINAL_ENTRY_CANDIDATE_CHANGED:"+file);
+  assert.equal(working,want,"STAGE3_ORIGINAL_ENTRY_WORKTREE_CHANGED:"+file);
+ }
+ return true;
+}
 function review(files,providerWitness=null){
+ originalEntriesUnchanged();
  assert(Array.isArray(files)&&files.length===3,"THREE_TIMING_INPUTS_REQUIRED");
  const reasons=[],samples=[];
  const seen=new Set();
@@ -54,4 +72,4 @@ if(require.main===module){try{
  // HOLD is the EXPECTED result, negative control must never mark graduation.
  if(r.status!==STATUS||r.qualified)process.exitCode=1;
 }catch(e){console.error("TIMING_ORIGINAL_EQUIVALENCE_REVIEW_HOLD:"+String(e.message||e));process.exitCode=1;}}
-module.exports={review,STATUS,PHASES};
+module.exports={review,STATUS,PHASES,originalEntriesUnchanged};
