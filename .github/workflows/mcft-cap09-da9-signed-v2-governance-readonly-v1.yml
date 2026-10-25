@@ -1,0 +1,54 @@
+name: mcft-cap09-da9-signed-v2-governance-readonly-v1
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/mcft-cap09-da9-signed-v2-governance-readonly-v1.yml"
+      - "scripts/governance_acceptance/REVIEW_MCFT_CAP09_DA9_SIGNED_V2_PHASE3_FROZEN_V13_V1.cjs"
+      - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json"
+permissions:
+  contents: read
+concurrency:
+  group: cap09-signed-v2-independent-governance-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+jobs:
+  signed-v2-phase3-frozen-review-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout governance review exact PR source (non-authorizing)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js for read-only governance audit
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+      - name: Require isolated governance branch and no inherited execution authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "${{ github.event.pull_request.base.sha }}" = "2162f368899e9a9b5c497d332859e4196f389660"
+          test -z "${MCFT_GOVERNED_RETRY_TICKET:-}"
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${DATABASE_URL:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+          test -z "${AWS_SECRET_ACCESS_KEY:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+          git cat-file -e '6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0^{commit}'
+          git cat-file -e '3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a^{commit}'
+      - name: Syntax check independent reviewer
+        run: node --check scripts/governance_acceptance/REVIEW_MCFT_CAP09_DA9_SIGNED_V2_PHASE3_FROZEN_V13_V1.cjs
+      - name: Audit 94-path PHASE3 source digest and 108-path Frozen V13 delta
+        run: node scripts/governance_acceptance/REVIEW_MCFT_CAP09_DA9_SIGNED_V2_PHASE3_FROZEN_V13_V1.cjs
+      - name: Retain read-only technical difference proof (not approval)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-da9-v2-phase3-frozen-governance-readonly-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_DA9_V2_SIGNED_GOVERNANCE_TECHNICAL_AUDIT_V1.json
+          if-no-files-found: warn
+          retention-days: 90
