@@ -111,10 +111,31 @@ function negative(reg,review,report,q,old,frozen) {
  reject(v=>v.qcp_technical_evidence_registered=false);
  return count;
 }
+function recomputeTechnicalReportIndependently() {
+ // QCP runs in its own clean job: the governance workflow's acceptance-output
+ // artifact is NOT implicitly present. Never infer proof from a missing file.
+ // Recompute exactly the pinned 94/108 Git object closures before reading it.
+ const verifier=path.join(ROOT,"scripts/governance_acceptance/REVIEW_MCFT_CAP09_DA9_SIGNED_V2_PHASE3_FROZEN_V13_V1.cjs");
+ const execution=cp.spawnSync(process.execPath,[verifier],{
+  cwd:ROOT,encoding:"utf8",timeout:120000,maxBuffer:8*1024*1024,
+  env:{
+   PATH:process.env.PATH||"",HOME:process.env.HOME||"",
+   LANG:process.env.LANG||"C.UTF-8",
+  },
+ });
+ assert.equal(execution.error,undefined,"CTO_SOURCE_GRAPH_RECOMPUTE_PROCESS_ERROR");
+ assert.equal(execution.status,0,"CTO_SOURCE_GRAPH_RECOMPUTE_FAILED:"+String(execution.stderr||"").slice(0,500));
+ assert.match(execution.stdout,/PASS_NONAUTHORIZING_PHASE3_AND_FROZEN_SEMANTIC_DIAGNOSTICS_ONLY/,"CTO_SOURCE_GRAPH_RECOMPUTE_MISSING_PASS");
+ const report=read(OUT);
+ assert.equal(report.source_subject,"6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0","CTO_RECOMPUTE_SUBJECT_CHANGED");
+ assert.equal(report.phase3.paths,94);assert.equal(report.frozen_v13.scope_paths,108);
+ return report;
+}
 function main(){
- const reg=read(REG),review=read(REVIEW),report=read(OUT),q=read(Q),old=read(OLD),frozen=read(FROZEN);
+ const reg=read(REG),review=read(REVIEW),q=read(Q),old=read(OLD),frozen=read(FROZEN);
+ const report=recomputeTechnicalReportIndependently();
  const v=verify(reg,review,report,q,old,frozen);
  const n=negative(reg,review,report,q,old,frozen);
- console.log(JSON.stringify({...v,negative_tests_pass:n}));
+ console.log(JSON.stringify({...v,source_graph_recomputed_in_this_process:true,negative_tests_pass:n}));
 }
 try{main()}catch(e){console.error("HOLD_DA9_SIGNED_V2_QCP_TECHNICAL_ENROLLMENT:"+String(e.stack||e));process.exitCode=1;}
