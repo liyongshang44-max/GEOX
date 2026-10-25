@@ -432,7 +432,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
-          test "${{ github.event.pull_request.base.sha }}" = "2b63652297bb285f21c4d4c63c37d247d009142c"
+          test "${{ github.event.pull_request.base.sha }}" = "$(node -p "require('./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-PYTHON-COMPOSER-SIX-CHECK-SUCCESSOR-V2.json').main_at_contract_draft")"
           test -z "${MCFT_GOVERNED_RETRY_TICKET:-}"
           test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
           test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
@@ -470,8 +470,8 @@ jobs:
       - name: Syntax-check EA5C1 governance gate
         run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs
 
-      - name: Independently verify current EA5C1 source preserved; do not reuse predecessor-only gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_EA5C1_SEMANTIC_SUCCESSOR_SCOPE_V1.cjs
+      - name: Independently pin unchanged EA5C1 source under NEW Composer successor; refuse old signed evidence
+        run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --ea5c1-scope
 
       - name: Re-prove CAP08 G3 frozen-core successor compatibility
         # Successor G3 mode compares every frozen-core blob directly to the accepted G3 merge.
