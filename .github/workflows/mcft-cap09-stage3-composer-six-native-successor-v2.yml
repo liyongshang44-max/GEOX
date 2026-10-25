@@ -1,0 +1,1098 @@
+name: mcft-cap09-stage3-composer-six-native-successor-v2
+# Independently rerun original six native job bodies under new exact PR HEAD.
+# This action never issues a permit, signs a receipt, or inherits historic six signatures.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/mcft-cap09-stage3-composer-six-native-successor-v2.yml'
+      - 'scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-PYTHON-COMPOSER-SIX-CHECK-SUCCESSOR-V2.json'
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+concurrency:
+  group: stage3-six-native-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+jobs:
+  six-successor-contract-and-phase3-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Preserve original DA9 contract; verify six successors have no execution authority
+        run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --selftest
+      - name: Independently classify PHASE3 historical dependency digest mismatch
+        run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --phase3 --out=acceptance-output/MCFT_CAP09_STAGE3_PHASE3_HISTORICAL_DIGEST_DISPOSITION_V2.json
+      - name: Publish nonauthorizing PHASE3 digest difference report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-phase3-digest-hold-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_STAGE3_PHASE3_HISTORICAL_DIGEST_DISPOSITION_V2.json
+          if-no-files-found: error
+          retention-days: 90
+
+  successor-v13-autonomous-forcing-foundation:
+    env:
+      NODE_VERSION: '20.11.1'
+      PNPM_VERSION: '9.15.4'
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_v13_forcing_acceptance
+      EXACT_PREDECESSOR_SHA: '26c1383f7f45abb76c99e28ec3d06714e85d1b2c'
+      CURRENT_SUCCESSOR_BASE_SHA: 'd054b334b3e74f3356b5d02498da9ba845eccdfb'
+      SUCCESSOR_REQUALIFICATION_BASE_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
+      POST_MERGE_V13_BASE_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+      PRODUCER_QUALIFICATION_BASE_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+      SCHEMA_QUALIFICATION_CONSISTENCY_REPAIR_BASE_SHA: '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_v13_forcing_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_v13_forcing_acceptance"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Require exact predecessor and no production effect
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            if [ "$base" != "$EXACT_PREDECESSOR_SHA" ] && [ "$base" != "$SUCCESSOR_REQUALIFICATION_BASE_SHA" ] && [ "$base" != "$POST_MERGE_V13_BASE_SHA" ] && [ "$base" != "$PRODUCER_QUALIFICATION_BASE_SHA" ] && [ "$base" != "$SCHEMA_QUALIFICATION_CONSISTENCY_REPAIR_BASE_SHA"  && [ "$base" != "$CURRENT_SUCCESSOR_BASE_SHA" ]]; then
+              echo "V13_FOUNDATION_UNGOVERNED_BASE:${base}" >&2
+              exit 1
+            fi
+          fi
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+          ! grep -Eq '^  schedule:' .github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml
+
+      - name: Validate v13 foundation governance
+        env:
+          MCFT_BASE_SHA: ${{ env.EXACT_PREDECESSOR_SHA }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.cjs
+
+      - name: Typecheck v13 foundation surfaces
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module ESNext --moduleResolution Bundler --esModuleInterop --types node
+          apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts
+          apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.ts
+          scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts
+
+      - name: Run real PostgreSQL v13 foundation acceptance
+        env:
+          MCFT_CAP09_V13_FOUNDATION_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.ts
+
+      - name: Typecheck full server Runtime surface
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Validate machine proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const governance=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_GOVERNANCE.json','utf8'));
+          const runtime=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_RESULT.json','utf8'));
+          const exactRelations=['twin_external_formal_forcing_base_cursor_v1','twin_external_formal_forcing_base_target_v1','twin_external_formal_forcing_controller_lease_v1'];
+          const predecessor=[
+            'facts','twin_action_feedback_cycle_projection_v1','twin_action_feedback_evidence_index_v1','twin_action_feedback_projection_v1',
+            'twin_active_lineage_index_v1','twin_approved_plan_binding_projection_v1','twin_decision_record_projection_v1',
+            'twin_forecast_point_projection_v1','twin_forecast_residual_projection_v1','twin_forecast_result_latest_index_v1',
+            'twin_forecast_run_projection_v1','twin_forecast_success_latest_index_v1','twin_object_idempotency_index_v1',
+            'twin_runtime_authority_snapshot_v1','twin_runtime_checkpoint_latest_index_v1','twin_runtime_health_latest_index_v1',
+            'twin_runtime_lease_v1','twin_scenario_latest_index_v1','twin_scenario_point_projection_v1','twin_scenario_set_projection_v1',
+            'twin_scenario_set_uniqueness_v1','twin_shadow_online_scheduler_cursor_v1','twin_shadow_online_scheduler_slot_v1',
+            'twin_state_history_projection_v1','twin_state_latest_index_v1','twin_terminal_tick_uniqueness_v1'
+          ].sort();
+          const final=[...predecessor,...exactRelations].sort();
+          if(governance.status!=='PASS'||governance.operational_table_delta!==3||JSON.stringify(governance.exact_new_operational_relations)!==JSON.stringify(exactRelations)||JSON.stringify([...governance.exact_predecessor_relations].sort())!==JSON.stringify(predecessor)||JSON.stringify([...governance.exact_v13_relations].sort())!==JSON.stringify(final)||governance.canonical_facts_schema_mutation!==false||governance.hardcoded_35_minute_budget_authorized!==false||governance.physical_visibility_uses_post_commit_db_readback!==true||governance.production_effect!==false)throw new Error('V13_FOUNDATION_GOVERNANCE_PASS_REQUIRED');
+          if(runtime.status!=='PASS'||runtime.acceptance_mode!=='REAL_POSTGRESQL_V13_AUTONOMOUS_FORCING_FOUNDATION')throw new Error('V13_FOUNDATION_RUNTIME_PASS_REQUIRED');
+          for(const key of ['producer_cursor_continuity_verified','producer_cursor_leads_runtime_consumption_by_required_base','exact_predecessor_base_continuity_verified','forcing_base_claim_lease_fencing_verified','duplicate_wake_idempotency_verified','stale_fencing_token_rejected','missed_causal_deadline_terminalized_before_runtime_claim','post_commit_fresh_transaction_fact_readback_verified','db_clock_post_commit_visibility_attested_before_base','payload_time_travel_rejected_by_physical_visibility','end_to_end_budget_requires_controlled_delay_matrix'])if(runtime[key]!==true)throw new Error(`V13_FOUNDATION_MACHINE_PROOF_MISSING:${key}`);
+          if(runtime.hardcoded_35_minute_budget_authorized!==false||runtime.production_workflow_wiring_changed!==false||runtime.formal_v4_mutation_performed!==false||runtime.mcft_cap09_completed!==false)throw new Error('V13_FOUNDATION_NONCLAIM_REGRESSION');
+
+      - name: Upload immutable foundation proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-autonomous-forcing-foundation-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_GOVERNANCE.json
+            acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Seal unsigned exact-source ${{ github.event.pull_request.head.sha }} receipt for V13_AUTONOMOUS_FORCING_FOUNDATION
+        if: success()
+        env:
+          MCFT_CAP09_EXACT_HEAD: ${{ github.event.pull_request.head.sha }}
+          MCFT_CAP09_EXACT_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --check-id=V13_AUTONOMOUS_FORCING_FOUNDATION --out=acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_V13_AUTONOMOUS_FORCING_FOUNDATION_RECEIPT_V2.json
+      - name: Upload unsigned exact-source V13_AUTONOMOUS_FORCING_FOUNDATION evidence only after original job success
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-six-V13_AUTONOMOUS_FORCING_FOUNDATION-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_V13_AUTONOMOUS_FORCING_FOUNDATION_RECEIPT_V2.json
+          if-no-files-found: error
+          retention-days: 90
+
+
+  successor-holistic-v13-schema:
+    env:
+      NODE_VERSION: '20.11.1'
+      PNPM_VERSION: '9.15.4'
+      EXACT_PREDECESSOR_SHA: '26c1383f7f45abb76c99e28ec3d06714e85d1b2c'
+      CURRENT_SUCCESSOR_BASE_SHA: 'd054b334b3e74f3356b5d02498da9ba845eccdfb'
+      SUCCESSOR_REQUALIFICATION_BASE_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
+      POST_MERGE_V13_BASE_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+      PRODUCER_QUALIFICATION_BASE_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+      SCHEMA_QUALIFICATION_CONSISTENCY_REPAIR_BASE_SHA: '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
+      DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_v13_holistic_schema'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_v13_holistic_schema
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_v13_holistic_schema"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Require exact predecessor and zero production wake
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            if [ "$base" != "$EXACT_PREDECESSOR_SHA" ] && [ "$base" != "$SUCCESSOR_REQUALIFICATION_BASE_SHA" ] && [ "$base" != "$POST_MERGE_V13_BASE_SHA" ] && [ "$base" != "$PRODUCER_QUALIFICATION_BASE_SHA" ] && [ "$base" != "$SCHEMA_QUALIFICATION_CONSISTENCY_REPAIR_BASE_SHA"  && [ "$base" != "$CURRENT_SUCCESSOR_BASE_SHA" ]]; then
+              echo "V13_HOLISTIC_SCHEMA_UNGOVERNED_BASE:${base}" >&2
+              exit 1
+            fi
+          fi
+          trigger_block="$(awk '/^on:/{capture=1} /^permissions:/{capture=0} capture{print}' .github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml)"
+          ! grep -Eq '^  schedule:|^  workflow_dispatch:' <<<"$trigger_block"
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+
+      - name: Typecheck holistic schema acceptance
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES.ts
+
+      - name: Run real PostgreSQL holistic v13 schema acceptance
+        env:
+          MCFT_CAP09_V13_HOLISTIC_SCHEMA_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES.ts
+
+      - name: Validate holistic schema machine proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES_RESULT.json','utf8'));
+          if(p.status!=='PASS')throw new Error('V13_HOLISTIC_SCHEMA_NOT_PASS');
+          if(p.predecessor_public_table_count!==26||p.v13_required_public_table_count!==29||p.operational_table_delta!==3)throw new Error('V13_HOLISTIC_SCHEMA_CARDINALITY_WRONG');
+          const expected=['twin_external_formal_forcing_base_cursor_v1','twin_external_formal_forcing_base_target_v1','twin_external_formal_forcing_controller_lease_v1'].sort();
+          if(JSON.stringify([...p.exact_new_operational_relations].sort())!==JSON.stringify(expected))throw new Error('V13_HOLISTIC_SCHEMA_RELATION_SET_WRONG');
+          const predecessor=[
+            'facts','twin_action_feedback_cycle_projection_v1','twin_action_feedback_evidence_index_v1','twin_action_feedback_projection_v1',
+            'twin_active_lineage_index_v1','twin_approved_plan_binding_projection_v1','twin_decision_record_projection_v1',
+            'twin_forecast_point_projection_v1','twin_forecast_residual_projection_v1','twin_forecast_result_latest_index_v1',
+            'twin_forecast_run_projection_v1','twin_forecast_success_latest_index_v1','twin_object_idempotency_index_v1',
+            'twin_runtime_authority_snapshot_v1','twin_runtime_checkpoint_latest_index_v1','twin_runtime_health_latest_index_v1',
+            'twin_runtime_lease_v1','twin_scenario_latest_index_v1','twin_scenario_point_projection_v1','twin_scenario_set_projection_v1',
+            'twin_scenario_set_uniqueness_v1','twin_shadow_online_scheduler_cursor_v1','twin_shadow_online_scheduler_slot_v1',
+            'twin_state_history_projection_v1','twin_state_latest_index_v1','twin_terminal_tick_uniqueness_v1'
+          ].sort();
+          const final=[...predecessor,...expected].sort();
+          if(JSON.stringify([...p.predecessor_public_tables].sort())!==JSON.stringify(predecessor))throw new Error('V13_HOLISTIC_SCHEMA_EXACT_PREDECESSOR_SET_WRONG');
+          if(JSON.stringify([...p.v13_public_tables].sort())!==JSON.stringify(final))throw new Error('V13_HOLISTIC_SCHEMA_EXACT_FINAL_SET_WRONG');
+          for(const key of ['canonical_facts_schema_unchanged','all_new_relations_zero_state','columns_observed_from_pg_catalog','constraints_observed_from_pg_catalog','indexes_observed_from_pg_indexes','exact_head_fingerprint_candidate_generated'])if(p[key]!==true)throw new Error(`V13_HOLISTIC_SCHEMA_PROOF_MISSING:${key}`);
+          for(const key of ['v13_column_fingerprint_md5','v13_constraint_fingerprint_md5','v13_index_fingerprint_md5'])if(!/^[0-9a-f]{32}$/.test(String(p[key]||'')))throw new Error(`V13_HOLISTIC_SCHEMA_FINGERPRINT_INVALID:${key}`);
+          if(p.production_workflow_effect!==false||p.formal_v4_mutation_performed!==false||p.mcft_cap09_completed!==false)throw new Error('V13_HOLISTIC_SCHEMA_NONCLAIM_REGRESSION');
+
+      - name: Upload holistic schema proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-holistic-schema-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Seal unsigned exact-source ${{ github.event.pull_request.head.sha }} receipt for V13_HOLISTIC_SCHEMA
+        if: success()
+        env:
+          MCFT_CAP09_EXACT_HEAD: ${{ github.event.pull_request.head.sha }}
+          MCFT_CAP09_EXACT_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --check-id=V13_HOLISTIC_SCHEMA --out=acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_V13_HOLISTIC_SCHEMA_RECEIPT_V2.json
+      - name: Upload unsigned exact-source V13_HOLISTIC_SCHEMA evidence only after original job success
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-six-V13_HOLISTIC_SCHEMA-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_V13_HOLISTIC_SCHEMA_RECEIPT_V2.json
+          if-no-files-found: error
+          retention-days: 90
+
+
+  successor-next-tick-viability:
+    env:
+      NODE_VERSION: '20.11.1'
+      PNPM_VERSION: '9.15.4'
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_v13_viability_acceptance
+      EXACT_PREDECESSOR_SHA: '26c1383f7f45abb76c99e28ec3d06714e85d1b2c'
+      CURRENT_SUCCESSOR_BASE_SHA: 'd054b334b3e74f3356b5d02498da9ba845eccdfb'
+      SUCCESSOR_REQUALIFICATION_BASE_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
+      POST_MERGE_V13_BASE_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+      PRODUCER_QUALIFICATION_BASE_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_v13_viability_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_v13_viability_acceptance"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Require exact predecessor and development-only surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            if [ "$base" != "$EXACT_PREDECESSOR_SHA" ] && [ "$base" != "$SUCCESSOR_REQUALIFICATION_BASE_SHA" ] && [ "$base" != "$POST_MERGE_V13_BASE_SHA" ] && [ "$base" != "$PRODUCER_QUALIFICATION_BASE_SHA"  && [ "$base" != "$CURRENT_SUCCESSOR_BASE_SHA" ]]; then
+              echo "V13_NEXT_TICK_UNGOVERNED_BASE:${base}" >&2
+              exit 1
+            fi
+          fi
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+      - name: Typecheck v5 viability-gated runner surface
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node
+          apps/server/src/runtime/twin_runtime/postgres_external_formal_next_tick_viability_v1.ts
+          apps/server/src/runtime/twin_runtime/external_formal_v5_viability_gated_scheduler_v1.ts
+          apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY.ts
+      - name: Run real PostgreSQL next-tick viability acceptance
+        env:
+          MCFT_CAP09_V13_VIABILITY_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts
+      - name: Prove post-COMMIT adjudication failure cannot re-terminalize predecessor
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY.ts
+      - name: Typecheck full server Runtime surface
+        run: pnpm --filter @geox/server typecheck
+      - name: Validate viability machine proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES_RESULT.json','utf8'));
+          for(const key of ['o00_a0_warm_start_exception_verified','runtime_cursor_exact_preclaim_boundary_verified','o01_requires_o00_forcing_base_attestation','exact_predecessor_forcing_base_required','physical_attestation_before_base_required','a2_blocked_does_not_imply_successor_viable','o08_claim_prevented_when_o07_forcing_base_terminal','successor_claim_forbidden_when_next_tick_viable_false'])if(p[key]!==true)throw new Error(`V13_VIABILITY_MACHINE_PROOF_MISSING:${key}`);
+          if(p.status!=='PASS'||p.viability_failure_underlying_scheduler_claim_count!==0||p.canonical_tick_core_changed!==false||p.production_workflow_effect!==false||p.mcft_cap09_completed!==false)throw new Error('V13_VIABILITY_NONCLAIM_REGRESSION');
+      - name: Validate post-COMMIT adjudication boundary proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY_RESULT.json','utf8'));
+          if(p.status!=='PASS'||p.predecessor_terminal_commit_count!==1||p.successor_adjudication_attempt_count!==1||p.post_commit_adjudication_failure_propagated_from_v5!==true||p.post_commit_adjudication_failure_does_not_reterminalize_current_slot!==true||p.frozen_v3_runner_modified!==false||p.canonical_tick_core_changed!==false||p.production_workflow_effect!==false||p.mcft_cap09_completed!==false)throw new Error('V13_POST_COMMIT_ADJUDICATION_BOUNDARY_REGRESSION');
+      - name: Upload immutable viability proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-next-tick-viability-${{ github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES_RESULT.json
+            acceptance-output/MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Seal unsigned exact-source ${{ github.event.pull_request.head.sha }} receipt for V13_NEXT_TICK_VIABILITY
+        if: success()
+        env:
+          MCFT_CAP09_EXACT_HEAD: ${{ github.event.pull_request.head.sha }}
+          MCFT_CAP09_EXACT_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --check-id=V13_NEXT_TICK_VIABILITY --out=acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_V13_NEXT_TICK_VIABILITY_RECEIPT_V2.json
+      - name: Upload unsigned exact-source V13_NEXT_TICK_VIABILITY evidence only after original job success
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-six-V13_NEXT_TICK_VIABILITY-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_V13_NEXT_TICK_VIABILITY_RECEIPT_V2.json
+          if-no-files-found: error
+          retention-days: 90
+
+
+  successor-ea5c1-durable-raw-restricted-ingress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5c1
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5c1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Exact PR subject and no external execution authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "${{ github.event.pull_request.base.sha }}" = "2b63652297bb285f21c4d4c63c37d247d009142c"
+          test -z "${MCFT_GOVERNED_RETRY_TICKET:-}"
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1 # Lockfile native better-sqlite3 ABI; Windows Node 24 host rehearsal is a separate later gate
+          cache: pnpm
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24.2'
+          cache: false
+
+      - name: Resolve exact EA5C1 base
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax-check EA5C1 governance gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs
+
+      - name: Independently verify current EA5C1 source preserved; do not reuse predecessor-only gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_EA5C1_SEMANTIC_SUCCESSOR_SCOPE_V1.cjs
+
+      - name: Re-prove CAP08 G3 frozen-core successor compatibility
+        # Successor G3 mode compares every frozen-core blob directly to the accepted G3 merge.
+        # Bind BASE to the exact subject so unrelated stacked-diff whitespace cannot mask that check.
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S2_G3_BOUNDARY.cjs
+
+      - name: Start private S3-compatible raw store
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin="$RUNNER_TEMP/ea5c1-minio-bin"
+          data="$RUNNER_TEMP/ea5c1-minio-data"
+          mkdir -p "$bin" "$data"
+
+          GOBIN="$bin" go install github.com/minio/minio@RELEASE.2025-09-07T16-13-09Z
+          GOBIN="$bin" go install github.com/minio/mc@RELEASE.2025-08-13T08-35-41Z
+
+          MINIO_ROOT_USER=minioadmin \
+          MINIO_ROOT_PASSWORD=minioadmin123 \
+            "$bin/minio" server "$data" >"$RUNNER_TEMP/ea5c1-minio.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/ea5c1-minio.pid"
+
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            if [ "$attempt" = 90 ]; then
+              cat "$RUNNER_TEMP/ea5c1-minio.log"
+              exit 1
+            fi
+            sleep 1
+          done
+
+          "$bin/mc" alias set local http://127.0.0.1:9000 minioadmin minioadmin123
+          "$bin/mc" mb --ignore-existing local/geox-mcft-cap09-formal-raw-v1
+          "$bin/mc" anonymous set private local/geox-mcft-cap09-formal-raw-v1
+          "$bin/mc" stat local/geox-mcft-cap09-formal-raw-v1
+
+      - name: Typecheck server
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p acceptance-output
+          pnpm --filter @geox/server run typecheck 2>&1 | tee acceptance-output/EA5C1_SERVER_TYPECHECK.log
+
+      - name: Prove durable raw retention and restricted canonical Evidence ingress
+        shell: bash
+        env:
+          EA5C1_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55432/ea5c1
+          EA5C1_S3_ENDPOINT: http://127.0.0.1:9000
+          EA5C1_S3_BUCKET: geox-mcft-cap09-formal-raw-v1
+          EA5C1_S3_ACCESS_KEY: minioadmin
+          EA5C1_S3_SECRET_KEY: minioadmin123
+          EA5C1_EXACT_HISTORICAL_BASE: b9e212f98dd1d0c1e8fff5e9f93f369167e6f065
+          EA5C1_CURRENT_BASE: ${{ steps.authority.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EA5C1_CURRENT_BASE" = "$EA5C1_EXACT_HISTORICAL_BASE" ]; then
+            pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts \
+              2>&1 | tee acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
+          else
+            pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts \
+              2>&1 | tee acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
+            pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts \
+              2>&1 | tee acceptance-output/EA5C1_REAL_CLOCK_P0_RETENTION_REUSE.log
+          fi
+
+      - name: Re-prove EA3 retention-before-decode collector boundary
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.ts
+
+      - name: Re-prove EA5B5C persistence-free production orchestration
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts
+
+      - name: Verify raw bucket stays private
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -sS -o /tmp/ea5c1-anon-body -w '%{http_code}' http://127.0.0.1:9000/geox-mcft-cap09-formal-raw-v1/ || true)"
+          test "$status" = "403"
+
+      - name: Stop private S3-compatible raw store
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/ea5c1-minio.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/ea5c1-minio.pid")" || true
+          fi
+
+      - name: Verify EA5C1 remains implementation qualification only
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP09_DA9_EA5C1_SEMANTIC_SUCCESSOR_SCOPE_RESULT.json','utf8'));
+          if (r.status !== 'PASS') throw new Error('EA5C1_GOVERNANCE_PASS_REQUIRED');
+          if (r.current_ea5c1_source_preserved_against_adopted_main !== true || r.historical_ea5c1_predecessor_only_gate_purposely_not_promoted !== true) throw new Error('EA5C1_SEMANTIC_SUCCESSOR_SCOPE_NOT_PROVEN');
+          if (r.historical_authority_requalified !== false || r.production_authorized !== false || r.permit_signed !== false || r.permit_consumed !== false) throw new Error('EA5C1_PREMATURE_SUCCESSOR_EFFECT');
+          if (r.production_write_performed !== false || r.provider_calls !== 0 || r.third_attempt_authorized !== false) throw new Error('EA5C1_NONCLAIM_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',ea5c1:true,ea5c_complete:false,formal_neon_write:false,ea5d:false,ea5e:false,o00:false,cap09:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap-09-ea5c1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP09_DA9_EA5C1_SEMANTIC_SUCCESSOR_SCOPE_RESULT.json
+            acceptance-output/MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json
+            acceptance-output/EA5C1_SERVER_TYPECHECK.log
+            acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
+            acceptance-output/EA5C1_REAL_CLOCK_P0_RETENTION_REUSE.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Seal unsigned exact-source ${{ github.event.pull_request.head.sha }} receipt for EA5C1_DURABLE_RAW_RESTRICTED_INGRESS
+        if: success()
+        env:
+          MCFT_CAP09_EXACT_HEAD: ${{ github.event.pull_request.head.sha }}
+          MCFT_CAP09_EXACT_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --check-id=EA5C1_DURABLE_RAW_RESTRICTED_INGRESS --out=acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_RECEIPT_V2.json
+      - name: Upload unsigned exact-source EA5C1_DURABLE_RAW_RESTRICTED_INGRESS evidence only after original job success
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-six-EA5C1_DURABLE_RAW_RESTRICTED_INGRESS-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_RECEIPT_V2.json
+          if-no-files-found: error
+          retention-days: 90
+
+
+  successor-postgres-evidence-persistence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: phase3_evidence
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d phase3_evidence"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/phase3_evidence
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install pinned GFS scientific stack and prove product decoder
+        run: |
+          python -m pip install --disable-pip-version-check             'eccodes==2.47.0'             'eccodeslib==2.47.3.23'             'numpy==1.26.4'             'refet==0.4.2'
+          python -m eccodes selfcheck
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py selftest
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py selftest
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py selftest
+      - name: Apply Phase3 Evidence persistence schema only
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql
+      - name: Apply idempotent KBS publication baseline pointer extension
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql
+      - name: Apply idempotent Evidence source poll schedule extension
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql
+      - name: Prove product and acceptance types
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts
+      - name: Prove durable Evidence lease and supply cursor semantics
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
+      - name: Prove durable fenced source poll schedule and restart throttle
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts
+      - name: Prove durable GFS retry throttle and per-target attempt budget
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts
+      - name: Prove fenced KBS publication baseline current pointer
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts
+      - name: Prove retained KBS snapshot historical-prefix comparison
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts
+      - name: Prove reusable verified retained-raw replay primitive
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts
+      - name: Prove KBS complete-table publication cycle semantics
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts
+      - name: Prove generic Evidence cadence profiles
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts
+      - name: Prove one canonical Evidence Runtime supply cycle
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts
+      - name: Prove long-running Evidence Runtime host lifecycle
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts
+      - name: Prove source-plan to single-host attempt execution core
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts
+      - name: Prove provider-attempt fence before provider I/O
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts
+      - name: Prove bounded GFS member retry resilience
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1.ts
+      - name: Prove product GFS raw bundle composition
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts
+      - name: Start isolated private candidate object store
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker rm -f mcft-cap09-phase7-private-minio >/dev/null 2>&1 || true
+          docker run -d --name mcft-cap09-phase7-private-minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=phase7access \
+            -e MINIO_ROOT_PASSWORD=phase7-private-secret-key-001 \
+            ghcr.io/datalens-tech/minio:25.09@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
+          docker run --rm --network host \
+            -e MC_HOST_phase7=http://phase7access:phase7-private-secret-key-001@127.0.0.1:9000 \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 mb --ignore-existing phase7/mcft-cap09-phase7-private
+          docker run --rm --network host \
+            -e MC_HOST_phase7=http://phase7access:phase7-private-secret-key-001@127.0.0.1:9000 \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 anonymous set private phase7/mcft-cap09-phase7-private
+      - name: Prove durable private candidate and retained-raw I/O
+        env:
+          PHASE7_PRIVATE_S3_ENDPOINT: http://127.0.0.1:9000
+          PHASE7_PRIVATE_S3_BUCKET: mcft-cap09-phase7-private
+          PHASE7_PRIVATE_S3_REGION: us-east-1
+          PHASE7_PRIVATE_S3_ACCESS_KEY_ID: phase7access
+          PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY: phase7-private-secret-key-001
+        run: |
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1.ts
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts
+      - name: Create isolated ACL qualification surface
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE TABLE public.facts (
+            fact_id text PRIMARY KEY,
+            occurred_at timestamptz NOT NULL,
+            source text NOT NULL,
+            record_json jsonb NOT NULL,
+            ingested_at timestamptz NOT NULL DEFAULT transaction_timestamp()
+          );
+          CREATE TABLE public.twin_runtime_lease_v1 (id integer PRIMARY KEY);
+          CREATE TABLE public.twin_runtime_checkpoint_latest_index_v1 (id integer PRIMARY KEY, value text);
+          CREATE TABLE public.twin_shadow_online_scheduler_cursor_v1 (id integer PRIMARY KEY);
+          CREATE TABLE public.approvals (id integer PRIMARY KEY);
+          CREATE TABLE public.actions (id integer PRIMARY KEY);
+          SQL
+      - name: Prove canonical GFS hourly target-pair history
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts
+      - name: Prove replay-complete External Evidence fact provenance readback
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts
+      - name: Prove zero-provider GFS partial-pair retained rehydration
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts
+      - name: Apply v13 Evidence-plane forcing operational schema
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql
+      - name: Apply Phase3 Evidence Runtime ACL
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql
+      - name: Reproduce V13 successor ACL reset
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql
+      - name: Apply forward Phase3 ACL carry-forward remediation
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql
+      - name: Prove Evidence Runtime database ACL separation
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts
+      - name: Prove deployable Evidence Runtime composition
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts
+      - name: Prove Phase3 persistence boundary has no Twin runtime or cadence ownership
+        shell: python
+        run: |
+          import pathlib
+          core_files = [
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_supply_cadence_profile_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_attempt_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts"),
+              pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts"),
+              pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_source_poll_schedule_v1.ts"),
+              pathlib.Path("apps/server/src/persistence/external_evidence/postgres_gfs_retry_schedule_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_gfs_retry_schedule_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_source_poll_schedule_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_production_evidence_source_due_policy_v1.ts"),
+              pathlib.Path("apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_kbs_raw_hourly_publication_cycle_service_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_gfs_partial_pair_rehydration_v1.ts"),
+
+              pathlib.Path("apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts"),
+              pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts"),
+          ]
+          decoder_file = pathlib.Path("apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts")
+          kbs_comparison_file = pathlib.Path("apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts")
+          core_text = "\n".join(p.read_text(encoding="utf-8") for p in core_files)
+          decoder_text = decoder_file.read_text(encoding="utf-8")
+          kbs_comparison_text = kbs_comparison_file.read_text(encoding="utf-8")
+
+          core_forbidden = [
+              "setInterval(",
+              "setTimeout(",
+              "process.env",
+              "child_process",
+              "scripts/runtime_acceptance",
+              "INSERT INTO twin_",
+              "UPDATE twin_",
+              "DELETE FROM twin_",
+          ]
+          for marker in core_forbidden:
+              if marker in core_text:
+                  raise SystemExit(f"PHASE3_EVIDENCE_CORE_FORBIDDEN_DEPENDENCY:{marker}")
+
+          decoder_forbidden = [
+              "setInterval(",
+              "setTimeout(",
+              "process.env",
+              "scripts/runtime_acceptance",
+              "INSERT INTO",
+              "UPDATE ",
+              "DELETE FROM",
+              "RuntimeTickCursor",
+          ]
+          for marker in decoder_forbidden:
+              if marker in decoder_text:
+                  raise SystemExit(f"PHASE3_EVIDENCE_DECODER_FORBIDDEN_DEPENDENCY:{marker}")
+          if 'from "node:child_process"' not in decoder_text:
+              raise SystemExit("PHASE3_EVIDENCE_DECODER_PRODUCT_PYTHON_BRIDGE_REQUIRED")
+          if "mcft_cap09_gfs_raw_bundle_decoder_v1.py" not in decoder_text:
+              raise SystemExit("PHASE3_EVIDENCE_DECODER_PRODUCT_DRIVER_BINDING_REQUIRED")
+
+          kbs_comparison_forbidden = [
+              "setInterval(",
+              "setTimeout(",
+              "process.env",
+              "scripts/runtime_acceptance",
+              "INSERT INTO",
+              "UPDATE ",
+              "DELETE FROM",
+              "RuntimeTickCursor",
+          ]
+          for marker in kbs_comparison_forbidden:
+              if marker in kbs_comparison_text:
+                  raise SystemExit(f"PHASE3_KBS_COMPARISON_BRIDGE_FORBIDDEN_DEPENDENCY:{marker}")
+          if 'from "node:child_process"' not in kbs_comparison_text:
+              raise SystemExit("PHASE3_KBS_COMPARISON_PRODUCT_PYTHON_BRIDGE_REQUIRED")
+          if "MCFT_CAP09_KBS_RAW_HOURLY_SCIENTIFIC_CORE_RELATIVE_PATH_V1" not in kbs_comparison_text:
+              raise SystemExit("PHASE3_KBS_COMPARISON_PRODUCT_CORE_AUTHORITY_BINDING_REQUIRED")
+          repo = pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts").read_text(encoding="utf-8")
+          if "twin_runtime_lease_v1" in repo:
+              raise SystemExit("PHASE3_EVIDENCE_LEASE_MUST_BE_INDEPENDENT_FROM_TWIN_RUNTIME_LEASE")
+          if "external_evidence_producer_lease_v1" not in repo or "external_evidence_supply_cursor_v1" not in repo:
+              raise SystemExit("PHASE3_EVIDENCE_PERSISTENCE_TABLE_BINDING_REQUIRED")
+          print("PHASE3_EVIDENCE_PERSISTENCE_BOUNDARY_PASS")
+      - name: Stop isolated private candidate object store
+        if: always()
+        run: docker rm -f mcft-cap09-phase7-private-minio >/dev/null 2>&1 || true
+      - name: Upload Phase3 Evidence persistence proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase3-evidence-persistence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_GFS_MEMBER_RETRY_RESILIENCE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Seal unsigned exact-source ${{ github.event.pull_request.head.sha }} receipt for PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+        if: success()
+        env:
+          MCFT_CAP09_EXACT_HEAD: ${{ github.event.pull_request.head.sha }}
+          MCFT_CAP09_EXACT_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --check-id=PHASE3_EVIDENCE_RUNTIME_FOUNDATION --out=acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_PHASE3_EVIDENCE_RUNTIME_FOUNDATION_RECEIPT_V2.json
+      - name: Upload unsigned exact-source PHASE3_EVIDENCE_RUNTIME_FOUNDATION evidence only after original job success
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-six-PHASE3_EVIDENCE_RUNTIME_FOUNDATION-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_PHASE3_EVIDENCE_RUNTIME_FOUNDATION_RECEIPT_V2.json
+          if-no-files-found: error
+          retention-days: 90
+
+
+  successor-candidate-promotion-composition:
+    env:
+      NODE_VERSION: '20.11.1'
+      PNPM_VERSION: '9.15.4'
+      EXACT_PREDECESSOR_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
+      CURRENT_SUCCESSOR_BASE_SHA: 'd054b334b3e74f3356b5d02498da9ba845eccdfb'
+      POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+      PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+      DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase7_composition'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_phase7_composition
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_phase7_composition"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Require exact stacked predecessor and zero production activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            git fetch --no-tags origin main
+            current_protected_main="$(git rev-parse origin/main)"
+            if [[ "$base" != "$EXACT_PREDECESSOR_SHA" \
+              && "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" \
+              && "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA" \
+              && "$base" != "$CURRENT_SUCCESSOR_BASE_SHA" \
+              && "$base" != "$current_protected_main" ]]; then
+              echo "PHASE7_COMPOSITION_UNGOVERNED_BASE:$base" >&2
+              exit 1
+            fi
+          fi
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_EPOCH_ID:-}"
+
+      - name: Typecheck candidate/promotion composition graph
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts \
+            apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts
+
+      - name: Prove reusable verified retained-raw replay primitive
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts
+
+      - name: Start isolated private formal raw/candidate store
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker rm -f mcft-cap09-phase7-composition-minio >/dev/null 2>&1 || true
+          docker run -d --name mcft-cap09-phase7-composition-minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=phase7composition \
+            -e MINIO_ROOT_PASSWORD=phase7-composition-secret-key-001 \
+            ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
+          docker run --rm --network host --entrypoint /bin/sh \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -ceu '
+              mc alias set phase7 http://127.0.0.1:9000 phase7composition phase7-composition-secret-key-001
+              mc mb --ignore-existing phase7/geox-mcft-cap09-formal-raw-v1
+              mc anonymous set private phase7/geox-mcft-cap09-formal-raw-v1
+            '
+
+      - name: Run real private candidate to PostgreSQL fenced promotion qualification
+        env:
+          MCFT_CAP09_PHASE7_COMPOSITION_DESTRUCTIVE_ACCEPTANCE: '1'
+          PHASE7_COMPOSITION_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PHASE7_PRIVATE_S3_ENDPOINT: http://127.0.0.1:9000
+          PHASE7_PRIVATE_S3_BUCKET: geox-mcft-cap09-formal-raw-v1
+          PHASE7_PRIVATE_S3_REGION: us-east-1
+          PHASE7_PRIVATE_S3_ACCESS_KEY_ID: phase7composition
+          PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY: phase7-composition-secret-key-001
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts
+
+      - name: Validate composition machine proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1_RESULT.json','utf8'));
+          if(p.status!=='PASS')throw new Error('PHASE7_CANDIDATE_PROMOTION_COMPOSITION_NOT_PASS');
+          if(p.subject_sha!=='${{ github.event.pull_request.head.sha || github.sha }}')throw new Error('PHASE7_COMPOSITION_SUBJECT_MISMATCH');
+          for(const key of [
+            'candidate_manifest_private_readback',
+            'replay_authority_fields_complete',
+            'rehydration_semantic_manifest_exact_match',
+            'real_postgres_fenced_promotion',
+            'exact_three_facts_single_fenced_transaction',
+            'promotion_did_not_advance_cursor',
+            'controller_attestation_after_promotion',
+            'cursor_advanced_only_after_attestation',
+            'pre_mutation_failure_fails_closed'
+          ]) if(p[key]!==true)throw new Error('PHASE7_COMPOSITION_PROOF_MISSING:'+key);
+          if(
+            p.capture_raw_object_count!==2
+            ||p.candidate_semantic_record_count!==3
+            ||p.promotion_provider_refetch_count!==0
+            ||p.promotion_github_artifact_rehydration_count!==0
+            ||p.promotion_raw_store_write_count!==0
+            ||p.real_postgres_formal_fact_present_count!==3
+            ||p.capture_formal_database_write_count!==0
+          )throw new Error('PHASE7_COMPOSITION_COUNT_OR_BOUNDARY_REGRESSION');
+          if(
+            p.production_process_graph_wiring!==false
+            ||p.production_owner_activation!==false
+            ||p.formal_v5_store_provisioned!==false
+            ||p.formal_v5_epoch_selected!==false
+            ||p.formal_v5_armed!==false
+            ||p.o00_started!==false
+            ||p.protected_main_mutated!==false
+            ||p.mcft_cap09_completed!==false
+          )throw new Error('PHASE7_COMPOSITION_NONCLAIM_REGRESSION');
+
+      - name: Stop isolated private object store
+        if: always()
+        run: docker rm -f mcft-cap09-phase7-composition-minio >/dev/null 2>&1 || true
+
+      - name: Upload Phase7 candidate/promotion composition proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase7-candidate-promotion-composition-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Seal unsigned exact-source ${{ github.event.pull_request.head.sha }} receipt for PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION
+        if: success()
+        env:
+          MCFT_CAP09_EXACT_HEAD: ${{ github.event.pull_request.head.sha }}
+          MCFT_CAP09_EXACT_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --check-id=PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION --out=acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_RECEIPT_V2.json
+      - name: Upload unsigned exact-source PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION evidence only after original job success
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-six-PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_STAGE3_SIX_NATIVE_PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_RECEIPT_V2.json
+          if-no-files-found: error
+          retention-days: 90
+
