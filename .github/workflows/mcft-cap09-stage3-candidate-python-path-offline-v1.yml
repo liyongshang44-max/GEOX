@@ -34,6 +34,6 @@ jobs:
           test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
       - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Real isolated Composition GFS capture versus Candidate replay path
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_CANDIDATE_PYTHON_PATH_OFFLINE_V1.ts
