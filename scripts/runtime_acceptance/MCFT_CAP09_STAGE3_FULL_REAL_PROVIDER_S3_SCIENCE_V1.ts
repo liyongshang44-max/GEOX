@@ -53,6 +53,7 @@ async function main(){
    assert(locator.protocol==="https:"&&
     ["lter.kbs.msu.edu","nomads.ncep.noaa.gov"].includes(locator.hostname));
    realGets++;
+   assert(realGets<=260,"STAGE3_REAL_GFS_MAX_260_HTTPS_GET_LIMIT");
    return fetch(input,init);
   };
   const factory=new ProductionEvidenceWorkItemFactoryV1({retention:ret,fetch_impl:actualFetch});
