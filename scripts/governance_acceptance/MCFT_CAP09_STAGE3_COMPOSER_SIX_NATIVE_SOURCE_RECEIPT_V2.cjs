@@ -85,6 +85,36 @@ function runPhase3(){
  assert(d.changed_paths.length>0||d.missing_historical_paths.length>0,"PHASE3_MISMATCH_WITHOUT_EXPLANATION");
  return d;
 }
+function runEa5c1SuccessorScope(){
+ const s=assertScope();
+ const BASE="2b63652297bb285f21c4d4c63c37d247d009142c";
+ const files=[
+ "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1.json",
+ "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts",
+ "apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts",
+ "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
+ "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts",
+ "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts",
+ "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts",
+ "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs",
+ ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml"
+ ];
+ assert.equal(git("merge-base",BASE,s.head),BASE,"EA5C1_ADOPTED_MAIN_NOT_ANCESTOR");
+ for(const f of files)assert.equal(git("rev-parse",s.head+":"+f),git("rev-parse",BASE+":"+f),
+  "EA5C1_SOURCE_CHANGED_FRESH_INDEPENDENT_REVIEW_REQUIRED:"+f);
+ assert.equal(git("rev-parse",s.head+":apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts"),
+  "9f9067058f2339937de5ddcf3940ce32eac3ce66","EA5C1_RETAINED_RAW_IMPLEMENTATION_CHANGED");
+ for(const k of ["MCFT_GOVERNED_RETRY_TICKET","MCFT_GOVERNED_RETRY_STAGE","MCFT_CAP09_ADOPTION_REQUEST",
+  "GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL","GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL"])
+   assert(!process.env[k],"EA5C1_AUTHORITY_ENV_FORBIDDEN:"+k);
+ return {status:"PASS_NEW_COMPOSER_EA5C1_ADOPTED_SOURCE_SCOPE_ONLY",
+  source_head:s.head,source_bindings_count:files.length,
+  legacy_old_composer_contract_reused:false,
+  old_six_signatures_reused:false,
+  original_real_pg_s3_native_acceptance_still_required:true,
+  production_authorized:false,permit:false};
+}
+
 function collectArtifacts(){
  const root=path.join(ROOT,"acceptance-output");
  const files=[];
@@ -146,9 +176,11 @@ if(require.main===module){
    process.stdout.write(JSON.stringify({status:"PASS_UNAUTHORIZED_SIX_SCOPE_SELFTEST",six_checks:s.c.checks.length,composer_blob:s.c.new_pinned_python_composer_git_blob,permit:false})+"\n");
   }else if(argv.includes("--phase3")){
    persist(runPhase3(),arg("--out"));
+  }else if(argv.includes("--ea5c1-scope")){
+   process.stdout.write(JSON.stringify(runEa5c1SuccessorScope())+"\n");
   }else{
    persist(runCheck(arg("--check-id")),arg("--out"));
   }
  }catch(e){console.error("HOLD_SIX_SUCCESSOR:"+String(e.stack||e));process.exitCode=1;}
 }
-module.exports={assertScope,sourceForCheck,runPhase3,runCheck};
+module.exports={assertScope,sourceForCheck,runPhase3,runEa5c1SuccessorScope,runCheck};
