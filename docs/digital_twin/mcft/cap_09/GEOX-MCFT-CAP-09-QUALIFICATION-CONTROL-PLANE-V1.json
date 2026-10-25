@@ -3122,8 +3122,7 @@
         "V13"
       ],
       "authority_refs": [
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json",
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-PYTHON-COMPOSER-SIX-CHECK-SUCCESSOR-V2.json"
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json"
       ],
       "resolver_ids": [
         "DA9_SIGNED_COMPOSER_V2_GOVERNANCE_READONLY_EXACT_PATHS"
