@@ -1466,6 +1466,44 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_SIGNED_HOST_BRIDGE_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_PARENT_SYNTHETIC_V1.cjs"
       ]
+    },
+    "STAGE3_20261025_NONAUTHORIZING_EXACT_PATH_SCOPE_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap09-da9-stage3-four-real-physical-primitives-v1.yml",
+        ".github/workflows/mcft-cap09-da9-stage3-nonauthorized-real-body-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-cancel-duplicate-live-provider-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-candidate-python-path-offline-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-full-real-provider-s3-science-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-independent-real-evidence-original-hold-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-live-provider-readonly-witness-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-one-real-provider-s3-pg-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-real-scientific-provider-readiness-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-stop-duplicate-science-once-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-three-contiguous-producer-fixture-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-three-physical-timing-phase-samples-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-FOUR-PHYSICAL-PRIMITIVES-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-NONAUTHORIZED-REAL-BODY-QUALIFICATION-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVES_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TIMING_EQUIVALENCE_HOLD_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_STAGE3_TIMING_ORIGINAL_EQUIVALENCE_GATE_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_CANDIDATE_PYTHON_PATH_OFFLINE_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_ISOLATED_REAL_TIMING_PHASE_SAMPLE_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_THREE_BASE_PRODUCER_FIXTURE_V1.ts",
+        "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_EVIDENCE_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_STAGE3_BOOTSTRAP_FRESH_ISOLATED_PG_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP09_STAGE3_FULL_REAL_PROVIDER_S3_SCIENCE_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP09_STAGE3_LIVE_PROVIDER_SCIENTIFIC_READINESS_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP09_STAGE3_ONE_REAL_PROVIDER_PG_FENCED_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP09_STAGE3_PRESERVED_CANDIDATE_REHYDRATION_OFFLINE_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP09_STAGE3_REAL_PROVIDER_READONLY_TRANSPORT_WITNESS_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_STAGE3_NEW_ISOLATED_PG_BOOTSTRAP_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_STAGE3_REAL_FULL_PROVIDER_ONE_BASE_V1.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_BODIES_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_SCRATCH_DELAY_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -3106,6 +3144,35 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/cap09_adoption_v1/acceptance.cjs --bundle synthetic-proof-bundle"
+    },
+    {
+      "check_id": "STAGE3_20261025_NONAUTHORIZING_EXACT_PATH_REQUALIFICATION",
+      "owner": "MCFT_CAP09_STAGE3_TEST_ONLY_EXECUTION_QUALIFICATION",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-NONAUTHORIZED-REAL-BODY-QUALIFICATION-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-FOUR-PHYSICAL-PRIMITIVES-V1.json"
+      ],
+      "resolver_ids": [
+        "STAGE3_20261025_NONAUTHORIZING_EXACT_PATH_SCOPE_V1"
+      ],
+      "historical_evidence_policy": "NONE_NO_CARRY_FORWARD_FROM_OLD_CANDIDATE_OR_SYNTHETIC_TEST",
+      "execution_workflow": ".github/workflows/mcft-cap09-stage3-independent-real-evidence-original-hold-v1.yml",
+      "execution_workflow_status": "ENGINEERING_ONLY_TEST_ONLY_NO_EXECUTION_AUTHORIZATION",
+      "fail_policy": "FAIL_CLOSED_ORIGINAL_REAL_STAGE_BODIES_NOT_YET_QUALIFIED_NO_PROVIDER_REFETCH_NO_OLD_FENCE_NO_PERMIT",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "STAGE3_20261025_NONAUTHORIZING_EXACT_PATH_SCOPE_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs"
     }
   ],
   "non_effects": {
