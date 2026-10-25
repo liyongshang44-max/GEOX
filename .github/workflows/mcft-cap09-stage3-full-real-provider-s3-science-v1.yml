@@ -1,9 +1,5 @@
 name: mcft-cap09-stage3-full-real-provider-s3-science-v1
 on:
-  pull_request:
-    paths:
-      - 'scripts/runtime_acceptance/MCFT_CAP09_STAGE3_FULL_REAL_PROVIDER_S3_SCIENCE_V1.ts'
-      - '.github/workflows/mcft-cap09-stage3-full-real-provider-s3-science-v1.yml'
   workflow_dispatch:
 permissions:
   contents: read

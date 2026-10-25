@@ -1,10 +1,5 @@
 name: mcft-cap09-stage3-one-real-provider-s3-pg-v1
 on:
-  pull_request:
-    paths:
-      - 'scripts/runtime_acceptance/MCFT_CAP09_STAGE3_BOOTSTRAP_FRESH_ISOLATED_PG_V1.ts'
-      - 'scripts/runtime_acceptance/MCFT_CAP09_STAGE3_ONE_REAL_PROVIDER_PG_FENCED_V1.ts'
-      - '.github/workflows/mcft-cap09-stage3-one-real-provider-s3-pg-v1.yml'
   workflow_dispatch:
 permissions:
   contents: read
