@@ -1,0 +1,140 @@
+name: mcft-cap09-stage3-three-physical-timing-phase-samples-v1
+on:
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_ISOLATED_REAL_TIMING_PHASE_SAMPLE_V1.ts'
+      - '.github/workflows/mcft-cap09-stage3-three-physical-timing-phase-samples-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  three-independent-isolated-timing-sample-physical:
+    name: "Measured physical timing ${{ matrix.sample }} (fixture Provider, NOT original Timing V2)"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sample: sample1
+            run_id: 11aaaa11aabb
+          - sample: sample2
+            run_id: 11aaaa11aabc
+          - sample: sample3
+            run_id: 11aaaa11aabd
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable-only-not-production
+          POSTGRES_DB: mcft_cap09_requal_${{ matrix.run_id }}_positive
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_requal_${{ matrix.run_id }}_positive"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CI: 'true'
+      CAP09_NONAUTHORIZED_E2E_EXCLUSIVE_DESTRUCTIVE_TEST: '1'
+      MCFT_CAP09_STAGE3_REAL_TIMING_SAMPLE: '1'
+      MCFT_CAP09_STAGE3_REAL_TIMING_SAMPLE_ID: ${{ matrix.sample }}
+      CAP09_NONAUTHORIZED_E2E_RUN_ID: ${{ matrix.run_id }}
+      DATABASE_URL: postgres://postgres:disposable-only-not-production@127.0.0.1:5432/mcft_cap09_requal_${{ matrix.run_id }}_positive
+      CAP09_E2E_PG_ROLE_PASSWORD: isolated-e2e-password-no-production
+      PHASE7_PRIVATE_S3_ENDPOINT: http://127.0.0.1:9000
+      PHASE7_PRIVATE_S3_BUCKET: mcft-cap09-requal-${{ matrix.run_id }}
+      PHASE7_PRIVATE_S3_REGION: us-east-1
+      PHASE7_PRIVATE_S3_ACCESS_KEY_ID: cap09testonly
+      PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY: disposable-s3-key-no-production-001
+    steps:
+      - name: Checkout exact candidate (never production)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Install exact locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Reject authorization or production namespace
+        run: |
+          set -euo pipefail
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${MCFT_GOVERNED_RETRY_TICKET:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+          test -z "${MCFT_CAP09_FORMAL_RAW_BUCKET:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:-}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+      - name: Compile exact changed graph
+        run: |
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts \
+            apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_ISOLATED_REAL_TIMING_PHASE_SAMPLE_V1.ts
+      - name: Test production strict guard and isolated negative cases
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts
+      - name: Negative proofs for absent, forged, stale, wrong-run physical attestation
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs
+      - name: Start throwaway real MinIO (no production account or storage)
+        run: |
+          set -euo pipefail
+          docker run -d --name cap09-da9-nonauthorized-contract-minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=cap09testonly \
+            -e MINIO_ROOT_PASSWORD=disposable-s3-key-no-production-001 \
+            ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
+          docker run --rm --network host --entrypoint /bin/sh \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -ceu '
+              mc alias set nonauth http://127.0.0.1:9000 cap09testonly disposable-s3-key-no-production-001
+              mc mb nonauth/mcft-cap09-requal-${{ matrix.run_id }}
+              mc anonymous set private nonauth/mcft-cap09-requal-${{ matrix.run_id }}
+            '
+      - name: Real independently measured timing phases against isolated physical PG+S3
+        env:
+          CAP09_E2E_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          export MCFT_CAP09_STAGE3_TIMING_LAUNCHED_MS="$(date +%s%3N)"
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_ISOLATED_REAL_TIMING_PHASE_SAMPLE_V1.ts
+      - name: Independently verify timing phase sum, real physical writes, non-authority
+        shell: node {0}
+        run: |
+          const fs=require("node:fs");
+          const p=JSON.parse(fs.readFileSync("acceptance-output/MCFT_CAP09_STAGE3_REAL_TIMING_${{ matrix.sample }}_SAMPLE_V1_RESULT.json".replace(/sample([123])/,"SAMPLE$1"),"utf8"));
+          if(p.schema_version!=="geox_mcft_cap09_stage3_isolated_real_physical_timing_sample_v1"||p.status!=="PASS")throw Error("TIMING_PHYSICAL_NOT_PASS");
+          if(p.sample_id!=="${{ matrix.sample }}"||p.test_run_id!=="${{ matrix.run_id }}")throw Error("TIMING_ROLE_IDENTITY");
+          const keys=["wake_delay_ms","job_start_setup_ms","provider_capture_ms","retained_raw_and_candidate_ms","promotion_queue_and_setup_ms","rehydration_promotion_commit_readback_ms"];
+          for(const k of keys)if(!Number.isSafeInteger(p.timing_phases?.[k])||p.timing_phases[k]<0)throw Error("TIMING_PHASE_INVALID:"+k);
+          if(p.measured_end_to_end_ms!==keys.reduce((sum,k)=>sum+p.timing_phases[k],0))throw Error("TIMING_PHASE_SUM");
+          if(p.raw_retention_call_count!==2||p.candidate_manifest_write_count!==1||p.formal_fact_present_count!==3||p.cursor_advanced!==true)throw Error("ACTUAL_PHYSICAL_IO_MISSING");
+          if(p.provider_capture_mode!=="CONTROLLED_IN_PROCESS_FIXTURE_NOT_LIVE_GFS_KBS")throw Error("LIVE_PROVIDER_FALSE_CLAIM");
+          for(const k of ["original_v13_timing_sample_v2_entry_executed","original_v13_timing_calibration_qualified","live_provider_latency_measured","permit_signed","permit_consumed","production_authorized","formal_v5_armed","o00_started","qualified"])if(p[k]!==false)throw Error("FALSE_EXECUTION_AUTHORITY:"+k);
+          console.log("STAGE3_THREE_INDEPENDENT_ACTUAL_PHYSICAL_TIMING_PHASES_TEST_ONLY_PASS");
+      - name: Stop throwaway MinIO
+        if: always()
+        run: docker rm -f cap09-da9-nonauthorized-contract-minio >/dev/null 2>&1 || true
+      - name: Retain actual isolated physical Timing phases and provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-real-physical-timing-${{ matrix.sample }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP09_STAGE3_REAL_TIMING_*_SAMPLE_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
