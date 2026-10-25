@@ -41,8 +41,8 @@ try{
  const prior=cp.execFileSync("git",["show",legacyBlob],{cwd:ROOT,encoding:"utf8"});
  const current=fs.readFileSync(path.join(ROOT,composer),"utf8");
  const edits=[
-  ["  fetch_impl?: typeof fetch;\\n",
-   "  fetch_impl?: typeof fetch;\\n  python_executable?: string; // Test-only caller pins actual Python binary for Windows science\\n"],
+  ["  fetch_impl?: typeof fetch;\n",
+   "  fetch_impl?: typeof fetch;\n  python_executable?: string; // Test-only caller pins actual Python binary for Windows science\n"],
   ["{retention,clock,fetch_impl:input.fetch_impl});",
    "{retention,clock,fetch_impl:input.fetch_impl,python_executable:input.python_executable});"],
   ["    rehydration_decoder_factory:new ProductionExternalFormalCandidateRehydrationDecoderFactoryV1(),",
@@ -74,8 +74,8 @@ try{
   "fetch_impl:input.fetch_impl,python_executable:input.python_executable",
   "fetch_impl:input.fetch_impl")),/UNREVIEWED_SOURCE_DELTA/);count++;
  assert.throws(()=>reviewExactPinnedPythonThreading(current.replace(
-  "python_executable:input.python_executable,\\n    }),",
-  "python_executable:\"python3\",\\n    }),")),/UNREVIEWED_SOURCE_DELTA/);count++;
+  "python_executable:input.python_executable,\n    }),",
+  "python_executable:\"python3\",\n    }),")),/UNREVIEWED_SOURCE_DELTA/);count++;
  assert.throws(()=>reviewExactPinnedPythonThreading(current.replace(
   "production_wrapper_composer_reused:false","production_wrapper_composer_reused:true")),
   /UNREVIEWED_SOURCE_DELTA/);count++;
