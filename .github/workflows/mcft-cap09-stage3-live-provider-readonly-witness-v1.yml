@@ -41,7 +41,7 @@ jobs:
             scripts/runtime_acceptance/MCFT_CAP09_STAGE3_REAL_PROVIDER_READONLY_TRANSPORT_WITNESS_V1.ts
       - name: Actually GET public KBS soil and NOAA GFS directory with original HTTP transports
         run: pnpm exec tsx scripts/runtime_acceptance/MCFT_CAP09_STAGE3_REAL_PROVIDER_READONLY_TRANSPORT_WITNESS_V1.ts
-      - name: Fail closed: live HTTP is NOT 72h GFS acquisition or original Timing qualification
+      - name: "Fail closed - live HTTP is NOT 72h GFS acquisition or original Timing qualification"
         shell: node {0}
         run: |
           const fs=require("node:fs"),path=require("node:path");
