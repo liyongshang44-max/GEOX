@@ -1466,6 +1466,14 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_SIGNED_HOST_BRIDGE_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_V3_PARENT_SYNTHETIC_V1.cjs"
       ]
+    },
+    "DA9_SIGNED_COMPOSER_V2_GOVERNANCE_READONLY_EXACT_PATHS": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap09-da9-signed-v2-governance-readonly-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json",
+        "scripts/governance_acceptance/REVIEW_MCFT_CAP09_DA9_SIGNED_V2_PHASE3_FROZEN_V13_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -3106,6 +3114,34 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/cap09_adoption_v1/acceptance.cjs --bundle synthetic-proof-bundle"
+    },
+    {
+      "check_id": "DA9_SIGNED_COMPOSER_V2_PHASE3_FROZEN_RUNTIME_REVIEW_ONLY",
+      "owner": "MCFT_CAP09_DA9_V2_INDEPENDENT_GOVERNANCE_REVIEW",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-PYTHON-COMPOSER-SIX-CHECK-SUCCESSOR-V2.json"
+      ],
+      "resolver_ids": [
+        "DA9_SIGNED_COMPOSER_V2_GOVERNANCE_READONLY_EXACT_PATHS"
+      ],
+      "historical_evidence_policy": "NONE_NEW_OPERATOR_SIGNATURES_ARE_NOT_OLD_FROZEN_RUNTIME_PROOF",
+      "execution_workflow": ".github/workflows/mcft-cap09-da9-signed-v2-governance-readonly-v1.yml",
+      "execution_workflow_status": "NONAUTHORIZING_READONLY_ACCEPTANCE_PASS_NOT_INDEPENDENT_ADMISSION",
+      "fail_policy": "FAIL_CLOSED_ZERO_DRIFT_HISTORICALLY_FAILS_AND_V2_APPROVAL_REQUIRED",
+      "carry_forward_policy": "NONE_NO_LEGACY_DIGEST_INHERITANCE",
+      "requalification_triggers": [
+        "DA9_SIGNED_COMPOSER_V2_GOVERNANCE_READONLY_EXACT_PATHS"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/REVIEW_MCFT_CAP09_DA9_SIGNED_V2_PHASE3_FROZEN_V13_V1.cjs"
     }
   ],
   "non_effects": {
