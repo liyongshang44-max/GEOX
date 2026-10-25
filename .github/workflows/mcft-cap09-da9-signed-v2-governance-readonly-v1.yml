@@ -55,19 +55,34 @@ jobs:
         run: |
           node --check scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_SIGNED_V2_QCP_TECHNICAL_ENROLLMENT_V1.cjs
           node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_SIGNED_V2_QCP_TECHNICAL_ENROLLMENT_V1.cjs
-      - name: Verify formal governance is HOLD without purpose delegation / separate signer (14 negative tests)
+      - name: Verify unchanged historical independent-request HOLD record (superseded only for owner-directed source scope)
         run: |
           node --check scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_FORMAL_GOVERNANCE_ADMISSION_V1.cjs
-          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_FORMAL_GOVERNANCE_ADMISSION_V1.cjs
-      - name: Prove strict admission rejects missing independent authorization
+          node - <<'NODE'
+          const fs=require('node:fs'), assert=require('node:assert/strict'), cp=require('node:child_process');
+          const file='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-FORMAL-GOVERNANCE-ADMISSION-REQUEST-V1.json';
+          const request=JSON.parse(fs.readFileSync(file,'utf8'));
+          assert.equal(request.request_status,'HOLD_PURPOSE_SPECIFIC_DELEGATION_AND_INDEPENDENT_APPROVAL_REQUIRED');
+          assert.equal(request.independent_formal_approval_signature_received,false);
+          assert.equal(request.independent_formal_approval_record_sha256,null);
+          assert.equal(request.approved_purpose_delegation_record_sha256,null);
+          assert.equal(request.permit_issued,false);
+          const old='0b225e0ee811aadfa50387df668df38bbeff9f1b';
+          for(const p of [file,'scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_FORMAL_GOVERNANCE_ADMISSION_V1.cjs']){
+            const git=(rev)=>cp.execFileSync('git',['rev-parse',rev+':'+p],{encoding:'utf8'}).trim();
+            assert.equal(git(old),git('HEAD'),'HISTORICAL_INDEPENDENT_REQUEST_OR_HOLD_VERIFIER_MUTATED');
+          }
+          console.log('PASS_RETIRED_INDEPENDENT_REQUEST_UNCHANGED_NO_SIGNATURE');
+          NODE
+      - name: Verify old independent route cannot silently authorize new policy
         shell: bash
         run: |
           set -euo pipefail
-          if node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_FORMAL_GOVERNANCE_ADMISSION_V1.cjs --require-approved > admission-strict.log 2>&1; then
-            echo "FORMAL_GATE_FAIL_OPEN"; exit 1
+          if node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_FORMAL_GOVERNANCE_ADMISSION_V1.cjs --require-approved > historic-independent-route.log 2>&1; then
+            echo "HISTORIC_INDEPENDENT_ROUTE_UNEXPECTEDLY_ADMITTED"; exit 1
           fi
-          grep -q 'HOLD_FORMAL_GOVERNANCE_NO_PURPOSE_DELEGATION_NO_SEPARATE_INDEPENDENT_SIGNATURE' admission-strict.log
-          echo "PASS_FORMAL_GOVERNANCE_HOLD_FAIL_CLOSED"
+          grep -q 'HOLD_FORMAL_GOVERNANCE:' historic-independent-route.log
+          echo "PASS_HISTORIC_INDEPENDENT_ROUTE_NOT_ADMITTED"
       - name: Check owner-directed source approval against authenticated PR event
         run: |
           node --check scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_OWNER_DIRECTED_SOURCE_ADMISSION_V1.cjs
