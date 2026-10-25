@@ -13,7 +13,7 @@ const REPO="liyongshang44-max/GEOX";
 const CONTRACT="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-PYTHON-COMPOSER-SIX-CHECK-SUCCESSOR-V2.json";
 const TRUST="scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json";
 const WORKFLOW=".github/workflows/mcft-cap09-stage3-composer-six-native-successor-v2.yml";
-const DOMAIN="GEOX_MCFT_CAP09_STAGE3_SIX_NATIVE_SUCCESSOR_REVIEW_V2\\n";
+const DOMAIN="GEOX_MCFT_CAP09_STAGE3_SIX_NATIVE_SUCCESSOR_REVIEW_V2\n";
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
 const trim=s=>String(s||"").trim();
 const args=process.argv.slice(2);
@@ -81,7 +81,7 @@ function unpackOne(zip,expected){
  try{
   const z=path.join(d,"artifact.zip");
   fs.writeFileSync(z,zip,{flag:"wx",mode:0o600});
-  const listing=cp.execFileSync("tar",["-tf",z],{encoding:"utf8",timeout:15000}).trim().split(/\\r?\\n/);
+  const listing=cp.execFileSync("tar",["-tf",z],{encoding:"utf8",timeout:15000}).trim().split(/\r?\n/);
   assert.deepEqual(listing,[expected],"GITHUB_ARTIFACT_ZIP_NOT_EXACT_SINGLE_FILE");
   cp.execFileSync("tar",["-xf",z,"-C",d],{timeout:15000});
   const f=path.join(d,expected),st=fs.lstatSync(f);
@@ -171,7 +171,7 @@ async function main(){
   qcp_enrollment_authorized:false,permit_authorized:false,production_authorized:false,
   entries};
  fs.mkdirSync(path.dirname(outFile),{recursive:true});
- fs.writeFileSync(outFile,JSON.stringify(bundle,null,2)+"\\n",{flag:"wx",mode:0o600});
+ fs.writeFileSync(outFile,JSON.stringify(bundle,null,2)+"\n",{flag:"wx",mode:0o600});
  console.log(JSON.stringify({status:bundle.status,run_id:run.id,subject_sha:run.head_sha,checks:entries.length,
   output:outFile,sha256:"sha256:"+sha(fs.readFileSync(outFile)),permit:false}));
 }
