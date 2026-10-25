@@ -30,6 +30,10 @@ jobs:
           node-version: '20.11.1'
       - name: Preserve original DA9 contract; verify six successors have no execution authority
         run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --selftest
+      - name: Selftest offline six-check Ed25519 signer without using operator key
+        run: |
+          node --check scripts/governance_acceptance/SIGN_MCFT_CAP09_STAGE3_COMPOSER_SIX_OFFLINE_V2.cjs
+          node scripts/governance_acceptance/SIGN_MCFT_CAP09_STAGE3_COMPOSER_SIX_OFFLINE_V2.cjs --selftest
       - name: Independently classify PHASE3 historical dependency digest mismatch
         run: node scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs --phase3 --out=acceptance-output/MCFT_CAP09_STAGE3_PHASE3_HISTORICAL_DIGEST_DISPOSITION_V2.json
       - name: Publish nonauthorizing PHASE3 digest difference report
