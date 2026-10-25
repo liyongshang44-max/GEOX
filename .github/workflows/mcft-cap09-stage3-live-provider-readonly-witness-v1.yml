@@ -1,11 +1,5 @@
 name: mcft-cap09-stage3-live-provider-readonly-witness-v1
 on:
-  pull_request:
-    paths:
-      - 'scripts/runtime_acceptance/MCFT_CAP09_STAGE3_REAL_PROVIDER_READONLY_TRANSPORT_WITNESS_V1.ts'
-      - 'scripts/governance_acceptance/MCFT_CAP09_STAGE3_TIMING_ORIGINAL_EQUIVALENCE_GATE_V1.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TIMING_EQUIVALENCE_HOLD_V1.cjs'
-      - '.github/workflows/mcft-cap09-stage3-live-provider-readonly-witness-v1.yml'
   workflow_dispatch:
 permissions:
   contents: read

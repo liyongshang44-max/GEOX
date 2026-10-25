@@ -1,0 +1,24 @@
+name: mcft-cap09-stage3-stop-duplicate-science-once-v1
+on:
+  push:
+    branches:
+      - qual/cap09-stage3-nonauthorized-real-business-bodies-v1
+    paths:
+      - '.github/workflows/mcft-cap09-stage3-stop-duplicate-science-once-v1.yml'
+permissions:
+  actions: write
+  contents: read
+jobs:
+  cancel-only-unrequested-science-retests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Cancel only two accidental repeated read-only provider probes; never cancel first qualified sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for r in 40164456052 40164456057; do
+            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$r/cancel" || true
+          done
+          echo "AUTOMATIC_PROVIDER_RETRO_RERUNS=DISABLED"
