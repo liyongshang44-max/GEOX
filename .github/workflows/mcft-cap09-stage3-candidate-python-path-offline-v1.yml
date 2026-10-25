@@ -5,6 +5,7 @@ on:
       - 'scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_CANDIDATE_PYTHON_PATH_OFFLINE_V1.ts'
       - '.github/workflows/mcft-cap09-stage3-candidate-python-path-offline-v1.yml'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_STAGE3_PRESERVED_CANDIDATE_REHYDRATION_OFFLINE_V1.ts'
   workflow_dispatch:
 permissions:
   contents: read
@@ -35,5 +36,10 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Compile offline candidate replay source and exact composition
+        run: |
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/MCFT_CAP09_STAGE3_PRESERVED_CANDIDATE_REHYDRATION_OFFLINE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_CANDIDATE_PYTHON_PATH_OFFLINE_V1.ts
       - name: Real isolated Composition GFS capture versus Candidate replay path
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_CANDIDATE_PYTHON_PATH_OFFLINE_V1.ts
