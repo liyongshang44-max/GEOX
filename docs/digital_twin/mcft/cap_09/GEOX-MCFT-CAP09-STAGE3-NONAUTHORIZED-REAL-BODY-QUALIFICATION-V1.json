@@ -1,0 +1,86 @@
+{
+  "schema_version": "geox_mcft_cap09_stage3_nonauthorized_real_bodies_contract_v1",
+  "status": "IMPLEMENTATION_IN_PROGRESS_STAGE3_REAL_BODIES_ZERO_OF_SIX_AT_CONTRACT_CREATION",
+  "frozen_pr_3730_head_sha": "12dcbba6750879f0349c5730f477cb04cd23b560",
+  "stage2_run_id": "af64cc3aa84e",
+  "stage2_submitted_evidence_zip_sha256": "153940c988485e074fbc8475beadec05f306faa09de38c157860d644184564be",
+  "historical_da9_attempt_run_id": "da9db7129607",
+  "separate_pr_required": true,
+  "must_not_modify_frozen_stage_entry_sources": true,
+  "real_provider_capture_forced": false,
+  "existing_stage2_resources_reusable_for_new_writes": false,
+  "new_permit_issuance_authorized": false,
+  "permit_consumption_authorized": false,
+  "six_stage_original_business_bodies_verified": false,
+  "synthetic_simulation_accepted": false,
+  "scratch_delay_is_not_real_provider_pipeline_delay": true,
+  "stages": [
+    {
+      "id": "PRODUCER",
+      "original_entry_script": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts",
+      "original_entry_git_blob_sha": "60ac618f465afd3a9e14325ceb08fd768318431e",
+      "expected_artifact_name": "MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2_RESULT.json",
+      "expected_artifact_schema": "geox_mcft_cap09_v13_producer_driven_live_qualification_v2"
+    },
+    {
+      "id": "TIMING_1",
+      "original_entry_script": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts",
+      "original_entry_git_blob_sha": "4b30a11186b80b9d37da252b735332202ef94a9d",
+      "expected_artifact_name": "MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_SAMPLE1_V2_RESULT.json",
+      "expected_artifact_schema": "geox_mcft_cap09_v13_exact_head_timing_sample_v2"
+    },
+    {
+      "id": "TIMING_2",
+      "original_entry_script": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts",
+      "original_entry_git_blob_sha": "4b30a11186b80b9d37da252b735332202ef94a9d",
+      "expected_artifact_name": "MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_SAMPLE2_V2_RESULT.json",
+      "expected_artifact_schema": "geox_mcft_cap09_v13_exact_head_timing_sample_v2"
+    },
+    {
+      "id": "TIMING_3",
+      "original_entry_script": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts",
+      "original_entry_git_blob_sha": "4b30a11186b80b9d37da252b735332202ef94a9d",
+      "expected_artifact_name": "MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_SAMPLE3_V2_RESULT.json",
+      "expected_artifact_schema": "geox_mcft_cap09_v13_exact_head_timing_sample_v2"
+    },
+    {
+      "id": "CONTROLLED_DELAY",
+      "original_entry_script": "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs",
+      "original_entry_git_blob_sha": "11f57189a6d6bd236aea21f31259027bbbe095c4",
+      "expected_artifact_name": "MCFT_CAP09_REAL_CONTROLLED_DELAY_V1_RESULT.json",
+      "expected_artifact_schema": "geox_mcft_cap09_real_controlled_delay_scratch_evidence_v1"
+    },
+    {
+      "id": "AGGREGATE",
+      "original_entry_script": "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts",
+      "original_entry_git_blob_sha": "830900fcca5a858cd7cc54612bdd41721d88ef55",
+      "expected_artifact_name": "MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2_RESULT.json",
+      "expected_artifact_schema": "geox_mcft_cap09_v13_exact_head_timing_measurement_v2"
+    }
+  ],
+  "fenced_pg_admission_review_20261025": {
+    "evidence_level": "SOURCE_REVIEW_AND_ORIGINAL_WINDOWS_OFFLINE_REPLAY_TEST_ONLY",
+    "status": "HOLD_NEW_ISOLATED_FENCED_PG_NOT_ADMITTED",
+    "prior_windows_raw_semantic_replay": "PASS_OPERATOR_OBSERVED_ORIGINAL_PHASE7_SOURCE_GUARDED",
+    "prior_receipt_sha256": "sha256:591534ce9c58746b29e39f5727152b958526760755dc83b0b29e7e2adcb6bf7e",
+    "prior_receipt_scope": "ORIGINAL_RAW_AND_CANDIDATE_ONLY_NOT_NEW_CANDIDATE_OR_PG",
+    "original_run_id": "b06f28c950ce",
+    "expired_old_controller_or_target_lease_reuse_allowed": false,
+    "expired_old_candidate_reuse_allowed": false,
+    "old_pg_write_allowed": false,
+    "source_provider_refetch_authorized": false,
+    "separate_new_disposable_pg_database_and_minio_bucket_required": true,
+    "new_run_epoch_subject_and_idempotency_identity_required": true,
+    "fresh_controller_and_target_claim_leases_required": true,
+    "actual_scientific_source_timestamp_and_target_causality_revalidation_required": true,
+    "regenerated_candidate_from_verified_raw_under_new_identity_required": true,
+    "existing_windows_fenced_pg_harness_uses_live_provider_capture": true,
+    "offline_no_provider_new_fenced_pg_positive_harness_implemented": false,
+    "evidence_acl_negative_and_positive_matrix_required": true,
+    "minio_runtime_least_privilege_acl_and_negative_probe_required": true,
+    "actual_windows_fenced_pg_three_facts_and_cursor_readback_observed": false,
+    "original_v13_timing_delay_aggregate_qualified": false,
+    "governed_host_permit_authorized": false,
+    "qualification_readiness": "ENGINEERING_SCOPE_ONLY_NO_EXECUTION"
+  }
+}

@@ -1,0 +1,72 @@
+name: mcft-cap09-stage3-independent-real-evidence-original-hold-v1
+on:
+  pull_request:
+    paths:
+      - 'scripts/governance_acceptance/MCFT_CAP09_STAGE3_TIMING_ORIGINAL_EQUIVALENCE_GATE_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TIMING_EQUIVALENCE_HOLD_V1.cjs'
+      - '.github/workflows/mcft-cap09-stage3-independent-real-evidence-original-hold-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  independent-frozen-original-qualification-evidence-hold:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Recheck original Timing Delay Aggregate blob pins and fail closed tests
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TIMING_EQUIVALENCE_HOLD_V1.cjs
+      - name: Retrieve three actual PG and MinIO measured isolated Timing artifacts from previous run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 40157219454
+          github-token: ${{ github.token }}
+          pattern: cap09-stage3-real-physical-timing-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/isolated-timing-samples
+      - name: Retrieve REAL KBS and NOAA upstream HTTPS provider transport observations
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 40157913553
+          github-token: ${{ github.token }}
+          name: cap09-stage3-readonly-actual-provider-transport-befcc5a00d2949bc6077ec06d1facb58ad0dc986
+          path: ${{ runner.temp }}/real-provider-transport
+      - name: Prove actual bytes reconciled but ORIGINAL V13 gate remains HOLD
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/governance_acceptance/MCFT_CAP09_STAGE3_TIMING_ORIGINAL_EQUIVALENCE_GATE_V1.cjs \
+            "$RUNNER_TEMP/isolated-timing-samples/MCFT_CAP09_STAGE3_REAL_TIMING_SAMPLE1_SAMPLE_V1_RESULT.json" \
+            "$RUNNER_TEMP/isolated-timing-samples/MCFT_CAP09_STAGE3_REAL_TIMING_SAMPLE2_SAMPLE_V1_RESULT.json" \
+            "$RUNNER_TEMP/isolated-timing-samples/MCFT_CAP09_STAGE3_REAL_TIMING_SAMPLE3_SAMPLE_V1_RESULT.json" \
+            "$RUNNER_TEMP/real-provider-transport/MCFT_CAP09_STAGE3_REAL_PROVIDER_READONLY_TRANSPORT_WITNESS_V1_RESULT.json" \
+            > "$RUNNER_TEMP/MCFT_CAP09_STAGE3_REAL_EVIDENCE_ORIGINAL_EQUIVALENCE_HOLD_V1.json"
+          node - "$RUNNER_TEMP/MCFT_CAP09_STAGE3_REAL_EVIDENCE_ORIGINAL_EQUIVALENCE_HOLD_V1.json" <<'NODE'
+          const fs=require("node:fs");
+          const f=process.argv[2],r=JSON.parse(fs.readFileSync(f,"utf8"));
+          if(r.status!=="HOLD_ORIGINAL_TIMING_AND_PROVIDER_SEMANTICS_NOT_EQUIVALENT")throw Error("FALSE_EQUIVALENCE_PASS");
+          if(r.samples.length!==3||r.live_https_response_count!==6)throw Error("MISSING_ACTUAL_UNTRUSTED_EVIDENCE_REVIEW");
+          for(const k of ["original_v13_timing_semantic_equivalence_proven",
+            "provider_72h_complete_real_capture_qualified","original_v13_controlled_delay_admitted",
+            "original_v13_aggregate_admitted","formal_timing_budget_qualified",
+            "qualified","permit_signed","permit_consumed","production_authorized"]){
+            if(r[k]!==false)throw Error("UNAUTHORIZED_STAGE_ADMISSION:"+k);
+          }
+          console.log("REAL_PROVIDER_HTTP_AND_THREE_REAL_PHYSICAL_FIXTURE_TIMING=INDEPENDENTLY_REVIEWED");
+          console.log("CONTROLLED_DELAY_AND_ORIGINAL_AGGREGATE=HOLD_FAIL_CLOSED_NO_PERMIT");
+          NODE
+      - name: Persist exact review and reason codes as immutable workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-original-timing-aggregate-admission-hold-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/MCFT_CAP09_STAGE3_REAL_EVIDENCE_ORIGINAL_EQUIVALENCE_HOLD_V1.json
+          if-no-files-found: error
+          retention-days: 90

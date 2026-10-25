@@ -1,0 +1,156 @@
+name: mcft-cap09-da9-stage3-four-real-physical-primitives-v1
+on:
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_BODIES_V1.cjs'
+      - 'scripts/runtime_acceptance/AGGREGATE_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_EVIDENCE_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVES_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-FOUR-PHYSICAL-PRIMITIVES-V1.json'
+      - '.github/workflows/mcft-cap09-da9-stage3-four-real-physical-primitives-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  four-actual-s3-pg-physical-primitive-executions:
+    name: ${{ matrix.stage }} physical isolated composer (NOT governed V13 stage)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - stage: PRODUCER
+            run_id: '112233aabbcc'
+          - stage: TIMING_1
+            run_id: '112233aabbcd'
+          - stage: TIMING_2
+            run_id: '112233aabbce'
+          - stage: TIMING_3
+            run_id: '112233aabbcf'
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable-only-not-production
+          POSTGRES_DB: mcft_cap09_requal_${{ matrix.run_id }}_positive
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CI: 'true'
+      CAP09_NONAUTHORIZED_E2E_EXCLUSIVE_DESTRUCTIVE_TEST: '1'
+      CAP09_NONAUTHORIZED_E2E_RUN_ID: ${{ matrix.run_id }}
+      CAP09_E2E_SUBJECT_SHA: 12dcbba6750879f0349c5730f477cb04cd23b560
+      CAP09_E2E_PG_ROLE_PASSWORD: disposable-stage3-role-password-2026
+      DATABASE_URL: postgres://postgres:disposable-only-not-production@127.0.0.1:5432/mcft_cap09_requal_${{ matrix.run_id }}_positive
+      PHASE7_PRIVATE_S3_ENDPOINT: http://127.0.0.1:9000
+      PHASE7_PRIVATE_S3_BUCKET: mcft-cap09-requal-${{ matrix.run_id }}
+      PHASE7_PRIVATE_S3_REGION: us-east-1
+      PHASE7_PRIVATE_S3_ACCESS_KEY_ID: cap09testonly
+      PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY: disposable-s3-key-no-production-001
+    steps:
+      - name: Checkout exact candidate, never protected production
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: pnpm 9.15.4
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - name: Node 20.11.1 Linux CI ABI (Windows Node24 qualification separate)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Lockfile and scoped module dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Static negative tests and strict source policy
+        run: |
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVES_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs
+      - name: Start disposable real S3 (no production keys)
+        run: |
+          set -euo pipefail
+          docker run -d --name cap09-stage3-minio-${{ matrix.run_id }} -p 9000:9000 \
+            -e MINIO_ROOT_USER=cap09testonly \
+            -e MINIO_ROOT_PASSWORD=disposable-s3-key-no-production-001 \
+            ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/live > /dev/null
+          docker run --rm --network host --entrypoint /bin/sh \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -ceu '
+              mc alias set nonauth http://127.0.0.1:9000 cap09testonly disposable-s3-key-no-production-001
+              mc mb nonauth/mcft-cap09-requal-${{ matrix.run_id }}
+              mc anonymous set private nonauth/mcft-cap09-requal-${{ matrix.run_id }}
+            '
+      - name: Run REAL new test-only physical primitive child (not original governed Producer/Timing)
+        run: |
+          set -euo pipefail
+          node scripts/runtime_acceptance/RUN_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_BODIES_V1.cjs \
+            --run "${{ matrix.stage }}" "${{ matrix.run_id }}" \
+            "$RUNNER_TEMP/cap09-stage3-${{ matrix.run_id }}"
+      - name: Independently verify physical bytes and subprocess completion
+        run: |
+          set -euo pipefail
+          node scripts/runtime_acceptance/RUN_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_BODIES_V1.cjs \
+            --verify "${{ matrix.stage }}" "${{ matrix.run_id }}" \
+            "$RUNNER_TEMP/cap09-stage3-${{ matrix.run_id }}"
+      - name: Preserve genuine stage3 subprocess and physical S3/PG receipt, NOT authorization
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-real-physical-primitives-${{ matrix.stage }}-${{ matrix.run_id }}
+          path: ${{ runner.temp }}/cap09-stage3-${{ matrix.run_id }}/
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Stop only disposable CI MinIO
+        if: always()
+        run: docker rm -f cap09-stage3-minio-${{ matrix.run_id }} >/dev/null 2>&1 || true
+
+  aggregate-four-real-physical-only:
+    name: Aggregate four observed physical primitive roles (NOT V13 Aggregate)
+    needs: [four-actual-s3-pg-physical-primitive-executions]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact candidate source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Node 24 for independent receipt-only verification
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Download all four actual physical run artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: cap09-stage3-real-physical-primitives-*
+          merge-multiple: false
+          path: ${{ runner.temp }}/cap09-stage3-four
+      - name: Validate real physical business body source hashes and ordered role set
+        run: |
+          set -euo pipefail
+          node --check scripts/runtime_acceptance/AGGREGATE_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_EVIDENCE_V1.cjs
+          node scripts/runtime_acceptance/AGGREGATE_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_EVIDENCE_V1.cjs \
+            "$RUNNER_TEMP/cap09-stage3-four" \
+            "$RUNNER_TEMP/MCFT_CAP09_STAGE3_FOUR_PHYSICAL_AGGREGATE_OBSERVATION_V1.json"
+      - name: Upload independently validated four-role physical aggregate, NOT Permit
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-four-role-real-physical-aggregate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/MCFT_CAP09_STAGE3_FOUR_PHYSICAL_AGGREGATE_OBSERVATION_V1.json
+          if-no-files-found: error
+          retention-days: 90

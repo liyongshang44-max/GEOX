@@ -1,0 +1,123 @@
+name: mcft-cap09-stage3-three-contiguous-producer-fixture-v1
+on:
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_THREE_BASE_PRODUCER_FIXTURE_V1.ts'
+      - '.github/workflows/mcft-cap09-stage3-three-contiguous-producer-fixture-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stage3-three-contiguous-real-isolated-s3-pg:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable-only-not-production
+          POSTGRES_DB: mcft_cap09_requal_abcdef012345_positive
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_requal_abcdef012345_positive"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CI: 'true'
+      CAP09_NONAUTHORIZED_E2E_EXCLUSIVE_DESTRUCTIVE_TEST: '1'
+      CAP09_STAGE3_THREE_BASE_PRODUCER: '1'
+      CAP09_NONAUTHORIZED_E2E_RUN_ID: abcdef012345
+      DATABASE_URL: postgres://postgres:disposable-only-not-production@127.0.0.1:5432/mcft_cap09_requal_abcdef012345_positive
+      CAP09_E2E_PG_ROLE_PASSWORD: isolated-e2e-password-no-production
+      PHASE7_PRIVATE_S3_ENDPOINT: http://127.0.0.1:9000
+      PHASE7_PRIVATE_S3_BUCKET: mcft-cap09-requal-abcdef012345
+      PHASE7_PRIVATE_S3_REGION: us-east-1
+      PHASE7_PRIVATE_S3_ACCESS_KEY_ID: cap09testonly
+      PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY: disposable-s3-key-no-production-001
+    steps:
+      - name: Checkout exact candidate (never production)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Install exact locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Reject authorization or production namespace
+        run: |
+          set -euo pipefail
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${MCFT_GOVERNED_RETRY_TICKET:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+          test -z "${MCFT_CAP09_FORMAL_RAW_BUCKET:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:-}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+      - name: Compile exact changed graph
+        run: |
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts \
+            apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_THREE_BASE_PRODUCER_FIXTURE_V1.ts
+      - name: Test production strict guard and isolated negative cases
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts
+      - name: Negative proofs for absent, forged, stale, wrong-run physical attestation
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs
+      - name: Start throwaway real MinIO (no production account or storage)
+        run: |
+          set -euo pipefail
+          docker run -d --name cap09-da9-nonauthorized-contract-minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=cap09testonly \
+            -e MINIO_ROOT_PASSWORD=disposable-s3-key-no-production-001 \
+            ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
+          docker run --rm --network host --entrypoint /bin/sh \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -ceu '
+              mc alias set nonauth http://127.0.0.1:9000 cap09testonly disposable-s3-key-no-production-001
+              mc mb nonauth/mcft-cap09-requal-abcdef012345
+              mc anonymous set private nonauth/mcft-cap09-requal-abcdef012345
+            '
+      - name: Real S3 retention, candidate readback, fenced PG commit, physical attestation
+        env:
+          CAP09_E2E_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_THREE_BASE_PRODUCER_FIXTURE_V1.ts
+      - name: Validate exactly three sequential actual S3/PG business transactions, no official Producer Host
+        shell: node {0}
+        run: |
+          const fs=require("node:fs");
+          const p=JSON.parse(fs.readFileSync("acceptance-output/MCFT_CAP09_STAGE3_THREE_BASE_PRODUCER_FIXTURE_V1_RESULT.json","utf8"));
+          if(p.schema_version!=="geox_mcft_cap09_stage3_three_base_producer_fixture_v1"||p.status!=="PASS")throw Error("STAGE3_THREE_BASE_RECEIPT_NOT_PASS");
+          if(p.real_contiguous_base_count!==3||p.real_fact_count!==9||p.real_attested_target_count!==3)throw Error("STAGE3_THREE_BASE_BUSINESS_SEMANTICS_MISSING");
+          if(p.per_base_samples.length!==3||p.per_base_samples.some((x,i)=>x.index!==i||x.formal_facts_after!==(i+1)*3||x.cursor_advanced!==true))throw Error("STAGE3_THREE_BASE_REAL_SAMPLE_SEQUENCE_INVALID");
+          for(const k of ["real_controller_cursor_and_fenced_writer_executed","real_private_s3_raw_and_candidate_executed","real_post_commit_physical_readback_executed"])if(p[k]!==true)throw Error("STAGE3_REAL_BUSINESS_PRIMITIVE_NOT_DONE:"+k);
+          for(const k of ["original_v13_producer_entry_executed","original_v13_timing_entry_executed","original_v13_aggregate_entry_executed","exact_v13_phase_timing_qualified","permit_signed","permit_consumed","production_authorized","formal_v5_armed","o00_started","qualified"])if(p[k]!==false)throw Error("STAGE3_AUTHORITY_FALSE_CLAIM:"+k);
+          if(p.provider_transport_kind!=="CONTROLLED_LOCAL_FIXTURES_NOT_LIVE_GFS_KBS")throw Error("STAGE3_PROVIDER_MODE_NOT_DECLARED");
+          console.log("STAGE3_THREE_REAL_CONTIGUOUS_PRODUCER_BASES_PASS_NOT_GOVERNED_V13_HOST");
+      - name: Stop throwaway MinIO
+        if: always()
+        run: docker rm -f cap09-da9-nonauthorized-contract-minio >/dev/null 2>&1 || true
+      - name: Retain actual 3-base real PG/S3 Producer semantic receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-three-real-producer-bases-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP09_STAGE3_THREE_BASE_PRODUCER_FIXTURE_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90

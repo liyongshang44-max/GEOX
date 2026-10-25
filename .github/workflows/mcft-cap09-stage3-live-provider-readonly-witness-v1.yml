@@ -1,0 +1,62 @@
+name: mcft-cap09-stage3-live-provider-readonly-witness-v1
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-provider-raw-https-transport-not-scientific-capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      CI: 'true'
+      MCFT_CAP09_STAGE3_REAL_PROVIDER_READONLY: '1'
+      MCFT_CAP09_STAGE3_PROVIDER_WITNESS_DIR: /tmp/cap09-stage3-provider-observation
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Immutable official stage blobs and negative semantic-equivalence gates
+        run: |
+          node --check scripts/governance_acceptance/MCFT_CAP09_STAGE3_TIMING_ORIGINAL_EQUIVALENCE_GATE_V1.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TIMING_EQUIVALENCE_HOLD_V1.cjs
+      - name: Frozen install and actual Provider probe type-check
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/MCFT_CAP09_STAGE3_REAL_PROVIDER_READONLY_TRANSPORT_WITNESS_V1.ts
+      - name: Actually GET public KBS soil and NOAA GFS directory with original HTTP transports
+        run: pnpm exec tsx scripts/runtime_acceptance/MCFT_CAP09_STAGE3_REAL_PROVIDER_READONLY_TRANSPORT_WITNESS_V1.ts
+      - name: "Fail closed - live HTTP is NOT 72h GFS acquisition or original Timing qualification"
+        shell: node {0}
+        run: |
+          const fs=require("node:fs"),path=require("node:path");
+          const f=path.join(process.env.MCFT_CAP09_STAGE3_PROVIDER_WITNESS_DIR,"MCFT_CAP09_STAGE3_REAL_PROVIDER_READONLY_TRANSPORT_WITNESS_V1_RESULT.json");
+          const r=JSON.parse(fs.readFileSync(f,"utf8"));
+          if(r.schema_version!=="geox_mcft_cap09_stage3_real_provider_readonly_transport_witness_v1")throw Error("PROBE_SCHEMA");
+          if(r.real_https_probe_events!==6||r.requests.length!==6)throw Error("LIVE_PROBE_MISSING_EVENT");
+          const ok=r.requests.filter(x=>x.http_response_observed);
+          if(ok.length!==r.real_https_success_events)throw Error("LIVE_PROBE_COUNT_CHANGED");
+          for(const k of ["gfs_72h_complete_cycle_acquired","gfs_member_bundle_decoded",
+            "kbs_soil_continuity_scientifically_validated","original_producer_v2_entry_executed",
+            "original_timing_v2_entry_executed","original_v13_aggregate_executed",
+            "physical_timing_budget_qualified","provider_delay_pipeline_injected",
+            "permit_signed","permit_consumed","production_authorized","qualified"])if(r[k]!==false)throw Error("FALSE_PROVIDER_AUTHORITY:"+k);
+          console.log("ACTUAL_PROVIDER_HTTP_SUCCESS_EVENTS="+ok.length);
+          console.log("ORIGINAL_V13_PROVIDER_TIMING_SEMANTICS=HOLD");
+      - name: Retain bounded real HTTPS events regardless of endpoint reliability
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-readonly-actual-provider-transport-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/cap09-stage3-provider-observation/MCFT_CAP09_STAGE3_REAL_PROVIDER_READONLY_TRANSPORT_WITNESS_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90

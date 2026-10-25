@@ -1,0 +1,102 @@
+name: mcft-cap09-stage3-full-real-provider-s3-science-v1
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-kbs-and-full-gfs-72h-new-private-s3:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CI: 'true'
+      MCFT_CAP09_STAGE3_FULL_REAL_S3_ACQUISITION: '1'
+      PHASE7_PRIVATE_S3_ENDPOINT: http://127.0.0.1:9000
+      PHASE7_PRIVATE_S3_REGION: us-east-1
+      PHASE7_PRIVATE_S3_ACCESS_KEY_ID: cap09testonly
+      PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY: disposable-s3-key-no-production-001
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Exact dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Compile authentic full KBS / 72h GFS / MinIO retention source
+        run: |
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/MCFT_CAP09_STAGE3_FULL_REAL_PROVIDER_S3_SCIENCE_V1.ts
+      - name: Check source science BEFORE private S3 allocation
+        env:
+          MCFT_CAP09_STAGE3_FULL_PROVIDER_SCIENCE_PREFLIGHT: '1'
+          MCFT_CAP09_STAGE3_PREFLIGHT_OUTPUT: /tmp/CAP09_STAGE3_SOURCE_SCIENCE_PREFLIGHT.json
+        run: |
+          pnpm exec tsx scripts/runtime_acceptance/MCFT_CAP09_STAGE3_LIVE_PROVIDER_SCIENTIFIC_READINESS_V1.ts
+          node - <<'NODE'
+          const fs=require("node:fs"),r=JSON.parse(fs.readFileSync("/tmp/CAP09_STAGE3_SOURCE_SCIENCE_PREFLIGHT.json","utf8"));
+          if(r.status!=="PASS_READONLY_SCIENCE_READINESS_NOT_FULL_CAPTURE")throw Error("LIVE_SOURCE_SCIENCE_NOT_READY");
+          if(r.real_gfs_full_72h_members_retained!==false)throw Error("FALSE_FULL_CAPTURE_CLAIM");
+          NODE
+      - name: Fresh run-scoped IDs from actual GitHub run and SHA
+        run: |
+          set -euo pipefail
+          R="$(printf '%s' "$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT:$GITHUB_SHA" | sha256sum | cut -c1-12)"
+          test "$R" != "da9db7129607"
+          echo "MCFT_CAP09_STAGE3_NEW_RUN_ID=$R" >> "$GITHUB_ENV"
+          echo "PHASE7_PRIVATE_S3_BUCKET=mcft-cap09-requal-$R" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_STAGE3_EVIDENCE_DIR=$RUNNER_TEMP/cap09-stage3-full-$R" >> "$GITHUB_ENV"
+          echo "NEW_ISOLATED_RUN_ID=$R"
+      - name: Create brand new private local MinIO with immutable test credentials
+        run: |
+          set -euo pipefail
+          docker run -d --name cap09-stage3-full-real-minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=cap09testonly \
+            -e MINIO_ROOT_PASSWORD=disposable-s3-key-no-production-001 \
+            ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
+          docker run --rm --network host --entrypoint /bin/sh \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -ceu "
+            mc alias set nonauth http://127.0.0.1:9000 cap09testonly disposable-s3-key-no-production-001
+            mc mb nonauth/$PHASE7_PRIVATE_S3_BUCKET
+            mc anonymous set private nonauth/$PHASE7_PRIVATE_S3_BUCKET
+            "
+      - name: Single genuine real full same-cycle 72h GFS member capture, S3 retain-first, KBS scientific decode
+        run: |
+          set -euo pipefail
+          pnpm exec tsx scripts/runtime_acceptance/MCFT_CAP09_STAGE3_FULL_REAL_PROVIDER_S3_SCIENCE_V1.ts
+      - name: Fail closed on full 72h scientific S3 and forbid PostgreSQL or formal stage claims
+        shell: node {0}
+        run: |
+          const fs=require("node:fs"),path=require("node:path");
+          const r=JSON.parse(fs.readFileSync(path.join(process.env.MCFT_CAP09_STAGE3_EVIDENCE_DIR,
+            "STAGE3_FULL_REAL_KBS_GFS_S3_SCIENCE_V1.json"),"utf8"));
+          if(r.status!=="PASS_GENUINE_PROVIDER_FULL_72H_S3_SCIENCE_NOT_PG")throw Error("FULL_REAL_PROVIDER_NOT_QUALIFIED");
+          if(!r.gfs?.full_72h_bundle_retained||!r.kbs?.raw_s3_retained)throw Error("ACTUAL_S3_SCIENCE_INCOMPLETE");
+          for(const k of ["postgres_fenced_promotion_executed","original_v13_stage_executed",
+            "original_v13_timing_equivalent","aggregate_executed","qualified",
+            "permit_signed","permit_consumed","production_authorized"]){
+            if(r[k]!==false)throw Error("FALSE_STAGE_AUTHORITY:"+k);
+          }
+          console.log("ACTUAL_KBS_AND_FULL_GFS_SAME_CYCLE_72H_PRIVATE_S3_SCIENCE=PASS_NOT_PG");
+      - name: Preserve real HTTP and private S3 science proof or precise HOLD reason
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-full-real-gfs72-kbs-private-s3-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cap09-stage3-full-*/
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Stop only disposable GitHub CI MinIO
+        if: always()
+        run: docker rm -f cap09-stage3-full-real-minio >/dev/null 2>&1 || true

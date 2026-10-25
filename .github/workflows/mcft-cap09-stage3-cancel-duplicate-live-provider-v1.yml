@@ -1,0 +1,24 @@
+name: mcft-cap09-stage3-cancel-duplicate-live-provider-v1
+on:
+  push:
+    branches:
+      - qual/cap09-stage3-nonauthorized-real-business-bodies-v1
+    paths:
+      - '.github/workflows/mcft-cap09-stage3-cancel-duplicate-live-provider-v1.yml'
+permissions:
+  actions: write
+  contents: read
+jobs:
+  preserve-earliest-run-stop-duplicate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Stop only known duplicate real NOAA request set
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # 40159238282 is the original preserved first-run authority.
+          # Do not cancel it or modify historical DA9; stop only redundant CI job.
+          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/40159496253/cancel"
+          echo "DUPLICATE_PROVIDER_PULL_CANCEL_REQUESTED=40159496253"

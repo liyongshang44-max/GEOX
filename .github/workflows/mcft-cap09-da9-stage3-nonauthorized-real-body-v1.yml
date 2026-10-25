@@ -1,0 +1,42 @@
+name: mcft-cap09-da9-stage3-nonauthorized-real-body-v1
+on:
+  pull_request:
+    paths:
+      - 'scripts/governance_acceptance/MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_SCRATCH_DELAY_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-STAGE3-NONAUTHORIZED-REAL-BODY-QUALIFICATION-V1.json'
+      - '.github/workflows/mcft-cap09-da9-stage3-nonauthorized-real-body-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stage3-real-body-contract-negative-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Never inherit Host/Permit or Provider/production authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${MCFT_GOVERNED_RETRY_TICKET:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+          test -z "${DATABASE_URL:-}"
+      - name: JavaScript syntax checking
+        run: |
+          node --check scripts/governance_acceptance/MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs
+          node --check scripts/runtime_acceptance/RUN_MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_SCRATCH_DELAY_V1.cjs
+      - name: Pin frozen original six entrypoint git blobs; synthetic and reused run HOLD
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs
+      - name: No Permit and no real stage execution in qualification contract CI
+        run: echo "STAGE3_REAL_BODY_EXECUTION_PENDING_REAL_WINDOWS_EVIDENCE_NO_PERMIT"
