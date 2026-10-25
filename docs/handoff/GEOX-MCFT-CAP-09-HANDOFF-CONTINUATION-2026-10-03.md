@@ -1,3 +1,11 @@
+### 2026-10-25 addendum — Windows PS5.1 FIX V2 static pre-resource admission PASS
+
+- **ACTUAL Windows operator log, not extrapolated from CI:** launched FIX V2 `RUN-MCFT-CAP09-WINDOWS-FULL-REAL-PS51.ps1` **without** `-Execute`. `PARENT_EXECUTION_ENV_SCRUBBED_KEYS=24`, upstream protected merge `2162f368899e9a9b5c497d332859e4196f389660`, #3731 pinned `c1ed4a64b78a1a5346ac4159d98307de85ac4a6c`, upstream source `12dcbba6750879f0349c5730f477cb04cd23b560`, Node `v24.19.0`, Node binary SHA256 `3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237`, Python base binary SHA256 `4d6f5f81a4bca11191c4c7c6b43632694d0a4ce74e068619d8fdc161d469859a`. Final marker **`STATIC_ADMISSION_PASS_NO_PROVIDER_NO_NEW_PG_S3_NO_PERMIT`**.
+- Confirms V1 Python `-c` quote bug resolved by FIX V2 in Windows PS5.1; **no** new Docker/PG/MinIO/CaseRoot, GFS, KBS, official Host, Permit or scientific venv was run in this preflight. **FULL WINDOW PHYSICAL CHAIN STILL HOLD**.
+- Next single explicit operator execution may use **same FIX V2 directory**, `-Execute -PgPort 55480 -MinioPort 59280`, new run-scoped isolated resources, exact interactive phrase `START_NEW_WINDOWS_STAGE3_REAL_PROVIDER_TEST_ONLY`. Script selftests Python3.12 scientific libraries and working-tree Node24 before initiating new resources/Provider. On failure preserve fresh case and raw data; do **not repeat public GFS members** before offline root-cause inspection. Only one actual Base targeted, no V13 original Timing/Delay/Aggregate authority. PR #3731 recorded log: https://github.com/liyongshang44-max/GEOX/pull/3731#issuecomment-6394140859.
+
+---
+
 ### 2026-10-25 addendum — Windows native V1 static preflight PS5.1 Python -c quoting HOLD and FIX V2
 
 - Operator actually executed the **static/pre-resource V1 preflight** only (no `-Execute`) on Windows PowerShell 5.1; V1 ZIP SHA256 `5365b029186d382c98846420810425e9279411833c0dc11f077386dea79b8d8d`. Output: `PARENT_EXECUTION_ENV_SCRUBBED_KEYS=24`, then Python printed `SyntaxError: print(%d.%d % sys.version_info[:2])`; PowerShell subsequently raised `InvokeMethodOnNull` from calling `.Trim()` on an empty native output pipeline. No `STATIC_ADMISSION_PASS`, no `-Execute`, no CaseRoot, no Docker resource, no public Provider request or Permit. This is **external PS5.1 argument marshalling and error-check order**, not science/PG failure.
