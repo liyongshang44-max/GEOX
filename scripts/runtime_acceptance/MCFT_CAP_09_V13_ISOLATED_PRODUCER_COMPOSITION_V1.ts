@@ -62,7 +62,13 @@ export function composeIsolatedMcftCap09V13ProducerCoreV1(input: {
     candidate_store:candidateStore,
     raw_reader:rawReader,
     fenced_promotion:fencedPromotion,
-    rehydration_decoder_factory:new ProductionExternalFormalCandidateRehydrationDecoderFactoryV1(),
+    // The GFS capture factory and Candidate raw-rehydration factory MUST use the
+    // same pinned interpreter. Otherwise Windows capture succeeds but replay
+    // silently falls back to unqualified "python3" on PATH (often ENOENT).
+    // This is isolated-qualification-only wiring; production graph untouched.
+    rehydration_decoder_factory:new ProductionExternalFormalCandidateRehydrationDecoderFactoryV1({
+      python_executable:input.python_executable,
+    }),
     clock,
   });
   return {
