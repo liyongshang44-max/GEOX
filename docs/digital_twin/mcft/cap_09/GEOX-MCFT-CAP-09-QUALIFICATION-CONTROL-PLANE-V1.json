@@ -1492,6 +1492,7 @@
         "scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs",
         "scripts/governance_acceptance/MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs",
         "scripts/governance_acceptance/MCFT_CAP09_STAGE3_TIMING_ORIGINAL_EQUIVALENCE_GATE_V1.cjs",
+        "scripts/governance_acceptance/SIGN_MCFT_CAP09_STAGE3_COMPOSER_SIX_OFFLINE_V2.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_CANDIDATE_PYTHON_PATH_OFFLINE_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_ISOLATED_REAL_TIMING_PHASE_SAMPLE_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_THREE_BASE_PRODUCER_FIXTURE_V1.ts",
