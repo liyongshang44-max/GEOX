@@ -109,10 +109,14 @@ function runEa5c1SuccessorScope(){
    assert(!process.env[k],"EA5C1_AUTHORITY_ENV_FORBIDDEN:"+k);
  return {status:"PASS_NEW_COMPOSER_EA5C1_ADOPTED_SOURCE_SCOPE_ONLY",
   source_head:s.head,source_bindings_count:files.length,
+  current_ea5c1_source_preserved_against_adopted_main:true,
+  historical_ea5c1_predecessor_only_gate_purposely_not_promoted:true,
   legacy_old_composer_contract_reused:false,
   old_six_signatures_reused:false,
   original_real_pg_s3_native_acceptance_still_required:true,
-  production_authorized:false,permit:false};
+  historical_authority_requalified:false,
+  production_write_performed:false,provider_calls:0,third_attempt_authorized:false,
+  production_authorized:false,permit_signed:false,permit_consumed:false,permit:false};
 }
 
 function collectArtifacts(){
@@ -177,7 +181,7 @@ if(require.main===module){
   }else if(argv.includes("--phase3")){
    persist(runPhase3(),arg("--out"));
   }else if(argv.includes("--ea5c1-scope")){
-   process.stdout.write(JSON.stringify(runEa5c1SuccessorScope())+"\n");
+   persist(runEa5c1SuccessorScope(),arg("--out"));
   }else{
    persist(runCheck(arg("--check-id")),arg("--out"));
   }
