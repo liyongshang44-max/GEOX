@@ -7,7 +7,7 @@ let passed=0;
 try{
  const files=[1,2,3].map(i=>{
   const obj={schema_version:"geox_mcft_cap09_stage3_isolated_real_physical_timing_sample_v1",
-   status:"PASS",sample_id:"sample"+i,subject_sha:"12dcbba6750879f0349c5730f477cb04cd23b560",
+   status:"PASS",sample_id:"sample"+i,subject_sha:"496951f099c5a6bf6b17e2ffd7972190faabe532",
    test_run_id:"11aaaa11aab"+i,provider_capture_mode:"CONTROLLED_IN_PROCESS_FIXTURE_NOT_LIVE_GFS_KBS",
    original_v13_timing_sample_v2_entry_executed:false,permit_consumed:false,production_authorized:false,
    timing_phases:{wake_delay_ms:0,job_start_setup_ms:100,provider_capture_ms:30,

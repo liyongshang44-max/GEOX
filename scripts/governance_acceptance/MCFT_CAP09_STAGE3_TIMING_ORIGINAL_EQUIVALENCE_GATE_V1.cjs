@@ -36,7 +36,7 @@ function review(files,providerWitness=null){
   assert.equal(s.schema_version,"geox_mcft_cap09_stage3_isolated_real_physical_timing_sample_v1");
   assert.equal(s.status,"PASS");assert.equal(s.sample_id,"sample"+(i+1));
   assert(!seen.has(s.test_run_id),"TIMING_DISTINCT_EXECUTION_REQUIRED");seen.add(s.test_run_id);
-  assert.equal(s.subject_sha,"12dcbba6750879f0349c5730f477cb04cd23b560");
+  assert.equal(s.subject_sha,"496951f099c5a6bf6b17e2ffd7972190faabe532","TIMING_EXACT_OBSERVED_CANDIDATE_BINDING_REQUIRED");
   const total=PHASES.reduce((a,k)=>{const v=s.timing_phases[k];assert(Number.isSafeInteger(v)&&v>=0);return a+v;},0);
   assert.equal(s.measured_end_to_end_ms,total,"V13_FORMULA_RECONCILIATION_FAILED");
   assert.equal(s.permit_consumed,false);assert.equal(s.production_authorized,false);
@@ -56,7 +56,7 @@ function review(files,providerWitness=null){
  }else{reasons.push("NO_LIVE_PROVIDER_TRANSPORT_WITNESS");}
  return {schema_version:"geox_mcft_cap09_stage3_original_timing_semantic_equivalence_review_v1",status:STATUS,
   frozen_original_v13_timing_entry:ORIGINAL,
-  reviewed_exactly_three_isolated_timing_samples:true,samples,
+  reviewed_exactly_three_isolated_timing_samples:true,isolated_timing_execution_sha:"496951f099c5a6bf6b17e2ffd7972190faabe532",samples,
   timing_formula_reconciled:true,live_transport_witness_present:!!live,
   live_https_response_count:live?.real_https_success_events??0,
   original_v13_timing_semantic_equivalence_proven:false,
