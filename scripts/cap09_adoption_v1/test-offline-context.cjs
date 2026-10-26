@@ -70,7 +70,14 @@ reject('wrong_material_root',f=>f.request.material.root=path.dirname(f.root),tru
 function formalFixture(){
  const base=fixture(),qcpPath=path.resolve(__dirname,'../../docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json');
  // The formal fixture must install the real QCP definition inside its immutable material root.
- const qcpBytes=fs.readFileSync(qcpPath);
+ // Replay the immutable 55-check V1 adoption fixture. The live QCP grows
+ // independently (e.g. CE94 review-only), and must never silently become
+ // a 54-check historical signed-adoption policy or change this V1 assertion.
+ const historicalSubject='12dcbba6750879f0349c5730f477cb04cd23b560';
+ const qcpRelative='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
+ const historicalBlob=cp.execFileSync('git',['rev-parse',historicalSubject+':'+qcpRelative],{encoding:'utf8'}).trim();
+ assert.equal(historicalBlob,'7e132ec2d40bc6ae16b68adf701701c84715cf9a','HISTORICAL_A44_QCP_BLOB_CHANGED');
+ const qcpBytes=cp.execFileSync('git',['show',historicalSubject+':'+qcpRelative],{maxBuffer:8*1024*1024});
  const installedQcpPath=path.join(base.root,...v.QCP_REL.split('/'));
  fs.mkdirSync(path.dirname(installedQcpPath),{recursive:true});
  fs.writeFileSync(installedQcpPath,qcpBytes,{flag:'wx'});
