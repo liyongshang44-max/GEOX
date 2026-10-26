@@ -12,7 +12,7 @@ function expiry(value, label, now) {
 }
 function identity(controller, claim, originalController, originalClaim, now, marginMs) {
   for (const k of ["epoch_id","subject_sha","lease_owner","fencing_token"]) {
-    assert.equal(String(controller[k]), String(originalController[k]), "STAGE3_HEARTBEAT_CONTROLLER_" + (k==="fencing_token"?"FENCE":k.toUpperCase()) + "_CHANGED");
+    assert.equal(String(controller[k]), String(originalController[k]), "STAGE3_HEARTBEAT_CONTROLLER_" + (k==="fencing_token"?"FENCE":k==="idempotency_key"?"IDEMPOTENCY":k.toUpperCase()) + "_CHANGED");
   }
   for (const k of ["epoch_id","subject_sha","lease_owner","base_target_t","causal_deadline","idempotency_key","fencing_token"]) {
     assert.equal(String(claim[k]), String(originalClaim[k]), "STAGE3_HEARTBEAT_CLAIM_" + (k==="fencing_token"?"FENCE":k.toUpperCase()) + "_CHANGED");
