@@ -1,0 +1,62 @@
+{
+  "schema_version": "geox_mcft_cap09_da9_signed_v2_formal_governance_admission_request_v1",
+  "request_id": "DA9_SIGNED_V2_PHASE3_FROZEN_TWO_BLOB_FORMAL_GOVERNANCE_V1",
+  "request_status": "HOLD_PURPOSE_SPECIFIC_DELEGATION_AND_INDEPENDENT_APPROVAL_REQUIRED",
+  "type": "SOURCE_QUALIFICATION_SUCCESSOR_NOT_PRODUCTION_OR_RETRY_PERMIT",
+  "source_pr": 3731,
+  "source_head_sha": "6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0",
+  "source_base_sha": "2162f368899e9a9b5c497d332859e4196f389660",
+  "technical_governance_pr": 3732,
+  "technical_registration_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-QCP-TECHNICAL-ENROLLMENT-V1.json",
+  "native_six_run_id": 40188383138,
+  "native_six_signed_bundle_sha256": "sha256:a98f40c3ed017b017a8459d02655b9f206f6716d1402abcc0e579487c63901df",
+  "native_six_independent_crypto_review_sha256": "sha256:11b4502add2acb26ed6334216bac2f9b69a28e7380c9f1c9087129a20770b71d",
+  "technical_governance_ci_run_id": 40196258357,
+  "technical_registration_negative_cases": 10,
+  "review_decisions": [
+    {
+      "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+      "technical_adjudication": "ACCEPT_FRESH_EXACT_SIGNED_COMPOSER_SOURCE_TECHNICAL_REQUALIFICATION_ONLY",
+      "historical_digest": "sha256:d5d1cf09c4cde3b0fe82e658d9af2b25fe5beccee1a582d40ba00349fab8534b",
+      "new_source_digest": "sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145",
+      "legacy_carryforward_allowed": false
+    },
+    {
+      "check_id": "FROZEN_V13_TWO_BLOB_SEMANTIC_SUCCESSOR",
+      "technical_adjudication": "ACCEPT_EXACT_TWO_PATH_ISOLATED_RETENTION_SEMANTIC_DELTA_TECHNICAL_ONLY",
+      "frozen_path_count": 108,
+      "changed_path_count": 2,
+      "old_runtime_digest": "sha256:13884b41d719ad88334e4fe757cd014fa670e363f92e96413ce4ef2fd7f7ba26",
+      "new_runtime_digest": "sha256:733739cdb36b50078ce5fc7fb628d252de9b68fb6d4d5e102fbd8ff53ac39c0f",
+      "historical_zero_delta_assertion": false
+    }
+  ],
+  "registered_operator_issuer": "mcft_cap09_operator_mylr1",
+  "registered_operator_spki_sha256": "223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365",
+  "independent_review_issuer_candidate": "mcft_cap09_independent_retry_governance",
+  "independent_review_role_existing": "INDEPENDENT_RETRY_GOVERNANCE",
+  "independent_review_public_key_spki_sha256": "ef7459a5918e35c90913532a7c8af545fbca4fec0b7dc95916797db3303fa870",
+  "independent_issuer_existing_role_grants_formal_source_successor_approval": false,
+  "independent_issuer_private_key_possession_verified": false,
+  "operator_private_key_may_impersonate_independent_issuer": false,
+  "independent_formal_approval_signature_received": false,
+  "independent_formal_approval_record_sha256": null,
+  "approved_purpose_delegation_record_sha256": null,
+  "approved_purpose_delegation_authority_provenance": null,
+  "eligible_scope_after_separate_approval": "ONLY_EXACT_SOURCE_6d8fb108_AND_ONLY_SIGNED_V2_SUCCESSOR_NO_PERMIT",
+  "independent_governance_requirements": [
+    "External governance organization issues versioned purpose-specific delegation for source qualification successor review; an existing retry role alone is insufficient",
+    "Separate authenticated independent approval explicitly accepts PHASE3 new digest and Frozen V13 two-blob successor; historically frozen zero-drift remains failed",
+    "Enforce independent approver not the original operator; verify Ed25519 signature, SPKI, revocation, validity, signed payload and complete evidence hashes",
+    "Post-signature formal QCP verifier must run on exact new registration source; central QCP and historical Frozen V13 must not be silently bypassed",
+    "No new Windows PG/MinIO, Provider, timing, delay, aggregate, production Permit or operator graduation is authorized by source qualification approval"
+  ],
+  "legacy_da9_frozen_contract_unchanged": true,
+  "historical_frozen_v13_zero_delta_still_fail": true,
+  "central_qcp_formal_qualified": false,
+  "adoption_qualified": false,
+  "production_authorized": false,
+  "fenced_pg_admitted": false,
+  "permit_issued": false,
+  "signed_v2_operator_evidence_not_resigned": true
+}

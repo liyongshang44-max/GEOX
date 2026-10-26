@@ -1508,6 +1508,26 @@
         "scripts/runtime_acceptance/RUN_MCFT_CAP09_STAGE3_FOUR_PHYSICAL_PRIMITIVE_BODIES_V1.cjs",
         "scripts/runtime_acceptance/RUN_MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_SCRATCH_DELAY_V1.cjs"
       ]
+    },
+    "DA9_SIGNED_COMPOSER_V2_GOVERNANCE_READONLY_EXACT_PATHS": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap09-da9-signed-v2-governance-readonly-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-QCP-TECHNICAL-ENROLLMENT-V1.json",
+        "scripts/governance_acceptance/REVIEW_MCFT_CAP09_DA9_SIGNED_V2_PHASE3_FROZEN_V13_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_SIGNED_V2_QCP_TECHNICAL_ENROLLMENT_V1.cjs"
+      ]
+    },
+    "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_REQUEST_EXACT_SCOPE_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap09-da9-signed-v2-governance-readonly-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-FORMAL-GOVERNANCE-ADMISSION-REQUEST-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-OWNER-DIRECTED-SOURCE-ADMISSION-V1.json",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_FORMAL_GOVERNANCE_ADMISSION_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_OWNER_DIRECTED_SOURCE_ADMISSION_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -3177,6 +3197,62 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs"
+    },
+    {
+      "check_id": "DA9_SIGNED_COMPOSER_V2_PHASE3_FROZEN_RUNTIME_REVIEW_ONLY",
+      "owner": "MCFT_CAP09_DA9_V2_INDEPENDENT_GOVERNANCE_REVIEW",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-QCP-TECHNICAL-ENROLLMENT-V1.json"
+      ],
+      "resolver_ids": [
+        "DA9_SIGNED_COMPOSER_V2_GOVERNANCE_READONLY_EXACT_PATHS"
+      ],
+      "historical_evidence_policy": "NEW_SIGNED_V2_EXACT_SUBJECT_TECHNICAL_REVIEW_NOT_OLD_FROZEN_RUNTIME_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap09-da9-signed-v2-governance-readonly-v1.yml",
+      "execution_workflow_status": "NONAUTHORIZING_CTO_TECHNICAL_QCP_REGISTERED_FORMAL_APPROVAL_REQUIRED",
+      "fail_policy": "FAIL_CLOSED_SIGNED_EXACT_SUBJECT_94_PHASE3_108_FROZEN_TWO_PATHS_NO_INDEPENDENT_GOVERNANCE_OR_PERMIT",
+      "carry_forward_policy": "NONE_NO_LEGACY_DIGEST_INHERITANCE",
+      "requalification_triggers": [
+        "DA9_SIGNED_COMPOSER_V2_GOVERNANCE_READONLY_EXACT_PATHS"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_SIGNED_V2_QCP_TECHNICAL_ENROLLMENT_V1.cjs"
+    },
+    {
+      "check_id": "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING",
+      "owner": "MCFT_CAP09_SEPARATE_FORMAL_SUCCESSOR_ADMISSION_GATE",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-FORMAL-GOVERNANCE-ADMISSION-REQUEST-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-OWNER-DIRECTED-SOURCE-ADMISSION-V1.json"
+      ],
+      "resolver_ids": [
+        "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_REQUEST_EXACT_SCOPE_V1"
+      ],
+      "historical_evidence_policy": "NEW_EXACT_SOURCE_OWNER_DIRECTED_SUCCESSOR_QUALIFIED_NOT_LEGACY_ZERO_DRIFT",
+      "execution_workflow": ".github/workflows/mcft-cap09-da9-signed-v2-governance-readonly-v1.yml",
+      "execution_workflow_status": "OWNER_DIRECTED_SIGNED_SOURCE_PREMERGE_QUALIFIED_NO_PERMIT",
+      "fail_policy": "FAIL_CLOSED_OWNER_ATTRIBUTED_PR_GITHUB_EVENT_PINNED_SIX_NATIVE_SOURCE_PHASE3_TWO_BLOBS_NO_PERMIT",
+      "carry_forward_policy": "NONE_NO_PREDECESSOR_FROZEN_ZERO_DELTA_CARRY_FORWARD",
+      "requalification_triggers": [
+        "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_REQUEST_EXACT_SCOPE_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_OWNER_DIRECTED_SOURCE_ADMISSION_V1.cjs"
     }
   ],
   "non_effects": {

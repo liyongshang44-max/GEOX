@@ -1,0 +1,120 @@
+{
+  "schema_version": "geox_mcft_cap09_da9_signed_composer_v2_independent_governance_review_v1",
+  "contract_id": "MCFT_CAP09_SIGNED_COMPOSER_V2_PHASE3_FROZEN_V13_SEPARATE_GOVERNANCE_REVIEW_V1",
+  "intent": "IMMUTABLE_VERIFIED_PROOFS_SUBJECT_SPECIFIC_SEPARATE_NOT_LEGACY_GRADUATION",
+  "status": "EVIDENCE_TECHNICALLY_VERIFIED_REVIEW_ONLY_NOT_ENROLLED",
+  "source_immutable_pr": 3731,
+  "source_head": "6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0",
+  "source_base": "2162f368899e9a9b5c497d332859e4196f389660",
+  "source_workflow_run_id": 40188383138,
+  "source_workflow_run_attempt": 1,
+  "source_workflow_path": ".github/workflows/mcft-cap09-stage3-composer-six-native-successor-v2.yml",
+  "signed_bundle_file": "MCFT-CAP09-STAGE3-SIX-SIGNED-V2.json",
+  "signed_bundle_sha256": "sha256:a98f40c3ed017b017a8459d02655b9f206f6716d1402abcc0e579487c63901df",
+  "signed_bundle_public_storage_policy": "DO_NOT_UPLOAD_OPERATOR_SIGNED_JSON_WITHOUT_EXPLICIT_GOVERNANCE_REVIEW",
+  "independent_cryptography_report_sha256": "sha256:11b4502add2acb26ed6334216bac2f9b69a28e7380c9f1c9087129a20770b71d",
+  "signed_issuer_id": "mcft_cap09_operator_mylr1",
+  "signed_key_id": "mcft_cap09_ed25519_223c806e",
+  "signed_public_spki_sha256": "223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365",
+  "signed_composer_git_blob": "2d1f72d92c05093537774285bda5b7200845344d",
+  "previous_composer_git_blob": "7e74b1df502e159dd49ceb21889cbfff86408e50",
+  "scope": "SIX_NEW_SIGNED_NATIVE_REQUALIFICATION_ONLY_NOT_OLD_SIX_AUTHORITY_OR_FROZEN_V13_ZERO_DRIFT",
+  "evidence_entries": [
+    {
+      "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+      "artifact_id": 12597497724,
+      "zip_sha256": "sha256:a27991accd72e5da460251b1ff3768394d5aa6628a7c8f95beb8e25614b253fc",
+      "receipt_sha256": "sha256:c86a6599aeefa4898c3e2cc0d56256450fd7ff66db34eae2cf75262dafb31411",
+      "reviewed_dependency_digest": "sha256:9efd03705e32adb877378b62e47597f5a6eaf7c0005df89eb956ad8320cbd1e5",
+      "legacy_wire_digest": "sha256:sha256:9efd03705e32adb877378b62e47597f5a6eaf7c0005df89eb956ad8320cbd1e5"
+    },
+    {
+      "check_id": "V13_HOLISTIC_SCHEMA",
+      "artifact_id": 12596883610,
+      "zip_sha256": "sha256:5ecc6c332366414c2bfa6d478a0a328455a25a6ca407c98aa383e83f5d6683ca",
+      "receipt_sha256": "sha256:5d294f7f82952c23cd937540c2e6222bfbe202cc1e8bdb409d5961db5f7cfd66",
+      "reviewed_dependency_digest": "sha256:9efd03705e32adb877378b62e47597f5a6eaf7c0005df89eb956ad8320cbd1e5",
+      "legacy_wire_digest": "sha256:sha256:9efd03705e32adb877378b62e47597f5a6eaf7c0005df89eb956ad8320cbd1e5"
+    },
+    {
+      "check_id": "V13_NEXT_TICK_VIABILITY",
+      "artifact_id": 12597198147,
+      "zip_sha256": "sha256:fbe740b397b4815e493fab4029084593abff99f5f4dcc48f1581737230951ded",
+      "receipt_sha256": "sha256:b00d82567b8b6e6d83046a2b79b9c99987f64f00ef7913ac915b2f283425c9be",
+      "reviewed_dependency_digest": "sha256:9efd03705e32adb877378b62e47597f5a6eaf7c0005df89eb956ad8320cbd1e5",
+      "legacy_wire_digest": "sha256:sha256:9efd03705e32adb877378b62e47597f5a6eaf7c0005df89eb956ad8320cbd1e5"
+    },
+    {
+      "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+      "artifact_id": 12597472971,
+      "zip_sha256": "sha256:37543df8f065cd7d477a0fdbb2ef82190c658b757b48814d3d377b4c4e0e487b",
+      "receipt_sha256": "sha256:d529e2ea89322de5bbd393e1a9718dfce84449ff9bf13a0b20649d53f3b6cde0",
+      "reviewed_dependency_digest": "sha256:08361c4ee5a17a95c2834bcd48d5b67a1a8a68d3c1875132785d60db496c0e14",
+      "legacy_wire_digest": "sha256:sha256:08361c4ee5a17a95c2834bcd48d5b67a1a8a68d3c1875132785d60db496c0e14"
+    },
+    {
+      "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+      "artifact_id": 12597646781,
+      "zip_sha256": "sha256:eb6832beb84935f5b23f44732b2b27f670ca1824af38575d88754e8645f5ba3c",
+      "receipt_sha256": "sha256:1bd190d8ff42836da929e5a9ad6ef997caee126935ef1ac0f6fd0cd1bb20aede",
+      "reviewed_dependency_digest": "sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145",
+      "legacy_wire_digest": "sha256:sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145"
+    },
+    {
+      "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+      "artifact_id": 12596627737,
+      "zip_sha256": "sha256:4243b1622441a27e58321604b92f96ccf2eacccdcc4cdf1b95862b8d6202fdba",
+      "receipt_sha256": "sha256:1cb0516c1351357101744ba4c355f3590a3efb0fb219ab04d0a8b1be1bc1ed04",
+      "reviewed_dependency_digest": "sha256:bd264e15a0591ccf281bb67d7c465ca5a8169e246a73b6e7c3be533e0364c81b",
+      "legacy_wire_digest": "sha256:sha256:bd264e15a0591ccf281bb67d7c465ca5a8169e246a73b6e7c3be533e0364c81b"
+    }
+  ],
+  "phase3": {
+    "historical_subject": "24cd4b592d671974f5b3a1449a6194bfca0806cb",
+    "historical_dependency_digest": "sha256:d5d1cf09c4cde3b0fe82e658d9af2b25fe5beccee1a582d40ba00349fab8534b",
+    "new_subject_dependency_digest": "sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145",
+    "dependency_scope_paths": 94,
+    "historical_changed_paths": 31,
+    "historical_missing_paths": 1,
+    "historical_diff_report_artifact_id": 12597602191,
+    "historical_diff_report_zip_sha256": "sha256:ec46faeef91350257c8dee26113ccf8589dd8787475a1150128572f84d0f5c2d",
+    "disposition": "HISTORICAL_DIGEST_REJECTED_FRESH_SIGNED_V2_SUBJECT_REQUALIFICATION_PROVEN_NOT_AUTOMATIC_QCP_CARRY_FORWARD",
+    "no_legacy_digest_rewrite": true
+  },
+  "frozen_v13": {
+    "historical_runtime_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+    "runtime_resolver_id": "V13_RUNTIME_SEMANTIC_CLOSURE",
+    "expected_runtime_path_count": 108,
+    "historical_zero_drift_verifier_retained": true,
+    "historical_zero_drift_gate_status": "FAIL",
+    "known_semantic_successor_paths": {
+      "apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts": {
+        "frozen_blob": "cda8c7412c36ef4e2fe29145c75f998d19076420",
+        "reviewed_blob": "68ad42eb41047fa550bf742b312a9b3c83a07f89"
+      },
+      "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts": {
+        "frozen_blob": "a415f9e4a0ca6e05857e1d032ed4098c68b0cf0e",
+        "reviewed_blob": "fcd429cad9fe3aeeb1570649289384188a9f7cde"
+      }
+    },
+    "successor_scope_positive_criteria": "EXACT_DIFF_ONLY_TWO_EXPECTED_RUNTIME_PATHS_AND_NATIVE_V2_SIX_PROOFS",
+    "disposition": "NEW_SEMANTIC_SUCCESSOR_REVIEW_REQUIRED_NO_HISTORICAL_ZERO_DRIFT_CLAIM"
+  },
+  "qcp_enrollment_approved": false,
+  "legacy_frozen_v13_qualified": false,
+  "old_signed_evidence_reused": false,
+  "separate_independent_governance_approver_recorded": false,
+  "operator_signature_is_not_independent_retry_governance_approval": true,
+  "production_authorized": false,
+  "permit_signing_authorized": false,
+  "permit_consumption_authorized": false,
+  "new_isolated_fenced_pg_authorized": false,
+  "provider_refetch_authorized": false,
+  "third_attempt_authorized": false,
+  "required_next": [
+    "independent signed V2 enrollment approval distinct from operator signature",
+    "separate frozen runtime semantics approval for two exact historic-to-new changed paths",
+    "central QCP post-adjudication requalification",
+    "new isolate original PG/ACL/MinIO/source-time/claim checks with no old lease reuse"
+  ]
+}
