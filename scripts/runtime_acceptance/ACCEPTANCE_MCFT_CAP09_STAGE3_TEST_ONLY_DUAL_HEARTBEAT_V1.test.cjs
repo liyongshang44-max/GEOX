@@ -103,3 +103,69 @@ test("strict lease bounds and interval; no implicit widening to 43 minutes",()=>
     lease_duration_seconds:3,heartbeat_interval_ms:3000
   }),/STAGE3_HEARTBEAT_INTERVAL_INVALID/);
 });
+
+test("revoked controller aborts the Provider signal and denies later S3 write",async()=>{
+  const e=environment({controller:r=>({...r,status:"TAKEN_OVER"})}),h=e.guard();
+  let wrote=0, aborted=false;
+  await assert.rejects(h.run(async({assertLive,signal})=>{
+    assertLive();
+    await sleep(35);
+    aborted=signal.aborted;
+    assertLive();wrote++;
+  }),/STAGE3_HEARTBEAT_CONTROLLER_RENEWAL_NOT_OWNED/);
+  assert.equal(wrote,0);
+  assert.equal(aborted,true);
+  assert.match(h.evidence().failure_code,/CONTROLLER_RENEWAL_NOT_OWNED/);
+  assert(h.evidence().event_log.some(x=>x.kind==="FAIL"));
+});
+test("revoked producer aborts before candidate or promotion after slow decoder",async()=>{
+  const e=environment({producer:r=>({...r,fencing_token:8n})}),h=e.guard();
+  let promoted=0;
+  await assert.rejects(h.run(async({assertLive})=>{
+    await sleep(35);
+    assertLive();promoted++;
+  }),/STAGE3_HEARTBEAT_CLAIM_FENCING_TOKEN_CHANGED/);
+  assert.equal(promoted,0);
+});
+test("expired initial claim does not strand running lock; failed instance cannot restart",async()=>{
+  const e=environment();
+  e.claim.lease_expires_at=new Date(Date.now()-1000).toISOString();
+  const h=e.guard();
+  await assert.rejects(h.run(async()=>{}),/STAGE3_HEARTBEAT_CLAIM_EXPIRED/);
+  await assert.rejects(h.run(async()=>{}),/STAGE3_HEARTBEAT_FAILED_INSTANCE_NOT_REUSABLE/);
+});
+test("deadline margin and whole-run watchdog both halt side effects",async()=>{
+  const e=environment();
+  const h=create({
+    lifecycle:e.lifecycle,continuity:e.continuity,initial_controller_lease:e.controller,
+    initial_producer_claim:e.claim,lease_duration_seconds:3,heartbeat_interval_ms:10,
+    max_run_ms:26,base_deadline_margin_ms:0
+  });
+  let writes=0;
+  await assert.rejects(h.run(async({assertLive,signal})=>{
+    await sleep(50);
+    assert.equal(signal.aborted,true);
+    assertLive();writes++;
+  }),/STAGE3_HEARTBEAT_WALL_BUDGET_EXPIRED/);
+  assert.equal(writes,0);
+  assert(h.evidence().event_log.some(x=>x.kind==="FAIL"));
+});
+test("budget cannot be disabled or widened beyond policy",()=>{
+  const e=environment();
+  const args={lifecycle:e.lifecycle,continuity:e.continuity,initial_controller_lease:e.controller,
+    initial_producer_claim:e.claim,lease_duration_seconds:3,heartbeat_interval_ms:10};
+  assert.throws(()=>create({...args,max_run_ms:5400001}),/STAGE3_HEARTBEAT_BUDGET_INVALID/);
+  assert.throws(()=>create({...args,base_deadline_margin_ms:-1}),/STAGE3_HEARTBEAT_MARGIN_INVALID/);
+});
+test("post-commit worker exception never produces a success report",async()=>{
+  const e=environment(),h=e.guard();
+  let committed=false,attested=false;
+  await assert.rejects(h.run(async({assertLive})=>{
+    assertLive();committed=true;
+    await sleep(15);
+    assertLive();throw Error("PHYSICAL_POST_COMMIT_ATTESTATION_UNCERTAIN");
+  }),/PHYSICAL_POST_COMMIT_ATTESTATION_UNCERTAIN/);
+  assert.equal(committed,true);
+  assert.equal(attested,false);
+  assert.match(h.evidence().failure_code,/PHYSICAL_POST_COMMIT/);
+});
