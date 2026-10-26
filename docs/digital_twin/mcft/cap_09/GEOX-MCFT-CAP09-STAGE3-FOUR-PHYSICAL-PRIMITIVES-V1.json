@@ -1,0 +1,26 @@
+{
+  "schema_version": "geox_mcft_cap09_stage3_four_isolated_physical_primitive_bodies_v1",
+  "state": "FOUR_STAGE_REAL_ISOLATED_PRIMITIVE_HARNESS_IMPLEMENTED_WINDOWS_EXECUTION_PENDING",
+  "frozen_stage2_head": "12dcbba6750879f0349c5730f477cb04cd23b560",
+  "frozen_stage2_integrated_test_file": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_ISOLATED_FULL_CHAIN_NONAUTHORIZED_V1.ts",
+  "four_physical_stage_roles": [
+    "PRODUCER",
+    "TIMING_1",
+    "TIMING_2",
+    "TIMING_3"
+  ],
+  "executed_body": "ORIGINAL_STAGE2_PHYSICAL_COMPOSER_S3_CANDIDATE_PG_CONTROLLER_IMPLEMENTATION",
+  "original_producer_v2_or_timing_v2_stage_entry_executed": false,
+  "real_provider_http_used": false,
+  "scoped_fake_provider_fixture_used": true,
+  "timing_measurement_basis": "REAL_SUBPROCESS_WALL_CLOCK_PHYSICAL_INTEGRATION_NOT_ORIGINAL_V13_EXACT_HEAD_TIMING_PHASES",
+  "permit_signed": false,
+  "permit_consumed": false,
+  "production_authorized": false,
+  "stage3_six_stage_qualification": false,
+  "current_stage3_real_body_count": "0_OF_6_UNTIL_PHYSICAL_RECEIPTS_DELIVERED",
+  "requires_unique_dedicated_postgres_database_and_private_s3_bucket_per_run": true,
+  "requires_postgres_schema_reset_only_in_disposable_database": true,
+  "original_frozen_stage_entry_verifier_remains_HOLD": true,
+  "aggregate_allowed_only_after_four_real_physical_body_receipts_verified": true
+}

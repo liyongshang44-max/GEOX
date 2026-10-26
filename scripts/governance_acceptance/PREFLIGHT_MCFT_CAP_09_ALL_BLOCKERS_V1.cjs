@@ -1023,7 +1023,7 @@ function validatePhase5CausalTemporalSupersessionV1(decision, head, base) {
   };
 }
 
-function resolveRequalificationEvidence(decision, authority, registry, stage, head) {
+function resolveRequalificationEvidence(decision, authority, registry, stage, head, base = null) {
   const section = registry.requalification_evidence;
   if (!section || section.binding_strategy !== REQUALIFICATION_BINDING_STRATEGY) {
     return { status: "FAIL", reason_code: "REQUALIFICATION_EVIDENCE_REGISTRY_MISSING_OR_UNSUPPORTED", candidates: [] };
@@ -1099,6 +1099,21 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
   // 108-file historical Frozen V13 assertion. Six precisely named checks
   // require independently signed, exact-head evidence; pending means HOLD.
   // No existing legacy check is reclassified as PASS by this path.
+  // Distinct new-source proof: six original Ed25519 operator signatures remain
+  // bound to #3731's exact Composer blob, NOT the integration merge SHA.
+  // This branch is narrowly gated by the signed source+governance two-parent
+  // ancestry, explicit current PR base, all six artifact hashes and public-key
+  // signature verification. If the successor proof exists but is invalid,
+  // return FAIL: never fall back to the historical Frozen zero-delta evidence.
+  // Unmatched historic subjects continue into the unchanged legacy verifier.
+  const v2SuccessorPath = path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs");
+  if (fs.existsSync(v2SuccessorPath)) {
+    const v2 = require("./VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs");
+    if (v2.required.includes(decision.check_id)) {
+      const currentV2 = v2.verifyRegisteredEvidence({ decision, stage, head, base });
+      if (currentV2 !== null) return currentV2;
+    }
+  }
   const da9SemanticVerifier = path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs");
   if (fs.existsSync(da9SemanticVerifier)) {
     const successor = require("./VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs");
@@ -1557,7 +1572,7 @@ function main() {
       ) {
         // The historical 24cd4b59 Phase3 digest is not evidence for this DA9
         // semantic successor. Missing current signed proof must stay HOLD.
-        const evidence=resolveRequalificationEvidence(decision,authority,registry,stage,args.head||null);
+        const evidence=resolveRequalificationEvidence(decision,authority,registry,stage,args.head||null,args.base||null);
         result={...common,execution:"DA9_PHASE3_SIGNED_EXACT_WORKFLOW_ARTIFACT",
           status:evidence.status,reason_code:evidence.reason_code,
           evidence_id:evidence.evidence_id??null,evidence_run_id:evidence.run_id??null,
@@ -1571,7 +1586,7 @@ function main() {
         successorChainAdmissionActive &&
         isAncestor(SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_V1.merge_commit_sha, args.base || "")
       ) {
-        const fresh = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null);
+        const fresh = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null, args.base || null);
         if (fresh.status === "PASS") {
           result = {
             ...common,
@@ -1658,7 +1673,7 @@ function main() {
         successorChainAdmissionActive &&
         isAncestor(SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.merge_commit_sha, args.base || "")
       ) {
-        const fresh = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null);
+        const fresh = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null, args.base || null);
         if (fresh.status === "PASS") {
           result = {
             ...common,
@@ -1729,6 +1744,7 @@ function main() {
                 registry,
                 stage,
                 args.head || null,
+                args.base || null,
               )
             : null;
 
@@ -1803,7 +1819,7 @@ function main() {
           }
         }
       } else {
-        const evidence = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null);
+        const evidence = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null, args.base || null);
         result = {
           ...common,
           execution: "DURABLE_REQUALIFICATION_EVIDENCE",

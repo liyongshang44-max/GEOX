@@ -1,0 +1,96 @@
+{
+  "schema_version": "geox_mcft_cap09_stage3_python_composer_six_check_successor_v2",
+  "contract_id": "MCFT_CAP09_STAGE3_PYTHON_COMPOSER_SIX_CHECK_SUCCESSOR_V2",
+  "status": "CANDIDATE_SCOPED_NONAUTHORIZING_FRESH_REQUALIFICATION_PENDING",
+  "historical_contract_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-FROZEN-SEMANTIC-SUCCESSOR-V1.json",
+  "historical_signed_registry_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIX-CHECK-EVIDENCE-V1.json",
+  "historical_evidence_must_remain_unchanged": true,
+  "historical_frozen_v13_validator_must_remain_unchanged": true,
+  "original_immutable_composer_git_blob": "7e74b1df502e159dd49ceb21889cbfff86408e50",
+  "new_pinned_python_composer_git_blob": "2d1f72d92c05093537774285bda5b7200845344d",
+  "accepted_change_surface": "EXACT_THREE_EDITS_OPTIONAL_PYTHON_CAPTURE_AND_REHYDRATION_FORWARDING_ONLY",
+  "main_at_contract_draft": "2162f368899e9a9b5c497d332859e4196f389660",
+  "six_check_workflow": ".github/workflows/mcft-cap09-stage3-composer-six-native-successor-v2.yml",
+  "new_receipt_builder": "scripts/governance_acceptance/MCFT_CAP09_STAGE3_COMPOSER_SIX_NATIVE_SOURCE_RECEIPT_V2.cjs",
+  "historical_phase3_successor_subject": "24cd4b592d671974f5b3a1449a6194bfca0806cb",
+  "historical_phase3_dependency_digest": "sha256:d5d1cf09c4cde3b0fe82e658d9af2b25fe5beccee1a582d40ba00349fab8534b",
+  "phase3_independent_disposition": "HOLD_LEGACY_DIGEST_NOT_NEW_PROOF",
+  "checks": [
+    {
+      "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+      "historical_workflow_path": ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+      "original_job_name": "v13-autonomous-forcing-foundation",
+      "acceptance_entry": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.ts",
+      "new_successor_ci_job": "successor-v13-autonomous-forcing-foundation",
+      "minimum_evidence": "SAME_HEAD_REAL_ACCEPTANCE_SUCCESS_AND_ARTIFACT_HASH",
+      "signature_status": "PENDING_INDEPENDENT_OPERATOR_ED25519",
+      "authorization_effect": "NONE"
+    },
+    {
+      "check_id": "V13_HOLISTIC_SCHEMA",
+      "historical_workflow_path": ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+      "original_job_name": "holistic-v13-schema",
+      "acceptance_entry": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES.ts",
+      "new_successor_ci_job": "successor-holistic-v13-schema",
+      "minimum_evidence": "SAME_HEAD_REAL_ACCEPTANCE_SUCCESS_AND_ARTIFACT_HASH",
+      "signature_status": "PENDING_INDEPENDENT_OPERATOR_ED25519",
+      "authorization_effect": "NONE"
+    },
+    {
+      "check_id": "V13_NEXT_TICK_VIABILITY",
+      "historical_workflow_path": ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+      "original_job_name": "next-tick-viability",
+      "acceptance_entry": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts",
+      "new_successor_ci_job": "successor-next-tick-viability",
+      "minimum_evidence": "SAME_HEAD_REAL_ACCEPTANCE_SUCCESS_AND_ARTIFACT_HASH",
+      "signature_status": "PENDING_INDEPENDENT_OPERATOR_ED25519",
+      "authorization_effect": "NONE"
+    },
+    {
+      "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+      "historical_workflow_path": ".github/workflows/mcft-cap09-da9-ea5c1-semantic-successor-ephemeral-v1.yml",
+      "original_job_name": "ea5c1-durable-raw-restricted-ingress",
+      "acceptance_entry": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts",
+      "new_successor_ci_job": "successor-ea5c1-durable-raw-restricted-ingress",
+      "minimum_evidence": "SAME_HEAD_REAL_ACCEPTANCE_SUCCESS_AND_ARTIFACT_HASH",
+      "signature_status": "PENDING_INDEPENDENT_OPERATOR_ED25519",
+      "authorization_effect": "NONE"
+    },
+    {
+      "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+      "historical_workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+      "original_job_name": "postgres-evidence-persistence",
+      "acceptance_entry": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts",
+      "new_successor_ci_job": "successor-postgres-evidence-persistence",
+      "minimum_evidence": "SAME_HEAD_REAL_ACCEPTANCE_SUCCESS_AND_ARTIFACT_HASH",
+      "signature_status": "PENDING_INDEPENDENT_OPERATOR_ED25519",
+      "authorization_effect": "NONE"
+    },
+    {
+      "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+      "historical_workflow_path": ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
+      "original_job_name": "candidate-promotion-composition",
+      "acceptance_entry": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts",
+      "new_successor_ci_job": "successor-candidate-promotion-composition",
+      "minimum_evidence": "SAME_HEAD_REAL_ACCEPTANCE_SUCCESS_AND_ARTIFACT_HASH",
+      "signature_status": "PENDING_INDEPENDENT_OPERATOR_ED25519",
+      "authorization_effect": "NONE"
+    }
+  ],
+  "signed_entries": [],
+  "qualified_six_checks": false,
+  "permit_signing_authorized": false,
+  "permit_consumption_authorized": false,
+  "fenced_pg_write_authorized": false,
+  "production_runtime_mutation_authorized": false,
+  "provider_capture_authorized": false,
+  "old_lease_or_candidate_reuse_authorized": false,
+  "conditions_before_adoption": [
+    "six real new-head success jobs from new workflow, verify GitHub run metadata and exact PR head",
+    "six non-empty acceptance artifacts with byte SHA-256 and source graph digest",
+    "new complete source-time and PHASE3 mismatch adjudication",
+    "six independent authorized Ed25519 offline signatures with revocation/time checks",
+    "signed registry must be reviewed and enrolled by a later separate gated PR, not an automated workflow",
+    "historical frozen V13, central QCP and new isolated fenced PG retain independent admission"
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "schema_version": "geox_mcft_cap09_da9_signed_v2_qcp_technical_enrollment_v1",
+  "registration_id": "MCFT_CAP09_DA9_SIGNED_V2_TWO_SEPARATE_TECHNICAL_SUCCESSOR_ADJUDICATIONS_V1",
+  "registry_class": "QCP_TECHNICAL_SUCCESSOR_EVIDENCE_REGISTRY_NOT_FORMAL_QUALIFICATION_AUTHORITY",
+  "registration_status": "REGISTERED_TWO_NEW_SUBJECT_TECHNICAL_DECISIONS_WITH_EXECUTION_HOLD",
+  "adjudicator_capacity": "CTO_TECHNICAL_REVIEW_DELEGATED_IN_CONVERSATION_NO_SEPARATE_GOVERNANCE_KEY",
+  "adjudicator_independence_cryptographically_attested": false,
+  "basis_governance_pr": 3732,
+  "basis_signed_source_pr": 3731,
+  "basis_source_sha": "6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0",
+  "basis_base_sha": "2162f368899e9a9b5c497d332859e4196f389660",
+  "basis_original_six_native_workflow_run": 40188383138,
+  "basis_signed_bundle_sha256": "sha256:a98f40c3ed017b017a8459d02655b9f206f6716d1402abcc0e579487c63901df",
+  "basis_operator_public_spki_sha256": "223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365",
+  "basis_independent_signature_audit_sha256": "sha256:11b4502add2acb26ed6334216bac2f9b69a28e7380c9f1c9087129a20770b71d",
+  "basis_independent_technical_workflow": "mcft-cap09-da9-signed-v2-governance-readonly-v1",
+  "basis_independent_technical_workflow_run": 40195303139,
+  "basis_technical_evidence_zip_sha256": "sha256:0475d14ee3c1646ba0b9933b3b156237b59735905bc7867175595318f6241caa",
+  "independent_technical_review_contract": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json",
+  "adjudications": [
+    {
+      "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+      "decision": "ACCEPT_FRESH_EXACT_SIGNED_COMPOSER_SOURCE_TECHNICAL_REQUALIFICATION_ONLY",
+      "source_sha": "6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0",
+      "historical_subject": "24cd4b592d671974f5b3a1449a6194bfca0806cb",
+      "legacy_digest": "sha256:d5d1cf09c4cde3b0fe82e658d9af2b25fe5beccee1a582d40ba00349fab8534b",
+      "registered_new_dependency_digest": "sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145",
+      "dependency_path_count": 94,
+      "historical_changed_count": 31,
+      "historical_missing_count": 1,
+      "legacy_digest_carryforward_allowed": false,
+      "old_physical_evidence_promoted": false,
+      "real_signed_native_job_completed": true,
+      "formal_registration_claim": false
+    },
+    {
+      "check_id": "FROZEN_V13_TWO_BLOB_SEMANTIC_SUCCESSOR",
+      "decision": "ACCEPT_EXACT_TWO_PATH_ISOLATED_RETENTION_SEMANTIC_DELTA_TECHNICAL_ONLY",
+      "old_frozen_runtime_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+      "source_sha": "6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0",
+      "frozen_runtime_scope_path_count": 108,
+      "reviewed_changed_runtime_path_count": 2,
+      "old_runtime_digest": "sha256:13884b41d719ad88334e4fe757cd014fa670e363f92e96413ce4ef2fd7f7ba26",
+      "new_runtime_digest": "sha256:733739cdb36b50078ce5fc7fb628d252de9b68fb6d4d5e102fbd8ff53ac39c0f",
+      "frozen_zero_drift_gate_passed": false,
+      "runtime_path_blobs": {
+        "apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts": {
+          "old": "cda8c7412c36ef4e2fe29145c75f998d19076420",
+          "new": "68ad42eb41047fa550bf742b312a9b3c83a07f89"
+        },
+        "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts": {
+          "old": "a415f9e4a0ca6e05857e1d032ed4098c68b0cf0e",
+          "new": "fcd429cad9fe3aeeb1570649289384188a9f7cde"
+        }
+      },
+      "science_scope": "ISOLATED_QUALIFICATION_ONLY_RETENTION_AUTHORITY_AND_PG_FENCE_PROPAGATION",
+      "legacy_zero_drift_redefined": false,
+      "formal_registration_claim": false
+    }
+  ],
+  "enrollment_scope": "QCP_NEW_TECHNICAL_REVIEW_ONLY_NO_EVIDENCE_REGISTRY_LEGACY_MUTATION",
+  "qcp_technical_evidence_registered": true,
+  "qcp_formal_requalification_approved": false,
+  "independent_retry_governance_approval": false,
+  "independent_human_governance_signature_recorded": false,
+  "signed_bundle_raw_bytes_committed": false,
+  "historical_da9_contract_mutated": false,
+  "historical_frozen_v13_gate_mutated": false,
+  "historical_phase3_digest_rewritten": false,
+  "old_candidate_or_lease_reused": false,
+  "no_provider_refetch": true,
+  "no_pg_or_minio_write": true,
+  "production_authorized": false,
+  "permit_signing_authorized": false,
+  "permit_consumption_authorized": false,
+  "fenced_pg_admitted": false,
+  "separate_admission_pending": [
+    "INDEPENDENT_GOVERNANCE_AUTHORIZED_APPROVER",
+    "CENTRAL_QCP_FORMAL_ENROLLMENT",
+    "OLD_FROZEN_V13_GATE_DISTINCT_SUCCESSOR_GOVERNANCE_DISPOSITION",
+    "WINDOWS_FRESH_ISOLATED_FENCED_PG_ACL_LEASE_SOURCE_TIME"
+  ]
+}

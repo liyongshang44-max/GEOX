@@ -1,0 +1,53 @@
+name: mcft-cap09-stage3-real-scientific-provider-readiness-v1
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readonly-real-kbs-science-and-gfs-72h-cycle-inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    env:
+      CI: 'true'
+      MCFT_CAP09_STAGE3_FULL_PROVIDER_SCIENCE_PREFLIGHT: '1'
+      MCFT_CAP09_STAGE3_PREFLIGHT_OUTPUT: /tmp/MCFT_CAP09_STAGE3_LIVE_PROVIDER_SCIENCE_READINESS_V1.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Frozen dependency install
+        run: pnpm install --frozen-lockfile
+      - name: Compile authentic Provider/science imports
+        run: |
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/MCFT_CAP09_STAGE3_LIVE_PROVIDER_SCIENTIFIC_READINESS_V1.ts
+      - name: Fetch and scientifically validate actual KBS with exact decoder and GFS published 72h cycle
+        run: pnpm exec tsx scripts/runtime_acceptance/MCFT_CAP09_STAGE3_LIVE_PROVIDER_SCIENTIFIC_READINESS_V1.ts
+      - name: Preserve scientific HOLD or preflight PASS without Provider raw values
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-stage3-real-provider-scientific-readiness-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/MCFT_CAP09_STAGE3_LIVE_PROVIDER_SCIENCE_READINESS_V1.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Strictly forbid mislabeling readiness as complete 72h real S3/PG acceptance
+        shell: node {0}
+        run: |
+          const fs=require("node:fs");
+          const p=JSON.parse(fs.readFileSync("/tmp/MCFT_CAP09_STAGE3_LIVE_PROVIDER_SCIENCE_READINESS_V1.json","utf8"));
+          for(const k of ["real_gfs_full_72h_members_retained","full_s3_pg_timed_capture_completed",
+            "permit_signed","permit_consumed","production_authorized","qualified"]){
+            if(p[k]!==false)throw Error("FALSE_PROVIDER_PROOF:"+k);
+          }
+          if(p.status!=="PASS_READONLY_SCIENCE_READINESS_NOT_FULL_CAPTURE")throw Error("SCIENCE_PREFLIGHT_NOT_QUALIFIED");
+          console.log("REAL_KBS_CONTINUITY_AND_GFS_CYCLE_INVENTORY=PASS_ONLY");

@@ -1,0 +1,72 @@
+{
+  "schema_version": "geox_mcft_cap09_da9_signed_v2_owner_directed_source_admission_v1",
+  "admission_id": "MCFT_CAP09_DA9_V2_OWNER_DIRECTED_SIGNED_SOURCE_QUALIFICATION_ONLY",
+  "decision": "APPROVE_EXACT_SIGNED_SOURCE_SUCCESSOR_WITHOUT_INDEPENDENT_REVIEW",
+  "decision_mode": "REPOSITORY_OWNER_DIRECTED_GOVERNANCE_POLICY_AMENDMENT_NOT_INDEPENDENT_SIGNATURE",
+  "requested_by": "repository_owner_in_active_conversation",
+  "repository": "liyongshang44-max/GEOX",
+  "repository_owner": "liyongshang44-max",
+  "expected_owner_pr": 3732,
+  "signed_source_pr": 3731,
+  "signed_source_head": "6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0",
+  "signed_source_base": "2162f368899e9a9b5c497d332859e4196f389660",
+  "native_six_run_id": 40188383138,
+  "native_six_bundle_sha256": "sha256:a98f40c3ed017b017a8459d02655b9f206f6716d1402abcc0e579487c63901df",
+  "operator_public_spki_sha256": "223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365",
+  "technical_governance_run_id": 40196258357,
+  "technical_registration_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-QCP-TECHNICAL-ENROLLMENT-V1.json",
+  "prior_formal_request": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-FORMAL-GOVERNANCE-ADMISSION-REQUEST-V1.json",
+  "decisions": [
+    {
+      "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+      "decision": "FRESH_94_PATH_SOURCE_REQUALIFICATION_ACCEPTED_NO_CARRY_FORWARD",
+      "path_count": 94,
+      "changed_historical_paths": 31,
+      "old_digest": "sha256:d5d1cf09c4cde3b0fe82e658d9af2b25fe5beccee1a582d40ba00349fab8534b",
+      "new_digest": "sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145",
+      "old_evidence_inherited": false
+    },
+    {
+      "check_id": "FROZEN_V13_TWO_BLOB_SEMANTIC_SUCCESSOR",
+      "decision": "EXACT_TWO_BLOB_ISOLATED_RETENTION_SEMANTIC_SUCCESSOR_ACCEPTED_NOT_LEGACY_FROZEN",
+      "frozen_scope_paths": 108,
+      "changed_blobs": 2,
+      "old_digest": "sha256:13884b41d719ad88334e4fe757cd014fa670e363f92e96413ce4ef2fd7f7ba26",
+      "new_digest": "sha256:733739cdb36b50078ce5fc7fb628d252de9b68fb6d4d5e102fbd8ff53ac39c0f",
+      "changed_runtime_blob_pairs": {
+        "apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts": {
+          "old": "cda8c7412c36ef4e2fe29145c75f998d19076420",
+          "new": "68ad42eb41047fa550bf742b312a9b3c83a07f89"
+        },
+        "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts": {
+          "old": "a415f9e4a0ca6e05857e1d032ed4098c68b0cf0e",
+          "new": "fcd429cad9fe3aeeb1570649289384188a9f7cde"
+        }
+      },
+      "legacy_zero_delta_gate_passed": false
+    }
+  ],
+  "requires_github_actions_event_provenance": true,
+  "requires_pr_author_is_repository_owner": true,
+  "requires_head_and_base_repository_owner": true,
+  "requires_complete_native_six_cryptographic_proof": true,
+  "requires_git_object_recompute": true,
+  "requires_existing_qcp_exact_path_scope": true,
+  "prior_independent_governance_request_superseded_for_this_qualification_scope": true,
+  "historical_frozen_runtime_unchanged": false,
+  "historical_frozen_contract_modified": false,
+  "legacy_phase3_digest_rewritten": false,
+  "independent_review_approval_present": false,
+  "independent_approval_claimed": false,
+  "operator_six_resigned": false,
+  "provider_refetched": false,
+  "raw_pg_s3_modified": false,
+  "scope": "SIGNED_3731_SOURCE_QUALIFICATION_ONLY_PR3732_REVIEWED_POLICY_NO_EXECUTION_AUTHORITY",
+  "source_successor_qcp_premerge_owner_policy_approved": true,
+  "post_merge_graduation_authorized": false,
+  "production_authorized": false,
+  "adoption_authorized": false,
+  "fenced_pg_admitted": false,
+  "permit_signing_authorized": false,
+  "permit_consumption_authorized": false
+}

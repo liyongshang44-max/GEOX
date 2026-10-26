@@ -25,6 +25,7 @@ export function composeIsolatedMcftCap09V13ProducerCoreV1(input: {
   private_store: S3CompatiblePrivateRawRetentionConfigV1;
   clock?: () => Date;
   fetch_impl?: typeof fetch;
+  python_executable?: string; // Test-only caller pins actual Python binary for Windows science
 }) {
   assert.match(input.isolated_run_id, /^[a-f0-9]{12}$/, "ISOLATED_RUN_ID_INVALID");
   assert.match(input.subject_sha, /^[a-f0-9]{40}$/, "ISOLATED_SUBJECT_INVALID");
@@ -41,7 +42,7 @@ export function composeIsolatedMcftCap09V13ProducerCoreV1(input: {
   const retention = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1({...input.private_store,clock});
   const candidateStore = new S3CompatiblePrivateCandidateManifestStoreV1({...input.private_store,clock});
   const rawReader = new S3CompatiblePrivateRetainedRawReaderV1({...input.private_store,clock});
-  const workItemFactory = new ProductionEvidenceWorkItemFactoryV1({retention,clock,fetch_impl:input.fetch_impl});
+  const workItemFactory = new ProductionEvidenceWorkItemFactoryV1({retention,clock,fetch_impl:input.fetch_impl,python_executable:input.python_executable});
   const fencedPromotion = new PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1(
     input.pool,retention,{
       scope:MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
@@ -61,7 +62,13 @@ export function composeIsolatedMcftCap09V13ProducerCoreV1(input: {
     candidate_store:candidateStore,
     raw_reader:rawReader,
     fenced_promotion:fencedPromotion,
-    rehydration_decoder_factory:new ProductionExternalFormalCandidateRehydrationDecoderFactoryV1(),
+    // The GFS capture factory and Candidate raw-rehydration factory MUST use the
+    // same pinned interpreter. Otherwise Windows capture succeeds but replay
+    // silently falls back to unqualified "python3" on PATH (often ENOENT).
+    // This is isolated-qualification-only wiring; production graph untouched.
+    rehydration_decoder_factory:new ProductionExternalFormalCandidateRehydrationDecoderFactoryV1({
+      python_executable:input.python_executable,
+    }),
     clock,
   });
   return {

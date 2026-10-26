@@ -1,0 +1,143 @@
+name: mcft-cap09-stage3-one-real-provider-s3-pg-v1
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  genuine-production-provider-factory-to-new-s3-and-fenced-pg:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 125
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable-only-not-production
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CI: 'true'
+      CAP09_NONAUTHORIZED_E2E_EXCLUSIVE_DESTRUCTIVE_TEST: '1'
+      MCFT_CAP09_STAGE3_FRESH_PG_BOOTSTRAP: '1'
+      MCFT_CAP09_STAGE3_REAL_PG_CAPTURE_TEST_ONLY: '1'
+      CAP09_E2E_PG_ROLE_PASSWORD: isolated-e2e-password-no-production
+      PHASE7_PRIVATE_S3_ENDPOINT: http://127.0.0.1:9000
+      PHASE7_PRIVATE_S3_REGION: us-east-1
+      PHASE7_PRIVATE_S3_ACCESS_KEY_ID: cap09testonly
+      PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY: disposable-s3-key-no-production-001
+      PGPASSWORD: disposable-only-not-production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Exact dependency installation
+        run: pnpm install --frozen-lockfile
+      - name: Compile full real Producer/S3/PG and isolated bootstrap
+        run: |
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/MCFT_CAP09_STAGE3_BOOTSTRAP_FRESH_ISOLATED_PG_V1.ts \
+            scripts/runtime_acceptance/MCFT_CAP09_STAGE3_ONE_REAL_PROVIDER_PG_FENCED_V1.ts
+      - name: Require previously completed full real GFS/KBS scientific S3 proof BEFORE new request set
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 40159238282
+          pattern: cap09-stage3-full-real-gfs72-kbs-private-s3-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/prior-genuine-full-science
+      - name: Independently require full 72h SCIENCE S3 PASS (never directory-only)
+        shell: node {0}
+        run: |
+          const fs=require("node:fs"),path=require("node:path");
+          const f=path.join(process.env.RUNNER_TEMP,"prior-genuine-full-science",
+            "STAGE3_FULL_REAL_KBS_GFS_S3_SCIENCE_V1.json");
+          const e=JSON.parse(fs.readFileSync(f,"utf8"));
+          if(e.status!=="PASS_GENUINE_PROVIDER_FULL_72H_S3_SCIENCE_NOT_PG"||
+             e.gfs?.full_72h_bundle_retained!==true||e.kbs?.scientific_status!=="PASS")throw Error("FULL_REAL_PROVIDER_SCIENTIFIC_S3_PROOF_HOLD");
+          if(e.permit_signed!==false||e.permit_consumed!==false||
+             e.postgres_fenced_promotion_executed!==false||e.qualified!==false)throw Error("SCIENTIFIC_SOURCE_FALSE_AUTHORITY");
+          console.log("TRUE_FULL_72H_PROVIDER_S3_SOURCE_PASS_SEPARATE_RUN_AND_BUCKET");
+      - name: Derive new run-specific isolated PostgreSQL database and S3 namespace
+        run: |
+          set -euo pipefail
+          R="$(printf '%s' "$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT:$GITHUB_SHA" | sha256sum | cut -c1-12)"
+          [[ "$R" =~ ^[a-f0-9]{12}$ ]]
+          echo "MCFT_CAP09_STAGE3_NEW_RUN_ID=$R" >> "$GITHUB_ENV"
+          echo "CAP09_E2E_SUBJECT_SHA=${{ github.event.pull_request.head.sha || github.sha }}" >> "$GITHUB_ENV"
+          echo "PHASE7_PRIVATE_S3_BUCKET=mcft-cap09-requal-$R" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_STAGE3_PHYSICAL_RECEIPT_DIR=$RUNNER_TEMP/cap09-full-provider-pg-$R" >> "$GITHUB_ENV"
+          echo "FRESH_REQUAL_DB=mcft_cap09_requal_$R"
+      - name: Create exactly one brand-new DB on disposable Postgres container
+        run: |
+          set -euo pipefail
+          DB="mcft_cap09_requal_${MCFT_CAP09_STAGE3_NEW_RUN_ID}_positive"
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres -c "CREATE DATABASE $DB"
+          echo "DATABASE_URL=postgres://postgres:disposable-only-not-production@127.0.0.1:5432/$DB" >> "$GITHUB_ENV"
+      - name: Bootstrap isolated Evidence login and exact Fenced Writer ACL (NO DROPs)
+        run: pnpm exec tsx scripts/runtime_acceptance/MCFT_CAP09_STAGE3_BOOTSTRAP_FRESH_ISOLATED_PG_V1.ts
+      - name: Create new private S3 only for this disposable job
+        run: |
+          set -euo pipefail
+          docker run -d --name cap09-stage3-real-pg-minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=cap09testonly \
+            -e MINIO_ROOT_PASSWORD=disposable-s3-key-no-production-001 \
+            ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e server /data
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
+          docker run --rm --network host --entrypoint /bin/sh \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -ceu "
+              mc alias set nonauth http://127.0.0.1:9000 cap09testonly disposable-s3-key-no-production-001
+              mc mb nonauth/$PHASE7_PRIVATE_S3_BUCKET
+              mc anonymous set private nonauth/$PHASE7_PRIVATE_S3_BUCKET
+            "
+      - name: Real original Provider factory to S3 retained members Candidate Fenced PG Controller
+        run: |
+          set -euo pipefail
+          R="$MCFT_CAP09_STAGE3_NEW_RUN_ID"
+          export DATABASE_URL="postgres://cap09_non_auth_e2e_$R:$CAP09_E2E_PG_ROLE_PASSWORD@127.0.0.1:5432/mcft_cap09_requal_${R}_positive"
+          unset PGPASSWORD
+          pnpm exec tsx scripts/runtime_acceptance/MCFT_CAP09_STAGE3_ONE_REAL_PROVIDER_PG_FENCED_V1.ts
+      - name: Observe no Permit or original formal Timing/Delay/Aggregate claims
+        shell: node {0}
+        run: |
+          const fs=require("node:fs"),path=require("node:path");
+          const r=JSON.parse(fs.readFileSync(path.join(process.env.MCFT_CAP09_STAGE3_PHYSICAL_RECEIPT_DIR,
+            "STAGE3_FULL_REAL_KBS_GFS_S3_PG_ONE_BASE_RESULT.json"),"utf8"));
+          if(r.status!=="PASS_FULL_REAL_GFS72_KBS_S3_PG_ONE_BASE_NOT_ORIGINAL_TIMING")throw Error("REAL_PG_QUALIFICATION_NOT_PASS");
+          if(r.physical_fenced_fact_count!==3||r.controller_cursor_advanced!==true)throw Error("FENCED_FACTS_MISSING");
+          for(const k of ["original_v13_producer_entry_executed","original_v13_timing_v2_executed",
+            "original_aggregate_executed","formal_timing_qualified",
+            "permit_signed","permit_consumed","qualified","production_authorized"]){
+            if(r[k]!==false)throw Error("FALSE_FORMAL_AUTHORITY:"+k);
+          }
+          console.log("REAL_GFS72_KBS_PRIVATE_S3_FENCED_PG_ONE_BASE=PASS_NONAUTHORITY");
+      - name: Preserve actual new resource and failure receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap09-stage3-full-real-provider-pg-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cap09-full-provider-pg-*/
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Stop only this disposable MinIO
+        if: always()
+        run: docker rm -f cap09-stage3-real-pg-minio >/dev/null 2>&1 || true
