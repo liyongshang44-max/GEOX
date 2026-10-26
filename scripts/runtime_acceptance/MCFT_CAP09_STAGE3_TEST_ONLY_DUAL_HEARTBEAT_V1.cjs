@@ -37,7 +37,11 @@ function createStage3TestOnlyDualHeartbeatV1(input) {
   assert(Number.isInteger(interval) && interval > 0 && interval < duration*1000,"STAGE3_HEARTBEAT_INTERVAL_INVALID");
   assert(Number.isInteger(budget) && budget > interval && budget <= 5400000,"STAGE3_HEARTBEAT_BUDGET_INVALID");
   assert(Number.isInteger(margin) && margin >= 0 && margin <= 3600000,"STAGE3_HEARTBEAT_MARGIN_INVALID");
-  let controller = ic, claim = ip, running = false, failure = null, started = null;
+  // One safety clock shared by capture and promotion, including runner setup.
+  const pinnedStart = input.run_start_ms ?? null;
+  assert(pinnedStart === null || (Number.isSafeInteger(pinnedStart) && pinnedStart > 0 && pinnedStart <= clock()),
+    "STAGE3_HEARTBEAT_PHYSICAL_RUN_START_INVALID");
+  let controller = ic, claim = ip, running = false, failure = null, started = pinnedStart;
   let controllerCount = 0, claimCount = 0, stop = false, wake = ()=>{};
   const ac = new AbortController();
   const events = [];
@@ -88,11 +92,17 @@ function createStage3TestOnlyDualHeartbeatV1(input) {
     assert(typeof work==="function","STAGE3_HEARTBEAT_WORK_REQUIRED");
     assert(!running,"STAGE3_HEARTBEAT_CONCURRENT_RUN_FORBIDDEN");
     assert(!failure,"STAGE3_HEARTBEAT_FAILED_INSTANCE_NOT_REUSABLE");
-    running=true; started=clock(); stop=false;
+    running=true; if(started===null) started=clock(); stop=false;
     try {assertLive();record("RUN","START");}
     catch(e){fail(e);running=false;throw e;}
     // Abort budget even when the caller is awaiting a network operation.
-    const watchdog=setTimeout(()=>fail(new Error("STAGE3_HEARTBEAT_WALL_BUDGET_EXPIRED")),budget);
+    const remainingBudget = started + budget - clock();
+    if(remainingBudget <= 0) {
+      fail(new Error("STAGE3_HEARTBEAT_WALL_BUDGET_EXPIRED"));
+      running=false;
+      throw failure;
+    }
+    const watchdog=setTimeout(()=>fail(new Error("STAGE3_HEARTBEAT_WALL_BUDGET_EXPIRED")),remainingBudget);
     const loop=(async()=>{
       while(!stop && !failure) {
         await new Promise(resolve=>{

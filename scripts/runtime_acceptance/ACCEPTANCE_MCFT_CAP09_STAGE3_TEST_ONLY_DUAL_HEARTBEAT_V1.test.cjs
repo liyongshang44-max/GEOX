@@ -198,3 +198,29 @@ test("durable journal failure during renewal is fail-closed and cancels future S
   }),/HEARTBEAT_JOURNAL_IO_FAILED/);
   assert.equal(wrote,false);
 });
+
+
+test("physical safety budget persists across capture and promotion run calls",async()=>{
+  const e=environment(),base=Date.now();let now=base;
+  const h=create({lifecycle:e.lifecycle,continuity:e.continuity,
+    initial_controller_lease:e.controller,initial_producer_claim:e.claim,
+    lease_duration_seconds:3,heartbeat_interval_ms:10,max_run_ms:50,
+    run_start_ms:base-10,clock:()=>now});
+  await h.run(async({assertLive})=>{now+=30;assertLive();});
+  assert.equal(h.evidence().run_started_at,new Date(base-10).toISOString());
+  await assert.rejects(h.run(async({assertLive})=>{
+    now+=11;assertLive();
+  }),/STAGE3_HEARTBEAT_WALL_BUDGET_EXPIRED/);
+  assert.equal(h.signal.aborted,true);
+  assert.equal(h.evidence().run_deadline_at,new Date(base+40).toISOString());
+});
+
+test("physical setup time cannot be erased by starting heartbeat late",async()=>{
+  const e=environment(),now=Date.now();
+  const h=create({lifecycle:e.lifecycle,continuity:e.continuity,
+    initial_controller_lease:e.controller,initial_producer_claim:e.claim,
+    lease_duration_seconds:3,heartbeat_interval_ms:10,max_run_ms:50,
+    run_start_ms:now-51,clock:()=>now});
+  await assert.rejects(h.run(async()=>{throw Error("UNREACHABLE");}),
+    /STAGE3_HEARTBEAT_WALL_BUDGET_EXPIRED/);
+});

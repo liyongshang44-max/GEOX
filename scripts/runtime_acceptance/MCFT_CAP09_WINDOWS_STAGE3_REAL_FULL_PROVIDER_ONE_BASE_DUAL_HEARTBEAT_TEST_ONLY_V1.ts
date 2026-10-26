@@ -112,6 +112,7 @@ async function main(){
   heartbeat=createStage3TestOnlyDualHeartbeatV1({
     lifecycle,continuity,initial_controller_lease:c.lease,initial_producer_claim:x.claim,
     lease_duration_seconds:1800,heartbeat_interval_ms:60000,
+     run_start_ms:start,
     on_event:(event:Record<string,unknown>)=>{
       if(heartbeatJournalFd===null)throw Error("STAGE3_HEARTBEAT_JOURNAL_NOT_OPEN");
       const line=Buffer.from(JSON.stringify(event)+"\n","utf8");
