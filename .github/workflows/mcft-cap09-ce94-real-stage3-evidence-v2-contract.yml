@@ -1,0 +1,34 @@
+name: mcft-cap09-ce94-real-stage3-evidence-v2-contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/governance_acceptance/MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
+      - 'scripts/governance_acceptance/SIGN_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
+      - '.github/workflows/mcft-cap09-ce94-real-stage3-evidence-v2-contract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ce94-v2-contract-and-v1-unchanged:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: V2 independent contract positive and negative tests (synthetic only)
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs
+      - name: V1 mandatory signed full-chain gate unchanged
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs
+      - name: Original six-stage scheduler contract unchanged
+        run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_SIX_STAGE_CHAIN_V1.cjs
+      - name: Explicitly prohibit V2 from touching Host/Permit and Stage3 runtime
+        run: |
+          set -euo pipefail
+          git diff --name-only "${{ github.event.pull_request.base.sha || 'HEAD^' }}" HEAD | tee /tmp/ce94-v2-changed.txt
+          ! grep -E '^(scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs|scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs|scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs|scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_STAGE3_REAL_FULL_PROVIDER_ONE_BASE_V1.ts|apps/server/)' /tmp/ce94-v2-changed.txt
