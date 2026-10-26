@@ -1453,11 +1453,7 @@
         ".github/workflows/mcft-cap09-da9-ea5c1-semantic-successor-ephemeral-v1.yml",
         "scripts/governance_acceptance/PREPARE_MCFT_CAP09_DA9_SIX_QCP_EXACT_RUN_EVIDENCE_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_EA5C1_SEMANTIC_SUCCESSOR_SCOPE_V1.cjs",
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIX-WORKFLOW-ARTIFACTS-UNSIGNED-20261024-V1.json",
-        ".github/workflows/mcft-cap09-ce94-real-stage3-evidence-v2-contract.yml",
-        "scripts/governance_acceptance/MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs",
-        "scripts/governance_acceptance/SIGN_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs"
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIX-WORKFLOW-ARTIFACTS-UNSIGNED-20261024-V1.json"
       ]
     },
     "DA9_SOURCE_TIME_CONTRACT_V3_CANDIDATE_ONLY": {
