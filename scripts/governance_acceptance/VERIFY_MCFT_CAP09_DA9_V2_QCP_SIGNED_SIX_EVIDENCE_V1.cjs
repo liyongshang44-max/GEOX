@@ -97,6 +97,84 @@ function validateBundle(a,review,trust,binding,owner,base,head){
  }
  return report;
 }
+// One protected main only: #3735's merged, exact first-parent successor of #3734.
+// This is a read-only historical-source proof, NOT an extension of the original
+// #3734 or #3735 event-bound verifiers and NOT a new admission policy.
+const REVIEW_MAIN="f654fff21e5aa05bfa6c79e67ea34fb53b61cdfb";
+const POSTMERGE_MAIN="b2e846d4b10a5d124d6060998ef1c9a2895391e4";
+const REVIEW_PARENT="1800f41d1325ab3c230702dec46ea14e35fc9ef8";
+const REVIEW_DELTA=Object.freeze([
+ ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+ ".github/workflows/mcft-cap09-ce94-real-stage3-evidence-v2-contract.yml",
+ "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+ "scripts/cap09_adoption_v1/test-offline-context.cjs",
+ "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs",
+ "scripts/governance_acceptance/MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs",
+ "scripts/governance_acceptance/SIGN_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs",
+ "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+ "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs"
+].sort());
+function verifyF654ReviewOnlyLineage({base,head}){
+ assert.equal(base,REVIEW_MAIN,"HOLD_REVIEW_SUCCESSOR_EXACT_BASE");
+ assert(/^[0-9a-f]{40}$/.test(head)&&ancestor(REVIEW_MAIN,head),"HOLD_REVIEW_SUCCESSOR_NOT_DESCENDANT");
+ assert.deepEqual(git("rev-list","--parents","-n","1",MERGE).split(/\s+/),[MERGE,SOURCE,GOV],"HOLD_ORIGINAL_TWO_PARENT_MERGE_DRIFT");
+ assert.deepEqual(git("rev-list","--parents","-n","1",REVIEW_MAIN).split(/\s+/),
+  [REVIEW_MAIN,POSTMERGE_MAIN,REVIEW_PARENT],"HOLD_3735_PROTECTED_MAIN_PARENTS_DRIFT");
+ assert(ancestor(MERGE,POSTMERGE_MAIN)&&ancestor(SOURCE,REVIEW_MAIN)&&ancestor(GOV,REVIEW_MAIN),
+  "HOLD_DA9_TWO_PARENT_LINEAGE_MISSING");
+ const changed=git("diff","--name-only",REVIEW_MAIN,head).split(/\r?\n/).filter(Boolean).sort();
+ assert.deepEqual(changed,REVIEW_DELTA,"HOLD_UNREVIEWED_F654_CURRENT_PR_PATH_DELTA");
+ const qOld=JSON.parse(git("show",REVIEW_MAIN+":"+QCP)),q=read(QCP);
+ assert.equal(qOld.checks.length,59,"HOLD_3735_QCP_BASE_CHECK_COUNT");
+ assert.equal(q.checks.length,60,"HOLD_CURRENT_QCP_REVIEW_ONLY_APPEND_COUNT");
+ assert.deepEqual(q.checks.slice(0,59),qOld.checks,"HOLD_HISTORIC_QCP_CHECKS_REWRITTEN");
+ const ids=Object.keys(qOld.dependency_resolvers);
+ assert.equal(ids.length,59,"HOLD_HISTORIC_RESOLVERS_COUNT");
+ for(const id of ids)assert.deepEqual(q.dependency_resolvers[id],qOld.dependency_resolvers[id],"HOLD_HISTORIC_RESOLVER_CHANGED:"+id);
+ assert.deepEqual(Object.keys(q.dependency_resolvers).filter(id=>!ids.includes(id)),
+  ["CE94_REAL_STAGE3_PHYSICAL_V2_REVIEW_ONLY"],"HOLD_UNREVIEWED_QCP_RESOLVER");
+ assert.equal(q.checks[59].check_id,"CE94_REAL_STAGE3_PHYSICAL_EVIDENCE_V2_ENGINEERING_REVIEW_ONLY");
+ assert.equal(q.checks[59].carry_forward_evidence_id,null);
+ assert.equal(q.fail_closed_rules.unknown_changed_path,"FAIL","HOLD_UNKNOWN_PATH_BYPASS");
+ const paths=q.dependency_resolvers.CE94_REAL_STAGE3_PHYSICAL_V2_REVIEW_ONLY.paths;
+ assert.deepEqual(paths,REVIEW_DELTA.filter(p=>p.includes("ce94-real-stage3-evidence-v2-contract")||
+   p.includes("REAL_STAGE3_PHYSICAL_EVIDENCE_V2")||p.includes("SIGN_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2")),
+  "HOLD_V2_EXACT_REVIEW_ONLY_OWNERSHIP_DRIFT");
+ const preserved=[BIND,OWNER,REVIEW,SIGNED,TRUST,
+  "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_TWO_PARENT_SOURCE_BINDING_V1.cjs",
+  "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_POSTMERGE_INTEGRATION_PRESERVATION_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts"];
+ for(const p of preserved){
+  assert.equal(blob(head,p),blob(REVIEW_MAIN,p),"HOLD_ORIGINAL_DA9_SOURCE_BLOB_CHANGED:"+p);
+ }
+ assert.equal(blob(SOURCE,"scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts"),
+  blob(head,"scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts"),
+  "HOLD_SIGNED_COMPOSER_BLOB_CHANGED");
+ return {status:"PASS_F654_EXACT_HISTORIC_SOURCE_AND_REVIEW_ONLY_DELTA",base_sha:base,head_sha:head,
+  historical_pr3734_event_replayed:false,historical_pr3735_event_replayed:false,
+  a44_changed:false,permit:false,physical_admission:false,production:false};
+}
+function verifyF654PostmergeEvidence({decision,stage,head,base}){
+ if(decision?.check_id!=="DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING"||
+  stage!=="SUCCESSOR_SUBJECT_PRE_MERGE"||base!==REVIEW_MAIN)return null;
+ try {
+  const lineage=verifyF654ReviewOnlyLineage({base,head});
+  const a=JSON.parse(raw(SIGNED)),review=read(REVIEW),trust=read(TRUST),binding=read(BIND),owner=read(OWNER);
+  assert.equal(crypto.createHash("sha256").update(raw(SIGNED)).digest("hex"),
+   "a98f40c3ed017b017a8459d02655b9f206f6716d1402abcc0e579487c63901df");
+  const signed=validateBundle(a,review,trust,binding,owner,BASE,head);
+  assert.equal(signed.length,6,"HOLD_DA9_SIX_NATIVE_SIGNED_REVIEWS_MISSING");
+  const check=read(QCP).checks.find(x=>x.check_id===decision.check_id);
+  assert(check&&check.carry_forward_evidence_id===null,"HOLD_HISTORIC_FORMAL_ADMISSION_POLICY_CHANGED");
+  return {status:"PASS",reason_code:"EXACT_F654_POSTMERGE_SIGNED_TWO_PARENT_SOURCE_PRESERVED_NO_EVENT_REPLAY",
+   evidence_id:"DA9_3734_3735_SIGNED_SOURCE_PRESERVATION_F654_REVIEW_ONLY",
+   source_sha:SOURCE,subject_sha:head,signature_count:signed.length,
+   historical_signed_source_only:true,original_3734_event_replayed:false,
+   original_3735_event_replayed:false,review_only_delta:REVIEW_DELTA.length,
+   permit_authorized:false,host_authorized:false,production_authorized:false,physical_admission_authorized:false};
+ }catch(error){return {status:"FAIL",reason_code:"HOLD_F654_POSTMERGE_PRESERVATION:"+String(error.message||error).slice(0,220),
+   candidates:[],permit_authorized:false};}
+}
 function verifyRegisteredEvidence({decision,stage,head,base}){
  if(!decision||!CHECKS.includes(decision.check_id))return null;
  if(stage!=="SUCCESSOR_SUBJECT_PRE_MERGE"||!head||!ancestor(MERGE,head))return null;
@@ -105,8 +183,10 @@ function verifyRegisteredEvidence({decision,stage,head,base}){
  const postmerge="b2e846d4b10a5d124d6060998ef1c9a2895391e4";
  const originalScope=base===BASE;
  const postmergeScope=base===postmerge && ancestor(postmerge,head) && ancestor(MERGE,postmerge);
- if(!originalScope&&!postmergeScope)return null;
+ const reviewScope=base===REVIEW_MAIN;
+ if(!originalScope&&!postmergeScope&&!reviewScope)return null;
  try {
+  if(reviewScope)verifyF654ReviewOnlyLineage({base,head});
   const bytes=raw(SIGNED),sha=crypto.createHash("sha256").update(bytes).digest("hex");
   assert.equal(sha,"a98f40c3ed017b017a8459d02655b9f206f6716d1402abcc0e579487c63901df");
   const a=JSON.parse(bytes),review=read(REVIEW),trust=read(TRUST),binding=read(BIND),owner=read(OWNER);
@@ -159,5 +239,5 @@ function main(){
    integration_head:head,verified_checks:checked,negative_tests_pass:negatives,
    historical_frozen_v13_zero_drift_pass:false,production:false,permit:false}));
 }
-module.exports={required:CHECKS,verifyRegisteredEvidence};
+module.exports={required:CHECKS,verifyRegisteredEvidence,verifyF654ReviewOnlyLineage,verifyF654PostmergeEvidence};
 if(require.main===module){try{main()}catch(e){console.error("HOLD_DA9_V2_SIX_SIGNED_QCP_VERIFICATION:"+String(e.stack||e));process.exitCode=1;}}
