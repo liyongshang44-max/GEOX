@@ -41,10 +41,10 @@ jobs:
           node --check scripts/runtime_acceptance/MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.cjs
           node --check scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.test.cjs
           node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.test.cjs
-      - name: Locked dependencies and new TEST_ONLY successor typecheck only
+      - name: Locked types only, no native build scripts; TEST_ONLY successor typecheck
         run: |
           set -euo pipefail
-          pnpm install --frozen-lockfile
+          pnpm install --frozen-lockfile --ignore-scripts
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
             scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_STAGE3_REAL_FULL_PROVIDER_ONE_BASE_DUAL_HEARTBEAT_TEST_ONLY_V1.ts
       - name: Assert no authority, provider or physical execution in CI
