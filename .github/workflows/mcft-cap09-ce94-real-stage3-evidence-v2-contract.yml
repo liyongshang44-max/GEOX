@@ -1,0 +1,109 @@
+name: mcft-cap09-ce94-real-stage3-evidence-v2-contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/governance_acceptance/MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
+      - 'scripts/governance_acceptance/SIGN_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
+      - '.github/workflows/mcft-cap09-ce94-real-stage3-evidence-v2-contract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ce94-v2-contract-and-v1-unchanged:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: V2 independent contract positive and negative tests (synthetic only)
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs
+      - name: V1 mandatory signed full-chain gate unchanged
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs
+      - name: Frozen A44 path and V1 synthetic authority regressions (without redefining historical 54-check adoption)
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          node scripts/cap09_adoption_v1/acceptance.cjs --bundle synthetic-proof-bundle
+          node - <<'NODE'
+          "use strict";
+          const assert=require("node:assert/strict"),cp=require("node:child_process"),fs=require("node:fs");
+          const p="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+          const base=JSON.parse(cp.execFileSync("git",["show",process.env.PR_BASE_SHA+":"+p],{encoding:"utf8"}));
+          const next=JSON.parse(fs.readFileSync(p,"utf8"));
+          const id="A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_V1";
+          const check="A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_ENGINEERING_ONLY";
+          assert.equal(base.dependency_resolvers[id].paths.length,64);
+          assert.deepEqual(next.dependency_resolvers[id],base.dependency_resolvers[id],"A44_FROZEN_EXACT_PATH_SET_DRIFT");
+          assert.deepEqual(next.checks.find(x=>x.check_id===check),base.checks.find(x=>x.check_id===check),"A44_FROZEN_CHECK_CHANGED");
+          const v="CE94_REAL_STAGE3_PHYSICAL_V2_REVIEW_ONLY", c="CE94_REAL_STAGE3_PHYSICAL_EVIDENCE_V2_ENGINEERING_REVIEW_ONLY";
+          const approved=[
+            ".github/workflows/mcft-cap09-ce94-real-stage3-evidence-v2-contract.yml",
+            "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs",
+            "scripts/governance_acceptance/MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs",
+            "scripts/governance_acceptance/SIGN_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs"];
+          assert.deepEqual(next.dependency_resolvers[v],{kind:"EXACT_PATH_SET",paths:approved},"V2_REVIEW_OWNERSHIP_NOT_EXACT");
+          assert.equal(next.checks.filter(x=>x.check_id===c).length,1,"V2_QCP_CHECK_MISSING_OR_AMBIGUOUS");
+          assert.equal(approved.some(x=>base.dependency_resolvers[id].paths.includes(x)),false,"V2_A44_CROSS_BINDING");
+          assert.equal(next.fail_closed_rules.unknown_changed_path,"FAIL","QCP_UNKNOWN_PATH_MUST_FAIL");
+          console.log("PASS_A44_64_FROZEN_PATHS_UNCHANGED_V2_EXACT_FOUR_REVIEW_ONLY_NOT_ADOPTION");
+          NODE
+      - name: Exact F654 protected-main signed-source inheritance positive and negative checks (review only)
+        env:
+          EXPECTED_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          "use strict";
+          const assert=require("node:assert/strict"),cp=require("node:child_process");
+          const v=require("./scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs");
+          const base="f654fff21e5aa05bfa6c79e67ea34fb53b61cdfb";
+          const head=cp.execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();
+          assert.equal(process.env.EXPECTED_PR_BASE_SHA,base);
+          const result=v.verifyF654ReviewOnlyLineage({base,head});
+          assert.equal(result.status,"PASS_F654_EXACT_HISTORIC_SOURCE_AND_REVIEW_ONLY_DELTA");
+          const review=require("./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json");
+          assert.equal(review.evidence_entries.length,6);
+          for(const entry of review.evidence_entries){
+            const r=v.verifyRegisteredEvidence({
+              decision:{check_id:entry.check_id,dependency_digest:entry.reviewed_dependency_digest},
+              stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base,head
+            });
+            assert.equal(r.status,"PASS",entry.check_id+":"+r.reason_code);
+            assert.equal(r.permit_authorized,false);
+            assert.equal(v.verifyRegisteredEvidence({
+              decision:{check_id:entry.check_id,dependency_digest:entry.reviewed_dependency_digest},
+              stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base:"0".repeat(40),head
+            }),null);
+          }
+          const id="DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING";
+          const r=v.verifyF654PostmergeEvidence({decision:{check_id:id},stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base,head});
+          assert.equal(r.status,"PASS",r.reason_code);
+          assert.equal(r.signature_count,6);
+          assert.equal(r.permit_authorized,false);
+          assert.equal(v.verifyF654PostmergeEvidence({decision:{check_id:id},stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base:"0".repeat(40),head}),null);
+          assert.throws(()=>v.verifyF654ReviewOnlyLineage({base:"0".repeat(40),head}),/HOLD_REVIEW_SUCCESSOR_EXACT_BASE/);
+          console.log("PASS_EXACT_F654_TWO_PARENT_SIX_ORIGINAL_ED25519_AND_3735_REVIEW_ONLY_NO_EVENT_REPLAY_NO_PERMIT");
+          NODE
+      - name: Original six-stage Host, Permit and scheduler sources unchanged
+        run: |
+          set -euo pipefail
+          git diff --exit-code "${{ github.event.pull_request.base.sha || 'HEAD^' }}" HEAD -- \
+            scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs \
+            scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs \
+            scripts/runtime_acceptance/MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs \
+            scripts/runtime_acceptance/MCFT_CAP09_PARENT_STAGE_DISPATCH_V1.cjs
+          node --check scripts/runtime_acceptance/MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs
+          node --check scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs
+          echo 'PASS_UNCHANGED_ORIGINAL_SIX_STAGE_AUTHORITY_SOURCES_NOT_EXECUTED'
+      - name: Explicitly prohibit V2 from touching Host/Permit and Stage3 runtime
+        run: |
+          set -euo pipefail
+          git diff --name-only "${{ github.event.pull_request.base.sha || 'HEAD^' }}" HEAD | tee /tmp/ce94-v2-changed.txt
+          ! grep -E '^(scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs|scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs|scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs|scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_STAGE3_REAL_FULL_PROVIDER_ONE_BASE_V1.ts|apps/server/)' /tmp/ce94-v2-changed.txt

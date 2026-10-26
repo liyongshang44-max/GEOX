@@ -1734,6 +1734,34 @@ function main() {
           detail: evidence,
         });
       } else if (
+        // The exact protected #3735 merge is the current PR #3736 base.
+        // Validate immutable #3734 two-parent source and #3735 preserved
+        // successor with original Ed25519 public signatures. Never replay
+        // either historic GitHub PR event and never infer Host or Permit.
+        decision.check_id === "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING" &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "f654fff21e5aa05bfa6c79e67ea34fb53b61cdfb"
+      ) {
+        const v2 = require("./VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs");
+        const preserved = v2.verifyF654PostmergeEvidence({
+          decision,stage,head:args.head || "",base:args.base
+        });
+        result = {
+          ...common,
+          execution:"EXACT_F654_HISTORICAL_SIGNED_SOURCE_POSTMERGE_PRESERVATION_REVIEW_ONLY",
+          status:preserved?.status ?? "FAIL",
+          reason_code:preserved?.reason_code ?? "HOLD_F654_POSTMERGE_EVIDENCE_MISSING",
+          original_event_3734_replayed:false,
+          original_event_3735_replayed:false,
+          physical_admission_authorized:false,
+          permit_authorized:false,
+          evidence:preserved
+        };
+        if(result.status!=="PASS")blockers.push({
+          blocker_class:"EXACT_F654_DA9_TWO_PARENT_SIGNED_SOURCE_INVALID",
+          check_id:decision.check_id,detail:preserved
+        });
+      } else if (
         // #3734 owner-event binding was checked on its original PR and merged.
         // On the exact first postmerge main, validate that proof's immutable
         // history instead of re-running an event-bound check for PR #3734.

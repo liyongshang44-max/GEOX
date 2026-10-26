@@ -5,6 +5,10 @@ on:
   pull_request:
     paths:
       - 'scripts/runtime_acceptance/MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs'
+      - 'scripts/governance_acceptance/MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
+      - 'scripts/governance_acceptance/SIGN_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
+      - '.github/workflows/mcft-cap09-ce94-real-stage3-evidence-v2-contract.yml'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-1E59-V1.json'

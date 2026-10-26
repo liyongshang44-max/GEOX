@@ -1543,6 +1543,15 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_POSTMERGE_WINDOWS_PHYSICAL_READONLY_GATE_V1.cjs",
         "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_POSTMERGE_INTEGRATION_PRESERVATION_V1.cjs"
       ]
+    },
+    "CE94_REAL_STAGE3_PHYSICAL_V2_REVIEW_ONLY": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap09-ce94-real-stage3-evidence-v2-contract.yml",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs",
+        "scripts/governance_acceptance/SIGN_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs"
+      ]
     }
   },
   "checks": [
@@ -3296,6 +3305,33 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_POSTMERGE_WINDOWS_PHYSICAL_READONLY_GATE_V1.cjs"
+    },
+    {
+      "check_id": "CE94_REAL_STAGE3_PHYSICAL_EVIDENCE_V2_ENGINEERING_REVIEW_ONLY",
+      "owner": "MCFT_CAP09_CE94_REAL_STAGE3_EVIDENCE_REVIEW_ONLY",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "scripts/governance_acceptance/MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs"
+      ],
+      "resolver_ids": [
+        "CE94_REAL_STAGE3_PHYSICAL_V2_REVIEW_ONLY"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_CE94_OBSERVED_SCOPE_ONLY",
+      "execution_workflow": ".github/workflows/mcft-cap09-ce94-real-stage3-evidence-v2-contract.yml",
+      "execution_workflow_status": "READONLY_SYNTHETIC_CONTRACT_VALIDATION_NOT_HOST_ADMISSION",
+      "fail_policy": "FAIL_CLOSED_EXACT_FOUR_PATHS_UNKNOWN_NOT_PASS_NO_HISTORICAL_EVENTS_OR_PERMIT",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "CE94_REAL_STAGE3_PHYSICAL_V2_REVIEW_ONLY"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs"
     }
   ],
   "non_effects": {
