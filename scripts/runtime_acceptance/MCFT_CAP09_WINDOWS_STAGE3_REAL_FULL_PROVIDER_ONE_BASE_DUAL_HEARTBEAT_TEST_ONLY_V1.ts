@@ -1,8 +1,7 @@
 // Genuine ProductionEvidenceWorkItemFactory acquisition and one physical
 // fenced PostgreSQL/MinIO Controller run. Strictly test-only; not governed V13 Host.
 import assert from "node:assert/strict";
-import {createRequire} from "node:module";
-const {createStage3TestOnlyDualHeartbeatV1} = createRequire(import.meta.url)("./MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.cjs");
+import {createStage3TestOnlyDualHeartbeatV1} from "./MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.cjs";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
