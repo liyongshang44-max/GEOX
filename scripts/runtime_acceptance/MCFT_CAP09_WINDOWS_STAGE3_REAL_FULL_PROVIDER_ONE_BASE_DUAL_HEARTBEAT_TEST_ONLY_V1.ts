@@ -58,6 +58,7 @@ async function main(){
  const phase:Record<string,unknown>={};
  let step="NEW_RESTRICTED_PG_ACL",realGets=0,rawMs=0,manifestMs=0;
  let heartbeat:any=null;
+ let heartbeatJournalFd:number|null=null;
  const pool=new Pool({connectionString:url.toString(),max:6});
  try{
   const acl=(await pool.query("SELECT current_user AS who,has_table_privilege(current_user,'public.facts','INSERT') AS can_insert,has_function_privilege(current_user,'public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)','EXECUTE') AS can_execute")).rows[0];
@@ -106,9 +107,16 @@ async function main(){
   assert.equal(x.status,"CLAIMED");assert.equal(x.claim.base_target_t,base);
   await continuity.advanceClaimPhaseUnderController({controller_lease:c.lease,claim:x.claim,phase:"ACQUIRING"});
   phase.claim_and_controller_ms=Date.now()-started;
+  heartbeatJournalFd=fs.openSync(path.join(output,"STAGE3_HEARTBEAT_EVENTS_TEST_ONLY.jsonl"),"wx",0o600);
   heartbeat=createStage3TestOnlyDualHeartbeatV1({
     lifecycle,continuity,initial_controller_lease:c.lease,initial_producer_claim:x.claim,
-    lease_duration_seconds:1800,heartbeat_interval_ms:60000
+    lease_duration_seconds:1800,heartbeat_interval_ms:60000,
+    on_event:(event:Record<string,unknown>)=>{
+      if(heartbeatJournalFd===null)throw Error("STAGE3_HEARTBEAT_JOURNAL_NOT_OPEN");
+      const line=Buffer.from(JSON.stringify(event)+"\\n","utf8");
+      fs.writeSync(heartbeatJournalFd,line,0,line.length);
+      fs.fsyncSync(heartbeatJournalFd);
+    }
   });
   step="ORIGINAL_REAL_KBS_AND_FULL_GFS_72H_CAPTURE";
   const captureStart=Date.now();
@@ -181,6 +189,7 @@ async function main(){
   receipt.reason_code=boundedFailure(e);receipt.failure_stage=step;}
  finally{
   await pool.end();
+  if(heartbeatJournalFd!==null){fs.fsyncSync(heartbeatJournalFd);fs.closeSync(heartbeatJournalFd);heartbeatJournalFd=null;}
   receipt.lease_heartbeats_test_only=heartbeat?heartbeat.evidence():null;
   receipt.requires_independent_readonly_pg_reconciliation=["UNKNOWN_POST_PROMOTION_ENTRY","REPORTED_COMMITTED_PENDING_READBACK","UNKNOWN"].includes(String(receipt.physical_commit_state));
   receipt.real_provider_get_count=realGets;receipt.timing_phases_test_only=phase;
