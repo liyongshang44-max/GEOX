@@ -45,7 +45,7 @@ function environment(overrides = {}) {
 }
 test("long-running capture heartbeats BOTH leases and preserves the two fences", async()=>{
   const e=environment(),h=e.guard();
-  const result=await h.run(async snapshot=>{
+  const result=await h.run(async ({snapshot})=>{
     assert.equal(snapshot().producer_claim.idempotency_key,e.claim.idempotency_key);
     await sleep(65);
     return {status:"CONTROLLED_CAPTURE_FINISHED"};
