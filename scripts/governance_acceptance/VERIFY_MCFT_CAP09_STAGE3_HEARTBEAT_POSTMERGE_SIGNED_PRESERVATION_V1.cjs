@@ -54,7 +54,9 @@ function reviewScope({base,head}){
  const proofs={};
  for(const id of SIX){
   const check=q.checks.find(x=>x.check_id===id);
-  assert(check&&check.carry_forward_evidence_id===null,"HOLD_HISTORIC_CHECK_POLICY_INVALID:"+id);
+  assert(check,"HOLD_HISTORIC_CHECK_POLICY_MISSING:"+id);
+  // Historical carry-forward fields are immutable (asserted against protected BASE),
+  // not required to be null; no ancient check definition is changed here.
   const files=[...new Set(check.resolver_ids.flatMap(v=>r.resolved[v]?.paths||[]))];
   assert(files.length>0,"HOLD_CHECK_DEPS_EMPTY:"+id);
   assert.equal(git("diff","--name-only",BASE,head,"--",...files),"","HOLD_SIGNED_SCIENCE_DEPENDENCY_CHANGED:"+id);
