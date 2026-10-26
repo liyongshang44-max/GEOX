@@ -19,6 +19,9 @@ concurrency:
   cancel-in-progress: true
 jobs:
   signed-v2-phase3-frozen-review-only:
+    # Original governance acceptance is bound to PR #3732. Its historic CI remains immutable.
+    # PR #3734 has a separate two-parent source-binding verifier/workflow.
+    if: github.event.pull_request.number == 3732
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
