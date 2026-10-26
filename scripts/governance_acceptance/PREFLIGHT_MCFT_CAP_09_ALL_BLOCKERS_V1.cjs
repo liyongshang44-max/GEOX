@@ -1733,6 +1733,36 @@ function main() {
           check_id: decision.check_id,
           detail: evidence,
         });
+      } else if (
+        // #3734 owner-event binding was checked on its original PR and merged.
+        // On the exact first postmerge main, validate that proof's immutable
+        // history instead of re-running an event-bound check for PR #3734.
+        decision.check_id === "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING" &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "b2e846d4b10a5d124d6060998ef1c9a2895391e4" &&
+        isAncestor(args.base, args.head || "")
+      ) {
+        const postmergeCommand =
+          "node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_POSTMERGE_INTEGRATION_PRESERVATION_V1.cjs";
+        const diagnostic = runDiagnostic(postmergeCommand, {}, decision.check_id);
+        result = {
+          ...common,
+          execution: "POSTMERGE_ORIGINAL_TWO_PARENT_INTEGRATION_IMMUTABILITY_REVALIDATION",
+          status: diagnostic.status,
+          reason_code: diagnostic.status === "PASS"
+            ? "POSTMERGE_ORIGINAL_INTEGRATION_PROOF_REVALIDATED_NO_EVENT_REPLAY"
+            : "POSTMERGE_ORIGINAL_INTEGRATION_PROOF_INVALID",
+          diagnostic_command: postmergeCommand,
+          original_event_3734_replayed: false,
+          physical_admission_authorized: false,
+          permit_authorized: false,
+          diagnostic,
+        };
+        if (diagnostic.status !== "PASS") blockers.push({
+          blocker_class: "POSTMERGE_ORIGINAL_TWO_PARENT_PROOF_INVALID",
+          check_id: decision.check_id,
+          detail: diagnostic,
+        });
       } else if (decision.diagnostic_command && !adoptionDurableRequalification) {
         const durableBeforeDiagnostic =
           PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(

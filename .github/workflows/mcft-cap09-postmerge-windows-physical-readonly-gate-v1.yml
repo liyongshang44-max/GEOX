@@ -1,0 +1,44 @@
+name: mcft-cap09-postmerge-windows-physical-readonly-gate-v1
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap09-postmerge-windows-physical-readonly-gate-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-POSTMERGE-WINDOWS-PHYSICAL-READONLY-GATE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_POSTMERGE_WINDOWS_PHYSICAL_READONLY_GATE_V1.cjs'
+permissions:
+  contents: read
+concurrency:
+  group: cap09-postmerge-windows-preflight-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+jobs:
+  windows-static-physical-boundary-only:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact non-authorizing PR source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Node 24.19.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+      - name: Explicit Windows static scope only (no local operator claims)
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD).Trim() -ne "${{ github.event.pull_request.head.sha }}") { throw 'HOLD_WRONG_PR_SHA' }
+          if ("${{ github.event.pull_request.base.sha }}" -ne 'b2e846d4b10a5d124d6060998ef1c9a2895391e4') { throw 'HOLD_MAIN_MOVED' }
+          if ($env:DATABASE_URL -or $env:MCFT_GOVERNED_RETRY_TICKET -or $env:AWS_SECRET_ACCESS_KEY) { throw 'HOLD_INHERITED_EXECUTION_ENV' }
+          if ((node -p "process.platform").Trim() -ne 'win32') { throw 'HOLD_WINDOWS_REQUIRED' }
+          if ((node -p "process.version").Trim() -ne 'v24.19.0') { throw 'HOLD_NODE_VERSION' }
+      - name: Verify 16 fail-closed negative cases and immutable signed source
+        shell: pwsh
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_POSTMERGE_WINDOWS_PHYSICAL_READONLY_GATE_V1.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_POSTMERGE_WINDOWS_PHYSICAL_READONLY_GATE_V1.cjs
+      - name: Confirm CI Windows is not the user's physical host
+        shell: pwsh
+        run: |
+          Write-Host 'PASS_STATIC_WINDOWS_GATE_ONLY: physical PG/MinIO/Provider/Host Admission/Permit all remain HOLD'

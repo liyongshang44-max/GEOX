@@ -99,12 +99,19 @@ function validateBundle(a,review,trust,binding,owner,base,head){
 }
 function verifyRegisteredEvidence({decision,stage,head,base}){
  if(!decision||!CHECKS.includes(decision.check_id))return null;
- if(stage!=="SUCCESSOR_SUBJECT_PRE_MERGE"||base!==BASE||!head||!ancestor(MERGE,head))return null;
+ if(stage!=="SUCCESSOR_SUBJECT_PRE_MERGE"||!head||!ancestor(MERGE,head))return null;
+ // Exact #3734 historical integration base OR the first protected main that
+ // contains #3734. No broader base-sha whitelist, no historic-bundle re-sign.
+ const postmerge="b2e846d4b10a5d124d6060998ef1c9a2895391e4";
+ const originalScope=base===BASE;
+ const postmergeScope=base===postmerge && ancestor(postmerge,head) && ancestor(MERGE,postmerge);
+ if(!originalScope&&!postmergeScope)return null;
  try {
   const bytes=raw(SIGNED),sha=crypto.createHash("sha256").update(bytes).digest("hex");
   assert.equal(sha,"a98f40c3ed017b017a8459d02655b9f206f6716d1402abcc0e579487c63901df");
   const a=JSON.parse(bytes),review=read(REVIEW),trust=read(TRUST),binding=read(BIND),owner=read(OWNER);
-  const rows=validateBundle(a,review,trust,binding,owner,base,head);
+  // Original operator payload is immutably signed against BASE, not PR #3735's base.
+  const rows=validateBundle(a,review,trust,binding,owner,BASE,head);
   const row=rows.find(x=>x.check_id===decision.check_id);
   assert(row&&row.dependency_digest===decision.dependency_digest,"HOLD_QCP_PLANNER_DEPENDENCY_DIGEST_MISMATCH");
   const q=read(QCP),check=q.checks.find(x=>x.check_id==="DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING");
