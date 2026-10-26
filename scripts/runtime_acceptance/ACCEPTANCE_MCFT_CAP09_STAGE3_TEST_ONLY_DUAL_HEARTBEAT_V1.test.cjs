@@ -169,3 +169,32 @@ test("post-commit worker exception never produces a success report",async()=>{
   assert.equal(attested,false);
   assert.match(h.evidence().failure_code,/PHYSICAL_POST_COMMIT/);
 });
+
+test("durable journal receives actual sequential Controller and Producer events",async()=>{
+  const e=environment(),journal=[];
+  const h=create({lifecycle:e.lifecycle,continuity:e.continuity,
+    initial_controller_lease:e.controller,initial_producer_claim:e.claim,
+    lease_duration_seconds:3,heartbeat_interval_ms:10,
+    on_event:v=>journal.push({...v})
+  });
+  await h.run(async()=>{await sleep(55);});
+  assert(journal.length>=5);
+  assert(journal.some(x=>x.kind==="CONTROLLER"));
+  assert(journal.some(x=>x.kind==="PRODUCER"));
+  assert.deepEqual(journal.map(x=>x.seq),journal.map((_,i)=>i+1));
+  assert.equal(h.evidence().on_event_durable_required,true);
+});
+test("durable journal failure during renewal is fail-closed and cancels future S3 writes",async()=>{
+  const e=environment(),h=create({
+    lifecycle:e.lifecycle,continuity:e.continuity,
+    initial_controller_lease:e.controller,initial_producer_claim:e.claim,
+    lease_duration_seconds:3,heartbeat_interval_ms:10,
+    on_event:v=>{if(v.kind==="CONTROLLER")throw Error("HEARTBEAT_JOURNAL_IO_FAILED");}
+  });
+  let wrote=false;
+  await assert.rejects(h.run(async({assertLive,signal})=>{
+    await sleep(40);assert.equal(signal.aborted,true);
+    assertLive();wrote=true;
+  }),/HEARTBEAT_JOURNAL_IO_FAILED/);
+  assert.equal(wrote,false);
+});
