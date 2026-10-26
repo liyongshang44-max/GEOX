@@ -65,10 +65,14 @@ async function main(){
   const n=Number((await pool.query("SELECT count(*)::int AS n FROM facts")).rows[0]?.n??-1);
   assert.equal(n,0,"STAGE3_REAL_PG_PREEXISTING_FACTS_FORBIDDEN");
   const realFetch:typeof fetch=async(input,init)=>{
+   heartbeat?.assertLive();
    const u=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
    assert(u.protocol==="https:"&&["lter.kbs.msu.edu","nomads.ncep.noaa.gov"].includes(u.hostname),"STAGE3_REAL_GFS_KBS_ONLY");
    realGets++;assert(realGets<=260,"STAGE3_REAL_PROVIDER_HTTP_REQUEST_BUDGET");
-   const started=Date.now();try{return await fetch(input,init);}finally{
+   const sourceSignal=input instanceof Request?input.signal:undefined;
+   const signals=[init?.signal,sourceSignal,heartbeat?.signal].filter((v):v is AbortSignal=>!!v);
+   const signal=signals.length?AbortSignal.any(signals):undefined;
+   const started=Date.now();try{return await fetch(input,{...init,signal});}finally{
     phase.real_provider_https_elapsed_ms=Number(phase.real_provider_https_elapsed_ms??0)+Date.now()-started;
    }
   };
@@ -83,12 +87,12 @@ async function main(){
   const raw=core.retention;
   const r1=raw.retainRawEvidence.bind(raw),r2=raw.retainRawEvidenceFile.bind(raw);
   raw.retainRawEvidence=async input=>{
-   const t=Date.now();try{return await r1(input);}finally{rawMs+=Date.now()-t;}};
+   const t=Date.now();try{heartbeat?.assertLive();const result=await r1(input);heartbeat?.assertLive();return result;}finally{rawMs+=Date.now()-t;}};
   raw.retainRawEvidenceFile=async input=>{
-   const t=Date.now();try{return await r2(input);}finally{rawMs+=Date.now()-t;}};
+   const t=Date.now();try{heartbeat?.assertLive();const result=await r2(input);heartbeat?.assertLive();return result;}finally{rawMs+=Date.now()-t;}};
   const candidate=core.candidate_store,c1=candidate.writeCandidateManifest.bind(candidate);
   candidate.writeCandidateManifest=async input=>{
-   const t=Date.now();try{return await c1(input);}finally{manifestMs+=Date.now()-t;}};
+   const t=Date.now();try{heartbeat?.assertLive();const result=await c1(input);heartbeat?.assertLive();return result;}finally{manifestMs+=Date.now()-t;}};
   const continuity=new PostgresExternalFormalForcingBaseContinuityRepositoryV1(pool,{
    scope:MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,epoch_id:epoch,subject_sha:subject,
    first_required_base:base,last_required_base:base});
@@ -111,9 +115,9 @@ async function main(){
   receipt.actual_windows_node_sha256="sha256:"+crypto.createHash("sha256").update(fs.readFileSync(process.execPath)).digest("hex");
   receipt.actual_python_executable=pinnedPython;
   receipt.real_provider_network_capture_required=true;
-  const captured=await heartbeat.run(()=>core.capture_promotion.captureExactBase({
+  const captured=await heartbeat.run(({assertLive}:any)=>{assertLive();return core.capture_promotion.captureExactBase({
     base_target_t:base,subject_sha:subject,idempotency_key:x.claim.idempotency_key
-  }));
+  });});
   phase.capture_full_ms=Date.now()-captureStart;
   phase.raw_s3_retain_ms=rawMs;
   phase.candidate_s3_ms=manifestMs;
@@ -122,10 +126,12 @@ async function main(){
   assert.equal(captured.formal_database_write_count,0);
   assert.equal(captured.raw_values_emitted,false);
   step="REAL_FENCED_PG_COMMIT";
-  const {committed,attested}=await heartbeat.run(async()=>{
+  const {committed,attested}=await heartbeat.run(async({assertLive}:any)=>{
+    assertLive();
     // Re-read current lease snapshots at every boundary. Fencing tokens must
     // never be reacquired/taken over; heartbeats keep the same owner's leases.
     let leases=heartbeat.snapshot();
+    phase.promotion_intent_at=new Date().toISOString();
     await continuity.advanceClaimPhaseUnderController({
       controller_lease:leases.controller_lease,claim:leases.producer_claim,phase:"READY_TO_FINALIZE"
     });
@@ -135,16 +141,22 @@ async function main(){
     });
     const promoteStart=Date.now();
     leases=heartbeat.snapshot();
+    assertLive();
+    phase.promotion_in_flight_at=new Date().toISOString();
+    receipt.physical_commit_state="UNKNOWN_POST_PROMOTION_ENTRY";
     const promoted=await core.capture_promotion.promoteExactBase({
       base_target_t:base,subject_sha:subject,idempotency_key:leases.producer_claim.idempotency_key,
       capture:captured,controller_lease:leases.controller_lease,producer_claim:leases.producer_claim
     });
     phase.fenced_promotion_ms=Date.now()-promoteStart;
+    receipt.physical_commit_state=promoted.database_fence_commit_succeeded===true?"REPORTED_COMMITTED_PENDING_READBACK":"UNKNOWN";
+    phase.promotion_returned_at=new Date().toISOString();
     assert.equal(promoted.database_fence_commit_succeeded,true);
     assert.equal(promoted.formal_fact_present_count,3);
     step="CONTROLLER_POST_COMMIT_READBACK";
     const readStart=Date.now();
     leases=heartbeat.snapshot();
+    assertLive();
     const visible=await continuity.attestFormalPhysicalVisibilityUnderController({
       controller_lease:leases.controller_lease,claim:leases.producer_claim,facts:promoted.facts,
       producer_run_id:captured.producer_run_id,promotion_run_id:promoted.promotion_run_id,
@@ -152,6 +164,8 @@ async function main(){
     });
     phase.physical_readback_ms=Date.now()-readStart;
     assert.equal(visible.status,"PASS");assert.equal(visible.cursor_advanced,true);
+    receipt.physical_commit_state="COMMITTED_AND_ATTESTED";
+    phase.attested_at=new Date().toISOString();
     return {committed:promoted,attested:visible};
   });
   const facts=Number((await pool.query("SELECT count(*)::int AS n FROM facts")).rows[0]?.n??-1);
@@ -163,10 +177,12 @@ async function main(){
   receipt.controller_cursor_advanced=true;
   receipt.candidate_digest=captured.candidate_artifact_digest;
  }catch(e){receipt.status="HOLD_REAL_FULL_PROVIDER_OR_PHYSICAL_CHAIN";
+   receipt.physical_commit_state=receipt.physical_commit_state??"NOT_ENTERED_PROMOTION";
   receipt.reason_code=boundedFailure(e);receipt.failure_stage=step;}
  finally{
   await pool.end();
   receipt.lease_heartbeats_test_only=heartbeat?heartbeat.evidence():null;
+  receipt.requires_independent_readonly_pg_reconciliation=["UNKNOWN_POST_PROMOTION_ENTRY","REPORTED_COMMITTED_PENDING_READBACK","UNKNOWN"].includes(String(receipt.physical_commit_state));
   receipt.real_provider_get_count=realGets;receipt.timing_phases_test_only=phase;
   receipt.total_elapsed_ms=Date.now()-start;
   receipt.qualified=false;receipt.permit_signed=false;receipt.permit_consumed=false;
