@@ -1114,6 +1114,15 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
       if (currentV2 !== null) return currentV2;
     }
   }
+  // #3737: independently validate 6 unchanged historical signed source checks
+  // on exact 63dc protected main and restricted current test-only PR delta.
+  // Never claim new operator signatures or historical Frozen-V13 zero drift.
+  const heartbeatSuccessorPath = path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs");
+  if (fs.existsSync(heartbeatSuccessorPath)) {
+    const successor = require("./VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs");
+    const verified = successor.verifyCheck({decision,stage,head,base});
+    if (verified !== null) return verified;
+  }
   const da9SemanticVerifier = path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs");
   if (fs.existsSync(da9SemanticVerifier)) {
     const successor = require("./VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs");
@@ -1732,6 +1741,26 @@ function main() {
           blocker_class: "INVALID_OR_MISSING_RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_EVIDENCE",
           check_id: decision.check_id,
           detail: evidence,
+        });
+      } else if (
+        decision.check_id === "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING" &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "63dc3382f879781c604a852c7d1b28af9b0dd9f" &&
+        fs.existsSync(path.join(ROOT, "scripts/governance_acceptance/VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs"))
+      ) {
+        const historic = require("./VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs").verifyCheck({
+          decision,stage,head:args.head||"",base:args.base
+        });
+        result={...common,
+          execution:"EXACT_3737_HISTORIC_SIX_ED25519_PRESERVED_TEST_ONLY_REVIEW",
+          status:historic?.status??"FAIL",
+          reason_code:historic?.reason_code??"HOLD_3737_SIGNED_SOURCE_PRESERVATION_MISSING",
+          historical_frozen_zero_drift_claim:false,
+          original_event_3734_replayed:false,original_event_3735_replayed:false,
+          physical_admission_authorized:false,permit_authorized:false,evidence:historic};
+        if(result.status!=="PASS")blockers.push({
+          blocker_class:"EXACT_3737_SIGNED_SOURCE_PRESERVATION_INVALID",
+          check_id:decision.check_id,detail:historic
         });
       } else if (
         // The exact protected #3735 merge is the current PR #3736 base.
