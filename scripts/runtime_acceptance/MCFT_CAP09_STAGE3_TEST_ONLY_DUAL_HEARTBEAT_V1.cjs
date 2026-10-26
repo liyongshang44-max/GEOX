@@ -31,6 +31,8 @@ function createStage3TestOnlyDualHeartbeatV1(input) {
   const budget = input.max_run_ms ?? 3600000;
   const margin = input.base_deadline_margin_ms ?? 900000;
   const clock = input.clock ?? (()=>Date.now());
+  const onEvent=input.on_event??null;
+  assert(onEvent===null||typeof onEvent==="function","STAGE3_HEARTBEAT_JOURNAL_CALLBACK_INVALID");
   assert(Number.isInteger(duration) && duration > 0 && duration <= 1800,"STAGE3_HEARTBEAT_MAX_LEASE_1800");
   assert(Number.isInteger(interval) && interval > 0 && interval < duration*1000,"STAGE3_HEARTBEAT_INTERVAL_INVALID");
   assert(Number.isInteger(budget) && budget > interval && budget <= 5400000,"STAGE3_HEARTBEAT_BUDGET_INVALID");
@@ -42,7 +44,11 @@ function createStage3TestOnlyDualHeartbeatV1(input) {
   function record(kind, code) {
     // Finite retention; bounded even if a caller configures tiny heartbeat intervals.
     if(events.length >= 256) throw new Error("STAGE3_HEARTBEAT_EVENT_BUDGET_EXCEEDED");
-    events.push({seq:events.length+1,at:new Date(clock()).toISOString(),kind,code});
+    const event={seq:events.length+1,at:new Date(clock()).toISOString(),kind,code};
+    // The Windows runner fsyncs the append-only per-run journal before renewal
+    // can be treated as successful. Failure is not silently ignored.
+    if(onEvent)onEvent(event);
+    events.push(event);
   }
   function fail(error) {
     if(!failure) {
@@ -75,6 +81,7 @@ function createStage3TestOnlyDualHeartbeatV1(input) {
     last_producer_expiry:claim.lease_expires_at,
     event_log:events.map(e=>({...e})),
     failure_code:failure?.message ?? null,
+    on_event_durable_required:!!onEvent,
     original_v13_stage_executed:false,permit_consumed:false,production_authorized:false
   });
   async function run(work) {
