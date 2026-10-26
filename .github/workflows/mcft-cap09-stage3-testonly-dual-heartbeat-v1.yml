@@ -5,6 +5,9 @@ on:
       - 'scripts/runtime_acceptance/MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_STAGE3_REAL_FULL_PROVIDER_ONE_BASE_DUAL_HEARTBEAT_TEST_ONLY_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.test.cjs'
+      - 'scripts/governance_acceptance/VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
       - '.github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml'
   workflow_dispatch:
 permissions:
@@ -35,6 +38,10 @@ jobs:
             scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs \
             scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs \
             scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs
+      - name: Independent exact #3737 six-signature historical preservation and negative identity tests
+        run: |
+          set -euo pipefail
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs
       - name: Offline syntax and dual heartbeat owner/fencing tests, no physical provider
         run: |
           set -euo pipefail
