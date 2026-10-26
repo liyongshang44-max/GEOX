@@ -84,7 +84,8 @@ function verify(d,t,o,q,e,env,scoped) {
  exactly(scoped.merge_to_current_changed,[
   ".github/workflows/mcft-cap09-da9-signed-v2-governance-readonly-v1.yml",
   ".github/workflows/mcft-cap09-da9-signed-source-merge-binding-v1.yml",
-  BIND,QCP,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_TWO_PARENT_SOURCE_BINDING_V1.cjs"
+  BIND,QCP,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_TWO_PARENT_SOURCE_BINDING_V1.cjs",
+  "docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json","scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
  ].sort(),"HOLD_UNREVIEWED_INTEGRATION_FILES");
  for(const p of governanceFiles.filter(x=>!x.endsWith("governance-readonly-v1.yml"))){
    assert.equal(shaAt(d.integrated_two_parent_merge,p),shaAt(d.governance_head,p),"HOLD_GOVERNANCE_PARENT_BLOB_CHANGED:"+p);
@@ -108,7 +109,8 @@ function verify(d,t,o,q,e,env,scoped) {
  const oldRes=initial.dependency_resolvers[RES],newRes=q.dependency_resolvers[RES];
  assert(oldRes&&newRes&&oldRes.kind==="EXACT_PATH_SET"&&newRes.kind==="EXACT_PATH_SET");
  exactly(newRes.paths,[...oldRes.paths,
-  ".github/workflows/mcft-cap09-da9-signed-source-merge-binding-v1.yml",BIND,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_TWO_PARENT_SOURCE_BINDING_V1.cjs"
+  ".github/workflows/mcft-cap09-da9-signed-source-merge-binding-v1.yml",BIND,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_TWO_PARENT_SOURCE_BINDING_V1.cjs",
+  "docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json","scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
  ].sort(),"HOLD_INTEGRATION_EXACT_PATH_SCOPE");
  const revert=structuredClone(q);revert.checks[revert.checks.findIndex(x=>x.check_id===CHECK)]=oldCheck;revert.dependency_resolvers[RES]=oldRes;
  exactly(revert,initial,"HOLD_OTHER_QCP_CHECK_OR_RESOLVER_DRIFT");
@@ -168,6 +170,14 @@ function main(){
  };
  const result=verify(d,t,o,q,e,process.env,scope);
  const n=negative(d,t,o,q,e,process.env,scope);assert.equal(n,20);
- console.log(JSON.stringify({...result,negative_tests_pass:n}));
+ const signedV2=require("./VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs");
+ let sixVerified=0;
+ for(const x of t.evidence_entries){
+  const v=signedV2.verifyRegisteredEvidence({decision:{check_id:x.check_id,dependency_digest:x.reviewed_dependency_digest},stage:"SUCCESSOR_SUBJECT_PRE_MERGE",head:scope.head,base:d.historic_main_base});
+  assert(v&&v.status==="PASS","HOLD_PUBLIC_SIX_SIGNATURE_PROOF_NOT_VERIFIED:"+x.check_id);
+  sixVerified++;
+ }
+ assert.equal(sixVerified,6);
+ console.log(JSON.stringify({...result,negative_tests_pass:n,cryptographically_verified_existing_ed25519_reviews:sixVerified}));
 }
 try{main()}catch(e){console.error("HOLD_TWO_PARENT_SOURCE_BINDING:"+String(e.stack||e));process.exitCode=1;}
