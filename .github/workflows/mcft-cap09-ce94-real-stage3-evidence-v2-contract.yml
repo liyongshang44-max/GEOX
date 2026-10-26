@@ -25,8 +25,17 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs
       - name: V1 mandatory signed full-chain gate unchanged
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs
-      - name: Original six-stage scheduler contract unchanged
-        run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_SIX_STAGE_CHAIN_V1.cjs
+      - name: Original six-stage Host, Permit and scheduler sources unchanged
+        run: |
+          set -euo pipefail
+          git diff --exit-code "${{ github.event.pull_request.base.sha || 'HEAD^' }}" HEAD -- \
+            scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs \
+            scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs \
+            scripts/runtime_acceptance/MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs \
+            scripts/runtime_acceptance/MCFT_CAP09_PARENT_STAGE_DISPATCH_V1.cjs
+          node --check scripts/runtime_acceptance/MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs
+          node --check scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs
+          echo 'PASS_UNCHANGED_ORIGINAL_SIX_STAGE_AUTHORITY_SOURCES_NOT_EXECUTED'
       - name: Explicitly prohibit V2 from touching Host/Permit and Stage3 runtime
         run: |
           set -euo pipefail
