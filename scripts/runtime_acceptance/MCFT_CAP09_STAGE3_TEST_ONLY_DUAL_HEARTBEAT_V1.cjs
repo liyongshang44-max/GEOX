@@ -90,7 +90,7 @@ function createStage3TestOnlyDualHeartbeatV1(input) {
     assert(!failure,"STAGE3_HEARTBEAT_FAILED_INSTANCE_NOT_REUSABLE");
     running=true; started=clock(); stop=false;
     try {assertLive();record("RUN","START");}
-    catch(e){running=false;throw e;}
+    catch(e){fail(e);running=false;throw e;}
     // Abort budget even when the caller is awaiting a network operation.
     const watchdog=setTimeout(()=>fail(new Error("STAGE3_HEARTBEAT_WALL_BUDGET_EXPIRED")),budget);
     const loop=(async()=>{
