@@ -171,8 +171,12 @@ function main(){
  const result=verify(d,t,o,q,e,process.env,scope);
  const n=negative(d,t,o,q,e,process.env,scope);assert.equal(n,20);
  const signedV2=require("./VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs");
+ const reviewedEvidence=read("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json");
+ assert.equal(reviewedEvidence.source_head,d.source_head);
+ assert.equal(reviewedEvidence.signed_bundle_sha256,d.original_signed_bundle_sha256);
+ assert.equal(reviewedEvidence.evidence_entries.length,6);
  let sixVerified=0;
- for(const x of t.evidence_entries){
+ for(const x of reviewedEvidence.evidence_entries){
   const v=signedV2.verifyRegisteredEvidence({decision:{check_id:x.check_id,dependency_digest:x.reviewed_dependency_digest},stage:"SUCCESSOR_SUBJECT_PRE_MERGE",head:scope.head,base:d.historic_main_base});
   assert(v&&v.status==="PASS","HOLD_PUBLIC_SIX_SIGNATURE_PROOF_NOT_VERIFIED:"+x.check_id);
   sixVerified++;
