@@ -34,7 +34,14 @@ assert.equal(entry.run_snapshot.workflow_path,EXPECTED.isolated_workflow);
 const head=entry.subject_sha;
 function bind(e){e.immutable_binding_sha256=crypto.createHash("sha256").update(JSON.stringify(fields.map(k=>e[k]??null))).digest("hex");return e;}
 const decision={check_id:entry.check_id,dependency_digest:entry.dependency_digest,execution_workflow:EXPECTED.isolated_workflow};
-const section=e=>({contract_ref:C,entries:[e]});bind(entry);
+const section=e=>({contract_ref:C,entries:[e]});
+// A pinned registered positive must carry its originally stored binding:
+// do NOT repair/re-sign the historical receipt inside this test.
+const originalBinding=entry.immutable_binding_sha256;
+assert.equal(originalBinding,
+  crypto.createHash("sha256").update(JSON.stringify(fields.map(k=>entry[k]??null))).digest("hex"),
+  "FROZEN_HISTORICAL_REGISTERED_BINDING_NOT_ORIGINAL");
+count++;
 assert.equal(resolveFreshEvidence(decision,section(entry),entry.stage,head).status,"PASS");count++;
 // Current successor eligibility is evaluated independently from historical
 // registered eligibility, without rewriting frozen runtime or QCP contracts.
