@@ -34,6 +34,10 @@ function validate(d,trust,sourceFacts){
  assert.equal(d.required_windows_runtime.exact_main_git_checkout,true);
  assert.equal(d.new_isolation.run_id_pattern,"^[0-9a-f]{12}$");
  assert(d.new_isolation.forbidden_prior_run_ids.includes("da9db7129607"));
+ assert(d.new_isolation.forbidden_prior_run_ids.includes("b06f28c950ce"),"HOLD_RETAINED_OLD_RUN_MUST_STAY_FORBIDDEN:b06f28c950ce");
+ assert(d.new_isolation.forbidden_prior_run_ids.includes("c8b2ea29c9f1"),"HOLD_RETAINED_OLD_RUN_MUST_STAY_FORBIDDEN:c8b2ea29c9f1");
+ assert(d.new_isolation.forbidden_prior_run_ids.includes("971899e1c236"),"HOLD_RETAINED_OLD_RUN_MUST_STAY_FORBIDDEN:971899e1c236");
+ assert(d.new_isolation.forbidden_prior_run_ids.includes("73b04afb4249"),"HOLD_RETAINED_OLD_RUN_MUST_STAY_FORBIDDEN:73b04afb4249");
  assert.deepEqual(d.new_isolation.minio_four_zero_fields,["current","versions","delete_markers","multipart"]);
  assert.equal(d.new_isolation.pg_public_table_count,29);
  assert.equal(d.new_isolation.pg_total_rows_required,0);
@@ -80,6 +84,10 @@ function negative(d,t,s){
  bad(x=>x.new_isolation.pg_total_rows_required=1);
  bad(x=>x.non_effects.minio_written=true);
  bad(x=>x.source_main_sha="0".repeat(40));
+ bad(x=>x.new_isolation.forbidden_prior_run_ids=x.new_isolation.forbidden_prior_run_ids.filter(id=>id!=="b06f28c950ce"));
+ bad(x=>x.new_isolation.forbidden_prior_run_ids=x.new_isolation.forbidden_prior_run_ids.filter(id=>id!=="c8b2ea29c9f1"));
+ bad(x=>x.new_isolation.forbidden_prior_run_ids=x.new_isolation.forbidden_prior_run_ids.filter(id=>id!=="971899e1c236"));
+ bad(x=>x.new_isolation.forbidden_prior_run_ids=x.new_isolation.forbidden_prior_run_ids.filter(id=>id!=="73b04afb4249"));
  return n;
 }
 function main(){
@@ -92,7 +100,7 @@ function main(){
    source_ancestor:cp.spawnSync("git",["merge-base","--is-ancestor",SOURCE,MAIN],{cwd:ROOT}).status===0,
    gov_ancestor:cp.spawnSync("git",["merge-base","--is-ancestor",d.source_governance_head,MAIN],{cwd:ROOT}).status===0};
  const result=validate(d,trust,sourceFacts),tests=negative(d,trust,sourceFacts);
- assert.equal(tests,12);
+ assert.equal(tests,16);
  console.log(JSON.stringify({...result,negative_tests_pass:tests,
   original_signed_operator_package_preserved:true,live_host_run_performed:false,
   permit:false,physical_execution_authorized:false}));

@@ -33,7 +33,7 @@ jobs:
           if ($env:DATABASE_URL -or $env:MCFT_GOVERNED_RETRY_TICKET -or $env:AWS_SECRET_ACCESS_KEY) { throw 'HOLD_INHERITED_EXECUTION_ENV' }
           if ((node -p "process.platform").Trim() -ne 'win32') { throw 'HOLD_WINDOWS_REQUIRED' }
           if ((node -p "process.version").Trim() -ne 'v24.19.0') { throw 'HOLD_NODE_VERSION' }
-      - name: Verify 12 fail-closed negative cases and immutable signed source
+      - name: Verify 16 fail-closed negative cases and immutable signed source
         shell: pwsh
         run: |
           node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_POSTMERGE_WINDOWS_PHYSICAL_READONLY_GATE_V1.cjs
