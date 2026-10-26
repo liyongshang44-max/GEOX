@@ -1278,6 +1278,34 @@ function main() {
     const ownerCutoverRegistrySelectionProtectedMainBase = String(process.env.OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA || "");
     const currentProtectedMainRefreshPredecessorBase = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");
     const currentCropContinuityRefreshMergeBase = String(process.env.CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA || "");
+    // Exact post-3736 TEST_ONLY heartbeat successor: resolve historical
+    // #3734/#3735/#3736 signed-source preservation BEFORE generic QCP
+    // diagnostics. Legacy integration-only PR event checks are never replayed.
+    // No new signature, Frozen108 PASS, Host, Permit or production authority.
+    if (
+      decision.check_id === "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING" &&
+      stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+      args.base === "63dc3382f879781c604a852c7d1b28af9b0dd9f4"
+    ) {
+      const exact = require("./VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs").verifyCheck({
+        decision,stage,head:args.head || "",base:args.base
+      });
+      result={...common,
+        execution:"EXACT_3737_PRIOR_TO_GENERIC_DIAGNOSTIC_HISTORIC_SIX_ED25519_READONLY",
+        status:exact?.status??"FAIL",
+        reason_code:exact?.reason_code??"HOLD_3737_HISTORICAL_SIGNATURE_PROOF_MISSING",
+        permit_authorized:false,production_authorized:false,
+        physical_admission_authorized:false,
+        historical_frozen_zero_drift_claim:false,
+        old_pr_3734_event_replayed:false,old_pr_3735_event_replayed:false,
+        evidence:exact
+      };
+      if(result.status!=="PASS") blockers.push({
+        blocker_class:"EXACT_3737_SIGNED_HISTORIC_PROOF_FAILED",check_id:decision.check_id,detail:exact
+      });
+      results.push(result);
+      continue;
+    }
     const adoptionDurableRequalification =
       stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
       PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id) &&
