@@ -25,6 +25,10 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs
       - name: V1 mandatory signed full-chain gate unchanged
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs
+      - name: Frozen A44 offline context/material cardinality and V1 authority regressions
+        run: |
+          node scripts/cap09_adoption_v1/test-offline-context.cjs
+          node scripts/cap09_adoption_v1/acceptance.cjs --bundle synthetic-proof-bundle
       - name: Original six-stage Host, Permit and scheduler sources unchanged
         run: |
           set -euo pipefail
