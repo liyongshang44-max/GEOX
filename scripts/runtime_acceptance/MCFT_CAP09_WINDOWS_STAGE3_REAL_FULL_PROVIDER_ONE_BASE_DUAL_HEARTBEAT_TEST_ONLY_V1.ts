@@ -113,7 +113,7 @@ async function main(){
     lease_duration_seconds:1800,heartbeat_interval_ms:60000,
     on_event:(event:Record<string,unknown>)=>{
       if(heartbeatJournalFd===null)throw Error("STAGE3_HEARTBEAT_JOURNAL_NOT_OPEN");
-      const line=Buffer.from(JSON.stringify(event)+"\\n","utf8");
+      const line=Buffer.from(JSON.stringify(event)+"\n","utf8");
       fs.writeSync(heartbeatJournalFd,line,0,line.length);
       fs.fsyncSync(heartbeatJournalFd);
     }
