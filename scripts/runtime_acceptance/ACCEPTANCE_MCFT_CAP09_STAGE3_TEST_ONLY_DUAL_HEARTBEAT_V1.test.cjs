@@ -124,7 +124,7 @@ test("revoked producer aborts before candidate or promotion after slow decoder",
   await assert.rejects(h.run(async({assertLive})=>{
     await sleep(35);
     assertLive();promoted++;
-  }),/STAGE3_HEARTBEAT_CLAIM_FENCING_TOKEN_CHANGED/);
+  }),/STAGE3_HEARTBEAT_CLAIM_FENCE_CHANGED/);
   assert.equal(promoted,0);
 });
 test("expired initial claim does not strand running lock; failed instance cannot restart",async()=>{
