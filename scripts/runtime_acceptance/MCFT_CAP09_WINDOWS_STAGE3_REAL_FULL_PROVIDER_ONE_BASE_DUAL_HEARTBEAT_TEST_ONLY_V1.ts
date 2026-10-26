@@ -57,6 +57,7 @@ async function main(){
   production_authorized:false,qualified:false};
  const phase:Record<string,unknown>={};
  let step="NEW_RESTRICTED_PG_ACL",realGets=0,rawMs=0,manifestMs=0;
+ let s3PutInitiated=false,s3PutInFlight=0;
  let heartbeat:any=null;
  let heartbeatJournalFd:number|null=null;
  const pool=new Pool({connectionString:url.toString(),max:6});
@@ -88,12 +89,12 @@ async function main(){
   const raw=core.retention;
   const r1=raw.retainRawEvidence.bind(raw),r2=raw.retainRawEvidenceFile.bind(raw);
   raw.retainRawEvidence=async input=>{
-   const t=Date.now();try{heartbeat?.assertLive();const result=await r1(input);heartbeat?.assertLive();return result;}finally{rawMs+=Date.now()-t;}};
+   const t=Date.now();try{heartbeat?.assertLive();s3PutInitiated=true;s3PutInFlight++;try{const result=await r1(input);heartbeat?.assertLive();return result;}finally{s3PutInFlight--;}}finally{rawMs+=Date.now()-t;}};
   raw.retainRawEvidenceFile=async input=>{
-   const t=Date.now();try{heartbeat?.assertLive();const result=await r2(input);heartbeat?.assertLive();return result;}finally{rawMs+=Date.now()-t;}};
+   const t=Date.now();try{heartbeat?.assertLive();s3PutInitiated=true;s3PutInFlight++;try{const result=await r2(input);heartbeat?.assertLive();return result;}finally{s3PutInFlight--;}}finally{rawMs+=Date.now()-t;}};
   const candidate=core.candidate_store,c1=candidate.writeCandidateManifest.bind(candidate);
   candidate.writeCandidateManifest=async input=>{
-   const t=Date.now();try{heartbeat?.assertLive();const result=await c1(input);heartbeat?.assertLive();return result;}finally{manifestMs+=Date.now()-t;}};
+   const t=Date.now();try{heartbeat?.assertLive();s3PutInitiated=true;s3PutInFlight++;try{const result=await c1(input);heartbeat?.assertLive();return result;}finally{s3PutInFlight--;}}finally{manifestMs+=Date.now()-t;}};
   const continuity=new PostgresExternalFormalForcingBaseContinuityRepositoryV1(pool,{
    scope:MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,epoch_id:epoch,subject_sha:subject,
    first_required_base:base,last_required_base:base});
@@ -191,6 +192,10 @@ async function main(){
   await pool.end();
   if(heartbeatJournalFd!==null){fs.fsyncSync(heartbeatJournalFd);fs.closeSync(heartbeatJournalFd);heartbeatJournalFd=null;}
   receipt.lease_heartbeats_test_only=heartbeat?heartbeat.evidence():null;
+  receipt.s3_object_write_attempted_test_only=s3PutInitiated;
+  receipt.s3_inflight_at_finalization=s3PutInFlight;
+  receipt.requires_independent_readonly_s3_reconciliation=receipt.status==="HOLD_REAL_FULL_PROVIDER_OR_PHYSICAL_CHAIN"&&s3PutInitiated;
+  receipt.s3_write_cancellation_limitation="IN_FLIGHT_HTTP_PUT_MAY_FINISH_AFTER_ABORT_REQUIRE_READONLY_RECONCILIATION";
   receipt.requires_independent_readonly_pg_reconciliation=["UNKNOWN_POST_PROMOTION_ENTRY","REPORTED_COMMITTED_PENDING_READBACK","UNKNOWN"].includes(String(receipt.physical_commit_state));
   receipt.real_provider_get_count=realGets;receipt.timing_phases_test_only=phase;
   receipt.total_elapsed_ms=Date.now()-start;
