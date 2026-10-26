@@ -50,6 +50,10 @@ jobs:
         run: |
           node --check scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_SIGNED_V2_QCP_TECHNICAL_ENROLLMENT_V1.cjs
           node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_SIGNED_V2_QCP_TECHNICAL_ENROLLMENT_V1.cjs
+      - name: Independently cryptographically verify all six original Ed25519 public review receipts (no key)
+        run: |
+          node --check scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs --selftest
       - name: Verify two-parent original signatures/source, owner approval + 20 negative tests
         shell: bash
         run: |
