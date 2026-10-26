@@ -54,6 +54,43 @@ jobs:
           assert.equal(next.fail_closed_rules.unknown_changed_path,"FAIL","QCP_UNKNOWN_PATH_MUST_FAIL");
           console.log("PASS_A44_64_FROZEN_PATHS_UNCHANGED_V2_EXACT_FOUR_REVIEW_ONLY_NOT_ADOPTION");
           NODE
+      - name: Exact F654 protected-main signed-source inheritance positive and negative checks (review only)
+        env:
+          EXPECTED_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          "use strict";
+          const assert=require("node:assert/strict"),cp=require("node:child_process");
+          const v=require("./scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs");
+          const base="f654fff21e5aa05bfa6c79e67ea34fb53b61cdfb";
+          const head=cp.execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();
+          assert.equal(process.env.EXPECTED_PR_BASE_SHA,base);
+          const result=v.verifyF654ReviewOnlyLineage({base,head});
+          assert.equal(result.status,"PASS_F654_EXACT_HISTORIC_SOURCE_AND_REVIEW_ONLY_DELTA");
+          const review=require("./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json");
+          assert.equal(review.evidence_entries.length,6);
+          for(const entry of review.evidence_entries){
+            const r=v.verifyRegisteredEvidence({
+              decision:{check_id:entry.check_id,dependency_digest:entry.reviewed_dependency_digest},
+              stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base,head
+            });
+            assert.equal(r.status,"PASS",entry.check_id+":"+r.reason_code);
+            assert.equal(r.permit_authorized,false);
+            assert.equal(v.verifyRegisteredEvidence({
+              decision:{check_id:entry.check_id,dependency_digest:entry.reviewed_dependency_digest},
+              stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base:"0".repeat(40),head
+            }),null);
+          }
+          const id="DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING";
+          const r=v.verifyF654PostmergeEvidence({decision:{check_id:id},stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base,head});
+          assert.equal(r.status,"PASS",r.reason_code);
+          assert.equal(r.signature_count,6);
+          assert.equal(r.permit_authorized,false);
+          assert.equal(v.verifyF654PostmergeEvidence({decision:{check_id:id},stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base:"0".repeat(40),head}),null);
+          assert.throws(()=>v.verifyF654ReviewOnlyLineage({base:"0".repeat(40),head}),/HOLD_REVIEW_SUCCESSOR_EXACT_BASE/);
+          console.log("PASS_EXACT_F654_TWO_PARENT_SIX_ORIGINAL_ED25519_AND_3735_REVIEW_ONLY_NO_EVENT_REPLAY_NO_PERMIT");
+          NODE
       - name: Original six-stage Host, Permit and scheduler sources unchanged
         run: |
           set -euo pipefail
