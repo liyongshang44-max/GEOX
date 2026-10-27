@@ -94,6 +94,49 @@ if(args.includes("--inventory")) {
  const contract=JSON.parse(fs.readFileSync(path.join(ROOT,CONTRACT),"utf8"));
  const proof=validatePinned(result,contract);
  console.log(JSON.stringify(proof));
+}else if(args.includes("--record-isolated")){
+ const CHECK=process.env.CHECK_ID;
+ const allowed=new Set(["V13_AUTONOMOUS_FORCING_FOUNDATION","V13_HOLISTIC_SCHEMA",
+   "V13_NEXT_TICK_VIABILITY","EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"]);
+ assert(allowed.has(CHECK),"CURRENT_SUCCESSOR_ISOLATED_CHECK_ID_REQUIRED");
+ const contract=JSON.parse(fs.readFileSync(path.join(ROOT,CONTRACT),"utf8"));
+ const qualifiedCatalog=validatePinned(result,contract);
+ const out=path.join(ROOT,"acceptance-output");
+ let inputFiles=[];
+ const tested={
+   V13_AUTONOMOUS_FORCING_FOUNDATION:["MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_RESULT.json",
+     ["stale_fencing_token_rejected","payload_time_travel_rejected_by_physical_visibility","end_to_end_budget_requires_real_samples"]],
+   V13_HOLISTIC_SCHEMA:["MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES_RESULT.json",
+     ["canonical_facts_schema_unchanged","all_new_relations_zero_state"]],
+   V13_NEXT_TICK_VIABILITY:["MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES_RESULT.json",
+     ["exact_predecessor_forcing_base_required","successor_claim_forbidden_when_next_tick_viable_false"]]
+ };
+ if(CHECK==="EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"){
+   for(const [name,expected] of [["SUCCESSOR_EA5C1_ACCEPTANCE.log",11],["SUCCESSOR_EA5C1_RETENTION.log",15]]){
+     const bytes=fs.readFileSync(path.join(out,name));
+     assert(bytes.toString("utf8").includes(expected+" PASS, 0 FAIL"),"CURRENT_EA5C1_REAL_ACCEPTANCE_REQUIRED:"+name);
+     inputFiles.push({name,sha256:sha(bytes)});
+   }
+ }else{
+   const [name,flags]=tested[CHECK];
+   const bytes=fs.readFileSync(path.join(out,name));
+   const proof=JSON.parse(bytes.toString("utf8"));
+   assert.equal(proof.status,"PASS","CURRENT_RUNTIME_REAL_ACCEPTANCE_NOT_PASS");
+   for(const flag of flags)assert.equal(proof[flag],true,"CURRENT_RUNTIME_REAL_ACCEPTANCE_MISSING:"+flag);
+   inputFiles.push({name,sha256:sha(bytes)});
+ }
+ const receipt={schema_version:"mcft_cap09_frozen108_successor_real_ci_testonly_v1",
+   status:"PASS_CURRENT_SUCCESSOR_ISOLATED_CHECK_TEST_ONLY_NOT_FROZEN_V13",
+   check_id:CHECK,head:result.head,subject_base_sha:BASE,
+   historical_digest:HIST_DIGEST,current_runtime_digest:BASE_DIGEST,
+   path_catalog_sha256:qualifiedCatalog.immutable_catalog_digest,
+   changed_path_count:result.changed_paths,real_acceptance_files:inputFiles,
+   historical_frozen_v13_pass_claim:false,independent_old_frozen_unchanged:true,
+   provider_calls:0,production_authorized:false,physical_windows_admission:false,
+   formal_six_stages:0,permit:false};
+ const target=path.join(out,"SUCCESSOR_FROZEN108_"+CHECK+"_TEST_ONLY.json");
+ fs.writeFileSync(target,JSON.stringify(receipt,null,2)+"\n",{flag:"wx"});
+ console.log(JSON.stringify(receipt));
 }else if(args.includes("--negative")){
  const contract=JSON.parse(fs.readFileSync(path.join(ROOT,CONTRACT),"utf8"));
  validatePinned(result,contract);
