@@ -59,8 +59,25 @@ function technical(){
   const resolver=structuredClone(q.dependency_resolvers[source.resolver]);
   if(source.n===3745)resolver.paths=[...resolver.paths,S].sort();
   assert.deepEqual(now.dependency_resolvers[source.resolver],resolver,"HOLD_SUCCESSOR_RESOLVER_DRIFT");
-  for(const p of source.files)
-   assert.equal(git("rev-parse",head+":"+p),git("rev-parse",source.head+":"+p),"HOLD_CHANGED_SOURCE_BLOB:"+p);
+  for(const p of source.files) {
+   if(source.n===3740 && p===".github/workflows/mcft-cap09-frozen108-runtime-successor-inventory-v1.yml"){
+    // Existing old branch is unchanged. On this composite only, exact-source
+    // workflow is skipped, not waived: independent native composite QCP executes.
+    const historic=git("show",source.head+":"+p);
+    const old="  exact108-readonly-inventory:\\n    runs-on: ubuntu-latest";
+    const guard="  exact108-readonly-inventory:\\n"+
+     "    # Original exact-source 3/6-path verifier cannot run as a 13-path composite.\\n"+
+     "    # Its native source runs remain preserved; composite uses its own exact-head verifier.\\n"+
+     "    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.number == 3739 || github.event.pull_request.number == 3740))\\n"+
+     "    runs-on: ubuntu-latest";
+    assert.equal(historic.split(old).length,2,"HOLD_SOURCE_STANDALONE_ANCHOR");
+    const expectedWorkflow=historic.replace(old,guard);
+    const currentWorkflow=fs.readFileSync(p,"utf8").trim();
+    assert.equal(currentWorkflow,expectedWorkflow,"HOLD_STANDALONE_WORKFLOW_DIFF_UNBOUNDED");
+   } else {
+    assert.equal(git("rev-parse",head+":"+p),git("rev-parse",source.head+":"+p),"HOLD_CHANGED_SOURCE_BLOB:"+p);
+   }
+  }
  }
  const policy=parse(REFS[2].head,REFS[2].files[1]);
  assert.equal(policy.status,"PROPOSED_PENDING_EXACT_HEAD_CI_AND_QCP");
