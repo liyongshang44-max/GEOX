@@ -37,7 +37,8 @@ const REFS=[
 const git=(...a)=>cp.execFileSync("git",a,{encoding:"utf8",timeout:60000,maxBuffer:32*1024*1024}).trim();
 const parse=(sha,p)=>JSON.parse(git("show",sha+":"+p));
 const shared=[".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",Q];
-const expected=[...new Set([...shared,S,...REFS.flatMap(x=>x.files)])].sort();
+const EXTRA=["scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"];
+const expected=[...new Set([...shared,S,...EXTRA,...REFS.flatMap(x=>x.files)])].sort();
 function technical(){
  const head=git("rev-parse","HEAD");
  assert.equal(git("merge-base",BASE,head),BASE);
@@ -57,7 +58,7 @@ function technical(){
   baseline.diagnostic_command="node "+S+" --technical";
   assert.deepEqual(current,baseline,"HOLD_SUCCESSOR_SEMANTIC_QCP_DRIFT");
   const resolver=structuredClone(q.dependency_resolvers[source.resolver]);
-  if(source.n===3745)resolver.paths=[...resolver.paths,S].sort();
+  if(source.n===3745)resolver.paths=[...resolver.paths,S,...EXTRA].sort();
   assert.deepEqual(now.dependency_resolvers[source.resolver],resolver,"HOLD_SUCCESSOR_RESOLVER_DRIFT");
   for(const p of source.files) {
    if(source.n===3740 && p===".github/workflows/mcft-cap09-frozen108-runtime-successor-inventory-v1.yml"){
