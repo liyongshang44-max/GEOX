@@ -142,6 +142,63 @@ function selftest(){
  console.log(JSON.stringify({status:"PASS_CURRENT_COMPOSER_FIVE_SCOPE_NATIVE",head,checks:CHECKS,
  negative_cases_pass:count,current_owner_source_only:true,historical_frozen_v13_pass:false,permit:false}));
 }
-module.exports={verifyCurrentComposer};
+// The ORIGINAL six Ed25519 operator signatures are verified strictly
+// against their historical subject. A new owner-source-policy is then checked
+// independently; this does not create a new Ed25519 signature or replay #3734.
+function verifyCurrentOwnerSignedHistory({decision,stage,head,base}){
+ if(decision?.check_id!=="DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING"||
+    stage!=="SUCCESSOR_SUBJECT_PRE_MERGE"||base!==BASE)return null;
+ try{
+  const ev=read(process.env.GITHUB_EVENT_PATH||"/dev/null");
+  const validated=precheck({decision:{check_id:CHECKS[0]},stage,head,base},ev,process.env);
+  assert(validated);
+  const oldVerifier="scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs";
+  const signedPath="docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json";
+  assert.equal(git("rev-parse",BASE+":"+oldVerifier),git("rev-parse",head+":"+oldVerifier),"HOLD_HISTORICAL_CRYPTO_VERIFIER_CHANGED");
+  assert.equal(git("rev-parse",BASE+":"+signedPath),git("rev-parse",head+":"+signedPath),"HOLD_HISTORIC_SIGNED_BUNDLE_CHANGED");
+  const crypto=require("node:crypto");
+  assert.equal(crypto.createHash("sha256").update(fs.readFileSync(signedPath)).digest("hex"),
+    "a98f40c3ed017b017a8459d02655b9f206f6716d1402abcc0e579487c63901df",
+    "HOLD_ORIGINAL_SIGNED_BUNDLE_HASH");
+  const oldCheck=repoGet(QCP).checks.find(x=>x.check_id===decision.check_id);
+  assert.deepEqual(read(QCP).checks.find(x=>x.check_id===decision.check_id),oldCheck,
+   "HOLD_HISTORICAL_SIGNATURE_CHECK_REWRITTEN");
+  const result=cp.execFileSync(process.execPath,[oldVerifier,"--selftest"],{
+    encoding:"utf8",timeout:60000,maxBuffer:2*1024*1024});
+  const evidence=JSON.parse(result.trim().split(/\\r?\\n/).pop());
+  assert.equal(evidence.status,"PASS_SIX_ORIGINAL_ED25519_SIGNATURES_AND_EXACT_SOURCE_ARTIFACT_BINDING");
+  assert.equal(evidence.verified_checks,6);
+  assert.equal(evidence.negative_tests_pass,8);
+  assert.equal(evidence.permit,false);
+  // Fresh, repository-owner-scope provenance is separate from old signatures.
+  if(!cached||cached.head!==head)cached={head,proof:native(head)};
+  const history=api("/pulls/3742");
+  assert.equal(history.head.sha,"96ae42a7aeb3be83933faadafb65f1b72379b2cf");
+  assert.equal(history.base.sha,BASE);
+  const workflow=api("/actions/runs/40516836986");
+  assert.equal(workflow.head_sha,history.head.sha);assert.equal(workflow.conclusion,"success");
+  const specialized=api("/actions/runs/40516836986/jobs?per_page=100");
+  assert(specialized.jobs.some(x=>x.name==="historic-signature-scope-not-current-admission"&&x.conclusion==="success"),
+    "HOLD_HISTORIC_SIGNATURE_SPECIFIC_JOB");
+  const previousCi=api("/actions/runs/40516837352");
+  assert.equal(previousCi.conclusion,"success");assert.equal(previousCi.head_sha,history.head.sha);
+  return {status:"PASS",
+    reason_code:"CURRENT_OWNER_DIRECTED_SOURCE_GOVERNANCE_HISTORICAL_SIX_SIGNATURES_VERIFIED",
+    evidence_id:"CAP09_3746_OWNER_SOURCE_REVIEW_AND_SIX_HISTORIC_SIGNATURE_VALIDITY_V1",
+    original_signed_subject_sha:"6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0",
+    original_six_signatures_verified:6,
+    original_event_3734_replayed:false,
+    old_operator_six_resigned:false,
+    new_independent_signature_claimed:false,
+    source_qualification_only:true,
+    historic_frozen_v13_zero_drift_pass:false,
+    original_formal_six_stages:0,
+    windows_physical_admission:false,permit_authorized:false,
+    native_current_owner:cached.proof};
+ }catch(e){return {status:"FAIL",reason_code:"HOLD_OWNER_SOURCE_HISTORIC_SIGNATURE:"+String(e.message||e).slice(0,260),
+ original_event_3734_replayed:false,permit_authorized:false};}
+}
+
+module.exports={verifyCurrentComposer,verifyCurrentOwnerSignedHistory};
 if(require.main===module){try{if(!process.argv.includes("--selftest"))throw Error("SELFTEST_ONLY");
 selftest();}catch(e){console.error("HOLD_COMPOSER_FIVE_SOURCE:"+String(e.stack||e));process.exitCode=1;}}
