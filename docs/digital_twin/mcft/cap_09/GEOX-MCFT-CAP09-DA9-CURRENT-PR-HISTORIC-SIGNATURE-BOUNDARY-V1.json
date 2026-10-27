@@ -1,0 +1,21 @@
+{
+  "contract_id": "MCFT_CAP09_DA9_HISTORIC_EVENT_CURRENT_SUCCESSOR_SCOPE_V1",
+  "base_sha": "63dc3382f879781c604a852c7d1b28af9b0dd9f4",
+  "historical_integration_pr": 3734,
+  "historical_two_parent_merge": "876cdcff39fe9c252b591236afd3b9bcdf27a4f4",
+  "historical_signed_source": "6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0",
+  "historical_operator_signature_base": "2162f368899e9a9b5c497d332859e4196f389660",
+  "prior_signed_bundle_sha256": "sha256:a98f40c3ed017b017a8459d02655b9f206f6716d1402abcc0e579487c63901df",
+  "original_historical_event_verifier": "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_TWO_PARENT_SOURCE_BINDING_V1.cjs",
+  "original_signed_registry_path": "docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json",
+  "original_governance_review_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json",
+  "current_composer_git_blob": "2d1f72d92c05093537774285bda5b7200845344d",
+  "check_id": "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING",
+  "technical_signature_history_may_be_verified": true,
+  "current_pr_formal_governance_admission_signed": false,
+  "old_event_may_be_replayed": false,
+  "historical_frozen_v13_zero_drift_pass": false,
+  "permit": false,
+  "windows_physical_admission": false,
+  "production_authorized": false
+}

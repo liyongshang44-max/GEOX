@@ -1791,6 +1791,33 @@ function main() {
           check_id: decision.check_id,
           detail: diagnostic,
         });
+      } else if (
+        decision.check_id === "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING" &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "63dc3382f879781c604a852c7d1b28af9b0dd9f4" &&
+        isAncestor(args.base, args.head || "") &&
+        fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_CURRENT_SUCCESSOR_HISTORIC_SIGNATURE_SCOPE_V1.cjs"))
+      ) {
+        // On new PRs the historical #3734 event-specific verifier MUST NOT
+        // evaluate the current PR number. Cryptographically verify only the
+        // original six signed historic-source payloads, preserve formal HOLD.
+        const signed = require("./VERIFY_MCFT_CAP09_DA9_CURRENT_SUCCESSOR_HISTORIC_SIGNATURE_SCOPE_V1.cjs")
+          .verifyCurrentSuccessor({base:args.base,head:args.head||""});
+        const sourceValid=signed.status==="PASS_HISTORIC_DA9_SIX_ED25519_SOURCE_ONLY_CURRENT_GOVERNANCE_HOLD";
+        result={...common,
+          execution:"HISTORIC_SIX_ED25519_SOURCE_VERIFIED_NOT_NEW_PR_ADMISSION",
+          status:"FAIL",
+          reason_code:sourceValid
+            ?"HOLD_CURRENT_SUCCESSOR_REQUIRES_OWN_FORMAL_GOVERNANCE_REVIEW"
+            :"HOLD_HISTORIC_SOURCE_VERIFICATION_FAILED",
+          original_pr3734_event_replayed:false,
+          historical_six_original_signatures_valid:sourceValid,
+          current_pr_formal_governance_approved:false,
+          permit_authorized:false,physical_admission_authorized:false,
+          historical_signatures:signed};
+        blockers.push({
+          blocker_class:"CURRENT_SUCCESSOR_DA9_FORMAL_GOVERNANCE_NOT_ADMITTED",
+          check_id:decision.check_id,detail:result});
       } else if (decision.diagnostic_command && !adoptionDurableRequalification) {
         const durableBeforeDiagnostic =
           PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(
