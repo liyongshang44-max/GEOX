@@ -748,48 +748,6 @@ jobs:
             console.error(error); process.exitCode=1;
           });
 
-      - name: Independently verify Frozen108 #3739 successful source run and four artifacts (read-only)
-        if: github.event_name == 'pull_request' && github.head_ref == 'qualification/cap09-frozen108-successor-qcp-registration-20261027'
-        shell: node {0}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-        run: |
-          const assert=require('node:assert/strict');
-          const head='5e81f129570d820bf50db6c1db3c6d81086687f6',runId=40436862484;
-          const expected=[["EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",12704373199],["V13_AUTONOMOUS_FORCING_FOUNDATION",12704472813],["V13_HOLISTIC_SCHEMA",12703998253],["V13_NEXT_TICK_VIABILITY",12703843458]];
-          const headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'};
-          const base='https://api.github.com/repos/'+process.env.REPO;
-          async function fetchJson(p){
-            const res=await fetch(base+p,{headers});
-            assert(res.ok,'FROZEN108_GITHUB_EVIDENCE_UNAVAILABLE:'+p+':'+res.status);
-            return res.json();
-          }
-          (async()=>{
-            const run=await fetchJson('/actions/runs/'+runId);
-            assert.equal(run.head_sha,head);
-            assert.equal(run.event,'pull_request');
-            assert.equal(run.conclusion,'success');
-            assert.equal(run.path,'.github/workflows/mcft-cap09-frozen108-runtime-successor-inventory-v1.yml');
-            const jobs=await fetchJson('/actions/runs/'+runId+'/jobs?per_page=50');
-            const names=new Set(jobs.jobs.filter(j=>j.conclusion==='success').map(j=>j.name));
-            assert(names.has('exact108-readonly-inventory'),'EXACT108_INVENTORY_JOB_REQUIRED');
-            for(const [check] of expected)assert(names.has(check),'FOUR_REAL_SUCCESSOR_JOBS_REQUIRED:'+check);
-            const artifacts=await fetchJson('/actions/runs/'+runId+'/artifacts?per_page=50');
-            const expectedPrefix='frozen108-successor-';
-            const found=artifacts.artifacts.filter(a=>a.name.startsWith(expectedPrefix));
-            assert.equal(found.length,4,'EXACT_FOUR_SUCCESSOR_ARTIFACTS_REQUIRED');
-            for(const [check,id] of expected) {
-              const a=found.find(row=>row.name===expectedPrefix+check+'-'+head);
-              assert(a&&a.id===id&&!a.expired,'IMMUTABLE_SUCCESSOR_ARTIFACT_ID_MISMATCH:'+check);
-              assert.equal(a.workflow_run?.head_sha,head);
-              assert.equal(a.workflow_run?.id,runId);
-            }
-            process.stdout.write(JSON.stringify({status:'PASS',source_head:head,run_id:runId,
-               jobs_checked:5,artifacts_checked:4,old_frozen_requalified:false,formal_approval:false,
-               windows_physical_admission:false,permit:false})+'\n');
-          })().catch(e=>{console.error(e);process.exitCode=1;});
-
       - name: Generate exact PR applicability plan
         if: github.event_name == 'pull_request'
         run: >-
@@ -1097,5 +1055,91 @@ jobs:
             acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json
             acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
+
+  frozen108-successor-scoped-technical-registration:
+    # Scoped technical validation MUST run even when the separate global V13
+    # preflight fails its seven historic/current-admission blockers.
+    # Never infer full QCP or physical execution authorization from this job.
+    if: github.event_name == 'pull_request' && github.head_ref == 'qualification/cap09-frozen108-successor-qcp-registration-20261027'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Confirm exact governance subject and no inherited authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = '8046843e88dd41170106dc9c2b9e588b355ac053' || test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -z "${DATABASE_URL:-}"
+          test -z "${MCFT_CAP09_PERMIT:-}"
+          test -z "${FORMAL_RAW_S3_ACCESS_KEY_ID:-}"
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+      - name: Validate QCP check and old Frozen108 distinction
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_SUCCESSOR_QCP_ENROLLMENT_V1.cjs --selftest
+      - name: Authenticate predecessor #3739 source, five real CI jobs and four exact artifacts
+        shell: node {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          QCP_EXACT_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          const assert=require('node:assert/strict');
+          const head='5e81f129570d820bf50db6c1db3c6d81086687f6',runId=40436862484;
+          const expected=[["EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",12704373199],["V13_AUTONOMOUS_FORCING_FOUNDATION",12704472813],["V13_HOLISTIC_SCHEMA",12703998253],["V13_NEXT_TICK_VIABILITY",12703843458]];
+          const headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'};
+          const base='https://api.github.com/repos/'+process.env.REPO;
+          async function fetchJson(p){
+            const res=await fetch(base+p,{headers});
+            assert(res.ok,'FROZEN108_GITHUB_EVIDENCE_UNAVAILABLE:'+p+':'+res.status);
+            return res.json();
+          }
+          (async()=>{
+            const run=await fetchJson('/actions/runs/'+runId);
+            assert.equal(run.head_sha,head);
+            assert.equal(run.event,'pull_request');
+            assert.equal(run.conclusion,'success');
+            assert.equal(run.path,'.github/workflows/mcft-cap09-frozen108-runtime-successor-inventory-v1.yml');
+            const jobs=await fetchJson('/actions/runs/'+runId+'/jobs?per_page=50');
+            const names=new Set(jobs.jobs.filter(j=>j.conclusion==='success').map(j=>j.name));
+            assert(names.has('exact108-readonly-inventory'),'EXACT108_INVENTORY_JOB_REQUIRED');
+            for(const [check] of expected)assert(names.has(check),'FOUR_REAL_SUCCESSOR_JOBS_REQUIRED:'+check);
+            const artifacts=await fetchJson('/actions/runs/'+runId+'/artifacts?per_page=50');
+            const expectedPrefix='frozen108-successor-';
+            const found=artifacts.artifacts.filter(a=>a.name.startsWith(expectedPrefix));
+            assert.equal(found.length,4,'EXACT_FOUR_SUCCESSOR_ARTIFACTS_REQUIRED');
+            for(const [check,id] of expected) {
+              const a=found.find(row=>row.name===expectedPrefix+check+'-'+head);
+              assert(a&&a.id===id&&!a.expired,'IMMUTABLE_SUCCESSOR_ARTIFACT_ID_MISMATCH:'+check);
+              assert.equal(a.workflow_run?.head_sha,head);
+              assert.equal(a.workflow_run?.id,runId);
+            }
+            const fs=require('node:fs');
+            const evidence={status:'PASS_SCOPED_FROZEN108_SUCCESSOR_TECHNICAL_QCP_ONLY',
+              source_head:head,source_run_id:runId,review_head:process.env.QCP_EXACT_HEAD,
+              jobs_checked:5,artifacts_checked:4,exact_catalog_sha256:'sha256:6458abd6c365c4e7c0d0e805d7d77910afdce74bc711d5f399e455d2c9f996e1',
+              historical_frozen_requalified:false,formal_governance_approval:false,
+              overall_central_qcp_zero_blockers_claim:false,windows_physical_admission:false,permit:false,
+              production_authorized:false,old_run_replayed:false};
+            fs.mkdirSync('acceptance-output',{recursive:true});
+            fs.writeFileSync('acceptance-output/MCFT_CAP09_FROZEN108_SCOPED_QCP_PROOF_V1.json',JSON.stringify(evidence,null,2)+'\n');
+            console.log(JSON.stringify(evidence));
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-frozen108-successor-scoped-qcp-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_FROZEN108_SCOPED_QCP_PROOF_V1.json
           if-no-files-found: error
           retention-days: 90
