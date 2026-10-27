@@ -82,7 +82,10 @@ jobs:
           version: '9.15.4'
       - uses: actions/setup-node@v4
         with:
-          node-version: '24.19.0'
+          # Frozen PG/MinIO integration harness is pinned to Node20.11.1;
+          # Node24 native better-sqlite3 install requires C++20 and is not a proof failure.
+          # Node24 independently verifies the exact 108-path inventory in the first job.
+          node-version: '20.11.1'
           cache: pnpm
       - name: Assert isolated ephemeral stores and deny inherited production credentials
         shell: node {0}
@@ -99,6 +102,11 @@ jobs:
           }
           assert.equal(process.env.EA5C1_S3_ENDPOINT,'http://127.0.0.1:9000');
       - run: pnpm install --frozen-lockfile
+      - name: Verify changed retention authority and production bucket fail-closed contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts
       - name: Start ephemeral private MinIO for EA5C1 only
         if: matrix.check == 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'
         shell: bash
