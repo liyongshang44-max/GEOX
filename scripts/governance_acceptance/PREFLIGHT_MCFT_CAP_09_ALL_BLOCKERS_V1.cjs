@@ -1833,6 +1833,35 @@ function main() {
           check_id: decision.check_id,
           detail: diagnostic,
         });
+      } else if (
+        decision.check_id === "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING" &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "63dc3382f879781c604a852c7d1b28af9b0dd9f4" &&
+        process.env.GITHUB_ACTIONS === "true" &&
+        process.env.GITHUB_EVENT_NAME === "pull_request" &&
+        fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs"))
+      ) {
+        // Original #3734 PR-event cannot run on new PR #3746. Verify its six
+        // original Ed25519 signatures against the ORIGINAL source, then verify
+        // owner-direct new-source review with actual native GitHub provenance.
+        // No new signature, historical zero-drift assertion, or Host/Permit.
+        const signed=require("./VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs")
+          .verifyCurrentOwnerSignedHistory({decision,stage,head:args.head||"",base:args.base||""});
+        result={...common,
+          execution:"CURRENT_OWNER_DIRECTED_NEW_SOURCE_WITH_HISTORICAL_SIX_SIGNER_VALIDATION",
+          status:signed?.status??"FAIL",
+          reason_code:signed?.reason_code??"HOLD_SIGNED_HISTORY_INVALID",
+          evidence_id:signed?.evidence_id??null,
+          original_event_3734_replayed:false,
+          independent_new_signature_claimed:false,
+          original_formal_six_stages:0,
+          physical_admission_authorized:false,
+          permit_authorized:false,
+          exact_current_owner_source_and_original_signature_proof:signed};
+        if(result.status!=="PASS")blockers.push({
+          blocker_class:"CURRENT_SOURCE_OWNER_DIRECTED_GOVERNANCE_REVIEW_INVALID",
+          check_id:decision.check_id,detail:signed
+        });
       } else if (decision.diagnostic_command && !adoptionDurableRequalification) {
         const durableBeforeDiagnostic =
           PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(
