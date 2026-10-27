@@ -60,7 +60,16 @@ function check(){
    const aggregate=planner.aggregateCheckDependencyDigest(row.resolver_ids,cats,"current");
    assert.deepEqual(aggregate.missing,[]);
    checks[id]={path_count:paths.length,source_path_blobs_sha256:"sha256:"+SHA(Buffer.from(JSON.stringify(paths.map(p=>[p,got(head,p)])))),
-      dependency_digest:"sha256:"+aggregate.digest};
+      dependency_digest:aggregate.digest};
+ }
+ for(const id of c.five_checks.concat(["PHASE3_EVIDENCE_RUNTIME_FOUNDATION"])){
+   const present=registry.entries.filter(e=>e?.payload?.check_id===id);
+   assert.equal(present.length,1,"EXACT_ONE_HISTORIC_SIGNED_ITEM_REQUIRED:"+id);
+   const signed=present[0].payload;
+   assert(/^sha256:[0-9a-f]{64}$/.test(checks[id].dependency_digest),"CANONICAL_DIGEST_FORMAT_REQUIRED");
+   assert.equal(checks[id].dependency_digest,signed.dependency_digest,"EXACT_DEPENDENCY_GRAPH_MUST_MATCH_EXISTING_SIGNED_SOURCE:"+id);
+   assert.equal(checks[id].source_path_blobs_sha256,"sha256:"+signed.source_blob_sha256,"EXACT_BLOB_GRAPH_MUST_MATCH_SIGNED_SOURCE:"+id);
+   assert.notEqual(head,signed.subject_sha,"HISTORICAL_SIGNATURE_CANNOT_BIND_NEW_SUBJECT");
  }
  assert.notEqual(checks.PHASE3_EVIDENCE_RUNTIME_FOUNDATION.dependency_digest,c.phase3_old_digest,"OLD_PHASE3_DIGEST_MUST_NOT_BE_CARRIED_FORWARD");
  const negative=structuredClone(c);negative.current_composer_blob="0".repeat(40);assert.notEqual(got(head,c.composer_path),negative.current_composer_blob);
@@ -69,7 +78,7 @@ function check(){
    exact_three_edits_verified:true,prior_signed_six_unchanged:true,
    current_frozen108_catalog_verified:true,checks,
    four_prior_real_ci_proofs_require_native_run_and_artifact_verification:true,
-   phase7_new_real_ci_proof_pending:true,phase3_historic_digest_carried_forward:false,
+   phase7_new_real_ci_proof_separately_required:true,phase3_historic_digest_carried_forward:false,
    historical_frozen_zero_drift_claim:false,signed_new_requalification:false,
    global_qcp_zero_blockers:false,permit:false,windows_physical_admission:false,
    original_six_stage_completed:0,production_authorized:false,
