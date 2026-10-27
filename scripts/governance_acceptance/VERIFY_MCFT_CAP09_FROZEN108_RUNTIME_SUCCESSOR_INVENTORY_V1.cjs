@@ -14,7 +14,7 @@ const HIST_FROZEN="3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a";
 const BASE="63dc3382f879781c604a852c7d1b28af9b0dd9f4";
 const HIST_DIGEST="sha256:13884b41d719ad88334e4fe757cd014fa670e363f92e96413ce4ef2fd7f7ba26";
 const BASE_DIGEST="sha256:733739cdb36b50078ce5fc7fb628d252de9b68fb6d4d5e102fbd8ff53ac39c0f";
-const ALLOWED=[".github/workflows/mcft-cap09-frozen108-runtime-successor-inventory-v1.yml","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-FROZEN108-RUNTIME-SUCCESSOR-INVENTORY-V1.json","scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs"].sort();
+const ALLOWED=[".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",".github/workflows/mcft-cap09-frozen108-runtime-successor-inventory-v1.yml","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-FROZEN108-RUNTIME-SUCCESSOR-INVENTORY-V1.json","scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs","scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_SUCCESSOR_QCP_ENROLLMENT_V1.cjs"];
 const git=(...a)=>cp.execFileSync("git",a,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:16*1024*1024}).trim();
 const show=(rev,p)=>cp.execFileSync("git",["show",rev+":"+p],{cwd:ROOT,maxBuffer:16*1024*1024,timeout:30000});
 const sha=b=>"sha256:"+crypto.createHash("sha256").update(b).digest("hex");
@@ -25,7 +25,15 @@ function compute(){
  check(git("merge-base","--is-ancestor",BASE,head)==="", "BASE_NOT_ANCESTOR"); // git command exits nonzero on mismatch
  const changed=git("diff","--name-only",BASE,head).split(/\r?\n/).filter(Boolean).sort();
  assert.deepEqual(changed,ALLOWED,"INVENTORY_ONLY_THREE_NEW_PATHS_ALLOWED");
- for(const f of [Q,OLD_CONTRACT,OLD_VERIFIER,OLD_TEST,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"])unchangedAtBase(f);
+ for(const f of [OLD_CONTRACT,OLD_VERIFIER,OLD_TEST,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"])unchangedAtBase(f);
+ const originalQ=JSON.parse(show(BASE,Q));
+ const qcp=JSON.parse(fs.readFileSync(path.join(ROOT,Q),"utf8"));
+ assert.deepEqual(qcp.checks.slice(0,-1),originalQ.checks,"OLD_QCP_CHECKS_MUTATED");
+ const previousQ=structuredClone(qcp);previousQ.checks=originalQ.checks;
+ delete previousQ.dependency_resolvers.FROZEN108_CURRENT_RUNTIME_SUCCESSOR_EXACT_SIX_PATHS_V1;
+ assert.deepEqual(previousQ,originalQ,"OLD_QCP_CONTRACT_MUTATED");
+ assert.deepEqual(qcp.dependency_resolvers.FROZEN108_CURRENT_RUNTIME_SUCCESSOR_EXACT_SIX_PATHS_V1,{kind:"EXACT_PATH_SET",paths:ALLOWED},"SIX_PATH_SCOPE_CHANGED");
+ assert.equal(qcp.checks.at(-1).check_id,"FROZEN108_CURRENT_RUNTIME_SUCCESSOR_TEST_ONLY_QCP_ENROLLMENT_V1");
  assert.equal(git("rev-parse",BASE+":"+OLD_TEST),"19659f3f7745a2fb4bb528c6552fb79041e3206f","OLD_FROZEN_SELFTEST_IDENTITY");
  const q=JSON.parse(fs.readFileSync(path.join(ROOT,Q),"utf8"));
  const planner=require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs");

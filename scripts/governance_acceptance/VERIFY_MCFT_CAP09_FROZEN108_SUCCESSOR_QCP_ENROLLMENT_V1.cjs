@@ -19,7 +19,9 @@ function verify(){
  assert.equal(cp.spawnSync("git",["merge-base","--is-ancestor",SOURCE,head],{cwd:ROOT}).status,0,"SOURCE_HEAD_NOT_ANCESTOR");
  assert.equal(cp.spawnSync("git",["merge-base","--is-ancestor",BASE,head],{cwd:ROOT}).status,0,"PROTECTED_MAIN_NOT_ANCESTOR");
  assert.deepEqual(git("diff","--name-only",BASE,head).split(/\r?\n/).filter(Boolean).sort(),PATHS,"QCP_EXACT_SIX_FILES_ONLY");
- for(const p of ORIGINAL)assert.equal(get(SOURCE,p),get(head,p),"ORIGINAL_3739_CERTIFIED_BLOB_MUTATED:"+p);
+ for(const p of ORIGINAL.filter(x=>x!=="scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs"))
+   assert.equal(get(SOURCE,p),get(head,p),"ORIGINAL_3739_CERTIFIED_BLOB_MUTATED:"+p);
+ assert.equal(get(head,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs"),"6aa013cf53e5f811bf83de8bd984d551d4dd26a9","INVENTORY_VERIFIER_APPROVED_QCP_DELTA_BLOB_MISMATCH");
  const q=read(Q),baseline=JSON.parse(git("show",BASE+":"+Q));
  assert.equal(q.checks.length,baseline.checks.length+1,"QCP_ONLY_ONE_NEW_CHECK");
  assert.deepEqual(q.checks.slice(0,-1),baseline.checks,"ALL_OLD_CHECKS_IMMUTABLE");
