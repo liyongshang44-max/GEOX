@@ -10,6 +10,9 @@ permissions:
   contents: read
 jobs:
   exact108-readonly-inventory:
+    # Original exact-source 3/6-path verifier cannot run as a 13-path composite.
+    # Its native source runs remain preserved; composite uses its own exact-head verifier.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.number == 3739 || github.event.pull_request.number == 3740))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
