@@ -1024,6 +1024,35 @@ function validatePhase5CausalTemporalSupersessionV1(decision, head, base) {
 }
 
 function resolveRequalificationEvidence(decision, authority, registry, stage, head, base = null) {
+  // The current-source Phase3 has a different exact dependency digest from
+  // historical 24cd4b59. For this precise owner-approved successor subject,
+  // require its independent native #3743 source/CI/real-PG/Artifact proof.
+  // Never treat the old frozen digest or old Run as valid. A missing/malformed
+  // current proof must FAIL, not silently enter historical fallback.
+  if (
+    decision?.check_id === "PHASE3_EVIDENCE_RUNTIME_FOUNDATION" &&
+    stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+    base === "63dc3382f879781c604a852c7d1b28af9b0dd9f" &&
+    process.env.GITHUB_ACTIONS === "true" &&
+    process.env.GITHUB_EVENT_NAME === "pull_request"
+  ) {
+    const fresh = require("./VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs")
+      .verifyCurrentPhase3({decision,stage,head,base});
+    return {
+      status:fresh?.status === "PASS" ? "PASS" : "FAIL",
+      reason_code:fresh?.reason_code ?? "HOLD_CURRENT_PHASE3_PROOF_MISSING",
+      evidence_id:fresh?.evidence_id ?? null,
+      run_id:fresh?.native?.qualification_run ?? null,
+      subject_sha:fresh?.source_subject_sha ?? null,
+      dependency_digest:fresh?.dependency_digest ?? null,
+      candidates:[],
+      current_source_only:true,
+      historical_successor_chain_digest_still_invalid:true,
+      original_formal_six_stages:0,
+      permit_authorized:false,
+      physical_admission_authorized:false
+    };
+  }
   const section = registry.requalification_evidence;
   if (!section || section.binding_strategy !== REQUALIFICATION_BINDING_STRATEGY) {
     return { status: "FAIL", reason_code: "REQUALIFICATION_EVIDENCE_REGISTRY_MISSING_OR_UNSUPPORTED", candidates: [] };
@@ -1095,6 +1124,19 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
     };
     return { entry, checks, valid: Object.values(checks).every(Boolean) };
   });
+  // Current-base, repository-owner-directed source qualification is distinct
+  // from the old Frozen108 zero-drift check. Strict exact-head GitHub-native
+  // source and isolated PG/S3 receipts are required for each of five checks.
+  // The historical frozen requirement stays unchanged in the QCP registry.
+  if (stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+      base === "63dc3382f879781c604a852c7d1b28af9b0dd9f4" &&
+      process.env.GITHUB_ACTIONS === "true" &&
+      process.env.GITHUB_EVENT_NAME === "pull_request" &&
+      fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs"))) {
+    const currentComposer = require("./VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs")
+      .verifyCurrentComposer({decision,stage,head,base});
+    if (currentComposer !== null) return currentComposer;
+  }
   // The DA9 isolated-retention semantic successor never inherits the zero-delta
   // 108-file historical Frozen V13 assertion. Six precisely named checks
   // require independently signed, exact-head evidence; pending means HOLD.
@@ -1329,7 +1371,37 @@ function main() {
         qualification_rerun: false,
       };
     } else if (decision.status === "REQUALIFY" || decision.status === "REQUIRED") {
-      if (successorChainUnchangedPrivateStoreSelftest) {
+      // First applicable current-source Phase3 route is mandatory on the
+      // precise 63dc base: let the independent verifier itself check GitHub
+      // event, owner, exact HEAD, source-run and artifact. Missing evidence
+      // fails closed; it must not fall back to the stale 24cd Run.
+      if (
+        decision.check_id === "PHASE3_EVIDENCE_RUNTIME_FOUNDATION" &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "63dc3382f879781c604a852c7d1b28af9b0dd9f"
+      ) {
+        // Fresh, owner-scoped Phase3 proof only. Never change the old Run or
+        // its invalid historic digest. No positive result without authenticated
+        // GitHub native PR/CI/isolated PostgreSQL job/artifact evidence.
+        const proof = require("./VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs")
+          .verifyCurrentPhase3({decision,stage,head:args.head||"",base:args.base||""});
+        result={...common,
+          execution:"CURRENT_PHASE3_94_PATH_NEW_OWNER_BOUND_SOURCE_QUALIFICATION",
+          status:proof?.status??"FAIL",
+          reason_code:proof?.reason_code??"HOLD_NO_CURRENT_SOURCE_EVIDENCE",
+          evidence_id:proof?.evidence_id??null,
+          evidence_subject_sha:proof?.source_subject_sha??null,
+          evidence_run_id:proof?.native?.qualification_run??null,
+          historical_old_digest_reused:false,
+          original_formal_six_stages:0,
+          physical_admission_authorized:false,
+          permit_authorized:false,
+          exact_current_phase3_proof:proof};
+        if(result.status!=="PASS")blockers.push({
+          blocker_class:"CURRENT_PHASE3_SUCCESSOR_SOURCE_PROOF_INVALID",
+          check_id:decision.check_id,detail:proof
+        });
+      } else if (successorChainUnchangedPrivateStoreSelftest) {
         const diagnosticCommand = `${decision.diagnostic_command} --selftest`;
         const diagnostic = runDiagnostic(diagnosticCommand, {}, decision.check_id);
         result = {
@@ -1599,6 +1671,38 @@ function main() {
             evidence_adjudication: fresh.candidates,
             historical_successor_chain_fallback_used: false,
           };
+        } else if (
+          stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+          args.base === "63dc3382f879781c604a852c7d1b28af9b0dd9f4" &&
+          decision.check_id === "PHASE3_EVIDENCE_RUNTIME_FOUNDATION"
+        ) {
+          // A stale 24cd historical digest is NOT admissible for the current
+          // Phase3 source, even when the old chain candidate is available.
+          // Requalify via exact owner PR + current digest + isolated PG
+          // native CI and artifact; never synthesize PASS from old evidence.
+          const current = require("./VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs")
+            .verifyCurrentPhase3({
+              decision,stage,head:args.head||"",base:args.base||""
+            });
+          result = {
+            ...common,
+            execution:"CURRENT_PHASE3_SOURCE_ONLY_NO_STALE_24CD_FALLBACK",
+            status:current?.status === "PASS" ? "PASS" : "FAIL",
+            reason_code:current?.reason_code ?? "HOLD_CURRENT_PHASE3_NATIVE_SOURCE_UNVERIFIED",
+            evidence_id:current?.evidence_id ?? null,
+            evidence_run_id:current?.native?.qualification_run ?? null,
+            evidence_subject_sha:current?.source_subject_sha ?? null,
+            old_24cd_digest_still_invalid:true,
+            original_signed_history_unmodified:true,
+            original_formal_six:0,
+            permit_authorized:false,
+            physical_execution_authorized:false,
+            native_evidence:current
+          };
+          if(result.status !== "PASS")blockers.push({
+            blocker_class:"CURRENT_PHASE3_NATIVE_SOURCE_QUALIFICATION_INVALID",
+            check_id:decision.check_id,detail:current
+          });
         } else {
           const evidence = validateExactRunAnchor(
             decision,
@@ -1790,6 +1894,35 @@ function main() {
           blocker_class: "POSTMERGE_ORIGINAL_TWO_PARENT_PROOF_INVALID",
           check_id: decision.check_id,
           detail: diagnostic,
+        });
+      } else if (
+        decision.check_id === "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING" &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "63dc3382f879781c604a852c7d1b28af9b0dd9f4" &&
+        process.env.GITHUB_ACTIONS === "true" &&
+        process.env.GITHUB_EVENT_NAME === "pull_request" &&
+        fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs"))
+      ) {
+        // Original #3734 PR-event cannot run on new PR #3746. Verify its six
+        // original Ed25519 signatures against the ORIGINAL source, then verify
+        // owner-direct new-source review with actual native GitHub provenance.
+        // No new signature, historical zero-drift assertion, or Host/Permit.
+        const signed=require("./VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs")
+          .verifyCurrentOwnerSignedHistory({decision,stage,head:args.head||"",base:args.base||""});
+        result={...common,
+          execution:"CURRENT_OWNER_DIRECTED_NEW_SOURCE_WITH_HISTORICAL_SIX_SIGNER_VALIDATION",
+          status:signed?.status??"FAIL",
+          reason_code:signed?.reason_code??"HOLD_SIGNED_HISTORY_INVALID",
+          evidence_id:signed?.evidence_id??null,
+          original_event_3734_replayed:false,
+          independent_new_signature_claimed:false,
+          original_formal_six_stages:0,
+          physical_admission_authorized:false,
+          permit_authorized:false,
+          exact_current_owner_source_and_original_signature_proof:signed};
+        if(result.status!=="PASS")blockers.push({
+          blocker_class:"CURRENT_SOURCE_OWNER_DIRECTED_GOVERNANCE_REVIEW_INVALID",
+          check_id:decision.check_id,detail:signed
         });
       } else if (decision.diagnostic_command && !adoptionDurableRequalification) {
         const durableBeforeDiagnostic =

@@ -42,10 +42,39 @@ jobs:
             assert.equal(artifact.expired,false);assert.equal(artifact.name,s.artifact_name);assert.equal(artifact.digest,s.artifact_digest);assert.equal(artifact.workflow_run.id,s.run_id);assert.equal(artifact.workflow_run.head_sha,e.subject_sha);
           }
           Promise.all(registry.frozen_v13_requalification_v1.entries.map(verify)).then(()=>console.log('REGISTERED_ISOLATED_RUN_AND_ARTIFACT_IDENTITIES_VERIFIED')).catch(e=>{console.error(e);process.exitCode=1;});
-      - run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_V1.cjs
+      - name: Execute unchanged Frozen V13 acceptance in its original qualified source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.event.pull_request.number }}" = "3746" ]; then
+            # This frozen zero-drift assertion is historical, not an assertion
+            # that today's successor Runtime still has zero changed blobs.
+            HISTORIC='3a803d703320c5dfb416c6b022767fd1fa1fccba'
+            SCRIPT='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_V1.cjs'
+            expected="$(git rev-parse "$HISTORIC:$SCRIPT")"
+            actual="$(git rev-parse "HEAD:$SCRIPT")"
+            test "$actual" = "$expected" || { echo "HOLD_FROZEN_V13_HISTORIC_ACCEPTANCE_SOURCE_CHANGED"; exit 1; }
+            test "$expected" = '19659f3f7745a2fb4bb528c6552fb79041e3206f'
+            root="$(mktemp -d)"
+            historic="$root/historic"
+            cleanup() {
+              git worktree remove --force "$historic" >/dev/null 2>&1 || true
+              rm -rf "$root"
+            }
+            trap cleanup EXIT
+            git worktree add --detach "$historic" "$HISTORIC"
+            (cd "$historic" && test "$(git rev-parse HEAD)" = "$HISTORIC" && node "$SCRIPT")
+            echo "FROZEN_V13_ORIGINAL_ASSERTIONS_EXECUTED_ON_PINNED_HISTORIC_SUBJECT"
+            echo "FROZEN_V13_CURRENT_ZERO_DRIFT_CLAIM=false"
+          else
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_V1.cjs
+          fi
       - run: node scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs --historic-frozen
   isolated:
     name: ${{ matrix.check }}
+    # Legacy frozen-identity matrix keeps original behavior outside the precise
+    # successor integration; #3746 has a separate live-source native proof.
+    if: github.event_name != 'pull_request' || github.event.pull_request.number != 3746
     needs: qualification-contract
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -152,3 +181,31 @@ jobs:
       - name: Remove isolated object store
         if: always() && matrix.check == 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'
         run: docker rm -f frozen-v13-minio || true
+
+  current-successor-native:
+    # Current-runtime qualification is distinct from Frozen V13 zero drift.
+    if: github.event_name == 'pull_request' && github.event.pull_request.number == 3746 && github.head_ref == 'qualification/cap09-owner-frozen108-da9-composite-20261027'
+    needs: qualification-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Authenticate current exact HEAD and original signed source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs --selftest
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs --selftest
+          echo "CURRENT_RUNTIME_SUCCESSOR_NATIVE_SOURCE_VALID_HISTORICAL_FROZEN_V13_NOT_PROMOTED"

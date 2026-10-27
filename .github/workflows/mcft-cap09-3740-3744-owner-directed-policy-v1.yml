@@ -1,0 +1,47 @@
+name: MCFT CAP09 3740 3744 owner-directed source review
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap09-3740-3744-owner-directed-policy-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-3740-3744-OWNER-DIRECTED-POLICY-V1.json'
+      - 'scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_DIRECTED_POLICY_V1.cjs'
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+jobs:
+  owner-source-review-only:
+    if: github.event_name == 'pull_request' && github.head_ref == 'qualification/cap09-owner-directed-exact-3740-3744-20261027'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Require no inherited execution environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          test -z "${MCFT_CAP09_PERMIT:-}"
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+          test -z "${AWS_SECRET_ACCESS_KEY:-}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+      - name: Verify owner event, immutable source receipts, and sixteen refusal cases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --check scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_DIRECTED_POLICY_V1.cjs
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_DIRECTED_POLICY_V1.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cap09-owner-source-3740-3744-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_3740_3744_OWNER_SOURCE_REVIEW_V1.json
+          if-no-files-found: error
+          retention-days: 90
