@@ -1,0 +1,37 @@
+name: MCFT CAP09 Frozen108 Runtime Successor Inventory V1
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap09-frozen108-runtime-successor-inventory-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-FROZEN108-RUNTIME-SUCCESSOR-INVENTORY-V1.json'
+      - 'scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exact108-readonly-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: No inherited authority or live Provider/DB/S3
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+          test -z "${PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY:-}"
+      - name: Independently enumerate original Frozen108 vs protected-main exact paths
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs --inventory
+      - name: Enforce immutable exact path catalog after discovery
+        run: |
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs --verify
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs --negative

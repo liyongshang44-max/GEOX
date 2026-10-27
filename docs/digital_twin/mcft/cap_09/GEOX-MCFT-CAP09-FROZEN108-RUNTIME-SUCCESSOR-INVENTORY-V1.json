@@ -1,0 +1,20 @@
+{
+  "contract_id": "MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_EXACT_PATHS_V1",
+  "scope": "READONLY_TEST_ONLY_SEPARATE_HISTORICAL_V13_NO_LEGACY_PASS",
+  "subject_base_sha": "63dc3382f879781c604a852c7d1b28af9b0dd9f4",
+  "historical_frozen_sha": "3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a",
+  "registered_history_sha": "3a803d703320c5dfb416c6b022767fd1fa1fccba",
+  "resolver_id": "V13_RUNTIME_SEMANTIC_CLOSURE",
+  "expected_path_count": 108,
+  "frozen_digest": "sha256:733739cdb36b50078ce5fc7fb628d252de9b68fb6d4d5e102fbd8ff53ac39c0f",
+  "protected_main_digest": "sha256:13884b41d719ad88334e4fe757cd014fa670e363f92e96413ce4ef2fd7f7ba26",
+  "entries_sha256": null,
+  "changed_path_count": null,
+  "entries": [],
+  "historical_frozen_requalified": false,
+  "permit_authorized": false,
+  "production_authorized": false,
+  "physical_execution_authorized": false,
+  "original_six_stage_count": 0,
+  "lifecycle": "DISCOVERY_ONLY_NOT_QUALIFIED_UNTIL_108_PATHS_PINNED"
+}
