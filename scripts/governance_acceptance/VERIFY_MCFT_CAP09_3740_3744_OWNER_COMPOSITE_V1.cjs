@@ -37,7 +37,7 @@ const REFS=[
 const git=(...a)=>cp.execFileSync("git",a,{encoding:"utf8",timeout:60000,maxBuffer:32*1024*1024}).trim();
 const parse=(sha,p)=>JSON.parse(git("show",sha+":"+p));
 const shared=[".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",Q];
-const EXTRA=["scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs","scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"];
+const EXTRA=[".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml","scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs","scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"];
 const expected=[...new Set([...shared,S,...EXTRA,...REFS.flatMap(x=>x.files)])].sort();
 function technical(){
  const head=git("rev-parse","HEAD");
