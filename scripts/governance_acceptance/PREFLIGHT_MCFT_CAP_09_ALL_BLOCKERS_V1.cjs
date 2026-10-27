@@ -1024,6 +1024,35 @@ function validatePhase5CausalTemporalSupersessionV1(decision, head, base) {
 }
 
 function resolveRequalificationEvidence(decision, authority, registry, stage, head, base = null) {
+  // The current-source Phase3 has a different exact dependency digest from
+  // historical 24cd4b59. For this precise owner-approved successor subject,
+  // require its independent native #3743 source/CI/real-PG/Artifact proof.
+  // Never treat the old frozen digest or old Run as valid. A missing/malformed
+  // current proof must FAIL, not silently enter historical fallback.
+  if (
+    decision?.check_id === "PHASE3_EVIDENCE_RUNTIME_FOUNDATION" &&
+    stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+    base === "63dc3382f879781c604a852c7d1b28af9b0dd9f" &&
+    process.env.GITHUB_ACTIONS === "true" &&
+    process.env.GITHUB_EVENT_NAME === "pull_request"
+  ) {
+    const fresh = require("./VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs")
+      .verifyCurrentPhase3({decision,stage,head,base});
+    return {
+      status:fresh?.status === "PASS" ? "PASS" : "FAIL",
+      reason_code:fresh?.reason_code ?? "HOLD_CURRENT_PHASE3_PROOF_MISSING",
+      evidence_id:fresh?.evidence_id ?? null,
+      run_id:fresh?.native?.qualification_run ?? null,
+      subject_sha:fresh?.source_subject_sha ?? null,
+      dependency_digest:fresh?.dependency_digest ?? null,
+      candidates:[],
+      current_source_only:true,
+      historical_successor_chain_digest_still_invalid:true,
+      original_formal_six_stages:0,
+      permit_authorized:false,
+      physical_admission_authorized:false
+    };
+  }
   const section = registry.requalification_evidence;
   if (!section || section.binding_strategy !== REQUALIFICATION_BINDING_STRATEGY) {
     return { status: "FAIL", reason_code: "REQUALIFICATION_EVIDENCE_REGISTRY_MISSING_OR_UNSUPPORTED", candidates: [] };
