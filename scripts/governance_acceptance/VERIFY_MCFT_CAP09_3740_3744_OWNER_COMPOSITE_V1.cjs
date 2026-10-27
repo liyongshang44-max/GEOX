@@ -64,11 +64,11 @@ function technical(){
     // Existing old branch is unchanged. On this composite only, exact-source
     // workflow is skipped, not waived: independent native composite QCP executes.
     const historic=git("show",source.head+":"+p);
-    const old="  exact108-readonly-inventory:\\n    runs-on: ubuntu-latest";
-    const guard="  exact108-readonly-inventory:\\n"+
-     "    # Original exact-source 3/6-path verifier cannot run as a 13-path composite.\\n"+
-     "    # Its native source runs remain preserved; composite uses its own exact-head verifier.\\n"+
-     "    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.number == 3739 || github.event.pull_request.number == 3740))\\n"+
+    const old="  exact108-readonly-inventory:\n    runs-on: ubuntu-latest";
+    const guard="  exact108-readonly-inventory:\n"+
+     "    # Original exact-source 3/6-path verifier cannot run as a 13-path composite.\n"+
+     "    # Its native source runs remain preserved; composite uses its own exact-head verifier.\n"+
+     "    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.number == 3739 || github.event.pull_request.number == 3740))\n"+
      "    runs-on: ubuntu-latest";
     assert.equal(historic.split(old).length,2,"HOLD_SOURCE_STANDALONE_ANCHOR");
     const expectedWorkflow=historic.replace(old,guard);
