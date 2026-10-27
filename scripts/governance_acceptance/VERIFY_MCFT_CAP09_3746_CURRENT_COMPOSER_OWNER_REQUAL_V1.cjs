@@ -165,7 +165,7 @@ function verifyCurrentOwnerSignedHistory({decision,stage,head,base}){
    "HOLD_HISTORICAL_SIGNATURE_CHECK_REWRITTEN");
   const result=cp.execFileSync(process.execPath,[oldVerifier,"--selftest"],{
     encoding:"utf8",timeout:60000,maxBuffer:2*1024*1024});
-  const evidence=JSON.parse(result.trim().split(/\\r?\\n/).pop());
+  const evidence=JSON.parse(result.trim().split(String.fromCharCode(10)).pop());
   assert.equal(evidence.status,"PASS_SIX_ORIGINAL_ED25519_SIGNATURES_AND_EXACT_SOURCE_ARTIFACT_BINDING");
   assert.equal(evidence.verified_checks,6);
   assert.equal(evidence.negative_tests_pass,8);
