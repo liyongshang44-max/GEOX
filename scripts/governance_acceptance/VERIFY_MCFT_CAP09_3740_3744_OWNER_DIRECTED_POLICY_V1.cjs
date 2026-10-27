@@ -12,6 +12,44 @@ const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
 const git=(...a)=>cp.execFileSync("git",a,{encoding:"utf8",timeout:45000,maxBuffer:32*1024*1024}).trim();
 const d=JSON.parse(fs.readFileSync(POLICY));
+
+const RES="CAP09_3740_3744_OWNER_POLICY_EXACT_FIVE_PATHS_V1";
+const CHECK="CAP09_3740_3744_OWNER_DIRECTED_SOURCE_REVIEW_TECHNICAL_V1";
+const OWNED=[
+ ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+ ".github/workflows/mcft-cap09-3740-3744-owner-directed-policy-v1.yml",
+ "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+ POLICY,
+ "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_DIRECTED_POLICY_V1.cjs"
+].sort();
+function staticQcp(){
+ const head=git("rev-parse","HEAD");
+ assert.equal(git("merge-base",BASE,head),BASE);
+ const paths=git("diff","--name-only",BASE,head).split(/\r?\n/).filter(Boolean).sort();
+ assert.deepEqual(paths,OWNED,"HOLD_OWNER_QCP_EXACT_PATH_SET");
+ const old=JSON.parse(git("show",BASE+":"+QCP));
+ const current=JSON.parse(fs.readFileSync(QCP,"utf8"));
+ assert.equal(old.checks.length,60);assert.equal(current.checks.length,61);
+ assert.deepEqual(current.checks.slice(0,60),old.checks,"HOLD_HISTORIC_QCP_MODIFIED");
+ assert.deepEqual(Object.fromEntries(Object.entries(current.dependency_resolvers).filter(([k])=>k!==RES)),
+ old.dependency_resolvers,"HOLD_HISTORIC_RESOLVER_MODIFIED");
+ assert.deepEqual(current.dependency_resolvers[RES],{kind:"EXACT_PATH_SET",paths:OWNED});
+ const row=current.checks[60];
+ assert.equal(row.check_id,CHECK);
+ assert.deepEqual(row.resolver_ids,[RES]);
+ assert.equal(row.carry_forward_evidence_id,null);
+ assert.equal(row.execution_workflow_status,"OWNER_DIRECTED_READONLY_TECHNICAL_ONLY_NO_PERMIT");
+ assert.equal(row.diagnostic_command,
+  "node scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_DIRECTED_POLICY_V1.cjs --qcp-technical");
+ assert.equal(d.status,"PROPOSED_PENDING_EXACT_HEAD_CI_AND_QCP");
+ assert.equal(d.full_central_qcp_pass,false);
+ assert.equal(d.global_qcp_blockers_open,7);
+ assert.equal(d.permit_approved,false);
+ return {status:"PASS_OWNER_DIRECTED_QCP_SCOPED_TECHNICAL_ONLY",
+ owner_scope_paths:OWNED.length,original_check_count:60,new_check_count:61,
+ formal_admission:false,physical_authorized:false,permit:"HOLD"};
+}
+
 function invariant(p,ev,env,head){
  assert.equal(p.status,"PROPOSED_PENDING_EXACT_HEAD_CI_AND_QCP");
  assert.equal(p.decision_mode,"REPOSITORY_OWNER_DIRECTED_SOURCE_QUALIFICATION");
@@ -119,7 +157,7 @@ async function main(){
  const head=git("rev-parse","HEAD");
  assert.equal(git("merge-base",BASE,head),BASE);
  assert.equal(git("rev-parse",BASE+":"+OLD),git("rev-parse",head+":"+OLD));
- assert.equal(git("rev-parse",BASE+":"+QCP),git("rev-parse",head+":"+QCP));
+ staticQcp();
  const evpath=process.env.GITHUB_EVENT_PATH;
  assert(evpath,"HOLD_GITHUB_EVENT_PATH_REQUIRED");
  const ev=JSON.parse(fs.readFileSync(evpath,"utf8"));
@@ -135,4 +173,9 @@ async function main(){
  JSON.stringify(result,null,2)+"\n");
  console.log(JSON.stringify(result));
 }
-main().catch(e=>{console.error("HOLD_OWNER_SOURCE_REVIEW:"+String(e.stack||e));process.exitCode=1});
+if(process.argv.includes("--qcp-technical")) {
+ try{console.log(JSON.stringify(staticQcp()))}
+ catch(e){console.error("HOLD_OWNER_SOURCE_QCP:"+String(e.stack||e));process.exitCode=1}
+} else {
+ main().catch(e=>{console.error("HOLD_OWNER_SOURCE_REVIEW:"+String(e.stack||e));process.exitCode=1});
+}
