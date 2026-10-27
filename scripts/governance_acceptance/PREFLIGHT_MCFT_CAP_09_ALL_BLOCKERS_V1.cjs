@@ -1342,7 +1342,37 @@ function main() {
         qualification_rerun: false,
       };
     } else if (decision.status === "REQUALIFY" || decision.status === "REQUIRED") {
-      if (successorChainUnchangedPrivateStoreSelftest) {
+      // First applicable current-source Phase3 route is mandatory on the
+      // precise 63dc base: let the independent verifier itself check GitHub
+      // event, owner, exact HEAD, source-run and artifact. Missing evidence
+      // fails closed; it must not fall back to the stale 24cd Run.
+      if (
+        decision.check_id === "PHASE3_EVIDENCE_RUNTIME_FOUNDATION" &&
+        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "63dc3382f879781c604a852c7d1b28af9b0dd9f"
+      ) {
+        // Fresh, owner-scoped Phase3 proof only. Never change the old Run or
+        // its invalid historic digest. No positive result without authenticated
+        // GitHub native PR/CI/isolated PostgreSQL job/artifact evidence.
+        const proof = require("./VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs")
+          .verifyCurrentPhase3({decision,stage,head:args.head||"",base:args.base||""});
+        result={...common,
+          execution:"CURRENT_PHASE3_94_PATH_NEW_OWNER_BOUND_SOURCE_QUALIFICATION",
+          status:proof?.status??"FAIL",
+          reason_code:proof?.reason_code??"HOLD_NO_CURRENT_SOURCE_EVIDENCE",
+          evidence_id:proof?.evidence_id??null,
+          evidence_subject_sha:proof?.source_subject_sha??null,
+          evidence_run_id:proof?.native?.qualification_run??null,
+          historical_old_digest_reused:false,
+          original_formal_six_stages:0,
+          physical_admission_authorized:false,
+          permit_authorized:false,
+          exact_current_phase3_proof:proof};
+        if(result.status!=="PASS")blockers.push({
+          blocker_class:"CURRENT_PHASE3_SUCCESSOR_SOURCE_PROOF_INVALID",
+          check_id:decision.check_id,detail:proof
+        });
+      } else if (successorChainUnchangedPrivateStoreSelftest) {
         const diagnosticCommand = `${decision.diagnostic_command} --selftest`;
         const diagnostic = runDiagnostic(diagnosticCommand, {}, decision.check_id);
         result = {
@@ -1594,35 +1624,6 @@ function main() {
         if(evidence.status!=="PASS")blockers.push({
           blocker_class:"INVALID_OR_MISSING_DA9_PHASE3_SIGNED_REQUALIFICATION",
           check_id:decision.check_id,detail:evidence});
-      } else if (
-        decision.check_id === "PHASE3_EVIDENCE_RUNTIME_FOUNDATION" &&
-        stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
-        args.base === "63dc3382f879781c604a852c7d1b28af9b0dd9f" &&
-        process.env.GITHUB_ACTIONS === "true" &&
-        process.env.GITHUB_EVENT_NAME === "pull_request" &&
-        fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs"))
-      ) {
-        // Fresh, owner-scoped Phase3 proof only. Never change the old Run or
-        // its invalid historic digest. No positive result without authenticated
-        // GitHub native PR/CI/isolated PostgreSQL job/artifact evidence.
-        const proof = require("./VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs")
-          .verifyCurrentPhase3({decision,stage,head:args.head||"",base:args.base||""});
-        result={...common,
-          execution:"CURRENT_PHASE3_94_PATH_NEW_OWNER_BOUND_SOURCE_QUALIFICATION",
-          status:proof?.status??"FAIL",
-          reason_code:proof?.reason_code??"HOLD_NO_CURRENT_SOURCE_EVIDENCE",
-          evidence_id:proof?.evidence_id??null,
-          evidence_subject_sha:proof?.source_subject_sha??null,
-          evidence_run_id:proof?.native?.qualification_run??null,
-          historical_old_digest_reused:false,
-          original_formal_six_stages:0,
-          physical_admission_authorized:false,
-          permit_authorized:false,
-          exact_current_phase3_proof:proof};
-        if(result.status!=="PASS")blockers.push({
-          blocker_class:"CURRENT_PHASE3_SUCCESSOR_SOURCE_PROOF_INVALID",
-          check_id:decision.check_id,detail:proof
-        });
       } else if (
         decision.check_id === SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_V1.check_id &&
         successorChainAdmissionActive &&
