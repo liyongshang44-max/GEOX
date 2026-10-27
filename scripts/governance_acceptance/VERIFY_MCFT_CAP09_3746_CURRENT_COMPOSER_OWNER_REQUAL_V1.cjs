@@ -60,12 +60,8 @@ function precheck({decision,stage,head,base},event,env){
  const oldQ=repoGet(QCP),current=read(QCP);
  assert.deepEqual(current.checks.filter(x=>CHECKS.includes(x.check_id)),
  oldQ.checks.filter(x=>CHECKS.includes(x.check_id)),"HOLD_OLD_FIVE_QCP_CHANGED");
- for(const k of [".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
-  ".github/workflows/mcft-cap-09-v13-holistic-schema.yml"]){
-   // If source path exists, its original qualification authority stays bound by Git identity.
-   try {assert.equal(git("rev-parse",BASE+":"+k),git("rev-parse",head+":"+k));}
-   catch(e){if(!String(e.message).includes("unknown revision"))throw e;}
- }
+ // The immutable original six signature records are checked separately
+ // by verifyCurrentOwnerSignedHistory(), not assumed from a changed workflow.
  return true;
 }
 function api(p){
@@ -127,6 +123,11 @@ function selftest(){
  const input={decision:{check_id:CHECKS[0]},stage:"SUCCESSOR_SUBJECT_PRE_MERGE",head,base:BASE};
  precheck(input,event,process.env);
  assert.equal(verifyCurrentComposer(input).status,"PASS");
+ const signed=verifyCurrentOwnerSignedHistory({
+   decision:{check_id:"DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING"},
+   stage:"SUCCESSOR_SUBJECT_PRE_MERGE",head,base:BASE});
+ assert.equal(signed.status,"PASS","HOLD_OWNER_SIGNED_HISTORY_SELFTEST:"+signed.reason_code);
+ assert.equal(signed.original_six_signatures_verified,6);
  for(const name of CHECKS){const i={...input,decision:{check_id:name}};
  assert.equal(verifyCurrentComposer(i).status,"PASS");}
  const reject=mutate=>{const i=structuredClone(input),ev=structuredClone(event),env={...process.env};
