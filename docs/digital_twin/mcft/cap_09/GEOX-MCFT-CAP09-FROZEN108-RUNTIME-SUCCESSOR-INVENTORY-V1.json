@@ -8,13 +8,884 @@
   "expected_path_count": 108,
   "frozen_digest": "sha256:13884b41d719ad88334e4fe757cd014fa670e363f92e96413ce4ef2fd7f7ba26",
   "protected_main_digest": "sha256:733739cdb36b50078ce5fc7fb628d252de9b68fb6d4d5e102fbd8ff53ac39c0f",
-  "entries_sha256": null,
-  "changed_path_count": null,
-  "entries": [],
+  "entries_sha256": "sha256:6458abd6c365c4e7c0d0e805d7d77910afdce74bc711d5f399e455d2c9f996e1",
+  "changed_path_count": 2,
+  "entries": [
+    {
+      "path": "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
+      "historical_git_blob": "0e7e4877789930fc7fc0cd82051f51641ae72129",
+      "current_git_blob": "0e7e4877789930fc7fc0cd82051f51641ae72129",
+      "historical_sha256": "sha256:945e473bf3aaf3f9621ab2c67a06741f92a2230831c2de73a693a0f5190c7f36",
+      "current_sha256": "sha256:945e473bf3aaf3f9621ab2c67a06741f92a2230831c2de73a693a0f5190c7f36",
+      "changed": false
+    },
+    {
+      "path": "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
+      "historical_git_blob": "a6a2cf712d2170765784df4969b83979ae319f25",
+      "current_git_blob": "a6a2cf712d2170765784df4969b83979ae319f25",
+      "historical_sha256": "sha256:12f00ac460ede694ad7f40c51ccedc023a41a8edc552b3acbfa1b3ac2c51b967",
+      "current_sha256": "sha256:12f00ac460ede694ad7f40c51ccedc023a41a8edc552b3acbfa1b3ac2c51b967",
+      "changed": false
+    },
+    {
+      "path": "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
+      "historical_git_blob": "6aed8c287306c5e32eb09d4a8ab3e61127cd7309",
+      "current_git_blob": "6aed8c287306c5e32eb09d4a8ab3e61127cd7309",
+      "historical_sha256": "sha256:e74ed65968c9750a4607be7468dba722540e48a1cc2c28107427bfc0e4d9483f",
+      "current_sha256": "sha256:e74ed65968c9750a4607be7468dba722540e48a1cc2c28107427bfc0e4d9483f",
+      "changed": false
+    },
+    {
+      "path": "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
+      "historical_git_blob": "aed0f089b89c91a1ea44f0900c640a3ba5d1d389",
+      "current_git_blob": "aed0f089b89c91a1ea44f0900c640a3ba5d1d389",
+      "historical_sha256": "sha256:536180c7b92b0d24be1674951f23510e61e013e1c016b9d3c906bf4c8de4f810",
+      "current_sha256": "sha256:536180c7b92b0d24be1674951f23510e61e013e1c016b9d3c906bf4c8de4f810",
+      "changed": false
+    },
+    {
+      "path": "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
+      "historical_git_blob": "8c0c5aff3b1d802e722d744342708aac4914a5ce",
+      "current_git_blob": "8c0c5aff3b1d802e722d744342708aac4914a5ce",
+      "historical_sha256": "sha256:13c1414e7b81e0675ae496f492d6f9d869b3a97e8633fa8410d6552510950cd7",
+      "current_sha256": "sha256:13c1414e7b81e0675ae496f492d6f9d869b3a97e8633fa8410d6552510950cd7",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/soil_water/additive_process_uncertainty_budget_v1.ts",
+      "historical_git_blob": "6f98c9c4c391a98631c2325f8b6a695373e7af7f",
+      "current_git_blob": "6f98c9c4c391a98631c2325f8b6a695373e7af7f",
+      "historical_sha256": "sha256:6bbf7c69ebe950bb2a688f9edffcfb56a33b27ee1953bfe4d9fb7e7a6f7ea9d4",
+      "current_sha256": "sha256:6bbf7c69ebe950bb2a688f9edffcfb56a33b27ee1953bfe4d9fb7e7a6f7ea9d4",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/soil_water/assimilated_continuation_posterior_v1.ts",
+      "historical_git_blob": "1031c2f534c47214f5a29326db9047e1c7c3566a",
+      "current_git_blob": "1031c2f534c47214f5a29326db9047e1c7c3566a",
+      "historical_sha256": "sha256:14487b566a1b0b025b2046845c39510d7fcfdf2db5363e38b825a4e248e2b82b",
+      "current_sha256": "sha256:14487b566a1b0b025b2046845c39510d7fcfdf2db5363e38b825a4e248e2b82b",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/soil_water/executed_irrigation_input_v1.ts",
+      "historical_git_blob": "fc8564311d2e6ede9b1e6a2db4409a8e3fefbcc6",
+      "current_git_blob": "fc8564311d2e6ede9b1e6a2db4409a8e3fefbcc6",
+      "historical_sha256": "sha256:54fdf875598bb5468a341d7a9534678408275f2c6700e7bb03ae1c8944f74546",
+      "current_sha256": "sha256:54fdf875598bb5468a341d7a9534678408275f2c6700e7bb03ae1c8944f74546",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/soil_water/external_formal_assimilation_authority_view_v1.ts",
+      "historical_git_blob": "06c94f7778995e94ba6008c0a31f1273a5c620a2",
+      "current_git_blob": "06c94f7778995e94ba6008c0a31f1273a5c620a2",
+      "historical_sha256": "sha256:813d618aafbac53f1a2a7be055ca07248e4769d78066e12af85672b0217c54a3",
+      "current_sha256": "sha256:813d618aafbac53f1a2a7be055ca07248e4769d78066e12af85672b0217c54a3",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/soil_water/fixed_point_water_decimal_v1.ts",
+      "historical_git_blob": "9740d07293d7d61ec10f40cdd8432ef67cc02f70",
+      "current_git_blob": "9740d07293d7d61ec10f40cdd8432ef67cc02f70",
+      "historical_sha256": "sha256:3b95517d780d8042ab7f35ab64fe5e0fb7993d45ed59b8836429b414f413d2ea",
+      "current_sha256": "sha256:3b95517d780d8042ab7f35ab64fe5e0fb7993d45ed59b8836429b414f413d2ea",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/soil_water/hourly_water_balance_v1.ts",
+      "historical_git_blob": "f510dc2954b09333e1e4396138a7c96c5d6f7433",
+      "current_git_blob": "f510dc2954b09333e1e4396138a7c96c5d6f7433",
+      "historical_sha256": "sha256:e4cb5cb2563193f2ebde2a7ac9b1d0e6d2928e8456884173690e4050cd687c39",
+      "current_sha256": "sha256:e4cb5cb2563193f2ebde2a7ac9b1d0e6d2928e8456884173690e4050cd687c39",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/soil_water/root_zone_observation_operator_v1.ts",
+      "historical_git_blob": "7ccd08231b5d6d5322d9eae5eeabc2a9fde97e17",
+      "current_git_blob": "7ccd08231b5d6d5322d9eae5eeabc2a9fde97e17",
+      "historical_sha256": "sha256:07829a73622ccdee94e99ba80a4bbf1bf13a98dc0ea86b060b1ec89c4091e7f3",
+      "current_sha256": "sha256:07829a73622ccdee94e99ba80a4bbf1bf13a98dc0ea86b060b1ec89c4091e7f3",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/soil_water/scalar_gaussian_assimilation_v1.ts",
+      "historical_git_blob": "c0d50dc8577aeab497cbaf6b06fd50ba1d250d8b",
+      "current_git_blob": "c0d50dc8577aeab497cbaf6b06fd50ba1d250d8b",
+      "historical_sha256": "sha256:da3b180c87d48dabc2e47bc0eac56f157ecb15f0e370aabd01ef4cb838c31ca3",
+      "current_sha256": "sha256:da3b180c87d48dabc2e47bc0eac56f157ecb15f0e370aabd01ef4cb838c31ca3",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/soil_water/water_mass_balance_trace_v1.ts",
+      "historical_git_blob": "e6b49277be152b5937e1c0976e1a491973904098",
+      "current_git_blob": "e6b49277be152b5937e1c0976e1a491973904098",
+      "historical_sha256": "sha256:d674ea6f04c378b167a958f249a412cbcbbfcb44506b29e1d72e836b77905dfd",
+      "current_sha256": "sha256:d674ea6f04c378b167a958f249a412cbcbbfcb44506b29e1d72e836b77905dfd",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts",
+      "historical_git_blob": "1f5b1be87c5f2102e61d85ae5133182fb9627c77",
+      "current_git_blob": "1f5b1be87c5f2102e61d85ae5133182fb9627c77",
+      "historical_sha256": "sha256:05b2b74ad2a26b219bca150f0cb7f4fa9795cdab92bb14c562077cc77601e7a0",
+      "current_sha256": "sha256:05b2b74ad2a26b219bca150f0cb7f4fa9795cdab92bb14c562077cc77601e7a0",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/assimilated_continuation_contracts_v1.ts",
+      "historical_git_blob": "c9d51e7b3fad83c527b67224d69adb8e1bd12c19",
+      "current_git_blob": "c9d51e7b3fad83c527b67224d69adb8e1bd12c19",
+      "historical_sha256": "sha256:042162dae35dd3cd279d6abe4dffa61cb2adba2751d99074263ac30697459ef7",
+      "current_sha256": "sha256:042162dae35dd3cd279d6abe4dffa61cb2adba2751d99074263ac30697459ef7",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/assimilated_continuation_contracts_v2.ts",
+      "historical_git_blob": "f1d21a6635eefd01c7d8fb9b839119f45754ec92",
+      "current_git_blob": "f1d21a6635eefd01c7d8fb9b839119f45754ec92",
+      "historical_sha256": "sha256:bef3658e6f188037486cc4779f16908f49140bc677352236bb32eb9144f66025",
+      "current_sha256": "sha256:bef3658e6f188037486cc4779f16908f49140bc677352236bb32eb9144f66025",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/assimilated_continuation_record_set_identity_v1.ts",
+      "historical_git_blob": "e6ddc5452cdfede8e3a76ef3b5f161ff3b1df24e",
+      "current_git_blob": "e6ddc5452cdfede8e3a76ef3b5f161ff3b1df24e",
+      "historical_sha256": "sha256:8d1750af49a1546cdd272a1a14e80b188fdadf0cbb08276272244522a6a0a1fc",
+      "current_sha256": "sha256:8d1750af49a1546cdd272a1a14e80b188fdadf0cbb08276272244522a6a0a1fc",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/assimilated_continuation_record_set_identity_v2.ts",
+      "historical_git_blob": "11b4dab23ec02515cf8799eedceb0c63ffe54793",
+      "current_git_blob": "11b4dab23ec02515cf8799eedceb0c63ffe54793",
+      "historical_sha256": "sha256:0c40c5b97c2478c2018d8cd8f4472415cdd6bece2b348e8853596edf5e8aeec7",
+      "current_sha256": "sha256:0c40c5b97c2478c2018d8cd8f4472415cdd6bece2b348e8853596edf5e8aeec7",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/assimilated_continuation_runtime_config_v1.ts",
+      "historical_git_blob": "4e03e75f415cb160259b673b05a4d670f3ede12c",
+      "current_git_blob": "4e03e75f415cb160259b673b05a4d670f3ede12c",
+      "historical_sha256": "sha256:0440fa51f32576e8e100ff88f4f0d9f9d3a4f63536f4e8a2a562933a61b54b06",
+      "current_sha256": "sha256:0440fa51f32576e8e100ff88f4f0d9f9d3a4f63536f4e8a2a562933a61b54b06",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/assimilated_continuation_runtime_config_v2.ts",
+      "historical_git_blob": "ba4975913bf156d4592ad1db4689cad8bf109986",
+      "current_git_blob": "ba4975913bf156d4592ad1db4689cad8bf109986",
+      "historical_sha256": "sha256:c02b93f3a5b9c0cfeea8b157c7b86f531ba071f707014b009137bec0448f6a57",
+      "current_sha256": "sha256:c02b93f3a5b9c0cfeea8b157c7b86f531ba071f707014b009137bec0448f6a57",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/canonical_identity_v1.ts",
+      "historical_git_blob": "427dcd99dd91af29686e8ded1a892ca4d6a516f6",
+      "current_git_blob": "427dcd99dd91af29686e8ded1a892ca4d6a516f6",
+      "historical_sha256": "sha256:78dfafded5cde1f3289d6024808d9319adde8727701066e8645bae92d518dcde",
+      "current_sha256": "sha256:78dfafded5cde1f3289d6024808d9319adde8727701066e8645bae92d518dcde",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/canonical_json_v1.ts",
+      "historical_git_blob": "009ad12dd2a25e2ae23c4e61256dd99e250ba144",
+      "current_git_blob": "009ad12dd2a25e2ae23c4e61256dd99e250ba144",
+      "historical_sha256": "sha256:cefda6b76663cffb26326fc7256d4c1bb131dd12ec408fa68bddedaecfbc29bd",
+      "current_sha256": "sha256:cefda6b76663cffb26326fc7256d4c1bb131dd12ec408fa68bddedaecfbc29bd",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.ts",
+      "historical_git_blob": "8912335612902a55cafbc464a8299bf8fcfbcf0a",
+      "current_git_blob": "8912335612902a55cafbc464a8299bf8fcfbcf0a",
+      "historical_sha256": "sha256:601622c711fac42408cc4b301f5ccc2937a3856eb431d8617971ad1cdb635789",
+      "current_sha256": "sha256:601622c711fac42408cc4b301f5ccc2937a3856eb431d8617971ad1cdb635789",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/continuation_contracts_v1.ts",
+      "historical_git_blob": "4a3c1dbcd37793bc8ffb3acfed363e051613c235",
+      "current_git_blob": "4a3c1dbcd37793bc8ffb3acfed363e051613c235",
+      "historical_sha256": "sha256:9e609175b19d2511a3db2b72879226995e338f5602a35b3c56da59cbf9e383cf",
+      "current_sha256": "sha256:9e609175b19d2511a3db2b72879226995e338f5602a35b3c56da59cbf9e383cf",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/continuation_operation_identity_v1.ts",
+      "historical_git_blob": "7e28b60e312a80a9ff09bd7c1805e71dcf6d376b",
+      "current_git_blob": "7e28b60e312a80a9ff09bd7c1805e71dcf6d376b",
+      "historical_sha256": "sha256:7d6fb14d3931f5dc123edca07b22a36b32e7b245e03d0947eb92a2a82b8f3c2b",
+      "current_sha256": "sha256:7d6fb14d3931f5dc123edca07b22a36b32e7b245e03d0947eb92a2a82b8f3c2b",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/continuation_record_set_identity_v1.ts",
+      "historical_git_blob": "a968df9778106b74645381cc28968c06e413bb5c",
+      "current_git_blob": "a968df9778106b74645381cc28968c06e413bb5c",
+      "historical_sha256": "sha256:da8d508c967714dba2be4e59f82a11cdc5451931e8085c6e256f3b2620336ca3",
+      "current_sha256": "sha256:da8d508c967714dba2be4e59f82a11cdc5451931e8085c6e256f3b2620336ca3",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/continuation_runtime_config_v1.ts",
+      "historical_git_blob": "ede903aa7ad7cd9de1f6482805442d9da4f5bf37",
+      "current_git_blob": "ede903aa7ad7cd9de1f6482805442d9da4f5bf37",
+      "historical_sha256": "sha256:7a080a3ed0300f83e4d8951dd612fc8d9c6c71c8c85f30612a1b695589ede2e8",
+      "current_sha256": "sha256:7a080a3ed0300f83e4d8951dd612fc8d9c6c71c8c85f30612a1b695589ede2e8",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/external_formal_bootstrap_authority_bundle_v1.ts",
+      "historical_git_blob": "2ac7005841dc3a1a3da5cb06028e3b45db02e989",
+      "current_git_blob": "2ac7005841dc3a1a3da5cb06028e3b45db02e989",
+      "historical_sha256": "sha256:e927ef8a8c72086adf6e01585e6e2bd6f204a4a795d083757251842454ef9ddd",
+      "current_sha256": "sha256:e927ef8a8c72086adf6e01585e6e2bd6f204a4a795d083757251842454ef9ddd",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/external_formal_cap04_execution_config_resolver_v1.ts",
+      "historical_git_blob": "7c542f62b6950739187948fa60f0d4c5b3c4e8e6",
+      "current_git_blob": "7c542f62b6950739187948fa60f0d4c5b3c4e8e6",
+      "historical_sha256": "sha256:596cf22491e7f60f4197a7714c32e6b1cda10ca185d7ff27a513466d8c39c1ae",
+      "current_sha256": "sha256:596cf22491e7f60f4197a7714c32e6b1cda10ca185d7ff27a513466d8c39c1ae",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/external_formal_cap04_forecast_authority_v1.ts",
+      "historical_git_blob": "cb334a55f7649a95de75a26ef30e4a5ee06fd53c",
+      "current_git_blob": "cb334a55f7649a95de75a26ef30e4a5ee06fd53c",
+      "historical_sha256": "sha256:00f124984ca7adef2d9c3ae84106d69f50a86989d3ce9b8ff8a7be6fe7fc989b",
+      "current_sha256": "sha256:00f124984ca7adef2d9c3ae84106d69f50a86989d3ce9b8ff8a7be6fe7fc989b",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.ts",
+      "historical_git_blob": "5fe20f988d2cd6ef038f54eec27e5a32ba6a396d",
+      "current_git_blob": "5fe20f988d2cd6ef038f54eec27e5a32ba6a396d",
+      "historical_sha256": "sha256:1d423cfd8a8934c3697e3735849a637d694f5cd0e74e9d960b11dc309dbf694c",
+      "current_sha256": "sha256:1d423cfd8a8934c3697e3735849a637d694f5cd0e74e9d960b11dc309dbf694c",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts",
+      "historical_git_blob": "97b5921bba42fef377471d5e5e6ac7c6f3232429",
+      "current_git_blob": "97b5921bba42fef377471d5e5e6ac7c6f3232429",
+      "historical_sha256": "sha256:e8c8fc4ec052ad2b08bd8fd16f4b1a6c81495c6c62cc6f16666691c948c49d4c",
+      "current_sha256": "sha256:e8c8fc4ec052ad2b08bd8fd16f4b1a6c81495c6c62cc6f16666691c948c49d4c",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts",
+      "historical_git_blob": "698f1db26b0e00c05ec3f39c8e9770f62abbe06f",
+      "current_git_blob": "698f1db26b0e00c05ec3f39c8e9770f62abbe06f",
+      "historical_sha256": "sha256:e9ec15b38a07711d731af5899d1365fb872838bc5a34663363ff5c9446ddf23c",
+      "current_sha256": "sha256:e9ec15b38a07711d731af5899d1365fb872838bc5a34663363ff5c9446ddf23c",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/feedback_canonical_contracts_v1.ts",
+      "historical_git_blob": "49e0a1f027462ef2f423899efb656c97ab482c22",
+      "current_git_blob": "49e0a1f027462ef2f423899efb656c97ab482c22",
+      "historical_sha256": "sha256:663370a7fada63a7baa333c88e05e7cfb6e6811bd5e31fbc95b4d532e9018c04",
+      "current_sha256": "sha256:663370a7fada63a7baa333c88e05e7cfb6e6811bd5e31fbc95b4d532e9018c04",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/feedback_runtime_config_v1.ts",
+      "historical_git_blob": "b1173e733986a69545f3ae96bfad112eb637e92a",
+      "current_git_blob": "b1173e733986a69545f3ae96bfad112eb637e92a",
+      "historical_sha256": "sha256:b5c84e344a775f551af1e2256f0def0caa2aa2fdcb5e0a0efb5c6650ce701329",
+      "current_sha256": "sha256:b5c84e344a775f551af1e2256f0def0caa2aa2fdcb5e0a0efb5c6650ce701329",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/forecast_canonical_authority_v1.ts",
+      "historical_git_blob": "56f368140cd11d20982ff2cfa66a73349566533d",
+      "current_git_blob": "56f368140cd11d20982ff2cfa66a73349566533d",
+      "historical_sha256": "sha256:a3bb43c320b283a247edde70988f46bd0621221da70dc2ae52836b2064a2ad8f",
+      "current_sha256": "sha256:a3bb43c320b283a247edde70988f46bd0621221da70dc2ae52836b2064a2ad8f",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.ts",
+      "historical_git_blob": "344cb130ffd4c13d8f2da2d36b7956c8a5089baa",
+      "current_git_blob": "344cb130ffd4c13d8f2da2d36b7956c8a5089baa",
+      "historical_sha256": "sha256:81a9144ce403e70a65fe3dd4e69eb0f6094152d03ad65d94362470d89bb32544",
+      "current_sha256": "sha256:81a9144ce403e70a65fe3dd4e69eb0f6094152d03ad65d94362470d89bb32544",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/forecast_observation_residual_v1.ts",
+      "historical_git_blob": "922cf8698bda8d826c8e0a0570d7cd7f9a52dd6b",
+      "current_git_blob": "922cf8698bda8d826c8e0a0570d7cd7f9a52dd6b",
+      "historical_sha256": "sha256:920f3c6e13689f7fa327fcbf26be788710529936e09d4a484662d113e7bf2553",
+      "current_sha256": "sha256:920f3c6e13689f7fa327fcbf26be788710529936e09d4a484662d113e7bf2553",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/forecast_scenario_contracts_v1.ts",
+      "historical_git_blob": "858a25ffb6dee399d59278f408c8423473a5ad68",
+      "current_git_blob": "858a25ffb6dee399d59278f408c8423473a5ad68",
+      "historical_sha256": "sha256:c73091e46491d22a8c0503b856e0101de77f238128def0ffddadeb0f1b7c7ee9",
+      "current_sha256": "sha256:c73091e46491d22a8c0503b856e0101de77f238128def0ffddadeb0f1b7c7ee9",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/forecast_scenario_member_hash_v1.ts",
+      "historical_git_blob": "04ceaacfaa70b6235692c6e49ea37ed777557d6a",
+      "current_git_blob": "04ceaacfaa70b6235692c6e49ea37ed777557d6a",
+      "historical_sha256": "sha256:9d9100710da6c173942eb37cd46b2205a4fa04798ad49ae0b870a323bcb7ea81",
+      "current_sha256": "sha256:9d9100710da6c173942eb37cd46b2205a4fa04798ad49ae0b870a323bcb7ea81",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/forecast_scenario_record_set_identity_v1.ts",
+      "historical_git_blob": "3b08a189848f0a6ea7a0fb3f0a15ca3749358719",
+      "current_git_blob": "3b08a189848f0a6ea7a0fb3f0a15ca3749358719",
+      "historical_sha256": "sha256:ec114097dd65c8ba99b3930e3096ec62327acb431371bb16def4f7de5c069696",
+      "current_sha256": "sha256:ec114097dd65c8ba99b3930e3096ec62327acb431371bb16def4f7de5c069696",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/forecast_scenario_record_set_validator_v1.ts",
+      "historical_git_blob": "e7c846ac9f36941dbce751cff73cc161898f2910",
+      "current_git_blob": "e7c846ac9f36941dbce751cff73cc161898f2910",
+      "historical_sha256": "sha256:8adcf2bf372651477c3418032427790e4f04dbf9161a5e57018b3c4eb0e8a45b",
+      "current_sha256": "sha256:8adcf2bf372651477c3418032427790e4f04dbf9161a5e57018b3c4eb0e8a45b",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/forecast_scenario_runtime_config_v1.ts",
+      "historical_git_blob": "2ceefc94aa82e619b1ef2398a1d7260b9607fa51",
+      "current_git_blob": "2ceefc94aa82e619b1ef2398a1d7260b9607fa51",
+      "historical_sha256": "sha256:94fc02870e7fcd26d9e8d44a03db3b8b87073f49fece6709e552f42fb68c9ecd",
+      "current_sha256": "sha256:94fc02870e7fcd26d9e8d44a03db3b8b87073f49fece6709e552f42fb68c9ecd",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/future_forcing_contracts_v1.ts",
+      "historical_git_blob": "faaa7abdf1c9424af2bf13264d8f5546d374c58a",
+      "current_git_blob": "faaa7abdf1c9424af2bf13264d8f5546d374c58a",
+      "historical_sha256": "sha256:03e861a71ba5e35fc5756291e14df2de2fd5a79464873953365106b8f1827321",
+      "current_sha256": "sha256:03e861a71ba5e35fc5756291e14df2de2fd5a79464873953365106b8f1827321",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/physical_bounds_v1.ts",
+      "historical_git_blob": "ac67726caf20b35bad6d42ac54432b10a1434948",
+      "current_git_blob": "ac67726caf20b35bad6d42ac54432b10a1434948",
+      "historical_sha256": "sha256:a1fb5db580382c0e1af483b77d49d1cdaf73e7b6416c0ef017ff3f538e549fd2",
+      "current_sha256": "sha256:a1fb5db580382c0e1af483b77d49d1cdaf73e7b6416c0ef017ff3f538e549fd2",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts",
+      "historical_git_blob": "45033d19fe05af54cca6eb3c358535d22f0640bd",
+      "current_git_blob": "45033d19fe05af54cca6eb3c358535d22f0640bd",
+      "historical_sha256": "sha256:17af91a35bb0de88b88e431223d66c5eaf69aaba8c0e8e0b7f9b236842ff1a50",
+      "current_sha256": "sha256:17af91a35bb0de88b88e431223d66c5eaf69aaba8c0e8e0b7f9b236842ff1a50",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/pure_three_scenario_math_v1.ts",
+      "historical_git_blob": "8cc80291ea51b8d01e3d299ae204e2523777a1fc",
+      "current_git_blob": "8cc80291ea51b8d01e3d299ae204e2523777a1fc",
+      "historical_sha256": "sha256:b07408303669a188af0817800abb271ad19948db853b3c40442181ed2a6556b7",
+      "current_sha256": "sha256:b07408303669a188af0817800abb271ad19948db853b3c40442181ed2a6556b7",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/runtime_config_execution_view_v1.ts",
+      "historical_git_blob": "cbb5f4d6ea0753825fe9f7d419cd3cbd89298895",
+      "current_git_blob": "cbb5f4d6ea0753825fe9f7d419cd3cbd89298895",
+      "historical_sha256": "sha256:6f67623d0ae0309619fe340cb22dc4f98ec1dd7c830c806c32a0313651552946",
+      "current_sha256": "sha256:6f67623d0ae0309619fe340cb22dc4f98ec1dd7c830c806c32a0313651552946",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/domain/twin_runtime/scenario_math_contracts_v1.ts",
+      "historical_git_blob": "7997be6d658009d43e06c1bb3409750276d36372",
+      "current_git_blob": "7997be6d658009d43e06c1bb3409750276d36372",
+      "historical_sha256": "sha256:132b05639f51a7d5d74871d500d128218c1c5be61c6664eee97bdb562befdaec",
+      "current_sha256": "sha256:132b05639f51a7d5d74871d500d128218c1c5be61c6664eee97bdb562befdaec",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts",
+      "historical_git_blob": "4141db84a4c31e8b7dfdff020cb4f78ed502929d",
+      "current_git_blob": "4141db84a4c31e8b7dfdff020cb4f78ed502929d",
+      "historical_sha256": "sha256:df8825f6760caed26a303d6ce58e8fbc4976616a54db15be7e91ba4a66aafa75",
+      "current_sha256": "sha256:df8825f6760caed26a303d6ce58e8fbc4976616a54db15be7e91ba4a66aafa75",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts",
+      "historical_git_blob": "59b4e1beef3904b6e1cd944c170a6c42a0f9e1a8",
+      "current_git_blob": "59b4e1beef3904b6e1cd944c170a6c42a0f9e1a8",
+      "historical_sha256": "sha256:fd2154565616fd775d880fae8a75de32ab89d89680d3ddca1eaa919fcc7858b1",
+      "current_sha256": "sha256:fd2154565616fd775d880fae8a75de32ab89d89680d3ddca1eaa919fcc7858b1",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_provider_attempt_fence_v1.ts",
+      "historical_git_blob": "75b4cbff5f67cd51d68ce246389148e29038b3a3",
+      "current_git_blob": "75b4cbff5f67cd51d68ce246389148e29038b3a3",
+      "historical_sha256": "sha256:5374c55ac203700f6bf2c73a22784befdcb891cc179c926fabe739ffa8b32ac4",
+      "current_sha256": "sha256:5374c55ac203700f6bf2c73a22784befdcb891cc179c926fabe739ffa8b32ac4",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.ts",
+      "historical_git_blob": "6ec6f5f828652b4db8514fec94812e6b4eb4026e",
+      "current_git_blob": "6ec6f5f828652b4db8514fec94812e6b4eb4026e",
+      "historical_sha256": "sha256:b88414550d2082cccdd7baec9879ca7b66977e167b7e93932c109d6613d0f408",
+      "current_sha256": "sha256:b88414550d2082cccdd7baec9879ca7b66977e167b7e93932c109d6613d0f408",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts",
+      "historical_git_blob": "9d3c79b25bfba91295a27353eca553d49c4600ac",
+      "current_git_blob": "9d3c79b25bfba91295a27353eca553d49c4600ac",
+      "historical_sha256": "sha256:53bdf3999a7d1cdbd8409634a080fa1426b76f2386db9fc26fef2f9ce7d96798",
+      "current_sha256": "sha256:53bdf3999a7d1cdbd8409634a080fa1426b76f2386db9fc26fef2f9ce7d96798",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/mcft_cap09_external_formal_collector_phase_orchestrator_v1.ts",
+      "historical_git_blob": "1be54411a4f283ece7a984e8a7edf974f6ad70ce",
+      "current_git_blob": "1be54411a4f283ece7a984e8a7edf974f6ad70ce",
+      "historical_sha256": "sha256:173793210fe3e879a604fa5e20cfa1eb6e75170ee6c06cc667f1b057046372fa",
+      "current_sha256": "sha256:173793210fe3e879a604fa5e20cfa1eb6e75170ee6c06cc667f1b057046372fa",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts",
+      "historical_git_blob": "90ca03c009a9fdcb16309eef892a17f71bcc9942",
+      "current_git_blob": "90ca03c009a9fdcb16309eef892a17f71bcc9942",
+      "historical_sha256": "sha256:19e57bb7daf991624c5e79272bca4cae12901d33ba6500ded6e8f6736d8bfd8d",
+      "current_sha256": "sha256:19e57bb7daf991624c5e79272bca4cae12901d33ba6500ded6e8f6736d8bfd8d",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts",
+      "historical_git_blob": "16820031cd8dfd650f8d7084cbe98ec19ecf47f4",
+      "current_git_blob": "16820031cd8dfd650f8d7084cbe98ec19ecf47f4",
+      "historical_sha256": "sha256:059d4ae089c549df7fff56cf12a0d9714dc639d2c8c21527dadd59869aae0fcb",
+      "current_sha256": "sha256:059d4ae089c549df7fff56cf12a0d9714dc639d2c8c21527dadd59869aae0fcb",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts",
+      "historical_git_blob": "696885ff3c9b20d0c0b8440130f9ea38b5d8868f",
+      "current_git_blob": "696885ff3c9b20d0c0b8440130f9ea38b5d8868f",
+      "historical_sha256": "sha256:69cf9d3197822bd0512c260b046d47525d8d2c7d02ed1d93594aa5948423919d",
+      "current_sha256": "sha256:69cf9d3197822bd0512c260b046d47525d8d2c7d02ed1d93594aa5948423919d",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts",
+      "historical_git_blob": "adc2b3394e11db3d9851e1ec177ca9dc339ab3e5",
+      "current_git_blob": "adc2b3394e11db3d9851e1ec177ca9dc339ab3e5",
+      "historical_sha256": "sha256:5862d72a97c9057ba465fb135d949b0a12276992aa23ea7ef7aee4dcb8ce70b1",
+      "current_sha256": "sha256:5862d72a97c9057ba465fb135d949b0a12276992aa23ea7ef7aee4dcb8ce70b1",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/producer_bound_transient_raw_evidence_reader_v1.ts",
+      "historical_git_blob": "2e478296176af1addcd91e9469b238278fa4d6ae",
+      "current_git_blob": "2e478296176af1addcd91e9469b238278fa4d6ae",
+      "historical_sha256": "sha256:b30fa7f64fa0c21f0c93fe87e2a023de2fc726051b0f01c7f37dcbfe1ad73bf1",
+      "current_sha256": "sha256:b30fa7f64fa0c21f0c93fe87e2a023de2fc726051b0f01c7f37dcbfe1ad73bf1",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts",
+      "historical_git_blob": "30a247fae93b2ee5be58fe62324f9cd45de1d747",
+      "current_git_blob": "30a247fae93b2ee5be58fe62324f9cd45de1d747",
+      "historical_sha256": "sha256:ec960f71f7bc786bd6180340bea5d9a25602485ea8c52704bcf9fa1dfec30b88",
+      "current_sha256": "sha256:ec960f71f7bc786bd6180340bea5d9a25602485ea8c52704bcf9fa1dfec30b88",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts",
+      "historical_git_blob": "b2fbfb1975658f3f77dcb1aab5bb16f2616fa963",
+      "current_git_blob": "b2fbfb1975658f3f77dcb1aab5bb16f2616fa963",
+      "historical_sha256": "sha256:03994ddfb3d11aaa261149d0bd07d71ba1a242878f389e5b06208c7e3da9030d",
+      "current_sha256": "sha256:03994ddfb3d11aaa261149d0bd07d71ba1a242878f389e5b06208c7e3da9030d",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts",
+      "historical_git_blob": "4df815d61504760b19ca85870977b466517ed461",
+      "current_git_blob": "4df815d61504760b19ca85870977b466517ed461",
+      "historical_sha256": "sha256:334295cb1c6069971f070139c751336b2cfebbdb706da38ccb36ba0b07b8cbf2",
+      "current_sha256": "sha256:334295cb1c6069971f070139c751336b2cfebbdb706da38ccb36ba0b07b8cbf2",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts",
+      "historical_git_blob": "345e1faf6c873a8e434166df7f90b6cf1e22af29",
+      "current_git_blob": "345e1faf6c873a8e434166df7f90b6cf1e22af29",
+      "historical_sha256": "sha256:8ab4ef65e3ca5ee6e36f3199bf55768a720895ebfa89ab50e654573c13a7a62b",
+      "current_sha256": "sha256:8ab4ef65e3ca5ee6e36f3199bf55768a720895ebfa89ab50e654573c13a7a62b",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.ts",
+      "historical_git_blob": "cd83fe05c0d44908a102c53c03cb9a9cbe897afc",
+      "current_git_blob": "cd83fe05c0d44908a102c53c03cb9a9cbe897afc",
+      "historical_sha256": "sha256:a8debb6b803dbc3a26fe069f6b42d34a370263d9f399628ac1705fb4f5b36ad1",
+      "current_sha256": "sha256:a8debb6b803dbc3a26fe069f6b42d34a370263d9f399628ac1705fb4f5b36ad1",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts",
+      "historical_git_blob": "4d5d14f82ba2cb5eb9f235d9b0393ee842901e89",
+      "current_git_blob": "4d5d14f82ba2cb5eb9f235d9b0393ee842901e89",
+      "historical_sha256": "sha256:daa5888f9abafce0ab03a9d11e1fbc389031d6f85fdb0a00b885c2811cbedda0",
+      "current_sha256": "sha256:daa5888f9abafce0ab03a9d11e1fbc389031d6f85fdb0a00b885c2811cbedda0",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts",
+      "historical_git_blob": "74664c86403185b361eb333b854418250eb7263e",
+      "current_git_blob": "74664c86403185b361eb333b854418250eb7263e",
+      "historical_sha256": "sha256:ac04a5985658c3159130e7769aa838c4eb918e64a9128e40eaa15748220d4974",
+      "current_sha256": "sha256:ac04a5985658c3159130e7769aa838c4eb918e64a9128e40eaa15748220d4974",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts",
+      "historical_git_blob": "88e88ed6eb1792427e7524d5cf6e7ce1874bee61",
+      "current_git_blob": "88e88ed6eb1792427e7524d5cf6e7ce1874bee61",
+      "historical_sha256": "sha256:958d5354c29fd71dfee6d49c47fca91842ac7d4ffaef3a313839239eff045634",
+      "current_sha256": "sha256:958d5354c29fd71dfee6d49c47fca91842ac7d4ffaef3a313839239eff045634",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts",
+      "historical_git_blob": "bdd89c1836afabf0132b46e7d3ac647feb6cbac4",
+      "current_git_blob": "bdd89c1836afabf0132b46e7d3ac647feb6cbac4",
+      "historical_sha256": "sha256:ff0f0b1ed448411186f37c304921b9e7ac6689cddd05609104cb0a69805f5214",
+      "current_sha256": "sha256:ff0f0b1ed448411186f37c304921b9e7ac6689cddd05609104cb0a69805f5214",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts",
+      "historical_git_blob": "74a690f246cb8f8d00b677495a03288db1b93172",
+      "current_git_blob": "74a690f246cb8f8d00b677495a03288db1b93172",
+      "historical_sha256": "sha256:843deae3d865fb6b7586bd5a151fa20ce0f4e46672b908f84115242ec480a4d3",
+      "current_sha256": "sha256:843deae3d865fb6b7586bd5a151fa20ce0f4e46672b908f84115242ec480a4d3",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts",
+      "historical_git_blob": "9f9067058f2339937de5ddcf3940ce32eac3ce66",
+      "current_git_blob": "9f9067058f2339937de5ddcf3940ce32eac3ce66",
+      "historical_sha256": "sha256:d451745152c1fe9ff3f486fea43addfa02283e1d2632989ac3a4423255e5afae",
+      "current_sha256": "sha256:d451745152c1fe9ff3f486fea43addfa02283e1d2632989ac3a4423255e5afae",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts",
+      "historical_git_blob": "73c1adec1f2ab02c0af2e88e91d84712aa9bb3d0",
+      "current_git_blob": "73c1adec1f2ab02c0af2e88e91d84712aa9bb3d0",
+      "historical_sha256": "sha256:980cda6f674c7c5ecf86fb7c5e4471c60bbb76a5be0910ffd630e188a897e97e",
+      "current_sha256": "sha256:980cda6f674c7c5ecf86fb7c5e4471c60bbb76a5be0910ffd630e188a897e97e",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/infra/database.ts",
+      "historical_git_blob": "72a3373f360356c7e13311ff5d06be9332025c23",
+      "current_git_blob": "72a3373f360356c7e13311ff5d06be9332025c23",
+      "historical_sha256": "sha256:52fc2dd8bdbb0f82c3ca4f99190f622e717dd79c338e35e8d40e9e7a0a4861a5",
+      "current_sha256": "sha256:52fc2dd8bdbb0f82c3ca4f99190f622e717dd79c338e35e8d40e9e7a0a4861a5",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts",
+      "historical_git_blob": "e25e75ffa8972a0fc0d00f3d0a6ac5171e4fd256",
+      "current_git_blob": "e25e75ffa8972a0fc0d00f3d0a6ac5171e4fd256",
+      "historical_sha256": "sha256:faa443bdab8ca8a63f00ed2babb7ef9f7895227abdead3ab8c0cfd2d807843fe",
+      "current_sha256": "sha256:faa443bdab8ca8a63f00ed2babb7ef9f7895227abdead3ab8c0cfd2d807843fe",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts",
+      "historical_git_blob": "a415f9e4a0ca6e05857e1d032ed4098c68b0cf0e",
+      "current_git_blob": "fcd429cad9fe3aeeb1570649289384188a9f7cde",
+      "historical_sha256": "sha256:83b311a9c97290aa966095bb77d1db109b5a6dab878ae8986a04d099846d19ca",
+      "current_sha256": "sha256:dd41557fb463f5283a4edd7c5ce38cd93179e56bee6e3f861ea3a3a2d742478e",
+      "changed": true
+    },
+    {
+      "path": "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
+      "historical_git_blob": "98348646008c6a1f3c5dc3e4b3569755d05a10fc",
+      "current_git_blob": "98348646008c6a1f3c5dc3e4b3569755d05a10fc",
+      "historical_sha256": "sha256:c3ddcf93b39d21595c3a564776c53d3e4542eb66ccdd4c9313d156f5fff7201c",
+      "current_sha256": "sha256:c3ddcf93b39d21595c3a564776c53d3e4542eb66ccdd4c9313d156f5fff7201c",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/persistence/twin_runtime/postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts",
+      "historical_git_blob": "e78145a88fab6696d64608e67b22c2fbeec47d4f",
+      "current_git_blob": "e78145a88fab6696d64608e67b22c2fbeec47d4f",
+      "historical_sha256": "sha256:c04b529d9864a68dae99fc46842222914af9dac78b4f2e36db6d712ad4a30fb4",
+      "current_sha256": "sha256:c04b529d9864a68dae99fc46842222914af9dac78b4f2e36db6d712ad4a30fb4",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts",
+      "historical_git_blob": "69f6b6f9f17eb6430f3bb8d253240a87999c5ee2",
+      "current_git_blob": "69f6b6f9f17eb6430f3bb8d253240a87999c5ee2",
+      "historical_sha256": "sha256:39ef0c70a72f43ef5b61a07664c568b8bacca26b167cae173031a2b3fdacc254",
+      "current_sha256": "sha256:39ef0c70a72f43ef5b61a07664c568b8bacca26b167cae173031a2b3fdacc254",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts",
+      "historical_git_blob": "c4ecf12c9830a82b4b5f5c001e51a483fc7ad2e0",
+      "current_git_blob": "c4ecf12c9830a82b4b5f5c001e51a483fc7ad2e0",
+      "historical_sha256": "sha256:28cf9c6366c9a19494b62d98641a1cfd6e9992746d88379fad4fc043b67c8256",
+      "current_sha256": "sha256:28cf9c6366c9a19494b62d98641a1cfd6e9992746d88379fad4fc043b67c8256",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/blocked_forecast_payload_builder_v1.ts",
+      "historical_git_blob": "e2936cc858038842287a39dbb6b4995193e872d2",
+      "current_git_blob": "e2936cc858038842287a39dbb6b4995193e872d2",
+      "historical_sha256": "sha256:f3064dd4d67232af54e87bdfd37182ffa8e16846b6a5f88824078fc4e9eade75",
+      "current_sha256": "sha256:f3064dd4d67232af54e87bdfd37182ffa8e16846b6a5f88824078fc4e9eade75",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts",
+      "historical_git_blob": "e7dc45f3eda82989c1544bd8adce420251f3729d",
+      "current_git_blob": "e7dc45f3eda82989c1544bd8adce420251f3729d",
+      "historical_sha256": "sha256:b243580733b837691b1abc0a28b3f0b215436a18d72af6036d52501ef445fcaa",
+      "current_sha256": "sha256:b243580733b837691b1abc0a28b3f0b215436a18d72af6036d52501ef445fcaa",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v2.ts",
+      "historical_git_blob": "d14e91370814ef7e6b3a6d0a321082513ee2304a",
+      "current_git_blob": "d14e91370814ef7e6b3a6d0a321082513ee2304a",
+      "historical_sha256": "sha256:25bed3004fc33ea217732ceb312dd725e2ae921600eb89c3bb600cae62fc527e",
+      "current_sha256": "sha256:25bed3004fc33ea217732ceb312dd725e2ae921600eb89c3bb600cae62fc527e",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.ts",
+      "historical_git_blob": "822bcd1336807932ce06ba4e83497e9b31366dfe",
+      "current_git_blob": "822bcd1336807932ce06ba4e83497e9b31366dfe",
+      "historical_sha256": "sha256:802c7bff762e45a5b83249363c0570b43974186a354961d7c558cc96acb08afa",
+      "current_sha256": "sha256:802c7bff762e45a5b83249363c0570b43974186a354961d7c558cc96acb08afa",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_amendment19_canonical_tick_core_v1.ts",
+      "historical_git_blob": "dcea5c9385ddfa8c1d98777219861fab7f5687d4",
+      "current_git_blob": "dcea5c9385ddfa8c1d98777219861fab7f5687d4",
+      "historical_sha256": "sha256:ce13f6910e7787cd8998d315d872b931de2975011238f159d9fb6f8043f491bc",
+      "current_sha256": "sha256:ce13f6910e7787cd8998d315d872b931de2975011238f159d9fb6f8043f491bc",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_cap04_a_record_set_builder_v1.ts",
+      "historical_git_blob": "436a74fe1395eb5123807c148b3b6229b120cf61",
+      "current_git_blob": "436a74fe1395eb5123807c148b3b6229b120cf61",
+      "historical_sha256": "sha256:8276fdd51be999b61c7a62d090cccd04c209cdaa343e3401386df909b2a29caf",
+      "current_sha256": "sha256:8276fdd51be999b61c7a62d090cccd04c209cdaa343e3401386df909b2a29caf",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_cap04_state_source_builder_v1.ts",
+      "historical_git_blob": "0d9857ea883f55a64261b58b8e56dffa1d388028",
+      "current_git_blob": "0d9857ea883f55a64261b58b8e56dffa1d388028",
+      "historical_sha256": "sha256:f67952aaaeb218cb32dc2db5fc9ca51cfa854323bc41520de276b5ac23d1ac50",
+      "current_sha256": "sha256:f67952aaaeb218cb32dc2db5fc9ca51cfa854323bc41520de276b5ac23d1ac50",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_current_interval_forcing_selector_v1.ts",
+      "historical_git_blob": "3eb8005b848df3a1b522532f762d84c2eba4103c",
+      "current_git_blob": "3eb8005b848df3a1b522532f762d84c2eba4103c",
+      "historical_sha256": "sha256:2913f99c51221c70bec9112011971c8cdde4379e8035bfe2648f8ef6f9a5827d",
+      "current_sha256": "sha256:2913f99c51221c70bec9112011971c8cdde4379e8035bfe2648f8ef6f9a5827d",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_et0_consumption_projection_v1.ts",
+      "historical_git_blob": "7257df95f3ddadf607561a7d2dc156166b908d49",
+      "current_git_blob": "7257df95f3ddadf607561a7d2dc156166b908d49",
+      "historical_sha256": "sha256:ae64086fc121b013cfc66ff6bf77fbe0bbfe1380b26845e2f420e4b78b1a436d",
+      "current_sha256": "sha256:ae64086fc121b013cfc66ff6bf77fbe0bbfe1380b26845e2f420e4b78b1a436d",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts",
+      "historical_git_blob": "cda8c7412c36ef4e2fe29145c75f998d19076420",
+      "current_git_blob": "68ad42eb41047fa550bf742b312a9b3c83a07f89",
+      "historical_sha256": "sha256:d8c741adba5ffb83735d73088e04219f73c79711375811487ba4837b31878160",
+      "current_sha256": "sha256:4dd8cb1a9d51da03014b68cf148a4e74fef7a8b71ab6defa24184cd9cf0ab77f",
+      "changed": true
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts",
+      "historical_git_blob": "3113848d48f52e38546dd49252053069244708d2",
+      "current_git_blob": "3113848d48f52e38546dd49252053069244708d2",
+      "historical_sha256": "sha256:b7a6a452a0f07a24e50baf3e1cfbc71eb95d2bdc22f1730d404ffd77a93c4be6",
+      "current_sha256": "sha256:b7a6a452a0f07a24e50baf3e1cfbc71eb95d2bdc22f1730d404ffd77a93c4be6",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts",
+      "historical_git_blob": "a66fb6b59e00870f27e1856975006a840a6f62f7",
+      "current_git_blob": "a66fb6b59e00870f27e1856975006a840a6f62f7",
+      "historical_sha256": "sha256:e382ad9140edaf7a3401f8d296ee8d045a7b86b8ff5197d8565f545dd3f52a2f",
+      "current_sha256": "sha256:e382ad9140edaf7a3401f8d296ee8d045a7b86b8ff5197d8565f545dd3f52a2f",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts",
+      "historical_git_blob": "b600682ad8e4bd9bc73fb77045b40c2b5859475a",
+      "current_git_blob": "b600682ad8e4bd9bc73fb77045b40c2b5859475a",
+      "historical_sha256": "sha256:1239e2fd9a4793604b1b468f326653155a3b1252cdf6e52a8eb4123f411beec3",
+      "current_sha256": "sha256:1239e2fd9a4793604b1b468f326653155a3b1252cdf6e52a8eb4123f411beec3",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v1.ts",
+      "historical_git_blob": "b03a0e881d7ce72e32bd5b5c6ff09a2125085442",
+      "current_git_blob": "b03a0e881d7ce72e32bd5b5c6ff09a2125085442",
+      "historical_sha256": "sha256:3eec8ec4d3d582a76c921b39742839b12df83487a8284283e36d382900bb3281",
+      "current_sha256": "sha256:3eec8ec4d3d582a76c921b39742839b12df83487a8284283e36d382900bb3281",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/external_formal_v5_viability_gated_scheduler_v1.ts",
+      "historical_git_blob": "21d96c4a3a0001e113af71eaeca86e75ee6e2287",
+      "current_git_blob": "21d96c4a3a0001e113af71eaeca86e75ee6e2287",
+      "historical_sha256": "sha256:2d10f0f92ad554d0f7567565d8754df4681a6426e9fca4cdd07e1efb6e0a75af",
+      "current_sha256": "sha256:2d10f0f92ad554d0f7567565d8754df4681a6426e9fca4cdd07e1efb6e0a75af",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts",
+      "historical_git_blob": "fbb7f7ebfe4962f689733af698e2f7a1ce8796b9",
+      "current_git_blob": "fbb7f7ebfe4962f689733af698e2f7a1ce8796b9",
+      "historical_sha256": "sha256:cc36a5361efe252c1840fccbe841633f5ae0926bbc1b1326a68aa8f948170765",
+      "current_sha256": "sha256:cc36a5361efe252c1840fccbe841633f5ae0926bbc1b1326a68aa8f948170765",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/forecast_scenario_persistence_ports_v1.ts",
+      "historical_git_blob": "188a191dd81d15f7b003d5a445ad619590f2f78b",
+      "current_git_blob": "188a191dd81d15f7b003d5a445ad619590f2f78b",
+      "historical_sha256": "sha256:549668b8528843a7fc1dacd443b2662009abf91494d9fea753a06a34d1f251b6",
+      "current_sha256": "sha256:549668b8528843a7fc1dacd443b2662009abf91494d9fea753a06a34d1f251b6",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/future_forcing_outcome_classifier_v1.ts",
+      "historical_git_blob": "77e37e6b9734caf9352b4302cc016d2602ee4d76",
+      "current_git_blob": "77e37e6b9734caf9352b4302cc016d2602ee4d76",
+      "historical_sha256": "sha256:22376994cd476594551d0cecd00e2dfe45871d26ea145d58e2aaee323a1a21bb",
+      "current_sha256": "sha256:22376994cd476594551d0cecd00e2dfe45871d26ea145d58e2aaee323a1a21bb",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/future_forcing_selector_v1.ts",
+      "historical_git_blob": "21bfaffc72226072b3e9d7529b48422acad91048",
+      "current_git_blob": "21bfaffc72226072b3e9d7529b48422acad91048",
+      "historical_sha256": "sha256:36fb8593d863407520e0ec6fa9bff8cda279dc779b02b5c1025c44268c86493a",
+      "current_sha256": "sha256:36fb8593d863407520e0ec6fa9bff8cda279dc779b02b5c1025c44268c86493a",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts",
+      "historical_git_blob": "16827ec64532b9313f5446c065c04a42270e2e22",
+      "current_git_blob": "16827ec64532b9313f5446c065c04a42270e2e22",
+      "historical_sha256": "sha256:055caeafa44f0a203fddf7bfceae9358d56bb8408c0f52b2e31b9a3a02b99b83",
+      "current_sha256": "sha256:055caeafa44f0a203fddf7bfceae9358d56bb8408c0f52b2e31b9a3a02b99b83",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/ports.ts",
+      "historical_git_blob": "9f62818498a645d554925dcf8569cdd19c0f1c34",
+      "current_git_blob": "9f62818498a645d554925dcf8569cdd19c0f1c34",
+      "historical_sha256": "sha256:1d24bd16a899c4e92d0f88b945f88b1bcc83ae57afbe7ecc4806ea261cd4772f",
+      "current_sha256": "sha256:1d24bd16a899c4e92d0f88b945f88b1bcc83ae57afbe7ecc4806ea261cd4772f",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts",
+      "historical_git_blob": "1327e4c818db482ac3fc3e3ebc1061319d8d229f",
+      "current_git_blob": "1327e4c818db482ac3fc3e3ebc1061319d8d229f",
+      "historical_sha256": "sha256:f175d9bd2a214f5881579fd104e79bcd53d8fc397c3d613c60dcaa4a84dfb0b3",
+      "current_sha256": "sha256:f175d9bd2a214f5881579fd104e79bcd53d8fc397c3d613c60dcaa4a84dfb0b3",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts",
+      "historical_git_blob": "ba0fe8ef48d40987583544358feed79441507683",
+      "current_git_blob": "ba0fe8ef48d40987583544358feed79441507683",
+      "historical_sha256": "sha256:027f39e82cc952e09dc35872139b451993fed750c10768b27188312a9d6fa0ca",
+      "current_sha256": "sha256:027f39e82cc952e09dc35872139b451993fed750c10768b27188312a9d6fa0ca",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts",
+      "historical_git_blob": "4a2d8059b5f641948d6d963722ea66d938ce80dc",
+      "current_git_blob": "4a2d8059b5f641948d6d963722ea66d938ce80dc",
+      "historical_sha256": "sha256:050fe01805a390526612be4af0beeb7315017647323d04ac5cedd2c3c11cb88c",
+      "current_sha256": "sha256:050fe01805a390526612be4af0beeb7315017647323d04ac5cedd2c3c11cb88c",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.ts",
+      "historical_git_blob": "754b65874a286f25f8866c3d0823ed0de57cc0af",
+      "current_git_blob": "754b65874a286f25f8866c3d0823ed0de57cc0af",
+      "historical_sha256": "sha256:92349c15f81683106761f95ffc52f7694cb2c291d77e13daacf9681b36f284cb",
+      "current_sha256": "sha256:92349c15f81683106761f95ffc52f7694cb2c291d77e13daacf9681b36f284cb",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/postgres_external_formal_next_tick_viability_v1.ts",
+      "historical_git_blob": "92a5f9fbd0d2a423e9d48d401244eb9e00187d38",
+      "current_git_blob": "92a5f9fbd0d2a423e9d48d401244eb9e00187d38",
+      "historical_sha256": "sha256:27b1d7519035238ee327d3809bf81f6dd2813d68c14ace7177600ef10b0d56c6",
+      "current_sha256": "sha256:27b1d7519035238ee327d3809bf81f6dd2813d68c14ace7177600ef10b0d56c6",
+      "changed": false
+    },
+    {
+      "path": "apps/server/src/runtime/twin_runtime/scenario_set_record_builder_v1.ts",
+      "historical_git_blob": "b24dfa6bcba90c07f1f7b9d47a4a0a2076bcd801",
+      "current_git_blob": "b24dfa6bcba90c07f1f7b9d47a4a0a2076bcd801",
+      "historical_sha256": "sha256:27340c7272643bd4b5909e786a8ca88aa0f4ace5156afdf686e3b605fcb7626b",
+      "current_sha256": "sha256:27340c7272643bd4b5909e786a8ca88aa0f4ace5156afdf686e3b605fcb7626b",
+      "changed": false
+    },
+    {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+      "historical_git_blob": "34fd3e92e0e628cf0db16e10df3633337fe81a1a",
+      "current_git_blob": "34fd3e92e0e628cf0db16e10df3633337fe81a1a",
+      "historical_sha256": "sha256:ce0658cb6b00ccf4adcea1dfb31e0fb05dbc07956d217b4d48c63e28f145b058",
+      "current_sha256": "sha256:ce0658cb6b00ccf4adcea1dfb31e0fb05dbc07956d217b4d48c63e28f145b058",
+      "changed": false
+    }
+  ],
   "historical_frozen_requalified": false,
   "permit_authorized": false,
   "production_authorized": false,
   "physical_execution_authorized": false,
   "original_six_stage_count": 0,
-  "lifecycle": "DISCOVERY_ONLY_NOT_QUALIFIED_UNTIL_108_PATHS_PINNED"
+  "lifecycle": "PINNED_EXACT_108_HISTORICAL_SEPARATELY_REJECTED_DRIFT_TEST_ONLY",
+  "changed_path_names": [
+    "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts",
+    "apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts"
+  ],
+  "discovery_workflow_run_id": 40435996368,
+  "discovery_subject_sha": "c2be904ce246fbca73c05762f6d2e6964cc4bf4c"
 }
