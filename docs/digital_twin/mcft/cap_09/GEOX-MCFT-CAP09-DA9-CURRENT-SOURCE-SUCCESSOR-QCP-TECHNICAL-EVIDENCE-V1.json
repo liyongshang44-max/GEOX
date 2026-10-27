@@ -1,0 +1,107 @@
+{
+  "schema_version": "geox_mcft_cap09_da9_current_source_successor_qcp_evidence_v1",
+  "id": "DA9_CURRENT_SOURCE_3741_3742_3743_TEST_ONLY_REGISTRATION",
+  "scope": "THREE_SEPARATE_PREDECESSOR_EXACT_HEAD_CI_PROOFS_NOT_SINGLE_NEW_RUNTIME_SIGNATURE",
+  "protected_main_base_sha": "63dc3382f879781c604a852c7d1b28af9b0dd9f4",
+  "qcp_check_id": "DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1",
+  "qcp_resolver_id": "DA9_CURRENT_SOURCE_SUCCESSOR_QCP_EXACT_FIVE_PATHS_V1",
+  "qcp_exact_path_set": [
+    ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-CURRENT-SOURCE-SUCCESSOR-FORMAL-REVIEW-REQUEST-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-CURRENT-SOURCE-SUCCESSOR-QCP-TECHNICAL-EVIDENCE-V1.json",
+    "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_CURRENT_SOURCE_QCP_TECHNICAL_ENROLLMENT_V1.cjs"
+  ],
+  "source_evidence": [
+    {
+      "pr": 3741,
+      "head": "ef3649e40f0d3ab542fe9f365275708b23c53cab",
+      "ci_run": 40516250068,
+      "qualification_run": 40516250234,
+      "workflow_name": "MCFT CAP09 DA9 Current Composer Five Check Successor V1",
+      "jobs": [
+        "current-composer-exact-readonly",
+        "phase7-real-isolated-candidate-promotion"
+      ],
+      "changed_paths": [
+        ".github/workflows/mcft-cap09-da9-current-composer-five-requal-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-CURRENT-COMPOSER-FIVE-REQUAL-V1.json",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_CURRENT_COMPOSER_FIVE_REQUAL_V1.cjs"
+      ],
+      "artifacts": [
+        {
+          "id": 12739696790,
+          "name": "da9-composer-four-native-source-ef3649e40f0d3ab542fe9f365275708b23c53cab",
+          "digest": "sha256:2b2ed72d9f0ba4f63a237c6df18edc5ae2b25c1d65bb448e82dff38b42e8900a"
+        },
+        {
+          "id": 12738798554,
+          "name": "da9-current-composer-phase7-testonly-ef3649e40f0d3ab542fe9f365275708b23c53cab",
+          "digest": "sha256:8936f407a94b95c86c61c1f04c7c229f547e07516c3b1b47173d99f8774ed67e"
+        }
+      ],
+      "semantic": "CURRENT_COMPOSER_THREE_PYTHON_EDITS_FOUR_REAL_SOURCE_RECEIPTS_AND_REAL_ISOLATED_PHASE7",
+      "current_signed_new_head": false
+    },
+    {
+      "pr": 3742,
+      "head": "96ae42a7aeb3be83933faadafb65f1b72379b2cf",
+      "ci_run": 40516837352,
+      "qualification_run": 40516836986,
+      "workflow_name": "MCFT CAP09 DA9 Historic Signed Event Applicability V1",
+      "jobs": [
+        "historic-signature-scope-not-current-admission"
+      ],
+      "changed_paths": [
+        ".github/workflows/mcft-cap09-da9-current-pr-historic-signature-scope-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-CURRENT-PR-HISTORIC-SIGNATURE-BOUNDARY-V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_CURRENT_SUCCESSOR_HISTORIC_SIGNATURE_SCOPE_V1.cjs"
+      ],
+      "artifacts": [],
+      "semantic": "SIX_HISTORIC_ED25519_VERIFIED_ONLY_NO_CURRENT_GOVERNANCE_ADMISSION",
+      "current_signed_new_head": false
+    },
+    {
+      "pr": 3743,
+      "head": "cd18701600346840b7e4cc3611a7108f2e713490",
+      "ci_run": 40517266880,
+      "qualification_run": 40517266887,
+      "workflow_name": "MCFT CAP09 Phase3 Current Source Independent Requalification V1",
+      "jobs": [
+        "phase3-current-source-real-postgres"
+      ],
+      "changed_paths": [
+        ".github/workflows/mcft-cap09-phase3-current-source-requalification-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-PHASE3-CURRENT-SOURCE-DIGEST-DISPOSITION-V1.json",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_PHASE3_CURRENT_SOURCE_DIGEST_V1.cjs"
+      ],
+      "artifacts": [
+        {
+          "id": 12738863652,
+          "name": "cap09-phase3-current-source-pg-testonly-cd18701600346840b7e4cc3611a7108f2e713490",
+          "digest": "sha256:0a05c94f21df6f8164b4cc3e37f09fbddf6663dfabee605443ec833e58177502"
+        }
+      ],
+      "semantic": "CURRENT_PHASE3_94_PATHS_31_CHANGED_NEW_PG16_FENCING_CURSOR",
+      "current_signed_new_head": false
+    }
+  ],
+  "cross_subject_carry_forward_forbidden": true,
+  "historical_frozen_v13_zero_drift_false": true,
+  "historical_3734_event_replayed": false,
+  "historic_signed_six_not_reissued": true,
+  "historical_phase3_dependency_digest": "sha256:d5d1cf09c4cde3b0fe82e658d9af2b25fe5beccee1a582d40ba00349fab8534b",
+  "current_phase3_dependency_digest": "sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145",
+  "source_graph_sha256": "sha256:eb54bf64d15a01659d8ab5df4c23efc76b0a4aeb898e415536ef98581a10caaf",
+  "frozen108_catalog_sha256": "sha256:6458abd6c365c4e7c0d0e805d7d77910afdce74bc711d5f399e455d2c9f996e1",
+  "registered_authority": "TECHNICAL_EVIDENCE_ONLY",
+  "independent_authorized_governance_signature_present": false,
+  "post_signature_formal_admission": false,
+  "windows_physical_injection_authorized": false,
+  "formal_original_six_stages": 0,
+  "permit": "HOLD",
+  "production_authorized": false,
+  "old_failed_run_id": "df091a71aafc",
+  "old_failed_run_reusable": false
+}
