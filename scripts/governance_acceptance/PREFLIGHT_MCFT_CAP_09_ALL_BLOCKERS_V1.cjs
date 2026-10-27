@@ -1095,6 +1095,19 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
     };
     return { entry, checks, valid: Object.values(checks).every(Boolean) };
   });
+  // Current-base, repository-owner-directed source qualification is distinct
+  // from the old Frozen108 zero-drift check. Strict exact-head GitHub-native
+  // source and isolated PG/S3 receipts are required for each of five checks.
+  // The historical frozen requirement stays unchanged in the QCP registry.
+  if (stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+      base === "63dc3382f879781c604a852c7d1b28af9b0dd9f4" &&
+      process.env.GITHUB_ACTIONS === "true" &&
+      process.env.GITHUB_EVENT_NAME === "pull_request" &&
+      fs.existsSync(path.join(ROOT,"scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs"))) {
+    const currentComposer = require("./VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs")
+      .verifyCurrentComposer({decision,stage,head,base});
+    if (currentComposer !== null) return currentComposer;
+  }
   // The DA9 isolated-retention semantic successor never inherits the zero-delta
   // 108-file historical Frozen V13 assertion. Six precisely named checks
   // require independently signed, exact-head evidence; pending means HOLD.
