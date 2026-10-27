@@ -12,8 +12,8 @@ const OLD_TEST="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_
 const HIST_SUCCESS="3a803d703320c5dfb416c6b022767fd1fa1fccba";
 const HIST_FROZEN="3d5fd13c8f5babd2edc5107206f43a5e5d12eb4a";
 const BASE="63dc3382f879781c604a852c7d1b28af9b0dd9f4";
-const HIST_DIGEST="sha256:733739cdb36b50078ce5fc7fb628d252de9b68fb6d4d5e102fbd8ff53ac39c0f";
-const BASE_DIGEST="sha256:13884b41d719ad88334e4fe757cd014fa670e363f92e96413ce4ef2fd7f7ba26";
+const HIST_DIGEST="sha256:13884b41d719ad88334e4fe757cd014fa670e363f92e96413ce4ef2fd7f7ba26";
+const BASE_DIGEST="sha256:733739cdb36b50078ce5fc7fb628d252de9b68fb6d4d5e102fbd8ff53ac39c0f";
 const ALLOWED=[".github/workflows/mcft-cap09-frozen108-runtime-successor-inventory-v1.yml","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-FROZEN108-RUNTIME-SUCCESSOR-INVENTORY-V1.json","scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs"].sort();
 const git=(...a)=>cp.execFileSync("git",a,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:16*1024*1024}).trim();
 const show=(rev,p)=>cp.execFileSync("git",["show",rev+":"+p],{cwd:ROOT,maxBuffer:16*1024*1024,timeout:30000});
