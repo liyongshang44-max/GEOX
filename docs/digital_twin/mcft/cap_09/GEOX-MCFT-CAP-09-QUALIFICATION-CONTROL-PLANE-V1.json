@@ -1556,6 +1556,7 @@
     "CAP09_3740_3744_OWNER_POLICY_EXACT_FIVE_PATHS_V1": {
       "kind": "EXACT_PATH_SET",
       "paths": [
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
         ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
         ".github/workflows/mcft-cap09-3740-3744-owner-directed-policy-v1.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
