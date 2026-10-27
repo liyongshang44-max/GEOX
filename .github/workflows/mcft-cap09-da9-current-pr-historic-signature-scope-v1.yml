@@ -1,0 +1,48 @@
+name: MCFT CAP09 DA9 Historic Signed Event Applicability V1
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
+      - 'scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_CURRENT_SUCCESSOR_HISTORIC_SIGNATURE_SCOPE_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-CURRENT-PR-HISTORIC-SIGNATURE-BOUNDARY-V1.json'
+      - '.github/workflows/mcft-cap09-da9-current-pr-historic-signature-scope-v1.yml'
+permissions:
+  contents: read
+jobs:
+  historic-signature-scope-not-current-admission:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Confirm exact current-main base and no inherited authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test '63dc3382f879781c604a852c7d1b28af9b0dd9f4' = "${{ github.event.pull_request.base.sha }}"
+          test -z "${DATABASE_URL:-}"
+          test -z "${MCFT_GOVERNED_RETRY_TICKET:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+      - name: Retain original six actual Ed25519 verifications but reject NEW-PR authorization
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_CURRENT_SUCCESSOR_HISTORIC_SIGNATURE_SCOPE_V1.cjs --selftest
+      - name: Preflight never replays historical PR event on new PRs
+        shell: node {0}
+        run: |
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const preflight=fs.readFileSync('scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs','utf8');
+          assert(preflight.includes('CURRENT_SUCCESSOR_DA9_FORMAL_GOVERNANCE_NOT_ADMITTED'));
+          assert(preflight.includes('HOLD_CURRENT_SUCCESSOR_REQUIRES_OWN_FORMAL_GOVERNANCE_REVIEW'));
+          assert(preflight.includes('original_pr3734_event_replayed:false'));
+          assert(preflight.includes('permit_authorized:false,physical_admission_authorized:false'));
+          const signed=fs.readFileSync('scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_CURRENT_SUCCESSOR_HISTORIC_SIGNATURE_SCOPE_V1.cjs','utf8');
+          assert(signed.includes('HISTORIC_ED25519_PROOF_MISSING'));
+          assert(signed.includes('current_pr_signed_governance_approved:false'));
+          console.log('PASS_HISTORIC_EVENT_CURRENT_SCOPE_FAIL_CLOSED_NO_PERMIT');
