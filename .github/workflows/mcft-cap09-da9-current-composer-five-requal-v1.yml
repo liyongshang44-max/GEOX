@@ -1,0 +1,161 @@
+name: MCFT CAP09 DA9 Current Composer Five Check Successor V1
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-CURRENT-COMPOSER-FIVE-REQUAL-V1.json'
+      - 'scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_CURRENT_COMPOSER_FIVE_REQUAL_V1.cjs'
+      - '.github/workflows/mcft-cap09-da9-current-composer-five-requal-v1.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cap09-da9-current-composer-five-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  current-composer-exact-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Audit historic immutable signed Composer vs current exactly 3 interpreter edits
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_CURRENT_COMPOSER_FIVE_REQUAL_V1.cjs --verify
+      - name: Verify prior four real GitHub CI jobs and immutable artifact IDs
+        shell: node {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          const source='5e81f129570d820bf50db6c1db3c6d81086687f6',runId=40436862484;
+          const expected={"V13_AUTONOMOUS_FORCING_FOUNDATION":12704472813,"V13_HOLISTIC_SCHEMA":12703998253,"V13_NEXT_TICK_VIABILITY":12703843458,"EA5C1_DURABLE_RAW_RESTRICTED_INGRESS":12704373199};
+          const root='https://api.github.com/repos/'+process.env.REPO;
+          const headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'};
+          async function request(p){const response=await fetch(root+p,{headers});assert(response.ok,'SOURCE_PROOF_FETCH_FAILED:'+p+':'+response.status);return response.json();}
+          (async()=>{
+            const run=await request('/actions/runs/'+runId);
+            assert.equal(run.head_sha,source);assert.equal(run.conclusion,'success');
+            const jobs=await request('/actions/runs/'+runId+'/jobs?per_page=50');
+            assert(jobs.jobs.filter(j=>j.conclusion==='success').length===5);
+            const artifacts=await request('/actions/runs/'+runId+'/artifacts?per_page=50');
+            for(const [id,aid] of Object.entries(expected)){
+              const found=artifacts.artifacts.find(a=>a.id===aid&&a.name==='frozen108-successor-'+id+'-'+source);
+              assert(found&&!found.expired,'SOURCE_ARTIFACT_ID_OR_HEAD_INVALID:'+id);
+              assert.equal(found.workflow_run?.head_sha,source);
+              assert.equal(found.workflow_run?.id,runId);
+            }
+            const report={status:'PASS_FOUR_PREVIOUS_REAL_NATIVE_CI_RECEIPTS_MATCH_CURRENT_SOURCE',
+              run_id:runId,source_head:source,real_jobs:4,verified_artifacts:4,old_ed25519_reused:false,
+              all_five_qualified:false,formal_governance:false,permit:false};
+            fs.mkdirSync('acceptance-output',{recursive:true});
+            fs.writeFileSync('acceptance-output/DA9_CURRENT_COMPOSER_PREVIOUS_FOUR_V1.json',JSON.stringify(report,null,2)+'\n');
+            console.log(JSON.stringify(report));
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+      - uses: actions/upload-artifact@v4
+        with:
+          name: da9-composer-four-native-source-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/DA9_CURRENT_COMPOSER_PREVIOUS_FOUR_V1.json
+          if-no-files-found: error
+
+  phase7-real-isolated-candidate-promotion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cap09_da9_composer_successor_p7
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d cap09_da9_composer_successor_p7"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/cap09_da9_composer_successor_p7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Deny production authority and pin exact isolated DB
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "${DATABASE_URL}" = "postgres://postgres:postgres@127.0.0.1:5432/cap09_da9_composer_successor_p7"
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${MCFT_GOVERNED_RETRY_TICKET:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:-}"
+      - run: pnpm install --frozen-lockfile
+      - name: Test exact pinned Python identity across capture and rehydration, no IO
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_CANDIDATE_PYTHON_PATH_OFFLINE_V1.ts
+      - name: Start ephemeral private MinIO, never customer S3
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name cap09-da9-phase7-minio -p 127.0.0.1:9000:9000 \
+            -e MINIO_ROOT_USER=phase7composition -e MINIO_ROOT_PASSWORD=phase7-composition-secret-key-001 \
+            ghcr.io/datalens-tech/minio:25.09@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/ready >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/ready >/dev/null
+          docker run --rm --network host --entrypoint /bin/sh \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 \
+            -c 'mc alias set phase7 http://127.0.0.1:9000 phase7composition phase7-composition-secret-key-001 && mc mb phase7/geox-mcft-cap09-formal-raw-v1 && mc anonymous set private phase7/geox-mcft-cap09-formal-raw-v1'
+      - name: Real isolated Phase7 PG fenced promotion and private retention
+        env:
+          MCFT_CAP09_PHASE7_COMPOSITION_DESTRUCTIVE_ACCEPTANCE: '1'
+          PHASE7_COMPOSITION_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+          PHASE7_PRIVATE_S3_ENDPOINT: http://127.0.0.1:9000
+          PHASE7_PRIVATE_S3_BUCKET: geox-mcft-cap09-formal-raw-v1
+          PHASE7_PRIVATE_S3_REGION: us-east-1
+          PHASE7_PRIVATE_S3_ACCESS_KEY_ID: phase7composition
+          PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY: phase7-composition-secret-key-001
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts
+      - name: Validate nine real isolated Phase7 semantics, never production
+        shell: node {0}
+        env:
+          SUBJECT: ${{ github.event.pull_request.head.sha }}
+        run: |
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1_RESULT.json','utf8'));
+          assert.equal(p.status,'PASS');assert.equal(p.subject_sha,process.env.SUBJECT);
+          const yes=['candidate_manifest_private_readback','replay_authority_fields_complete','rehydration_semantic_manifest_exact_match',
+            'real_postgres_fenced_promotion','exact_three_facts_single_fenced_transaction','promotion_did_not_advance_cursor',
+            'controller_attestation_after_promotion','cursor_advanced_only_after_attestation','pre_mutation_failure_fails_closed'];
+          for(const k of yes)assert.equal(p[k],true,'MISSING_REAL_PHASE7_FACT:'+k);
+          assert.equal(p.promotion_provider_refetch_count,0);
+          assert.equal(p.promotion_raw_store_write_count,0);
+          assert.equal(p.real_postgres_formal_fact_present_count,3);
+          assert.equal(p.production_owner_activation,false);
+          assert.equal(p.mcft_cap09_completed,false);
+          console.log(JSON.stringify({status:'PASS_NEW_HEAD_PHASE7_REAL_ISOLATED_PG_S3_TEST_ONLY',subject:process.env.SUBJECT,
+            fact_count:3,verified_semantics:yes.length,production_authorized:false,permit:false}));
+      - uses: actions/upload-artifact@v4
+        with:
+          name: da9-current-composer-phase7-testonly-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1_RESULT.json
+          if-no-files-found: error
+      - name: Remove only ephemeral MinIO
+        if: always()
+        run: docker rm -f cap09-da9-phase7-minio || true
