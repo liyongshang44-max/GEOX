@@ -22,6 +22,9 @@ on:
       - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - '.github/workflows/mcft-cap09-3740-3744-owner-directed-policy-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-3740-3744-OWNER-DIRECTED-POLICY-V1.json'
+      - 'scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_DIRECTED_POLICY_V1.cjs'
       - '.github/workflows/mcft-cap-09-production-evidence-runtime-private-store-binding-v1.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-RUNTIME-PRIVATE-STORE-BINDING-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs'
@@ -198,6 +201,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  owner-directed-scoped-qcp-technical:
+    # This independent, nonauthorizing job does not suppress global QCP blockers.
+    if: github.event_name == 'pull_request' && github.head_ref == 'qualification/cap09-owner-directed-exact-3740-3744-20261027'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Validate exact owner QCP registration, preserving original 60
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_DIRECTED_POLICY_V1.cjs --qcp-technical | tee acceptance-output/MCFT_CAP09_3740_3744_OWNER_QCP_TECHNICAL_V1.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cap09-owner-source-qcp-scoped-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_3740_3744_OWNER_QCP_TECHNICAL_V1.json
+          if-no-files-found: error
+          retention-days: 90
+
   applicability-and-blocker-inventory:
     runs-on: ubuntu-latest
     timeout-minutes: 15
