@@ -1671,6 +1671,38 @@ function main() {
             evidence_adjudication: fresh.candidates,
             historical_successor_chain_fallback_used: false,
           };
+        } else if (
+          stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+          args.base === "63dc3382f879781c604a852c7d1b28af9b0dd9f4" &&
+          decision.check_id === "PHASE3_EVIDENCE_RUNTIME_FOUNDATION"
+        ) {
+          // A stale 24cd historical digest is NOT admissible for the current
+          // Phase3 source, even when the old chain candidate is available.
+          // Requalify via exact owner PR + current digest + isolated PG
+          // native CI and artifact; never synthesize PASS from old evidence.
+          const current = require("./VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs")
+            .verifyCurrentPhase3({
+              decision,stage,head:args.head||"",base:args.base||""
+            });
+          result = {
+            ...common,
+            execution:"CURRENT_PHASE3_SOURCE_ONLY_NO_STALE_24CD_FALLBACK",
+            status:current?.status === "PASS" ? "PASS" : "FAIL",
+            reason_code:current?.reason_code ?? "HOLD_CURRENT_PHASE3_NATIVE_SOURCE_UNVERIFIED",
+            evidence_id:current?.evidence_id ?? null,
+            evidence_run_id:current?.native?.qualification_run ?? null,
+            evidence_subject_sha:current?.source_subject_sha ?? null,
+            old_24cd_digest_still_invalid:true,
+            original_signed_history_unmodified:true,
+            original_formal_six:0,
+            permit_authorized:false,
+            physical_execution_authorized:false,
+            native_evidence:current
+          };
+          if(result.status !== "PASS")blockers.push({
+            blocker_class:"CURRENT_PHASE3_NATIVE_SOURCE_QUALIFICATION_INVALID",
+            check_id:decision.check_id,detail:current
+          });
         } else {
           const evidence = validateExactRunAnchor(
             decision,
