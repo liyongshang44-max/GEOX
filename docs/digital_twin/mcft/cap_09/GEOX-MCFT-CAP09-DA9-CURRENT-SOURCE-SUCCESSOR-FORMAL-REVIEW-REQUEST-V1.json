@@ -1,0 +1,48 @@
+{
+  "schema_version": "geox_mcft_cap09_da9_current_source_formal_review_request_v1",
+  "request_id": "DA9_CURRENT_SOURCE_3741_3742_3743_EXACT_EVIDENCE_GOVERNANCE_APPROVAL_REQUEST",
+  "status": "PENDING_INDEPENDENT_PURPOSE_SPECIFIC_DELEGATION_AND_CRYPTOGRAPHIC_APPROVAL",
+  "technical_evidence_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-CURRENT-SOURCE-SUCCESSOR-QCP-TECHNICAL-EVIDENCE-V1.json",
+  "qcp_check_id": "DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1",
+  "source_prs": [
+    3741,
+    3742,
+    3743
+  ],
+  "source_heads": [
+    "ef3649e40f0d3ab542fe9f365275708b23c53cab",
+    "96ae42a7aeb3be83933faadafb65f1b72379b2cf",
+    "cd18701600346840b7e4cc3611a7108f2e713490"
+  ],
+  "requested_authority_scope": "ONLY_NEW_EXACT_SOURCE_TECHNICAL_QUALIFICATION_GOVERNANCE_REVIEW_NO_WINDOWS_HOST_OR_PERMIT",
+  "original_operator_id": "mcft_cap09_operator_mylr1",
+  "independent_candidate_issuer_id": "mcft_cap09_independent_retry_governance",
+  "independent_candidate_role": "INDEPENDENT_RETRY_GOVERNANCE",
+  "independent_candidate_spki_sha256": "ef7459a5918e35c90913532a7c8af545fbca4fec0b7dc95916797db3303fa870",
+  "existing_retry_role_sufficient_for_this_source_purpose": false,
+  "purpose_specific_delegation_signed": false,
+  "delegation_issuer_id": null,
+  "delegation_document_sha256": null,
+  "authorized_independent_approver_identity": null,
+  "approver_separate_from_operator": null,
+  "explicit_new_evidence_payload_signature_base64": null,
+  "approval_signed_at": null,
+  "approval_signer_key_id": null,
+  "approval_subject_current_qcp_head_sha": null,
+  "reviewer_approved_native_pr_review_id": null,
+  "approved": false,
+  "formal_qcp_zero_blockers": false,
+  "historical_frozen_v13_requalified": false,
+  "old_run_reactivated": false,
+  "windows_physical_injection_authorized": false,
+  "permit": "HOLD",
+  "requirements": [
+    "Obtain independently verifiable purpose-specific source-successor-review delegation from actual governance organization; prior retry role is not sufficient",
+    "Approver must be independent from source operator and existing PR author; do not self-approve",
+    "Sign a canonical immutable receipt naming current QCP exact head, three source heads and all 3 native source Artifacts with SHA-256, Phase3 changed source digest and preserved Frozen108 history",
+    "Verify approver public SPKI against approved role binding, Ed25519 signature, key validity window, revocation and exact purpose",
+    "Record an authentic authorized native GitHub review for the exact current QCP head where branch protection requires it",
+    "Enroll signed receipt in a later distinct QCP governance approval PR with fail-closed negative tests and preserve old historical verification failure",
+    "Source-only approval never signs Permit nor authorizes Windows real Provider, PG, S3, leases or physical fault injection"
+  ]
+}
