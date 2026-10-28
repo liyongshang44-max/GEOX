@@ -6,7 +6,7 @@
  * after a bound V2 child stage capability and exact-head security review.
  * Avoid burning a genuine one-shot Permit with a V1-only stage dispatcher.
  */
-const assert=require("node:assert/strict"),crypto=require("node:crypto"),fs=require("node:fs"),path=require("node:path");
+const assert=require("node:assert/strict"),crypto=require("node:crypto"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process");
 const c=require("../cap09_adoption_v1/contract.cjs");
 const adoption=require("../cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs");
 const permit=require("./MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs");
@@ -20,6 +20,18 @@ function noLinkDirectory(d){
  assert(typeof d==="string"&&path.isAbsolute(d),"A3_V2_LEDGER_ROOT_ABSOLUTE");
  let p=path.resolve(d);
  for(;;){const s=fs.lstatSync(p);assert(s.isDirectory()&&!s.isSymbolicLink(),"A3_V2_LEDGER_ROOT_NOT_SAFE");const par=path.dirname(p);if(par===p)break;p=par;}
+}
+function assertLiveExactMain(root,expected){
+ // A caller-supplied context is never proof of protected remote main.
+ // On the actual Windows host, independently read Git HEAD, working tree,
+ // and REMOTE main. No local cached origin/main fallback is accepted.
+ assert(typeof root==="string"&&path.isAbsolute(root),"A3_V2_RELEASE_ROOT_REQUIRED");
+ const git=(...args)=>cp.execFileSync("git",["-C",root,...args],{encoding:"utf8",timeout:20000,maxBuffer:1048576,windowsHide:true}).trim();
+ assert.equal(git("rev-parse","HEAD"),expected,"A3_V2_ACTUAL_HEAD_MISMATCH");
+ assert.equal(git("status","--porcelain","--untracked-files=all"),"","A3_V2_ACTUAL_WORKTREE_DIRTY");
+ const remote=git("ls-remote","origin","refs/heads/main").split(/\\s+/)[0];
+ assert.equal(remote,expected,"A3_V2_REMOTE_MAIN_MOVED_OR_UNVERIFIED");
+ return true;
 }
 function writeOnce(f,obj){
  const fd=fs.openSync(f,"wx",0o600);
@@ -40,6 +52,7 @@ function prepare(args){
  assert(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS,"A3_V2_WINDOWS_HOST_ONLY");
  assert(!process.env.NODE_OPTIONS&&!process.env.NODE_PATH,"A3_V2_NODE_INJECTION_FORBIDDEN");
  const now=Date.now();
+ assertLiveExactMain(releaseRoot,context.head_sha);
  const a=adoption.verify(adoptionRequest,releaseRoot,{now,host:context.host_id});
  assert(adoption.isVerified(a),"A3_V2_ADOPTION_NOT_VERIFIED");
  assert.equal(context.head_sha,a.subject_sha,"A3_V2_LOCAL_MAIN_CHANGED");
@@ -120,4 +133,4 @@ function assertConsumed(receipt){
  assert(a.equals(b),"A3_V2_TWIN_CONSUMPTION_BYTES_DIFFER");
  return receipt;
 }
-module.exports={HOST_V2_STAGE_DISPATCH_ADOPTED,prepare,consumeForQualifiedHost,assertConsumed};
+module.exports={HOST_V2_STAGE_DISPATCH_ADOPTED,assertLiveExactMain,prepare,consumeForQualifiedHost,assertConsumed};
