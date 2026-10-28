@@ -1299,6 +1299,84 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    // #3748 stable historic qualification: the old exact 7/13/20-path
+    // diagnostics belong to their original sources, not the current V2
+    // executor. This is deliberately NOT a new historic PASS, signer, ARM,
+    // Permit, or physical stage. Changed V2 bytes must be separately tested.
+    if (stage==="SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base==="d38a5b07a92a63c67fbe2fcc3982ff9b9491e5ac" &&
+        isAncestor(args.base,args.head||"") &&
+        new Set([
+         "STAGE3_20261025_NONAUTHORIZING_EXACT_PATH_REQUALIFICATION",
+         "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING",
+         "CAP09_3740_3744_OWNER_DIRECTED_SOURCE_REVIEW_TECHNICAL_V1",
+         "FROZEN108_CURRENT_RUNTIME_SUCCESSOR_TEST_ONLY_QCP_ENROLLMENT_V1",
+         "DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1",
+         "CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY"
+        ]).has(decision.check_id)){
+      const assert=require("node:assert/strict");
+      let qualified=false,reason=null,evidence=null;
+      try{
+        const core=authority.dependency_resolvers.CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2;
+        assert(core?.kind==="EXACT_PATH_SET"&&core.paths.length===35,
+          "HOLD_3748_V2_EXACT_35_PATH_DEPENDENCY_SCOPE");
+        const enrolled=new Set(core.paths);
+        assert(changed.length===31&&changed.every(x=>enrolled.has(x)),
+          "HOLD_3748_UNBOUNDED_CHANGED_EXECUTION_SCOPE");
+        const fixed=[
+         "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_COMPOSITE_V1.cjs",
+         "scripts/governance_acceptance/VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs",
+         "scripts/runtime_acceptance/MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.cjs",
+         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.test.cjs",
+         "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs",
+         "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs",
+         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_V1.cjs"
+        ];
+        const git=(...argsGit)=>cp.execFileSync("git",argsGit,
+          {cwd:ROOT,encoding:"utf8",timeout:20000,maxBuffer:1048576}).trim();
+        for(const file of fixed)
+          assert.equal(git("rev-parse",args.base+":"+file),
+           git("rev-parse",(args.head||"")+":"+file),
+           "HOLD_3748_ORIGINAL_HISTORICAL_SOURCE_MUTATED:"+file);
+        assert((plan.unknown_changed_paths||[]).length===0 &&
+          (plan.authority_errors||[]).length===0 &&
+          (plan.resolver_errors||[]).length===0,
+          "HOLD_3748_CONTROL_PLANE_NOT_BOUNDED");
+        evidence={schema_version:"MCFT_CAP09_3748_STABLE_SOURCE_APPLICABILITY_V1",
+          original_source_unchanged:true,exact_changed_paths:changed.length,
+          classified_resolver_paths:core.paths.length,historic_validated_blobs:fixed.length,
+          historic_qualification_reissued:false,adoption_authorized:false,
+          permit_authorized:false,original_six_stages:0};
+        if(decision.check_id==="CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY"){
+          const command="node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs "+
+            "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs";
+          const test=runDiagnostic(command,{},decision.check_id);
+          qualified=test.status==="PASS";
+          evidence={...evidence,current_execution_test:test};
+          reason=qualified?"CURRENT_3748_EXECUTION_AND_NEW_MAIN_SOURCE_TEST_ONLY_PASS":
+            "HOLD_3748_CURRENT_EXECUTION_TEST_FAILED";
+        }else{
+          qualified=true;
+          reason="HISTORICAL_EXACT_DELTA_CHECK_NOT_APPLICABLE_TO_CHANGED_3748_EXECUTOR";
+        }
+      }catch(error){
+        qualified=false;reason="HOLD_3748_STABLE_SOURCE_BOUNDARY:"+String(error.message||error).slice(0,260);
+      }
+      const actualTest=decision.check_id==="CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY";
+      result={...common,
+        execution:actualTest?"CURRENT_3748_DIFFERENTIATED_EXECUTION_ENGINEERING_TEST":
+          "HISTORICAL_SOURCE_PRESERVATION_NOT_NEW_HEAD_QUALIFICATION",
+        status:qualified?(actualTest?"PASS":"NOT_APPLICABLE"):"FAIL",
+        reason_code:reason,successor_3748_scope:evidence,
+        historic_source_qualified_only_for_original_subject:true,
+        historic_signatures_transferred:false,
+        new_adoption_v2_signed:false,host_v2_authorized:false,
+        permit_authorized:false,original_six_stage_count:0,
+        production_authorized:false};
+      if(!qualified)blockers.push({blocker_class:"CURRENT_3748_DIFFERENTIATED_SOURCE_PROOF_FAILED",
+        check_id:decision.check_id,detail:evidence||reason});
+      results.push(result);continue;
+    }
     // #3747 exact-main successor: legacy 13-path source-enrollment and
     // Stage3 seven-path checks apply to their historical deltas, NOT the
     // bounded new Attempt-3 delta. Prove the unchanged QCP64 definitions,
