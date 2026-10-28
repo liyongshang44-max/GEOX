@@ -49,7 +49,7 @@ test("CI and Linux can never consume Attempt-3 Permit or launch a child",async()
  assert.throws(()=>atomic.assertConsumed({}),/A3_V2_ATOMIC_CONSUMPTION_REQUIRED/);
 });
 
-test("current #3748 byte-delta is fully classified; frozen QCP and EA5E2 graph stay unchanged",()=>{
+test("current #3748 byte-delta registers exactly 13 changed V2 paths; frozen historical contracts stay unchanged",()=>{
  // Diff classification is a technical review artifact; NEVER Adoption or Permit.
  const cp=require("node:child_process"),path=require("node:path");
  const root=path.resolve(__dirname,"../..");
@@ -77,6 +77,7 @@ test("current #3748 byte-delta is fully classified; frozen QCP and EA5E2 graph s
  ];
  const changedExisting=[
   ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
   "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs",
   "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
   "scripts/cap09_adoption_v1/installed-material.cjs",
@@ -97,11 +98,24 @@ test("current #3748 byte-delta is fully classified; frozen QCP and EA5E2 graph s
  const frozen=[
   ".github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml",
   ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs",
   "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"
  ];
+ const authorityRel="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+ const registry=JSON.parse(require("node:fs").readFileSync(path.join(root,authorityRel),"utf8"));
+ const baseline=JSON.parse(git("show",base+":"+authorityRel));
+ const resolver="CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2";
+ const past=baseline.dependency_resolvers[resolver].paths;
+ const now=registry.dependency_resolvers[resolver].paths;
+ assert.equal(past.length,20,"V2_HISTORICAL_SCOPE_CHANGED");
+ assert.equal(now.length,33,"V2_SCOPE_MUST_BIND_EXACTLY_13_SUCCESSORS");
+ const expectedNew=[...executionNew,...inheritedProvenanceNew].sort();
+ assert.deepEqual(now.filter(x=>!past.includes(x)).sort(),expectedNew,
+  "V2_NEW_SOURCE_PATHS_NOT_EXACTLY_ENROLLED");
+ const otherwise=structuredClone(registry);otherwise.dependency_resolvers[resolver].paths=past;
+ assert.deepEqual(otherwise,baseline,
+  "V2_REGISTRY_MUTATED_SOMETHING_BEYOND_13_EXACT_PATHS");
  const frozenDiff=cp.spawnSync("git",["-C",root,"diff","--exit-code",base+".."+head,"--",...frozen],
   {encoding:"utf8",timeout:20000});
  assert.equal(frozenDiff.status,0,"PR3748_FROZEN_VERIFIER_OR_REGISTRY_BYTES_CHANGED");
