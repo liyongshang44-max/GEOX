@@ -50,7 +50,7 @@ The new gate **always** returns `ENGINEERING_LINEAGE_VERIFIED_EXECUTION_HOLD` ev
 
 ## Central QCP registration and new dependency ownership
 
-This PR appends the *single* independent check `CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY` to the existing 64 registered checks. Exactly 18 paths, including the central QCP document itself, are owned by `CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2`; the prior 64 check definitions and their resolvers are untouched. This is QCP 65 **technical source qualification only**, not revised historical 55/54 artifact or new signed Adoption. Any current QCP/EA5E2 failure remains a real gate, never silently classified N/A.
+This PR appends the *single* independent check `CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY` to the existing 64 registered checks. Exactly 19 paths, including the central QCP document itself, are owned by `CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2`; the prior 64 check definitions and their resolvers are untouched. This is QCP 65 **technical source qualification only**, not revised historical 55/54 artifact or new signed Adoption. Any current QCP/EA5E2 failure remains a real gate, never silently classified N/A.
 
 ## 2026-10-28 Implementation extension (no physical admission)
 
@@ -60,21 +60,21 @@ New V2 source consumers were added in the same existing #3747:
 - `scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs`: signed TEST_ONLY Windows owner/readback contract with separate new positive/negative PostgreSQL, bucket, restricted ACL, zero-row/zero-object-state, time window, exact run/host/source binding. **No actual host probe has been performed**. Owner signature asserts actual field measurements; this checker does not independently query PG/S3.
 - `scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs`: reads genuine V2 Adoption + distinct lineage + resource owner + original signed nonauthorized S3→Candidate→PG physical full-chain + Permit V2 envelope **before** considering any ledger burn. Atomic dual run/nonce write logic is implemented but **explicitly blocked** by `HOST_V2_STAGE_DISPATCH_ADOPTED=false`. Existing V1 child stage capability's `assertConsumed` is tied to the V1 Permit WeakSet, so cannot legitimately receive a V2 consumed token. Do not burn an Attempt-3 Permit before a separately qualified V2 child-stage dispatch path exists. There is NO CLI to consume V2 Permit now.
 
-The central QCP 65th check owns exactly **18 paths** under `CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2`; its title is historic but the resolver is the current exact list. All original 64 checks remain unchanged. Current CI/QCP stage3/frozen historical false statuses must be assessed individually; do not rewrite frozen signatures or treat exact old PR-3734/3737 event-specific validators as general successor qualification.
+The central QCP 65th check owns exactly **19 paths** under `CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2`; its title is historic but the resolver is the current exact list. All original 64 checks remain unchanged. Current CI/QCP stage3/frozen historical false statuses must be assessed individually; do not rewrite frozen signatures or treat exact old PR-3734/3737 event-specific validators as general successor qualification.
 
 **Remaining actual effects:** create and verify dedicated Windows PG/S3; obtain fresh real current HEAD QCP65 raw all-green evidence, actual signed Adoption V2 and resource owner review, signed separate physical full-chain attestation, and implement/qualify Host V2 child-stage capability before atomic Permit consumption or original six formal stages. All remain **HOLD** today.
 ## Explicit exclusions
 
 No edits to old V1/V2 historic validators, Frozen V13 108-path digest, old ledger, signatures, historical artifacts, DA9 existing resources, Provider science, old physical runs, or production authority. CI unit tests use **ephemeral in-process test-only Ed25519 fixtures** and synthetic receipts; their PASS does not establish Windows host physical authority. Do not mark this branch as executable or merge simply because the bounded engineering unit tests are green.
 
-## 2026-10-28 — #3747 exact 18-path QCP applicability and immutable historic boundaries
+## 2026-10-28 — #3747 exact 19-path QCP applicability and immutable historic boundaries
 
 The historic `HOLD_COMPOSITE_EXACT_13_PATHS` diagnostic belongs to the
 `VERIFY_MCFT_CAP09_3740_3744_OWNER_COMPOSITE_V1.cjs` predecessor: its
 frozen base, native event, path inventory and 60→63 check transition
 are not those of the present #3747. A direct failure on this successor
 **remains a historical check failure**, not evidence that the #3747
-18-path source diff is unreviewed. No historical check expected-path
+19-path source diff is unreviewed. No historical check expected-path
 value, QCP definition, signature or prior failure receipt is rewritten.
 
 `DA9_SEMANTIC_SUCCESSOR_COMPOSER_SCOPE_CHANGED` similarly denotes
@@ -90,7 +90,7 @@ the original exact subject is not revoked or extended here.
 The #3747 checker `VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs`
 now asserts that both original historic verifier blobs are unchanged,
 the old composite exact-scope guard still exists, and the current
-18-path diff remains the single registered source scope. Only four
+19-path diff remains the single registered source scope. Only four
 inherited **technical-source** QCP checks can receive
 `NOT_APPLICABLE` for this new scoped delta; **no historic FAIL is
 converted to a PASS**. The new QCP 65th check remains `REQUALIFY`
@@ -123,7 +123,7 @@ the old 24cd Phase3 digest
 remains invalid on the current graph.
 
 A new exact #3747 PR-native `verifyPhase3Successor` requires:
-current event/HEAD/base/18-path scope; the 94 unchanged Git blob
+current event/HEAD/base/19-path scope; the 94 unchanged Git blob
 identities; the unchanged owner policy and source manifest; the
 authenticated live #3743 CI and real PostgreSQL qualification jobs
 plus immutable artifact `12738863652` with digest
@@ -228,7 +228,7 @@ duplicated, wrong-author, wrong-head or wrong-repository comments.
 No purported assistant-private signature or fabricated independent signer
 qualifies. The current source scope expires on any HEAD/policy change.
 
-**Source-QCP approval covers only:** current 18-path `#3747` source
+**Source-QCP approval covers only:** current 19-path `#3747` source
 preservation, immutable historic DA9 six Ed25519 signature verification
 for their **original** subject, native Phase3 94-blob source proof,
 native Composer 108-blob/five-check source proof, and enrollment of those
@@ -247,7 +247,7 @@ operator signatures to the current HEAD.
 
 **Source-of-truth ordering:**
 1. Commit this exact policy/validator/test change on existing Draft PR
-   #3747, with its historical checks and original 18-path diff preserved.
+   #3747, with its historical checks and original 19-path diff preserved.
 2. Receive one authenticated owner-native GitHub approval comment with
    `HEAD` equal to the final resulting commit SHA and all permission
    ceilings present.
@@ -300,7 +300,7 @@ and **central QCP65** all passed. The remaining red workflows were
   Provider/PG/S3 stage is claimed.**
 
 These are **two new reviewed workflow files**. Consequently the
-successor exact-source scope increases from **16 to 18 paths**,
+successor exact-source scope increases from **16 to 19 paths**,
 registered under the already-existing 65th test-only QCP resolver
 `CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2`; its 64
 predecessor check definitions and resolvers remain byte-semantically
@@ -314,8 +314,55 @@ remain FAIL.
 **Owner-directed formal source-QCP approval is exact-HEAD-bound.**
 The native Owner GitHub approval comment at previous HEAD
 `7266f27a1456b21dd520e29ee946b0d8eb1cf790` does not apply
-to this revised 18-path HEAD; a distinct authenticated Owner approval
+to this revised 19-path HEAD; a distinct authenticated Owner approval
 comment must be posted **after the final new HEAD** and checked by
 a new native central-QCP execution before claiming QCP success.
 Adoption V2, Host, Permit, production and original six physical stages
 remain HOLD / 0 of 6 regardless of all technical checks.
+
+## 2026-10-28 — Final CI regression repair: deterministic CE94 negative test and real PR-head checkout
+
+The exact #3747 HEAD `0ee3ae1cc29c29c4c78583f82c03b618a32ebd31`
+completed general CI, EA5E2, Adoption V2 TEST_ONLY engineering gate and
+Frozen V13 isolated historical replay with SUCCESS, but Stage3 historical
+workflow run `40672974738` and central QCP
+`40672974999` failed on distinct concrete regressions.
+
+1. **Stage3 checkout identity, not historical evidence failure.**
+   The Stage3 workflow used `actions/checkout@v4` without an explicit
+   `ref`, causing a pull-request synthetic merge checkout rather than
+   the exact PR HEAD required by the bounded historical worktree route.
+   It now pins `ref: github.event.pull_request.head.sha || github.sha`.
+   The historical verifier and its original seven-path contract remain
+   unchanged, and its original Git Blob
+   `3766f72c88bb42481739044b3489404ac3374ec0` is still verified.
+   The original GitHub-native #3737 workflow succeeded on its own
+   subject `bdce07aa692a26fc990be94aca15e2d1a12b9999`.
+
+2. **Central QCP synthetic CE94 false-negative due to randomness.**
+   `ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs`
+   generated an ephemeral Ed25519 key and intended to tamper with
+   the test signature by hardcoding its first Base64 symbol to `A`.
+   When the genuinely random signed signature already began with
+   `A`, no tampering occurred, so the negative proof triggered
+   `SYNTHETIC_FALSE_ACCEPTANCE` (QCP job `122764167898`).
+   The negative test now deterministically selects `B` if the original
+   first symbol is `A`, and `A` otherwise, and asserts the changed
+   signature differs from the original. The crypto verifier,
+   original signing keys, immutable signed evidence, acceptance
+   semantics and negative rejection criteria remain unchanged.
+
+The scope expands from the previous 18 files to precisely **19**:
+the historic workflow checkout fix is contained in the already-included
+Stage3 workflow, while the original CE94 **synthetic regression
+script** is the one new file. The 65th QCP resolver has the exact
+19 paths, and all original 64 checks and all their resolvers remain
+unchanged. This changes no formal runtime, old six-stage physical
+result or Permit.
+
+The previous purpose-specific Owner-directed GitHub comment
+`6466706010` is exact-HEAD-bound to
+`0ee3ae1cc29c29c4c78583f82c03b618a32ebd31` and must
+**not** be reused for this 19-path successor. The final exact HEAD
+needs its own GitHub-native owner approval, and the actual CI/QCP
+and old historical tests must re-run before final qualification.
