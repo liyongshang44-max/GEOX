@@ -113,3 +113,14 @@ test("synthetic signed fixture cannot claim engineering gate readiness without r
   runReceiptFile:"/this-file-does-not-exist",nonceReceiptFile:"/this-file-does-not-exist",
   ...context()}));
 });
+test("actual checked-out QCP65 maps only 54 Formal and 11 technical-only definitions",()=>{
+ const root=path.resolve(__dirname,"../..");
+ const current=JSON.parse(fs.readFileSync(path.join(root,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"),"utf8"));
+ const policy=JSON.parse(fs.readFileSync(path.join(root,"scripts/cap09_adoption_v1/offline-trust.json"),"utf8"));
+ const mapped=g.mapAdoptionV2(current,policy);
+ assert.equal(mapped.total_checks,65);assert.equal(mapped.formal_checks,54);
+ assert.equal(mapped.technical_only_checks,11);assert.equal(mapped.adoption_authorized,false);
+ const mutant=structuredClone(current);
+ mutant.checks[mutant.checks.length-1].check_id="UNKNOWN";
+ assert.throws(()=>g.mapAdoptionV2(mutant,policy));
+});
