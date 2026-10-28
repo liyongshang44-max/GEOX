@@ -1,0 +1,25 @@
+name: CAP-09 Adoption V2 Attempt-3 engineering gate (non-authorizing)
+on:
+  pull_request:
+    paths:
+      - "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs"
+      - "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs"
+      - ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"
+      - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-V2-ATTEMPT3-ENGINEERING-BOUNDARY-V1.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  engineering-only-negative-proof:
+    name: Engineering only — no Adoption, Permit or Host
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - name: Offline negative and domain-separation tests
+        env:
+          CI: "true"
+        run: node --test scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs
