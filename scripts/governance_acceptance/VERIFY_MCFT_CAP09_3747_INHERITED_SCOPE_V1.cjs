@@ -418,7 +418,7 @@ function da9HistoricalLocal({decision,stage,head,base,event=null,native=false}){
    assert.equal(run("rev-parse",BASE+":"+p),run("rev-parse",head+":"+p),
      "HOLD_3747_DA9_HISTORICAL_BLOB_CHANGED:"+p);
  }
- const parents=run("rev-list","--parents","-n","1",DA9_HISTORIC_MERGE).split(/\\s+/);
+ const parents=run("rev-list","--parents","-n","1",DA9_HISTORIC_MERGE).split(/\s+/);
  assert.deepEqual(parents,[DA9_HISTORIC_MERGE,DA9_HISTORIC_SOURCE,DA9_HISTORIC_GOV],
    "HOLD_3747_DA9_HISTORIC_MERGE_PARENT");
  assert.equal(run("merge-base",DA9_HISTORIC_MERGE,head),DA9_HISTORIC_MERGE,
