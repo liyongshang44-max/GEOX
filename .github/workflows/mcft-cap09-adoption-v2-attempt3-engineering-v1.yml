@@ -8,11 +8,32 @@ on:
       - "scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.test.cjs"
       - "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
       - "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs"
+      - "scripts/cap09_adoption_v1/installed-material.cjs"
       - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs"
       - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs"
+      - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_POSTMERGE_SOURCE_V1.cjs"
+      - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.cjs"
+      - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs"
       - "scripts/cap09_adoption_v1/SIGN_MCFT_CAP09_ADOPTION_V2_OFFLINE.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.test.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.test.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs"
+      - "scripts/runtime_acceptance/RUN_MCFT_CAP09_ATTEMPT3_HOST_V2_WINDOWS.cjs"
+      - "scripts/runtime_acceptance/RUN_MCFT_CAP09_ATTEMPT3_HOST_V2_WINDOWS.test.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_WINDOWS_READONLY_INSPECTION_V1.ps1"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_REAL_LEDGER_READBACK_V1.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_REAL_LEDGER_READBACK_V1.test.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs"
+      - "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
+      - "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts"
+      - "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_PARENT_STAGE_DISPATCH_V2.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_STAGE_RECEIPTS_V1.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.test.cjs"
       - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
@@ -38,22 +59,63 @@ jobs:
         env:
           CI: "true"
         run: |
-          node --test scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs
+          # Legacy #3747 assertions are exact-20-path and cannot be
+          # rerun on successor #3748. The original native #3747 QCP is
+          # preserved; run legacy tests only at their immutable Git subject.
+          HISTORIC=61820645059360ba2c8c44cc2453925a0e68f83e
+          HIST_ROOT="$RUNNER_TEMP/cap09_3747_historical_source"
+          git worktree add --detach "$HIST_ROOT" "$HISTORIC"
+          test "$(git -C "$HIST_ROOT" rev-parse HEAD)" = "$HISTORIC"
+          (cd "$HIST_ROOT" && GITHUB_ACTIONS=false GITHUB_EVENT_NAME=historical_source_only node --test scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs)
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.test.cjs
           node --test scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.test.cjs
           node --test scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs
+          node --test scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs
-      - name: Exact current-head inherited-source scope (not legacy Frozen PASS)
+          node --test scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.test.cjs
+          node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.test.cjs
+          node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs
+          node --test scripts/runtime_acceptance/RUN_MCFT_CAP09_ATTEMPT3_HOST_V2_WINDOWS.test.cjs
+          node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_REAL_LEDGER_READBACK_V1.test.cjs
+      - name: Verify original 3747 scope at its frozen source; reject inherited current approval
         if: github.event_name == 'pull_request'
+        shell: bash
         run: |
+          set -euo pipefail
+          HIST_ROOT="$RUNNER_TEMP/cap09_3747_historical_source"
+          test "$(git -C "$HIST_ROOT" rev-parse HEAD)" = "61820645059360ba2c8c44cc2453925a0e68f83e"
+          (cd "$HIST_ROOT" && node scripts/governance_acceptance/VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs --technical)
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           mkdir -p acceptance-output
-          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs --native |
-            tee acceptance-output/MCFT_CAP09_3747_EXACT_SCOPE_NONAUTH_V1.json
-      - name: Save exact-head non-authorizing QCP applicability receipt
+          node -e 'const fs=require("node:fs");const cp=require("node:child_process");const old="61820645059360ba2c8c44cc2453925a0e68f83e",current=cp.execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();if(current===old)throw Error("SUCCESSOR_HEAD_NOT_DISTINCT");fs.writeFileSync("acceptance-output/CAP09_3748_HISTORIC_3747_SOURCE_ISOLATION_V1.json",JSON.stringify({schema:"CAP09_3748_HISTORIC_3747_SOURCE_ISOLATION_V1",old_exact_subject:old,current_successor_subject:current,original_scope_replayed_only_at_own_git_head:true,current_source_qualification_approved:false,adoption_v2_signed:false,host_v2:false,permit_v2:false,original_six_stages_executed:0,production:false})+"\n")'
+      - name: Upload nonauthorizing historical/source-separation receipt
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-3747-exact-scope-${{ github.event.pull_request.head.sha }}
-          path: acceptance-output/MCFT_CAP09_3747_EXACT_SCOPE_NONAUTH_V1.json
+          name: mcft-cap09-3748-historic-source-isolation-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/CAP09_3748_HISTORIC_3747_SOURCE_ISOLATION_V1.json
           if-no-files-found: error
           retention-days: 30
+
+  windows-readonly-inspection-contract:
+    name: Windows PS5.1 no-effect inspection (NOT the operator host)
+    runs-on: windows-2022
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Verify PowerShell 5.1 local inspector without real input
+        shell: powershell
+        run: |
+          $script = Join-Path $env:GITHUB_WORKSPACE 'scripts\runtime_acceptance\MCFT_CAP09_ATTEMPT3_WINDOWS_READONLY_INSPECTION_V1.ps1'
+          $json = & $script -Repo $env:GITHUB_WORKSPACE
+          if ($LASTEXITCODE -ne 0) { throw 'READONLY_INSPECTOR_PROCESS_FAILED' }
+          $fact = ($json | Out-String | ConvertFrom-Json)
+          if ($fact.status -ne 'READONLY_LOCAL_INSPECTION_NOT_SIGNED_PREFLIGHT') { throw 'INSPECTOR_STATUS_CHANGED' }
+          if ($fact.permit_consumed -ne $false -or $fact.original_six_stages_executed -ne 0) { throw 'FAKE_PHYSICAL_PASS' }
+          if ($fact.signed_material_verified -ne $false -or $fact.production_authorized -ne $false) { throw 'FAKE_ADMISSION' }
+          if ($fact.blockers -notcontains 'SIGNED_ADOPTION_PERMIT_WINDOWS_INPUT_NOT_PROVIDED') { throw 'MISSING_EXPECTED_HOLD' }
+          if ($fact.required_source_files.Count -lt 11) { throw 'STAGE_SOURCE_INVENTORY_INCOMPLETE' }
+          Write-Output ('PASS_WINDOWS_READONLY_INSPECTOR_CONTRACT_NOT_OPERATOR_ATTESTATION files=' + $fact.required_source_files.Count)

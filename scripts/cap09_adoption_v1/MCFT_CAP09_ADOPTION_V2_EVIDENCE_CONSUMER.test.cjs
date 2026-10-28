@@ -128,3 +128,151 @@ test("raw source bytes extracted from native ZIP, not candidate self-declaration
  const bad=storedZip(name,raw);bad.writeUInt32LE(1,0);
  assert.throws(()=>adoption.zipRaw(bad));
 });
+
+
+const postmerge=require("./MCFT_CAP09_ADOPTION_V2_POSTMERGE_SOURCE_V1.cjs");
+function mergedFixture(){
+ const tree="26c7fb2b9aba39cf96718c550352e1b86fe7af09";
+ const p={run_id:"6ff9b41f6f7f",subject_sha:postmerge.MERGE,qcp_source_subject_sha:postmerge.SOURCE,
+  qcp_run_id:40709390062,qcp_run_attempt:1,qcp_job_id:122890190873,
+  qcp_artifact_id:12826495755,qcp_artifact_sha256:"6803cdc407ed4e3d7dc70941f21d53f75b0c79046a1b8f676bdfc8aa124708f4",
+  qcp_results_digest:"a".repeat(64),material_digest:"b".repeat(64),
+  host_id:"LAPTOP-STN2A2P1",operator_id:"mcft_cap09_operator_mylr1",
+  issuer_id:"mcft_cap09_operator_mylr1",key_id:"mcft_cap09_ed25519_223c806e",
+  adoption_owner_approval_comment_id:7000000000};
+ const derivation={schema_version:"MCFT_CAP09_3747_POSTMERGE_QCP65_SOURCE_DERIVATION_V1",
+  repository:postmerge.REPO,pr_number:3747,base_sha:postmerge.BASE,
+  source_subject_sha:postmerge.SOURCE,subject_sha:postmerge.MERGE,
+  source_tree_sha:tree,merge_tree_sha:tree,merge_parents:[postmerge.BASE,postmerge.SOURCE],
+  source_qcp_run_id:p.qcp_run_id,source_qcp_attempt:p.qcp_run_attempt,
+  source_qcp_artifact_id:p.qcp_artifact_id,source_qcp_artifact_sha256:p.qcp_artifact_sha256,
+  source_qcp_results_digest:p.qcp_results_digest,source_qcp_owner_comment_id:postmerge.OWNER_SOURCE_COMMENT,
+  qcp_executed_at_merge_subject:false,source_tree_equivalent:true,
+  adoption_authorized:false,host_authorized:false,permit_authorized:false,
+  production_authorized:false,original_six_stage_count:0};
+ const sourceOwner={id:postmerge.OWNER_SOURCE_COMMENT,
+  user:{login:"liyongshang44-max",type:"User"},author_association:"OWNER",
+  created_at:"2026-10-28T14:48:20Z",updated_at:"2026-10-28T14:48:20Z",
+  issue_url:"https://api.github.com/repos/"+postmerge.REPO+"/issues/3747",
+  html_url:"https://github.com/"+postmerge.REPO+"/pull/3747#issuecomment-"+postmerge.OWNER_SOURCE_COMMENT,
+  body:[
+   "GEOX_MCFT_CAP09_3747_OWNER_QCP_SOURCE_ADMISSION_V1",
+   "REPOSITORY="+postmerge.REPO,"PR=3747","BASE="+postmerge.BASE,"HEAD="+postmerge.SOURCE,
+   "CHECK=DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING",
+   "POLICY_VERSION=OWNER_DIRECTED_QCP_SOURCE_ADMISSION_V1",
+   "DECISION=APPROVE_PURPOSE_SPECIFIC_CURRENT_HEAD_FORMAL_QCP_SOURCE_ADMISSION",
+   "AUTHORITY=GITHUB_REPOSITORY_OWNER_NATIVE_COMMENT",
+   "INDEPENDENT_ED25519_REVIEW_REQUIRED_FOR_THIS_SOURCE_QCP_SCOPE=false",
+   "ORIGINAL_3734_SIGNATURES_VERIFIED_FOR_ORIGINAL_SUBJECT_ONLY=true",
+   "CURRENT_QCP65_SOURCE_ADMISSION_APPROVED=true",
+   "ADOPTION_V2_SIGNED_ACCEPTANCE_AUTHORIZED=false","HOST_V2_AUTHORIZED=false",
+   "PERMIT_V2_ISSUE_OR_CONSUME_AUTHORIZED=false","PRODUCTION_AUTHORIZED=false",
+   "ORIGINAL_FORMAL_SIX_STAGES=0",
+   "HISTORICAL_FROZEN_V13_FAILURE_UNCHANGED=true",
+   "HISTORICAL_STAGE3_FAILURE_UNCHANGED=true",
+   "NO_PROVIDER_REFETCH_NO_OLD_RUN_REPLAY=true",
+   "THIS_APPROVAL_EXPIRES_ON_ANY_HEAD_OR_POLICY_CHANGE=true"].join("\n")};
+ const pr={number:3747,state:"closed",merged:true,
+  head:{sha:postmerge.SOURCE,repo:{full_name:postmerge.REPO}},
+  base:{sha:postmerge.BASE},merge_commit_sha:postmerge.MERGE,
+  merged_at:"2026-10-28T15:03:07Z"};
+ const sourceCommit={sha:postmerge.SOURCE,tree:{sha:tree},author:{date:"2026-10-28T14:45:20Z"}};
+ const mergeCommit={sha:postmerge.MERGE,tree:{sha:tree},
+  parents:[{sha:postmerge.BASE},{sha:postmerge.SOURCE}]};
+ const main={object:{sha:postmerge.MERGE}};
+ return {p,derivation,n:{pr,sourceCommit,mergeCommit,main,sourceOwner}};
+}
+test("historic QCP65 source proof remains valid without pretending it ran on new protected main",()=>{
+ const {p,derivation,n}=mergedFixture();
+ n.main.object.sha="e".repeat(40);
+ assert.throws(()=>postmerge.verify(derivation,p,n),/POSTMERGE_LIVE_MAIN_MOVED/);
+ const historical=postmerge.verifyHistoricalSource(derivation,p,n);
+ assert.equal(historical.qcp_executed_at_merge_subject,false);
+ assert.equal(historical.permit_authorized,false);
+});
+test("postmerge exact Git source tree lineage proves source only, never merge QCP/adoption",()=>{
+ const {p,derivation,n}=mergedFixture();
+ const v=postmerge.verify(derivation,p,n);
+ assert.equal(v.status,"POSTMERGE_QCP65_SOURCE_EQUIVALENCE_VERIFIED_NOT_ADOPTION");
+ assert.equal(v.qcp_executed_at_merge_subject,false);
+ assert.equal(v.adoption_authorized,false);assert.equal(v.permit_authorized,false);
+});
+test("postmerge source proof rejects 24 scoped and authority escalation attacks",()=>{
+ const {p,derivation,n}=mergedFixture();
+ const attacks=[
+ a=>a[0].subject_sha="0".repeat(40),a=>a[0].qcp_source_subject_sha=postmerge.MERGE,
+ a=>a[0].qcp_artifact_id=5,a=>a[0].qcp_results_digest="0".repeat(64),
+ a=>a[1].source_subject_sha=postmerge.MERGE,a=>a[1].source_tree_equivalent=false,
+ a=>a[1].source_qcp_owner_comment_id=0,a=>a[1].qcp_executed_at_merge_subject=true,
+ a=>a[1].adoption_authorized=true,a=>a[1].host_authorized=true,
+ a=>a[1].permit_authorized=true,a=>a[1].production_authorized=true,
+ a=>a[1].original_six_stage_count=1,
+ a=>a[2].pr.number=3746,a=>a[2].pr.merged=false,
+ a=>a[2].pr.head.sha=postmerge.MERGE,a=>a[2].pr.merge_commit_sha=postmerge.SOURCE,
+ a=>a[2].sourceCommit.tree.sha="0".repeat(40),
+ a=>a[2].mergeCommit.parents.reverse(),
+ a=>a[2].main.object.sha=postmerge.SOURCE,
+ a=>a[2].sourceOwner.author_association="CONTRIBUTOR",
+ a=>a[2].sourceOwner.issue_url="https://api.github.com/repos/"+postmerge.REPO+"/issues/3748",
+ a=>a[2].sourceOwner.body=a[2].sourceOwner.body.replace("ADOPTION_V2_SIGNED_ACCEPTANCE_AUTHORIZED=false","ADOPTION_V2_SIGNED_ACCEPTANCE_AUTHORIZED=true"),
+ a=>a[2].sourceOwner.updated_at="2026-10-29T00:00:00Z",
+ a=>a[2].sourceOwner.created_at="2026-10-28T14:40:00Z"];
+ for(const attack of attacks){
+  const a=structuredClone([p,derivation,n]);attack(a);
+  assert.throws(()=>postmerge.verify(a[1],a[0],a[2]));
+ }
+ assert.equal(attacks.length,25);
+});
+test("postmerge GitHub-native empty run PR association is allowed ONLY with separate verified merge",()=>{
+ const {p,n}=mergedFixture();
+ const run={id:p.qcp_run_id,head_sha:postmerge.SOURCE,
+  name:"mcft-cap-09-qualification-control-plane-v1",
+  path:".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+  event:"pull_request",status:"completed",conclusion:"success",run_attempt:1,
+  pull_requests:[]};
+ const artifacts={artifacts:[{id:p.qcp_artifact_id,
+  name:"mcft-cap09-qualification-control-plane-"+postmerge.SOURCE,expired:false,
+  digest:"sha256:"+p.qcp_artifact_sha256,
+  workflow_run:{id:p.qcp_run_id,head_sha:postmerge.SOURCE},
+  created_at:"2026-10-28T14:57:06Z"}]};
+ const jobs={jobs:[{id:p.qcp_job_id,name:"applicability-and-blocker-inventory",conclusion:"success",
+  started_at:"2026-10-28T14:47:42Z",completed_at:"2026-10-28T14:57:09Z"}]};
+ assert.throws(()=>adoption.checkNative(p,run,artifacts,jobs,n.pr));
+ assert.equal(adoption.checkNative(p,run,artifacts,jobs,n.pr,true).status,
+  "GITHUB_NATIVE_RUN_AND_ARTIFACT_VERIFIED");
+ const notSource=structuredClone(run);notSource.head_sha=postmerge.MERGE;
+ assert.throws(()=>adoption.checkNative(p,notSource,artifacts,jobs,n.pr,true));
+ const falsePR=structuredClone(n.pr);falsePR.merged=false;
+ assert.throws(()=>adoption.checkNative(p,run,artifacts,jobs,falsePR,true));
+ const wrongLink=structuredClone(run);wrongLink.pull_requests=[{number:3746}];
+ assert.throws(()=>adoption.checkNative(p,wrongLink,artifacts,jobs,n.pr,true));
+});
+test("formal Adoption-specific Owner approval cannot be replaced by QCP-only owner comment",()=>{
+ const {p,n}=mergedFixture();
+ const t="2026-10-28T15:16:00Z",approval={id:p.adoption_owner_approval_comment_id,
+  user:{login:"liyongshang44-max",type:"User"},author_association:"OWNER",
+  created_at:t,updated_at:t,body:postmerge.ownerApprovalText(p),
+  issue_url:"https://api.github.com/repos/"+postmerge.REPO+"/issues/3748",
+  html_url:"https://github.com/"+postmerge.REPO+"/pull/3748#issuecomment-"+p.adoption_owner_approval_comment_id};
+ assert.equal(postmerge.verifyOwnerApproval(p,approval,n.sourceOwner).status,
+  "ADOPTION_V2_OWNER_PURPOSE_APPROVAL_VERIFIED_NOT_SIGNED");
+ const bad=[
+ a=>a[0].adoption_owner_approval_comment_id=postmerge.OWNER_SOURCE_COMMENT,
+ a=>a[1].body=n.sourceOwner.body,
+ a=>a[1].body=a[1].body.replace("SIGNATURE_STILL_REQUIRED=true","SIGNATURE_STILL_REQUIRED=false"),
+ a=>a[1].body=a[1].body.replace("PRODUCTION_AUTHORIZED=false","PRODUCTION_AUTHORIZED=true"),
+ a=>a[1].author_association="NONE",
+ a=>a[1].updated_at="2026-10-28T15:17:00Z",
+ a=>a[1].created_at="2026-10-28T14:47:00Z",
+ a=>a[1].user.login="someone-else",
+ a=>a[1].issue_url="https://api.github.com/repos/"+postmerge.REPO+"/issues/3747",
+ a=>a[1].html_url="https://github.com/"+postmerge.REPO+"/issues/3748#issuecomment-"+a[1].id,
+ a=>a[0].material_digest="0".repeat(64),
+ a=>a[0].host_id="ANOTHER_WINDOWS_HOST",
+ a=>a[0].issuer_id="unknown"
+ ];
+ for(const attack of bad){
+  const a=structuredClone([p,approval]);attack(a);
+  assert.throws(()=>postmerge.verifyOwnerApproval(a[0],a[1],n.sourceOwner));
+ }
+});

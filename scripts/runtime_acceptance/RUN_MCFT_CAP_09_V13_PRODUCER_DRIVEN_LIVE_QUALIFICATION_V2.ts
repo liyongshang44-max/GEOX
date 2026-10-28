@@ -145,8 +145,10 @@ async function main(): Promise<void> {
   // This read binds latency to the independently signed Observations envelope.
   // Both plans are bound to the same independently signed Observations digest.
   const governedObserved = process.env.MCFT_GOVERNED_RETRY_STAGE === "PRODUCER"
-    ? createRequire(import.meta.url)("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs")
-      .hostBundle(required("MCFT_GOVERNED_RETRY_BUNDLE")).bundle.observed
+    ? (process.env.MCFT_ATTEMPT3_V2_CHILD === "1"
+      ? createRequire(import.meta.url)("./MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs").observed()
+      : createRequire(import.meta.url)("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs")
+        .hostBundle(required("MCFT_GOVERNED_RETRY_BUNDLE")).bundle.observed)
     : null;
   const governedResponseGate = governedObserved
     ? responseDelay.makeGate({plan: governedObserved.real_provider_response_delay_plan,

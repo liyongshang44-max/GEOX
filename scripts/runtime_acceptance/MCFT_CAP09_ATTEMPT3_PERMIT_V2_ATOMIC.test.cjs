@@ -1,8 +1,8 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict");
 const host=require("./MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs");
-test("V2 stage route cannot burn a signed Permit until V2 child-stage authority is adopted",()=>{
- assert.equal(host.HOST_V2_STAGE_DISPATCH_ADOPTED,false);
+test("V2 stage route is registered but cannot burn a Permit without genuine signed prepare",()=>{
+ assert.equal(host.HOST_V2_STAGE_DISPATCH_ADOPTED,true);
  assert.throws(()=>host.consumeForQualifiedHost({}),/A3_V2_SIGNED_PREPARE_REQUIRED/);
  assert.throws(()=>host.assertConsumed({}),/A3_V2_ATOMIC_CONSUMPTION_REQUIRED/);
 });

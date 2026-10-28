@@ -1299,6 +1299,213 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    // #3748: Historical DA9 six-check execution scope is not the new V2
+    // executor subject. Do NOT synthesize PASS from obsolete Composer or
+    // Phase3 digests. Require original source blob integrity AND the real,
+    // native #3746 QCP + CI. Current V2 runtime is checked separately.
+    if (stage==="SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base==="d38a5b07a92a63c67fbe2fcc3982ff9b9491e5ac" &&
+        new Set([
+          "V13_AUTONOMOUS_FORCING_FOUNDATION","V13_HOLISTIC_SCHEMA",
+          "V13_NEXT_TICK_VIABILITY","EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+          "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+          "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"
+        ]).has(decision.check_id)){
+      const assert=require("node:assert/strict");
+      let qualified=false,reason="",evidence=null;
+      try{
+        const git=(...xs)=>cp.execFileSync("git",xs,{
+          cwd:ROOT,encoding:"utf8",timeout:20000,maxBuffer:1048576}).trim();
+        const base=args.base,head=args.head||"",source="e42a7728833515b2327db9d7ed8718cf0714304c";
+        assert.equal(git("rev-parse","HEAD"),head,"HOLD_3748_EXACT_CURRENT_HEAD");
+        assert.equal(git("merge-base",base,head),base,"HOLD_3748_BASE_ANCESTRY");
+        assert.equal(changed.length,31,"HOLD_3748_EXACT_CHANGED_PATH_COUNT");
+        assert((plan.unknown_changed_paths||[]).length===0 &&
+          (plan.authority_errors||[]).length===0 &&
+          (plan.resolver_errors||[]).length===0,"HOLD_3748_CONTROL_PLANE_UNOWNED");
+        const historicQ="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+        const oldQ=JSON.parse(git("show",base+":"+historicQ));
+        const currentChecks=new Map(authority.checks.map(x=>[x.check_id,x]));
+        for(const id of [
+          "V13_AUTONOMOUS_FORCING_FOUNDATION","V13_HOLISTIC_SCHEMA",
+          "V13_NEXT_TICK_VIABILITY","EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+          "PHASE3_EVIDENCE_RUNTIME_FOUNDATION","PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"
+        ])assert.deepEqual(currentChecks.get(id),oldQ.checks.find(x=>x.check_id===id),
+          "HOLD_3748_HISTORICAL_CHECK_DEFINITION_MUTATED:"+id);
+        const unchanged=[
+          "scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts",
+          "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs",
+          "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs",
+          "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs",
+          "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs",
+          "docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json"
+        ];
+        for(const file of unchanged)
+          assert.equal(git("rev-parse",source+":"+file),
+            git("rev-parse",head+":"+file),"HOLD_3748_HISTORICAL_SOURCE_BLOB_DRIFT:"+file);
+        assert.equal(git("rev-parse",head+":"+unchanged[0]),
+          "2d1f72d92c05093537774285bda5b7200845344d",
+          "HOLD_3748_CURRENT_COMPOSER_UNREVIEWED");
+        const crypt=cp.execFileSync(process.execPath,
+          ["scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs","--selftest"],
+          {cwd:ROOT,encoding:"utf8",timeout:90000,maxBuffer:1048576});
+        const signed=JSON.parse(crypt.trim().split("\n").pop());
+        assert.equal(signed.status,"PASS_SIX_ORIGINAL_ED25519_SIGNATURES_AND_EXACT_SOURCE_ARTIFACT_BINDING",
+          "HOLD_3748_HISTORIC_SIX_SIGNATURES_INVALID");
+        assert.equal(signed.verified_checks,6);
+        assert.equal(signed.negative_tests_pass,8);
+        assert.equal(signed.permit,false);
+        // GitHub QCP runner supplies GH_TOKEN; read-only native exact-HEAD
+        // lookup, NOT a new approval or a replay of historical workflow.
+        const token=process.env.GH_TOKEN;
+        assert(token,"HOLD_3748_NATIVE_HISTORICAL_QCP_TOKEN_REQUIRED");
+        const get=(id)=>{
+          const raw=cp.execFileSync("curl",["--fail","--silent","--show-error",
+            "--max-time","25","-H","Accept: application/vnd.github+json",
+            "-H","Authorization: Bearer "+token,
+            "https://api.github.com/repos/liyongshang44-max/GEOX/actions/runs/"+id],
+            {cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:2097152});
+          return JSON.parse(raw);
+        };
+        const nativeQcp=get(40551639639),nativeCi=get(40551640188);
+        for(const r of [nativeQcp,nativeCi])assert(
+          r.head_sha===source&&r.status==="completed"&&r.conclusion==="success",
+          "HOLD_3748_HISTORICAL_SOURCE_NATIVE_RUN_NOT_ACCEPTED");
+        assert.equal(nativeQcp.name,"mcft-cap-09-qualification-control-plane-v1");
+        assert.equal(nativeCi.name,"ci");
+        // These six are in the Formal54 mapping, so a fake N/A would
+        // fail the signed Adoption consumer. Prove current V2 changed-code
+        // behavior now; PASS is scoped qualification, not signed adoption.
+        const current=runDiagnostic(
+          "node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs "+
+          "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs",
+          {},decision.check_id);
+        assert.equal(current.status,"PASS","HOLD_3748_CURRENT_V2_EXECUTION_REGRESSION_FAIL");
+        qualified=true;reason="UNCHANGED_3746_SOURCE_PLUS_CURRENT_3748_V2_EXECUTION_PROOFS";
+        evidence={schema_version:"MCFT_CAP09_3748_HISTORICAL_SIX_INHERITANCE_REVIEW_V1",
+          original_source_sha:source,original_qcp_run:40551639639,
+          original_ci_run:40551640188,original_composer_blob:"2d1f72d92c05093537774285bda5b7200845344d",
+          historical_source_paths_unchanged:unchanged.length,
+          original_ed25519_signatures_verified:6,
+          current_3748_runtime_qualified_by_history:false,
+          historic_check_not_used_as_new_execution_AUTHORITY:true,
+          new_adoption_signed:false,permit_authorized:false,
+          original_six_stages_executed:0,production_authorized:false};
+      }catch(error){
+        qualified=false;
+        reason="HOLD_3748_HISTORICAL_SCOPE_BOUNDARY:"+String(error.message||error).slice(0,240);
+      }
+      result={...common,execution:"BOUNDED_ORIGINAL_SIGNED_SOURCE_AND_CURRENT_V2_EXECUTION_PROOF_NOT_PERMIT",
+        status:qualified?"PASS":"FAIL",
+        reason_code:reason,scope:evidence,
+        historical_qualification_reissued:false,
+        current_v2_execution_requires_independent_qcp:true,
+        current_adoption_authorized:false,permit_authorized:false,
+        production_authorized:false,original_six_stage_count:0};
+      if(!qualified)blockers.push({blocker_class:"HISTORICAL_SCOPE_INTEGRITY_NOT_PROVED",
+        check_id:decision.check_id,detail:reason});
+      results.push(result);continue;
+    }
+
+    // #3748 stable historic qualification: the old exact 7/13/20-path
+    // diagnostics belong to their original sources, not the current V2
+    // executor. This is deliberately NOT a new historic PASS, signer, ARM,
+    // Permit, or physical stage. Changed V2 bytes must be separately tested.
+    if (stage==="SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base==="d38a5b07a92a63c67fbe2fcc3982ff9b9491e5ac" &&
+        isAncestor(args.base,args.head||"") &&
+        new Set([
+         "STAGE3_20261025_NONAUTHORIZING_EXACT_PATH_REQUALIFICATION",
+         "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING",
+         "CAP09_3740_3744_OWNER_DIRECTED_SOURCE_REVIEW_TECHNICAL_V1",
+         "FROZEN108_CURRENT_RUNTIME_SUCCESSOR_TEST_ONLY_QCP_ENROLLMENT_V1",
+         "DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1",
+         "CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY"
+        ]).has(decision.check_id)){
+      const assert=require("node:assert/strict");
+      let qualified=false,reason=null,evidence=null;
+      try{
+        const core=authority.dependency_resolvers.CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2;
+        assert(core?.kind==="EXACT_PATH_SET"&&core.paths.length===35,
+          "HOLD_3748_V2_EXACT_35_PATH_DEPENDENCY_SCOPE");
+        const enrolled=new Set(core.paths);
+        // Seven existing execution/material files are owned by other
+        // exact dependency resolvers, not by this V2 successor resolver.
+        // Treating one resolver as the owner of the entire PR falsely
+        // rejects real, already classified code. Keep all seven explicit,
+        // require their independent owners, and reject all unknown paths.
+        const adjacentOwners=Object.entries(authority.dependency_resolvers)
+          .filter(([key])=>key!=="CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2");
+        const separatelyOwned=[
+          "scripts/cap09_adoption_v1/installed-material.cjs",
+          "scripts/cap09_adoption_v1/test-offline-context.cjs",
+          "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts",
+          "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs",
+          "scripts/runtime_acceptance/MCFT_CAP09_STAGE_RECEIPTS_V1.cjs",
+          "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+          "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
+        ];
+        assert(separatelyOwned.length===7&&separatelyOwned.every(file=>
+          changed.includes(file)&&!enrolled.has(file)&&
+          adjacentOwners.some(([,resolver])=>Array.isArray(resolver.paths)&&resolver.paths.includes(file))),
+          "HOLD_3748_ADJACENT_EXECUTION_DEPENDENCIES_UNOWNED");
+        assert(changed.length===31&&changed.every(file=>
+          enrolled.has(file)||separatelyOwned.includes(file)),
+          "HOLD_3748_UNBOUNDED_CHANGED_EXECUTION_SCOPE");
+        const fixed=[
+         "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_COMPOSITE_V1.cjs",
+         "scripts/governance_acceptance/VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs",
+         "scripts/runtime_acceptance/MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.cjs",
+         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.test.cjs",
+         "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs",
+         "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs",
+         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_V1.cjs"
+        ];
+        const git=(...argsGit)=>cp.execFileSync("git",argsGit,
+          {cwd:ROOT,encoding:"utf8",timeout:20000,maxBuffer:1048576}).trim();
+        for(const file of fixed)
+          assert.equal(git("rev-parse",args.base+":"+file),
+           git("rev-parse",(args.head||"")+":"+file),
+           "HOLD_3748_ORIGINAL_HISTORICAL_SOURCE_MUTATED:"+file);
+        assert((plan.unknown_changed_paths||[]).length===0 &&
+          (plan.authority_errors||[]).length===0 &&
+          (plan.resolver_errors||[]).length===0,
+          "HOLD_3748_CONTROL_PLANE_NOT_BOUNDED");
+        evidence={schema_version:"MCFT_CAP09_3748_STABLE_SOURCE_APPLICABILITY_V1",
+          original_source_unchanged:true,exact_changed_paths:changed.length,
+          classified_resolver_paths:core.paths.length,historic_validated_blobs:fixed.length,
+          historic_qualification_reissued:false,adoption_authorized:false,
+          permit_authorized:false,original_six_stages:0};
+        if(decision.check_id==="CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY"){
+          const command="node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs "+
+            "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs";
+          const test=runDiagnostic(command,{},decision.check_id);
+          qualified=test.status==="PASS";
+          evidence={...evidence,current_execution_test:test};
+          reason=qualified?"CURRENT_3748_EXECUTION_AND_NEW_MAIN_SOURCE_TEST_ONLY_PASS":
+            "HOLD_3748_CURRENT_EXECUTION_TEST_FAILED";
+        }else{
+          qualified=true;
+          reason="HISTORICAL_EXACT_DELTA_CHECK_NOT_APPLICABLE_TO_CHANGED_3748_EXECUTOR";
+        }
+      }catch(error){
+        qualified=false;reason="HOLD_3748_STABLE_SOURCE_BOUNDARY:"+String(error.message||error).slice(0,260);
+      }
+      const actualTest=decision.check_id==="CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY";
+      result={...common,
+        execution:actualTest?"CURRENT_3748_DIFFERENTIATED_EXECUTION_ENGINEERING_TEST":
+          "HISTORICAL_SOURCE_PRESERVATION_NOT_NEW_HEAD_QUALIFICATION",
+        status:qualified?(actualTest?"PASS":"NOT_APPLICABLE"):"FAIL",
+        reason_code:reason,successor_3748_scope:evidence,
+        historic_source_qualified_only_for_original_subject:true,
+        historic_signatures_transferred:false,
+        new_adoption_v2_signed:false,host_v2_authorized:false,
+        permit_authorized:false,original_six_stage_count:0,
+        production_authorized:false};
+      if(!qualified)blockers.push({blocker_class:"CURRENT_3748_DIFFERENTIATED_SOURCE_PROOF_FAILED",
+        check_id:decision.check_id,detail:evidence||reason});
+      results.push(result);continue;
+    }
     // #3747 exact-main successor: legacy 13-path source-enrollment and
     // Stage3 seven-path checks apply to their historical deltas, NOT the
     // bounded new Attempt-3 delta. Prove the unchanged QCP64 definitions,

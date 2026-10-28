@@ -46,9 +46,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ] && { [ "${{ github.event.pull_request.number }}" = "3746" ] || [ "${{ github.event.pull_request.number }}" = "3747" ]; }; then
+          if [ "${{ github.event_name }}" = "pull_request" ] && { [ "${{ github.event.pull_request.number }}" = "3746" ] || [ "${{ github.event.pull_request.number }}" = "3747" ] || [ "${{ github.event.pull_request.number }}" = "3748" ]; }; then
             # This frozen zero-drift assertion is historical, not an assertion
             # that today's successor Runtime still has zero changed blobs.
+            # #3748 runs the historical assertion ONLY in its pinned historical
+            # checkout; current changed runtime remains subject to fresh
+            # EA5E2 and the separate isolated matrix below.
             HISTORIC='3a803d703320c5dfb416c6b022767fd1fa1fccba'
             SCRIPT='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_V1.cjs'
             expected="$(git rev-parse "$HISTORIC:$SCRIPT")"
@@ -171,8 +174,44 @@ jobs:
               test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:9000/geox-mcft-cap09-formal-raw-v1/)" = 403 ;;
             *) exit 1 ;;
           esac
-      - name: Record exact-head qualification proof
+      - name: Record original Frozen V13 proof only in original compatible scope
+        if: github.event_name != 'pull_request' || github.event.pull_request.number != 3748
         run: node scripts/governance_acceptance/RECORD_MCFT_CAP_09_FROZEN_V13_ISOLATED_EVIDENCE_V1.cjs "$CHECK_ID"
+      - name: Record exact #3748 successor matrix result without false Frozen zero-drift claim
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 3748
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          "use strict";
+          const assert=require("node:assert/strict"),fs=require("node:fs"),cp=require("node:child_process");
+          const checks=["V13_AUTONOMOUS_FORCING_FOUNDATION","V13_HOLISTIC_SCHEMA","V13_NEXT_TICK_VIABILITY","EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"];
+          const check=process.env.CHECK_ID;
+          assert(checks.includes(check),"HOLD_SUCCESSOR_MATRIX_CHECK_NOT_FROZEN_ID");
+          assert.equal(process.env.PR_BASE_SHA,"d38a5b07a92a63c67fbe2fcc3982ff9b9491e5ac","HOLD_3748_BASE_CHANGED");
+          const head=cp.execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();
+          assert.equal(head,process.env.PR_HEAD_SHA,"HOLD_3748_EXACT_HEAD_CHANGED");
+          assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request");
+          assert.equal(process.env.MCFT_CAP09_V13_FOUNDATION_DESTRUCTIVE_ACCEPTANCE,"1");
+          // The preceding physical PostgreSQL/private-store CI test step must
+          // succeed for this record step to be reached. This receipt is NOT
+          // historical Frozen V13 source requalification or formal physical proof.
+          const fact={schema_version:"MCFT_CAP09_3748_SUCCESSOR_ISOLATED_REGRESSION_V1",
+            check_id:check,source_head_sha:head,base_sha:process.env.PR_BASE_SHA,
+            result:"PASS_CURRENT_SUCCESSOR_ISOLATED_TEST_ONLY",
+            actual_isolated_test_step_completed:true,
+            historical_frozen_v13_runtime_zero_drift_claim:false,
+            historical_frozen_qualifications_reissued:false,
+            formal_adoption_v2_authorized:false,permit_issued:false,
+            permit_consumed:false,production_authorized:false,
+            original_six_physical_stages_executed:0};
+          fs.mkdirSync("acceptance-output",{recursive:true});
+          fs.writeFileSync("acceptance-output/CAP09_3748_"+check+"_SUCCESSOR_MATRIX.json",JSON.stringify(fact)+"\n",{flag:"wx"});
+          console.log(JSON.stringify({check_id:check,status:fact.result,historical_frozen_zero_drift:false}));
+          NODE
       - uses: actions/upload-artifact@v4
         with:
           name: frozen-v13-${{ matrix.check }}-${{ github.event.pull_request.head.sha || github.sha }}

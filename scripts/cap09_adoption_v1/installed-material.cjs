@@ -49,7 +49,13 @@ const CHILD_STAGE_ENVIRONMENT_NAMES=Object.freeze([
  'MCFT_TIMING_WAKE_DELAY_MS','MCFT_TIMING_JOB_START_SETUP_MS','MCFT_TIMING_LOCAL_LAUNCH_AT_MS',
  'MCFT_GOVERNED_RETRY_RUN_ID','MCFT_GOVERNED_RETRY_DELAY_TIMEOUT_MS',
  'MCFT_TIMING_SAMPLE_ID','MCFT_TIMING_BASE_TARGET',
- 'MCFT_GOVERNED_RETRY_TICKET','MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256'
+ 'MCFT_GOVERNED_RETRY_TICKET','MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256',
+ // Attempt-3 V2 uses a separately signed parent/child domain. The inherited
+ // material profile must allow these exact child-only keys up front, so the
+ // parent cannot introduce an unbound environment surface after collection.
+ 'MCFT_ATTEMPT3_V2_CHILD','MCFT_ATTEMPT3_V2_LEDGER_ROOT',
+ 'MCFT_ATTEMPT3_V2_NONCE','MCFT_ATTEMPT3_V2_PERMIT_ENVELOPE_SHA256',
+ 'MCFT_ATTEMPT3_V2_OBSERVED_FILE','MCFT_ATTEMPT3_V2_OBSERVATIONS_SHA256'
 ]);
 function collect(root,python,powershell,output,environment=process.env){
  root=fs.realpathSync(path.resolve(root));output=path.resolve(output);c.noLinks(root);assert(fs.statSync(root).isDirectory(),'MATERIAL_ROOT_REQUIRED');assert(outside(root,output),'MATERIAL_OUTPUT_MUST_BE_OUTSIDE_RELEASE');
