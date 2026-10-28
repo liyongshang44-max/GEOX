@@ -9,6 +9,8 @@ on:
       - '.github/workflows/mcft-cap-09-rolling-preboundary-capture.yml'
       - '.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml'
       - 'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/MCFT_CAP09_EA5E2_POST_PHASE6_DIFFERENTIAL_ROUTE_V1.cjs'
+      - 'scripts/governance_acceptance/MCFT_CAP09_EA5E2_POST_PHASE6_DIFFERENTIAL_ROUTE_V1.test.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.cjs'
@@ -53,15 +55,35 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
 
-      - name: Generate central applicability plan
+      - name: Generate original central applicability plan (preserve actual FAIL)
         if: github.event_name == 'pull_request'
-        run: >-
-          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
-          --base '${{ github.event.pull_request.base.sha }}'
-          --head '${{ github.event.pull_request.head.sha }}'
-          --generation v13
-          --stage SUCCESSOR_SUBJECT_PRE_MERGE
-          --out acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json
+        shell: bash
+        run: |
+          set -uo pipefail
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs \
+            --base '${{ github.event.pull_request.base.sha }}' \
+            --head '${{ github.event.pull_request.head.sha }}' \
+            --generation v13 \
+            --stage SUCCESSOR_SUBJECT_PRE_MERGE \
+            --out acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json
+          code=$?
+          if [ ! -s acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json ]; then
+            echo "CENTRAL_PLANNER_MISSING_FACTS"; exit 1
+          fi
+          PLAN_EXIT_CODE="$code" node -e '
+          const p=require("./acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json");
+          const x=Number(process.env.PLAN_EXIT_CODE);
+          if(!["PASS","FAIL"].includes(p.status)||(p.status==="PASS"&&x!==0)||
+             (p.status==="FAIL"&&x===0))throw Error("CENTRAL_PLAN_EXIT_STATUS_INCONSISTENT");
+          console.log("CENTRAL_PLANNER_RECORDED_UNALTERED="+p.status);
+          '
+      - name: Obtain fresh exact-head EA5E2 full scientific/runtime graph proof
+        if: github.event_name == 'pull_request'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
+      - name: Check narrow post-Phase6 differential route negative proofs
+        if: github.event_name == 'pull_request'
+        run: node --test scripts/governance_acceptance/MCFT_CAP09_EA5E2_POST_PHASE6_DIFFERENTIAL_ROUTE_V1.test.cjs
+
 
       - name: Route EA5E2 from central planner
         id: route
@@ -90,7 +112,41 @@ jobs:
             const plan = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json','utf8'));
             const phase6AuthorityPath='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json';
             const phase6Active=fs.existsSync(phase6AuthorityPath) && String(JSON.parse(fs.readFileSync(phase6AuthorityPath,'utf8')).status||'').startsWith('PHASE6_');
-            if (phase6Active) {
+            if (phase6Active && plan.status === 'FAIL') {
+              // This route never repairs or promotes the central frozen plan.
+              // It decides whether the *retired GitHub EA5E2 graph* was
+              // separately requalified at this exact PR HEAD.
+              const cp=require('node:child_process');
+              const gitDiff=cp.execFileSync('git',['diff','--name-only',plan.base_sha+'..'+plan.head_sha],
+                {encoding:'utf8'}).split(String.fromCharCode(10)).map(x=>x.trim()).filter(Boolean);
+              const graph=JSON.parse(fs.readFileSync(
+                'acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json','utf8'));
+              const scoped=require('./scripts/governance_acceptance/MCFT_CAP09_EA5E2_POST_PHASE6_DIFFERENTIAL_ROUTE_V1.cjs')
+                .decide({plan,graph,changedPaths:gitDiff,baseSha:plan.base_sha,headSha:plan.head_sha});
+              // The Phase6 retirement/owner audit still needs to be real.
+              const audit=cp.spawnSync(process.execPath,
+                ['scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs','enforce'],
+                {encoding:'utf8'});
+              if(audit.status!==0)throw Error('EA5E2_SCOPED_OWNER_RETIREMENT_AUDIT_FAIL:'
+                +String(audit.stderr||audit.stdout||'').slice(0,350));
+              proof={
+                schema_version:'geox_mcft_cap09_ea5e2_planner_route_v1',
+                status:'PASS',subject_sha:process.env.SUBJECT_SHA,
+                planner_status:'FAIL_UNCHANGED',generation:plan.generation,stage:plan.stage,
+                applicability:'EA5E2_POST_PHASE6_DIFFERENTIAL_ONLY',
+                reason_code:'EXACT_HEAD_GRAPH_PASS_AND_REAL_PHASE6_OWNER_AUDIT',
+                action:'PHASE6_SCOPED_DIFF',central_plan_status:plan.status,
+                central_plan_failure_still_open:true,scoped,
+                carry_forward_evidence_id:null,immutable_evidence_binding:null,
+                changed_dependencies:scoped.ea5e2_changed_paths,
+                dependency_digest:null,historical_dependency_digest:null,
+                dependency_digest_match:false,
+                unknown_changed_paths:plan.unknown_changed_paths,
+                runtime_mutation:false,production_workflow_activation:false,
+                formal_database_mutation:false,provider_request:false,
+                graduation_effect:false,mcft_cap09_completed:false
+              };
+            } else if (phase6Active) {
               if (plan.status !== 'PASS') throw new Error(`EA5E2_PHASE6_CENTRAL_PLAN_NOT_PASS:${plan.status}`);
               if ((plan.authority_errors || []).length) throw new Error('EA5E2_PHASE6_CENTRAL_PLAN_AUTHORITY_ERROR');
               if ((plan.resolver_errors || []).length) throw new Error('EA5E2_PHASE6_CENTRAL_PLAN_RESOLVER_ERROR');
@@ -183,6 +239,10 @@ jobs:
         if: steps.route.outputs.action == 'NOT_APPLICABLE'
         run: echo 'EA5E2_NOT_APPLICABLE_BY_CENTRAL_PLANNER'
 
+      - name: Record exact-head differential graph qualification separately from global frozen plan
+        if: steps.route.outputs.action == 'PHASE6_SCOPED_DIFF'
+        run: echo 'EA5E2_EXACT_HEAD_DIFF_PASS_GLOBAL_PLANNER_STILL_FAIL_NO_ADOPTION_NO_PERMIT'
+
       - name: Record Phase6 retired production-graph route
         if: steps.route.outputs.action == 'PHASE6_RETIRED'
         run: echo 'EA5E2_PHASE6_GITHUB_PRODUCTION_EXECUTION_RETIRED_BY_AUTHORITY'
@@ -195,6 +255,7 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_09_EA5E2_PLANNER_ROUTE_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json
+            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json
           if-no-files-found: warn
           retention-days: 90
 

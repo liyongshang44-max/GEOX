@@ -400,7 +400,13 @@ test('installed_material_collector_roundtrip',()=>{
 test('installed_material_collector_allows_exact_signed_child_stage_names',()=>{
  const dir=fs.mkdtempSync(path.join(tmp,'child-stage-')),root=path.join(dir,'release'),out=path.join(dir,'profile.json');fs.mkdirSync(root);fs.writeFileSync(path.join(root,'one.cjs'),'fixture');
  const node=fs.realpathSync(process.execPath),env={MCFT_PYTHON_EXECUTABLE:node,PATH:'fixed'},p=m.collect(root,node,node,out,env),profile=c.read(out);
- assert.equal(m.CHILD_STAGE_ENVIRONMENT_NAMES.length,19);
+ // V1 names remain frozen; Attempt-3 adds six explicit child-only keys.
+ const v2=['MCFT_ATTEMPT3_V2_CHILD','MCFT_ATTEMPT3_V2_LEDGER_ROOT',
+  'MCFT_ATTEMPT3_V2_NONCE','MCFT_ATTEMPT3_V2_PERMIT_ENVELOPE_SHA256',
+  'MCFT_ATTEMPT3_V2_OBSERVED_FILE','MCFT_ATTEMPT3_V2_OBSERVATIONS_SHA256'];
+ assert.equal(m.CHILD_STAGE_ENVIRONMENT_NAMES.length,25);
+ assert.equal(new Set(m.CHILD_STAGE_ENVIRONMENT_NAMES).size,25);
+ for(const name of v2)assert(m.CHILD_STAGE_ENVIRONMENT_NAMES.includes(name),'V2_CHILD_ENV_NOT_IN_SIGNED_MATERIAL:'+name);
  const child={...env,MCFT_SUBJECT_SHA:'a'.repeat(40),MCFT_GOVERNED_RETRY_STAGE:'PRODUCER',MCFT_GOVERNED_RETRY_TICKET:'fixture-ticket'};
  assert.equal(m.verify(profile,root,child).digest,p.profile_sha256);
  child.NODE_OPTIONS='--require untrusted';assert.throws(()=>m.verify(profile,root,child));
