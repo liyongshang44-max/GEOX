@@ -6,6 +6,7 @@ on:
       - "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.test.cjs"
+      - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
       - ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"
       - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-V2-ATTEMPT3-ENGINEERING-BOUNDARY-V1.md"
   workflow_dispatch:
