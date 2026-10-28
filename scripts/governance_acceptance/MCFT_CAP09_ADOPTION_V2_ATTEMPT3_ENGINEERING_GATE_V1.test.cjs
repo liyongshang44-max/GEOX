@@ -124,3 +124,29 @@ test("actual checked-out QCP65 maps only 54 Formal and 11 technical-only definit
  mutant.checks[mutant.checks.length-1].check_id="UNKNOWN";
  assert.throws(()=>g.mapAdoptionV2(mutant,policy));
 });
+
+test("historic 13-path composite is not current 16-path source qualification; Composer signatures cannot transfer",()=>{
+ const cp=require("node:child_process");
+ const scoped=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs");
+ const head=cp.execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();
+ const v=scoped.technical({head,base:g.BASELINE,
+   check_id:"DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1"});
+ assert.equal(v.status,"PASS");
+ assert.equal(v.scope,"PR_3747_SOURCE_PRESERVATION_ONLY");
+ assert.equal(v.exact_current_delta_paths,16);
+ assert.equal(v.historical_composite_exact_path_verifier_unchanged,true);
+ assert.equal(v.historical_da9_semantic_verifier_unchanged,true);
+ assert.equal(v.historical_composite_13_path_check_not_replayed,true);
+ assert.equal(v.historical_composite_current_head_qualification_claimed,false);
+ assert.equal(v.composer_successor_scope_changed,true);
+ assert.equal(v.historic_composer_signature_transfer_authorized,false);
+ assert.equal(v.historical_frozen_v13_failure_preserved,true);
+ assert.equal(v.permit_authorized,false);
+ assert.equal(v.adoption_authorized,false);
+ assert.throws(()=>scoped.technical({head,base:"63dc3382f879781c604a852c7d1b28af9b0dd9f4"}),
+   /HOLD_3747_EXACT_BASE_REQUIRED/);
+ assert.throws(()=>scoped.technical({head:"f".repeat(40),base:g.BASELINE}),
+   /HOLD_3747_EXACT_HEAD_REQUIRED/);
+ assert.throws(()=>scoped.technical({head,base:g.BASELINE,check_id:"CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY"}),
+   /HOLD_3747_UNSCOPED_CHECK/);
+});
