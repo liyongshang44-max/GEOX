@@ -1387,6 +1387,28 @@ function main() {
         check_id:decision.check_id,detail:qualified});
       results.push(result);continue;
     }
+    // #3747 DA9 formal governance: original #3734 event-bound verifier cannot
+    // be invoked on #3747. Independently reverify its six original Ed25519
+    // source signatures and exact two-parent merge, but retain a clear HOLD
+    // until a distinct purpose-specific current-QCP65 Adoption signature exists.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE" &&
+       args.base==="e7a8f30ffb60cb4c2bc6bd83d7bbe487eb708cc9" &&
+       decision.check_id==="DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING"){
+      const qualified=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs")
+        .verifyDA9FormalSuccessor({decision,stage,head:args.head||"",base:args.base});
+      result={...common,
+        execution:"EXACT_3747_HISTORIC_SIX_ED25519_VALID_CURRENT_FORMAL_ADOPTION_HOLD",
+        status:"FAIL",reason_code:qualified?.reason_code||"HOLD_3747_DA9_FORMAL_MISSING",
+        source_historical_signed_subject:qualified?.historical?.original_operator_signed_source_sha||null,
+        historical_original_signatures_verified:qualified?.historical?.original_operator_signature_count||0,
+        old_3734_event_replayed:false,new_3747_signed_adoption_present:false,
+        adoption_authorized:false,permit_authorized:false,
+        production_authorized:false,original_formal_six_stages:0,
+        successor_governance_evidence:qualified};
+      blockers.push({blocker_class:"CURRENT_3747_DA9_FORMAL_SIGNED_ADOPTION_NOT_PRESENT",
+        check_id:decision.check_id,detail:qualified});
+      results.push(result);continue;
+    }
     // #3737: ONLY exact 7-path TEST_ONLY successor to qualified #3746 main.
     // Verify native predecessor QCP run/artifact, original six Ed25519 signatures,
     // immutable prior 63 QCP definitions, and no scientific/runtime/source delta.
