@@ -19,6 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # PR event defaults to a synthetic merge checkout. Exact-source
+          # historical verifier must bind the real PR HEAD, not merge ref.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: pnpm/action-setup@v4
