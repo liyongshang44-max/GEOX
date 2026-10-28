@@ -242,7 +242,151 @@ function verifyPhase3Successor({decision,stage,head,base}){
   }
 }
 
-module.exports={technical,verifyForPreflight,CHECKS,DELTA,phase3Local,verifyPhase3Successor};
+
+const COMPOSER_CHECKS=Object.freeze([
+ "V13_AUTONOMOUS_FORCING_FOUNDATION",
+ "V13_HOLISTIC_SCHEMA",
+ "V13_NEXT_TICK_VIABILITY",
+ "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+ "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"
+]);
+const COMPOSER_SOURCE="ef3649e40f0d3ab542fe9f365275708b23c53cab";
+const COMPOSER_QUALIFIED_MAIN="e42a7728833515b2327db9d7ed8718cf0714304c";
+const COMPOSER_INVENTORY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-FROZEN108-RUNTIME-SUCCESSOR-INVENTORY-V1.json";
+const COMPOSER_SOURCE_MANIFEST=PHASE3_SOURCE_MANIFEST;
+const COMPOSER_CATALOG_DIGEST="sha256:6458abd6c365c4e7c0d0e805d7d77910afdce74bc711d5f399e455d2c9f996e1";
+const COMPOSER_NATIVE_ARTIFACTS=[
+ {id:12739696790,digest:"sha256:2b2ed72d9f0ba4f63a237c6df18edc5ae2b25c1d65bb448e82dff38b42e8900a"},
+ {id:12738798554,digest:"sha256:8936f407a94b95c86c61c1f04c7c229f547e07516c3b1b47173d99f8774ed67e"}
+];
+function composerLocal({decision,stage,head,base,event}){
+ assert(COMPOSER_CHECKS.includes(decision?.check_id),"HOLD_3747_COMPOSER_CHECK");
+ assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","HOLD_3747_COMPOSER_STAGE");
+ assert.equal(base,BASE,"HOLD_3747_COMPOSER_BASE");
+ assert.deepEqual(decision.changed_dependencies||[],[],"HOLD_3747_COMPOSER_DEPENDENCIES_CHANGED");
+ const q=read(QCP);
+ const original=JSON.parse(run("show",BASE+":"+QCP));
+ const actual=q.checks.find(x=>x.check_id===decision.check_id);
+ const previous=original.checks.find(x=>x.check_id===decision.check_id);
+ assert.deepEqual(actual,previous,"HOLD_3747_COMPOSER_QCP_DEFINITION_DRIFT");
+ const scoped=technical({head,base,native:true,event});
+ assert.equal(scoped.status,"PASS");
+ const inventory=read(COMPOSER_INVENTORY);
+ assert.equal(inventory.entries.length,108,"HOLD_3747_COMPOSER_CATALOG_COUNT");
+ assert.equal(inventory.entries_sha256,COMPOSER_CATALOG_DIGEST,"HOLD_3747_COMPOSER_CATALOG_DIGEST");
+ assert.equal(inventory.historical_frozen_requalified,false,"HOLD_3747_HISTORIC_FROZEN_WAIVER");
+ assert.equal(inventory.changed_path_count,2,"HOLD_3747_HISTORIC_TWO_BLOBS");
+ assert.equal(run("rev-parse",BASE+":"+COMPOSER_INVENTORY),
+   run("rev-parse",head+":"+COMPOSER_INVENTORY),
+   "HOLD_3747_COMPOSER_INVENTORY_CHANGED");
+ const manifest=read(COMPOSER_SOURCE_MANIFEST);
+ assert.equal(manifest.frozen108_catalog_sha256,COMPOSER_CATALOG_DIGEST);
+ const evidence=manifest.source_evidence[0];
+ assert.equal(evidence.pr,3741);assert.equal(evidence.head,COMPOSER_SOURCE);
+ assert.equal(evidence.ci_run,40516250068);
+ assert.equal(evidence.qualification_run,40516250234);
+ assert.deepEqual(evidence.jobs,[
+   "current-composer-exact-readonly","phase7-real-isolated-candidate-promotion"]);
+ assert.deepEqual(evidence.artifacts.map(x=>({id:x.id,digest:x.digest})),
+   COMPOSER_NATIVE_ARTIFACTS,"HOLD_3747_COMPOSER_NATIVE_ARTIFACT_MANIFEST");
+ const owner=read(PHASE3_OWNER_POLICY);
+ assert.equal(owner.source_qualification_only,true);
+ assert.equal(owner.owner,"liyongshang44-max");
+ assert.equal(owner.physical_execution_approved,false);
+ assert.equal(owner.permit_approved,false);
+ const paths=inventory.entries.map(x=>x.path);
+ assert.equal(new Set(paths).size,108,"HOLD_3747_COMPOSER_CATALOG_DUPLICATE");
+ for(const entry of inventory.entries){
+   assert.equal(entry.current_git_blob,run("rev-parse",COMPOSER_SOURCE+":"+entry.path),
+     "HOLD_3747_COMPOSER_3741_SOURCE_MISMATCH:"+entry.path);
+   assert.equal(entry.current_git_blob,run("rev-parse",COMPOSER_QUALIFIED_MAIN+":"+entry.path),
+     "HOLD_3747_COMPOSER_3746_QCP_SOURCE_MISMATCH:"+entry.path);
+   assert.equal(entry.current_git_blob,run("rev-parse",head+":"+entry.path),
+     "HOLD_3747_COMPOSER_CURRENT_SOURCE_DRIFT:"+entry.path);
+ }
+ assert.equal(run("rev-parse",head+":"+SOURCE_COMPOSER),CURRENT_COMPOSER_BLOB);
+ return {status:"PASS_BLOBS_ONLY_NOT_FORMAL_ADOPTION",
+   check_id:decision.check_id,source_sha:COMPOSER_SOURCE,
+   previously_native_qcp_qualified_head:COMPOSER_QUALIFIED_MAIN,
+   exact_current_head:head,exact_catalog_paths:108,
+   catalog_sha256:COMPOSER_CATALOG_DIGEST,
+   current_composer_blob:CURRENT_COMPOSER_BLOB,
+   historical_frozen_composer_blob:HISTORIC_FROZEN_COMPOSER_BLOB,
+   historical_frozen_requalified:false,
+   source_identity_not_six_signature_new_subject:true,
+   original_six_stages:0,permit_authorized:false,adoption_authorized:false,
+   production_authorized:false};
+}
+let composerNativeCache=null;
+function verifyComposerSuccessor({decision,stage,head,base}){
+ if(!COMPOSER_CHECKS.includes(decision?.check_id)||
+   stage!=="SUCCESSOR_SUBJECT_PRE_MERGE"||base!==BASE)return null;
+ try{
+   assert(process.env.GITHUB_EVENT_PATH,"HOLD_3747_COMPOSER_EVENT_REQUIRED");
+   const event=read(process.env.GITHUB_EVENT_PATH);
+   const local=composerLocal({decision,stage,head,base,event});
+   if(!composerNativeCache || composerNativeCache.head!==head){
+     const source=nativePhase3Get("/pulls/3741");
+     assert.equal(source.head.sha,COMPOSER_SOURCE,"HOLD_3747_COMPOSER_NATIVE_SOURCE_HEAD");
+     assert.equal(source.base.sha,"63dc3382f879781c604a852c7d1b28af9b0dd9f4");
+     assert.equal(source.user.login,"liyongshang44-max");
+     const ci=nativePhase3Get("/actions/runs/40516250068");
+     assert.equal(ci.head_sha,COMPOSER_SOURCE);
+     assert.equal(ci.conclusion,"success");
+     const ciJobs=nativePhase3Get("/actions/runs/40516250068/jobs?per_page=100");
+     for(const name of ["build-test","acceptance"])
+       assert(ciJobs.jobs.some(j=>j.name===name&&j.conclusion==="success"),
+         "HOLD_3747_COMPOSER_CI_JOB:"+name);
+     const sourceRun=nativePhase3Get("/actions/runs/40516250234");
+     assert.equal(sourceRun.head_sha,COMPOSER_SOURCE);
+     assert.equal(sourceRun.conclusion,"success");
+     const sourceJobs=nativePhase3Get("/actions/runs/40516250234/jobs?per_page=100");
+     for(const name of ["current-composer-exact-readonly","phase7-real-isolated-candidate-promotion"])
+       assert(sourceJobs.jobs.some(j=>j.name===name&&j.conclusion==="success"),
+         "HOLD_3747_COMPOSER_QUAL_JOB:"+name);
+     const arts=nativePhase3Get("/actions/runs/40516250234/artifacts?per_page=100");
+     for(const expected of COMPOSER_NATIVE_ARTIFACTS){
+       const a=arts.artifacts.find(x=>x.id===expected.id);
+       assert(a&&!a.expired&&a.digest===expected.digest,"HOLD_3747_COMPOSER_ARTIFACT");
+       assert.equal(a.workflow_run?.head_sha,COMPOSER_SOURCE);
+       assert.equal(a.workflow_run?.id,40516250234);
+     }
+     const merged=nativePhase3Get("/pulls/3746");
+     assert.equal(merged.head.sha,COMPOSER_QUALIFIED_MAIN);
+     assert.equal(merged.merged,true,"HOLD_3747_COMPOSER_SOURCE_MERGE");
+     const qcp=nativePhase3Get("/actions/runs/40551639639");
+     assert.equal(qcp.head_sha,COMPOSER_QUALIFIED_MAIN);
+     assert.equal(qcp.conclusion,"success","HOLD_3747_COMPOSER_PRIOR_NATIVE_QCP");
+     const qjobs=nativePhase3Get("/actions/runs/40551639639/jobs?per_page=100");
+     for(const name of ["applicability-and-blocker-inventory",
+       "owner-frozen-da9-composite-exact-native"])
+       assert(qjobs.jobs.some(j=>j.name===name&&j.conclusion==="success"),
+         "HOLD_3747_COMPOSER_3746_QCP_JOB:"+name);
+     const qarts=nativePhase3Get("/actions/runs/40551639639/artifacts?per_page=100");
+     const qa=qarts.artifacts.find(x=>x.id===12756735392);
+     assert(qa&&!qa.expired&&qa.digest===
+       "sha256:23137baa056c926458dadde08b56ac9c9d2fc4a8968609403f4df15608c05660",
+       "HOLD_3747_COMPOSER_3746_QCP_ARTIFACT");
+     assert.equal(qa.workflow_run?.head_sha,COMPOSER_QUALIFIED_MAIN);
+     const owner=nativePhase3Get("/actions/runs/40527803393");
+     assert.equal(owner.head_sha,"368cb5518562794314bf4ba61140308894f85214");
+     assert.equal(owner.conclusion,"success","HOLD_3747_COMPOSER_OWNER_REVIEW");
+     composerNativeCache={head,original_qualification_run:40516250234,
+       original_qualification_artifact_ids:COMPOSER_NATIVE_ARTIFACTS.map(x=>x.id),
+       accepted_3746_qcp_run:40551639639,
+       accepted_3746_qcp_artifact_id:12756735392};
+   }
+   return {...local,status:"PASS",
+     reason_code:"CURRENT_108_IDENTICAL_BLOBS_AND_3746_NATIVE_QCP_COMPOSER_SOURCE_QUALIFIED",
+     evidence_id:"CAP09_3747_CURRENT_COMPOSER_SOURCE_NATIVE_3741_3746_V1",
+     native:composerNativeCache,source_qualification_only:true};
+ }catch(e){return {status:"FAIL",
+   reason_code:"HOLD_3747_COMPOSER_CURRENT_SOURCE:"+String(e.message||e).slice(0,280),
+   historical_frozen_unchanged:true,permit_authorized:false,
+   adoption_authorized:false,production_authorized:false};}
+}
+
+module.exports={technical,verifyForPreflight,CHECKS,DELTA,phase3Local,verifyPhase3Successor,COMPOSER_CHECKS,composerLocal,verifyComposerSuccessor};
 if(require.main===module){
  try{
   const native=process.argv.includes("--native");
