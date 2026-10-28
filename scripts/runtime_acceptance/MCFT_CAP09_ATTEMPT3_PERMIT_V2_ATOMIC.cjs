@@ -1,10 +1,10 @@
 "use strict";
 /**
  * Attempt-3 Permit V2 one-shot Host admission / atomic dual-ledger primitive.
- * Host dispatch V2 remains NOT REGISTERED; thus NO execute/consume entrypoint
- * is exposed. commitAtomic is internal; future governed Host must call it only
- * after a bound V2 child stage capability and exact-head security review.
- * Avoid burning a genuine one-shot Permit with a V1-only stage dispatcher.
+ * Stage capability V2 + parent dispatcher now provide actual V2 stage routing,
+ * not a V1 reinterpretation. All signed qualification, readback and signed
+ * full-chain inputs remain mandatory before consumption. No automatic retry.
+ * Host V2 is TEST_ONLY, with no production activation.
  */
 const assert=require("node:assert/strict"),crypto=require("node:crypto"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process");
 const c=require("../cap09_adoption_v1/contract.cjs");
@@ -15,7 +15,10 @@ const resource=require("../governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OW
 const fullChain=require("../governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
 const sha=x=>crypto.createHash("sha256").update(x).digest("hex");
 const accepted=new WeakSet(),consumed=new WeakSet();
-const HOST_V2_STAGE_DISPATCH_ADOPTED=false; // Frozen V1 children cannot consume V2 Permit tokens.
+// A V2-only child capability and actual six-stage parent runner now exist.
+// Engineering route registration is NOT signed Adoption, Permit or production
+// authority. prepare() still verifies all actual signed + resource preconditions.
+const HOST_V2_STAGE_DISPATCH_ADOPTED=true;
 function noLinkDirectory(d){
  assert(typeof d==="string"&&path.isAbsolute(d),"A3_V2_LEDGER_ROOT_ABSOLUTE");
  let p=path.resolve(d);
@@ -110,6 +113,15 @@ function prepare(args){
 function consumeForQualifiedHost(prepared){
  assert(accepted.has(prepared),"A3_V2_SIGNED_PREPARE_REQUIRED");
  assert.equal(HOST_V2_STAGE_DISPATCH_ADOPTED,true,"A3_V2_STAGE_DISPATCH_NOT_ADOPTED_HOLD");
+ // Never route through V1 Permit weaksets or V1 child stage capabilities.
+ const v2=require("./MCFT_CAP09_STAGE_CAPABILITY_V2.cjs");
+ const dispatcher=require("./MCFT_CAP09_PARENT_STAGE_DISPATCH_V2.cjs");
+ const child=require("./MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs");
+ const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
+ assert.deepEqual(v2.STAGES,scheduler.STAGES,"A3_V2_CHILD_STAGE_ORDER_UNBOUND");
+ assert.equal(typeof v2.initializeStageAuthority,"function","A3_V2_STAGE_CAPABILITY_UNREGISTERED");
+ assert.equal(typeof dispatcher.dispatchConsumedStageV2,"function","A3_V2_PARENT_DISPATCH_UNREGISTERED");
+ assert.equal(typeof child.childTargets,"function","A3_V2_CHILD_GATE_UNREGISTERED");
  assert(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS);
  assert(Date.now()<Date.parse(prepared.permit_expires_at),"A3_V2_PERMIT_EXPIRED");
  const root=prepared.ledger_root;noLinkDirectory(root);

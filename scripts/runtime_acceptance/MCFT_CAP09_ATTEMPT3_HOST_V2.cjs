@@ -29,6 +29,7 @@ function boundStages({releaseRoot,material,plan,outputRoot,firstBase,runId,subje
  scheduler.validateStagePlan(plan);
  assert.deepEqual(STAGES.map(x=>x[0]),scheduler.STAGES,"V2_STAGE_PLAN_DIFFERS_FROM_REAL_SCHEDULER");
  assert(path.isAbsolute(releaseRoot)&&path.isAbsolute(outputRoot)&&path.isAbsolute(ledgerRoot));
+ assert.equal(path.resolve(__dirname),path.join(releaseRoot,"scripts","runtime_acceptance"),"V2_HOST_MUST_RUN_INSIDE_INSTALLED_RELEASE");
  assert(typeof firstBase==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:00:00\.000Z$/.test(firstBase)&&
   Number.isFinite(Date.parse(firstBase))&&Date.parse(firstBase)>Date.now(),"V2_FIRST_BASE_NOT_FUTURE");
  assert(/^[a-f0-9]{12}$/.test(runId)&&/^[a-f0-9]{40}$/.test(subjectSha)&&/^[a-f0-9]{64}$/.test(nonce));
