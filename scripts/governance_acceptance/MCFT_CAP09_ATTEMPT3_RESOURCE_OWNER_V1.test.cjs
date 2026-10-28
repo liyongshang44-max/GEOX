@@ -47,3 +47,19 @@ test("reject stale resource readback, expired evidence and signing key mismatch"
  assert.throws(()=>owner.verify(x.sign(x.p),revoked,x.ctx));
  assert.throws(()=>owner.verify(x.sign(x.p,"wrong-domain\n"),x.trust,x.ctx));
 });
+
+test("signed owner properties must be individually backed by captured raw PG/S3 facts",()=>{
+ const x=input();
+ const valid={sha256:x.p.readback_sha256,status:"RAW_READBACK_BYTES_MATCH_NOT_AUTHORITY",
+  facts:{schema_version:"MCFT_CAP09_ATTEMPT3_RESOURCE_READBACK_V1",run_id:a3.RUN,
+   status:"PASS",probe_type:"WINDOWS_READ_ONLY_PG_S3_INDEPENDENT_HOST",
+   probe_source_sha256:"f".repeat(64),production_authorized:false}};
+ for(const k of owner.FACT_BINDINGS)valid.facts[k]=x.p[k];
+ assert.equal(owner.bindSignedToReadback(x.p,valid),true);
+ const bad=structuredClone(valid);bad.facts.positive_rows_zero=false;
+ assert.throws(()=>owner.bindSignedToReadback(x.p,bad),/A3_RESOURCE_ATTESTATION_CONTRADICTS_RAW:positive_rows_zero/);
+ const badHost=structuredClone(valid);badHost.facts.host_id="unknown";
+ assert.throws(()=>owner.bindSignedToReadback(x.p,badHost));
+ const changedBytes=structuredClone(valid);changedBytes.sha256="0".repeat(64);
+ assert.throws(()=>owner.bindSignedToReadback(x.p,changedBytes));
+});
