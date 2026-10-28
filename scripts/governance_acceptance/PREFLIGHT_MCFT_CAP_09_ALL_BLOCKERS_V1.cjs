@@ -1299,6 +1299,37 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    // #3747 exact-main successor: legacy 13-path source-enrollment and
+    // Stage3 seven-path checks apply to their historical deltas, NOT the
+    // bounded new Attempt-3 delta. Prove the unchanged QCP64 definitions,
+    // immutable old resolvers, actual changed 16 paths, and unchanged
+    // current Composer blob BEFORE classifying them NOT_APPLICABLE here.
+    // This is explicitly NOT a PASS, a new signature, Frozen V13
+    // requalification, or an Adoption/Permit authority.
+    if (stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "e7a8f30ffb60cb4c2bc6bd83d7bbe487eb708cc9" &&
+        require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs").CHECKS.has(decision.check_id)) {
+      const inherited = require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs")
+        .verifyForPreflight({decision,stage,head:args.head||"",base:args.base});
+      const valid = inherited?.status === "PASS";
+      result={...common,
+        execution:"EXACT_3747_CURRENT_DELTA_PRESERVATION_NOT_HISTORICAL_REPLAY",
+        status:valid?"NOT_APPLICABLE":"FAIL",
+        reason_code:valid?
+          "HISTORICAL_SOURCE_ENROLLMENT_UNCHANGED_NOT_THIS_16_PATH_DELTA":
+          (inherited?.reason_code||"HOLD_3747_INHERITED_SCOPE_NOT_PROVEN"),
+        inherited_scope_evidence:inherited,
+        historical_source_check_requalified:false,
+        historical_frozen_v13_zero_drift_pass:false,
+        historic_composer_blob_mismatch_preserved:true,
+        original_formal_six_stages:0,
+        permit_authorized:false,
+        production_authorized:false};
+      if(!valid)blockers.push({
+        blocker_class:"EXACT_3747_INHERITED_SOURCE_SCOPE_INVALID",
+        check_id:decision.check_id,detail:inherited});
+      results.push(result);continue;
+    }
     // #3737: ONLY exact 7-path TEST_ONLY successor to qualified #3746 main.
     // Verify native predecessor QCP run/artifact, original six Ed25519 signatures,
     // immutable prior 63 QCP definitions, and no scientific/runtime/source delta.
