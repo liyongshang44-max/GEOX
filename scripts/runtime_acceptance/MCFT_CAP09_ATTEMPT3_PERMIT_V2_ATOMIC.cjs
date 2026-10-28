@@ -52,7 +52,9 @@ function prepare(args){
  assert(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS,"A3_V2_WINDOWS_HOST_ONLY");
  assert(!process.env.NODE_OPTIONS&&!process.env.NODE_PATH,"A3_V2_NODE_INJECTION_FORBIDDEN");
  const now=Date.now();
- assertLiveExactMain(releaseRoot,context.head_sha);
+ // Portable installed release may be content-verified but not itself a Git checkout.
+ // Source Git identity is independently verified at the separate named clean checkout.
+ assertLiveExactMain(context.source_git_root,context.head_sha);
  const a=adoption.verify(adoptionRequest,releaseRoot,{now,host:context.host_id});
  assert(adoption.isVerified(a),"A3_V2_ADOPTION_NOT_VERIFIED");
  assert.equal(context.head_sha,a.subject_sha,"A3_V2_LOCAL_MAIN_CHANGED");
