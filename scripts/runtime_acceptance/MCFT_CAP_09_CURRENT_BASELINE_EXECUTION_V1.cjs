@@ -125,7 +125,7 @@ function isolatedTargets(a, env) {
   assert(env.MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR && path.relative(ROOT, out).startsWith(".." + path.sep), "CURRENT_QUALIFICATION_OUTPUT_OUTSIDE_REPO_REQUIRED");
   return {positive, negative, bucket, out, allow_insecure_http_for_test: s.protocol === "http:"};
 }
-function qualificationTargets() { if(process.env.MCFT_GOVERNED_RETRY_BUNDLE || process.env.MCFT_GOVERNED_RETRY_STAGE) return require("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs").childTargets(); const a = authorize("ISOLATED_QUALIFICATION"); assert.equal(process.env.MCFT_SUBJECT_SHA, sourceContext().head); return isolatedTargets(a, process.env); }
+function qualificationTargets() { if(process.env.MCFT_ATTEMPT3_V2_CHILD) return require("./MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs").childTargets(); if(process.env.MCFT_GOVERNED_RETRY_BUNDLE || process.env.MCFT_GOVERNED_RETRY_STAGE) return require("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs").childTargets(); const a = authorize("ISOLATED_QUALIFICATION"); assert.equal(process.env.MCFT_SUBJECT_SHA, sourceContext().head); return isolatedTargets(a, process.env); }
 function outputPath(targets, name) { assert(/^[A-Z0-9_]+\.json$/.test(name)); const out = path.join(targets.out, name); assert(!fs.existsSync(out), "CURRENT_QUALIFICATION_IMMUTABLE_OUTPUT_EXISTS"); return out; }
 function measureStartupMs(launch, now) { const start=Number(launch); assert(Number.isSafeInteger(start)&&start>0&&Number.isSafeInteger(now)&&now>=start,"CURRENT_TIMING_VALID_LOCAL_LAUNCH_CLOCK_REQUIRED"); return now-start; }
 module.exports = {ROOT, ARM, BASE, canonical, validateArm, sourceContext, sourceWorktreeClean, frozenRuntimePaths, authorize, isolatedTargets, qualificationTargets, outputPath, measureStartupMs};

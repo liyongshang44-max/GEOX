@@ -16,6 +16,12 @@ on:
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.test.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.test.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs"
+      - "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
+      - "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts"
+      - "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_PARENT_STAGE_DISPATCH_V2.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_STAGE_RECEIPTS_V1.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs"
@@ -56,6 +62,7 @@ jobs:
           node --test scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.test.cjs
+          node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.test.cjs
       - name: Verify original 3747 scope at its frozen source; reject inherited current approval
         if: github.event_name == 'pull_request'
         shell: bash

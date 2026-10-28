@@ -104,8 +104,10 @@ function main(): void {
   let realPipelineDelayDigest: string | null = null;
   let realPipelineDelayCount = 0;
   if (governed) {
-    const signedObserved = createRequire(import.meta.url)("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs")
-      .hostBundle(required("MCFT_GOVERNED_RETRY_BUNDLE")).bundle.observed;
+    const signedObserved = process.env.MCFT_ATTEMPT3_V2_CHILD === "1"
+      ? createRequire(import.meta.url)("./MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs").observed()
+      : createRequire(import.meta.url)("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs")
+        .hostBundle(required("MCFT_GOVERNED_RETRY_BUNDLE")).bundle.observed;
     const providerProof = createRequire(import.meta.url)("./MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs")
       .verifyEvidence(path.join(SAMPLE_DIR, "MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1_RESULT.json"),
         {runId:required("MCFT_GOVERNED_RETRY_RUN_ID"),subjectSha:subject,plan:signedObserved.real_provider_response_delay_plan});

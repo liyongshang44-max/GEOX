@@ -98,10 +98,13 @@ module.exports={PHASES,deriveDelayPlan,validateRealDelayPlan,executeRealDelay};
 if(require.main===module){
  (async()=>{
   // Entry is always real-host gated; synthetic E2E tests import pure exports.
-  const host=require("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs");
+  const v2=process.env.MCFT_ATTEMPT3_V2_CHILD === "1";
+  const host=v2?require("./MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs"):
+    require("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs");
   const targets=host.childTargets();
   const runId=process.env.MCFT_GOVERNED_RETRY_RUN_ID,subjectSha=process.env.MCFT_SUBJECT_SHA;
-  const signedObserved=host.hostBundle(process.env.MCFT_GOVERNED_RETRY_BUNDLE).bundle.observed;
+  const signedObserved=v2?host.observed():
+    host.hostBundle(process.env.MCFT_GOVERNED_RETRY_BUNDLE).bundle.observed;
   const samples=[1,2,3].map(i=>path.join(targets.out,`MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_SAMPLE${i}_V2_RESULT.json`));
   const providerReceipt=require("./MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs").verifyEvidence(
    path.join(targets.out,"MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1_RESULT.json"),
