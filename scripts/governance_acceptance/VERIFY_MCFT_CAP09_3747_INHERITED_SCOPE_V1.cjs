@@ -386,7 +386,103 @@ function verifyComposerSuccessor({decision,stage,head,base}){
    adoption_authorized:false,production_authorized:false};}
 }
 
-module.exports={technical,verifyForPreflight,CHECKS,DELTA,phase3Local,verifyPhase3Successor,COMPOSER_CHECKS,composerLocal,verifyComposerSuccessor};
+
+const DA9_FORMAL_ID="DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING";
+const DA9_HISTORIC_MERGE="876cdcff39fe9c252b591236afd3b9bcdf27a4f4";
+const DA9_HISTORIC_SOURCE="6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0";
+const DA9_HISTORIC_GOV="bc367f2ead25b9f28dfd61b1aed394fd864d73b2";
+const DA9_SIGNED_BUNDLE="docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json";
+const DA9_SIGNED_REVIEW="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json";
+const DA9_BIND="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-TWO-PARENT-SOURCE-BINDING-V1.json";
+const DA9_SIGNED_BYTES_SHA256="a98f40c3ed017b017a8459d02655b9f206f6716d1402abcc0e579487c63901df";
+function da9HistoricalLocal({decision,stage,head,base,event=null,native=false}){
+ assert.equal(decision?.check_id,DA9_FORMAL_ID,"HOLD_3747_DA9_FORMAL_CHECK");
+ assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","HOLD_3747_DA9_STAGE");
+ assert.equal(base,BASE,"HOLD_3747_DA9_BASE");
+ if(native)technical({head,base,event,native:true});
+ else {
+   assert.equal(head,run("rev-parse","HEAD"),"HOLD_3747_DA9_HEAD");
+   assert.equal(run("merge-base",BASE,head),BASE,"HOLD_3747_DA9_ANCESTRY");
+ }
+ const old=JSON.parse(run("show",BASE+":"+QCP));
+ const now=read(QCP);
+ assert.deepEqual(now.checks.find(x=>x.check_id===DA9_FORMAL_ID),
+   old.checks.find(x=>x.check_id===DA9_FORMAL_ID),
+   "HOLD_3747_DA9_FORMAL_QCP_POLICY_CHANGED");
+ assert.equal(now.checks.find(x=>x.check_id===DA9_FORMAL_ID).carry_forward_evidence_id,null,
+   "HOLD_3747_DA9_SIGNATURE_CARRY_FORWARD_FORBIDDEN");
+ for(const p of [DA9_SIGNED_BUNDLE,DA9_SIGNED_REVIEW,DA9_BIND,
+    "scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json",
+    "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_TWO_PARENT_SOURCE_BINDING_V1.cjs",
+    "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs"]){
+   assert.equal(run("rev-parse",BASE+":"+p),run("rev-parse",head+":"+p),
+     "HOLD_3747_DA9_HISTORICAL_BLOB_CHANGED:"+p);
+ }
+ const parents=run("rev-list","--parents","-n","1",DA9_HISTORIC_MERGE).split(/\\s+/);
+ assert.deepEqual(parents,[DA9_HISTORIC_MERGE,DA9_HISTORIC_SOURCE,DA9_HISTORIC_GOV],
+   "HOLD_3747_DA9_HISTORIC_MERGE_PARENT");
+ assert.equal(run("merge-base",DA9_HISTORIC_MERGE,head),DA9_HISTORIC_MERGE,
+   "HOLD_3747_DA9_HISTORIC_MERGE_NOT_ANCESTOR");
+ const bytes=fs.readFileSync(DA9_SIGNED_BUNDLE);
+ const sha=require("node:crypto").createHash("sha256").update(bytes).digest("hex");
+ assert.equal(sha,DA9_SIGNED_BYTES_SHA256,"HOLD_3747_DA9_SIGNED_BYTES_CHANGED");
+ const oldReviews=read(DA9_SIGNED_REVIEW);
+ assert.equal(oldReviews.source_head,DA9_HISTORIC_SOURCE);
+ assert.equal(oldReviews.evidence_entries.length,6,"HOLD_3747_DA9_HISTORICAL_SIX_COUNT");
+ const signed=require("./VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs");
+ const results=[];
+ for(const row of oldReviews.evidence_entries){
+   const proof=signed.verifyRegisteredEvidence({
+     decision:{check_id:row.check_id,dependency_digest:row.reviewed_dependency_digest},
+     stage:"SUCCESSOR_SUBJECT_PRE_MERGE",head,
+     base:"b2e846d4b10a5d124d6060998ef1c9a2895391e4"});
+   assert(proof?.status==="PASS"&&
+     proof.signature_verification==="ED25519_VALID_ORIGINAL_SOURCE_ONLY",
+     "HOLD_3747_DA9_HISTORIC_SIGNATURE_INVALID:"+row.check_id+":"+(proof?.reason_code||"UNKNOWN"));
+   results.push(row.check_id);
+ }
+ assert.equal(new Set(results).size,6);
+ // The historic six signed original subject 6d8f... with Composer blob 2d1f.
+ // The earlier Frozen V13 composer 7e74 is a different prior generation.
+ // Neither original signed source SUBJECT nor original 3734 PR event
+ // becomes a new purpose-specific #3747 formal adoption signature.
+ assert.equal(run("rev-parse",DA9_HISTORIC_SOURCE+":"+SOURCE_COMPOSER),
+   CURRENT_COMPOSER_BLOB,"HOLD_3747_DA9_ORIGINAL_SIGNED_COMPOSER");
+ return {status:"HISTORICAL_SIX_ED25519_VERIFIED_NOT_CURRENT_FORMAL_ADOPTION",
+   original_operator_signed_source_sha:DA9_HISTORIC_SOURCE,
+   original_signed_composer_blob:CURRENT_COMPOSER_BLOB,
+   earlier_frozen_v13_composer_blob:HISTORIC_FROZEN_COMPOSER_BLOB,
+   original_3734_event_replayed:false,
+   original_3735_event_replayed:false,
+   historical_signed_checks:results,
+   original_operator_signature_count:results.length,
+   source_head_identity_not_current_adoption:true,
+   current_new_purpose_signature_present:false,
+   adoption_authorized:false,permit_authorized:false,
+   production_authorized:false,original_six_stages:0};
+}
+function verifyDA9FormalSuccessor({decision,stage,head,base}){
+ if(decision?.check_id!==DA9_FORMAL_ID||
+    stage!=="SUCCESSOR_SUBJECT_PRE_MERGE"||base!==BASE)return null;
+ try{
+   assert(process.env.GITHUB_EVENT_PATH,"HOLD_3747_DA9_EVENT_REQUIRED");
+   const historical=da9HistoricalLocal({decision,stage,head,base,
+     event:read(process.env.GITHUB_EVENT_PATH),native:true});
+   return {status:"FAIL",
+     reason_code:"HOLD_3747_DA9_CURRENT_PURPOSE_SPECIFIC_FORMAL_SIGNED_ADOPTION_NOT_PRESENT",
+     evidence_class:"IMMUTABLE_SIX_ORIGINAL_SIGNATURES_VALID_CURRENT_GOVERNANCE_PENDING",
+     historical,
+     original_3734_event_replayed:false,
+     original_signed_subject_not_new_adoption:true,
+     adoption_authorized:false,permit_authorized:false,
+     production_authorized:false};
+ }catch(e){return {status:"FAIL",
+   reason_code:"HOLD_3747_DA9_HISTORICAL_PRESERVATION:"+String(e.message||e).slice(0,280),
+   original_3734_event_replayed:false,adoption_authorized:false,
+   permit_authorized:false,production_authorized:false};}
+}
+
+module.exports={technical,verifyForPreflight,CHECKS,DELTA,phase3Local,verifyPhase3Successor,COMPOSER_CHECKS,composerLocal,verifyComposerSuccessor,DA9_FORMAL_ID,da9HistoricalLocal,verifyDA9FormalSuccessor};
 if(require.main===module){
  try{
   const native=process.argv.includes("--native");
