@@ -46,9 +46,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ] && { [ "${{ github.event.pull_request.number }}" = "3746" ] || [ "${{ github.event.pull_request.number }}" = "3747" ]; }; then
+          if [ "${{ github.event_name }}" = "pull_request" ] && { [ "${{ github.event.pull_request.number }}" = "3746" ] || [ "${{ github.event.pull_request.number }}" = "3747" ] || [ "${{ github.event.pull_request.number }}" = "3748" ]; }; then
             # This frozen zero-drift assertion is historical, not an assertion
             # that today's successor Runtime still has zero changed blobs.
+            # #3748 runs the historical assertion ONLY in its pinned historical
+            # checkout; current changed runtime remains subject to fresh
+            # EA5E2 and the separate isolated matrix below.
             HISTORIC='3a803d703320c5dfb416c6b022767fd1fa1fccba'
             SCRIPT='scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_V1.cjs'
             expected="$(git rev-parse "$HISTORIC:$SCRIPT")"
