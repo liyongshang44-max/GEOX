@@ -18,6 +18,8 @@ on:
       - "scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.test.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.test.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs"
       - "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
       - "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts"
@@ -63,6 +65,7 @@ jobs:
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.test.cjs
+          node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs
       - name: Verify original 3747 scope at its frozen source; reject inherited current approval
         if: github.event_name == 'pull_request'
         shell: bash
