@@ -1600,6 +1600,18 @@
         "scripts/runtime_acceptance/MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_STAGE3_REAL_FULL_PROVIDER_ONE_BASE_DUAL_HEARTBEAT_TEST_ONLY_V1.ts"
       ]
+    },
+    "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SEVEN_PATHS_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-V2-ATTEMPT3-ENGINEERING-BOUNDARY-V1.md",
+        "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.test.cjs"
+      ]
     }
   },
   "checks": [
@@ -3493,6 +3505,33 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.test.cjs"
+    },
+    {
+      "check_id": "CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY",
+      "owner": "MCFT_CAP09_ATTEMPT3_ADOPTION_V2_TECHNICAL_SOURCE_ONLY",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-V2-ATTEMPT3-ENGINEERING-BOUNDARY-V1.md"
+      ],
+      "resolver_ids": [
+        "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SEVEN_PATHS_V1"
+      ],
+      "historical_evidence_policy": "NONE_ATTEMPT2_SIGNATURE_OR_LEDGER_NOT_ATTEMPT3_AUTHORITY",
+      "execution_workflow": ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+      "execution_workflow_status": "ENGINEERING_UNIT_NEGATIVES_ONLY_NO_HOST_PERMIT_OR_REAL_SIGNED_ADOPTION",
+      "fail_policy": "FAIL_CLOSED_VERSIONED_65_TO_FORMAL54_ONLY_NO_HISTORIC_REWRITE",
+      "carry_forward_policy": "NONE_HISTORICAL_ADOPTION_DA9_NOT_REPLAYABLE",
+      "requalification_triggers": [
+        "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SEVEN_PATHS_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node --test scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs"
     }
   ],
   "non_effects": {
