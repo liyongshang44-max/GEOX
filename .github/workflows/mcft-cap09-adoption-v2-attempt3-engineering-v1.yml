@@ -1,0 +1,59 @@
+name: CAP-09 Adoption V2 Attempt-3 engineering gate (non-authorizing)
+on:
+  pull_request:
+    paths:
+      - "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs"
+      - "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs"
+      - "scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs"
+      - "scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.test.cjs"
+      - "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
+      - "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs"
+      - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs"
+      - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs"
+      - "scripts/cap09_adoption_v1/SIGN_MCFT_CAP09_ADOPTION_V2_OFFLINE.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.test.cjs"
+      - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+      - ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"
+      - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-V2-ATTEMPT3-ENGINEERING-BOUNDARY-V1.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  engineering-only-negative-proof:
+    name: Engineering only — no Adoption, Permit or Host
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - name: Offline negative and domain-separation tests
+        env:
+          CI: "true"
+        run: |
+          node --test scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs
+          node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.test.cjs
+          node --test scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.test.cjs
+          node --test scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs
+          node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs
+      - name: Exact current-head inherited-source scope (not legacy Frozen PASS)
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p acceptance-output
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs --native |
+            tee acceptance-output/MCFT_CAP09_3747_EXACT_SCOPE_NONAUTH_V1.json
+      - name: Save exact-head non-authorizing QCP applicability receipt
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-3747-exact-scope-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_3747_EXACT_SCOPE_NONAUTH_V1.json
+          if-no-files-found: error
+          retention-days: 30

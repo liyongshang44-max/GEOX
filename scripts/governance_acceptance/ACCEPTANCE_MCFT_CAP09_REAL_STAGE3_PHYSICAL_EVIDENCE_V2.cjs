@@ -83,7 +83,12 @@ try{
   tamperEvidence(e=>e.demonstrated.readonly_attestation_time="2026-10-26T06:26:00.000Z",/NOT_BYTE_GROUNDED/);
   tamperEvidence(e=>e.limits.production_authorized=true,/NOT_BYTE_GROUNDED/);
   tamperEvidence(e=>e.limits.execution_authorized=true,/NOT_BYTE_GROUNDED/);
-  const fakeSignature={...signed,signature_base64:"A"+signed.signature_base64.slice(1)};
+  // Ephemeral Ed25519 keys can generate signatures already starting with A.
+  // Always change one valid base64 symbol so this negative case is non-flaky.
+  const first=signed.signature_base64[0]==="A"?"B":"A";
+  const fakeSignature={...signed,signature_base64:first+signed.signature_base64.slice(1)};
+  assert.notEqual(fakeSignature.signature_base64,signed.signature_base64,
+    "SYNTHETIC_SIGNED_BYTES_MUST_DIFFER");
   put(attestationFile,fakeSignature);
   checkReject(()=>unit.verifyReview({attestationFile,evidenceFile,...files,trust,now:Date.parse("2026-10-26T08:10:00Z")}),/SIGNATURE_INVALID/);
   put(attestationFile,signed);

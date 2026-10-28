@@ -1299,6 +1299,129 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    // #3747 exact-main successor: legacy 13-path source-enrollment and
+    // Stage3 seven-path checks apply to their historical deltas, NOT the
+    // bounded new Attempt-3 delta. Prove the unchanged QCP64 definitions,
+    // immutable old resolvers, actual changed 16 paths, and unchanged
+    // current Composer blob BEFORE classifying them NOT_APPLICABLE here.
+    // This is explicitly NOT a PASS, a new signature, Frozen V13
+    // requalification, or an Adoption/Permit authority.
+    if (stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "e7a8f30ffb60cb4c2bc6bd83d7bbe487eb708cc9" &&
+        require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs").CHECKS.has(decision.check_id)) {
+      const inherited = require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs")
+        .verifyForPreflight({decision,stage,head:args.head||"",base:args.base});
+      const valid = inherited?.status === "PASS";
+      result={...common,
+        execution:"EXACT_3747_CURRENT_DELTA_PRESERVATION_NOT_HISTORICAL_REPLAY",
+        status:valid?"NOT_APPLICABLE":"FAIL",
+        reason_code:valid?
+          "HISTORICAL_SOURCE_ENROLLMENT_UNCHANGED_NOT_THIS_20_PATH_DELTA":
+          (inherited?.reason_code||"HOLD_3747_INHERITED_SCOPE_NOT_PROVEN"),
+        inherited_scope_evidence:inherited,
+        historical_source_check_requalified:false,
+        historical_frozen_v13_zero_drift_pass:false,
+        historic_composer_blob_mismatch_preserved:true,
+        original_formal_six_stages:0,
+        permit_authorized:false,
+        production_authorized:false};
+      if(!valid)blockers.push({
+        blocker_class:"EXACT_3747_INHERITED_SOURCE_SCOPE_INVALID",
+        check_id:decision.check_id,detail:inherited});
+      results.push(result);continue;
+    }
+    // #3747 Phase3: original 24cd Phase3 workflow digest is stale; the
+    // 94-file exact new Phase3 graph has been byte-identical since qualified
+    // #3743. Requalify only with GitHub-native #3743 CI/PG/artifact, current
+    // QCP digest and exact 16-path HEAD. No old Run/Permit/signature carryover.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE" &&
+       args.base==="e7a8f30ffb60cb4c2bc6bd83d7bbe487eb708cc9" &&
+       decision.check_id==="PHASE3_EVIDENCE_RUNTIME_FOUNDATION"){
+      const qualified=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs")
+        .verifyPhase3Successor({decision,stage,head:args.head||"",base:args.base});
+      const passed=qualified?.status==="PASS";
+      result={...common,
+        execution:"CURRENT_94_BLOB_PHASE3_NATIVE_3743_REAL_PG_SOURCE_REQUALIFICATION",
+        status:passed?"PASS":"FAIL",
+        reason_code:qualified?.reason_code||"HOLD_3747_PHASE3_NATIVE_MISSING",
+        evidence_id:qualified?.evidence_id||null,
+        evidence_subject_sha:qualified?.qualified_source||null,
+        old_24cd_phase3_digest_still_invalid:true,
+        native_3743_source_only:true,
+        original_formal_six_stages:0,
+        adoption_authorized:false,permit_authorized:false,
+        production_authorized:false,
+        phase3_current_source_proof:qualified};
+      if(!passed)blockers.push({
+        blocker_class:"CURRENT_3747_PHASE3_NATIVE_SOURCE_QUALIFICATION_INVALID",
+        check_id:decision.check_id,detail:qualified});
+      results.push(result);continue;
+    }
+    // #3747: The five V13/EA5C1/Phase7 changed-Composer checks share
+    // an exact, unchanged 108-blob source graph already independently
+    // qualified in native #3741 and current-source #3746 QCP. Preserve
+    // historical frozen and signer failures; this is source-only requalification
+    // tied to 3747's own exact HEAD, never a fresh signer or formal Permit.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE" &&
+       args.base==="e7a8f30ffb60cb4c2bc6bd83d7bbe487eb708cc9" &&
+       require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs")
+         .COMPOSER_CHECKS.includes(decision.check_id)){
+      const qualified=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs")
+        .verifyComposerSuccessor({decision,stage,head:args.head||"",base:args.base});
+      const passed=qualified?.status==="PASS";
+      result={...common,
+        execution:"CURRENT_COMPOSER_108_BLOB_3741_3746_NATIVE_SOURCE_QUALIFICATION_ONLY",
+        status:passed?"PASS":"FAIL",
+        reason_code:qualified?.reason_code||"HOLD_3747_COMPOSER_NATIVE_SOURCE",
+        evidence_id:qualified?.evidence_id||null,
+        evidence_subject_sha:qualified?.source_sha||null,
+        new_current_signature_claimed:false,
+        old_frozen_108_zero_drift_claimed:false,
+        qualified_3746_source_only:true,
+        original_formal_six_stages:0,
+        adoption_authorized:false,permit_authorized:false,
+        production_authorized:false,
+        composer_current_source_proof:qualified};
+      if(!passed)blockers.push({
+        blocker_class:"CURRENT_3747_COMPOSER_NATIVE_SOURCE_QUALIFICATION_INVALID",
+        check_id:decision.check_id,detail:qualified});
+      results.push(result);continue;
+    }
+    // #3747 DA9 formal governance: original #3734 event-bound verifier cannot
+    // be invoked on #3747. Independently reverify its six original Ed25519
+    // source signatures and exact two-parent merge, but retain a clear HOLD
+    // until a distinct purpose-specific current-QCP65 Adoption signature exists.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE" &&
+       args.base==="e7a8f30ffb60cb4c2bc6bd83d7bbe487eb708cc9" &&
+       decision.check_id==="DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING"){
+      const qualified=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs")
+        .verifyDA9FormalSuccessor({decision,stage,head:args.head||"",base:args.base});
+      const approved=qualified?.status==="PASS" &&
+        qualified?.owner_approval?.qcp_source_admission_approved===true &&
+        qualified?.adoption_authorized===false &&
+        qualified?.permit_authorized===false;
+      result={...common,
+        execution:"EXACT_3747_OWNER_NATIVE_FORMAL_QCP_SOURCE_ONLY_ADMISSION",
+        status:approved?"PASS":"FAIL",
+        reason_code:qualified?.reason_code||"HOLD_3747_DA9_QCP_OWNER_APPROVAL_MISSING",
+        evidence_id:qualified?.evidence_id||null,
+        evidence_subject_sha:approved?(args.head||null):null,
+        source_historical_signed_subject:qualified?.historical?.original_operator_signed_source_sha||null,
+        historical_original_signatures_verified:qualified?.historical?.original_operator_signature_count||0,
+        owner_native_approval_comment_id:qualified?.owner_approval?.comment_id||null,
+        native_owner_approval_verified:approved,
+        old_3734_event_replayed:false,new_3747_signed_adoption_present:false,
+        formal_qcp_source_only_approved:approved,
+        formal_adoption_v2_not_approved:true,
+        historical_independent_request_not_rewritten:true,
+        adoption_authorized:false,permit_authorized:false,
+        production_authorized:false,original_formal_six_stages:0,
+        successor_governance_evidence:qualified};
+      if(!approved)blockers.push({
+        blocker_class:"CURRENT_3747_DA9_OWNER_QCP_SOURCE_ADMISSION_NOT_VERIFIED",
+        check_id:decision.check_id,detail:qualified});
+      results.push(result);continue;
+    }
     // #3737: ONLY exact 7-path TEST_ONLY successor to qualified #3746 main.
     // Verify native predecessor QCP run/artifact, original six Ed25519 signatures,
     // immutable prior 63 QCP definitions, and no scientific/runtime/source delta.

@@ -1600,6 +1600,31 @@
         "scripts/runtime_acceptance/MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_STAGE3_REAL_FULL_PROVIDER_ONE_BASE_DUAL_HEARTBEAT_TEST_ONLY_V1.ts"
       ]
+    },
+    "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+        ".github/workflows/mcft-cap09-ce94-real-stage3-evidence-v2-contract.yml",
+        ".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-V2-ATTEMPT3-ENGINEERING-BOUNDARY-V1.md",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
+        "scripts/cap09_adoption_v1/SIGN_MCFT_CAP09_ADOPTION_V2_OFFLINE.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.test.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.test.cjs"
+      ]
     }
   },
   "checks": [
@@ -3493,6 +3518,33 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.test.cjs"
+    },
+    {
+      "check_id": "CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY",
+      "owner": "MCFT_CAP09_ATTEMPT3_ADOPTION_V2_TECHNICAL_SOURCE_ONLY",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-V2-ATTEMPT3-ENGINEERING-BOUNDARY-V1.md"
+      ],
+      "resolver_ids": [
+        "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2"
+      ],
+      "historical_evidence_policy": "NONE_ATTEMPT2_SIGNATURE_OR_LEDGER_NOT_ATTEMPT3_AUTHORITY",
+      "execution_workflow": ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+      "execution_workflow_status": "ENGINEERING_SIGNED_PROOF_VALIDATORS_ONLY_NO_CURRENT_SUBJECT_OWNER_OR_HOST_STAGE_AUTHORITY",
+      "fail_policy": "FAIL_CLOSED_EXACT_SOURCE_REQUAL_SIGNED_QCP65_ADOPTION_V2_AND_ATTEMPT3_HOST_PERMIT_HOLD",
+      "carry_forward_policy": "NONE_HISTORICAL_ADOPTION_DA9_NOT_REPLAYABLE",
+      "requalification_triggers": [
+        "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node --test scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs"
     }
   ],
   "non_effects": {

@@ -19,6 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # PR event defaults to a synthetic merge checkout. Exact-source
+          # historical verifier must bind the real PR HEAD, not merge ref.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: pnpm/action-setup@v4
@@ -39,9 +42,44 @@ jobs:
             scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs \
             scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs
       - name: Independent exact #3737 six-signature historical preservation and negative identity tests
+        if: github.event_name != 'pull_request' || github.event.pull_request.number != 3747
         run: |
           set -euo pipefail
           node scripts/governance_acceptance/VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs
+      - name: Exact #3747 successor — replay original #3737 test in its own frozen worktree only
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 3747
+        shell: bash
+        run: |
+          set -euo pipefail
+          HISTORIC='bdce07aa692a26fc990be94aca15e2d1a12b9999'
+          HISTORIC_BASE='b0b7f05a36214ce65cb306a411d088fb8fa76c6b'
+          ORIGINAL='scripts/governance_acceptance/VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs'
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "$(git rev-parse "$HISTORIC:$ORIGINAL")" = '3766f72c88bb42481739044b3489404ac3374ec0'
+          test "$(git rev-parse "HEAD:$ORIGINAL")" = "$(git rev-parse "$HISTORIC:$ORIGINAL")"
+          test "$(git merge-base "$HISTORIC_BASE" "$HISTORIC")" = "$HISTORIC_BASE"
+          test "$(git merge-base "$HISTORIC" HEAD)" = "$HISTORIC"
+          for file in \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.test.cjs \
+            scripts/runtime_acceptance/MCFT_CAP09_STAGE3_TEST_ONLY_DUAL_HEARTBEAT_V1.cjs \
+            scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_STAGE3_REAL_FULL_PROVIDER_ONE_BASE_DUAL_HEARTBEAT_TEST_ONLY_V1.ts \
+            docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json; do
+            test "$(git rev-parse "HEAD:$file")" = "$(git rev-parse "$HISTORIC:$file")" || {
+              echo "HOLD_3747_STAGE3_ORIGINAL_SOURCE_CHANGED:$file"; exit 1;
+            }
+          done
+          root="$(mktemp -d)"
+          historic="$root/3737"
+          cleanup() {
+            git worktree remove --force "$historic" >/dev/null 2>&1 || true
+            rm -rf "$root"
+          }
+          trap cleanup EXIT
+          git worktree add --detach "$historic" "$HISTORIC"
+          (cd "$historic" && test "$(git rev-parse HEAD)" = "$HISTORIC" && node "$ORIGINAL")
+          echo 'STAGE3_HISTORICAL_SEVEN_PATH_SIGNATURE_TEST_PASS_ON_EXACT_3737_SOURCE'
+          echo 'STAGE3_3747_CURRENT_SEVEN_PATH_REQUALIFICATION_CLAIM=false'
+          echo 'STAGE3_3747_ADOPTION_PERMIT_PRODUCTION_AUTHORITY=false'
       - name: Offline syntax and dual heartbeat owner/fencing tests, no physical provider
         run: |
           set -euo pipefail

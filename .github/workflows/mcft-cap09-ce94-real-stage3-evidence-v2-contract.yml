@@ -16,6 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -55,6 +56,7 @@ jobs:
           console.log("PASS_A44_64_FROZEN_PATHS_UNCHANGED_V2_EXACT_FOUR_REVIEW_ONLY_NOT_ADOPTION");
           NODE
       - name: Exact F654 protected-main signed-source inheritance positive and negative checks (review only)
+        if: github.event_name != 'pull_request' || github.event.pull_request.number != 3747
         env:
           EXPECTED_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
@@ -91,6 +93,74 @@ jobs:
           assert.throws(()=>v.verifyF654ReviewOnlyLineage({base:"0".repeat(40),head}),/HOLD_REVIEW_SUCCESSOR_EXACT_BASE/);
           console.log("PASS_EXACT_F654_TWO_PARENT_SIX_ORIGINAL_ED25519_AND_3735_REVIEW_ONLY_NO_EVENT_REPLAY_NO_PERMIT");
           NODE
+      - name: Exact #3747 successor — verify original F654 review in pinned #3736 source
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 3747
+        run: |
+          set -euo pipefail
+          HISTORIC='9a5c4ea1d0c93b68989a8faa45f5db474c3ad281'
+          ORIGINAL='scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs'
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "$(git merge-base "$HISTORIC" HEAD)" = "$HISTORIC"
+          test "$(git rev-parse "$HISTORIC:$ORIGINAL")" = '9d35a1fd5a2796f50a65c5fa49e0399cde17801d'
+          test "$(git rev-parse "HEAD:$ORIGINAL")" = '9d35a1fd5a2796f50a65c5fa49e0399cde17801d'
+          for file in \
+            scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs \
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json \
+            docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json \
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-TWO-PARENT-SOURCE-BINDING-V1.json \
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-OWNER-DIRECTED-SOURCE-ADMISSION-V1.json \
+            scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json; do
+            test "$(git rev-parse "HEAD:$file")" = "$(git rev-parse "$HISTORIC:$file")" || {
+              echo "HOLD_3747_CE94_F654_HISTORIC_SOURCE_DRIFT:$file"; exit 1;
+            }
+          done
+          root="$(mktemp -d)"
+          historic="$root/3736"
+          cleanup() {
+            git worktree remove --force "$historic" >/dev/null 2>&1 || true
+            rm -rf "$root"
+          }
+          trap cleanup EXIT
+          git worktree add --detach "$historic" "$HISTORIC"
+          (
+            cd "$historic"
+            test "$(git rev-parse HEAD)" = "$HISTORIC"
+            EXPECTED_PR_BASE_SHA='f654fff21e5aa05bfa6c79e67ea34fb53b61cdfb' node - <<'NODE'
+          "use strict";
+          const assert=require("node:assert/strict"),cp=require("node:child_process");
+          const v=require("./scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs");
+          const base="f654fff21e5aa05bfa6c79e67ea34fb53b61cdfb";
+          const head=cp.execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();
+          assert.equal(process.env.EXPECTED_PR_BASE_SHA,base);
+          const result=v.verifyF654ReviewOnlyLineage({base,head});
+          assert.equal(result.status,"PASS_F654_EXACT_HISTORIC_SOURCE_AND_REVIEW_ONLY_DELTA");
+          const review=require("./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-SIGNED-V2-PHASE3-FROZEN-V13-GOVERNANCE-REVIEW-V1.json");
+          assert.equal(review.evidence_entries.length,6);
+          for(const entry of review.evidence_entries){
+            const r=v.verifyRegisteredEvidence({
+              decision:{check_id:entry.check_id,dependency_digest:entry.reviewed_dependency_digest},
+              stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base,head
+            });
+            assert.equal(r.status,"PASS",entry.check_id+":"+r.reason_code);
+            assert.equal(r.permit_authorized,false);
+            assert.equal(v.verifyRegisteredEvidence({
+              decision:{check_id:entry.check_id,dependency_digest:entry.reviewed_dependency_digest},
+              stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base:"0".repeat(40),head
+            }),null);
+          }
+          const id="DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING";
+          const r=v.verifyF654PostmergeEvidence({decision:{check_id:id},stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base,head});
+          assert.equal(r.status,"PASS",r.reason_code);
+          assert.equal(r.signature_count,6);
+          assert.equal(r.permit_authorized,false);
+          assert.equal(v.verifyF654PostmergeEvidence({decision:{check_id:id},stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base:"0".repeat(40),head}),null);
+          assert.throws(()=>v.verifyF654ReviewOnlyLineage({base:"0".repeat(40),head}),/HOLD_REVIEW_SUCCESSOR_EXACT_BASE/);
+          console.log("PASS_EXACT_F654_TWO_PARENT_SIX_ORIGINAL_ED25519_AND_3735_REVIEW_ONLY_NO_EVENT_REPLAY_NO_PERMIT");
+          NODE
+          )
+          echo 'CE94_F654_HISTORIC_SOURCE_REVIEW_PASS_ONLY'
+          echo 'CE94_3747_CURRENT_F654_DELTA_REQUALIFIED=false'
+          echo 'CE94_3747_ADOPTION_PERMIT_PRODUCTION_AUTHORIZED=false'
       - name: Original six-stage Host, Permit and scheduler sources unchanged
         run: |
           set -euo pipefail
