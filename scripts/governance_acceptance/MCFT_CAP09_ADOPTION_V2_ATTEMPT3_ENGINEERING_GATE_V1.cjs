@@ -11,6 +11,7 @@ const BASELINE="e7a8f30ffb60cb4c2bc6bd83d7bbe487eb708cc9";
 const PARENT="72dc0304a21a", SECOND="da9db7129607", RUN="6ff9b41f6f7f";
 const HISTORIC_SUBJECT="2b63652297bb285f21c4d4c63c37d247d009142c";
 const HISTORIC_CONSUMED_SHA="f8c55961e2b4972e8e2b92ad0d788b6030240f97e2bc274edf206fb5833ea21a";
+const SUCCESSOR_ID="CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY";
 const ENGINEERING_IDS=Object.freeze([
  "A44_ADOPTION_QUALIFICATION_LOCAL_EXECUTION_ADMISSION_ENGINEERING_ONLY",
  "STAGE3_20261025_NONAUTHORIZING_EXACT_PATH_REQUALIFICATION",
@@ -40,15 +41,16 @@ function exact(x,keys,token){
 }
 function time(t){assert(typeof t==="string"&&Number.isFinite(Date.parse(t))&&new Date(t).toISOString()===t,"A3_TIME");return Date.parse(t);}
 function mapAdoptionV2(qcp,policy){
- assert(qcp&&Array.isArray(qcp.checks)&&qcp.checks.length===64,"A3_QCP64_REQUIRED");
+ assert(qcp&&Array.isArray(qcp.checks)&&[64,65].includes(qcp.checks.length),"A3_QCP64_OR_65_REQUIRED");
  assert(policy&&policy.schema==="CAP09_OFFLINE_ADOPTION_TRUST_V1"&&Array.isArray(policy.checks)&&policy.checks.length===54,"A3_FORMAL54_REQUIRED");
  const ids=qcp.checks.map(x=>x.check_id), formal=policy.checks.map(x=>x.check_id);
- assert.equal(new Set(ids).size,64,"A3_QCP_DUPLICATE");
+ assert.equal(new Set(ids).size,ids.length,"A3_QCP_DUPLICATE");
  assert.equal(new Set(formal).size,54,"A3_FORMAL_DUPLICATE");
  const formalSet=new Set(formal);
  assert(formal.every(x=>ids.includes(x)),"A3_FORMAL_DEFINITION_MISSING");
  const extras=ids.filter(x=>!formalSet.has(x));
- assert.deepEqual(extras.slice().sort(),ENGINEERING_IDS.slice().sort(),"A3_TECHNICAL_EXTRA_IDENTITY_CHANGED");
+ const expected=ids.length===65?[...ENGINEERING_IDS,SUCCESSOR_ID]:ENGINEERING_IDS.slice();
+ assert.deepEqual(extras.slice().sort(),expected.slice().sort(),"A3_TECHNICAL_EXTRA_IDENTITY_CHANGED");
  assert(policy.checks.every(x=>x.check_revision==="LOCAL_QCP_DEFINITION_SHA256"),"A3_FORMAL_REVISION_POLICY_CHANGED");
  assert.deepEqual(policy.allowed_not_applicable_ids.slice().sort(),[
   "V13_PRODUCER_DRIVEN_QUALIFICATION","END_TO_END_EVIDENCE_SUPPLY_DEADLINE",
@@ -57,7 +59,7 @@ function mapAdoptionV2(qcp,policy){
  const definitions=new Map(qcp.checks.map(x=>[x.check_id,x]));
  const revisions=Object.fromEntries(formal.map(id=>[id,sha(canonical(definitions.get(id)))]));
  return Object.freeze({schema_version:"MCFT_CAP09_ADOPTION_V2_TECHNICAL_MAP_V1",
-  total_checks:64,formal_checks:54,technical_only_checks:10,
+  total_checks:ids.length,formal_checks:54,technical_only_checks:expected.length,
   formal_revisions_sha256:sha(canonical(revisions)),
   technical_ids_sha256:sha(canonical(extras.slice().sort())),
   status:"DEFINITIONS_ONLY_NOT_ADOPTION",adoption_authorized:false,permit_authorized:false});
@@ -148,5 +150,5 @@ function assessEngineeringGate({qcp,policy,review,trust,runReceiptFile,nonceRece
   adoption_authorized:false,permit_issued:false,permit_consumed:false,
   six_stage_executed:false,production_authorized:false};
 }
-module.exports={BASELINE,RUN,PARENT,SECOND,HISTORIC_CONSUMED_SHA,ENGINEERING_IDS,DOMAIN,
+module.exports={BASELINE,RUN,PARENT,SECOND,HISTORIC_CONSUMED_SHA,ENGINEERING_IDS,SUCCESSOR_ID,DOMAIN,
  canonical,mapAdoptionV2,verifyConsumedTwins,verifyLineageReview,assessEngineeringGate};
