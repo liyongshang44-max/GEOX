@@ -22,7 +22,7 @@ This document describes a *new technical eligibility slice*, not an execution-ad
 
 `scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs` implements three explicit checks:
 
-1. **QCP64→Formal54 definition mapping.** Exactly 54 existing formal policy checks, and exactly the ten identified source/engineering-only current checks. The extra ten are **not** promoted to formal Adoption authority. There is no synthetic 64→54 truncation, no changed historic 55-check artifact, no permission to replay 55/54 signing.
+1. **QCP64 baseline / QCP65 successor → Formal54 definition mapping.** Exactly 54 existing formal policy checks; original main contains 10 identified source/engineering-only checks, while this PR adds one independently named technical-only QCP check (11 in total). The extra ten are **not** promoted to formal Adoption authority. There is no synthetic 64/65→54 truncation, no changed historic 55-check artifact, no permission to replay 55/54 signing.
 2. **Read-only historical ledger twins.** Read the exact `run-*` and `nonce-*` bytes and require the immutable SHA256, byte equality, original subject, parent, ordinal 2, Windows host, time window and signature-stripped verified object. This is ledger integrity, not an Ed25519 signature re-verification.
 3. **Purpose-specific Attempt-3 review verifier.** A fresh Ed25519 review under domain `GEOX_MCFT_CAP09_ATTEMPT3_LINEAGE_ADJUDICATION_V1` binds new exact source subject, original protected baseline, host, run/parent/ordinal 3, immutable DA9 consumption SHA, **real sealed-failure evidence SHA**, **all-attempts inventory SHA**, review window and `TEST_ONLY`. Existing registered retry issuer roles remain in control; an old DA9 signature is never valid for this new payload or domain. **No signing key is generated/issued for real authority.**
 
@@ -42,11 +42,15 @@ The new gate **always** returns `ENGINEERING_LINEAGE_VERIFIED_EXECUTION_HOLD` ev
 
 ## Remaining closure work (MANDATORY before any real execution)
 
-- Design and source-qualify the **full** Adoption V2 signed evidence format and authentic 64-check QCP artifact→54-check formal proof with exact new HEAD and release material. The code in this branch validates *definitions*, not source PR artifacts, historical/native QCP result evidence, or signed Adoption.
+- Design and source-qualify the **full** Adoption V2 signed evidence format and authentic **current 65-check** QCP artifact→54-check formal proof with exact new HEAD and release material. The code in this branch validates *definitions*, not source PR artifacts, historical/native QCP result evidence, or signed Adoption.
 - Finish independent **versioned Host/Permit V2 and Admission Bridge** beyond the now-implemented **read-only** Permit V2 envelope verifier, consume the valid V2 adoption context and bound Attempt-3 lineage signature, retain atomic nonce/run ledger semantics. Legacy `MCFT_CAP09_RETRY_PERMIT_V1.cjs` still requires ordinal 2 and **MUST NOT be edited to 3**. Production trust defaults remain disabled.
 - Bind new **real** independently assigned loopback PostgreSQL positive/negative databases, dedicated restricted logins and MinIO endpoint/bucket. Do not invent a port, credential, ownership assertion or use the DA9 resources. Positive/negative ACL and zero-state must be read from actual Windows host.
 - Complete **new-subject, distinct-run, signed non-authorized full-chain S3→Candidate→PG→readback proof**, which remains an original mandatory pre-Permit gate. Do not reclassify CE94 or `df091a71aafc` evidence as this proof.
 - Obtain genuine owner-reviewed current-subject signing authority, a valid short-lived exact-run Permit only **after** all live preflights, then run original six stages once and retain event ordering and Stage receipts. Until then `6ff9b41f6f7f` is `HOLD`.
+
+## Central QCP registration and new dependency ownership
+
+This PR appends the *single* independent check `CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY` to the existing 64 registered checks. Exactly seven paths, including the central QCP document itself, are owned by `CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SEVEN_PATHS_V1`; the prior 64 check definitions and their resolvers are untouched. This is QCP 65 **technical source qualification only**, not revised historical 55/54 artifact or new signed Adoption. Any current QCP/EA5E2 failure remains a real gate, never silently classified N/A.
 
 ## Explicit exclusions
 
