@@ -1357,6 +1357,36 @@ function main() {
         check_id:decision.check_id,detail:qualified});
       results.push(result);continue;
     }
+    // #3747: The five V13/EA5C1/Phase7 changed-Composer checks share
+    // an exact, unchanged 108-blob source graph already independently
+    // qualified in native #3741 and current-source #3746 QCP. Preserve
+    // historical frozen and signer failures; this is source-only requalification
+    // tied to 3747's own exact HEAD, never a fresh signer or formal Permit.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE" &&
+       args.base==="e7a8f30ffb60cb4c2bc6bd83d7bbe487eb708cc9" &&
+       require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs")
+         .COMPOSER_CHECKS.includes(decision.check_id)){
+      const qualified=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs")
+        .verifyComposerSuccessor({decision,stage,head:args.head||"",base:args.base});
+      const passed=qualified?.status==="PASS";
+      result={...common,
+        execution:"CURRENT_COMPOSER_108_BLOB_3741_3746_NATIVE_SOURCE_QUALIFICATION_ONLY",
+        status:passed?"PASS":"FAIL",
+        reason_code:qualified?.reason_code||"HOLD_3747_COMPOSER_NATIVE_SOURCE",
+        evidence_id:qualified?.evidence_id||null,
+        evidence_subject_sha:qualified?.source_sha||null,
+        new_current_signature_claimed:false,
+        old_frozen_108_zero_drift_claimed:false,
+        qualified_3746_source_only:true,
+        original_formal_six_stages:0,
+        adoption_authorized:false,permit_authorized:false,
+        production_authorized:false,
+        composer_current_source_proof:qualified};
+      if(!passed)blockers.push({
+        blocker_class:"CURRENT_3747_COMPOSER_NATIVE_SOURCE_QUALIFICATION_INVALID",
+        check_id:decision.check_id,detail:qualified});
+      results.push(result);continue;
+    }
     // #3737: ONLY exact 7-path TEST_ONLY successor to qualified #3746 main.
     // Verify native predecessor QCP run/artifact, original six Ed25519 signatures,
     // immutable prior 63 QCP definitions, and no scientific/runtime/source delta.
