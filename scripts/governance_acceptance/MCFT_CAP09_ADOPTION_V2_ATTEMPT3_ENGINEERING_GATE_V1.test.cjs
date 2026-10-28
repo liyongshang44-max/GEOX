@@ -125,7 +125,7 @@ test("actual checked-out QCP65 maps only 54 Formal and 11 technical-only definit
  assert.throws(()=>g.mapAdoptionV2(mutant,policy));
 });
 
-test("historic 13-path composite is not current 16-path source qualification; Composer signatures cannot transfer",()=>{
+test("historic 13-path composite is not current 18-path source qualification; Composer signatures cannot transfer",()=>{
  const cp=require("node:child_process");
  const scoped=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs");
  const head=cp.execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();
@@ -133,7 +133,7 @@ test("historic 13-path composite is not current 16-path source qualification; Co
    check_id:"DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1"});
  assert.equal(v.status,"PASS");
  assert.equal(v.scope,"PR_3747_SOURCE_PRESERVATION_ONLY");
- assert.equal(v.exact_current_delta_paths,16);
+ assert.equal(v.exact_current_delta_paths,18);
  assert.equal(v.historical_composite_exact_path_verifier_unchanged,true);
  assert.equal(v.historical_da9_semantic_verifier_unchanged,true);
  assert.equal(v.historical_composite_13_path_check_not_replayed,true);
@@ -287,4 +287,46 @@ test("owner-directed purpose-specific QCP approval rejects forged identity, edit
  for(const mutate of negatives){const altered=structuredClone(comment);mutate(altered);
    assert.throws(()=>scoped.ownerQcpApprovalValidate(altered,head,commitDate));}
  assert.throws(()=>scoped.ownerQcpApprovalText("f"),/HOLD_OWNER_QCP_HEAD_FORMAT/);
+});
+
+test("the two predecessor-workflow successor routes retain original frozen acceptances and exact source IDs",()=>{
+ const cp=require("node:child_process");
+ const root=path.resolve(__dirname,"../..");
+ const head=cp.execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim();
+ const git=(...args)=>cp.execFileSync("git",args,{cwd:root,encoding:"utf8"}).trim();
+ const fz=".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml";
+ const st=".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml";
+ const oldFrozen="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_V1.cjs";
+ const oldStage3="scripts/governance_acceptance/VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs";
+ const q=JSON.parse(fs.readFileSync(path.join(root,
+   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"),"utf8"));
+ const files=q.dependency_resolvers.CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2.paths;
+ assert.equal(files.length,18);
+ for(const file of [fz,st])assert(files.includes(file),
+   "HOLD_3747_MISSING_SUCCESSOR_APPLICABILITY_FILE:"+file);
+ assert.equal(git("rev-parse",g.BASELINE+":"+oldFrozen),
+   git("rev-parse",head+":"+oldFrozen),"HOLD_3747_HISTORIC_FROZEN_ACCEPTANCE_CHANGED");
+ assert.equal(git("rev-parse",g.BASELINE+":"+oldStage3),
+   git("rev-parse",head+":"+oldStage3),"HOLD_3747_HISTORIC_STAGE3_ACCEPTANCE_CHANGED");
+ assert.equal(git("rev-parse","3a803d703320c5dfb416c6b022767fd1fa1fccba:"+oldFrozen),
+   "19659f3f7745a2fb4bb528c6552fb79041e3206f");
+ assert.equal(git("rev-parse","bdce07aa692a26fc990be94aca15e2d1a12b9999:"+oldStage3),
+   "3766f72c88bb42481739044b3489404ac3374ec0");
+ const frozen=fs.readFileSync(path.join(root,fz),"utf8");
+ const stage3=fs.readFileSync(path.join(root,st),"utf8");
+ for(const fragment of ["git worktree add --detach", "HISTORIC='3a803d703320c5dfb416c6b022767fd1fa1fccba'",
+  'github.event.pull_request.number != 3747',
+  'github.event.pull_request.number }}" = "3747"']){
+   assert(frozen.includes(fragment),"HOLD_3747_FROZEN_ROUTE:"+fragment);
+ }
+ for(const fragment of ["git worktree add --detach",
+   "HISTORIC='bdce07aa692a26fc990be94aca15e2d1a12b9999'",
+   'HOLD_3747_STAGE3_ORIGINAL_SOURCE_CHANGED',
+   'STAGE3_3747_CURRENT_SEVEN_PATH_REQUALIFICATION_CLAIM=false']){
+   assert(stage3.includes(fragment),"HOLD_3747_STAGE3_ROUTE:"+fragment);
+ }
+ assert.equal(git("rev-parse",g.BASELINE+":"+
+   "docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json"),
+   git("rev-parse",head+":"+
+   "docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json"));
 });
