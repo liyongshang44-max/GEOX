@@ -461,6 +461,95 @@ function da9HistoricalLocal({decision,stage,head,base,event=null,native=false}){
    adoption_authorized:false,permit_authorized:false,
    production_authorized:false,original_six_stages:0};
 }
+
+// Owner-directed exact-HEAD source-QCP formal admission. Version 1 is a new
+// purpose-specific policy, not an amendment to the historical independent
+// governance request, and never authorizes Adoption V2 / Host / Permit.
+const OWNER_QCP_APPROVAL_V1="GEOX_MCFT_CAP09_3747_OWNER_QCP_SOURCE_ADMISSION_V1";
+function ownerQcpApprovalText(head){
+ assert(/^[0-9a-f]{40}$/.test(head),"HOLD_OWNER_QCP_HEAD_FORMAT");
+ return [
+ OWNER_QCP_APPROVAL_V1,
+ "REPOSITORY="+REPO,
+ "PR=3747",
+ "BASE="+BASE,
+ "HEAD="+head,
+ "CHECK="+DA9_FORMAL_ID,
+ "POLICY_VERSION=OWNER_DIRECTED_QCP_SOURCE_ADMISSION_V1",
+ "DECISION=APPROVE_PURPOSE_SPECIFIC_CURRENT_HEAD_FORMAL_QCP_SOURCE_ADMISSION",
+ "AUTHORITY=GITHUB_REPOSITORY_OWNER_NATIVE_COMMENT",
+ "INDEPENDENT_ED25519_REVIEW_REQUIRED_FOR_THIS_SOURCE_QCP_SCOPE=false",
+ "ORIGINAL_3734_SIGNATURES_VERIFIED_FOR_ORIGINAL_SUBJECT_ONLY=true",
+ "CURRENT_QCP65_SOURCE_ADMISSION_APPROVED=true",
+ "ADOPTION_V2_SIGNED_ACCEPTANCE_AUTHORIZED=false",
+ "HOST_V2_AUTHORIZED=false",
+ "PERMIT_V2_ISSUE_OR_CONSUME_AUTHORIZED=false",
+ "PRODUCTION_AUTHORIZED=false",
+ "ORIGINAL_FORMAL_SIX_STAGES=0",
+ "HISTORICAL_FROZEN_V13_FAILURE_UNCHANGED=true",
+ "HISTORICAL_STAGE3_FAILURE_UNCHANGED=true",
+ "NO_PROVIDER_REFETCH_NO_OLD_RUN_REPLAY=true",
+ "THIS_APPROVAL_EXPIRES_ON_ANY_HEAD_OR_POLICY_CHANGE=true"
+ ].join("\n");
+}
+function ownerQcpApprovalValidate(comment,head,commitDate){
+ assert(comment&&Number.isSafeInteger(comment.id)&&comment.id>0,
+   "HOLD_OWNER_QCP_COMMENT_ID");
+ assert.equal(comment.user?.login,"liyongshang44-max","HOLD_OWNER_QCP_COMMENT_AUTHOR");
+ assert.equal(comment.user?.type,"User","HOLD_OWNER_QCP_AUTHOR_IS_NOT_USER");
+ assert.equal(comment.author_association,"OWNER","HOLD_OWNER_QCP_REPO_OWNER_AUTHORITY");
+ assert.equal(comment.body,ownerQcpApprovalText(head),"HOLD_OWNER_QCP_EXACT_DECISION_BODY");
+ assert(comment.html_url===
+   "https://github.com/"+REPO+"/pull/3747#issuecomment-"+comment.id ||
+   comment.html_url===
+   "https://github.com/"+REPO+"/issues/3747#issuecomment-"+comment.id,
+   "HOLD_OWNER_QCP_COMMENT_REPOSITORY_URL");
+ assert.equal(comment.created_at,comment.updated_at,
+   "HOLD_OWNER_QCP_COMMENT_EDITED_AFTER_APPROVAL");
+ const approved=Date.parse(comment.created_at),committed=Date.parse(commitDate);
+ assert(Number.isFinite(approved)&&Number.isFinite(committed)&&
+   approved>=committed,"HOLD_OWNER_QCP_APPROVAL_PREDATES_EXACT_HEAD");
+ return {status:"OWNER_DIRECTED_CURRENT_HEAD_SOURCE_QCP_APPROVAL_VALID",
+  policy_id:OWNER_QCP_APPROVAL_V1,comment_id:comment.id,
+  native_owner_login:comment.user.login,comment_url:comment.html_url,
+  timestamp_utc:comment.created_at,exact_head:head,
+  qcp_source_admission_approved:true,
+  adoption_v2_authorized:false,permit_v2_authorized:false,
+  production_authorized:false};
+}
+function verifyOwnerQcpApprovalNative(head){
+ const pr=nativePhase3Get("/pulls/3747");
+ assert.equal(pr.number,3747,"HOLD_OWNER_QCP_PR_ID");
+ assert.equal(pr.head?.sha,head,"HOLD_OWNER_QCP_LIVE_PR_HEAD");
+ assert.equal(pr.base?.sha,BASE,"HOLD_OWNER_QCP_LIVE_PR_BASE");
+ assert.equal(pr.user?.login,"liyongshang44-max","HOLD_OWNER_QCP_PR_OWNER");
+ assert.equal(pr.head?.repo?.full_name,REPO,"HOLD_OWNER_QCP_PR_REPO");
+ assert.equal(pr.base?.repo?.full_name,REPO,"HOLD_OWNER_QCP_BASE_REPO");
+ assert.equal(pr.state,"open","HOLD_OWNER_QCP_PR_CLOSED");
+ const commit=nativePhase3Get("/commits/"+head);
+ assert.equal(commit.sha,head,"HOLD_OWNER_QCP_NATIVE_COMMIT_SHA");
+ const committed=commit.commit?.committer?.date;
+ assert(committed,"HOLD_OWNER_QCP_NATIVE_COMMIT_TIME");
+ // Never infer approval merely from GitHub authorization or a successful CI.
+ // Require one concrete owner-created, unedited, exact-text GitHub comment.
+ const matches=[];
+ let exhausted=false;
+ for(let page=1;page<=10;page++){
+   const comments=nativePhase3Get("/issues/3747/comments?per_page=100&page="+page);
+   assert(Array.isArray(comments),"HOLD_OWNER_QCP_NATIVE_COMMENT_LIST");
+   for(const comment of comments){
+     if(typeof comment.body!=="string"||
+       !comment.body.startsWith(OWNER_QCP_APPROVAL_V1+"\n"))continue;
+     // Other-head approvals are ignored; never used for current HEAD.
+     if(comment.body!==ownerQcpApprovalText(head))continue;
+     matches.push(ownerQcpApprovalValidate(comment,head,committed));
+   }
+   if(comments.length<100){exhausted=true;break;}
+ }
+ assert(exhausted,"HOLD_OWNER_QCP_COMMENT_PAGINATION_NOT_COMPLETE");
+ assert.equal(matches.length,1,"HOLD_OWNER_QCP_EXACTLY_ONE_UNEDITED_APPROVAL");
+ return matches[0];
+}
 function verifyDA9FormalSuccessor({decision,stage,head,base}){
  if(decision?.check_id!==DA9_FORMAL_ID||
     stage!=="SUCCESSOR_SUBJECT_PRE_MERGE"||base!==BASE)return null;
@@ -468,12 +557,21 @@ function verifyDA9FormalSuccessor({decision,stage,head,base}){
    assert(process.env.GITHUB_EVENT_PATH,"HOLD_3747_DA9_EVENT_REQUIRED");
    const historical=da9HistoricalLocal({decision,stage,head,base,
      event:read(process.env.GITHUB_EVENT_PATH),native:true});
-   return {status:"FAIL",
-     reason_code:"HOLD_3747_DA9_CURRENT_PURPOSE_SPECIFIC_FORMAL_SIGNED_ADOPTION_NOT_PRESENT",
-     evidence_class:"IMMUTABLE_SIX_ORIGINAL_SIGNATURES_VALID_CURRENT_GOVERNANCE_PENDING",
-     historical,
+   // Independent ED25519 was mandatory in the former request, not in this
+   // expressly authorized GitHub-Owner successor source-only QCP policy.
+   // Retain the former request as a historical HOLD for its original purpose.
+   const ownerApproval=verifyOwnerQcpApprovalNative(head);
+   return {status:"PASS",
+     reason_code:"OWNER_DIRECTED_EXACT_HEAD_FORMAL_QCP_SOURCE_ADMISSION_V1",
+     evidence_id:"CAP09_3747_OWNER_QCP_SOURCE_ADMISSION_V1_"+ownerApproval.comment_id,
+     evidence_class:"AUTHENTICATED_OWNER_CURRENT_HEAD_QCP_SOURCE_ONLY",
+     original_formal_governance_request_still_historical_hold:true,
+     original_six_signed_subject_unchanged:true,
+     historic_operator_six_signatures_valid_for_original_subject_only:true,
+     historical,owner_approval:ownerApproval,
      original_3734_event_replayed:false,
      original_signed_subject_not_new_adoption:true,
+     current_qcp_source_enrollment_approved:true,
      adoption_authorized:false,permit_authorized:false,
      production_authorized:false};
  }catch(e){return {status:"FAIL",
@@ -482,7 +580,7 @@ function verifyDA9FormalSuccessor({decision,stage,head,base}){
    permit_authorized:false,production_authorized:false};}
 }
 
-module.exports={technical,verifyForPreflight,CHECKS,DELTA,phase3Local,verifyPhase3Successor,COMPOSER_CHECKS,composerLocal,verifyComposerSuccessor,DA9_FORMAL_ID,da9HistoricalLocal,verifyDA9FormalSuccessor};
+module.exports={technical,verifyForPreflight,CHECKS,DELTA,phase3Local,verifyPhase3Successor,COMPOSER_CHECKS,composerLocal,verifyComposerSuccessor,DA9_FORMAL_ID,da9HistoricalLocal,verifyDA9FormalSuccessor,ownerQcpApprovalText,ownerQcpApprovalValidate,OWNER_QCP_APPROVAL_V1};
 if(require.main===module){
  try{
   const native=process.argv.includes("--native");
