@@ -37,6 +37,7 @@ const DELTA=Object.freeze([
  "scripts/cap09_adoption_v1/SIGN_MCFT_CAP09_ADOPTION_V2_OFFLINE.cjs",
  "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs",
  "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs",
+ "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs",
  "scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs",
  "scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.test.cjs",
  "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs",
@@ -53,7 +54,7 @@ function technical({head,base=BASE,check_id=null,event=null,native=false}={}){
  assert.equal(head,run("rev-parse","HEAD"),"HOLD_3747_EXACT_HEAD_REQUIRED");
  assert.equal(run("merge-base",BASE,head),BASE,"HOLD_3747_ANCESTRY");
  const delta=run("diff","--name-only",BASE,head).split(/\r?\n/).filter(Boolean).sort();
- assert.deepEqual(delta,DELTA,"HOLD_3747_EXACT_18_PATH_BOUNDARY");
+ assert.deepEqual(delta,DELTA,"HOLD_3747_EXACT_19_PATH_BOUNDARY");
  const old=JSON.parse(run("show",BASE+":"+QCP)),current=read(QCP);
  assert.equal(old.checks.length,64,"HOLD_3747_BASE_QCP64_REQUIRED");
  assert.equal(current.checks.length,65,"HOLD_3747_NEW_QCP65_REQUIRED");
@@ -72,7 +73,7 @@ function technical({head,base=BASE,check_id=null,event=null,native=false}={}){
  assert.equal(run("rev-parse",BASE+":"+SOURCE_COMPOSER),CURRENT_COMPOSER_BLOB);
  assert.equal(run("rev-parse",head+":"+SOURCE_COMPOSER),CURRENT_COMPOSER_BLOB);
  assert.notEqual(CURRENT_COMPOSER_BLOB,HISTORIC_FROZEN_COMPOSER_BLOB);
- // Do not replay historical 13-path and DA9-source checks on this new 18-path PR.
+ // Do not replay historical 13-path and DA9-source checks on this new 19-path PR.
  // Assert both original checking implementations survived byte-for-byte.
  for(const oldVerifier of [OLD_COMPOSITE,OLD_DA9_SEMANTIC]){
    assert.equal(run("rev-parse",BASE+":"+oldVerifier),
