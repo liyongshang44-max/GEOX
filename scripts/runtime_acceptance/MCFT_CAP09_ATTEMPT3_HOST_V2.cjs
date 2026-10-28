@@ -109,6 +109,21 @@ function persistOnce(file,obj){
  try{fs.writeFileSync(fd,JSON.stringify(obj,null,2)+"\n");fs.fsyncSync(fd);}
  finally{fs.closeSync(fd);}
 }
+
+function preflight({admission,plan,observed,outputRoot,firstBase,environment=process.env}){
+ assert(process.platform==="win32"&&!environment.CI&&!environment.GITHUB_ACTIONS,"V2_HOST_WINDOWS_ONLY");
+ assert(!environment.NODE_OPTIONS&&!environment.NODE_PATH,"V2_HOST_NODE_INJECTION_FORBIDDEN");
+ const steps=checkPreconsume({admission,plan,observed,outputRoot,firstBase,environment});
+ const prepared=atomic.prepare(admission);
+ assert.equal(steps.length,6,"V2_STAGE_DISPATCH_NOT_COMPLETE");
+ assert.equal(atomic.HOST_V2_STAGE_DISPATCH_ADOPTED,true,"V2_STAGE_ROUTE_NOT_ADOPTED");
+ // Read-only preflight: Permit neither consumed nor reissued, no output/DB/S3 mutation.
+ return Object.freeze({status:"ATTEMPT3_V2_SIX_STAGE_WINDOWS_PREFLIGHT_PASS_NOT_EXECUTED",
+  run_id:prepared.run_id,subject_sha:prepared.subject_sha,
+  fixed_stages:steps.map(s=>s.id),permit_consumed:false,original_six_stages_executed:0,
+  host_v2_route_implemented:true,production_authorized:false});
+}
+
 async function execute({admission,plan,observed,outputRoot,firstBase,environment=process.env}){
  assert(process.platform==="win32"&&!environment.CI&&!environment.GITHUB_ACTIONS,"V2_HOST_WINDOWS_ONLY");
  assert(!environment.NODE_OPTIONS&&!environment.NODE_PATH,"V2_HOST_NODE_INJECTION_FORBIDDEN");
@@ -142,4 +157,4 @@ async function execute({admission,plan,observed,outputRoot,firstBase,environment
   final_receipt_sha256:result.final_receipt_sha256,
   output:outputRoot,production_authorized:false};
 }
-module.exports={STAGES,boundStages,checkPreconsume,execute};
+module.exports={STAGES,boundStages,checkPreconsume,preflight,execute};
