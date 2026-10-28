@@ -156,7 +156,7 @@ jobs:
           assert.equal(v.verifyF654PostmergeEvidence({decision:{check_id:id},stage:"SUCCESSOR_SUBJECT_PRE_MERGE",base:"0".repeat(40),head}),null);
           assert.throws(()=>v.verifyF654ReviewOnlyLineage({base:"0".repeat(40),head}),/HOLD_REVIEW_SUCCESSOR_EXACT_BASE/);
           console.log("PASS_EXACT_F654_TWO_PARENT_SIX_ORIGINAL_ED25519_AND_3735_REVIEW_ONLY_NO_EVENT_REPLAY_NO_PERMIT");
-            NODE
+          NODE
           )
           echo 'CE94_F654_HISTORIC_SOURCE_REVIEW_PASS_ONLY'
           echo 'CE94_3747_CURRENT_F654_DELTA_REQUALIFIED=false'
