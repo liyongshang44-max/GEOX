@@ -153,15 +153,25 @@ function mergedFixture(){
  const sourceOwner={id:postmerge.OWNER_SOURCE_COMMENT,
   user:{login:"liyongshang44-max",type:"User"},author_association:"OWNER",
   created_at:"2026-10-28T14:48:20Z",updated_at:"2026-10-28T14:48:20Z",
+  issue_url:"https://api.github.com/repos/"+postmerge.REPO+"/issues/3747",
+  html_url:"https://github.com/"+postmerge.REPO+"/pull/3747#issuecomment-"+postmerge.OWNER_SOURCE_COMMENT,
   body:[
    "GEOX_MCFT_CAP09_3747_OWNER_QCP_SOURCE_ADMISSION_V1",
-   "REPOSITORY="+postmerge.REPO,"PR=3747","BASE="+postmerge.BASE,
-   "HEAD="+postmerge.SOURCE,
+   "REPOSITORY="+postmerge.REPO,"PR=3747","BASE="+postmerge.BASE,"HEAD="+postmerge.SOURCE,
+   "CHECK=DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING",
+   "POLICY_VERSION=OWNER_DIRECTED_QCP_SOURCE_ADMISSION_V1",
    "DECISION=APPROVE_PURPOSE_SPECIFIC_CURRENT_HEAD_FORMAL_QCP_SOURCE_ADMISSION",
+   "AUTHORITY=GITHUB_REPOSITORY_OWNER_NATIVE_COMMENT",
+   "INDEPENDENT_ED25519_REVIEW_REQUIRED_FOR_THIS_SOURCE_QCP_SCOPE=false",
+   "ORIGINAL_3734_SIGNATURES_VERIFIED_FOR_ORIGINAL_SUBJECT_ONLY=true",
    "CURRENT_QCP65_SOURCE_ADMISSION_APPROVED=true",
-   "ADOPTION_V2_SIGNED_ACCEPTANCE_AUTHORIZED=false",
-   "HOST_V2_AUTHORIZED=false","PERMIT_V2_ISSUE_OR_CONSUME_AUTHORIZED=false",
-   "PRODUCTION_AUTHORIZED=false","ORIGINAL_FORMAL_SIX_STAGES=0"].join("\n")};
+   "ADOPTION_V2_SIGNED_ACCEPTANCE_AUTHORIZED=false","HOST_V2_AUTHORIZED=false",
+   "PERMIT_V2_ISSUE_OR_CONSUME_AUTHORIZED=false","PRODUCTION_AUTHORIZED=false",
+   "ORIGINAL_FORMAL_SIX_STAGES=0",
+   "HISTORICAL_FROZEN_V13_FAILURE_UNCHANGED=true",
+   "HISTORICAL_STAGE3_FAILURE_UNCHANGED=true",
+   "NO_PROVIDER_REFETCH_NO_OLD_RUN_REPLAY=true",
+   "THIS_APPROVAL_EXPIRES_ON_ANY_HEAD_OR_POLICY_CHANGE=true"].join("\n")};
  const pr={number:3747,state:"closed",merged:true,
   head:{sha:postmerge.SOURCE,repo:{full_name:postmerge.REPO}},
   base:{sha:postmerge.BASE},merge_commit_sha:postmerge.MERGE,
@@ -195,6 +205,7 @@ test("postmerge source proof rejects 24 scoped and authority escalation attacks"
  a=>a[2].mergeCommit.parents.reverse(),
  a=>a[2].main.object.sha=postmerge.SOURCE,
  a=>a[2].sourceOwner.author_association="CONTRIBUTOR",
+ a=>a[2].sourceOwner.issue_url="https://api.github.com/repos/"+postmerge.REPO+"/issues/3748",
  a=>a[2].sourceOwner.body=a[2].sourceOwner.body.replace("ADOPTION_V2_SIGNED_ACCEPTANCE_AUTHORIZED=false","ADOPTION_V2_SIGNED_ACCEPTANCE_AUTHORIZED=true"),
  a=>a[2].sourceOwner.updated_at="2026-10-29T00:00:00Z",
  a=>a[2].sourceOwner.created_at="2026-10-28T14:40:00Z"];
@@ -202,7 +213,7 @@ test("postmerge source proof rejects 24 scoped and authority escalation attacks"
   const a=structuredClone([p,derivation,n]);attack(a);
   assert.throws(()=>postmerge.verify(a[1],a[0],a[2]));
  }
- assert.equal(attacks.length,24);
+ assert.equal(attacks.length,25);
 });
 test("postmerge GitHub-native empty run PR association is allowed ONLY with separate verified merge",()=>{
  const {p,n}=mergedFixture();
@@ -232,7 +243,9 @@ test("formal Adoption-specific Owner approval cannot be replaced by QCP-only own
  const {p,n}=mergedFixture();
  const t="2026-10-28T15:16:00Z",approval={id:p.adoption_owner_approval_comment_id,
   user:{login:"liyongshang44-max",type:"User"},author_association:"OWNER",
-  created_at:t,updated_at:t,body:postmerge.ownerApprovalText(p)};
+  created_at:t,updated_at:t,body:postmerge.ownerApprovalText(p),
+  issue_url:"https://api.github.com/repos/"+postmerge.REPO+"/issues/3748",
+  html_url:"https://github.com/"+postmerge.REPO+"/pull/3748#issuecomment-"+p.adoption_owner_approval_comment_id};
  assert.equal(postmerge.verifyOwnerApproval(p,approval,n.sourceOwner).status,
   "ADOPTION_V2_OWNER_PURPOSE_APPROVAL_VERIFIED_NOT_SIGNED");
  const bad=[
@@ -244,6 +257,8 @@ test("formal Adoption-specific Owner approval cannot be replaced by QCP-only own
  a=>a[1].updated_at="2026-10-28T15:17:00Z",
  a=>a[1].created_at="2026-10-28T14:47:00Z",
  a=>a[1].user.login="someone-else",
+ a=>a[1].issue_url="https://api.github.com/repos/"+postmerge.REPO+"/issues/3747",
+ a=>a[1].html_url="https://github.com/"+postmerge.REPO+"/issues/3748#issuecomment-"+a[1].id,
  a=>a[0].material_digest="0".repeat(64),
  a=>a[0].host_id="ANOTHER_WINDOWS_HOST",
  a=>a[0].issuer_id="unknown"
