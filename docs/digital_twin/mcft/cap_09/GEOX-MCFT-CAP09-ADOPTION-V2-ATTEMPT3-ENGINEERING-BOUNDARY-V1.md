@@ -109,6 +109,37 @@ signed and entered into a distinct exact-source technical qualification
 record before it can even be considered for further gates; it cannot
 be carried forward after modifying the source HEAD.
 
+## 2026-10-28 — bounded current-HEAD Phase3 requalification
+
+This PR also independently checks the current Phase3 **94 exact dependency
+Git blobs** against the independently qualified #3743
+source `cd18701600346840b7e4cc3611a7108f2e713490`.
+A read-only source comparison found all 94 blobs identical to protected
+main `e7a8f30ffb60cb4c2bc6bd83d7bbe487eb708cc9`.
+The current graph digest is
+`sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145`;
+the old 24cd Phase3 digest
+`sha256:d5d1cf09c4cde3b0fe82e658d9af2b25fe5beccee1a582d40ba00349fab8534b`
+remains invalid on the current graph.
+
+A new exact #3747 PR-native `verifyPhase3Successor` requires:
+current event/HEAD/base/16-path scope; the 94 unchanged Git blob
+identities; the unchanged owner policy and source manifest; the
+authenticated live #3743 CI and real PostgreSQL qualification jobs
+plus immutable artifact `12738863652` with digest
+`sha256:0a05c94f21df6f8164b4cc3e37f09fbddf6663dfabee605443ec833e58177502`;
+and the original #3745 owner-directed GitHub-native source-review
+runs. **No technical PASS without all live proofs**. This path
+requalifies the *same Phase3 source bytes*, not the old 24cd historical
+Run, six operator signatures, Frozen V13 source or DA9 formal governance.
+
+The Phase3 QCP check can be marked `PASS` **only when** this
+independent real-source exact-blob/native proof succeeds. The five
+Composer scope-change blockers and the PR3734-specific formal DA9
+admission remain separate `FAIL` until their distinct evidence is
+available. This route grants no Adoption/Permit, authorization, Owner
+activation, formal six stages or production write.
+
 **Decision: historical Frozen V13, DA9 signer succession and Stage3
 predecessor checks retain their actual outcomes. The #3747 technical
 scope assessment is independent and non-authorizing.** Adoption HOLD,
