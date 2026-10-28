@@ -69,6 +69,7 @@ function prepare(args){
  assert.equal(raw.status,"RAW_READBACK_BYTES_MATCH_NOT_AUTHORITY");
  const owned=resource.verify(resourceEnvelope,trust,{subject_sha:a.subject_sha,host_id:a.host_id,
   readback_sha256:raw.sha256,now});
+ resource.bindSignedToReadback(resourceEnvelope.payload,raw);
  assert.equal(owned.run_id,a.run_id);
  const full=fullChain.verify({binding:fullChainBinding,trust,subjectSha:a.subject_sha,
   attemptRunId:a.run_id,sourceRoot:releaseRoot,now});
