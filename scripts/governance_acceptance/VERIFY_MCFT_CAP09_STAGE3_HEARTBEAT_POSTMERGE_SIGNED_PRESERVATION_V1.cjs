@@ -5,7 +5,10 @@
 const assert=require("node:assert/strict");
 const cp=require("node:child_process"),fs=require("node:fs"),path=require("node:path");
 const ROOT=path.resolve(__dirname,"../..");
-const BASE="63dc3382f879781c604a852c7d1b28af9b0dd9f4";
+// The original #3737/CE94 preserved base remains a distinct historic Git object.
+// Exact current post-#3746 main is a NEW subject; old approvals do not transfer.
+const ORIGINAL_3737_BASE="63dc3382f879781c604a852c7d1b28af9b0dd9f4";
+const BASE="b0b7f05a36214ce65cb306a411d088fb8fa76c6b";
 const INTEGRATION="876cdcff39fe9c252b591236afd3b9bcdf27a4f4";
 const POSTMERGE="b2e846d4b10a5d124d6060998ef1c9a2895391e4";
 const MAIN3735="f654fff21e5aa05bfa6c79e67ea34fb53b61cdfb";
@@ -40,12 +43,20 @@ function reviewScope({base,head}){
  assert.deepEqual(diff,ALLOWED,"HOLD_UNREVIEWED_3737_PATH_DELTA");
  const q=JSON.parse(fs.readFileSync(QCP,"utf8"));
  const old=JSON.parse(git("show",BASE+":"+QCP));
- assert.equal(old.checks.length,60,"HOLD_PROTECTED_3736_BASE_QCP_60");
- assert.equal(q.checks.length,61,"HOLD_HEARTBEAT_QCP_61");
- assert.deepEqual(q.checks.slice(0,60),old.checks,"HOLD_HISTORICAL_CHECK_REWRITE");
+ assert.equal(old.checks.length,63,"HOLD_CURRENT_3746_MAIN_QCP_63");
+ assert.equal(q.checks.length,64,"HOLD_HEARTBEAT_SUCCESSOR_QCP_64");
+ assert.deepEqual(q.checks.slice(0,63),old.checks,"HOLD_CURRENT_MAIN_CHECK_REWRITE");
  for(const [id,resolver] of Object.entries(old.dependency_resolvers))assert.deepEqual(q.dependency_resolvers[id],resolver,"HOLD_HISTORIC_RESOLVER_REWRITE:"+id);
+ assert.deepEqual(
+   q.checks.slice(63).map(x=>x.check_id),
+   ["STAGE3_20261026_DUAL_HEARTBEAT_ENGINEERING_ONLY"],
+   "HOLD_CURRENT_QCP_EXTRA_CHECKS");
+ assert.equal(q.checks[63].carry_forward_policy,
+   "NONE_NO_HISTORICAL_PERMIT_NO_RAW_RECLASSIFICATION",
+   "HOLD_HEARTBEAT_CARRY_FORWARD_FORBIDDEN");
  assert.equal(q.fail_closed_rules.unknown_changed_path,"FAIL");
- assert.equal(digest(BASE),"2d1f72d92c05093537774285bda5b7200845344d");
+ assert.equal(digest(ORIGINAL_3737_BASE),"2d1f72d92c05093537774285bda5b7200845344d");
+ assert.equal(digest(BASE),digest(ORIGINAL_3737_BASE),"HOLD_CURRENT_MAIN_COMPOSER_CHANGED");
  assert.equal(digest(head),digest(BASE),"HOLD_SIGNED_COMPOSER_BLOB_CHANGED");
  const r=require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs").resolveDependencyResolvers(ROOT,q);
  assert.deepEqual(r.errors,[],"HOLD_HEARTBEAT_RESOLVER_ERRORS");

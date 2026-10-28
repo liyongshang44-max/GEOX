@@ -1,0 +1,46 @@
+{
+  "schema_version": "geox_mcft_cap09_owner_directed_successor_policy_v1",
+  "status": "PROPOSED_PENDING_EXACT_HEAD_CI_AND_QCP",
+  "decision_mode": "REPOSITORY_OWNER_DIRECTED_SOURCE_QUALIFICATION",
+  "owner": "liyongshang44-max",
+  "authority_basis": "explicit_repository_owner_instruction_2026_10_27_no_independent_signature",
+  "previous_owner_policy": "GEOX-MCFT-CAP09-DA9-SIGNED-V2-OWNER-DIRECTED-SOURCE-ADMISSION-V1.json",
+  "previous_policy_not_inherited": true,
+  "protected_main_base": "63dc3382f879781c604a852c7d1b28af9b0dd9f4",
+  "sources": [
+    {
+      "pr": 3740,
+      "head": "cd8d5909fb600535445298b48c2ca25a1e9032a7",
+      "qcp_workflow_run": 40446287200,
+      "ci_run": 40446287281,
+      "scoped_artifact_id": 12708053283,
+      "scoped_artifact_sha256": "3e847de5b05fef9d13f739ef02410de1a62699d081c3a0a7e81d807f4fd6def8"
+    },
+    {
+      "pr": 3744,
+      "head": "c99c6ce846cf1d17d6193930956a30d3b05199cb",
+      "qcp_workflow_run": 40519871969,
+      "ci_run": 40519872857,
+      "scoped_artifact_id": 12741276233,
+      "scoped_artifact_sha256": "1e39c12ac51d5db0219aef1bf5ff603a5aa74f7ad19c0654adc2b1abfc8a6950"
+    }
+  ],
+  "manifest_sha256": "3d19be32ffc48a92df749be763c6e00fb41ce4be8cb5c126fef77ac52bb12cd3",
+  "review_request_sha256": "dcda9ddc9a1f5acc5b08d398e5432dad677aa96092fa1e2c2c7fd717d541da45",
+  "historical_checks_preserved": 60,
+  "new_scoped_checks_expected": 2,
+  "source_qualification_only": true,
+  "requires_authenticated_owner_event": true,
+  "requires_native_exact_head_verification": true,
+  "independent_ed25519_signature_required": false,
+  "independent_ed25519_signature_claimed": false,
+  "historical_frozen_v13_zero_drift_pass": false,
+  "historic_six_operator_signatures_resigned": false,
+  "full_central_qcp_pass": false,
+  "global_qcp_blockers_open": 7,
+  "physical_execution_approved": false,
+  "permit_approved": false,
+  "old_failed_run_id": "df091a71aafc",
+  "old_run_reuse_allowed": false,
+  "original_formal_six_stages": 0
+}

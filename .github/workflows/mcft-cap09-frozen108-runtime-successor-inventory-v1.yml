@@ -1,0 +1,157 @@
+name: MCFT CAP09 Frozen108 Runtime Successor Inventory V1
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap09-frozen108-runtime-successor-inventory-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-FROZEN108-RUNTIME-SUCCESSOR-INVENTORY-V1.json'
+      - 'scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exact108-readonly-inventory:
+    # Original exact-source 3/6-path verifier cannot run as a 13-path composite.
+    # Its native source runs remain preserved; composite uses its own exact-head verifier.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.number == 3739 || github.event.pull_request.number == 3740))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: No inherited authority or live Provider/DB/S3
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+          test -z "${PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY:-}"
+      - name: Independently enumerate original Frozen108 vs protected-main exact paths
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs --inventory
+      - name: Enforce immutable exact path catalog after discovery
+        run: |
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs --verify
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs --negative
+  isolated-current-runtime:
+    name: ${{ matrix.check }}
+    needs: exact108-readonly-inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - V13_AUTONOMOUS_FORCING_FOUNDATION
+          - V13_HOLISTIC_SCHEMA
+          - V13_NEXT_TICK_VIABILITY
+          - EA5C1_DURABLE_RAW_RESTRICTED_INGRESS
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_successor_isolated_testonly
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_successor_isolated_testonly"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_successor_isolated_testonly
+      EA5C1_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_successor_isolated_testonly
+      EA5C1_S3_ENDPOINT: http://127.0.0.1:9000
+      EA5C1_S3_BUCKET: geox-mcft-cap09-formal-raw-v1
+      EA5C1_S3_ACCESS_KEY: minioadmin
+      EA5C1_S3_SECRET_KEY: minioadmin123
+      CHECK_ID: ${{ matrix.check }}
+      MCFT_CAP09_V13_FOUNDATION_DESTRUCTIVE_ACCEPTANCE: '1'
+      MCFT_CAP09_V13_HOLISTIC_SCHEMA_DESTRUCTIVE_ACCEPTANCE: '1'
+      MCFT_CAP09_V13_VIABILITY_DESTRUCTIVE_ACCEPTANCE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - uses: actions/setup-node@v4
+        with:
+          # Frozen PG/MinIO integration harness is pinned to Node20.11.1;
+          # Node24 native better-sqlite3 install requires C++20 and is not a proof failure.
+          # Node24 independently verifies the exact 108-path inventory in the first job.
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Assert isolated ephemeral stores and deny inherited production credentials
+        shell: node {0}
+        run: |
+          const assert=require('node:assert/strict');
+          for(const [k,v] of Object.entries(process.env)){
+            if(/^GEOX_MCFTCAP09_|^GEOX_MCFT_CAP09_|^MCFT_GOVERNED_RETRY_|^MCFT_CAP09_ADOPTION_REQUEST$/.test(k))assert(!v,'FORBIDDEN_PRODUCTION_ENV:'+k);
+          }
+          for(const name of ['DATABASE_URL','EA5C1_DATABASE_URL']){
+            const u=new URL(process.env[name]);
+            assert.equal(u.hostname,'127.0.0.1');
+            assert.equal(u.username,'postgres');
+            assert.equal(u.pathname,'/mcft_cap09_successor_isolated_testonly');
+          }
+          assert.equal(process.env.EA5C1_S3_ENDPOINT,'http://127.0.0.1:9000');
+      - run: pnpm install --frozen-lockfile
+      - name: Verify changed retention authority and production bucket fail-closed contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts
+      - name: Start ephemeral private MinIO for EA5C1 only
+        if: matrix.check == 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name successor-frozen108-minio -p 127.0.0.1:9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin123 \
+            ghcr.io/datalens-tech/minio:25.09@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/ready >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/ready >/dev/null
+          docker run --rm --network host --entrypoint /bin/sh \
+            docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 \
+            -c 'mc alias set successor http://127.0.0.1:9000 minioadmin minioadmin123 && mc mb successor/geox-mcft-cap09-formal-raw-v1 && mc anonymous set private successor/geox-mcft-cap09-formal-raw-v1'
+      - name: Run real ephemeral isolated PG/S3 successor acceptance, never prior Frozen recorder
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          case "$CHECK_ID" in
+            V13_AUTONOMOUS_FORCING_FOUNDATION)
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.ts ;;
+            V13_HOLISTIC_SCHEMA)
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES.ts ;;
+            V13_NEXT_TICK_VIABILITY)
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY.ts ;;
+            EA5C1_DURABLE_RAW_RESTRICTED_INGRESS)
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts | tee acceptance-output/SUCCESSOR_EA5C1_ACCEPTANCE.log
+              pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts | tee acceptance-output/SUCCESSOR_EA5C1_RETENTION.log
+              test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:9000/geox-mcft-cap09-formal-raw-v1/)" = 403 ;;
+            *) exit 1 ;;
+          esac
+      - name: Record NONAUTHORIZING exact-head successor evidence separate from historic Frozen
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP09_FROZEN108_RUNTIME_SUCCESSOR_INVENTORY_V1.cjs --record-isolated
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frozen108-successor-${{ matrix.check }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/
+          if-no-files-found: error
+      - name: Remove temporary MinIO
+        if: always() && matrix.check == 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'
+        run: docker rm -f successor-frozen108-minio || true
