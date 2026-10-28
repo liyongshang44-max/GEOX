@@ -10,6 +10,7 @@ const c=require("../cap09_adoption_v1/contract.cjs");
 const off=require("../cap09_adoption_v1/offline-context.cjs");
 const material=require("../cap09_adoption_v1/installed-material.cjs");
 const a3=require("../governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs");
+const merged=require("./MCFT_CAP09_ADOPTION_V2_POSTMERGE_SOURCE_V1.cjs");
 const DOMAIN="GEOX_MCFT_CAP09_ADOPTION_QUALIFICATION_V2\n";
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const verified=new WeakSet();
@@ -115,35 +116,40 @@ function zipRaw(zip){
  return out;
 }
 function githubGet(uri){
- assert(/^\/(?:pulls\/3747|actions\/runs\/[0-9]+(?:\/artifacts\?per_page=100|\/attempts\/[0-9]+\/jobs\?per_page=100)?)$/.test(uri),"A3_V2_GITHUB_URL_SCOPE");
+ assert(/^\/(?:pulls\/3747|actions\/runs\/[0-9]+(?:\/artifacts\?per_page=100|\/attempts\/[0-9]+\/jobs\?per_page=100)?|git\/commits\/[0-9a-f]{40}|git\/ref\/heads\/main|issues\/comments\/[1-9][0-9]*)$/.test(uri),"A3_V2_GITHUB_URL_SCOPE");
  const curl=process.platform==="win32"?"curl.exe":"curl";
  const data=cp.execFileSync(curl,["--fail","--silent","--show-error","--location","--max-time","20",
   "-H","Accept: application/vnd.github+json","-H","X-GitHub-Api-Version: 2022-11-28",
   "https://api.github.com/repos/"+REPO+uri],{encoding:"utf8",timeout:25000,maxBuffer:2097152,windowsHide:true});
  return JSON.parse(data);
 }
-function checkNative(p,run,artifactList,jobList,pr){
- assert.equal(pr.number,PR);assert.equal(pr.head?.sha,p.subject_sha);
+function checkNative(p,run,artifactList,jobList,pr,mergedProofValidated=false){
+ const source=mergedProofValidated?merged.SOURCE:p.subject_sha;
+ assert.equal(pr.number,PR);assert.equal(pr.head?.sha,source);
  assert.equal(pr.base?.sha,a3.BASELINE);assert.equal(pr.head?.repo?.full_name,REPO);
- assert.equal(run.id,p.qcp_run_id);assert.equal(run.head_sha,p.subject_sha);
+ assert.equal(run.id,p.qcp_run_id);assert.equal(run.head_sha,source);
  assert.equal(run.name,"mcft-cap-09-qualification-control-plane-v1");
  assert.equal(run.path,".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml");
  assert.equal(run.event,"pull_request");assert.equal(run.status,"completed");
  assert.equal(run.conclusion,"success","A3_V2_GITHUB_QCP_NOT_SUCCESS");
  assert.equal(run.run_attempt,p.qcp_run_attempt,"A3_V2_GITHUB_RUN_ATTEMPT_CHANGED");
- assert(Array.isArray(run.pull_requests)&&run.pull_requests.some(x=>x.number===PR&&
-  x.head?.sha===p.subject_sha&&x.base?.sha===a3.BASELINE),"A3_V2_GITHUB_PR_UNBOUND");
+ assert(Array.isArray(run.pull_requests),"A3_V2_GITHUB_PR_ASSOCIATIONS_INVALID");
+ if(run.pull_requests.length===0)
+  assert(mergedProofValidated&&pr.merged===true&&pr.merge_commit_sha===merged.MERGE,
+   "A3_V2_GITHUB_PR_ASSOCIATION_MISSING_WITHOUT_MERGE_PROOF");
+ else assert(run.pull_requests.some(x=>x.number===PR&&x.head?.sha===source&&x.base?.sha===a3.BASELINE),
+  "A3_V2_GITHUB_PR_UNBOUND");
  const job=jobList.jobs?.find(x=>x.id===p.qcp_job_id);
  assert(job&&job.name==="applicability-and-blocker-inventory"&&job.conclusion==="success","A3_V2_GITHUB_JOB_UNQUALIFIED");
  const art=artifactList.artifacts?.find(x=>x.id===p.qcp_artifact_id);
- assert(art&&!art.expired&&art.name==="mcft-cap09-qualification-control-plane-"+p.subject_sha,"A3_V2_GITHUB_ARTIFACT_IDENTITY");
+ assert(art&&!art.expired&&art.name==="mcft-cap09-qualification-control-plane-"+source,"A3_V2_GITHUB_ARTIFACT_IDENTITY");
  assert.equal(art.digest,"sha256:"+p.qcp_artifact_sha256,"A3_V2_GITHUB_ARTIFACT_DIGEST");
- assert.equal(art.workflow_run?.id,run.id);assert.equal(art.workflow_run?.head_sha,p.subject_sha);
+ assert.equal(art.workflow_run?.id,run.id);assert.equal(art.workflow_run?.head_sha,source);
  const ms=x=>{const v=Date.parse(x);assert(Number.isFinite(v),"A3_V2_GITHUB_TIME_INVALID");return v;};
  assert(ms(job.started_at)<=ms(art.created_at)&&ms(art.created_at)<=ms(job.completed_at),"A3_V2_GITHUB_ARTIFACT_WRONG_ATTEMPT");
  return {status:"GITHUB_NATIVE_RUN_AND_ARTIFACT_VERIFIED",run_id:run.id,artifact_id:art.id,job_id:job.id};
 }
-function verifyNativeArtifact(p,evidenceRoot){
+function verifyNativeArtifact(p,evidenceRoot,derivation){
  for(const k of ["qcp_run_id","qcp_run_attempt","qcp_job_id","qcp_artifact_id"])
   assert(Number.isSafeInteger(p[k])&&p[k]>0,"A3_V2_NATIVE_ID_REQUIRED:"+k);
  assert.equal(p.qcp_event,"pull_request","A3_V2_EVENT_CHANGED");c.hash(p.qcp_artifact_sha256);
@@ -155,14 +161,22 @@ function verifyNativeArtifact(p,evidenceRoot){
  const run=githubGet("/actions/runs/"+p.qcp_run_id);
  const arts=githubGet("/actions/runs/"+p.qcp_run_id+"/artifacts?per_page=100");
  const jobs=githubGet("/actions/runs/"+p.qcp_run_id+"/attempts/"+p.qcp_run_attempt+"/jobs?per_page=100");
- return checkNative(p,run,arts,jobs,githubGet("/pulls/3747"));
+ const pr=githubGet("/pulls/3747");
+ const owner=githubGet("/issues/comments/"+merged.OWNER_SOURCE_COMMENT);
+ const checked=merged.verify(derivation,p,{pr,
+  sourceCommit:githubGet("/git/commits/"+merged.SOURCE),
+  mergeCommit:githubGet("/git/commits/"+merged.MERGE),
+  main:githubGet("/git/ref/heads/main"),sourceOwner:owner});
+ const native=checkNative(p,run,arts,jobs,pr,true);
+ return Object.freeze({native,checked,sourceOwner:owner});
 }
 
 const PAYLOAD=["schema","qualification_id","run_id","parent_run_id","attempt_ordinal","baseline_main_sha","subject_sha",
  "host_id","operator_id","scope","production_authorized","issued_at","expires_at","issuer_id","key_id",
  "policy_digest","material_digest","frozen_paths","first_parent_proven",
  "qcp_source_ref","qcp_source_sha256","qcp_artifact_ref","qcp_artifact_sha256","qcp_artifact_id","qcp_run_id","qcp_run_attempt","qcp_job_id","qcp_event",
- "qcp_results_digest","release_binding_ref","release_binding_sha256"];
+ "qcp_results_digest","qcp_source_subject_sha","qcp_merge_derivation_ref","qcp_merge_derivation_sha256",
+ "adoption_owner_approval_comment_id","release_binding_ref","release_binding_sha256"];
 function verify(request,releaseRoot,opts={}){
  const now=opts.now??Date.now(),host=opts.host??os.hostname(),env=opts.environment??process.env;
  c.exact(request,["schema_version","qualification","material","evidence_root",...(Object.hasOwn(request,"operator_scope_grant")?["operator_scope_grant"]:[])]);
@@ -184,9 +198,12 @@ function verify(request,releaseRoot,opts={}){
  const qcp=c.read(path.join(releaseRoot,...QCP.split("/")));
  const map=a3.mapAdoptionV2(qcp,policy);assert.equal(map.total_checks,65);
  const machine=readBound(request.evidence_root,p.qcp_source_ref,p.qcp_source_sha256);
- const q=checkQcp65(machine,qcp,policy,p.subject_sha);
+ const q=checkQcp65(machine,qcp,policy,p.qcp_source_subject_sha);
  assert.equal(p.qcp_results_digest,q.qcp_results_digest,"A3_V2_RESULT_DIGEST_CHANGED");
- verifyNativeArtifact(p,request.evidence_root);
+ const derivation=readBound(request.evidence_root,p.qcp_merge_derivation_ref,p.qcp_merge_derivation_sha256);
+ const provenance=verifyNativeArtifact(p,request.evidence_root,derivation);
+ const ownerApproval=githubGet("/issues/comments/"+p.adoption_owner_approval_comment_id);
+ merged.verifyOwnerApproval(p,ownerApproval,provenance.sourceOwner);
  const release=readBound(request.evidence_root,p.release_binding_ref,p.release_binding_sha256);
  assert.equal(release.schema_version,"MCFT_CAP09_RELEASE_MATERIAL_BINDING_V1");
  assert.equal(release.subject_commit_sha,p.subject_sha,"A3_V2_RELEASE_HEAD_CHANGED");
