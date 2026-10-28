@@ -200,3 +200,67 @@ child-stage dispatch, Permit, original six stages and production
 remain blocked. Historic Frozen V13 and Stage3 standalone workflow
 FAIL results remain untouched; no summary, QCP64 definition,
 historical digest, signed envelope or historic Permit is modified.
+
+## Owner-directed formal source-QCP admission policy V1 — 2026-10-28
+
+**Policy ID:** `GEOX_MCFT_CAP09_3747_OWNER_QCP_SOURCE_ADMISSION_V1`.
+
+**Authorization decision:** The repository Owner has explicitly authorized a
+**new, purpose-specific, exact-HEAD formal central QCP source-qualification
+admission path** on existing Draft PR #3747. This specific scope replaces
+the requirement for an *independent Ed25519 signature* on the new
+**source-QCP-only** approval; it does **not** rewrite, revoke or claim
+to satisfy the earlier DA9 V2 formal-governance request at its original
+historical subject, nor does it change the original check definition,
+diagnostic command, resolver, registered signatures, or prior failure.
+
+**Authenticated approval evidence:** A native GitHub issue/PR conversation
+comment **authored by** `liyongshang44-max` with GitHub
+`author_association=OWNER`, exact content
+`GEOX_MCFT_CAP09_3747_OWNER_QCP_SOURCE_ADMISSION_V1`
+plus exact PR #3747/head/base/check ID and the full permission-denial
+vector. This comment must be created **after** the exact HEAD commit, must
+be **unedited** (`created_at=updated_at`), must have an exact GitHub
+repository/PR URL and be the **only** matching owner approval comment.
+The current native QCP preflight fetches that comment live through
+GitHub with `GH_TOKEN`; it must reject missing, malformed, edited,
+duplicated, wrong-author, wrong-head or wrong-repository comments.
+No purported assistant-private signature or fabricated independent signer
+qualifies. The current source scope expires on any HEAD/policy change.
+
+**Source-QCP approval covers only:** current 16-path `#3747` source
+preservation, immutable historic DA9 six Ed25519 signature verification
+for their **original** subject, native Phase3 94-blob source proof,
+native Composer 108-blob/five-check source proof, and enrollment of those
+technical outcomes under `DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING`
+for the **current QCP65 source-qualification record**. This is formally
+a QCP *source-admission* decision, not a versioned Adoption V2
+signed-acceptance receipt.
+
+**Explicitly excluded from this authorization:** Adoption V2 signing
+or acceptance, Host V2 delegation, Permit V2 issue/consume, production
+execution, Provider reharvesting, any original formal six-stage run,
+formal PostgreSQL promotion outside isolated test resources, Frozen V13
+historical zero-drift requalification, Stage3 historical gate waiver,
+replaying any PR #3734 GitHub event, or transfer of the historic
+operator signatures to the current HEAD.
+
+**Source-of-truth ordering:**
+1. Commit this exact policy/validator/test change on existing Draft PR
+   #3747, with its historical checks and original 16-path diff preserved.
+2. Receive one authenticated owner-native GitHub approval comment with
+   `HEAD` equal to the final resulting commit SHA and all permission
+   ceilings present.
+3. Re-run the **same exact HEAD** central QCP; only a real native
+   `ownerQcpApprovalValidate` PASS may close its remaining source
+   admission blocker. No approval comment or CI result alone is sufficient.
+4. Leave Adoption/Permit/production/original six-stage qualification in
+   HOLD, irrespective of the source-QCP result.
+
+**Governance distinction:** The preceding historical DA9 formal request
+required separate independent approval; the already-accepted #3732
+owner-directed policy was limited to its original technical scope.
+This *new policy* extends only **formal current-HEAD source-QCP
+enrollment**, in direct response to the Owner's explicit instruction;
+it does not retroactively amend the former request or authorize
+a signed Adoption/Permit.
