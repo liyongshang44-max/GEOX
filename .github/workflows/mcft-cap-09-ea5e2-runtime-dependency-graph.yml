@@ -59,6 +59,9 @@ jobs:
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
+          # GitHub runs bash with -e by default. Explicitly preserve the
+          # central planner's nonzero exit while retaining its authentic JSON.
+          set +e
           set -uo pipefail
           node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs \
             --base '${{ github.event.pull_request.base.sha }}' \
@@ -67,6 +70,7 @@ jobs:
             --stage SUCCESSOR_SUBJECT_PRE_MERGE \
             --out acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json
           code=$?
+          set -e
           if [ ! -s acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json ]; then
             echo "CENTRAL_PLANNER_MISSING_FACTS"; exit 1
           fi
