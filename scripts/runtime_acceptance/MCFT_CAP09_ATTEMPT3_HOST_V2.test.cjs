@@ -76,6 +76,8 @@ test("current #3748 byte-delta registers exactly 13 changed V2 paths; frozen his
   "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_POSTMERGE_SOURCE_V1.cjs"
  ];
  const changedExisting=[
+  ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+  ".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",
   ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
   "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs",
