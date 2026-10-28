@@ -1,0 +1,80 @@
+name: MCFT CAP09 Phase3 Current Source Independent Requalification V1
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-PHASE3-CURRENT-SOURCE-DIGEST-DISPOSITION-V1.json'
+      - 'scripts/governance_acceptance/VERIFY_MCFT_CAP09_PHASE3_CURRENT_SOURCE_DIGEST_V1.cjs'
+      - '.github/workflows/mcft-cap09-phase3-current-source-requalification-v1.yml'
+permissions:
+  contents: read
+jobs:
+  phase3-current-source-real-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cap09_phase3_fresh_successor
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d cap09_phase3_fresh_successor"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/cap09_phase3_fresh_successor
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+      - name: Require current protected main and isolated zero-state database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${DATABASE_URL}" = "postgres://postgres:postgres@127.0.0.1:5432/cap09_phase3_fresh_successor"
+          test '63dc3382f879781c604a852c7d1b28af9b0dd9f4' = "${{ github.event.pull_request.base.sha }}"
+          test -z "${MCFT_GOVERNED_RETRY_TICKET:-}"
+          test -z "${MCFT_GOVERNED_RETRY_STAGE:-}"
+          test -z "${FORMAL_RAW_S3_ACCESS_KEY_ID:-}"
+          test -z "${MCFT_CAP09_ADOPTION_REQUEST:-}"
+      - name: Validate the exact 94 source paths and classify historical digest separately
+        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP09_PHASE3_CURRENT_SOURCE_DIGEST_V1.cjs --verify --out
+      - run: pnpm install --frozen-lockfile
+      - name: Apply only ephemeral Phase3 evidence schema
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql
+      - name: Run original real producer lease, visibility and supply cursor PostgreSQL acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
+      - name: Validate real PostgreSQL receipt belongs to exact current head
+        shell: node {0}
+        env:
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const base=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP09_PHASE3_CURRENT_SOURCE_DIGEST_V1.json','utf8'));
+          const actual=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1_RESULT.json','utf8'));
+          assert.equal(base.current_head,process.env.HEAD);
+          assert.equal(base.status,'PASS_PHASE3_CURRENT_SOURCE_EXACT_DIGEST_CLASSIFIED_TEST_ONLY');
+          assert.equal(actual.status,'PASS');
+          assert(base.changed_paths.length>0);
+          console.log(JSON.stringify({status:'PASS_PHASE3_NEW_HEAD_EPHEMERAL_PG_TECHNICAL_ONLY',
+            subject:process.env.HEAD,paths:base.paths_total,historical_digest_carried_forward:false,
+            signed_new_authority:false,production:false,permit:false}));
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cap09-phase3-current-source-pg-testonly-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP09_PHASE3_CURRENT_SOURCE_DIGEST_V1.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1_RESULT.json
+          if-no-files-found: error
