@@ -73,7 +73,27 @@ function verifyReadbackFile(file,expectedSha){
  for(;;){const stat=fs.lstatSync(f);assert(!stat.isSymbolicLink(),"A3_RESOURCE_READBACK_SYMLINK");if(f===path.resolve(file))assert(stat.isFile()&&stat.size>0&&stat.size<1048576,"A3_RESOURCE_READBACK_REGULAR_FILE");const par=path.dirname(f);if(par===f)break;f=par;}
  const bytes=fs.readFileSync(file);assert.equal(sha(bytes),expectedSha,"A3_RESOURCE_READBACK_BYTES_CHANGED");
  const r=JSON.parse(bytes.toString("utf8").replace(/^\uFEFF/,""));
- assert.equal(r.run_id,a3.RUN,"A3_RESOURCE_READBACK_RUN_CHANGED");assert.equal(r.status,"PASS","A3_RESOURCE_READBACK_NOT_PASS");
- return Object.freeze({sha256:sha(bytes),run_id:r.run_id,status:"RAW_READBACK_BYTES_MATCH_NOT_AUTHORITY"});
+ assert.equal(r.schema_version,"MCFT_CAP09_ATTEMPT3_RESOURCE_READBACK_V1","A3_RESOURCE_READBACK_SCHEMA");
+ assert.equal(r.run_id,a3.RUN,"A3_RESOURCE_READBACK_RUN_CHANGED");
+ assert.equal(r.status,"PASS","A3_RESOURCE_READBACK_NOT_PASS");
+ assert.equal(r.probe_type,"WINDOWS_READ_ONLY_PG_S3_INDEPENDENT_HOST","A3_RESOURCE_READBACK_PROBE_TYPE");
+ assert(HASH.test(r.probe_source_sha256),"A3_RESOURCE_READBACK_SOURCE_DIGEST_REQUIRED");
+ assert.equal(r.production_authorized,false,"A3_RESOURCE_READBACK_PRODUCTION");
+ return Object.freeze({sha256:sha(bytes),run_id:r.run_id,status:"RAW_READBACK_BYTES_MATCH_NOT_AUTHORITY",facts:r});
 }
-module.exports={DOMAIN,FIELDS,validateFacts,verify,verifyReadbackFile};
+const FACT_BINDINGS=["subject_sha","host_id","observed_at","database_host","database_port",
+ "positive_database","negative_database","audit_user","positive_rows_zero","negative_rows_zero",
+ "positive_database_exists","negative_database_exists","positive_login_restricted",
+ "negative_login_restricted","fenced_writer_execute_allowed","direct_fact_insert_forbidden",
+ "bucket_endpoint","bucket","bucket_exists","bucket_empty_including_versions_multipart",
+ "bucket_private","production_bindings_present","owner_exclusive","pg_owner_id","s3_owner_id"];
+function bindSignedToReadback(signed,readback){
+ assert(readback?.status==="RAW_READBACK_BYTES_MATCH_NOT_AUTHORITY"&&readback.facts,"A3_RESOURCE_RAW_READBACK_REQUIRED");
+ assert.equal(readback.sha256,signed.readback_sha256,"A3_RESOURCE_ATTESTATION_RAW_BYTES_MISMATCH");
+ for(const field of FACT_BINDINGS)assert.deepEqual(signed[field],readback.facts[field],"A3_RESOURCE_ATTESTATION_CONTRADICTS_RAW:"+field);
+ assert.equal(signed.run_id,readback.facts.run_id,"A3_RESOURCE_RAW_RUN_DIFFERENT");
+ assert.equal(readback.facts.production_authorized,false);
+ return true;
+}
+}
+module.exports={DOMAIN,FIELDS,FACT_BINDINGS,validateFacts,verify,verifyReadbackFile,bindSignedToReadback};
