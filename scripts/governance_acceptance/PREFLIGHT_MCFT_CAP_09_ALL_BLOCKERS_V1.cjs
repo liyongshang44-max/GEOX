@@ -1396,16 +1396,29 @@ function main() {
        decision.check_id==="DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING"){
       const qualified=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs")
         .verifyDA9FormalSuccessor({decision,stage,head:args.head||"",base:args.base});
+      const approved=qualified?.status==="PASS" &&
+        qualified?.owner_approval?.qcp_source_admission_approved===true &&
+        qualified?.adoption_authorized===false &&
+        qualified?.permit_authorized===false;
       result={...common,
-        execution:"EXACT_3747_HISTORIC_SIX_ED25519_VALID_CURRENT_FORMAL_ADOPTION_HOLD",
-        status:"FAIL",reason_code:qualified?.reason_code||"HOLD_3747_DA9_FORMAL_MISSING",
+        execution:"EXACT_3747_OWNER_NATIVE_FORMAL_QCP_SOURCE_ONLY_ADMISSION",
+        status:approved?"PASS":"FAIL",
+        reason_code:qualified?.reason_code||"HOLD_3747_DA9_QCP_OWNER_APPROVAL_MISSING",
+        evidence_id:qualified?.evidence_id||null,
+        evidence_subject_sha:approved?(args.head||null):null,
         source_historical_signed_subject:qualified?.historical?.original_operator_signed_source_sha||null,
         historical_original_signatures_verified:qualified?.historical?.original_operator_signature_count||0,
+        owner_native_approval_comment_id:qualified?.owner_approval?.comment_id||null,
+        native_owner_approval_verified:approved,
         old_3734_event_replayed:false,new_3747_signed_adoption_present:false,
+        formal_qcp_source_only_approved:approved,
+        formal_adoption_v2_not_approved:true,
+        historical_independent_request_not_rewritten:true,
         adoption_authorized:false,permit_authorized:false,
         production_authorized:false,original_formal_six_stages:0,
         successor_governance_evidence:qualified};
-      blockers.push({blocker_class:"CURRENT_3747_DA9_FORMAL_SIGNED_ADOPTION_NOT_PRESENT",
+      if(!approved)blockers.push({
+        blocker_class:"CURRENT_3747_DA9_OWNER_QCP_SOURCE_ADMISSION_NOT_VERIFIED",
         check_id:decision.check_id,detail:qualified});
       results.push(result);continue;
     }
