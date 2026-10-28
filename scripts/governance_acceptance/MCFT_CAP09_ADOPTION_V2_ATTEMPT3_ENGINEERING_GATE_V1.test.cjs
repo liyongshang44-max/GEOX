@@ -189,3 +189,59 @@ test("current Phase3 94-blob native qualification cannot inherit a stale Run or 
  wrongBase.base="63dc3382f879781c604a852c7d1b28af9b0dd9f4";
  assert.throws(()=>scoped.phase3Local(wrongBase),/HOLD_3747_PHASE3_BASE/);
 });
+
+test("current composer 108-blob evidence stays source-only and rejects drift",()=>{
+ const cp=require("node:child_process");
+ const scoped=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs");
+ const root=path.resolve(__dirname,"../..");
+ const head=cp.execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim();
+ if(process.env.GITHUB_ACTIONS!=="true"||
+    process.env.GITHUB_EVENT_NAME!=="pull_request")return;
+ const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+ for(const id of scoped.COMPOSER_CHECKS){
+   const input={decision:{check_id:id,changed_dependencies:[]},
+     stage:"SUCCESSOR_SUBJECT_PRE_MERGE",head,base:g.BASELINE,event};
+   const verified=scoped.composerLocal(input);
+   assert.equal(verified.status,"PASS_BLOBS_ONLY_NOT_FORMAL_ADOPTION");
+   assert.equal(verified.exact_catalog_paths,108);
+   assert.equal(verified.historical_frozen_requalified,false);
+   assert.equal(verified.adoption_authorized,false);
+   assert.equal(verified.permit_authorized,false);
+ }
+ const input={decision:{check_id:scoped.COMPOSER_CHECKS[0],changed_dependencies:[]},
+   stage:"SUCCESSOR_SUBJECT_PRE_MERGE",head,base:g.BASELINE,event};
+ for(const fn of [
+   x=>{x.base="63dc3382f879781c604a852c7d1b28af9b0dd9f4";},
+   x=>{x.head="a".repeat(40);},
+   x=>{x.decision.changed_dependencies=["apps/server/unknown.ts"];},
+   x=>{x.decision.check_id="PHASE3_EVIDENCE_RUNTIME_FOUNDATION";}
+ ]){
+   const bad=structuredClone(input);fn(bad);
+   assert.throws(()=>scoped.composerLocal(bad));
+ }
+});
+
+test("DA9 six original Ed25519 signatures survive but do not authorize current #3747 Adoption",()=>{
+ const cp=require("node:child_process");
+ const scoped=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs");
+ const root=path.resolve(__dirname,"../..");
+ const head=cp.execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim();
+ const input={decision:{check_id:scoped.DA9_FORMAL_ID},
+   stage:"SUCCESSOR_SUBJECT_PRE_MERGE",head,base:g.BASELINE};
+ const historic=scoped.da9HistoricalLocal(input);
+ assert.equal(historic.status,"HISTORICAL_SIX_ED25519_VERIFIED_NOT_CURRENT_FORMAL_ADOPTION");
+ assert.equal(historic.original_operator_signature_count,6);
+ assert.equal(historic.original_signed_composer_blob,
+   "2d1f72d92c05093537774285bda5b7200845344d");
+ assert.equal(historic.current_new_purpose_signature_present,false);
+ assert.equal(historic.adoption_authorized,false);
+ assert.equal(historic.permit_authorized,false);
+ for(const fn of [
+   x=>{x.decision.check_id="PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION";},
+   x=>{x.base="2162f368899e9a9b5c497d332859e4196f389660";},
+   x=>{x.head="f".repeat(40);}
+ ]){
+   const bad=structuredClone(input);fn(bad);
+   assert.throws(()=>scoped.da9HistoricalLocal(bad));
+ }
+});
