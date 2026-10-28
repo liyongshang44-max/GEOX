@@ -245,3 +245,46 @@ test("DA9 six original Ed25519 signatures survive but do not authorize current #
    assert.throws(()=>scoped.da9HistoricalLocal(bad));
  }
 });
+
+test("owner-directed purpose-specific QCP approval rejects forged identity, edits, head drift and authority expansion",()=>{
+ const cp=require("node:child_process");
+ const scoped=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs");
+ const head=cp.execFileSync("git",["rev-parse","HEAD"],
+   {cwd:path.resolve(__dirname,"../.."),encoding:"utf8"}).trim();
+ const policy=scoped.ownerQcpApprovalText(head);
+ assert(policy.startsWith(scoped.OWNER_QCP_APPROVAL_V1+"\n"));
+ assert(policy.includes("CURRENT_QCP65_SOURCE_ADMISSION_APPROVED=true"));
+ for(const field of [
+   "ADOPTION_V2_SIGNED_ACCEPTANCE_AUTHORIZED=false",
+   "PERMIT_V2_ISSUE_OR_CONSUME_AUTHORIZED=false",
+   "PRODUCTION_AUTHORIZED=false",
+   "INDEPENDENT_ED25519_REVIEW_REQUIRED_FOR_THIS_SOURCE_QCP_SCOPE=false",
+   "ORIGINAL_FORMAL_SIX_STAGES=0"
+ ])assert(policy.includes(field));
+ const comment={id:123456,user:{login:"liyongshang44-max",type:"User"},
+   author_association:"OWNER",body:policy,
+   html_url:"https://github.com/liyongshang44-max/GEOX/pull/3747#issuecomment-123456",
+   created_at:"2026-10-28T10:20:00Z",updated_at:"2026-10-28T10:20:00Z"};
+ const commitDate="2026-10-28T10:15:00Z";
+ const verified=scoped.ownerQcpApprovalValidate(comment,head,commitDate);
+ assert.equal(verified.status,"OWNER_DIRECTED_CURRENT_HEAD_SOURCE_QCP_APPROVAL_VALID");
+ assert.equal(verified.adoption_v2_authorized,false);
+ assert.equal(verified.permit_v2_authorized,false);
+ const negatives=[
+   c=>c.user.login="other",
+   c=>c.user.type="Bot",
+   c=>c.author_association="COLLABORATOR",
+   c=>c.body=c.body.replace("CURRENT_QCP65_SOURCE_ADMISSION_APPROVED=true",
+      "CURRENT_QCP65_SOURCE_ADMISSION_APPROVED=false"),
+   c=>c.body=c.body.replace("PERMIT_V2_ISSUE_OR_CONSUME_AUTHORIZED=false",
+      "PERMIT_V2_ISSUE_OR_CONSUME_AUTHORIZED=true"),
+   c=>c.body=c.body.replace(head,"f".repeat(40)),
+   c=>c.updated_at="2026-10-28T10:21:00Z",
+   c=>c.created_at="2026-10-28T10:10:00Z",
+   c=>c.html_url="https://github.com/example/other/pull/3747#issuecomment-123456",
+   c=>c.id=123457,
+ ];
+ for(const mutate of negatives){const altered=structuredClone(comment);mutate(altered);
+   assert.throws(()=>scoped.ownerQcpApprovalValidate(altered,head,commitDate));}
+ assert.throws(()=>scoped.ownerQcpApprovalText("f"),/HOLD_OWNER_QCP_HEAD_FORMAT/);
+});
