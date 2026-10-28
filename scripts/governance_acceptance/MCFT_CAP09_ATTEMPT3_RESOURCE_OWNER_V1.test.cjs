@@ -63,3 +63,13 @@ test("signed owner properties must be individually backed by captured raw PG/S3 
  const changedBytes=structuredClone(valid);changedBytes.sha256="0".repeat(64);
  assert.throws(()=>owner.bindSignedToReadback(x.p,changedBytes));
 });
+
+test("all locally discovered occupied historical PG and S3 ports remain non-reusable",()=>{
+ const x=input();
+ for(const old of [55445,55446,55477,55478,55479,55480,55481,55482]){
+  assert.throws(()=>owner.validateFacts({...x.p,database_port:old},x.ctx),"historical PG "+old);
+ }
+ for(const old of [59005,59006,59277,59278,59279,59280,59281,59282]){
+  assert.throws(()=>owner.validateFacts({...x.p,bucket_endpoint:"http://127.0.0.1:"+old},x.ctx),"historical S3 "+old);
+ }
+});
