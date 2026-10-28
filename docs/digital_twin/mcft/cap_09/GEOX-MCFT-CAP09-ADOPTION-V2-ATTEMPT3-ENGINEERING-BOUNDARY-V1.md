@@ -50,7 +50,7 @@ The new gate **always** returns `ENGINEERING_LINEAGE_VERIFIED_EXECUTION_HOLD` ev
 
 ## Central QCP registration and new dependency ownership
 
-This PR appends the *single* independent check `CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY` to the existing 64 registered checks. Exactly fourteen paths, including the central QCP document itself, are owned by `CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2`; the prior 64 check definitions and their resolvers are untouched. This is QCP 65 **technical source qualification only**, not revised historical 55/54 artifact or new signed Adoption. Any current QCP/EA5E2 failure remains a real gate, never silently classified N/A.
+This PR appends the *single* independent check `CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY` to the existing 64 registered checks. Exactly 16 paths, including the central QCP document itself, are owned by `CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2`; the prior 64 check definitions and their resolvers are untouched. This is QCP 65 **technical source qualification only**, not revised historical 55/54 artifact or new signed Adoption. Any current QCP/EA5E2 failure remains a real gate, never silently classified N/A.
 
 ## 2026-10-28 Implementation extension (no physical admission)
 
@@ -60,9 +60,57 @@ New V2 source consumers were added in the same existing #3747:
 - `scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs`: signed TEST_ONLY Windows owner/readback contract with separate new positive/negative PostgreSQL, bucket, restricted ACL, zero-row/zero-object-state, time window, exact run/host/source binding. **No actual host probe has been performed**. Owner signature asserts actual field measurements; this checker does not independently query PG/S3.
 - `scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs`: reads genuine V2 Adoption + distinct lineage + resource owner + original signed nonauthorized S3→Candidate→PG physical full-chain + Permit V2 envelope **before** considering any ledger burn. Atomic dual run/nonce write logic is implemented but **explicitly blocked** by `HOST_V2_STAGE_DISPATCH_ADOPTED=false`. Existing V1 child stage capability's `assertConsumed` is tied to the V1 Permit WeakSet, so cannot legitimately receive a V2 consumed token. Do not burn an Attempt-3 Permit before a separately qualified V2 child-stage dispatch path exists. There is NO CLI to consume V2 Permit now.
 
-The central QCP 65th check owns exactly **14 paths** under `CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2`; its title is historic but the resolver is the current exact list. All original 64 checks remain unchanged. Current CI/QCP stage3/frozen historical false statuses must be assessed individually; do not rewrite frozen signatures or treat exact old PR-3734/3737 event-specific validators as general successor qualification.
+The central QCP 65th check owns exactly **16 paths** under `CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2`; its title is historic but the resolver is the current exact list. All original 64 checks remain unchanged. Current CI/QCP stage3/frozen historical false statuses must be assessed individually; do not rewrite frozen signatures or treat exact old PR-3734/3737 event-specific validators as general successor qualification.
 
 **Remaining actual effects:** create and verify dedicated Windows PG/S3; obtain fresh real current HEAD QCP65 raw all-green evidence, actual signed Adoption V2 and resource owner review, signed separate physical full-chain attestation, and implement/qualify Host V2 child-stage capability before atomic Permit consumption or original six formal stages. All remain **HOLD** today.
 ## Explicit exclusions
 
 No edits to old V1/V2 historic validators, Frozen V13 108-path digest, old ledger, signatures, historical artifacts, DA9 existing resources, Provider science, old physical runs, or production authority. CI unit tests use **ephemeral in-process test-only Ed25519 fixtures** and synthetic receipts; their PASS does not establish Windows host physical authority. Do not mark this branch as executable or merge simply because the bounded engineering unit tests are green.
+
+## 2026-10-28 — #3747 exact 16-path QCP applicability and immutable historic boundaries
+
+The historic `HOLD_COMPOSITE_EXACT_13_PATHS` diagnostic belongs to the
+`VERIFY_MCFT_CAP09_3740_3744_OWNER_COMPOSITE_V1.cjs` predecessor: its
+frozen base, native event, path inventory and 60→63 check transition
+are not those of the present #3747. A direct failure on this successor
+**remains a historical check failure**, not evidence that the #3747
+16-path source diff is unreviewed. No historical check expected-path
+value, QCP definition, signature or prior failure receipt is rewritten.
+
+`DA9_SEMANTIC_SUCCESSOR_COMPOSER_SCOPE_CHANGED` similarly denotes
+a genuinely distinct Composer identity. The old signature-bound Composer
+blob is `7e74b1df502e159dd49ceb21889cbfff86408e50`; the current
+protected-main Composer blob is
+`2d1f72d92c05093537774285bda5b7200845344d`.
+The old six operator signatures **cannot transfer** to this different
+source identity. A new source-specific proof is required for any
+subsequent signed Adoption/Permit. Their cryptographic validity for
+the original exact subject is not revoked or extended here.
+
+The #3747 checker `VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs`
+now asserts that both original historic verifier blobs are unchanged,
+the old composite exact-scope guard still exists, and the current
+16-path diff remains the single registered source scope. Only four
+inherited **technical-source** QCP checks can receive
+`NOT_APPLICABLE` for this new scoped delta; **no historic FAIL is
+converted to a PASS**. The new QCP 65th check remains `REQUALIFY`
+until its own current-HEAD native source and evidence acceptance passes.
+No complete QCP65 all-green result, Adoption V2 signed authority,
+Host V2 stage-dispatch qualification, or Permit follows from the
+scoped technical checker alone.
+
+A separate Windows disposable Run `b17d2a9f3c60` at the
+baseline `e7a8f30f...` has independently verified real MinIO
+retention/private candidate readback and PostgreSQL three-fact
+fenced commit/Controller attestation/cursor. That is **TEST_ONLY**,
+uses controlled Provider fixtures, and belongs to a different
+Run from candidate Attempt-3 `6ff9b41f6f7f`. Its evidence must be
+signed and entered into a distinct exact-source technical qualification
+record before it can even be considered for further gates; it cannot
+be carried forward after modifying the source HEAD.
+
+**Decision: historical Frozen V13, DA9 signer succession and Stage3
+predecessor checks retain their actual outcomes. The #3747 technical
+scope assessment is independent and non-authorizing.** Adoption HOLD,
+Permit HOLD, original formal six stages 0/6; preserve both Windows
+test environments, all historical data and frozen failure receipts.
