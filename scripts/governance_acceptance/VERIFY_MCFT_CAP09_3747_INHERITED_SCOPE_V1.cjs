@@ -16,6 +16,8 @@ const PREFLIGHT="scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKER
 const SOURCE_COMPOSER="scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts";
 const CURRENT_COMPOSER_BLOB="2d1f72d92c05093537774285bda5b7200845344d";
 const HISTORIC_FROZEN_COMPOSER_BLOB="7e74b1df502e159dd49ceb21889cbfff86408e50";
+const OLD_COMPOSITE="scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_COMPOSITE_V1.cjs";
+const OLD_DA9_SEMANTIC="scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs";
 const CHECKS=new Set([
  "CAP09_3740_3744_OWNER_DIRECTED_SOURCE_REVIEW_TECHNICAL_V1",
  "FROZEN108_CURRENT_RUNTIME_SUCCESSOR_TEST_ONLY_QCP_ENROLLMENT_V1",
@@ -68,6 +70,18 @@ function technical({head,base=BASE,check_id=null,event=null,native=false}={}){
  assert.equal(run("rev-parse",BASE+":"+SOURCE_COMPOSER),CURRENT_COMPOSER_BLOB);
  assert.equal(run("rev-parse",head+":"+SOURCE_COMPOSER),CURRENT_COMPOSER_BLOB);
  assert.notEqual(CURRENT_COMPOSER_BLOB,HISTORIC_FROZEN_COMPOSER_BLOB);
+ // Do not replay historical 13-path and DA9-source checks on this new 16-path PR.
+ // Assert both original checking implementations survived byte-for-byte.
+ for(const oldVerifier of [OLD_COMPOSITE,OLD_DA9_SEMANTIC]){
+   assert.equal(run("rev-parse",BASE+":"+oldVerifier),
+     run("rev-parse",head+":"+oldVerifier),
+     "HOLD_3747_HISTORICAL_VERIFIER_CHANGED:"+oldVerifier);
+ }
+ assert(run("show",BASE+":"+OLD_COMPOSITE).includes("HOLD_COMPOSITE_EXACT_13_PATHS"),
+   "HOLD_3747_ORIGINAL_COMPOSITE_SCOPE_GUARD_ABSENT");
+ // Old signed Composer (7e74...) does not become current successor (2d1f...).
+ assert.notEqual(run("rev-parse",head+":"+SOURCE_COMPOSER),
+   HISTORIC_FROZEN_COMPOSER_BLOB,"HOLD_3747_HISTORIC_COMPOSER_IDENTITY_TRANSFER");
  if(check_id!==null)assert(CHECKS.has(check_id),"HOLD_3747_UNSCOPED_CHECK");
  if(native){
    assert.equal(process.env.GITHUB_ACTIONS,"true","HOLD_3747_GITHUB_ACTIONS");
@@ -84,6 +98,12 @@ function technical({head,base=BASE,check_id=null,event=null,native=false}={}){
   check_id,base_sha:BASE,head_sha:head,exact_current_delta_paths:DELTA.length,
   frozen_qcp64_semantics_preserved:true,composer_current_blob_unchanged:true,
   historic_frozen_composer_blob_not_equal_current:true,
+  historical_composite_exact_path_verifier_unchanged:true,
+  historical_da9_semantic_verifier_unchanged:true,
+  historical_composite_13_path_check_not_replayed:true,
+  historical_composite_current_head_qualification_claimed:false,
+  composer_successor_scope_changed:true,
+  historic_composer_signature_transfer_authorized:false,
   historical_13_path_check_replayed:false,stage3_7_path_check_replayed:false,
   historical_frozen_v13_failure_preserved:true,
   new_composer_signature_claimed:false,old_signature_transferred:false,
