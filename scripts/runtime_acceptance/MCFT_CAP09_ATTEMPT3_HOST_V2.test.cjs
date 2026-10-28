@@ -118,6 +118,22 @@ test("current #3748 byte-delta registers exactly 13 changed V2 paths; frozen his
  const expectedNew=[...executionNew,...inheritedProvenanceNew].sort();
  assert.deepEqual(now.filter(x=>!past.includes(x)).sort(),expectedNew,
   "V2_NEW_SOURCE_PATHS_NOT_EXACTLY_ENROLLED");
+ const separatelyOwned=[
+  "scripts/cap09_adoption_v1/installed-material.cjs",
+  "scripts/cap09_adoption_v1/test-offline-context.cjs",
+  "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts",
+  "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_STAGE_RECEIPTS_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+  "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
+ ];
+ const ownedHere=new Set(now);
+ const otherOwners=Object.entries(registry.dependency_resolvers)
+  .filter(([key])=>key!==resolver);
+ assert.equal(separatelyOwned.length,7);
+ assert(separatelyOwned.every(file=>changedExisting.includes(file)&&
+  !ownedHere.has(file)&&otherOwners.some(([,owner])=>owner.paths?.includes(file))),
+  "V2_CHANGED_EXISTING_SOURCES_MUST_HAVE_OTHER_EXACT_RESOLVERS");
  const otherwise=structuredClone(registry);otherwise.dependency_resolvers[resolver].paths=past;
  assert.deepEqual(otherwise,baseline,
   "V2_REGISTRY_MUTATED_SOMETHING_BEYOND_13_EXACT_PATHS");

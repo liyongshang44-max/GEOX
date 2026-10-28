@@ -1321,7 +1321,28 @@ function main() {
         assert(core?.kind==="EXACT_PATH_SET"&&core.paths.length===35,
           "HOLD_3748_V2_EXACT_35_PATH_DEPENDENCY_SCOPE");
         const enrolled=new Set(core.paths);
-        assert(changed.length===31&&changed.every(x=>enrolled.has(x)),
+        // Seven existing execution/material files are owned by other
+        // exact dependency resolvers, not by this V2 successor resolver.
+        // Treating one resolver as the owner of the entire PR falsely
+        // rejects real, already classified code. Keep all seven explicit,
+        // require their independent owners, and reject all unknown paths.
+        const adjacentOwners=Object.entries(authority.dependency_resolvers)
+          .filter(([key])=>key!=="CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2");
+        const separatelyOwned=[
+          "scripts/cap09_adoption_v1/installed-material.cjs",
+          "scripts/cap09_adoption_v1/test-offline-context.cjs",
+          "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts",
+          "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs",
+          "scripts/runtime_acceptance/MCFT_CAP09_STAGE_RECEIPTS_V1.cjs",
+          "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+          "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
+        ];
+        assert(separatelyOwned.length===7&&separatelyOwned.every(file=>
+          changed.includes(file)&&!enrolled.has(file)&&
+          adjacentOwners.some(([,resolver])=>Array.isArray(resolver.paths)&&resolver.paths.includes(file))),
+          "HOLD_3748_ADJACENT_EXECUTION_DEPENDENCIES_UNOWNED");
+        assert(changed.length===31&&changed.every(file=>
+          enrolled.has(file)||separatelyOwned.includes(file)),
           "HOLD_3748_UNBOUNDED_CHANGED_EXECUTION_SCOPE");
         const fixed=[
          "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_COMPOSITE_V1.cjs",
