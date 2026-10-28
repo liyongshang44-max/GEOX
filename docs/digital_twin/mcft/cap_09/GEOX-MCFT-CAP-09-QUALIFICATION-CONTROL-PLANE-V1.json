@@ -1601,14 +1601,21 @@
         "scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_STAGE3_REAL_FULL_PROVIDER_ONE_BASE_DUAL_HEARTBEAT_TEST_ONLY_V1.ts"
       ]
     },
-    "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SEVEN_PATHS_V1": {
+    "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2": {
       "kind": "EXACT_PATH_SET",
       "paths": [
         ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-V2-ATTEMPT3-ENGINEERING-BOUNDARY-V1.md",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
+        "scripts/cap09_adoption_v1/SIGN_MCFT_CAP09_ADOPTION_V2_OFFLINE.cjs",
         "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs",
         "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.test.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.test.cjs"
       ]
@@ -3516,15 +3523,15 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-V2-ATTEMPT3-ENGINEERING-BOUNDARY-V1.md"
       ],
       "resolver_ids": [
-        "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SEVEN_PATHS_V1"
+        "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2"
       ],
       "historical_evidence_policy": "NONE_ATTEMPT2_SIGNATURE_OR_LEDGER_NOT_ATTEMPT3_AUTHORITY",
       "execution_workflow": ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
-      "execution_workflow_status": "ENGINEERING_UNIT_NEGATIVES_ONLY_NO_HOST_PERMIT_OR_REAL_SIGNED_ADOPTION",
-      "fail_policy": "FAIL_CLOSED_VERSIONED_65_TO_FORMAL54_ONLY_NO_HISTORIC_REWRITE",
+      "execution_workflow_status": "ENGINEERING_SIGNED_PROOF_VALIDATORS_ONLY_NO_CURRENT_SUBJECT_OWNER_OR_HOST_STAGE_AUTHORITY",
+      "fail_policy": "FAIL_CLOSED_EXACT_SOURCE_REQUAL_SIGNED_QCP65_ADOPTION_V2_AND_ATTEMPT3_HOST_PERMIT_HOLD",
       "carry_forward_policy": "NONE_HISTORICAL_ADOPTION_DA9_NOT_REPLAYABLE",
       "requalification_triggers": [
-        "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SEVEN_PATHS_V1"
+        "CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",
