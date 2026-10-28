@@ -125,7 +125,7 @@ test("actual checked-out QCP65 maps only 54 Formal and 11 technical-only definit
  assert.throws(()=>g.mapAdoptionV2(mutant,policy));
 });
 
-test("historic 13-path composite is not current 18-path source qualification; Composer signatures cannot transfer",()=>{
+test("historic 13-path composite is not current 19-path source qualification; Composer signatures cannot transfer",()=>{
  const cp=require("node:child_process");
  const scoped=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs");
  const head=cp.execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();
@@ -133,7 +133,7 @@ test("historic 13-path composite is not current 18-path source qualification; Co
    check_id:"DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1"});
  assert.equal(v.status,"PASS");
  assert.equal(v.scope,"PR_3747_SOURCE_PRESERVATION_ONLY");
- assert.equal(v.exact_current_delta_paths,18);
+ assert.equal(v.exact_current_delta_paths,19);
  assert.equal(v.historical_composite_exact_path_verifier_unchanged,true);
  assert.equal(v.historical_da9_semantic_verifier_unchanged,true);
  assert.equal(v.historical_composite_13_path_check_not_replayed,true);
@@ -301,7 +301,7 @@ test("the two predecessor-workflow successor routes retain original frozen accep
  const q=JSON.parse(fs.readFileSync(path.join(root,
    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"),"utf8"));
  const files=q.dependency_resolvers.CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2.paths;
- assert.equal(files.length,18);
+ assert.equal(files.length,19);
  for(const file of [fz,st])assert(files.includes(file),
    "HOLD_3747_MISSING_SUCCESSOR_APPLICABILITY_FILE:"+file);
  assert.equal(git("rev-parse",g.BASELINE+":"+oldFrozen),
@@ -329,4 +329,24 @@ test("the two predecessor-workflow successor routes retain original frozen accep
    "docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json"),
    git("rev-parse",head+":"+
    "docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-SIGNED-V2-SIX-OPERATOR-REVIEW-20261025.json"));
+});
+
+test("CE94 transient synthetic signature must always mutate Ed25519 bytes, not leak original evidence",()=>{
+ const cp=require("node:child_process");
+ const root=path.resolve(__dirname,"../..");
+ const source="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs";
+ const verifier="scripts/governance_acceptance/MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs";
+ const git=(...args)=>cp.execFileSync("git",args,{cwd:root,encoding:"utf8"}).trim();
+ assert.equal(git("rev-parse",g.BASELINE+":"+verifier),git("rev-parse","HEAD:"+verifier),
+    "HOLD_3747_REAL_CE94_VERIFIER_CHANGED");
+ const src=fs.readFileSync(path.join(root,source),"utf8");
+ assert(src.includes('signed.signature_base64[0]==="A"?"B":"A"'));
+ assert(src.includes("SYNTHETIC_SIGNED_BYTES_MUST_DIFFER"));
+ for(const x of ["A","B","Q","9","/"]){
+   const changed=x==="A"?"B":"A";
+   assert.notEqual(changed,x,"HOLD_CE94_FLIP_NOT_DIFFERENT");
+ }
+ // This fixture explicitly does not touch production signing material.
+ assert(src.includes("CAP09_REAL_STAGE3_V2_SYNTHETIC_TEST"));
+ assert(src.includes("crypto.generateKeyPairSync"));
 });
