@@ -45,3 +45,16 @@ test("signed observed document is hash-bound and cannot silently change",()=>{
 test("V2 child cannot launch as unsigned Linux/CI fixture",()=>{
  assert.throws(()=>child.childTargets(),/CAP09_V2_WINDOWS_ONLY/);
 });
+
+test("Attempt-3 child env must be present in installed-material allowlist before host release collection",()=>{
+ const names=require("../cap09_adoption_v1/installed-material.cjs").CHILD_STAGE_ENVIRONMENT_NAMES;
+ const required=[
+ "MCFT_ATTEMPT3_V2_CHILD","MCFT_ATTEMPT3_V2_LEDGER_ROOT",
+ "MCFT_ATTEMPT3_V2_NONCE","MCFT_ATTEMPT3_V2_PERMIT_ENVELOPE_SHA256",
+ "MCFT_ATTEMPT3_V2_OBSERVED_FILE","MCFT_ATTEMPT3_V2_OBSERVATIONS_SHA256",
+ "MCFT_GOVERNED_RETRY_STAGE","MCFT_GOVERNED_RETRY_TICKET",
+ "MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256"
+ ];
+ assert.equal(new Set(names).size,names.length,"DUPLICATE_CHILD_ENV_NAMES");
+ for(const name of required)assert(names.includes(name),"INSTALL_MATERIAL_MISSING_CHILD_ENV:"+name);
+});
