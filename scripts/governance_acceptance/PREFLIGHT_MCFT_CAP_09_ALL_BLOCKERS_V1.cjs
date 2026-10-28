@@ -1330,6 +1330,33 @@ function main() {
         check_id:decision.check_id,detail:inherited});
       results.push(result);continue;
     }
+    // #3747 Phase3: original 24cd Phase3 workflow digest is stale; the
+    // 94-file exact new Phase3 graph has been byte-identical since qualified
+    // #3743. Requalify only with GitHub-native #3743 CI/PG/artifact, current
+    // QCP digest and exact 16-path HEAD. No old Run/Permit/signature carryover.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE" &&
+       args.base==="e7a8f30ffb60cb4c2bc6bd83d7bbe487eb708cc9" &&
+       decision.check_id==="PHASE3_EVIDENCE_RUNTIME_FOUNDATION"){
+      const qualified=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs")
+        .verifyPhase3Successor({decision,stage,head:args.head||"",base:args.base});
+      const passed=qualified?.status==="PASS";
+      result={...common,
+        execution:"CURRENT_94_BLOB_PHASE3_NATIVE_3743_REAL_PG_SOURCE_REQUALIFICATION",
+        status:passed?"PASS":"FAIL",
+        reason_code:qualified?.reason_code||"HOLD_3747_PHASE3_NATIVE_MISSING",
+        evidence_id:qualified?.evidence_id||null,
+        evidence_subject_sha:qualified?.qualified_source||null,
+        old_24cd_phase3_digest_still_invalid:true,
+        native_3743_source_only:true,
+        original_formal_six_stages:0,
+        adoption_authorized:false,permit_authorized:false,
+        production_authorized:false,
+        phase3_current_source_proof:qualified};
+      if(!passed)blockers.push({
+        blocker_class:"CURRENT_3747_PHASE3_NATIVE_SOURCE_QUALIFICATION_INVALID",
+        check_id:decision.check_id,detail:qualified});
+      results.push(result);continue;
+    }
     // #3737: ONLY exact 7-path TEST_ONLY successor to qualified #3746 main.
     // Verify native predecessor QCP run/artifact, original six Ed25519 signatures,
     // immutable prior 63 QCP definitions, and no scientific/runtime/source delta.
