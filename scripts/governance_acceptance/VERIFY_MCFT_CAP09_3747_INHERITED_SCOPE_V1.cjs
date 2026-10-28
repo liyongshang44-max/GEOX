@@ -121,7 +121,128 @@ function verifyForPreflight({decision,stage,base,head}){
   check_id:decision.check_id,old_technical_check_requalified:false,
   historic_frozen_v13_failure_preserved:true,permit_authorized:false};}
 }
-module.exports={technical,verifyForPreflight,CHECKS,DELTA};
+
+// Distinct current-HEAD PHASE3 qualification on #3747. The 94 exact
+// source dependencies are byte-identical to native #3743's qualified
+// PostgreSQL source; a stale 24cd4b59 historic dependency digest is
+// NOT admissible. This reviewer never signs or provides execution authority.
+const PHASE3_SOURCE="cd18701600346840b7e4cc3611a7108f2e713490";
+const PHASE3_DIGEST="sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145";
+const PHASE3_OLD_DIGEST="sha256:d5d1cf09c4cde3b0fe82e658d9af2b25fe5beccee1a582d40ba00349fab8534b";
+const PHASE3_ARTIFACT="sha256:0a05c94f21df6f8164b4cc3e37f09fbddf6663dfabee605443ec833e58177502";
+const PHASE3_SOURCE_MANIFEST="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-DA9-CURRENT-SOURCE-SUCCESSOR-QCP-TECHNICAL-EVIDENCE-V1.json";
+const PHASE3_OWNER_POLICY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-3740-3744-OWNER-DIRECTED-POLICY-V1.json";
+function phase3Local({decision,stage,head,base,event}){
+  assert.equal(decision?.check_id,"PHASE3_EVIDENCE_RUNTIME_FOUNDATION","HOLD_3747_PHASE3_CHECK");
+  assert.equal(decision.dependency_digest,PHASE3_DIGEST,"HOLD_3747_PHASE3_CURRENT_DIGEST");
+  assert.notEqual(decision.dependency_digest,PHASE3_OLD_DIGEST,"HOLD_3747_PHASE3_STALE_DIGEST");
+  assert.deepEqual(decision.changed_dependencies||[],[],"HOLD_3747_PHASE3_CHANGED_DEPENDENCY");
+  assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","HOLD_3747_PHASE3_STAGE");
+  assert.equal(base,BASE,"HOLD_3747_PHASE3_BASE");
+  const scoped=technical({head,base,native:true,event});
+  assert.equal(scoped.status,"PASS");
+  const q=read(QCP);
+  const graph=q.dependency_resolvers?.PHASE3_EVIDENCE_RUNTIME_FOUNDATION;
+  assert.equal(graph?.kind,"EXACT_PATH_SET","HOLD_3747_PHASE3_RESOLVER");
+  const deps=graph.paths;
+  assert.equal(deps.length,94,"HOLD_3747_PHASE3_94_DEPENDENCIES");
+  assert.equal(new Set(deps).size,94,"HOLD_3747_PHASE3_DUPLICATES");
+  assert.equal(run("rev-parse",BASE+":"+PHASE3_SOURCE_MANIFEST),
+    run("rev-parse",head+":"+PHASE3_SOURCE_MANIFEST),
+    "HOLD_3747_PHASE3_MANIFEST_CHANGED");
+  assert.equal(run("rev-parse",BASE+":"+PHASE3_OWNER_POLICY),
+    run("rev-parse",head+":"+PHASE3_OWNER_POLICY),
+    "HOLD_3747_PHASE3_OWNER_POLICY_CHANGED");
+  const srcManifest=read(PHASE3_SOURCE_MANIFEST);
+  assert.equal(srcManifest.current_phase3_dependency_digest,PHASE3_DIGEST,
+    "HOLD_3747_PHASE3_SOURCE_MANIFEST_DIGEST");
+  assert.equal(srcManifest.source_evidence[2].head,PHASE3_SOURCE,
+    "HOLD_3747_PHASE3_SOURCE_IDENTITY");
+  assert.equal(srcManifest.source_evidence[2].ci_run,40517266880);
+  assert.equal(srcManifest.source_evidence[2].qualification_run,40517266887);
+  assert.equal(srcManifest.source_evidence[2].artifacts[0].id,12738863652);
+  assert.equal(srcManifest.source_evidence[2].artifacts[0].digest,PHASE3_ARTIFACT);
+  const policy=read(PHASE3_OWNER_POLICY);
+  assert.equal(policy.owner,"liyongshang44-max");
+  assert.equal(policy.source_qualification_only,true);
+  assert.equal(policy.requires_native_exact_head_verification,true);
+  assert.equal(policy.physical_execution_approved,false);
+  assert.equal(policy.permit_approved,false);
+  // Exact source blob comparison; never equate an unrelated or modified
+  // current HEAD solely because a former GitHub workflow returned green.
+  for(const file of deps){
+    assert.equal(run("rev-parse",PHASE3_SOURCE+":"+file),
+      run("rev-parse",head+":"+file),
+      "HOLD_3747_PHASE3_SOURCE_DRIFT:"+file);
+  }
+  return {status:"PASS_SOURCE_BLOBS_ONLY_NOT_NATIVE_ADOPTION",
+    current_head:head,qualified_source:PHASE3_SOURCE,
+    exact_dependency_count:deps.length,current_digest:PHASE3_DIGEST,
+    original_historical_digest_still_invalid:true,
+    previously_signed_evidence_transferred:false,
+    old_run_reused_for_current_adoption:false,
+    permit_authorized:false,adoption_authorized:false,production_authorized:false};
+}
+function nativePhase3Get(endpoint){
+  const token=process.env.GH_TOKEN;
+  assert(token,"HOLD_3747_PHASE3_NATIVE_TOKEN_REQUIRED");
+  const uri="https://api.github.com/repos/"+REPO+endpoint;
+  const raw=cp.execFileSync("curl",["--fail","--silent","--show-error","--max-time","30",
+    "-H","Accept: application/vnd.github+json","-H","Authorization: Bearer "+token,uri],
+    {encoding:"utf8",timeout:35000,maxBuffer:8*1024*1024});
+  return JSON.parse(raw);
+}
+function verifyPhase3Successor({decision,stage,head,base}){
+  if(decision?.check_id!=="PHASE3_EVIDENCE_RUNTIME_FOUNDATION"||
+    stage!=="SUCCESSOR_SUBJECT_PRE_MERGE"||base!==BASE)return null;
+  try{
+    assert(process.env.GITHUB_EVENT_PATH,"HOLD_3747_PHASE3_EVENT_REQUIRED");
+    const event=read(process.env.GITHUB_EVENT_PATH);
+    const local=phase3Local({decision,stage,head,base,event});
+    const source=nativePhase3Get("/pulls/3743");
+    assert.equal(source.head.sha,PHASE3_SOURCE,"HOLD_3747_PHASE3_PR_HEAD");
+    assert.equal(source.base.sha,"63dc3382f879781c604a852c7d1b28af9b0dd9f4");
+    assert.equal(source.user.login,"liyongshang44-max");
+    const ci=nativePhase3Get("/actions/runs/40517266880");
+    assert.equal(ci.head_sha,PHASE3_SOURCE);
+    assert.equal(ci.conclusion,"success","HOLD_3747_PHASE3_NATIVE_CI");
+    const ciJobs=nativePhase3Get("/actions/runs/40517266880/jobs?per_page=100");
+    for(const n of ["build-test","acceptance"])
+      assert(ciJobs.jobs.some(j=>j.name===n&&j.conclusion==="success"),
+        "HOLD_3747_PHASE3_CI_JOB:"+n);
+    const runtime=nativePhase3Get("/actions/runs/40517266887");
+    assert.equal(runtime.head_sha,PHASE3_SOURCE);
+    assert.equal(runtime.conclusion,"success","HOLD_3747_PHASE3_NATIVE_RUNTIME");
+    const jobs=nativePhase3Get("/actions/runs/40517266887/jobs?per_page=100");
+    assert(jobs.jobs.some(j=>j.name==="phase3-current-source-real-postgres"&&
+      j.conclusion==="success"),"HOLD_3747_PHASE3_REAL_POSTGRES");
+    const artifacts=nativePhase3Get("/actions/runs/40517266887/artifacts?per_page=100");
+    const a=artifacts.artifacts.find(x=>x.id===12738863652);
+    assert(a&&!a.expired&&a.digest===PHASE3_ARTIFACT,
+      "HOLD_3747_PHASE3_NATIVE_ARTIFACT");
+    assert.equal(a.workflow_run?.head_sha,PHASE3_SOURCE);
+    assert.equal(a.workflow_run?.id,40517266887);
+    const owner=nativePhase3Get("/pulls/3745");
+    assert.equal(owner.head.sha,"368cb5518562794314bf4ba61140308894f85214");
+    assert.equal(owner.user.login,"liyongshang44-max");
+    for(const id of [40527803393,40527803833]){
+      const wr=nativePhase3Get("/actions/runs/"+id);
+      assert.equal(wr.head_sha,owner.head.sha,"HOLD_3747_PHASE3_OWNER_NATIVE_HEAD");
+      assert.equal(wr.conclusion,"success","HOLD_3747_PHASE3_OWNER_NATIVE_RUN");
+    }
+    return {...local,status:"PASS",
+      reason_code:"CURRENT_PHASE3_94_IDENTICAL_BLOBS_AND_NATIVE_REAL_PG_3743_PROVEN",
+      evidence_id:"CAP09_3747_PHASE3_SOURCE_IDENTICAL_NATIVE_3743_V1",
+      native_ci_run_id:40517266880,native_pg_run_id:40517266887,
+      native_artifact_id:12738863652,source_qualification_only:true};
+  }catch(e){
+    return {status:"FAIL",reason_code:"HOLD_3747_PHASE3:"+String(e.message||e).slice(0,280),
+      historical_digest_still_invalid:true,permit_authorized:false,
+      physical_execution_authorized:false,adoption_authorized:false};
+  }
+}
+
+module.exports={technical,verifyForPreflight,CHECKS,DELTA,phase3Local,verifyPhase3Successor};
 if(require.main===module){
  try{
   const native=process.argv.includes("--native");
