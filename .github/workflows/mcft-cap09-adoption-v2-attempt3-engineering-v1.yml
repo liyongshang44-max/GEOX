@@ -22,6 +22,7 @@ on:
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs"
       - "scripts/runtime_acceptance/RUN_MCFT_CAP09_ATTEMPT3_HOST_V2_WINDOWS.cjs"
       - "scripts/runtime_acceptance/RUN_MCFT_CAP09_ATTEMPT3_HOST_V2_WINDOWS.test.cjs"
+      - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_WINDOWS_READONLY_INSPECTION_V1.ps1"
       - "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs"
       - "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
       - "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts"
@@ -88,3 +89,26 @@ jobs:
           path: acceptance-output/CAP09_3748_HISTORIC_3747_SOURCE_ISOLATION_V1.json
           if-no-files-found: error
           retention-days: 30
+
+  windows-readonly-inspection-contract:
+    name: Windows PS5.1 no-effect inspection (NOT the operator host)
+    runs-on: windows-2022
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Verify PowerShell 5.1 local inspector without real input
+        shell: powershell
+        run: |
+          $script = Join-Path $env:GITHUB_WORKSPACE 'scripts\runtime_acceptance\MCFT_CAP09_ATTEMPT3_WINDOWS_READONLY_INSPECTION_V1.ps1'
+          $json = & $script -Repo $env:GITHUB_WORKSPACE
+          if ($LASTEXITCODE -ne 0) { throw 'READONLY_INSPECTOR_PROCESS_FAILED' }
+          $fact = ($json | Out-String | ConvertFrom-Json)
+          if ($fact.status -ne 'READONLY_LOCAL_INSPECTION_NOT_SIGNED_PREFLIGHT') { throw 'INSPECTOR_STATUS_CHANGED' }
+          if ($fact.permit_consumed -ne $false -or $fact.original_six_stages_executed -ne 0) { throw 'FAKE_PHYSICAL_PASS' }
+          if ($fact.signed_material_verified -ne $false -or $fact.production_authorized -ne $false) { throw 'FAKE_ADMISSION' }
+          if ($fact.blockers -notcontains 'SIGNED_ADOPTION_PERMIT_WINDOWS_INPUT_NOT_PROVIDED') { throw 'MISSING_EXPECTED_HOLD' }
+          if ($fact.required_source_files.Count -lt 11) { throw 'STAGE_SOURCE_INVENTORY_INCOMPLETE' }
+          Write-Output ('PASS_WINDOWS_READONLY_INSPECTOR_CONTRACT_NOT_OPERATOR_ATTESTATION files=' + $fact.required_source_files.Count)
