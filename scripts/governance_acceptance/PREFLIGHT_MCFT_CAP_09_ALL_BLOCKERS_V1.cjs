@@ -1373,22 +1373,30 @@ function main() {
           "HOLD_3748_HISTORICAL_SOURCE_NATIVE_RUN_NOT_ACCEPTED");
         assert.equal(nativeQcp.name,"mcft-cap-09-qualification-control-plane-v1");
         assert.equal(nativeCi.name,"ci");
-        qualified=true;reason="HISTORICAL_3746_CHECK_SUBJECT_OUT_OF_SCOPE_IN_3748_SOURCE";
+        // These six are in the Formal54 mapping, so a fake N/A would
+        // fail the signed Adoption consumer. Prove current V2 changed-code
+        // behavior now; PASS is scoped qualification, not signed adoption.
+        const current=runDiagnostic(
+          "node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs "+
+          "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs",
+          {},decision.check_id);
+        assert.equal(current.status,"PASS","HOLD_3748_CURRENT_V2_EXECUTION_REGRESSION_FAIL");
+        qualified=true;reason="UNCHANGED_3746_SOURCE_PLUS_CURRENT_3748_V2_EXECUTION_PROOFS";
         evidence={schema_version:"MCFT_CAP09_3748_HISTORICAL_SIX_INHERITANCE_REVIEW_V1",
           original_source_sha:source,original_qcp_run:40551639639,
           original_ci_run:40551640188,original_composer_blob:"2d1f72d92c05093537774285bda5b7200845344d",
           historical_source_paths_unchanged:unchanged.length,
           original_ed25519_signatures_verified:6,
           current_3748_runtime_qualified_by_history:false,
-          historic_check_not_applicable_to_new_executor:true,
+          historic_check_not_used_as_new_execution_AUTHORITY:true,
           new_adoption_signed:false,permit_authorized:false,
           original_six_stages_executed:0,production_authorized:false};
       }catch(error){
         qualified=false;
         reason="HOLD_3748_HISTORICAL_SCOPE_BOUNDARY:"+String(error.message||error).slice(0,240);
       }
-      result={...common,execution:"HISTORICAL_SIGNED_SOURCE_READONLY_INHERITANCE_NOT_EXECUTION",
-        status:qualified?"NOT_APPLICABLE":"FAIL",
+      result={...common,execution:"BOUNDED_ORIGINAL_SIGNED_SOURCE_AND_CURRENT_V2_EXECUTION_PROOF_NOT_PERMIT",
+        status:qualified?"PASS":"FAIL",
         reason_code:reason,scope:evidence,
         historical_qualification_reissued:false,
         current_v2_execution_requires_independent_qcp:true,
