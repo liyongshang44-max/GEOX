@@ -150,3 +150,42 @@ test("historic 13-path composite is not current 16-path source qualification; Co
  assert.throws(()=>scoped.technical({head,base:g.BASELINE,check_id:"CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY"}),
    /HOLD_3747_UNSCOPED_CHECK/);
 });
+
+test("current Phase3 94-blob native qualification cannot inherit a stale Run or modified dependency",()=>{
+ const cp=require("node:child_process");
+ const scoped=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs");
+ const root=path.resolve(__dirname,"../..");
+ const head=cp.execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim();
+ const q=JSON.parse(fs.readFileSync(path.join(root,
+   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"),"utf8"));
+ const graph=q.dependency_resolvers.PHASE3_EVIDENCE_RUNTIME_FOUNDATION;
+ assert.equal(graph.kind,"EXACT_PATH_SET");
+ assert.equal(graph.paths.length,94);
+ // Native positive proof is exercised against GitHub event and pinned
+ // 94-blob qualified #3743 source; no custom synthetic positive event.
+ if(process.env.GITHUB_ACTIONS!=="true"||
+    process.env.GITHUB_EVENT_NAME!=="pull_request") return;
+ const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+ const decision={check_id:"PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+   dependency_digest:"sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145",
+   changed_dependencies:[]};
+ const input={decision,stage:"SUCCESSOR_SUBJECT_PRE_MERGE",head,base:g.BASELINE,event};
+ const local=scoped.phase3Local(input);
+ assert.equal(local.exact_dependency_count,94);
+ assert.equal(local.original_historical_digest_still_invalid,true);
+ assert.equal(local.adoption_authorized,false);
+ assert.equal(local.permit_authorized,false);
+ assert.equal(local.status,"PASS_SOURCE_BLOBS_ONLY_NOT_NATIVE_ADOPTION");
+ const badDigest=structuredClone(input);
+ badDigest.decision.dependency_digest=
+   "sha256:d5d1cf09c4cde3b0fe82e658d9af2b25fe5beccee1a582d40ba00349fab8534b";
+ assert.throws(()=>scoped.phase3Local(badDigest),/HOLD_3747_PHASE3_CURRENT_DIGEST/);
+ const changed=structuredClone(input);
+ changed.decision.changed_dependencies=["apps/server/src/external_evidence/modified.ts"];
+ assert.throws(()=>scoped.phase3Local(changed),/HOLD_3747_PHASE3_CHANGED_DEPENDENCY/);
+ const changedHead=structuredClone(input); changedHead.head="a".repeat(40);
+ assert.throws(()=>scoped.phase3Local(changedHead),/HOLD_3747_EXACT_HEAD_REQUIRED/);
+ const wrongBase=structuredClone(input);
+ wrongBase.base="63dc3382f879781c604a852c7d1b28af9b0dd9f4";
+ assert.throws(()=>scoped.phase3Local(wrongBase),/HOLD_3747_PHASE3_BASE/);
+});
