@@ -45,4 +45,15 @@ jobs:
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs
       - name: Exact current-head inherited-source scope (not legacy Frozen PASS)
         if: github.event_name == 'pull_request'
-        run: node scripts/governance_acceptance/VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs --native
+        run: |
+          mkdir -p acceptance-output
+          node scripts/governance_acceptance/VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs --native |
+            tee acceptance-output/MCFT_CAP09_3747_EXACT_SCOPE_NONAUTH_V1.json
+      - name: Save exact-head non-authorizing QCP applicability receipt
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-3747-exact-scope-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP09_3747_EXACT_SCOPE_NONAUTH_V1.json
+          if-no-files-found: error
+          retention-days: 30
