@@ -48,3 +48,67 @@ test("CI and Linux can never consume Attempt-3 Permit or launch a child",async()
  assert.throws(()=>atomic.consumeForQualifiedHost({}),/A3_V2_SIGNED_PREPARE_REQUIRED/);
  assert.throws(()=>atomic.assertConsumed({}),/A3_V2_ATOMIC_CONSUMPTION_REQUIRED/);
 });
+
+test("current #3748 byte-delta is fully classified; frozen QCP and EA5E2 graph stay unchanged",()=>{
+ // Diff classification is a technical review artifact; NEVER Adoption or Permit.
+ const cp=require("node:child_process"),path=require("node:path");
+ const root=path.resolve(__dirname,"../..");
+ const base="d38a5b07a92a63c67fbe2fcc3982ff9b9491e5ac";
+ const git=(...args)=>cp.execFileSync("git",["-C",root,...args],{encoding:"utf8",timeout:20000}).trim();
+ const head=git("rev-parse","HEAD");
+ const lines=git("diff","--name-status",base+".."+head).split(/\r?\n/).filter(Boolean);
+ const rows=lines.map(x=>{const [status,file]=x.split("\t");return {status,file};});
+ const executionNew=[
+  "MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs",
+  "MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.test.cjs",
+  "MCFT_CAP09_ATTEMPT3_HOST_V2.cjs",
+  "MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs",
+  "MCFT_CAP09_ATTEMPT3_REAL_LEDGER_READBACK_V1.cjs",
+  "MCFT_CAP09_ATTEMPT3_REAL_LEDGER_READBACK_V1.test.cjs",
+  "MCFT_CAP09_ATTEMPT3_WINDOWS_READONLY_INSPECTION_V1.ps1",
+  "MCFT_CAP09_PARENT_STAGE_DISPATCH_V2.cjs",
+  "MCFT_CAP09_STAGE_CAPABILITY_V2.cjs",
+  "MCFT_CAP09_STAGE_CAPABILITY_V2.test.cjs",
+  "RUN_MCFT_CAP09_ATTEMPT3_HOST_V2_WINDOWS.cjs",
+  "RUN_MCFT_CAP09_ATTEMPT3_HOST_V2_WINDOWS.test.cjs"
+ ].map(x=>"scripts/runtime_acceptance/"+x);
+ const inheritedProvenanceNew=[
+  "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_POSTMERGE_SOURCE_V1.cjs"
+ ];
+ const changedExisting=[
+  ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+  "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs",
+  "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
+  "scripts/cap09_adoption_v1/installed-material.cjs",
+  "scripts/cap09_adoption_v1/test-offline-context.cjs",
+  "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts",
+  "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_STAGE_RECEIPTS_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+  "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts"
+ ];
+ const wanted=[...executionNew,...inheritedProvenanceNew].map(file=>({status:"A",file}))
+  .concat(changedExisting.map(file=>({status:"M",file})))
+  .sort((a,b)=>a.file.localeCompare(b.file,"en"));
+ assert.deepEqual(rows.sort((a,b)=>a.file.localeCompare(b.file,"en")),wanted,
+  "PR3748_UNKNOWN_OR_UNCLASSIFIED_CHANGED_EXECUTION_PATH");
+ const frozen=[
+  ".github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml",
+  ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs",
+  "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"
+ ];
+ const frozenDiff=cp.spawnSync("git",["-C",root,"diff","--exit-code",base+".."+head,"--",...frozen],
+  {encoding:"utf8",timeout:20000});
+ assert.equal(frozenDiff.status,0,"PR3748_FROZEN_VERIFIER_OR_REGISTRY_BYTES_CHANGED");
+ console.log(JSON.stringify({status:"PR3748_EXECUTION_BYTE_DELTA_CLASSIFIED_TEST_ONLY",
+  base_sha:base,head_sha:head,changed_paths_count:rows.length,
+  added_execution_or_source_provenance:executionNew.length+inheritedProvenanceNew.length,
+  modified_existing_sources:changedExisting.length,unchanged_frozen_authority_paths:frozen.length,
+  inherited_execution_authority:false,adoption_authorized:false,
+  host_authorized:false,permit_authorized:false,original_six_stage_count:0}));
+});
