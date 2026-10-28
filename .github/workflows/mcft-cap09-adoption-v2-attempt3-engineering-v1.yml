@@ -12,6 +12,8 @@ on:
       - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs"
       - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs"
       - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_POSTMERGE_SOURCE_V1.cjs"
+      - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.cjs"
+      - "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs"
       - "scripts/cap09_adoption_v1/SIGN_MCFT_CAP09_ADOPTION_V2_OFFLINE.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs"
       - "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs"
@@ -68,6 +70,7 @@ jobs:
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.test.cjs
           node --test scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.test.cjs
           node --test scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs
+          node --test scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.test.cjs

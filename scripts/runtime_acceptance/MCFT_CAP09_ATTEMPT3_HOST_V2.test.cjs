@@ -73,7 +73,9 @@ test("current #3748 byte-delta registers exactly 13 changed V2 paths; frozen his
   "RUN_MCFT_CAP09_ATTEMPT3_HOST_V2_WINDOWS.test.cjs"
  ].map(x=>"scripts/runtime_acceptance/"+x);
  const inheritedProvenanceNew=[
-  "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_POSTMERGE_SOURCE_V1.cjs"
+  "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_POSTMERGE_SOURCE_V1.cjs",
+  "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.cjs",
+  "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs"
  ];
  const changedExisting=[
   ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
@@ -111,7 +113,7 @@ test("current #3748 byte-delta registers exactly 13 changed V2 paths; frozen his
  const past=baseline.dependency_resolvers[resolver].paths;
  const now=registry.dependency_resolvers[resolver].paths;
  assert.equal(past.length,20,"V2_HISTORICAL_SCOPE_CHANGED");
- assert.equal(now.length,33,"V2_SCOPE_MUST_BIND_EXACTLY_13_SUCCESSORS");
+ assert.equal(now.length,35,"V2_SCOPE_MUST_BIND_EXACTLY_15_SUCCESSORS");
  const expectedNew=[...executionNew,...inheritedProvenanceNew].sort();
  assert.deepEqual(now.filter(x=>!past.includes(x)).sort(),expectedNew,
   "V2_NEW_SOURCE_PATHS_NOT_EXACTLY_ENROLLED");

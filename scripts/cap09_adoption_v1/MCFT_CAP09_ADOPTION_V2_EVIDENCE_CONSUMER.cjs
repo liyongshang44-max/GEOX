@@ -11,6 +11,7 @@ const off=require("../cap09_adoption_v1/offline-context.cjs");
 const material=require("../cap09_adoption_v1/installed-material.cjs");
 const a3=require("../governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs");
 const merged=require("./MCFT_CAP09_ADOPTION_V2_POSTMERGE_SOURCE_V1.cjs");
+const successor=require("./MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.cjs");
 const DOMAIN="GEOX_MCFT_CAP09_ADOPTION_QUALIFICATION_V2\n";
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const verified=new WeakSet();
@@ -116,7 +117,7 @@ function zipRaw(zip){
  return out;
 }
 function githubGet(uri){
- assert(/^\/(?:pulls\/3747|actions\/runs\/[0-9]+(?:\/artifacts\?per_page=100|\/attempts\/[0-9]+\/jobs\?per_page=100)?|git\/commits\/[0-9a-f]{40}|git\/ref\/heads\/main|issues\/comments\/[1-9][0-9]*)$/.test(uri),"A3_V2_GITHUB_URL_SCOPE");
+ assert(/^\/(?:pulls\/(?:3747|3748)|actions\/runs\/[0-9]+(?:\/artifacts\?per_page=100|\/attempts\/[0-9]+\/jobs\?per_page=100)?|git\/commits\/[0-9a-f]{40}|git\/ref\/heads\/main|issues\/comments\/[1-9][0-9]*)$/.test(uri),"A3_V2_GITHUB_URL_SCOPE");
  const curl=process.platform==="win32"?"curl.exe":"curl";
  const data=cp.execFileSync(curl,["--fail","--silent","--show-error","--location","--max-time","20",
   "-H","Accept: application/vnd.github+json","-H","X-GitHub-Api-Version: 2022-11-28",
@@ -149,7 +150,7 @@ function checkNative(p,run,artifactList,jobList,pr,mergedProofValidated=false){
  assert(ms(job.started_at)<=ms(art.created_at)&&ms(art.created_at)<=ms(job.completed_at),"A3_V2_GITHUB_ARTIFACT_WRONG_ATTEMPT");
  return {status:"GITHUB_NATIVE_RUN_AND_ARTIFACT_VERIFIED",run_id:run.id,artifact_id:art.id,job_id:job.id};
 }
-function verifyNativeArtifact(p,evidenceRoot,derivation){
+function verifyNativeArtifact(p,evidenceRoot,derivation,newDerivation){
  for(const k of ["qcp_run_id","qcp_run_attempt","qcp_job_id","qcp_artifact_id"])
   assert(Number.isSafeInteger(p[k])&&p[k]>0,"A3_V2_NATIVE_ID_REQUIRED:"+k);
  assert.equal(p.qcp_event,"pull_request","A3_V2_EVENT_CHANGED");c.hash(p.qcp_artifact_sha256);
@@ -163,12 +164,27 @@ function verifyNativeArtifact(p,evidenceRoot,derivation){
  const jobs=githubGet("/actions/runs/"+p.qcp_run_id+"/attempts/"+p.qcp_run_attempt+"/jobs?per_page=100");
  const pr=githubGet("/pulls/3747");
  const owner=githubGet("/issues/comments/"+merged.OWNER_SOURCE_COMMENT);
- const checked=merged.verify(derivation,p,{pr,
+ const checked=merged.verifyHistoricalSource(derivation,p,{pr,
   sourceCommit:githubGet("/git/commits/"+merged.SOURCE),
   mergeCommit:githubGet("/git/commits/"+merged.MERGE),
   main:githubGet("/git/ref/heads/main"),sourceOwner:owner});
  const native=checkNative(p,run,arts,jobs,pr,true);
- return Object.freeze({native,checked,sourceOwner:owner});
+ // Frozen #3747 QCP65 is verified above at its original source.
+ // Changed #3748 code must separately pass native source QCP and real merge.
+ const currentPr=githubGet("/pulls/3748");
+ const liveMain=githubGet("/git/ref/heads/main");
+ const newRun=githubGet("/actions/runs/"+newDerivation.source_qcp_run_id);
+ const newJobs=githubGet("/actions/runs/"+newDerivation.source_qcp_run_id+
+  "/attempts/"+newDerivation.source_qcp_run_attempt+"/jobs?per_page=100");
+ const newArts=githubGet("/actions/runs/"+newDerivation.source_qcp_run_id+"/artifacts?per_page=100");
+ const newRaw=fs.readFileSync(safeFile(evidenceRoot,newDerivation.source_qcp_raw_ref));
+ const newZip=fs.readFileSync(safeFile(evidenceRoot,newDerivation.source_qcp_artifact_ref));
+ const successorStatus=successor.verify(newDerivation,p,{
+  pr:currentPr,sourceCommit:githubGet("/git/commits/"+newDerivation.source_head_sha),
+  mergeCommit:githubGet("/git/commits/"+newDerivation.subject_sha),
+  main:liveMain,qcpRun:newRun,qcpJobList:newJobs,qcpArtifacts:newArts
+ },newRaw,newZip,zipRaw);
+ return Object.freeze({native,checked,successorStatus,sourceOwner:owner,newMergePr:currentPr});
 }
 
 const PAYLOAD=["schema","qualification_id","run_id","parent_run_id","attempt_ordinal","baseline_main_sha","subject_sha",
@@ -176,6 +192,7 @@ const PAYLOAD=["schema","qualification_id","run_id","parent_run_id","attempt_ord
  "policy_digest","material_digest","frozen_paths","first_parent_proven",
  "qcp_source_ref","qcp_source_sha256","qcp_artifact_ref","qcp_artifact_sha256","qcp_artifact_id","qcp_run_id","qcp_run_attempt","qcp_job_id","qcp_event",
  "qcp_results_digest","qcp_source_subject_sha","qcp_merge_derivation_ref","qcp_merge_derivation_sha256",
+ "successor_source_head_sha","successor_derivation_ref","successor_derivation_sha256",
  "adoption_owner_approval_comment_id","release_binding_ref","release_binding_sha256"];
 function verify(request,releaseRoot,opts={}){
  const now=opts.now??Date.now(),host=opts.host??os.hostname(),env=opts.environment??process.env;
@@ -201,9 +218,12 @@ function verify(request,releaseRoot,opts={}){
  const q=checkQcp65(machine,qcp,policy,p.qcp_source_subject_sha);
  assert.equal(p.qcp_results_digest,q.qcp_results_digest,"A3_V2_RESULT_DIGEST_CHANGED");
  const derivation=readBound(request.evidence_root,p.qcp_merge_derivation_ref,p.qcp_merge_derivation_sha256);
- const provenance=verifyNativeArtifact(p,request.evidence_root,derivation);
+ const successorDerivation=readBound(request.evidence_root,p.successor_derivation_ref,
+  p.successor_derivation_sha256);
+ const provenance=verifyNativeArtifact(p,request.evidence_root,derivation,successorDerivation);
  const ownerApproval=githubGet("/issues/comments/"+p.adoption_owner_approval_comment_id);
- merged.verifyOwnerApproval(p,ownerApproval,provenance.sourceOwner);
+ successor.verifyOwnerApproval(p,ownerApproval,{sourceOwner:provenance.sourceOwner,
+  newMergePr:provenance.newMergePr});
  const release=readBound(request.evidence_root,p.release_binding_ref,p.release_binding_sha256);
  assert.equal(release.schema_version,"MCFT_CAP09_RELEASE_MATERIAL_BINDING_V1");
  assert.equal(release.subject_commit_sha,p.subject_sha,"A3_V2_RELEASE_HEAD_CHANGED");

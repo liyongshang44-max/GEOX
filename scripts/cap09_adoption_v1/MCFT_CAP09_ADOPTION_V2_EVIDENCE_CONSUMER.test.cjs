@@ -182,6 +182,14 @@ function mergedFixture(){
  const main={object:{sha:postmerge.MERGE}};
  return {p,derivation,n:{pr,sourceCommit,mergeCommit,main,sourceOwner}};
 }
+test("historic QCP65 source proof remains valid without pretending it ran on new protected main",()=>{
+ const {p,derivation,n}=mergedFixture();
+ n.main.object.sha="e".repeat(40);
+ assert.throws(()=>postmerge.verify(derivation,p,n),/POSTMERGE_LIVE_MAIN_MOVED/);
+ const historical=postmerge.verifyHistoricalSource(derivation,p,n);
+ assert.equal(historical.qcp_executed_at_merge_subject,false);
+ assert.equal(historical.permit_authorized,false);
+});
 test("postmerge exact Git source tree lineage proves source only, never merge QCP/adoption",()=>{
  const {p,derivation,n}=mergedFixture();
  const v=postmerge.verify(derivation,p,n);

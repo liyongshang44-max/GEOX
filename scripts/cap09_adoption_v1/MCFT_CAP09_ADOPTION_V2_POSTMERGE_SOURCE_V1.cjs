@@ -34,12 +34,12 @@ const FIELDS=["schema_version","repository","pr_number","base_sha","source_subje
  "source_qcp_artifact_id","source_qcp_artifact_sha256","source_qcp_results_digest",
  "source_qcp_owner_comment_id","qcp_executed_at_merge_subject","source_tree_equivalent",
  "adoption_authorized","host_authorized","permit_authorized","production_authorized","original_six_stage_count"];
-function verify(d,p,n){
+function verifyHistoricalSource(d,p,n){
  c.exact(d,FIELDS);
  assert.equal(d.schema_version,"MCFT_CAP09_3747_POSTMERGE_QCP65_SOURCE_DERIVATION_V1");
  assert.equal(d.repository,REPO);assert.equal(d.pr_number,PR);assert.equal(d.base_sha,BASE);
  assert.equal(d.source_subject_sha,SOURCE);assert.equal(d.subject_sha,MERGE);
- assert.equal(p.subject_sha,MERGE,"POSTMERGE_SIGNED_SUBJECT_NOT_MAIN");
+ // Historical QCP65 source proof is valid independently of a later main HEAD.
  assert.equal(p.qcp_source_subject_sha,SOURCE,"POSTMERGE_QCP_SOURCE_NOT_EXACT");
  for(const [a,b] of [["source_qcp_run_id","qcp_run_id"],["source_qcp_attempt","qcp_run_attempt"],
   ["source_qcp_artifact_id","qcp_artifact_id"],["source_qcp_artifact_sha256","qcp_artifact_sha256"],
@@ -62,7 +62,7 @@ function verify(d,p,n){
  assert.equal(d.source_tree_sha,sourceCommit.tree.sha);
  assert.equal(d.merge_tree_sha,mergeCommit.tree.sha);
  assert.deepEqual(d.merge_parents,[BASE,SOURCE]);
- assert.equal(main?.object?.sha,MERGE,"POSTMERGE_LIVE_MAIN_MOVED");
+ // Live protected-main assertion is done by verify() or separately by a successor verifier.
  assert.equal(sourceOwner?.id,OWNER_SOURCE_COMMENT);
  assert.equal(sourceOwner.user?.login,"liyongshang44-max");
  assert.equal(sourceOwner.user?.type,"User");
@@ -80,6 +80,12 @@ function verify(d,p,n){
  return Object.freeze({status:"POSTMERGE_QCP65_SOURCE_EQUIVALENCE_VERIFIED_NOT_ADOPTION",
   source_head:SOURCE,merge_head:MERGE,tree_sha:sourceCommit.tree.sha,
   qcp_executed_at_merge_subject:false,adoption_authorized:false,permit_authorized:false});
+}
+function verify(d,p,n){
+ assert.equal(p.subject_sha,MERGE,"POSTMERGE_SIGNED_SUBJECT_NOT_MAIN");
+ const result=verifyHistoricalSource(d,p,n);
+ assert.equal(n.main?.object?.sha,MERGE,"POSTMERGE_LIVE_MAIN_MOVED");
+ return result;
 }
 function ownerApprovalText(p){
  return ["GEOX_MCFT_CAP09_ADOPTION_V2_PURPOSE_SPECIFIC_OWNER_APPROVAL_V1",
@@ -113,4 +119,4 @@ function verifyOwnerApproval(p,comment,sourceOwner){
  return Object.freeze({status:"ADOPTION_V2_OWNER_PURPOSE_APPROVAL_VERIFIED_NOT_SIGNED",
   approval_comment_id:comment.id,host_authorized:false,permit_authorized:false,production_authorized:false});
 }
-module.exports={REPO,PR,BASE,SOURCE,MERGE,OWNER_SOURCE_COMMENT,FIELDS,verify,ownerApprovalText,verifyOwnerApproval};
+module.exports={REPO,PR,BASE,SOURCE,MERGE,OWNER_SOURCE_COMMENT,FIELDS,verify,verifyHistoricalSource,ownerApprovalText,verifyOwnerApproval};
