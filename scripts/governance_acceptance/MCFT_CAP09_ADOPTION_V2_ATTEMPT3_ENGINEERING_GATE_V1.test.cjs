@@ -125,7 +125,7 @@ test("actual checked-out QCP65 maps only 54 Formal and 11 technical-only definit
  assert.throws(()=>g.mapAdoptionV2(mutant,policy));
 });
 
-test("historic 13-path composite is not current 19-path source qualification; Composer signatures cannot transfer",()=>{
+test("historic 13-path composite is not current 20-path source qualification; Composer signatures cannot transfer",()=>{
  const cp=require("node:child_process");
  const scoped=require("./VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs");
  const head=cp.execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();
@@ -133,7 +133,7 @@ test("historic 13-path composite is not current 19-path source qualification; Co
    check_id:"DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1"});
  assert.equal(v.status,"PASS");
  assert.equal(v.scope,"PR_3747_SOURCE_PRESERVATION_ONLY");
- assert.equal(v.exact_current_delta_paths,19);
+ assert.equal(v.exact_current_delta_paths,20);
  assert.equal(v.historical_composite_exact_path_verifier_unchanged,true);
  assert.equal(v.historical_da9_semantic_verifier_unchanged,true);
  assert.equal(v.historical_composite_13_path_check_not_replayed,true);
@@ -301,7 +301,8 @@ test("the two predecessor-workflow successor routes retain original frozen accep
  const q=JSON.parse(fs.readFileSync(path.join(root,
    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"),"utf8"));
  const files=q.dependency_resolvers.CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2.paths;
- assert.equal(files.length,19);
+ assert.equal(files.length,20);
+ assert(files.includes(".github/workflows/mcft-cap09-ce94-real-stage3-evidence-v2-contract.yml"));
  for(const file of [fz,st])assert(files.includes(file),
    "HOLD_3747_MISSING_SUCCESSOR_APPLICABILITY_FILE:"+file);
  assert.equal(git("rev-parse",g.BASELINE+":"+oldFrozen),

@@ -1316,7 +1316,7 @@ function main() {
         execution:"EXACT_3747_CURRENT_DELTA_PRESERVATION_NOT_HISTORICAL_REPLAY",
         status:valid?"NOT_APPLICABLE":"FAIL",
         reason_code:valid?
-          "HISTORICAL_SOURCE_ENROLLMENT_UNCHANGED_NOT_THIS_16_PATH_DELTA":
+          "HISTORICAL_SOURCE_ENROLLMENT_UNCHANGED_NOT_THIS_20_PATH_DELTA":
           (inherited?.reason_code||"HOLD_3747_INHERITED_SCOPE_NOT_PROVEN"),
         inherited_scope_evidence:inherited,
         historical_source_check_requalified:false,

@@ -29,6 +29,7 @@ const ADOPTION_RESOLVER="CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2";
 const DELTA=Object.freeze([
  ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
  ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+ ".github/workflows/mcft-cap09-ce94-real-stage3-evidence-v2-contract.yml",
  ".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",
  QCP,
  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-ADOPTION-V2-ATTEMPT3-ENGINEERING-BOUNDARY-V1.md",
@@ -54,7 +55,7 @@ function technical({head,base=BASE,check_id=null,event=null,native=false}={}){
  assert.equal(head,run("rev-parse","HEAD"),"HOLD_3747_EXACT_HEAD_REQUIRED");
  assert.equal(run("merge-base",BASE,head),BASE,"HOLD_3747_ANCESTRY");
  const delta=run("diff","--name-only",BASE,head).split(/\r?\n/).filter(Boolean).sort();
- assert.deepEqual(delta,DELTA,"HOLD_3747_EXACT_19_PATH_BOUNDARY");
+ assert.deepEqual(delta,DELTA,"HOLD_3747_EXACT_20_PATH_BOUNDARY");
  const old=JSON.parse(run("show",BASE+":"+QCP)),current=read(QCP);
  assert.equal(old.checks.length,64,"HOLD_3747_BASE_QCP64_REQUIRED");
  assert.equal(current.checks.length,65,"HOLD_3747_NEW_QCP65_REQUIRED");

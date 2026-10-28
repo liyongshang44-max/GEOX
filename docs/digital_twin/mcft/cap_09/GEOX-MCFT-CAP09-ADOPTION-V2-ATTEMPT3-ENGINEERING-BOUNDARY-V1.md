@@ -366,3 +366,9 @@ The previous purpose-specific Owner-directed GitHub comment
 **not** be reused for this 19-path successor. The final exact HEAD
 needs its own GitHub-native owner approval, and the actual CI/QCP
 and old historical tests must re-run before final qualification.
+
+## 2026-10-28 — successor CE94 historical-source workflow applicability; exact 20 paths
+
+The earlier 19-path review snapshot is historical. The present #3747 source change is **exactly 20 paths** including the original CE94 workflow, now qualified as a separate successor path. The unchanged F654/CE94 historic source-integrity test is executed inside a detached, pinned #3736 source `9a5c4ea1d0c93b68989a8faa45f5db474c3ad281`, rather than falsely requiring #3747's different PR base to equal historical `f654fff21e5aa05bfa6c79e67ea34fb53b61cdfb`. Current PR HEAD must first independently match the original verifier Git Blob `9d35a1fd5a2796f50a65c5fa49e0399cde17801d`, preserved signed-evidence files and historic ancestry.
+
+The immutable historical F654 result is **historical review only**, never a new #3747 F654 scope PASS or source-Adoption/Permit/Host permission. CE94 original checks and the existing 64 QCP definitions/resolvers remain unchanged; only the 65th dedicated successor exact-path resolver extends to 20. Any HEAD change expires the prior Owner-directed source-QCP approval. Formal Adoption V2 signing, Host V2, Permit issuance/consumption, production and original six-stage physical tests remain HOLD / 0-of-6.
