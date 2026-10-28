@@ -29,7 +29,7 @@ function assertLiveExactMain(root,expected){
  const git=(...args)=>cp.execFileSync("git",["-C",root,...args],{encoding:"utf8",timeout:20000,maxBuffer:1048576,windowsHide:true}).trim();
  assert.equal(git("rev-parse","HEAD"),expected,"A3_V2_ACTUAL_HEAD_MISMATCH");
  assert.equal(git("status","--porcelain","--untracked-files=all"),"","A3_V2_ACTUAL_WORKTREE_DIRTY");
- const remote=git("ls-remote","origin","refs/heads/main").split(/\\s+/)[0];
+ const remote=git("ls-remote","origin","refs/heads/main").split(String.fromCharCode(9))[0];
  assert.equal(remote,expected,"A3_V2_REMOTE_MAIN_MOVED_OR_UNVERIFIED");
  return true;
 }
