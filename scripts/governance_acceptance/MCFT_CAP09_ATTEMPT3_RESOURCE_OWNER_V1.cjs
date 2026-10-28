@@ -97,5 +97,4 @@ function bindSignedToReadback(signed,readback){
  assert.equal(readback.facts.production_authorized,false);
  return true;
 }
-}
 module.exports={DOMAIN,FIELDS,FACT_BINDINGS,validateFacts,verify,verifyReadbackFile,bindSignedToReadback};
