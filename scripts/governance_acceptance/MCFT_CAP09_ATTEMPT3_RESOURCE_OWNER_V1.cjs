@@ -9,6 +9,8 @@ const fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypt
 const a3=require("./MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs");
 const DOMAIN="GEOX_MCFT_CAP09_ATTEMPT3_ISOLATED_RESOURCE_OWNER_ATTESTATION_V1\n";
 const HASH=/^[0-9a-f]{64}$/, HEAD=/^[0-9a-f]{40}$/;
+const DISCOVERED_HISTORIC_PG_PORTS=Object.freeze([55445,55446,55477,55478,55479,55480,55481,55482]);
+const DISCOVERED_HISTORIC_S3_PORTS=Object.freeze([59005,59006,59277,59278,59279,59280,59281,59282]);
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
 const exact=(v,ks)=>{assert(v&&typeof v==="object"&&!Array.isArray(v),"A3_RESOURCE_OBJECT_REQUIRED");assert.deepEqual(Object.keys(v).sort(),ks.slice().sort(),"A3_RESOURCE_SCHEMA_CHANGED");};
 const time=t=>{assert(typeof t==="string"&&Number.isFinite(Date.parse(t))&&new Date(t).toISOString()===t,"A3_RESOURCE_TIME_INVALID");return Date.parse(t);};
@@ -26,13 +28,13 @@ function validateFacts(p,ctx){
  assert.equal(p.host_id,ctx.host_id);assert.equal(p.scope,"TEST_ONLY");assert.equal(p.production_authorized,false);
  assert(HASH.test(p.readback_sha256)&&p.readback_sha256===ctx.readback_sha256,"A3_RESOURCE_READBACK_UNBOUND");
  assert.equal(p.database_host,"127.0.0.1","A3_RESOURCE_PG_LOOPBACK_REQUIRED");
- assert(Number.isInteger(p.database_port)&&p.database_port>=1024&&p.database_port<=65535&&![55434,55445,55432,5432,5433].includes(p.database_port),"A3_RESOURCE_PG_PORT_NOT_DEDICATED");
+ assert(Number.isInteger(p.database_port)&&p.database_port>=1024&&p.database_port<=65535&&![55434,55432,5432,5433,...DISCOVERED_HISTORIC_PG_PORTS].includes(p.database_port),"A3_RESOURCE_PG_PORT_NOT_DEDICATED");
  assert.equal(p.positive_database,`mcft_cap09_requal_${a3.RUN}_positive`);
  assert.equal(p.negative_database,`mcft_cap09_requal_${a3.RUN}_negative`);
  assert(/^[a-z_][a-z0-9_]{3,62}$/.test(p.audit_user)&&!["postgres","qual_admin","qual_dedicated_admin"].includes(p.audit_user),"A3_RESOURCE_AUDIT_USER_NOT_EXCLUSIVE");
  const endpoint=new URL(p.bucket_endpoint);
  assert(endpoint.protocol==="http:"&&endpoint.hostname==="127.0.0.1"&&endpoint.username===""&&endpoint.password===""&&endpoint.pathname==="/"&&endpoint.search===""&&endpoint.hash==="","A3_RESOURCE_S3_LOOPBACK_ONLY");
- assert(Number.isInteger(Number(endpoint.port))&&Number(endpoint.port)>=1024&&Number(endpoint.port)<=65535&&![59000,59005,9000,9001,9002].includes(Number(endpoint.port)),"A3_RESOURCE_S3_PORT_NOT_DEDICATED");
+ assert(Number.isInteger(Number(endpoint.port))&&Number(endpoint.port)>=1024&&Number(endpoint.port)<=65535&&![59000,9000,9001,9002,...DISCOVERED_HISTORIC_S3_PORTS].includes(Number(endpoint.port)),"A3_RESOURCE_S3_PORT_NOT_DEDICATED");
  assert.equal(p.bucket,"mcft-cap09-requal-"+a3.RUN);
  for(const k of ["positive_rows_zero","negative_rows_zero","positive_database_exists","negative_database_exists",
  "positive_login_restricted","negative_login_restricted","fenced_writer_execute_allowed","direct_fact_insert_forbidden",
