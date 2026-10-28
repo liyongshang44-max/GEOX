@@ -28,6 +28,62 @@ const git=(...args)=>cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8",timeou
 const digest=sha=>git("rev-parse",sha+":"+COMPOSER);
 const original=require("./VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs");
 const SIX=new Set(original.required);
+const STAGE3_ID="STAGE3_20261026_DUAL_HEARTBEAT_ENGINEERING_ONLY";
+// Source-governance carry-forward is purpose-limited, and only for checks
+// ALREADY machine-qualified on merged main by native QCP #3746.
+const MAIN_SOURCE_IDS=new Set([
+ ...SIX,
+ "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING",
+ "CAP09_3740_3744_OWNER_DIRECTED_SOURCE_REVIEW_TECHNICAL_V1",
+ "FROZEN108_CURRENT_RUNTIME_SUCCESSOR_TEST_ONLY_QCP_ENROLLMENT_V1",
+ "DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1",
+ STAGE3_ID
+]);
+assert.equal(MAIN_SOURCE_IDS.size,11,"HOLD_STAGE3_SCOPE_EXACT_ELEVEN");
+const QCP_RUN=40551639639,QCP_ARTIFACT=12756735392;
+const QCP_ART_SHA="sha256:23137baa056c926458dadde08b56ac9c9d2fc4a8968609403f4df15608c05660";
+const QCP_PR_HEAD="e42a7728833515b2327db9d7ed8718cf0714304c";
+let nativeCache=null;
+function readNativeMainQcp(head) {
+  assert.equal(process.env.GITHUB_ACTIONS,"true","HOLD_NOT_GITHUB_NATIVE_ACTIONS");
+  assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request","HOLD_NOT_NATIVE_PR");
+  assert(process.env.GH_TOKEN && process.env.GITHUB_EVENT_PATH,"HOLD_NATIVE_QCP_CREDENTIAL_OR_EVENT_MISSING");
+  const ev=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+  assert.equal(ev.pull_request?.number,3737,"HOLD_CURRENT_PR_NUMBER");
+  assert.equal(ev.pull_request?.head?.sha,head,"HOLD_CURRENT_PR_EXACT_HEAD");
+  assert.equal(ev.pull_request?.base?.sha,BASE,"HOLD_CURRENT_PR_EXACT_BASE");
+  function api(route) {
+    const body=cp.execFileSync("gh",["api",route],{
+      cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:2*1024*1024,
+      env:process.env
+    });
+    return JSON.parse(body);
+  }
+  if(nativeCache && nativeCache.head===head) return nativeCache;
+  const pr=api("/repos/liyongshang44-max/GEOX/pulls/3746");
+  assert(pr.merged_at && pr.merge_commit_sha===BASE,"HOLD_PREDECESSOR_PR_NOT_MERGED_AT_BASE");
+  assert.equal(pr.head?.sha,QCP_PR_HEAD,"HOLD_PREDECESSOR_PR_HEAD_CHANGED");
+  const run=api("/repos/liyongshang44-max/GEOX/actions/runs/"+QCP_RUN);
+  assert.equal(run.head_sha,QCP_PR_HEAD,"HOLD_PREDECESSOR_QCP_HEAD");
+  assert.equal(run.event,"pull_request","HOLD_PREDECESSOR_QCP_EVENT");
+  assert.equal(run.status,"completed","HOLD_PREDECESSOR_QCP_UNFINISHED");
+  assert.equal(run.conclusion,"success","HOLD_PREDECESSOR_QCP_NOT_SUCCESS");
+  assert.equal(run.path,".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml","HOLD_PREDECESSOR_QCP_PATH");
+  const artifact=api("/repos/liyongshang44-max/GEOX/actions/artifacts/"+QCP_ARTIFACT);
+  assert.equal(artifact.workflow_run?.id,QCP_RUN,"HOLD_PREDECESSOR_ARTIFACT_RUN");
+  assert.equal(artifact.workflow_run?.head_sha,QCP_PR_HEAD,"HOLD_PREDECESSOR_ARTIFACT_SUBJECT");
+  assert.equal(artifact.digest,QCP_ART_SHA,"HOLD_PREDECESSOR_ARTIFACT_DIGEST");
+  assert.equal(artifact.expired,false,"HOLD_PREDECESSOR_ARTIFACT_EXPIRED");
+  const main=api("/repos/liyongshang44-max/GEOX/branches/main");
+  assert.equal(main.commit?.sha,BASE,"HOLD_PROTECTED_MAIN_MOVED");
+  nativeCache={status:"PASS",head,predecessor_main:BASE,
+    predecessor_qcp_run_id:QCP_RUN,predecessor_qcp_artifact_id:QCP_ARTIFACT,
+    predecessor_qcp_artifact_digest:QCP_ART_SHA,
+    source_scope:"CURRENT_MAIN_63_CHECKS_ALREADY_NATIVE_QUALIFIED_NOT_CURRENT_HEAD_EXECUTION",
+    production_authorized:false,permit_authorized:false,physical_admission_authorized:false};
+  return nativeCache;
+}
+
 let cached=null;
 function reviewScope({base,head}){
  assert.equal(base,BASE,"HOLD_HEARTBEAT_EXACT_PROTECTED_MAIN_BASE");
@@ -86,13 +142,20 @@ function reviewScope({base,head}){
   permit_authorized:false,physical_admission_authorized:false,production_authorized:false};
 }
 function verifyCheck({decision,stage,base,head}){
- if(stage!=="SUCCESSOR_SUBJECT_PRE_MERGE"||base!==BASE||(!SIX.has(decision?.check_id)&&decision?.check_id!=="DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING"))return null;
+ if(stage!=="SUCCESSOR_SUBJECT_PRE_MERGE"||base!==BASE||!MAIN_SOURCE_IDS.has(decision?.check_id))return null;
  try {
   if(!cached||cached.head!==head)cached=reviewScope({base,head});
+  const native=readNativeMainQcp(head);
+  assert.equal(native.status,"PASS","HOLD_NATIVE_SOURCE_QCP_NOT_QUALIFIED");
   const proof= SIX.has(decision.check_id)?cached.proofs[decision.check_id]:null;
   if(proof)assert.equal(decision.dependency_digest,proof.digest,"HOLD_CURRENT_DEPENDENCY_DIGEST_NOT_SIGNED");
   return {status:"PASS",reason_code:proof?"EXACT_3737_HISTORICAL_SIGNED_ORIGINAL_SCIENCE_UNCHANGED":"EXACT_3737_DA9_SIGNED_HISTORICAL_SOURCE_POSTMERGE_REVIEW_ONLY",
-   evidence_id:proof?.evidence_id||"DA9_3734_3735_3736_NATIVE_SIGNED_SOURCE_PRESERVATION_ONLY",
+   evidence_id:proof?.evidence_id||"CAP09_3746_NATIVE_MAIN_63_QCP_PRESERVED_AND_3737_OPTIONAL_SCOPE",
+   native_predecessor_qcp_run_id:native.predecessor_qcp_run_id,
+   native_predecessor_qcp_artifact_id:native.predecessor_qcp_artifact_id,
+   optional_stage3_test_only:decision.check_id===STAGE3_ID,
+   inherited_main_source_unchanged:true,source_main_63_checks_preserved:true,
+   prior_qualification_is_not_current_subject_qcp:true,
    original_six_signature_count:6,original_3734_event_replayed:false,original_3735_event_replayed:false,
    old_frozen_v13_zero_delta_claim:false,original_v13_six_stage_executed:false,
    permit_authorized:false,production_authorized:false,host_authorized:false};
@@ -109,4 +172,4 @@ if(require.main===module){
  }
  console.log(JSON.stringify({...proof,negative_tests_pass:negative},null,2));
 }
-module.exports={reviewScope,verifyCheck};
+module.exports={reviewScope,verifyCheck,MAIN_SOURCE_IDS};

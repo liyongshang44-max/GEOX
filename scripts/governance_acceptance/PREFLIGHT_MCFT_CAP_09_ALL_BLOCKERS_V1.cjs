@@ -1299,31 +1299,29 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
-    // #3737 successor: optional Stage3 TEST_ONLY engineering evidence on the exact
-    // post-#3746 main. This ONLY qualifies the new heartbeat check; existing
-    // 63 QCP checks and their source-specific authority routes remain untouched.
-    // Never infer six-stage Permit, production authority or Frozen108 zero drift.
-    if (decision.check_id === "STAGE3_20261026_DUAL_HEARTBEAT_ENGINEERING_ONLY" &&
-        stage === "SUCCESSOR_SUBJECT_PRE_MERGE") {
-      const proof = require("./VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs")
-        .verifyCheck({decision,stage,head:args.head || "",base:args.base || ""});
-      const passed = (decision.status === "REQUALIFY" || decision.status === "REQUIRED") &&
-        proof?.status === "PASS";
-      result = {
-        ...common,execution:"EXACT_CURRENT_MAIN_STAGE3_HEARTBEAT_OPTIONAL_TEST_ONLY",
-        status:passed ? "PASS" : "FAIL",
-        reason_code:passed ? "STAGE3_3737_SOURCE_SCOPED_TEST_ONLY_PROOF_VALID" :
-          (proof?.reason_code || "HOLD_STAGE3_CURRENT_MAIN_SCOPE_NOT_PROVEN"),
-        evidence:proof,optional_engineering_only:true,original_formal_six_stages:0,
-        physical_admission_authorized:false,permit_authorized:false,production_authorized:false,
-        old_frozen_v13_zero_drift_claim:false
+    // #3737: ONLY exact 7-path TEST_ONLY successor to qualified #3746 main.
+    // Verify native predecessor QCP run/artifact, original six Ed25519 signatures,
+    // immutable prior 63 QCP definitions, and no scientific/runtime/source delta.
+    // No old PR event is replayed; no Frozen108 zero-drift, Permit or live effects.
+    if (stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base === "b0b7f05a36214ce65cb306a411d088fb8fa76c6b" &&
+        require("./VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs")
+          .MAIN_SOURCE_IDS.has(decision.check_id)) {
+      const proof=require("./VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs")
+        .verifyCheck({decision,stage,head:args.head || "",base:args.base});
+      const passed=(decision.status==="REQUALIFY" || decision.status==="REQUIRED") && proof?.status==="PASS";
+      result={...common,
+        execution:"EXACT_NATIVE_3746_MAIN_SOURCE_PRESERVATION_PLUS_OPTIONAL_STAGE3_3737",
+        status:passed?"PASS":"FAIL",
+        reason_code:passed?"CURRENT_MAIN_NATIVE_QCP_63_PRESERVED_SOURCE_ONLY_HEARTBEAT_OPTIONAL":
+          (proof?.reason_code||"HOLD_CURRENT_MAIN_NATIVE_SOURCE_NOT_PROVEN"),
+        evidence:proof,prior_native_source_qcp_not_current_head_qualification:true,
+        historic_frozen_v13_failure_preserved:true,original_formal_six_stages:0,
+        physical_admission_authorized:false,permit_authorized:false,production_authorized:false
       };
-      if (!passed) blockers.push({
-        blocker_class:"STAGE3_TEST_ONLY_CURRENT_MAIN_PROOF_INVALID",
-        check_id:decision.check_id,detail:proof
-      });
-      results.push(result);
-      continue;
+      if(!passed)blockers.push({blocker_class:"CURRENT_MAIN_SOURCE_SCOPED_TEST_ONLY_INVALID",
+        check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
     }
     const protectedMainAdoptionBase = String(process.env.PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA || "");
     const postAdoptionEffectivenessBase = String(process.env.POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA || "");
