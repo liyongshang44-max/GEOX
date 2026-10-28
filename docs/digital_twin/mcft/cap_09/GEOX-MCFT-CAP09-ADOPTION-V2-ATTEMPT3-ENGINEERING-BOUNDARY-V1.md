@@ -145,3 +145,58 @@ predecessor checks retain their actual outcomes. The #3747 technical
 scope assessment is independent and non-authorizing.** Adoption HOLD,
 Permit HOLD, original formal six stages 0/6; preserve both Windows
 test environments, all historical data and frozen failure receipts.
+
+## 2026-10-28 — five current Composer source qualifications and explicit DA9 formal HOLD
+
+The five shared current-Composer source checks
+(`V13_AUTONOMOUS_FORCING_FOUNDATION`, `V13_HOLISTIC_SCHEMA`,
+`V13_NEXT_TICK_VIABILITY`,
+`EA5C1_DURABLE_RAW_RESTRICTED_INGRESS`,
+`PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION`) now have a
+separate, **current #3747 native-source-only** qualification route.
+It asserts each of the 108 paths against the immutable Frozen108
+catalog, the qualified #3741 source
+`ef3649e40f0d3ab542fe9f365275708b23c53cab`,
+the already-accepted #3746 source
+`e42a7728833515b2327db9d7ed8718cf0714304c`, and the exact
+current #3747 HEAD. The source byte identity must be identical for
+all 108 paths. This proof does not re-evaluate the failed original
+Frozen V13 zero-drift contract against its historic Composer.
+
+The successor route also independently queries GitHub-native #3741
+CI `40516250068`, the real Phase7 private candidate test
+`40516250234` (including both original source artifacts), accepted
+#3746 central QCP `40551639639` (including native owner composite
+job and immutable artifact) and original owner-directed native run
+`40527803393`. An absent/mismatched GitHub result, byte, artifact,
+owner review or PR identity means FAIL, not carry-forward PASS.
+No new six-operator signed subject is asserted.
+
+There are **three distinct identities**: (a) Frozen V13's earlier
+Composer blob `7e74b1df502e159dd49ceb21889cbfff86408e50`;
+(b) the already-signed DA9 V2 operator bundle for original source
+subject `6d8fb108655d9ada4b44cc7e4709a1c2ac5832b0`, whose
+Composer blob is `2d1f72d92c05093537774285bda5b7200845344d`;
+(c) the *current #3747 HEAD* with the same Composer byte blob as
+(b) but a distinct whole-repository subject. The DA9 six original
+Ed25519 reviews are independently cryptographically revalidated
+**for subject (b) only**, with exact historical two-parent source
+ancestry. The old #3734 PR event is not replayed or forged.
+
+Therefore the current
+`DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING`
+remains **FAIL / HOLD_CURRENT_PURPOSE_SPECIFIC_FORMAL_SIGNED_ADOPTION_NOT_PRESENT**:
+a source-blob match is not a purpose-specific current-head Adoption
+signature and a historical signer identity cannot be converted into
+an unsigned current formal approval. This replaces the misleading
+direct replay diagnostic `HOLD_NOT_INTEGRATION_PR_3734` on #3747
+with verifiable historical preservation plus a precise current
+authorization gap, *not* a green formal gate.
+
+The new check-specific PASS records, if native tests complete, are
+**source technical requalification only**. Formal DA9 admission,
+Adoption V2 source-specific QCP65 signed material, versioned Host V2
+child-stage dispatch, Permit, original six stages and production
+remain blocked. Historic Frozen V13 and Stage3 standalone workflow
+FAIL results remain untouched; no summary, QCP64 definition,
+historical digest, signed envelope or historic Permit is modified.
