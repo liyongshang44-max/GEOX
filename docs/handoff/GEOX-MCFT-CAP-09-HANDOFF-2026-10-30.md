@@ -337,7 +337,7 @@ NO_RESOURCE_OWNER_NO_PRODUCTION_BINDING_ABSENCE_CLAIM_NO_ADOPTION_NO_PERMIT
 
 在 Step 4C-6C WSL PASS 后，不再重复 73/73 Docker Env、272 个计划任务、四组 SCRAM 或 S3 V5。下一块未覆盖的事实是**运行中部署入口引用的实际配置文件**，而非全盘内容搜索。
 
-新的独立 PS5.1 只读脚本：`CAP09-A3-ACTIVE-CONFIG-BINDING-READONLY-PS51.ps1`，本次生成的 SHA-256 `8c78d452296320509e6730bd37ea09838b3a94a04a252856b2b4d3693e6f56d5`。脚本通过 Docker inspect 的 Compose `com.docker.compose.project.working_dir`、`config_files` 标签，以及绑定挂载 `Mounts` 发现候选配置来源，并补充有限的两处 GEOX 已知部署根。仅读取部署配置候选文本，在进程内检测 55490/59290、精确两库、Bucket、选定容器名；不打印内容、密码、环境变量值或命令行。文件身份仅打印路径 SHA-256；不读取 `PRIVATE-DO-NOT-UPLOAD`、凭据或密钥目录。
+新的独立 PS5.1 只读脚本：`CAP09-A3-ACTIVE-CONFIG-BINDING-READONLY-PS51.ps1`，本次生成的 SHA-256 `7b9dbe453deeffacd049ad5e5e29611442a24e941c89b5c174e75660c754cc9c`。脚本通过 Docker inspect 的 Compose `com.docker.compose.project.working_dir`、`config_files` 标签，以及绑定挂载 `Mounts` 发现候选配置来源，并补充有限的两处 GEOX 已知部署根。仅读取部署配置候选文本，在进程内检测 55490/59290、精确两库、Bucket、选定容器名；不打印内容、密码、环境变量值或命令行。文件身份仅打印路径 SHA-256；不读取 `PRIVATE-DO-NOT-UPLOAD`、凭据或密钥目录。
 
 预期输出包括 `DOCKER_CONTAINERS_INSPECTED`、`COMPOSE_DECLARED_CONFIG_PATHS`、`BIND_DIRECTORY_REFERENCES`、`UNRESOLVED_NONWINDOWS_PATHS`、`CONFIG_FILES_READ`、`ACTIVE_CONFIG_REFERENCE_COUNT` 和 `COVERAGE_ERROR_COUNT`。
 
