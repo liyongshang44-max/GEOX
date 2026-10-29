@@ -304,3 +304,30 @@ MethodArgumentConversionInvalidCastArgument: Replace([char]0, '')
 修复文件（独立聊天交付、未纳入仓库源码）：`CAP09-A3-WSL-BOUNDARY-DIAGNOSTIC-READONLY-V3-PS51.ps1`；SHA256 `25c720aa3e2415572c6f62b216eb9ab1935aaabc0c08923c8a48e73b32d96b15`；仅将 NUL/BOM 字符处理改为 `[regex]::Replace([string]$Line, '[\\u0000\\uFEFF]', '').Trim()` 并更新输出版本标识。静态检查通过，**尚未经用户 Windows PS5.1 实测**。下一步只运行 V3 并回传 `WSL_RUNNING_DISTRIBUTION_COUNT`、`WSL_NON_DOCKER_RUNNING_DISTRIBUTIONS`、注册数/最终标记；无需重跑 73/73 Docker、272 项计划任务、PG SCRAM、MinIO。
 
 Resource Owner / Adoption / Permit 仍 HOLD；原始六阶段 0/6。
+
+
+## 12. Step 4C-6C：WSL V3 补充 PASS（2026-10-30 用户 Windows 实测）
+
+```text
+A3_WSL_BOUNDARY_DIAGNOSTIC_V3=READ_ONLY
+RUN=6ff9b41f6f7f
+WSL_EXE_PRESENT=True
+WSL_QUERY_MODE=FINISHED
+WSL_QUERY_EXIT_CODE=0
+WSL_QUERY_STDOUT_BYTES=32
+WSL_QUERY_STDERR_BYTES=0
+WSL_QUERY_ERROR_CLASS=NONE
+WSL_RUNNING_DISTRIBUTION_COUNT=1
+WSL_NON_DOCKER_RUNNING_DISTRIBUTIONS=0
+RUNNING_WSL_DISTRIBUTION_CLASS=DOCKER_DESKTOP
+WSL_READONLY_LIST_COMPLETED_NOT_WORKLOAD_ABSENCE
+WSL_REGISTERED_DOCKER_DISTROS=1
+WSL_REGISTERED_NON_DOCKER_DISTROS=1
+WSL_REGISTERED_UNKNOWN_DISTROS=0
+WSL_REGISTRY_INVENTORY=READ_ONLY_BOUNDED_CURRENT_USER
+NO_RESOURCE_OWNER_NO_PRODUCTION_BINDING_ABSENCE_CLAIM_NO_ADOPTION_NO_PERMIT
+```
+
+**判定：** 已证明 WSL 命令可用、Windows 当前用户 WSL 注册清单可读；在该时点唯一运行中的发行版为 Docker Desktop，非 Docker 的已注册发行版 1 个但当时未运行。关闭 `HOLD_WSL_RUNNING_DISTRIBUTION_QUERY`，**不**由此证明 WSL 内 Docker 所有持久化数据或未来工作负载绝对不存在其他配置引用。
+
+**剩余精确阻断：** Windows 当前 active production 配置入口和服务/容器绑定来源的 bounded 覆盖仍不完整；受保护的部分非内核进程未核实运行中映像身份，SCM 的登记路径签名不等于实时映像已签名。不得仅凭已验收检查将 `production_bindings_present=false` 或 `owner_exclusive=true` 写入正式 Raw。原始六阶段仍 0/6、Resource Owner/Adoption/Permit 仍 HOLD。
