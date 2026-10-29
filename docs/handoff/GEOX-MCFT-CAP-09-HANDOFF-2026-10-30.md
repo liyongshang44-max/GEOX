@@ -331,3 +331,14 @@ NO_RESOURCE_OWNER_NO_PRODUCTION_BINDING_ABSENCE_CLAIM_NO_ADOPTION_NO_PERMIT
 **判定：** 已证明 WSL 命令可用、Windows 当前用户 WSL 注册清单可读；在该时点唯一运行中的发行版为 Docker Desktop，非 Docker 的已注册发行版 1 个但当时未运行。关闭 `HOLD_WSL_RUNNING_DISTRIBUTION_QUERY`，**不**由此证明 WSL 内 Docker 所有持久化数据或未来工作负载绝对不存在其他配置引用。
 
 **剩余精确阻断：** Windows 当前 active production 配置入口和服务/容器绑定来源的 bounded 覆盖仍不完整；受保护的部分非内核进程未核实运行中映像身份，SCM 的登记路径签名不等于实时映像已签名。不得仅凭已验收检查将 `production_bindings_present=false` 或 `owner_exclusive=true` 写入正式 Raw。原始六阶段仍 0/6、Resource Owner/Adoption/Permit 仍 HOLD。
+
+
+## 13. Step 4C-6D：活动部署配置入口的 bounded 只读复核（待现场执行）
+
+在 Step 4C-6C WSL PASS 后，不再重复 73/73 Docker Env、272 个计划任务、四组 SCRAM 或 S3 V5。下一块未覆盖的事实是**运行中部署入口引用的实际配置文件**，而非全盘内容搜索。
+
+新的独立 PS5.1 只读脚本：`CAP09-A3-ACTIVE-CONFIG-BINDING-READONLY-PS51.ps1`，本次生成的 SHA-256 `8c78d452296320509e6730bd37ea09838b3a94a04a252856b2b4d3693e6f56d5`。脚本通过 Docker inspect 的 Compose `com.docker.compose.project.working_dir`、`config_files` 标签，以及绑定挂载 `Mounts` 发现候选配置来源，并补充有限的两处 GEOX 已知部署根。仅读取部署配置候选文本，在进程内检测 55490/59290、精确两库、Bucket、选定容器名；不打印内容、密码、环境变量值或命令行。文件身份仅打印路径 SHA-256；不读取 `PRIVATE-DO-NOT-UPLOAD`、凭据或密钥目录。
+
+预期输出包括 `DOCKER_CONTAINERS_INSPECTED`、`COMPOSE_DECLARED_CONFIG_PATHS`、`BIND_DIRECTORY_REFERENCES`、`UNRESOLVED_NONWINDOWS_PATHS`、`CONFIG_FILES_READ`、`ACTIVE_CONFIG_REFERENCE_COUNT` 和 `COVERAGE_ERROR_COUNT`。
+
+**裁决边界：** 此脚本尚未经过用户 Windows PS5.1 实测，因此没有 PASS。哪怕无引用也仅是发现范围内的配置扫描，不是生产绑定绝对不存在的证明。未解析的 WSL/Linux-only 源路径、运行时动态读取或被系统保护的映像，仍必须按实际覆盖边界审计。Resource Owner/Adoption/Permit HOLD，原始六阶段 0/6。
