@@ -373,3 +373,44 @@ NO_GLOBAL_PRODUCTION_BINDING_ABSENCE_NO_RESOURCE_OWNER_NO_ADOPTION_NO_PERMIT
 **下一步必须限定在这 6 个缺口的归属及原因分类**，不重复 PG、MinIO、SCRAM、73/73 Docker ENV、272 任务、WSL。已准备 `CAP09-A3-MISSING-COMPOSE-PATH-OWNERS-READONLY-PS51.ps1`，SHA-256 `37f5ca3e6bfa7ba612146034bd2d51e754abf61fb7ca0126376a2ffa4d104fd1`。它从现有 Docker Compose 标签（仅容器元数据）关联路径至运行/停止容器，用 Windows 只读 `Get-Item` 元数据区分磁盘/父目录不可达、文件不存在、访问拒绝、非文件和重解析路径；不读取配置正文，不输出原始路径、密钥、环境变量值。**脚本未在实际 Windows 5.1 主机上运行，结果未证实。**
 
 仅当 6 个路径全部证明属于已停止容器且确实历史失效，才能就其对**当前运行容器 Compose 配置扫描**的适用性做限定处置；不能推导所有生产绑定不存在。若存在活跃 owner 或路径权限问题，继续 HOLD，并针对明确 owner 查真实部署来源。Owner Exclusive、Resource Owner、Adoption、Permit 维持 HOLD，原六阶段 0/6。
+
+
+## 15. Step 4C-6E 真实六个配置缺口归属与 4C-6F 接续（2026-10-30）
+
+用户在 Windows PowerShell 5.1 完成只读缺失 Compose 路径归属审查：
+
+```text
+A3_MISSING_COMPOSE_DECLARATION_OWNER_REVIEW=READ_ONLY
+RUN=6ff9b41f6f7f
+CONTAINER_METADATA_RECORDS=73
+RUNNING_CONTAINER_COUNT=36
+COMPOSE_DECLARATION_REFERENCES=73
+UNIQUE_COMPOSE_DECLARED_CONFIGS=15
+DECLARED_FILE_PRESENT_COUNT=9
+DECLARED_FILE_GAP_COUNT=6
+GAP_RUNNING_OWNER_COUNT=5
+GAP_STOPPED_ONLY_COUNT=1
+GAP_UNEXPECTED_CAUSE_COUNT=0
+UNMAPPED_PATH_COUNT=0
+QUERY_ERROR_COUNT=0
+HOLD_ACTIVE_OR_UNRESOLVED_COMPOSE_CONFIG_GAPS
+```
+
+六个唯一路径的归属（路径不入库，仅保存本机路径 SHA-256）：
+
+| 缺口 | Path SHA-256 | 丢失原因 | 活跃 Owner | 已停止 Owner | 具体归属 |
+|---|---|---|---:|---:|---|
+| 1 | `37181170d617b61f9511b3b72f684e44ece631168be4bba9e2cfb48ec1bf1611` | 文件缺失、父目录存在 | 1 | 1 | `geox-mcft-cap09-production-v1-geox-mcft-cap09-evidence-runtime-v1-1`（运行中）；`...twin-runtime-v1-1`（停止） |
+| 2 | `4266d5484f456e091c9cba563b96d78eceb433ee5c2236a943c72c7058f72665` | 文件缺失、父目录存在 | 1 | 1 | 同上 |
+| 3 | `5127130b3490b486e2e1572c708340f1bc4648ae0a41b0f7eda483a141665ac5` | 文件缺失、父目录存在 | 0 | 8 | `geox-bline-phaseb-*` 历史停止容器 |
+| 4 | `2b9ecddc244a5fec0ea7f5199996a948c1497f01c5cfe45f72cdfede9f212413` | 文件缺失、父目录存在 | 3 | 0 | `lexicon-pr54-viewport-{web,server,postgres}-1` |
+| 5 | `0b9fd05f316461d7ffbbf5d3014dd24a374d34f22baba2577fb6982ce657b9a1` | 父目录缺失或不可访问 | 3 | 0 | `lexicon-pr58-versus-{web,server,postgres}-1` |
+| 6 | `fe51b32d05c55fa8f514e8f547ccaba7e277bb0339284f3e88cf528897df834a` | 文件缺失、父目录存在 | 2 | 0 | `lexicon-public-smoke-{web,server}-1` |
+
+注意 `GAP_RUNNING_OWNER_COUNT=5` 是**独立缺失路径**的数量，不是进程数；这 5 个路径关联 1 个 MCFT Evidence Runtime 及 8 个 Lexicon 活跃容器（共 9 个唯一活跃容器，10 次路径-容器关联）。目前不能将它们全部标记为历史失效或豁免。
+
+**重要优先级：** 缺口 1/2 直接对应正在运行的 MCFT 生产 Evidence Runtime。仓库当前生产 Compose 源码 `docker-compose.mcft-cap09-production.yml` 和 `docker-compose.mcft-cap09-production-preformal.yml` 均将 Evidence Runtime 的 PG URL、S3 Endpoint 和 Bucket 通过 Docker environment 注入。因此，即使原 Compose 路径不可读，`docker inspect` 的当前实际 `Config.Env`、`NetworkSettings.Networks`、`Mounts`、`Config.Cmd/Entrypoint` 能作**受限有效运行配置**核查；但不能还原已经丢失的原始 Compose 源文件或追认上线变更。
+
+准备的下一项独立 Windows PS5.1 只读探针：`CAP09-A3-ACTIVE-CONTAINER-EFFECTIVE-BINDING-READONLY-PS51.ps1`，交付 SHA-256 `ceee77919859615a9d12e14bb6d1ca707f48c321c64b0aa02ab27adf6d19e412`。仅检查缺口 1/2/4/5/6 关联的上述九个活跃容器，核验内存中的 Config.Env（不打印环境变量值）、对选定 `55490/59290`、`positive/negative DB`、Bucket、容器名的精确引用、MCFT PG/S3 显式 endpoint 类别、网络连接、挂载与实际启动分类。输出仅类别、布尔值与计数；不改动容器、数据库、S3 或配置。**未在用户 Windows 现场运行，不能提前判 PASS**。
+
+后续即使有效运行配置未发现所选资源引用，结论依然是**限定 Docker 运行时目标绑定检查**，不自动成立全局 `production_bindings_present=false` 或 `owner_exclusive=true`；正式 Resource Owner Raw / 签名仍需独立新鲜事实。原始六阶段 `0/6`、Adoption / Permit HOLD。
