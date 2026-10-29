@@ -342,3 +342,34 @@ NO_RESOURCE_OWNER_NO_PRODUCTION_BINDING_ABSENCE_CLAIM_NO_ADOPTION_NO_PERMIT
 预期输出包括 `DOCKER_CONTAINERS_INSPECTED`、`COMPOSE_DECLARED_CONFIG_PATHS`、`BIND_DIRECTORY_REFERENCES`、`UNRESOLVED_NONWINDOWS_PATHS`、`CONFIG_FILES_READ`、`ACTIVE_CONFIG_REFERENCE_COUNT` 和 `COVERAGE_ERROR_COUNT`。
 
 **裁决边界：** 此脚本尚未经过用户 Windows PS5.1 实测，因此没有 PASS。哪怕无引用也仅是发现范围内的配置扫描，不是生产绑定绝对不存在的证明。未解析的 WSL/Linux-only 源路径、运行时动态读取或被系统保护的映像，仍必须按实际覆盖边界审计。Resource Owner/Adoption/Permit HOLD，原始六阶段 0/6。
+
+
+## 14. Step 4C-6D：活动部署配置扫描真实回执（2026-10-30）
+
+```text
+A3_ACTIVE_CONFIG_BINDING_DISCOVERY=READ_ONLY
+RUN=6ff9b41f6f7f
+DOCKER_CONTAINERS_INSPECTED=73
+DOCKER_RUNNING_CONTAINERS=36
+COMPOSE_DECLARED_CONFIG_PATHS=73
+COMPOSE_WORKDIR_REFERENCES=51
+BIND_CONFIG_FILE_REFERENCES=0
+BIND_DIRECTORY_REFERENCES=11
+UNRESOLVED_NONWINDOWS_PATHS=0
+CONFIG_ROOTS_FOUND=18
+CONFIG_ROOTS_NOT_FOUND=1
+CONFIG_FILES_CANDIDATE_COUNT=66
+CONFIG_FILES_READ=60
+HOLD_DECLARED_CONFIG_FILE_UNREADABLE KIND=COMPOSE_CONFIG_DECLARED (6 occurrences)
+CONFIG_REFERENCE_COUNT=0
+ACTIVE_CONFIG_REFERENCE_COUNT=0
+COVERAGE_ERROR_COUNT=6
+HOLD_BOUNDED_DEPLOYMENT_CONFIG_BINDING_REVIEW
+NO_GLOBAL_PRODUCTION_BINDING_ABSENCE_NO_RESOURCE_OWNER_NO_ADOPTION_NO_PERMIT
+```
+
+**判定：** 已读取 60 个候选配置文件且未发现选定 `55490/59290`、两库、Bucket、选定容器名的显式引用；尚不能证明余下 6 个不可读取的 Compose 配置是否属于已停止容器（历史路径失效）或当前运行容器（活跃部署审查缺口）。原扫描以 `Test-Path -PathType Leaf` 为判定条件，将不存在、目录错误、重解析/访问问题统一输出 `UNREADABLE`，缺失实际归属与错误类型。
+
+**下一步必须限定在这 6 个缺口的归属及原因分类**，不重复 PG、MinIO、SCRAM、73/73 Docker ENV、272 任务、WSL。已准备 `CAP09-A3-MISSING-COMPOSE-PATH-OWNERS-READONLY-PS51.ps1`，SHA-256 `37f5ca3e6bfa7ba612146034bd2d51e754abf61fb7ca0126376a2ffa4d104fd1`。它从现有 Docker Compose 标签（仅容器元数据）关联路径至运行/停止容器，用 Windows 只读 `Get-Item` 元数据区分磁盘/父目录不可达、文件不存在、访问拒绝、非文件和重解析路径；不读取配置正文，不输出原始路径、密钥、环境变量值。**脚本未在实际 Windows 5.1 主机上运行，结果未证实。**
+
+仅当 6 个路径全部证明属于已停止容器且确实历史失效，才能就其对**当前运行容器 Compose 配置扫描**的适用性做限定处置；不能推导所有生产绑定不存在。若存在活跃 owner 或路径权限问题，继续 HOLD，并针对明确 owner 查真实部署来源。Owner Exclusive、Resource Owner、Adoption、Permit 维持 HOLD，原六阶段 0/6。
