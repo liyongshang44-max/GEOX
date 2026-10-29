@@ -528,3 +528,22 @@ production_recovery_authorized=false
 **本轮完成的限定子项：** 当前生产 Evidence 容器 deployment subject、tag、不可变 Image ID 与历史登记的观察值精确一致；实际执行入口与仓库 GFS bootstrap overlay 的模块名一致；前述对 Run `6ff9b41f6f7f` 的指定 PG/S3/Bucket 非目标连接结论不受影响。**未证明：** 独立镜像内容证明、当前 production owner 健康、全部 Windows/WSL 长期动态访问路径排除、选定隔离资源 Owner 唯一归属，以及正式签署的 Resource Owner Raw。不要因为镜像/进程一致性再次重启生产容器。
 
 下一步不再追查生产镜像身份或历史 Compose 原路径，专注所选 A3 PG/S3 的独占归属、具体生产绑定适用性审查；只有限定事实充分时才运行一次独立新的 Windows PG/S3 fresh 原始回读，按 `scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs` 生成 byte-hash-bound 的 TEST_ONLY 签署。原始六阶段仍 0/6，Resource Owner / Adoption / Permit HOLD。
+
+
+## 20. CTO Step 4C-7 正式执行批准与 Fresh Resource Owner 本地封闭工具（2026-10-30）
+
+**CTO 决定：`APPROVED FOR BOUNDED RESOURCE OWNER CLOSURE`，而非 Resource Owner PASS。** 指定资源冻结：`cap09-a3-pg-6ff9b41f6f7f`、`cap09-a3-minio-6ff9b41f6f7f`，端点 `127.0.0.1:55490`、`127.0.0.1:59290`，正负数据库 `mcft_cap09_requal_6ff9b41f6f7f_{positive,negative}`，Bucket `mcft-cap09-requal-6ff9b41f6f7f`。不重新创建容器、卷、网络、数据库或 Bucket；不重复生产镜像身份/已通过科学采集/历史物理测试。Resource Owner 通过后主线依次为 Adoption V2 → 非授权 S3→Candidate→PG 全链（必要时）→ Windows `--preflight-only` → 单独 TEST_ONLY Permit 裁决。
+
+重新核实受保护 `main` 上的强制验签模块 `scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs`：payload 严格字段、`MCFT_CAP09_ATTEMPT3_RESOURCE_READBACK_V1` 原始字节 SHA-256、 `WINDOWS_READ_ONLY_PG_S3_INDEPENDENT_HOST` probe 来源 SHA、已登记 `ACCOUNTABLE_SINGLE_OPERATOR` Ed25519 key、`issued_at-observed_at<=300000ms`、`expires_at-issued_at<=300000ms`，签署 `GEOX_MCFT_CAP09_ATTEMPT3_ISOLATED_RESOURCE_OWNER_ATTESTATION_V1\\n` domain。读取 `scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json`，登记 host `LAPTOP-STN2A2P1`、Operator `mcft_cap09_operator_mylr1`、key `mcft_cap09_ed25519_223c806e`、SPKI `223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365`，有效期 `2026-10-13` 至 `2026-11-13` UTC；未使用独立治理签名者，不改变证据用途。
+
+根据本次授权，已在本地生成**未执行**单次 Windows fresh producer + same-process signer/verifier：
+
+- `CAP09-A3-RESOURCE-OWNER-FRESH-SIGN-VERIFY-V1.cjs`，SHA-256 `63ed18a730a0f62fcc8b8a1d8d4692f91e5be4ccf7ed9c33e077b117a3367a31`；Node `--check` 通过，Linux 非 Windows guard 正确 fail closed；未取得 Windows 实测。读取现有 PG/S3 服务、专用网/卷、精确 host port、PG 正负库空表和 SCRAM 实测、角色/ACL、非循环客户端、PG 现有会话、MinIO 匿名权限/当前+版本+未完成 multipart、其他 MinIO 命名容器是否共用 exact root credential、目标端口 host 活跃连接；不重验历史生产镜像身份。Source SHA 是本工具真实文件摘要，不从日志生成。
+- `RUN-CAP09-A3-RESOURCE-OWNER-FRESH-PS51.ps1`，SHA-256 `92a1ee09bdb44923a96991642c065fad673818ec72a156b775e750fae7f5eb5b`；通过 SHA-256 校验，自动查找当前 **clean exact protected main** 或由用户指定仓库位置；不更新 checkout。
+- 可下载打包 `CAP09-A3-RESOURCE-OWNER-CLOSURE-V1.zip`，SHA-256 `193bb0ef154693d199be0713008c6e477adf77a378b3caa5abb6f188f1a1b2f0`（用户聊天附件；**未上传到仓库**）；含使用说明，不含凭据/私钥。
+
+**防止错误提升的边界：** 任何进程/服务/端口/卷/账号/对象状态不一致，都提前 STOP，不生成 signed Owner envelope。仅在 fresh probes 成功、原始 JSON 实际字节保存并通过仓库 `verifyReadbackFile`、单一真实私钥与 trust SPKI 一致、严格 payload `bindSignedToReadback`、正式 `verify` 成功时，才产生独立的 Raw JSON、Signed Envelope 和 Verification Receipt 到本地**仓库外**目录；不上传凭据。对生产绑定的否定是**已发现活跃配置与当前观察范围**的受限结论，不宣称任何休眠/未来主机进程绝对无法访问这些端口。历史 Compose 丢失保留在前节，不重建。实际 Owner PASS 仍需要 Windows 原始实际结果；此工具生成与成功静态检查不能替代实测。
+
+**截至本次记录的唯一正式状态：** `RESOURCE_EXCLUSIVITY=HOLD`、`FRESH_RAW_READBACK=NOT_RUN`、`OWNER_ED25519=HOLD`、`ADOPTION_V2=HOLD`、`FULL_CHAIN=HOLD`、`PERMIT=HOLD`、`ORIGINAL_SIX_STAGES=0/6`。
+
+**第一项剩余阻断及最小动作：** 真实 Windows 本机尚未执行本次 fresh probe/签署闭环。用所附签署工具在当前 clean exact protected main 上执行**一次**，仅当独占检查确证后产出原始回读与签名；如报 HOLD，按工具第一项 `HOLD_*` 精确修复，不重跑历史验收。
