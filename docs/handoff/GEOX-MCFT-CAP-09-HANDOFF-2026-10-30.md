@@ -447,3 +447,25 @@ NO_PRODUCTION_BINDING_ABSENCE_CLAIM_NO_OWNER_NO_ADOPTION_NO_PERMIT
 **尚待独立核对的有效容器启动入口：** 6F 脚本从 `Config.Cmd + Config.Entrypoint` 未识别出 `mcft_cap09_evidence_[preformal_owner_]runtime`，输出 `OTHER_OR_UNDETERMINED_HOLD`。仓库源 `docker-compose.mcft-cap09-production-preformal.yml` 的预期启动模块为 `mcft_cap09_evidence_preformal_owner_runtime.js`；`docker-compose.mcft-cap09-production.yml` 为 `mcft_cap09_evidence_runtime.js`。需读取正在运行容器 `Path/Args/Config.Cmd/Entrypoint`，必要时 `docker top`，只打印启动模块类别而不暴露命令行/凭据。不得仅以运行中和映像 ID 存在推断正确模块。
 
 **处理原则：** 不需要重新扫描 Docker 73 个容器，或重做 9 个容器资源绑定证据；只修清晰的脚本路径解析缺陷、定点核对 MCFT Production Evidence Runtime 实际启动模块，同时保留历史 Compose 原文件缺失事实。Resource Owner / Adoption / Permit HOLD；原始六阶段 0/6。
+
+
+## 17. Step 4C-6G：真实启动模块初次分类 HOLD（2026-10-30）
+
+用户通过 `docker inspect` 取得 MCFT Production Evidence Runtime 的真实 `Path/Args/Config.Cmd/Entrypoint`，并运行 `docker top`。结果：
+
+```text
+A3_PRODUCTION_ENTRYPOINT_REVIEW=READ_ONLY
+CONTAINER_RUNNING=True
+RUNTIME_PATH_CLASS=NOT_IDENTIFIED
+RUNTIME_ARGS_CLASS=OTHER_MCFT_MODULE
+CONFIG_CMD_CLASS=OTHER_MCFT_MODULE
+CONFIG_ENTRYPOINT_CLASS=NOT_IDENTIFIED
+DOCKER_TOP_EXIT_CODE=0
+LIVE_PROCESS_CLASS=OTHER_MCFT_MODULE
+PRODUCTION_ENTRYPOINT_DIAGNOSTIC_COMPLETE
+NO_RESOURCE_OWNER_NO_ADOPTION_NO_PERMIT
+```
+
+**正确裁决：** 模块可见，但不属于早期脚本内硬编码的 `mcft_cap09_evidence_preformal_owner_runtime.js` 或 `mcft_cap09_evidence_runtime.js` 两种形态。不能判它错误或正确；未输出**实际模块 basename**。经仓库 protected main `5d69b8a3...` 的源码核查，另有 `docker-compose.mcft-cap09-production-preformal-am22-v2.yml` AM22 overlay，其 Evidence 入口为 `scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_EVIDENCE_OWNER_ENTRY_V2.cjs`，与 V1 入口不同；该文件存在是可核的候选解释，**不能假定当前运行容器正在使用 AM22 overlay**。
+
+下一步只从 `docker inspect` 已有的 `Args/Config.Cmd/Entrypoint` 与 `docker top` 中提取合法 MCFT `.js/.cjs/.ts` 文件名（只打印 basename，不打印完整命令行、环境、凭据），确认是否是上述 overlay，随后审查实际 container image/entrypoint 对齐性。已经验收的非目标 PG/S3/Bucket、0 selected network attachment 结论不需要重跑。Resource Owner/Adoption/Permit HOLD，原始六阶段 0/6。
