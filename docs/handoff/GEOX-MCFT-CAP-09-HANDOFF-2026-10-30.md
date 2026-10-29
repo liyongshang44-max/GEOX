@@ -243,3 +243,42 @@ PRODUCTION_AUTHORIZED            false
 ```
 
 **该文件是仓库内 Handoff 文档，记录真实工程历史与接续点，但无任何授权效力。**
+
+
+## 10. Step 4C-6B 追加回执：Windows 受保护进程分类（2026-10-30）
+
+最新用户实测：
+
+```text
+A3_WINDOWS_PROTECTED_PROCESS_REVIEW=READ_ONLY
+RUN=6ff9b41f6f7f
+PROCESS_COUNT=271
+SERVICE_COUNT=304
+UNREADABLE_PROCESS_COUNT=24
+KERNEL_PROCESS_CANDIDATES=5
+CORE_OS_PROCESS_CANDIDATES=8
+SERVICE_SECURITY_CANDIDATES=10
+WSL_VM_HOST_CANDIDATES=1
+UNCLASSIFIED_UNREADABLE_COUNT=0
+UNMAPPED_SVCHOST_COUNT=0
+DIRECT_MS_SIGNED_PROCESS_PATHS=0
+SCM_REGISTERED_MS_SIGNED_IMAGE_PATHS=9
+NONKERNEL_IMAGE_NOT_VERIFIABLE_COUNT=10
+MAPPED_SERVICE_CONFIG_REFERENCES=0
+ACTIVE_SELECTED_PORT_CONNECTIONS=0
+QUERY_ERRORS=0
+HOLD_WSL_RUNNING_DISTRIBUTION_QUERY
+WSL_RUNNING_DISTRIBUTION_COUNT=-1
+WSL_NON_DOCKER_RUNNING_DISTRIBUTIONS=-1
+WSL_READONLY_INVENTORY_COMPLETE=False
+HOLD_WINDOWS_PROTECTED_PROCESS_CLASSIFICATION_OR_BINDINGS
+NO_GLOBAL_PRODUCTION_BINDING_ABSENCE_CLAIM_NO_RESOURCE_OWNER_NO_PERMIT
+```
+
+相较上一轮快照，进程数 270→271，命令行不可读 22→24；新增的 `svchost.exe` 分别映射 `ClipSVC`、`AppXSvc`。其他已查明的服务映射包括 `wscsvc`、`DoSvc`、`SecurityHealthService`、`WinDefend`、`MDCoreSvc`、`WdNisSvc`。其中九项服务管理器登记映像得到 Microsoft 签名验证，但因为 PID 实际可执行路径不可读取，该签名结果仅证明**登记文件**，不能冒充**运行中映像的独立身份验证**。另有核心受保护进程和安全组件路径仍不可验证。
+
+`vmmemWSL` PID=13152 在该快照中存在。脚本将 `wsl.exe --list --running --quiet` 的异常或非零退出吞并为单一 `HOLD_WSL_RUNNING_DISTRIBUTION_QUERY`，导致本轮无法区分 WSL 查询错误、空列表及编码/宿主权限问题。**WSL 工作负载实际运行边界没有通过；不得因为 Docker 73/73 无引用就推定 WSL 内所有 workload 已审计。**
+
+下一步采用新的只读定点脚本 `CAP09-A3-WSL-BOUNDARY-DIAGNOSTIC-READONLY-V2-PS51.ps1`，通过 .NET 子进程获取真实退出码、输出字节与受限错误类别，并辅以 HKCU Lxss 注册清单；它不会启动 WSL 发行版、不修改服务/DB/S3，不输出敏感命令行或凭据。**该脚本尚未获得 Windows 主机实测结果，不得标记 PASS。**
+
+本轮实际 HOLD：WSL running distro inventory 未确认；不可读取的进程映像并非全部有可绑定 PID 的签名证明；生产配置文件范围仍只是 bounded。Resource Owner、Adoption、Permit 和原始六阶段保持 HOLD / HOLD / HOLD / 0/6。
