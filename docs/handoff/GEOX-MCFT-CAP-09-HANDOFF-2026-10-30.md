@@ -414,3 +414,36 @@ HOLD_ACTIVE_OR_UNRESOLVED_COMPOSE_CONFIG_GAPS
 准备的下一项独立 Windows PS5.1 只读探针：`CAP09-A3-ACTIVE-CONTAINER-EFFECTIVE-BINDING-READONLY-PS51.ps1`，交付 SHA-256 `ceee77919859615a9d12e14bb6d1ca707f48c321c64b0aa02ab27adf6d19e412`。仅检查缺口 1/2/4/5/6 关联的上述九个活跃容器，核验内存中的 Config.Env（不打印环境变量值）、对选定 `55490/59290`、`positive/negative DB`、Bucket、容器名的精确引用、MCFT PG/S3 显式 endpoint 类别、网络连接、挂载与实际启动分类。输出仅类别、布尔值与计数；不改动容器、数据库、S3 或配置。**未在用户 Windows 现场运行，不能提前判 PASS**。
 
 后续即使有效运行配置未发现所选资源引用，结论依然是**限定 Docker 运行时目标绑定检查**，不自动成立全局 `production_bindings_present=false` 或 `owner_exclusive=true`；正式 Resource Owner Raw / 签名仍需独立新鲜事实。原始六阶段 `0/6`、Adoption / Permit HOLD。
+
+
+## 16. Step 4C-6F：九个运行中容器的有效资源绑定实测（2026-10-30）
+
+用户本机只读检查实际回执：
+
+```text
+A3_ACTIVE_CONTAINER_EFFECTIVE_BINDING=READ_ONLY
+RUN=6ff9b41f6f7f
+EXPECTED_ACTIVE_OWNER_COUNT=9
+ACTUAL_RUNNING_OWNER_COUNT=9
+TARGET_SIGNAL_OCCURRENCES=0
+SELECTED_NETWORK_ATTACHMENTS=0
+MCFT_PRODUCTION_DB_URL_CLASS=PARSED_NON_TARGET_PG
+MCFT_PRODUCTION_S3_ENDPOINT_CLASS=PARSED_NON_TARGET_S3
+MCFT_PRODUCTION_S3_BUCKET_CLASS=EXPLICIT_NON_TARGET_BUCKET
+MCFT_PRODUCTION_ENTRYPOINT_CLASS=OTHER_OR_UNDETERMINED_HOLD
+MCFT_PRODUCTION_IMAGE_ID_PRESENT=True
+COMPOSE_MISSING_DECLARATION_REFERENCES=0
+COMPOSE_UNMAPPED_DECLARATION_REFERENCES=18
+PRODUCTION_ENDPOINT_VERIFICATION_HOLDS=0
+HOLD_EFFECTIVE_RUNTIME_BINDING_OR_SNAPSHOT_REVIEW
+DECLARED_COMPOSE_FILES_STILL_MISSING_NOT_RECONSTRUCTED
+NO_PRODUCTION_BINDING_ABSENCE_CLAIM_NO_OWNER_NO_ADOPTION_NO_PERMIT
+```
+
+**已经证明：** 九个实际运行的容器中没有选定隔离网络成员关系和脚本检查范围内的资源信号；正在运行的 MCFT Production Evidence Runtime 的 PG URL、S3 Endpoint、Bucket 均属于明确非本 Run 目标的资源，三项 Authority mount 均只读；这与先前的 73/73 Docker Env 扫描相互印证。它是**当前 Docker 有效运行配置的限定目标隔离 PASS**，而非全局 Owner 身份 PASS。
+
+**复核脚本发现确定性解析缺陷：** `CAP09-A3-ACTIVE-CONTAINER-EFFECTIVE-BINDING-READONLY-PS51.ps1` 的 `Normalize-HostPath()` 检测 Windows 盘符路径采用正则 `^[a-zA-Z]:[\/]` 的无反斜杠形式（脚本原文为单斜杠字符类）；原 `CAP09-A3-MISSING-COMPOSE-PATH-OWNERS-READONLY-PS51.ps1` 使用同时识别 `\\` 和 `/` 的字符类，已取得 `UNMAPPED_PATH_COUNT=0`。这解释新脚本 9×2 共 18 个 `UNMAPPED`，不能作为 18 个新增配置文件或真实文件状态。**前一轮六个唯一缺失路径事实仍有效，不能由新解析器的 `MISSING=0` 推翻。**
+
+**尚待独立核对的有效容器启动入口：** 6F 脚本从 `Config.Cmd + Config.Entrypoint` 未识别出 `mcft_cap09_evidence_[preformal_owner_]runtime`，输出 `OTHER_OR_UNDETERMINED_HOLD`。仓库源 `docker-compose.mcft-cap09-production-preformal.yml` 的预期启动模块为 `mcft_cap09_evidence_preformal_owner_runtime.js`；`docker-compose.mcft-cap09-production.yml` 为 `mcft_cap09_evidence_runtime.js`。需读取正在运行容器 `Path/Args/Config.Cmd/Entrypoint`，必要时 `docker top`，只打印启动模块类别而不暴露命令行/凭据。不得仅以运行中和映像 ID 存在推断正确模块。
+
+**处理原则：** 不需要重新扫描 Docker 73 个容器，或重做 9 个容器资源绑定证据；只修清晰的脚本路径解析缺陷、定点核对 MCFT Production Evidence Runtime 实际启动模块，同时保留历史 Compose 原文件缺失事实。Resource Owner / Adoption / Permit HOLD；原始六阶段 0/6。
