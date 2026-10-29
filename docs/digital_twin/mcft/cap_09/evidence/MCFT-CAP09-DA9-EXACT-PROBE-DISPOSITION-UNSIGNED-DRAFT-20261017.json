@@ -1,0 +1,94 @@
+{
+  "schema_version": "geox_mcft_cap09_da9_exact_probe_disposition_request_draft_v1",
+  "request_status": "UNSIGNED_DRAFT_REVIEW_REQUIRED",
+  "run_id": "da9db7129607",
+  "subject_sha": "61ceb797721cbbe9d6a949832afd92910c351a00",
+  "source": {
+    "endpoint": "http://127.0.0.1:59005",
+    "bucket": "mcft-cap09-requal-da9db7129607",
+    "inventory_host_path": "D:\\gptdown\\MCFT-CAP09-DA9-ROOT-READONLY-INVENTORY-20261017130828.json",
+    "inventory_receipt_sha256": "3662522a439e52b6ef2fe164e26c03c245f9ca6158a345c9db664f4be9ad3a5e",
+    "inventory_is_fresh_for_disposition": false,
+    "latest_inventory": {
+      "current_objects": 2,
+      "versions": 2,
+      "delete_markers": 0,
+      "multipart_uploads": 0,
+      "keys_exact_match": true,
+      "version_id_literal": "null",
+      "observed_status": "SOURCE_TWO_PROBE_READBACK_PASS_DISPOSITION_HOLD",
+      "receipt_host_path": "D:\\gptdown\\MCFT-CAP09-DA9-SOURCE-RECHECK-57abdbb579f34482aaa5b21986b9cdc0\\source-readonly-recheck.json",
+      "receipt_sha256": "0441f9211ef02fc4276fe07b9e3e098646a07b666ae04bb3a10be951c19732d0",
+      "note": "Actual operator reported independent root-identity read-only inventory and two version-specific GETs. Timestamp stored in host receipt, original receipt bytes not included in GitHub. Not dynamic scoped IAM Admission."
+    },
+    "inventory_is_fresh_for_disposition_reason": "Fresh at readback time only; any future effectful operation requires a new time-bounded pre-action inventory"
+  },
+  "objects": [
+    {
+      "key": "negative/qualification/iam-probe-da9db7129607-v1.txt",
+      "version_id_literal": "null",
+      "size_bytes": 27,
+      "source_payload_sha256": "9644be2c235939884b2d12dace3c455ea26f6e4ab78fb8f9316da33bf3671a95",
+      "source_payload_sha256_state": "INDEPENDENT_MINIO_READONLY_GET_MATCHED_ARCHIVE_2026-10-17",
+      "archive_payload_sha256": "9644be2c235939884b2d12dace3c455ea26f6e4ab78fb8f9316da33bf3671a95",
+      "archive_entry_name": "negative-probe.bin",
+      "archive_hash_provenance": "Windows SHA-256 direct stream read of named 27-byte entry in custody ZIP with verified overall ZIP SHA256",
+      "source_payload_verification": "User-executed version-specific MinIO GET, 27 bytes, SHA256 equal archived ZIP"
+    },
+    {
+      "key": "positive/qualification/iam-probe-da9db7129607-v1.txt",
+      "version_id_literal": "null",
+      "size_bytes": 27,
+      "source_payload_sha256": "96b91f40a611b726561cff9e81a7ea60bb8cbc363f75f9e60aad6598ac53a7d8",
+      "source_payload_sha256_state": "INDEPENDENT_MINIO_READONLY_GET_MATCHED_ARCHIVE_2026-10-17",
+      "archive_payload_sha256": "96b91f40a611b726561cff9e81a7ea60bb8cbc363f75f9e60aad6598ac53a7d8",
+      "archive_entry_name": "positive-probe.bin",
+      "archive_hash_provenance": "Windows SHA-256 direct stream read of named 27-byte entry in custody ZIP with verified overall ZIP SHA256",
+      "source_payload_verification": "User-executed version-specific MinIO GET, 27 bytes, SHA256 equal archived ZIP"
+    }
+  ],
+  "custody": {
+    "endpoint": "http://127.0.0.1:59005",
+    "bucket": "mcft-cap09-da9-evidence-worm-v1",
+    "key": "MCFT-CAP09-DA9-PROBE-EVIDENCE-20261016T170707Z.zip",
+    "version_id": "f7dda227-652e-4dc7-ab97-c9d70874731d",
+    "retention_mode": "COMPLIANCE",
+    "retain_until_utc": "2027-10-16T17:29:54.041Z",
+    "remote_readback_sha256": "6dbb1ffe417174dfc45450e695d0fd28cd2eacce0b85523a7a6c71d5f44ee62e",
+    "independent_host_receipt_path": "D:\\gptdown\\MCFT-CAP09-DA9-WORM-READONLY-RECHECK-47e648ddd8be4ad688aacfe9f73307d1\\independent-readonly-recheck.json",
+    "receipt_sha256": "6a26a91fe10d0a67bcbdf0509261101dfeae3c7bbef22292f6d3f43b85694d81",
+    "original_upload_receipt_missing": true,
+    "receipt_sha256_provenance": "Windows host Get-FileHash SHA256 on independent-readonly-recheck.json, user-reported 2026-10-17; original receipt not available in repository"
+  },
+  "review": {
+    "reviewer_id": null,
+    "review_authority_ref": null,
+    "review_issued_at": null,
+    "review_signature": null,
+    "disposition_reason": null,
+    "proposed_action": "EXACT_SOURCE_PROBE_DISPOSITION_PENDING_REVIEW",
+    "explicit_source_deletion_authorized": false,
+    "production_authorized": false
+  },
+  "safety": {
+    "do_not_delete_before_fresh_inventory": true,
+    "do_not_bulk_clear_bucket": true,
+    "do_not_modify_worm_archive": true,
+    "do_not_approve_from_this_document": true,
+    "do_not_reuse_old_retry_signature": true,
+    "execution_authorized": false
+  },
+  "governance_route": {
+    "user_instruction_date": "2026-10-17",
+    "independent_second_review_account_required": false,
+    "accountable_single_operator_candidate": "mcft_cap09_operator_mylr1",
+    "registered_retry_role": "ACCOUNTABLE_SINGLE_OPERATOR",
+    "registered_public_key_fingerprint_sha256": "223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365",
+    "role_registration_is_authorization": false,
+    "policy_source": "docs/digital_twin/mcft/cap_09/evidence/MCFT-CAP09-DA9-OWNER-OPERATOR-AUTHORITY-DETERMINATION-20261016.md",
+    "candidate_signature_route": "owner-held Ed25519 signer plus independent code-path verifier; no second human account",
+    "disposition_approval_status": "NOT_SIGNED_NOT_ADOPTED",
+    "required_authorization": "specific reviewed single-operator source-object disposition policy, attributable exact-key scope, current source inventory, signature and independent verification",
+    "must_not_impersonate_independent_issuer": true
+  }
+}
