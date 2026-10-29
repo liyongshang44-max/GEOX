@@ -469,3 +469,30 @@ NO_RESOURCE_OWNER_NO_ADOPTION_NO_PERMIT
 **正确裁决：** 模块可见，但不属于早期脚本内硬编码的 `mcft_cap09_evidence_preformal_owner_runtime.js` 或 `mcft_cap09_evidence_runtime.js` 两种形态。不能判它错误或正确；未输出**实际模块 basename**。经仓库 protected main `5d69b8a3...` 的源码核查，另有 `docker-compose.mcft-cap09-production-preformal-am22-v2.yml` AM22 overlay，其 Evidence 入口为 `scripts/runtime_acceptance/RUN_MCFT_CAP_09_AM22_EVIDENCE_OWNER_ENTRY_V2.cjs`，与 V1 入口不同；该文件存在是可核的候选解释，**不能假定当前运行容器正在使用 AM22 overlay**。
 
 下一步只从 `docker inspect` 已有的 `Args/Config.Cmd/Entrypoint` 与 `docker top` 中提取合法 MCFT `.js/.cjs/.ts` 文件名（只打印 basename，不打印完整命令行、环境、凭据），确认是否是上述 overlay，随后审查实际 container image/entrypoint 对齐性。已经验收的非目标 PG/S3/Bucket、0 selected network attachment 结论不需要重跑。Resource Owner/Adoption/Permit HOLD，原始六阶段 0/6。
+
+
+## 18. Step 4C-6H：真实 Production Evidence 入口确认（2026-10-30）
+
+本机用户实测，容器 `geox-mcft-cap09-production-v1-geox-mcft-cap09-evidence-runtime-v1-1`：
+
+```text
+A3_EXACT_ENTRY_MODULE_DISCOVERY=READ_ONLY
+RUN=6ff9b41f6f7f
+CONTAINER_ARGS_MODULE=mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.js
+CONFIG_CMD_MODULE=mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.js
+CONFIG_ENTRYPOINT_MODULE=NO_MCFT_MODULE_NAME_FOUND
+DOCKER_TOP_EXIT_CODE=0
+LIVE_MODULE=mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.js
+EXACT_ENTRY_MODULE_DISCOVERY_COMPLETE
+NO_RESOURCE_OWNER_NO_ADOPTION_NO_PERMIT
+```
+
+仓库受保护 `main=5d69b8a3f254600726bc10f0404f1330de1e4562` 存在精确配置 `docker-compose.mcft-cap09-am22-gfs-bootstrap-v1.yml`，入口为 `apps/server/dist/apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.js`，与实际 basename 一致。对应实现为 `apps/server/src/runtime/mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.ts`，读取 `GEOX_DEPLOYMENT_SUBJECT_COMMIT`、runtime-start authority、owner-cutover authority，验证同一 host_id 后调用 `runMcftCap09ProductionEvidenceRuntimeV1`。因此之前 `OTHER_MCFT_MODULE` 是检查脚本只识别较早两个 Evidence Runtime 入口的误分类。**关闭 MODULE_NAME_UNKNOWN 阻断；不将其提升为镜像来源或当前生产授权 PASS。**
+
+源文档 `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AM22-GFS-BOOTSTRAP-CUTOVER-V1.md` 对该 seam 的说明为：GFS same-cycle pre-A0 seed / Owner cutover 引导链，可产生真实生产 Evidence 侧效果；不对 Formal-v5/A0/O00 授权，且六阶段物理测量仍独立必要。仅凭启动模块存在不能证明当前 Authority 生效、Owner 独占或最新 Evidence 健康。
+
+**重要的进一步来源事实：** `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-BASELINE-PREPARATION-CONTRACT-V1.json` 保存了更早一次 Operator Docker inspect 部署观察：`deployment_subject=3b46be1dda2406ffdcc869c55758f3393d69c716`、`image_id=sha256:b2eed3f3845ce4ba45627da028ecc7a04947dd03223698d65cebacf10c659456`、`image_contents_attested=false`、`production_recovery_authorized=false`。这只是**历史观察基线**，还没有在当前 2026-10-30 容器上重新核对，不得将其等同当前鉴证。
+
+**下一步唯一推荐的只读定点：** 对当前生产 Evidence 容器读 `Config.Image`、实际 `Image` ID 和 `GEOX_DEPLOYMENT_SUBJECT_COMMIT` 值，并与上述历史观察作**一致性对比**，只报告匹配布尔值和必要的非敏感 image/subj SHA；不重新打开 Compose 源配置，不动数据库/MinIO，不执行任何 Owner cutover、recovery、Adoption 或 Permit。无论是否匹配，镜像内容及 Authority/Owner 证据仍须独立核验。
+
+Resource Owner / Adoption / Permit HOLD；原始六阶段 0/6。
