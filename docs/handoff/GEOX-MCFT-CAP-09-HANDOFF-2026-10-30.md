@@ -496,3 +496,35 @@ NO_RESOURCE_OWNER_NO_ADOPTION_NO_PERMIT
 **下一步唯一推荐的只读定点：** 对当前生产 Evidence 容器读 `Config.Image`、实际 `Image` ID 和 `GEOX_DEPLOYMENT_SUBJECT_COMMIT` 值，并与上述历史观察作**一致性对比**，只报告匹配布尔值和必要的非敏感 image/subj SHA；不重新打开 Compose 源配置，不动数据库/MinIO，不执行任何 Owner cutover、recovery、Adoption 或 Permit。无论是否匹配，镜像内容及 Authority/Owner 证据仍须独立核验。
 
 Resource Owner / Adoption / Permit HOLD；原始六阶段 0/6。
+
+
+## 19. Step 4C-6I：生产部署主体及镜像身份精确核对 PASS（2026-10-30 实测）
+
+对运行中的 `geox-mcft-cap09-production-v1-geox-mcft-cap09-evidence-runtime-v1-1`，用户在 Windows PowerShell 5.1 通过 `docker inspect` 获取 `Config.Env` 中唯一的 `GEOX_DEPLOYMENT_SUBJECT_COMMIT`、`Config.Image`、不可变容器 `Image`；再通过 `docker image inspect` 独立回读不可变 ID。结果：
+
+```text
+A3_PRODUCTION_IMAGE_IDENTITY=READ_ONLY
+SUBJECT_MATCHES_RECORDED_DEPLOYMENT=True
+IMAGE_ID_MATCHES_RECORDED_DEPLOYMENT=True
+IMAGE_TAG_MATCHES_RECORDED_DEPLOYMENT=True
+IMMUTABLE_IMAGE_ID_READBACK=True
+PRODUCTION_IMAGE_IDENTITY_DISCOVERY_COMPLETE
+IMAGE_CONTENT_ATTESTATION_NOT_ESTABLISHED
+NO_RESOURCE_OWNER_NO_ADOPTION_NO_PERMIT
+```
+
+对应受保护主线既有历史部署观察：
+
+```text
+deployment_subject=3b46be1dda2406ffdcc869c55758f3393d69c716
+image_id=sha256:b2eed3f3845ce4ba45627da028ecc7a04947dd03223698d65cebacf10c659456
+image_tag=geox-mcft-cap09-runtime:3b46be1dda2406ffdcc869c55758f3393d69c716
+image_contents_attested=false
+production_recovery_authorized=false
+```
+
+历史观察源：`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-BASELINE-PREPARATION-CONTRACT-V1.json`。源码 `docker-compose.mcft-cap09-am22-gfs-bootstrap-v1.yml` 的入口 basename `mcft_cap09_am22_gfs_bootstrap_evidence_owner_v1.js` 也已经与实际 `docker top` 核对一致。
+
+**本轮完成的限定子项：** 当前生产 Evidence 容器 deployment subject、tag、不可变 Image ID 与历史登记的观察值精确一致；实际执行入口与仓库 GFS bootstrap overlay 的模块名一致；前述对 Run `6ff9b41f6f7f` 的指定 PG/S3/Bucket 非目标连接结论不受影响。**未证明：** 独立镜像内容证明、当前 production owner 健康、全部 Windows/WSL 长期动态访问路径排除、选定隔离资源 Owner 唯一归属，以及正式签署的 Resource Owner Raw。不要因为镜像/进程一致性再次重启生产容器。
+
+下一步不再追查生产镜像身份或历史 Compose 原路径，专注所选 A3 PG/S3 的独占归属、具体生产绑定适用性审查；只有限定事实充分时才运行一次独立新的 Windows PG/S3 fresh 原始回读，按 `scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs` 生成 byte-hash-bound 的 TEST_ONLY 签署。原始六阶段仍 0/6，Resource Owner / Adoption / Permit HOLD。
