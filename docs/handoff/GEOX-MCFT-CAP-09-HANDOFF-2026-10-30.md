@@ -282,3 +282,25 @@ NO_GLOBAL_PRODUCTION_BINDING_ABSENCE_CLAIM_NO_RESOURCE_OWNER_NO_PERMIT
 下一步采用新的只读定点脚本 `CAP09-A3-WSL-BOUNDARY-DIAGNOSTIC-READONLY-V2-PS51.ps1`，通过 .NET 子进程获取真实退出码、输出字节与受限错误类别，并辅以 HKCU Lxss 注册清单；它不会启动 WSL 发行版、不修改服务/DB/S3，不输出敏感命令行或凭据。**该脚本尚未获得 Windows 主机实测结果，不得标记 PASS。**
 
 本轮实际 HOLD：WSL running distro inventory 未确认；不可读取的进程映像并非全部有可绑定 PID 的签名证明；生产配置文件范围仍只是 bounded。Resource Owner、Adoption、Permit 和原始六阶段保持 HOLD / HOLD / HOLD / 0/6。
+
+## 11. Step 4C-6C：WSL V2 查询成功、清单解析脚本报错（2026-10-30）
+
+用户实测：
+
+```text
+A3_WSL_BOUNDARY_DIAGNOSTIC_V2=READ_ONLY
+RUN=6ff9b41f6f7f
+WSL_EXE_PRESENT=True
+WSL_QUERY_MODE=FINISHED
+WSL_QUERY_EXIT_CODE=0
+WSL_QUERY_STDOUT_BYTES=32
+WSL_QUERY_STDERR_BYTES=0
+WSL_QUERY_ERROR_CLASS=NONE
+MethodArgumentConversionInvalidCastArgument: Replace([char]0, '')
+```
+
+**正确裁决：** Windows `wsl.exe --list --running --quiet` 调用本身返回退出码 0，且无 stderr，不是 WSL 调用失败；V2 脚本在清理 NUL/BOM 字符时，Windows PowerShell 5.1 将 `.Replace([char]0, '')` 解析为 `char,char` 重载，空字符串无法转成 `char`。所以**WSL 发行版清单解析未完成**，不能填写正在运行的发行版数量，不能断言非 Docker workload 为零，更不能升级为 Resource Owner PASS。
+
+修复文件（独立聊天交付、未纳入仓库源码）：`CAP09-A3-WSL-BOUNDARY-DIAGNOSTIC-READONLY-V3-PS51.ps1`；SHA256 `25c720aa3e2415572c6f62b216eb9ab1935aaabc0c08923c8a48e73b32d96b15`；仅将 NUL/BOM 字符处理改为 `[regex]::Replace([string]$Line, '[\\u0000\\uFEFF]', '').Trim()` 并更新输出版本标识。静态检查通过，**尚未经用户 Windows PS5.1 实测**。下一步只运行 V3 并回传 `WSL_RUNNING_DISTRIBUTION_COUNT`、`WSL_NON_DOCKER_RUNNING_DISTRIBUTIONS`、注册数/最终标记；无需重跑 73/73 Docker、272 项计划任务、PG SCRAM、MinIO。
+
+Resource Owner / Adoption / Permit 仍 HOLD；原始六阶段 0/6。
