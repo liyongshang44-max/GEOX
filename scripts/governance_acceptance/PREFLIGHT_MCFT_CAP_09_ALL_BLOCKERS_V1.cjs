@@ -1329,10 +1329,40 @@ function main() {
       assert.equal(git("merge-base",base,head),base,"R4285_3749_MAIN_NOT_ANCESTOR");
       assert.deepEqual(changed.slice().sort(),[
         ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs"
       ].sort(),"R4285_3749_UNCLASSIFIED_EXACT_DELTA");
+      // Exact historical-workflow delta; frozen original acceptance is run
+      // in its original immutable checkout, never waived or reclassified.
+      const historicYaml=[
+        {file:".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",edits:[
+          ['[ "${{ github.event.pull_request.number }}" = "3748" ]; }; then',
+           '[ "${{ github.event.pull_request.number }}" = "3748" ] || [ "${{ github.event.pull_request.number }}" = "3749" ]; }; then'],
+          ['# #3748 runs the historical assertion ONLY in its pinned historical',
+           '# #3748 and #3749 run this original acceptance ONLY in its pinned historical']
+        ]},
+        {file:".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",edits:[
+          ['(github.event.pull_request.number != 3747 && github.event.pull_request.number != 3748)',
+           '(github.event.pull_request.number != 3747 && github.event.pull_request.number != 3748 && github.event.pull_request.number != 3749)'],
+          ['(github.event.pull_request.number == 3747 || github.event.pull_request.number == 3748)',
+           '(github.event.pull_request.number == 3747 || github.event.pull_request.number == 3748 || github.event.pull_request.number == 3749)'],
+          ['Exact #3747 successor — replay original #3737 test',
+           'Historical #3737 exact-source preservation — replay original test']
+        ]}
+      ];
+      for(const item of historicYaml){
+        const original=git("show",base+":"+item.file);
+        let expected=original;
+        for(const [before,after] of item.edits){
+          assert.equal(expected.split(before).length,2,"R4285_3749_HISTORIC_YAML_ANCHOR:"+item.file);
+          expected=expected.replace(before,after);
+        }
+        assert.equal(fs.readFileSync(path.join(ROOT,item.file),"utf8").trim(),
+          expected,"R4285_3749_UNAPPROVED_HISTORICAL_WORKFLOW_EDIT:"+item.file);
+      }
       assert.equal(plan.unknown_changed_paths.length,0,"R4285_3749_UNOWNED_PATHS");
       assert.equal(plan.authority_errors.length,0,"R4285_3749_AUTHORITY_ERRORS");
       assert.equal(plan.resolver_errors.length,0,"R4285_3749_RESOLVER_ERRORS");
