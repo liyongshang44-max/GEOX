@@ -212,6 +212,7 @@ test("#3749 exact-source successor scope preserves historic physical Full-chain 
  const delta=git("diff","--name-only",base+"..."+head).split(/\r?\n/).filter(Boolean).sort();
  const allowed=[
   ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+  "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs"
  ].sort();
