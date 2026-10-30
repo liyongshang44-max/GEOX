@@ -690,3 +690,14 @@ ORIGINAL_SIX_STAGES=0/6
 - **下一实际操作：** 在同一个 Windows PS5.1 会话中运行 `FINALIZE-SIGN-ADOPTION-V2.cjs`，参数使用 release root `D:\gptdown\CAP09-A3-ADOPTION-V2-3748-PREPARED\installed-release`、output root `D:\gptdown\CAP09-A3-ADOPTION-V2-3748-PREPARED`、已核验 Owner comment ID `6513969227`、本机 ADOPTION 私钥 `D:\gptdown\MCFT-CAP09-PRIVATE-SIGNER\signer-private.pem`、以及 `material.json` 中实际登记的 Python 路径。该脚本会重新从 GitHub 核验 Owner comment、生成独立 `TEST_ONLY` Operator Scope Grant 和 ADOPTION Ed25519 签名，并调用正式 Consumer；私钥不得上传。
 
 **当前状态：** `RESOURCE_EXCLUSIVITY=PASS`，`FRESH_RAW_READBACK=PASS`，`OWNER_ED25519=VERIFIED`，`ADOPTION_OWNER_APPROVAL=VERIFIED`；`ADOPTION_V2=AWAITING_WINDOWS_SIGNATURE_AND_CONSUMER`，`FULL_CHAIN=HOLD`，`PERMIT=HOLD`，`ORIGINAL_SIX_STAGES=0/6`。
+
+
+## 30. Attempt-3 Adoption V2 Windows 签署 PASS 与后续隔离物理全链（2026-10-30）
+
+用户 Windows PS5.1 终态回执：`ADOPTION_V2=PASS`、`adoption_status=SIGNED_ADOPTION_V2_EVIDENCE_SAVED_NOT_EXECUTION_AUTHORITY`、正确 #3748 Owner 评论 `6514022530`、`subject_sha=5d69b8a3f254600726bc10f0404f1330de1e4562`；签署 Request SHA-256 `9bdbe19854cd3b9e8c7165c2d6005c5bfebcc548b1307acc7224df142f0e823b`，签署 Scope Grant SHA-256 `482760ab1fe2084ae7aa7bde2ff5a58021b0eb15495dd8a92e040a162b1dc85f`，签署请求保存路径 `D:\gptdown\CAP09-A3-ADOPTION-V2-3748-PREPARED\SIGNED-ADOPTION-V2-REQUEST.json`。同时显示 `ADOPTION_V2_SIGNING_COMMAND_COMPLETED`。这意味着现场 signer 调用了正式 Adoption V2 Consumer 并返回验证结果，但原始签名文件/JSON bytes 尚未在聊天独立二次读取；签名所用注册 ADOPTION key 与既有 Resource Owner 签名用途区分，不能相互复用。
+
+前一轮首次 Owner 批准评论 `6513969227` 使用过期审批模板，Windows 正式签署报 `OWNER_COMMENT_TEXT_NOT_EXACT`，无效事实保留；之后新 Owner 评论 `6514022530` 使用 `GEOX_MCFT_CAP09_ADOPTION_V2_NEW_MAIN_OWNER_APPROVAL_V1`，GitHub 原生回读确认作者 OWNER、正文精确匹配、合并后发布、未编辑。不得编辑旧评论或伪造失败回执。
+
+**下一项未关闭资格为 FULL_CHAIN：** 本仓 `MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs` 的 `prepare()` 仍独立要求真实 `fullChain.verify()`、`lineage.verifyLineageReview()`、`resource.verify()` 和有效的独立签署 Permit；Adoption PASS 不代表 Host/Permit PASS。现有 `MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs` 要求与执行 Run 不同的全新 `test_run_id`、对应独立 bucket/PG positive 数据库、实际双 S3 Raw、三 Candidate 语义记录、PG fenced 单交易三条正式 facts、提交后实体回读、Controller attestation→cursor 的先后顺序、无 Provider refetch、Permit/6 Stage 都为零；物理测试回执需严格绑定当前主线 `SOURCE_PATHS` 字节，并由已注册 Operator 用独立 `NONAUTHORIZED_FULL_CHAIN_ATTESTATION_V1` domain 签署。禁止把此前的 CI 绿色/模拟器证明当成 Run 6ff9 可消费的物理全链。此后正式 `--preflight-only` 仍需全部其它签署输入，由 Host `MCFT_CAP09_ATTEMPT3_HOST_V2.cjs` 实际审查；直到单独 Permit 决策前原六阶段保持 `0/6`。
+
+当前状态：`RESOURCE_EXCLUSIVITY=PASS`；`FRESH_RAW_READBACK=PASS`；`OWNER_ED25519=VERIFIED`；`ADOPTION_OWNER=VERIFIED`；`ADOPTION_V2=PASS`；`FULL_CHAIN=HOLD`；`PERMIT=HOLD`；`ORIGINAL_SIX_STAGES=0/6`。
