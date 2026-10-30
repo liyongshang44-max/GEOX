@@ -1640,6 +1640,19 @@
         "scripts/runtime_acceptance/RUN_MCFT_CAP09_ATTEMPT3_HOST_V2_WINDOWS.cjs",
         "scripts/runtime_acceptance/RUN_MCFT_CAP09_ATTEMPT3_HOST_V2_WINDOWS.test.cjs"
       ]
+    },
+    "CAP09_R4285_SIGNED_HOST_READONLY_EXACT_FIVE_PATHS_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_V1.test.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_PREFLIGHT_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -3560,6 +3573,34 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node --test scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs"
+    },
+    {
+      "check_id": "CAP09_R4285_PURPOSE_SPECIFIC_SIGNED_EVIDENCE_HOST_READONLY_V1",
+      "owner": "MCFT_CAP09_R4285_ACCOUNTABLE_OPERATOR_SIGNED_LINEAGE_TEST_ONLY_SOURCE_REVIEW",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_PREFLIGHT_V1.cjs"
+      ],
+      "resolver_ids": [
+        "CAP09_R4285_SIGNED_HOST_READONLY_EXACT_FIVE_PATHS_V1"
+      ],
+      "historical_evidence_policy": "NONE_OLD_ATTEMPT3_SIGNATURE_OR_PERMIT_CANNOT_AUTHORIZE_R4285",
+      "execution_workflow": ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+      "execution_workflow_status": "READ_ONLY_SIGNED_EVIDENCE_NEGATIVE_TESTS_NO_HOST_EXECUTION",
+      "fail_policy": "FAIL_CLOSED_EXACT_EIGHT_PATHS_QCP65_ADOPTION_IMMUTABLE_R4285_TEST_ONLY_NO_OWNER_PERMIT_STAGE",
+      "carry_forward_policy": "NONE_HISTORICAL_FULLCHAIN_ONLY_NATIVE_CRYPTO_PRESERVED_NO_EXECUTION_AUTHORITY",
+      "requalification_triggers": [
+        "CAP09_R4285_SIGNED_HOST_READONLY_EXACT_FIVE_PATHS_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_V1.test.cjs"
     }
   ],
   "non_effects": {
