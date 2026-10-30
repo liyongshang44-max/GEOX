@@ -590,3 +590,22 @@ HOLD_SELECT_EXACT_MAIN_REPOSITORY
 **最小下一动作：** 优先只检查 `D:\\gptdown\\MCFT-CAP09-MAIN-5D69B8A3` 的 `rev-parse HEAD`、`branch --show-current`、`status --porcelain`、`ls-remote origin refs/heads/main`，要求 `main`、干净、HEAD 与当前远端一致（并与冻结 `5d69b8a3f254600726bc10f0404f1330de1e4562` 的 subject 进行确认）。如果全满足，执行已存在的 `D:\\gptdown\\CAP09-A3-RESOURCE-OWNER-CLOSURE-V1\\RUN-CAP09-A3-RESOURCE-OWNER-FRESH-PS51.ps1 -RepoRoot D:\\gptdown\\MCFT-CAP09-MAIN-5D69B8A3`；不重新下载 V2、自动扫描整个目录、不改 Git。若不满足，则 HOLD 并报告第一失败条件，不切换到历史只读检出以规避门禁。
 
 状态仍为 `RESOURCE_EXCLUSIVITY=HOLD`，`FRESH_RAW_READBACK=NOT_RUN`，`OWNER_ED25519=HOLD`，`ADOPTION_V2=HOLD`，`FULL_CHAIN=HOLD`，`PERMIT=HOLD`，`ORIGINAL_SIX_STAGES=0/6`。
+
+
+## 24. Step 4C-7 第四次操作：唯一剩余精确主线阻断是分支状态（2026-10-30）
+
+用户在 `D:\\gptdown\\MCFT-CAP09-MAIN-5D69B8A3` 实测（从 Git 实际 stdout）：
+
+```text
+BRANCH_MAIN=False
+WORKTREE_CLEAN=True
+EXACT_FROZEN_HEAD=True
+HEAD_MATCHES_REMOTE_MAIN=True
+HOLD_EXACT_CLEAN_PROTECTED_MAIN
+```
+
+之后用户继续逐行运行 `Write-Host 'EXACT_MAIN_ADMISSION=PASS'`，那**只是手动打印**，前面的 throw 已确实阻断；不是验收结果。V1 工具再执行，`SOURCE_PROBE_SHA256=63ed18a730a0f62fcc8b8a1d8d4692f91e5be4ccf7ed9c33e077b117a3367a31`，输出目录 `D:\\gptdown\\CAP09-A3-RESOURCE-OWNER-FRESH-20261030T011056604Z`，Node 在进入物理探针前正确返回 `first_blocker=HOLD_EXACT_CLEAN_PROTECTED_MAIN_REQUIRED`。**没有 PG/S3 Fresh Raw、Ed25519 签署或 Permit 消费。**
+
+**准确原因：** HEAD 正确、当前远端 main 正确、工作树干净；只有当前检出分支并非字面 `main`（可能 detached HEAD 或其他分支，暂未定），与本次强制资格门禁不符。历史 `D:\\gptdown\\MCFT-CAP09-3748-READONLY` 保持保留；不需要清理旧工作树。建议仅在 `D:\\gptdown\\MCFT-CAP09-MAIN-5D69B8A3` 中确认当前 Git refs 与远端 HEAD 后，安全地 `git switch main`（若存在且等于 exact head），或本地 `git switch -c main <exactHead>`（仅当 local main ref 不存在）——只能改变本地分支指向，不提交、不 push、不更新受保护 main、不强制接管其他工作树。重新验证 branch/main、clean status、exact head、remote SHA，全部 PASS 后调用已有 V1 `-RepoRoot`。不能忽略 Node 严格主线核验。
+
+**状态：** `RESOURCE_EXCLUSIVITY=HOLD`, `FRESH_RAW_READBACK=NOT_RUN`, `OWNER_ED25519=HOLD`, `ADOPTION_V2=HOLD`, `FULL_CHAIN=HOLD`, `PERMIT=HOLD`, `ORIGINAL_SIX_STAGES=0/6`。
