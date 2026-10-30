@@ -1342,7 +1342,9 @@ function main() {
           ['[ "${{ github.event.pull_request.number }}" = "3748" ]; }; then',
            '[ "${{ github.event.pull_request.number }}" = "3748" ] || [ "${{ github.event.pull_request.number }}" = "3749" ]; }; then'],
           ['# #3748 runs the historical assertion ONLY in its pinned historical',
-           '# #3748 and #3749 run this original acceptance ONLY in its pinned historical']
+           '# #3748 and #3749 run this original acceptance ONLY in its pinned historical'],
+          ["if: github.event_name != 'pull_request' || (github.event.pull_request.number != 3746 && github.event.pull_request.number != 3747)",
+           "if: github.event_name != 'pull_request' || (github.event.pull_request.number != 3746 && github.event.pull_request.number != 3747 && github.event.pull_request.number != 3749)"]
         ]},
         {file:".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",edits:[
           ['(github.event.pull_request.number != 3747 && github.event.pull_request.number != 3748)',
