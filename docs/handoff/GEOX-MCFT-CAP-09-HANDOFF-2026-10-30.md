@@ -609,3 +609,18 @@ HOLD_EXACT_CLEAN_PROTECTED_MAIN
 **准确原因：** HEAD 正确、当前远端 main 正确、工作树干净；只有当前检出分支并非字面 `main`（可能 detached HEAD 或其他分支，暂未定），与本次强制资格门禁不符。历史 `D:\\gptdown\\MCFT-CAP09-3748-READONLY` 保持保留；不需要清理旧工作树。建议仅在 `D:\\gptdown\\MCFT-CAP09-MAIN-5D69B8A3` 中确认当前 Git refs 与远端 HEAD 后，安全地 `git switch main`（若存在且等于 exact head），或本地 `git switch -c main <exactHead>`（仅当 local main ref 不存在）——只能改变本地分支指向，不提交、不 push、不更新受保护 main、不强制接管其他工作树。重新验证 branch/main、clean status、exact head、remote SHA，全部 PASS 后调用已有 V1 `-RepoRoot`。不能忽略 Node 严格主线核验。
 
 **状态：** `RESOURCE_EXCLUSIVITY=HOLD`, `FRESH_RAW_READBACK=NOT_RUN`, `OWNER_ED25519=HOLD`, `ADOPTION_V2=HOLD`, `FULL_CHAIN=HOLD`, `PERMIT=HOLD`, `ORIGINAL_SIX_STAGES=0/6`。
+
+
+## 25. Step 4C-7 第五次操作：本地 main ref 与正确 HEAD 不同（2026-10-30 Windows 回执）
+
+用户已证实 `D:\\gptdown\\MCFT-CAP09-MAIN-5D69B8A3` 当前 checkout HEAD 与远端 protected main `5d69b8a3f254600726bc10f0404f1330de1e4562` 相同，worktree clean，当前分支非 `main`。进一步尝试安全切换前，`git show-ref --verify refs/heads/main` 存在，但 `git rev-parse refs/heads/main` 与 exact expected HEAD 不同，脚本按设计终止：
+
+```text
+HOLD_LOCAL_MAIN_POINTS_TO_DIFFERENT_HEAD
+```
+
+该事实**只证明本地 main ref 不同**，尚未证明是本地落后还是分叉；不得直接 `git branch -f` / `reset --hard`，也不更改远端或删除旧 `MCFT-CAP09-3748-READONLY` 工作树。Node Fresh probe 未运行、PG/S3 未复采、Owner 未签署。
+
+唯一最小安全动作：重新验证 exact HEAD、clean、remote SHA → `git merge-base --is-ancestor refs/heads/main <exact HEAD>`。仅当返回 0，才能 `git switch main` 再 `git merge --ff-only <exact HEAD>`，完毕后重新查 `main`/clean/HEAD/remote，全部精确一致才调用现有 V1 `-RepoRoot`。如果本地 main 是分叉或已被其他 worktree 占用，保持 HOLD 并报告第一项具体 Git 失败；不做强制分支更新。
+
+状态仍为 `RESOURCE_EXCLUSIVITY=HOLD`, `FRESH_RAW_READBACK=NOT_RUN`, `OWNER_ED25519=HOLD`, `ADOPTION_V2=HOLD`, `FULL_CHAIN=HOLD`, `PERMIT=HOLD`, `ORIGINAL_SIX_STAGES=0/6`。
