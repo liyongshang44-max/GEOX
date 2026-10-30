@@ -624,3 +624,41 @@ HOLD_LOCAL_MAIN_POINTS_TO_DIFFERENT_HEAD
 唯一最小安全动作：重新验证 exact HEAD、clean、remote SHA → `git merge-base --is-ancestor refs/heads/main <exact HEAD>`。仅当返回 0，才能 `git switch main` 再 `git merge --ff-only <exact HEAD>`，完毕后重新查 `main`/clean/HEAD/remote，全部精确一致才调用现有 V1 `-RepoRoot`。如果本地 main 是分叉或已被其他 worktree 占用，保持 HOLD 并报告第一项具体 Git 失败；不做强制分支更新。
 
 状态仍为 `RESOURCE_EXCLUSIVITY=HOLD`, `FRESH_RAW_READBACK=NOT_RUN`, `OWNER_ED25519=HOLD`, `ADOPTION_V2=HOLD`, `FULL_CHAIN=HOLD`, `PERMIT=HOLD`, `ORIGINAL_SIX_STAGES=0/6`。
+
+
+## 26. Step 4C-7 — Windows Resource Owner Fresh Raw + Operator Ed25519 实测完成（2026-10-30）
+
+**首次正式现场成功回执**（用户上传的 Windows PowerShell 全量日志，末尾含工具生成的单行 JSON；文件未直接上传原始 Raw JSON 或签名 Envelope）：
+
+```text
+EXACT_MAIN_ADMISSION=PASS
+A3_OWNER_CLOSURE=BOUNDED_WINDOWS_FRESH
+RUN=6ff9b41f6f7f
+SOURCE_PROBE_SHA256=63ed18a730a0f62fcc8b8a1d8d4692f91e5be4ccf7ed9c33e077b117a3367a31
+OUTPUT_DIR=D:\gptdown\CAP09-A3-RESOURCE-OWNER-FRESH-20261030T012250812Z
+RESOURCE_EXCLUSIVITY=PASS
+FRESH_RAW_READBACK=PASS
+OWNER_ED25519=VERIFIED
+ADOPTION_V2=HOLD
+FULL_CHAIN=HOLD
+PERMIT=HOLD
+ORIGINAL_SIX_STAGES=0/6
+```
+
+精确证据索引（来自同一次工具终态 JSON）：
+
+- `subject_sha=5d69b8a3f254600726bc10f0404f1330de1e4562`
+- `host_id=LAPTOP-STN2A2P1`
+- `raw_sha256=8605568797c21b0094ad501075d12b4b9e969fbaefe341d259ee0199fdc9ad17`
+- `signed_sha256=992bd3f5c3f3d28beebddb02b1521933bae9741d997090ff2e3ce50f884ac554`
+- Local-only evidence path: `D:\gptdown\CAP09-A3-RESOURCE-OWNER-FRESH-20261030T012250812Z`
+
+操作中先对本地 `D:\gptdown\MCFT-CAP09-MAIN-5D69B8A3` 完成安全 `git switch main` 和 `git merge --ff-only`，Git 显示 `Fast-forward`，随后 `EXACT_MAIN_ADMISSION=PASS`，实际 Node probe/Signer 进入并返回正式 PASS。Git 输出的 `602 files changed` 是**本地 main 快进的源码树更新摘要**，不表示资源生产化变更或向远端推送。既有其他工作树未删除；生产运行容器身份检查 Step 4C-6I 已冻结。
+
+**正式裁决：** Run `6ff9b41f6f7f` 的 Resource Exclusivity / Windows Fresh Raw / Operator Ed25519 当前现场验收为 `PASS / PASS / VERIFIED`。该结论基于本次真实 Windows 工具成功日志与回执摘要；未将本地原始 JSON、签名 Envelope、私钥或测试密码上传仓库，仓库 Handoff 不是签署物本身。后续正式验证器消费必须从上述本地目录按 SHA-256 校验原始 bytes，不得由本日志/Handoff 重构正式 Raw 或补造签名。保留原始证据文件，勿修改或移动直至后续消费流程完成。
+
+**立即切主线：** Adoption V2 当前精确 Subject 签署资格；若必需补非授权 S3→Candidate→PG 全链，再完成真正 Windows `--preflight-only`，最后单独 TEST_ONLY Permit 裁决。不得因 Owner 已 PASS 自动提升 Adoption、Full Chain、Permit；不启动原始六阶段、不重新施工 PG/S3、不重复已通过的生产镜像或科学采集。
+
+**下一项唯一直接阻断：** `ADOPTION_V2=HOLD`；最小动作是审查现有 current subject 65 项 QCP 资格与原 54 formal 定义、取得当前主线 Adoption V2 的用途专属批准/签名输入，并通过已存在的正式消费程序验证，禁止伪造或重用陈旧签名。
+
+**状态：** `RESOURCE_EXCLUSIVITY=PASS`; `FRESH_RAW_READBACK=PASS`; `OWNER_ED25519=VERIFIED`; `ADOPTION_V2=HOLD`; `FULL_CHAIN=HOLD`; `PERMIT=HOLD`; `ORIGINAL_SIX_STAGES=0/6`.
