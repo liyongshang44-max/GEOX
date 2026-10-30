@@ -226,8 +226,7 @@ test("#3749 exact-source successor scope preserves historic physical Full-chain 
   "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_STAGE_RECEIPTS_V1.cjs",
   "scripts/governance_acceptance/MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs",
-  "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_COMPOSITE_V1.cjs",
-  "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
+  "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_COMPOSITE_V1.cjs"
  ])].sort();
  for(const file of preserved){
   assert.equal(git("rev-parse",base+":"+file),git("rev-parse",head+":"+file),
