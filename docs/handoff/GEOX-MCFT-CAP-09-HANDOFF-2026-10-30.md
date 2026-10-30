@@ -547,3 +547,18 @@ production_recovery_authorized=false
 **截至本次记录的唯一正式状态：** `RESOURCE_EXCLUSIVITY=HOLD`、`FRESH_RAW_READBACK=NOT_RUN`、`OWNER_ED25519=HOLD`、`ADOPTION_V2=HOLD`、`FULL_CHAIN=HOLD`、`PERMIT=HOLD`、`ORIGINAL_SIX_STAGES=0/6`。
 
 **第一项剩余阻断及最小动作：** 真实 Windows 本机尚未执行本次 fresh probe/签署闭环。用所附签署工具在当前 clean exact protected main 上执行**一次**，仅当独占检查确证后产出原始回读与签名；如报 HOLD，按工具第一项 `HOLD_*` 精确修复，不重跑历史验收。
+
+## 21. Step 4C-7 第一次正式执行：仅启动器仓库发现失败（2026-10-30 Windows 回执）
+
+用户在已有解压目录 `D:\\gptdown\\CAP09-A3-RESOURCE-OWNER-CLOSURE-V1` 执行 `RUN-CAP09-A3-RESOURCE-OWNER-FRESH-PS51.ps1`，终止于第 26 行：
+```text
+git.exe : fatal: not a git repository (or any of the parent directories): .git
+at RUN-CAP09-A3-RESOURCE-OWNER-FRESH-PS51.ps1:26
+$Head = @(& git.exe -C $Dir.FullName rev-parse HEAD 2>$null)
+```
+
+**准确原因：** 脚本候选目录发现先判断 `MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs` 文件存在，但某候选只是源码复制件、缺少 Git worktree 元数据。Windows PowerShell 5.1 的 `$ErrorActionPreference='Stop'` 将非仓库候选的 `git rev-parse` STDERR NativeCommandError 升级为整个启动器终止。程序并未调用 Node 物理探针，未访问 PG/S3，未生成 Fresh Raw 或签名；这不是资源独占性失败，也不需要重新运行之前 PASS 的镜像/容器/网络检查。
+
+**最小纠正：** 打包原 Node producer 不变的 `CAP09-A3-RESOURCE-OWNER-CLOSURE-V2.zip`，ZIP SHA-256 `ec9c0c7adde29cb71ad1b1c557e5ce9d8f691263bc09f070dedb16b7561767c6`；其中仅 PS5.1 启动器对四类 Git 候选探测命令（rev-parse / branch / status / ls-remote）添加定点 `try/catch { continue }`，确保**只跳过非 Git/不满足资格的候选**，没有改变所有 exact protected main、clean branch、远端 HEAD 等 fail-closed 要求。新的 PS 启动器 SHA-256 `88398f245a53ad95f98985128dfa660cb6a5532055731d8e8955eba19a8b1648`。Node producer 原 SHA-256 `63ed18a730a0f62fcc8b8a1d8d4692f91e5be4ccf7ed9c33e077b117a3367a31` 保持不变，`node --check` PASS，归档清单/字节 SHA 回读一致；未进行 Windows PS5.1 实测。
+
+**下一动作：** 解压 V2 到新目录（不覆盖 V1），验 ZIP/PS/Node SHA 后运行新启动器一次。若 `HOLD_NO_CLEAN_EXACT_MAIN_CHECKOUT_FOUND_USE_REPOROOT`，应只明确定位合法的 clean exact protected main checkout，再通过 `-RepoRoot` 指定；不得自行将失去 Git 元数据的源码复制目录当作精确主线。仅当进入 Node 后才可能执行 Fresh PG/S3 Raw 与 5 分钟签署。保持 `RESOURCE_EXCLUSIVITY=HOLD`, `FRESH_RAW_READBACK=NOT_RUN`, `OWNER_ED25519=HOLD`, `ADOPTION_V2=HOLD`, `FULL_CHAIN=HOLD`, `PERMIT=HOLD`, `ORIGINAL_SIX_STAGES=0/6`。
