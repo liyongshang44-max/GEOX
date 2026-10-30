@@ -49,13 +49,15 @@ test("CI and Linux can never consume Attempt-3 Permit or launch a child",async()
  assert.throws(()=>atomic.assertConsumed({}),/A3_V2_ATOMIC_CONSUMPTION_REQUIRED/);
 });
 
-test("current #3748 byte-delta registers exactly 13 changed V2 paths; frozen historical contracts stay unchanged",()=>{
+test("immutable #3748 byte-delta registers exactly 13 changed V2 paths; frozen historical contracts stay unchanged",()=>{
  // Diff classification is a technical review artifact; NEVER Adoption or Permit.
  const cp=require("node:child_process"),path=require("node:path");
  const root=path.resolve(__dirname,"../..");
  const base="d38a5b07a92a63c67fbe2fcc3982ff9b9491e5ac";
  const git=(...args)=>cp.execFileSync("git",["-C",root,...args],{encoding:"utf8",timeout:20000}).trim();
- const head=git("rev-parse","HEAD");
+ const head="5d69b8a3f254600726bc10f0404f1330de1e4562";
+ assert.equal(cp.spawnSync("git",["-C",root,"merge-base","--is-ancestor",head,git("rev-parse","HEAD")]).status,0,
+  "PR3748_IMMUTABLE_HISTORY_NOT_ANCESTOR");
  const lines=git("diff","--name-status",base+".."+head).split(/\r?\n/).filter(Boolean);
  const rows=lines.map(x=>{const [status,file]=x.split("\t");return {status,file};});
  const executionNew=[
@@ -108,7 +110,7 @@ test("current #3748 byte-delta registers exactly 13 changed V2 paths; frozen his
   "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"
  ];
  const authorityRel="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
- const registry=JSON.parse(require("node:fs").readFileSync(path.join(root,authorityRel),"utf8"));
+ const registry=JSON.parse(git("show",head+":"+authorityRel));
  const baseline=JSON.parse(git("show",base+":"+authorityRel));
  const resolver="CAP09_ADOPTION_V2_ATTEMPT3_EXACT_SOURCE_PATHS_V2";
  const past=baseline.dependency_resolvers[resolver].paths;
@@ -146,4 +148,51 @@ test("current #3748 byte-delta registers exactly 13 changed V2 paths; frozen his
   modified_existing_sources:changedExisting.length,unchanged_frozen_authority_paths:frozen.length,
   inherited_execution_authority:false,adoption_authorized:false,
   host_authorized:false,permit_authorized:false,original_six_stage_count:0}));
+});
+
+
+test("preconsume identity requires two exact per-run Evidence roles and signed owner endpoint",()=>{
+ const run="6ff9b41f6f7f";
+ const positive="mcft_cap09_requal_"+run+"_positive",negative="mcft_cap09_requal_"+run+"_negative";
+ const owner={run_id:run,database_host:"127.0.0.1",database_port:55490,positive_database:positive,negative_database:negative};
+ const admission={resourceEnvelope:{payload:owner},permitEnvelope:{payload:{run_id:run}}};
+ const url=(user,db,port=55490)=>"postgresql://"+user+":fake-pass@127.0.0.1:"+port+"/"+db;
+ const env={DATABASE_URL:url("cap09_"+run+"_p_evidence",positive),
+   BLOCKED_DATABASE_URL:url("cap09_"+run+"_n_evidence",negative)};
+ const bindings=bridge.scopedDbConnectionBindings(admission,env);
+ assert.equal(bindings.length,2);
+ assert.deepEqual(bindings.map(x=>x.role),
+   ["cap09_"+run+"_p_evidence","cap09_"+run+"_n_evidence"]);
+ for(const [mutation,pattern] of [
+  [e=>e.DATABASE_URL=url("cap09_a3_writer",positive),/SCOPED_EVIDENCE_URL_ROLE_MISMATCH/],
+  [e=>e.BLOCKED_DATABASE_URL=url("cap09_a3_writer",negative),/SCOPED_EVIDENCE_URL_ROLE_MISMATCH/],
+  [e=>e.DATABASE_URL=url("cap09_"+run+"_n_evidence",positive),/SCOPED_EVIDENCE_URL_ROLE_MISMATCH/],
+  [e=>e.DATABASE_URL=url("cap09_"+run+"_p_evidence",positive,55530),/V2_PG_ENDPOINT_PORT_MISMATCH/],
+  [e=>e.DATABASE_URL=e.DATABASE_URL+"?host=elsewhere",/V2_PG_URL_OVERRIDE_FORBIDDEN/],
+  [e=>e.DATABASE_URL="postgresql://cap09_"+run+"_p_evidence@127.0.0.1:55490/"+positive,/V2_PG_EXPLICIT_PASSWORD_REQUIRED/]
+ ]){const wrong={...env};mutation(wrong);
+  assert.throws(()=>bridge.scopedDbConnectionBindings(admission,wrong),pattern);}
+ const wrongOwner=structuredClone(admission);wrongOwner.resourceEnvelope.payload.database_port=55530;
+ assert.throws(()=>bridge.scopedDbConnectionBindings(wrongOwner,env),/V2_PG_ENDPOINT_PORT_MISMATCH/);
+});
+test("29 exact physical table names, fenced writer and restricted ACL fail closed without a database",()=>{
+ const run="6ff9b41f6f7f";
+ const binding={side:"positive",role:"cap09_"+run+"_p_evidence",
+  database:"mcft_cap09_requal_"+run+"_positive"};
+ const good={session_user:binding.role,current_user:binding.role,database:binding.database,
+  tables:[...bridge.REQUIRED_PUBLIC_TABLES],fenced_exists:true,direct_insert:false,
+  fenced_execute:true,controller_acl:true};
+ assert.equal(bridge.REQUIRED_PUBLIC_TABLES.length,29);
+ assert.doesNotThrow(()=>bridge.assertPgCatalogContract(binding,good));
+ for(const [field,value,pattern] of [
+  ["current_user","cap09_a3_writer",/V2_PG_EFFECTIVE_LOGIN_MISMATCH/],
+  ["session_user","postgres",/V2_PG_SESSION_LOGIN_MISMATCH/],
+  ["database","postgres",/V2_PG_AUTHENTICATED_DATABASE_MISMATCH/],
+  ["tables",good.tables.slice(0,19),/V2_PG_EXACT_29_TABLE_SCHEMA_MISMATCH/],
+  ["tables",[...good.tables.slice(0,28),"wrong_table"],/V2_PG_EXACT_29_TABLE_SCHEMA_MISMATCH/],
+  ["fenced_exists",false,/V2_PG_FENCED_WRITER_MISSING/],
+  ["fenced_execute",false,/V2_PG_FENCED_WRITER_EXECUTE_REQUIRED/],
+  ["direct_insert",true,/V2_PG_DIRECT_FACT_INSERT_FORBIDDEN/],
+  ["controller_acl",false,/V2_PG_CONTROLLER_TABLE_ACL_REQUIRED/]
+ ]){assert.throws(()=>bridge.assertPgCatalogContract(binding,{...good,[field]:value}),pattern);}
 });
