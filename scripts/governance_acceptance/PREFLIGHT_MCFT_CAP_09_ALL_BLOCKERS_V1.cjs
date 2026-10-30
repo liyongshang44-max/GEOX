@@ -1330,6 +1330,7 @@ function main() {
         ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
         ".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
         "scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_V1.test.cjs",
