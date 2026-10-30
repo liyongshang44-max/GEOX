@@ -15,7 +15,18 @@ function inherited(id,head){return {status:"PASS",scope:"PR_3747_SOURCE_PRESERVA
 
 function fixture(){
  const root=path.resolve(__dirname,"../..");
- const qcp=JSON.parse(fs.readFileSync(path.join(root,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"),"utf8"));
+ const currentQcp=JSON.parse(fs.readFileSync(path.join(root,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"),"utf8"));
+ // QCP66 adds a separate nonauthorizing R4285 source check. Historic
+ // Adoption V2 QCP65 is a signed fixed-size contract and MUST continue
+ // to operate only on its original 65 definitions, in their original order.
+ assert.equal(currentQcp.checks.length,66,"QCP66_MUST_CONTAIN_EXACT_ONE_EXTRA_TECHNICAL_CHECK");
+ const extra=currentQcp.checks[65];
+ assert.equal(extra.check_id,"CAP09_R4285_PURPOSE_SPECIFIC_SIGNED_EVIDENCE_HOST_READONLY_V1");
+ assert.equal(extra.carry_forward_policy,
+  "NONE_HISTORICAL_FULLCHAIN_ONLY_NATIVE_CRYPTO_PRESERVED_NO_EXECUTION_AUTHORITY");
+ assert.equal(extra.carry_forward_evidence_id,null);
+ assert.equal(currentQcp.dependency_resolvers.CAP09_R4285_SIGNED_HOST_READONLY_EXACT_FIVE_PATHS_V1.paths.length,8);
+ const qcp={...currentQcp,checks:currentQcp.checks.slice(0,65)};
  const policy=JSON.parse(fs.readFileSync(path.join(root,"scripts/cap09_adoption_v1/offline-trust.json"),"utf8"));
  const na=new Set(policy.allowed_not_applicable_ids);
  const results=qcp.checks.map(x=>({check_id:x.check_id,
