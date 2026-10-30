@@ -72,7 +72,8 @@ function scopedDbConnectionBindings(admission,environment){
   {side:"negative",database:negative,raw:environment?.BLOCKED_DATABASE_URL}
  ].map(row=>{
   assert(typeof row.raw==="string"&&row.raw.length>0,"V2_PG_URL_REQUIRED:"+row.side);
-  const u=new URL(row.raw);
+  let u;
+  try{u=new URL(row.raw);}catch{throw new Error("V2_PG_URL_INVALID");}
   assert(["postgres:","postgresql:"].includes(u.protocol),"V2_PG_SCHEME_INVALID");
   assert.equal(u.hostname,owner.database_host,"V2_PG_ENDPOINT_HOST_MISMATCH");
   assert.equal(u.port,String(owner.database_port),"V2_PG_ENDPOINT_PORT_MISMATCH");
@@ -125,7 +126,10 @@ async function probePreconsumePostgres({admission,releaseRoot,environment}){
     ?(await client.query("SELECT has_function_privilege(current_user,$1::text,'EXECUTE') AS allowed",[FENCED_WRITER])).rows[0]?.allowed
     :false;
    const controllerAcl=(await client.query(
-    "SELECT bool_and(has_table_privilege(current_user,'public.'||name,'SELECT,INSERT,UPDATE')) AS allowed FROM (VALUES "+
+    "SELECT bool_and("+
+    "has_table_privilege(current_user,'public.'||name,'SELECT') AND "+
+    "has_table_privilege(current_user,'public.'||name,'INSERT') AND "+
+    "has_table_privilege(current_user,'public.'||name,'UPDATE')) AS allowed FROM (VALUES "+
     "('twin_external_formal_forcing_base_cursor_v1'),"+
     "('twin_external_formal_forcing_base_target_v1'),"+
     "('twin_external_formal_forcing_controller_lease_v1')) AS t(name)"
