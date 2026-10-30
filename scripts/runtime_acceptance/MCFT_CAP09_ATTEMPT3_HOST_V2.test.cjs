@@ -196,3 +196,58 @@ test("29 exact physical table names, fenced writer and restricted ACL fail close
   ["controller_acl",false,/V2_PG_CONTROLLER_TABLE_ACL_REQUIRED/]
  ]){assert.throws(()=>bridge.assertPgCatalogContract(binding,{...good,[field]:value}),pattern);}
 });
+
+
+test("#3749 exact-source successor scope preserves historic physical Full-chain and six-stage implementation bytes",()=>{
+ // Technical byte-delta admission evidence only. Do not treat this as
+ // requalification of predecessor signatures or formal QCP approval.
+ const cp=require("node:child_process"),path=require("node:path");
+ const root=path.resolve(__dirname,"../..");
+ const base="5d69b8a3f254600726bc10f0404f1330de1e4562";
+ const git=(...args)=>cp.execFileSync("git",["-C",root,...args],
+  {encoding:"utf8",timeout:20000,maxBuffer:2*1024*1024}).trim();
+ const head=git("rev-parse","HEAD");
+ assert.equal(cp.spawnSync("git",["-C",root,"merge-base","--is-ancestor",base,head],
+  {timeout:20000}).status,0,"R4285_3749_BASE_ANCESTRY_REQUIRED");
+ const delta=git("diff","--name-only",base+"..."+head).split(/\r?\n/).filter(Boolean).sort();
+ const allowed=[
+  ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+  "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs"
+ ].sort();
+ assert.deepEqual(delta,allowed,"R4285_3749_UNKNOWN_SUCCESSOR_PATH_HOLD");
+ const fullChain=require("../governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
+ assert.equal(fullChain.SOURCE_PATHS.length,23,"R4285_HISTORIC_FULLCHAIN_SOURCE_SET_CHANGED");
+ const preserved=[...new Set([...fullChain.SOURCE_PATHS,
+  "scripts/runtime_acceptance/MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_PARENT_STAGE_DISPATCH_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_STAGE_RECEIPTS_V1.cjs",
+  "scripts/governance_acceptance/MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs",
+  "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_COMPOSITE_V1.cjs",
+  "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
+ ])].sort();
+ for(const file of preserved){
+  assert.equal(git("rev-parse",base+":"+file),git("rev-parse",head+":"+file),
+   "R4285_3749_HISTORIC_OR_STAGE_PROTECTED_BLOB_CHANGED:"+file);
+ }
+ assert.equal(bridge.STAGES.length,6);
+ assert.deepEqual(bridge.STAGES.map(x=>x[0]),scheduler.STAGES);
+ assert.equal(bridge.signPermit,undefined);
+ assert.equal(bridge.createAdoption,undefined);
+ assert.equal(bridge.enableProduction,undefined);
+ assert.equal(typeof bridge.probePreconsumePostgres,"function");
+ assert.equal(typeof bridge.assertPgCatalogContract,"function");
+ assert.equal(bridge.REQUIRED_PUBLIC_TABLES.length,29);
+ // The prior 12 central-QCP failures remain separately reportable; this
+ // test is only an exact proof that this PR did NOT edit those source bodies.
+ console.log(JSON.stringify({
+  status:"R4285_3749_EXACT_SOURCE_SCOPE_VERIFIED_TECHNICAL_ONLY",
+  subject_sha:head,base_sha:base,changed_paths:delta.length,
+  historical_and_stage_blobs_preserved:preserved.length,
+  independent_historical_signature_reverified:false,
+  central_qcp_admitted:false,permit_issued:false,permit_consumed:false,
+  execute_authorized:false,stage_count:0,production_authorized:false
+ }));
+});
