@@ -237,7 +237,7 @@ test("#3749 exact-source successor scope preserves historic physical Full-chain 
  assert.equal(bridge.signPermit,undefined);
  assert.equal(bridge.createAdoption,undefined);
  assert.equal(bridge.enableProduction,undefined);
- assert.equal(typeof bridge.probePreconsumePostgres,"function");
+ assert.equal(bridge.probePreconsumePostgres,undefined,"PRIVATE_PG_PROBE_NOT_PUBLIC_AUTHORITY");
  assert.equal(typeof bridge.assertPgCatalogContract,"function");
  assert.equal(bridge.REQUIRED_PUBLIC_TABLES.length,29);
  // The prior 12 central-QCP failures remain separately reportable; this
