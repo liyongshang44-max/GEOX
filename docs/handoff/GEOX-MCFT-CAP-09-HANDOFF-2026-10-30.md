@@ -562,3 +562,12 @@ $Head = @(& git.exe -C $Dir.FullName rev-parse HEAD 2>$null)
 **最小纠正：** 打包原 Node producer 不变的 `CAP09-A3-RESOURCE-OWNER-CLOSURE-V2.zip`，ZIP SHA-256 `ec9c0c7adde29cb71ad1b1c557e5ce9d8f691263bc09f070dedb16b7561767c6`；其中仅 PS5.1 启动器对四类 Git 候选探测命令（rev-parse / branch / status / ls-remote）添加定点 `try/catch { continue }`，确保**只跳过非 Git/不满足资格的候选**，没有改变所有 exact protected main、clean branch、远端 HEAD 等 fail-closed 要求。新的 PS 启动器 SHA-256 `88398f245a53ad95f98985128dfa660cb6a5532055731d8e8955eba19a8b1648`。Node producer 原 SHA-256 `63ed18a730a0f62fcc8b8a1d8d4692f91e5be4ccf7ed9c33e077b117a3367a31` 保持不变，`node --check` PASS，归档清单/字节 SHA 回读一致；未进行 Windows PS5.1 实测。
 
 **下一动作：** 解压 V2 到新目录（不覆盖 V1），验 ZIP/PS/Node SHA 后运行新启动器一次。若 `HOLD_NO_CLEAN_EXACT_MAIN_CHECKOUT_FOUND_USE_REPOROOT`，应只明确定位合法的 clean exact protected main checkout，再通过 `-RepoRoot` 指定；不得自行将失去 Git 元数据的源码复制目录当作精确主线。仅当进入 Node 后才可能执行 Fresh PG/S3 Raw 与 5 分钟签署。保持 `RESOURCE_EXCLUSIVITY=HOLD`, `FRESH_RAW_READBACK=NOT_RUN`, `OWNER_ED25519=HOLD`, `ADOPTION_V2=HOLD`, `FULL_CHAIN=HOLD`, `PERMIT=HOLD`, `ORIGINAL_SIX_STAGES=0/6`。
+
+
+## 22. Step 4C-7 第二次操作：V2 ZIP 本地路径不存在（2026-10-30 Windows 回执）
+
+Windows 用户执行 `Get-FileHash D:\\gptdown\\CAP09-A3-RESOURCE-OWNER-CLOSURE-V2.zip`、`Expand-Archive`、调用 `RUN-CAP09-A3-RESOURCE-OWNER-FRESH-PS51.ps1` 均失败，第一故障为 `Resolve-Path ItemNotFound`，即 ZIP 没有实际保存到预期路径，后续只是级联失败。**无物理回读、无 Owner 签名、未访问目标 PG/S3。**
+
+已核实对话工具包原本存在完整 V1 与 V2，且 V2 中 `CAP09-A3-RESOURCE-OWNER-FRESH-SIGN-VERIFY-V1.cjs` 的原始 Node 生产者没有改动。原 V1 已在 `D:\\gptdown\\CAP09-A3-RESOURCE-OWNER-CLOSURE-V1` 解压，启动器显式接受 `-RepoRoot` 参数；故下一步**不再要求下载 V2 ZIP**。从 `D:\\gptdown` 下存在真实 `.git` 及 `MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs` 的候选检出目录中确定唯一 clean protected main，显式传 `-RepoRoot` 运行现有 V1（Node 内依然强制 `HEAD===git ls-remote origin refs/heads/main`、`branch=main`、`status --porcelain` 为空）。绝不把缺少 Git 元数据的源码复制目录冒充正式主线；若无唯一合格仓库，应只定位/准备合法 checkout，不涉及 Docker PG/S3 施工。
+
+状态：`RESOURCE_EXCLUSIVITY=HOLD`；`FRESH_RAW_READBACK=NOT_RUN`；`OWNER_ED25519=HOLD`；`ADOPTION_V2=HOLD`；`FULL_CHAIN=HOLD`；`PERMIT=HOLD`；`ORIGINAL_SIX_STAGES=0/6`。
