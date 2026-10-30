@@ -662,3 +662,17 @@ ORIGINAL_SIX_STAGES=0/6
 **下一项唯一直接阻断：** `ADOPTION_V2=HOLD`；最小动作是审查现有 current subject 65 项 QCP 资格与原 54 formal 定义、取得当前主线 Adoption V2 的用途专属批准/签名输入，并通过已存在的正式消费程序验证，禁止伪造或重用陈旧签名。
 
 **状态：** `RESOURCE_EXCLUSIVITY=PASS`; `FRESH_RAW_READBACK=PASS`; `OWNER_ED25519=VERIFIED`; `ADOPTION_V2=HOLD`; `FULL_CHAIN=HOLD`; `PERMIT=HOLD`; `ORIGINAL_SIX_STAGES=0/6`.
+
+
+## 27. Resource Owner 完成后：Adoption V2 当前主线原生证据初核（2026-10-30）
+
+从 GitHub 真实原生 API 独立回读：
+
+- PR **#3748** `state=CLOSED`，`merged=true`，`head=db275e6f9699a719f5cd72c0d70a763cc2e8e2bb`，`merge_commit_sha=5d69b8a3f254600726bc10f0404f1330de1e4562`，与 protected `refs/heads/main` 当前值一致。
+- #3748 source QCP run `40747123426`，`completed/success`，head `db275e6f...`；artifact id `12841204944`，name `mcft-cap09-qualification-control-plane-db275e6f9699a719f5cd72c0d70a763cc2e8e2bb`，`expired=false`，GitHub artifact SHA-256 `696460a2b646423dcc641a066ccad41df5c0a2ba4a7de8db2dc059037e81586e`，size 319725 bytes；appplicability-and-blocker-inventory job `123024417814` 为 SUCCESS，其余四个 QCP workflow job 是 skipped（合约是否允许须由正式 Consumer 核对，勿从 workflow success 自动推断整个 QCP65 PASS）。
+- #3748 GitHub issue comments 共 8 条；截至本次回读，没有正文以严格 `GEOX_MCFT_CAP09_ADOPTION_V2_NEW_MAIN_OWNER_APPROVAL_V1` 开头的**当前主线 Owner 批准评论**。该评论是 `MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.cjs` 的原生强制输入，须由仓库 owner `liyongshang44-max` 在 #3748 **合并后**发布；正文必须严格等于基于 unsigned candidate payload 的 `ownerApprovalText(p)`，含新 main、source head、Run/Host/Operator、`MATERIAL_DIGEST`、issuer/key、TEST_ONLY 与 No Permit 等边界。现有工程评论不能冒充这一评论，亦不能在 candidate/material digest 未定前编造。
+- 签署由已存在的 `SIGN_MCFT_CAP09_ADOPTION_V2_OFFLINE.cjs` 在 Windows 上执行，要求当前 release、unsigned candidate、material、合格用途 ADOPTION 注册 key 和若适用的 operator scope grant，正式 Consumer `MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs` 验证成功后才持久化 Signed Request。该用途与刚完成的 **Resource Owner** Ed25519 签署不同，不能复用签名值或假定同一 key 获得 ADOPTION 用途资格。
+
+**第一实际阻断：** 当前 subject 的 Adoption V2 尚无经 Consumer 验证的完整 unsigned candidate/material/provenance bundle 及合并后 Owner 用途专属原生批准；已有 #3748 source QCP 工程 SUCCESS + artifact 不能独立替代 Adoption。最小动作是严格按当前 Consumer 组装 candidate/material，以真实 digest 生成 Owner comment，读取其 GitHub 原生 ID，然后在 Windows 用 ADOPTION 注册密钥签署并正式消费。资源 Owner 已 PASS，**不得因此重跑其 Fresh Raw 或更改隔离 PG/S3**。
+
+状态仍：`RESOURCE_EXCLUSIVITY=PASS`; `FRESH_RAW_READBACK=PASS`; `OWNER_ED25519=VERIFIED`; `ADOPTION_V2=HOLD`; `FULL_CHAIN=HOLD`; `PERMIT=HOLD`; `ORIGINAL_SIX_STAGES=0/6`.
