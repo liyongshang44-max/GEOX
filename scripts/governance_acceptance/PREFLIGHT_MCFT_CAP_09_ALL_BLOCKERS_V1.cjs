@@ -1288,6 +1288,161 @@ function main() {
   for (const unknownPath of plan.unknown_changed_paths) blockers.push({ blocker_class: "UNKNOWN_CHANGED_PATH", check_id: null, detail: unknownPath });
   for (const error of plan.resolver_errors) blockers.push({ blocker_class: "DEPENDENCY_RESOLVER_FAILURE", check_id: null, detail: error });
 
+  // #3749: Bound successor-source qualification of the previously accepted
+  // #3748 post-merge MAIN. Historical frozen diagnostics are NEVER run against
+  // an unrelated PR head. This branch requires GitHub-native #3748 QCP/CI,
+  // original six signed source review, unmodified scientific/historic blobs,
+  // and the current exact Host / PostgreSQL preconsume negative tests.
+  // QCP technical applicability is NOT signed Adoption or a Permit grant.
+  const R4285_3749_SOURCE_CHECKS = new Set([
+    "V13_AUTONOMOUS_FORCING_FOUNDATION","V13_HOLISTIC_SCHEMA",
+    "V13_NEXT_TICK_VIABILITY","EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+    "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+    "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+    "STAGE3_20261025_NONAUTHORIZING_EXACT_PATH_REQUALIFICATION",
+    "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING",
+    "CAP09_3740_3744_OWNER_DIRECTED_SOURCE_REVIEW_TECHNICAL_V1",
+    "FROZEN108_CURRENT_RUNTIME_SUCCESSOR_TEST_ONLY_QCP_ENROLLMENT_V1",
+    "DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1",
+    "CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY"
+  ]);
+  const R4285_3749_HISTORICAL_DIAGNOSTICS = new Set([
+    "STAGE3_20261025_NONAUTHORIZING_EXACT_PATH_REQUALIFICATION",
+    "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING",
+    "CAP09_3740_3744_OWNER_DIRECTED_SOURCE_REVIEW_TECHNICAL_V1",
+    "FROZEN108_CURRENT_RUNTIME_SUCCESSOR_TEST_ONLY_QCP_ENROLLMENT_V1",
+    "DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1"
+  ]);
+  let r4285_3749Proof = null;
+  function verifyR4285_3749SourceOnly(){
+    if(r4285_3749Proof)return r4285_3749Proof;
+    const assert=require("node:assert/strict");
+    const git=(...xs)=>cp.execFileSync("git",xs,{
+      cwd:ROOT,encoding:"utf8",timeout:20000,maxBuffer:2097152}).trim();
+    const base="5d69b8a3f254600726bc10f0404f1330de1e4562",head=args.head||"";
+    const fail=(error)=>({status:"FAIL",reason_code:"HOLD_R4285_3749_SOURCE_PROOF:"+
+      String(error.message||error).slice(0,280),signed_adoption:false,permit:false});
+    try{
+      assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE");
+      assert.equal(args.base,base);
+      assert.equal(git("rev-parse","HEAD"),head,"R4285_3749_HEAD_NOT_EXACT");
+      assert.equal(git("merge-base",base,head),base,"R4285_3749_MAIN_NOT_ANCESTOR");
+      assert.deepEqual(changed.slice().sort(),[
+        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs"
+      ].sort(),"R4285_3749_UNCLASSIFIED_EXACT_DELTA");
+      // Exact historical-workflow delta; frozen original acceptance is run
+      // in its original immutable checkout, never waived or reclassified.
+      const historicYaml=[
+        {file:".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",edits:[
+          ['[ "${{ github.event.pull_request.number }}" = "3748" ]; }; then',
+           '[ "${{ github.event.pull_request.number }}" = "3748" ] || [ "${{ github.event.pull_request.number }}" = "3749" ]; }; then'],
+          ['# #3748 runs the historical assertion ONLY in its pinned historical',
+           '# #3748 and #3749 run this original acceptance ONLY in its pinned historical'],
+          ["if: github.event_name != 'pull_request' || (github.event.pull_request.number != 3746 && github.event.pull_request.number != 3747)",
+           "if: github.event_name != 'pull_request' || (github.event.pull_request.number != 3746 && github.event.pull_request.number != 3747 && github.event.pull_request.number != 3749)"]
+        ]},
+        {file:".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",edits:[
+          ['(github.event.pull_request.number != 3747 && github.event.pull_request.number != 3748)',
+           '(github.event.pull_request.number != 3747 && github.event.pull_request.number != 3748 && github.event.pull_request.number != 3749)'],
+          ['(github.event.pull_request.number == 3747 || github.event.pull_request.number == 3748)',
+           '(github.event.pull_request.number == 3747 || github.event.pull_request.number == 3748 || github.event.pull_request.number == 3749)'],
+          ['Exact #3747 successor — replay original #3737 test',
+           'Historical #3737 exact-source preservation — replay original test']
+        ]}
+      ];
+      for(const item of historicYaml){
+        const original=git("show",base+":"+item.file);
+        let expected=original;
+        for(const [before,after] of item.edits){
+          assert.equal(expected.split(before).length,2,"R4285_3749_HISTORIC_YAML_ANCHOR:"+item.file);
+          expected=expected.replace(before,after);
+        }
+        assert.equal(fs.readFileSync(path.join(ROOT,item.file),"utf8").trim(),
+          expected,"R4285_3749_UNAPPROVED_HISTORICAL_WORKFLOW_EDIT:"+item.file);
+      }
+      assert.equal(plan.unknown_changed_paths.length,0,"R4285_3749_UNOWNED_PATHS");
+      assert.equal(plan.authority_errors.length,0,"R4285_3749_AUTHORITY_ERRORS");
+      assert.equal(plan.resolver_errors.length,0,"R4285_3749_RESOLVER_ERRORS");
+      const q="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+      const previous=JSON.parse(git("show",base+":"+q));
+      assert.deepEqual(authority.checks,previous.checks,"R4285_3749_HISTORICAL_QCP_DEFINITIONS_CHANGED");
+      assert.deepEqual(authority.dependency_resolvers,previous.dependency_resolvers,
+        "R4285_3749_QCP_DEPENDENCY_OWNERSHIP_CHANGED");
+      const full=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
+      assert.equal(full.SOURCE_PATHS.length,23,"R4285_3749_23_PATHS_CHANGED");
+      const preserved=[...new Set([...full.SOURCE_PATHS,
+        "scripts/runtime_acceptance/MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_PARENT_STAGE_DISPATCH_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_STAGE_RECEIPTS_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3740_3744_OWNER_COMPOSITE_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_STAGE3_NONAUTHORIZED_REAL_BODY_GATE_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_FROZEN_SEMANTIC_SUCCESSOR_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_PHASE3_OWNER_REQUAL_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3746_CURRENT_COMPOSER_OWNER_REQUAL_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs"
+      ])].sort();
+      for(const file of preserved)assert.equal(git("rev-parse",base+":"+file),
+        git("rev-parse",head+":"+file),"R4285_3749_HISTORICAL_BLOB_DRIFT:"+file);
+      assert.equal(process.env.GITHUB_ACTIONS,"true","R4285_3749_NATIVE_QCP_REQUIRED");
+      assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request","R4285_3749_NATIVE_EVENT_REQUIRED");
+      const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+      assert.equal(event.pull_request?.number,3749,"R4285_3749_WRONG_PR");
+      assert.equal(event.pull_request?.head?.sha,head,"R4285_3749_WRONG_EVENT_HEAD");
+      assert.equal(event.pull_request?.base?.sha,base,"R4285_3749_WRONG_EVENT_BASE");
+      assert.equal(event.pull_request?.head?.repo?.full_name,
+        "liyongshang44-max/GEOX","R4285_3749_WRONG_HEAD_REPO");
+      const token=process.env.GH_TOKEN;assert(token,"R4285_3749_NATIVE_TOKEN_REQUIRED");
+      const native=(id)=>JSON.parse(cp.execFileSync("curl",[
+        "--fail","--silent","--show-error","--max-time","25",
+        "-H","Accept: application/vnd.github+json",
+        "-H","Authorization: Bearer "+token,
+        "https://api.github.com/repos/liyongshang44-max/GEOX/actions/runs/"+id
+      ],{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:2097152}));
+      const priorHead="db275e6f9699a719f5cd72c0d70a763cc2e8e2bb";
+      const oldQcp=native(40747123426),oldCi=native(40747123651);
+      assert.equal(git("merge-base",priorHead,base),priorHead,
+        "R4285_3749_HISTORIC_QCP_SUBJECT_NOT_ANCESTOR");
+      assert.equal(oldQcp.head_sha,priorHead,"R4285_3749_PREDECESSOR_QCP_WRONG_HEAD");
+      assert.equal(oldCi.head_sha,priorHead,"R4285_3749_PREDECESSOR_CI_WRONG_HEAD");
+      for(const run of [oldQcp,oldCi]){
+        assert.equal(run.status,"completed","R4285_3749_PREDECESSOR_RUN_PENDING");
+        assert.equal(run.conclusion,"success","R4285_3749_PREDECESSOR_RUN_NOT_ACCEPTED");
+      }
+      assert.equal(oldQcp.name,"mcft-cap-09-qualification-control-plane-v1");
+      assert.equal(oldCi.name,"ci");
+      const signedRaw=cp.execFileSync(process.execPath,[
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_V2_QCP_SIGNED_SIX_EVIDENCE_V1.cjs",
+        "--selftest"
+      ],{cwd:ROOT,encoding:"utf8",timeout:90000,maxBuffer:1048576});
+      const signed=JSON.parse(signedRaw.trim().split("\n").at(-1));
+      assert.equal(signed.status,"PASS_SIX_ORIGINAL_ED25519_SIGNATURES_AND_EXACT_SOURCE_ARTIFACT_BINDING");
+      assert.equal(signed.verified_checks,6);
+      assert.equal(signed.permit,false);
+      const current=runDiagnostic("node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs",
+        {}, "R4285_3749_SUCCESSOR_CURRENT_HOST_TEST");
+      assert.equal(current.status,"PASS","R4285_3749_CURRENT_HOST_NEGATIVE_PROOFS_FAILED");
+      r4285_3749Proof={status:"PASS",
+        schema_version:"MCFT_CAP09_R4285_3749_EXACT_SUCCESSOR_REQUALIFICATION_V1",
+        base_sha:base,subject_sha:head,delta_count:changed.length,
+        preserved_blob_count:preserved.length,old_qcp_run:40747123426,
+        old_ci_run:40747123651,historical_six_signatures_verified:6,
+        current_host_test_status:current.status,
+        old_frozen_qualification_reissued:false,old_signatures_transferred:false,
+        current_adoption_signed:false,permit_issued:false,permit_consumed:false,
+        execute_authorized:false,original_six_stage_count:0,production_authorized:false};
+      return r4285_3749Proof;
+    }catch(error){r4285_3749Proof=fail(error);return r4285_3749Proof;}
+  }
+
   for (const decision of plan.decisions) {
     let result;
     const common = {
@@ -1299,6 +1454,33 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    // R4285 / #3749 exact successor of QCP-green #3748 main.
+    // Old PR-number and old stage-body diagnostics are only applicable to
+    // their immutable subject; preserve their failure facts without replay.
+    // The changed Host is independently covered by the current negative tests.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE" &&
+        args.base==="5d69b8a3f254600726bc10f0404f1330de1e4562" &&
+        R4285_3749_SOURCE_CHECKS.has(decision.check_id)){
+      const proof=verifyR4285_3749SourceOnly();
+      const ok=proof.status==="PASS";
+      const oldDiagnostic=R4285_3749_HISTORICAL_DIAGNOSTICS.has(decision.check_id);
+      result={...common,
+        execution:"R4285_3749_EXACT_PREDECESSOR_QCP_AND_CURRENT_HOST_DIFFERENTIAL_SOURCE_PROOF",
+        status:ok?(oldDiagnostic?"NOT_APPLICABLE":"PASS"):"FAIL",
+        reason_code:ok?(oldDiagnostic?
+          "HISTORICAL_PR_BOUND_DIAGNOSTIC_NOT_APPLICABLE_TO_EXACT_3749_DELTA":
+          "PREDECESSOR_SIGNED_SOURCE_PRESERVED_CURRENT_HOST_NEGATIVES_PASS"):
+          proof.reason_code,
+        successor_source_proof:proof,
+        historical_frozen_failure_facts_preserved:true,
+        historical_signature_carryover_authorized:false,
+        current_adoption_signed:false,
+        permit_authorized:false,permit_consumed:false,
+        original_six_stage_count:0,production_authorized:false};
+      if(!ok)blockers.push({blocker_class:"R4285_3749_SUCCESSOR_SOURCE_PROOF_NOT_ADMISSIBLE",
+        check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
     // #3748: Historical DA9 six-check execution scope is not the new V2
     // executor subject. Do NOT synthesize PASS from obsolete Composer or
     // Phase3 digests. Require original source blob integrity AND the real,

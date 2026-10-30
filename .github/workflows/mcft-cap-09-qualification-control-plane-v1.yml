@@ -5,6 +5,10 @@ on:
   pull_request:
     paths:
       - 'scripts/runtime_acceptance/MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs'
+      # Host V2 may change Permit preconsumption semantics. Always run the
+      # full central QCP for modifications, never just the engineering CI.
+      - 'scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs'
       - 'scripts/governance_acceptance/MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
       - 'scripts/governance_acceptance/SIGN_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_REAL_STAGE3_PHYSICAL_EVIDENCE_V2.cjs'
