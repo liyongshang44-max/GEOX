@@ -571,3 +571,22 @@ Windows 用户执行 `Get-FileHash D:\\gptdown\\CAP09-A3-RESOURCE-OWNER-CLOSURE-
 已核实对话工具包原本存在完整 V1 与 V2，且 V2 中 `CAP09-A3-RESOURCE-OWNER-FRESH-SIGN-VERIFY-V1.cjs` 的原始 Node 生产者没有改动。原 V1 已在 `D:\\gptdown\\CAP09-A3-RESOURCE-OWNER-CLOSURE-V1` 解压，启动器显式接受 `-RepoRoot` 参数；故下一步**不再要求下载 V2 ZIP**。从 `D:\\gptdown` 下存在真实 `.git` 及 `MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.cjs` 的候选检出目录中确定唯一 clean protected main，显式传 `-RepoRoot` 运行现有 V1（Node 内依然强制 `HEAD===git ls-remote origin refs/heads/main`、`branch=main`、`status --porcelain` 为空）。绝不把缺少 Git 元数据的源码复制目录冒充正式主线；若无唯一合格仓库，应只定位/准备合法 checkout，不涉及 Docker PG/S3 施工。
 
 状态：`RESOURCE_EXCLUSIVITY=HOLD`；`FRESH_RAW_READBACK=NOT_RUN`；`OWNER_ED25519=HOLD`；`ADOPTION_V2=HOLD`；`FULL_CHAIN=HOLD`；`PERMIT=HOLD`；`ORIGINAL_SIX_STAGES=0/6`。
+
+
+## 23. Step 4C-7 第三次操作：精确本地工作树候选已定位，待校验后显式选择（2026-10-30 Windows 回执）
+
+本次 Windows PS5.1 执行只读工作树发现：
+
+```text
+RESOURCE_OWNER_PROBE_SHA256_PRECHECK=NO_ERROR
+REAL_GIT_REPOSITORY_CANDIDATES=2
+CANDIDATE=D:\\gptdown\\MCFT-CAP09-3748-READONLY
+CANDIDATE=D:\\gptdown\\MCFT-CAP09-MAIN-5D69B8A3
+HOLD_SELECT_EXACT_MAIN_REPOSITORY
+```
+
+**判定：** 此次扫描判定条件仅为“存在 `.git` 且存在 Owner 验证器文件”，并**未**测量两个候选当前 HEAD、分支、工作树清洁状态、远端 `origin/main`。因此数值 2 不等于两个仓库均满足 exact clean main，也不代表 V1 运行器或物理 probe 失败。V1 未执行、PG/S3 Raw 未发生、未签署。
+
+**最小下一动作：** 优先只检查 `D:\\gptdown\\MCFT-CAP09-MAIN-5D69B8A3` 的 `rev-parse HEAD`、`branch --show-current`、`status --porcelain`、`ls-remote origin refs/heads/main`，要求 `main`、干净、HEAD 与当前远端一致（并与冻结 `5d69b8a3f254600726bc10f0404f1330de1e4562` 的 subject 进行确认）。如果全满足，执行已存在的 `D:\\gptdown\\CAP09-A3-RESOURCE-OWNER-CLOSURE-V1\\RUN-CAP09-A3-RESOURCE-OWNER-FRESH-PS51.ps1 -RepoRoot D:\\gptdown\\MCFT-CAP09-MAIN-5D69B8A3`；不重新下载 V2、自动扫描整个目录、不改 Git。若不满足，则 HOLD 并报告第一失败条件，不切换到历史只读检出以规避门禁。
+
+状态仍为 `RESOURCE_EXCLUSIVITY=HOLD`，`FRESH_RAW_READBACK=NOT_RUN`，`OWNER_ED25519=HOLD`，`ADOPTION_V2=HOLD`，`FULL_CHAIN=HOLD`，`PERMIT=HOLD`，`ORIGINAL_SIX_STAGES=0/6`。
