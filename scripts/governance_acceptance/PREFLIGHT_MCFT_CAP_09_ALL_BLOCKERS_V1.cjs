@@ -1327,6 +1327,8 @@ function main() {
       assert.equal(git("merge-base",args.base,args.head),args.base,
         "R4285_HOST_MUST_DESCEND_FROM_MERGED_MAIN");
       const expected=[
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
         "scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
@@ -1334,6 +1336,32 @@ function main() {
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_PREFLIGHT_V1.cjs"
       ].sort();
       assert.deepEqual(changed.slice().sort(),expected,"R4285_HOST_UNCLASSIFIED_SOURCE_DELTA");
+      // Both predecessor workflows run the original check in immutable
+      // historical worktrees. Exact YAML rewrite proof prevents a broad skip.
+      const historicalWorkflowDiffs=[
+        {file:".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",edits:[
+          ['[ "${{ github.event.pull_request.number }}" = "3749" ]; }; then',
+           '[ "${{ github.event.pull_request.number }}" = "3749" ] || [ "${{ github.event.pull_request.number }}" = "3750" ]; }; then'],
+          ["(github.event.pull_request.number != 3746 && github.event.pull_request.number != 3747 && github.event.pull_request.number != 3749)",
+           "(github.event.pull_request.number != 3746 && github.event.pull_request.number != 3747 && github.event.pull_request.number != 3749 && github.event.pull_request.number != 3750)"]
+        ]},
+        {file:".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",edits:[
+          ["(github.event.pull_request.number != 3747 && github.event.pull_request.number != 3748 && github.event.pull_request.number != 3749)",
+           "(github.event.pull_request.number != 3747 && github.event.pull_request.number != 3748 && github.event.pull_request.number != 3749 && github.event.pull_request.number != 3750)"],
+          ["(github.event.pull_request.number == 3747 || github.event.pull_request.number == 3748 || github.event.pull_request.number == 3749)",
+           "(github.event.pull_request.number == 3747 || github.event.pull_request.number == 3748 || github.event.pull_request.number == 3749 || github.event.pull_request.number == 3750)"]
+        ]}
+      ];
+      for(const item of historicalWorkflowDiffs){
+        let expectedYaml=git("show",args.base+":"+item.file);
+        for(const [before,after] of item.edits){
+          assert.equal(expectedYaml.split(before).length,2,
+            "R4285_HOST_HISTORICAL_WORKFLOW_ANCHOR:"+item.file);
+          expectedYaml=expectedYaml.replace(before,after);
+        }
+        assert.equal(fs.readFileSync(path.join(ROOT,item.file),"utf8").trim(),expectedYaml,
+          "R4285_HOST_HISTORICAL_YAML_SCOPE_BROADENED:"+item.file);
+      }
       assert.equal((plan.unknown_changed_paths||[]).length,0,"R4285_HOST_UNKNOWN_PATHS");
       assert.equal((plan.authority_errors||[]).length,0,"R4285_HOST_AUTHORITY_ERRORS");
       assert.equal((plan.resolver_errors||[]).length,0,"R4285_HOST_RESOLVER_ERRORS");
