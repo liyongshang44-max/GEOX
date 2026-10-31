@@ -69,7 +69,7 @@ function registryObject(){
  authorized_by_owner:false,owner_ordinal_adjudicated:false,permit_authorized:false,permit_issued:false,
  permit_consumed_by_this_readback:false,execution_authorized:false,production_authorized:false};
 }
-const registry=()=>Buffer.from(JSON.stringify(registryObject())+'\\n');
+const registry=()=>Buffer.from(JSON.stringify(registryObject())+'\n');
 function sign(payload,domain){return {payload,signature_base64:crypto.sign(null,Buffer.from(domain+g.canonical(payload)),keys.privateKey).toString('base64')};}
 function ownerPayload(reportBytes,registryBytes){return {schema_version:'MCFT_CAP09_R4285_OWNER_INVENTORY_AND_ORDINAL_V1',
  issuer_id:'owner',key_id:'key1',run_id:g.RUN,subject_sha:subject,host_id:g.HOST,
