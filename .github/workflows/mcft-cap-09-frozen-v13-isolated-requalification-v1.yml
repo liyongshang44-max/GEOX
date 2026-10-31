@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ] && { [ "${{ github.event.pull_request.number }}" = "3746" ] || [ "${{ github.event.pull_request.number }}" = "3747" ] || [ "${{ github.event.pull_request.number }}" = "3748" ] || [ "${{ github.event.pull_request.number }}" = "3749" ] || [ "${{ github.event.pull_request.number }}" = "3750" ] || [ "${{ github.event.pull_request.number }}" = "3751" ]; }; then
+          if [ "${{ github.event_name }}" = "pull_request" ] && { [ "${{ github.event.pull_request.number }}" = "3746" ] || [ "${{ github.event.pull_request.number }}" = "3747" ] || [ "${{ github.event.pull_request.number }}" = "3748" ] || [ "${{ github.event.pull_request.number }}" = "3749" ] || [ "${{ github.event.pull_request.number }}" = "3750" ] || [ "${{ github.event.pull_request.number }}" = "3751" ] || [ "${{ github.event.pull_request.number }}" = "3752" ]; }; then
             # This frozen zero-drift assertion is historical, not an assertion
             # that today's successor Runtime still has zero changed blobs.
             # #3748 and #3749 run this original acceptance ONLY in its pinned historical
@@ -77,7 +77,7 @@ jobs:
     name: ${{ matrix.check }}
     # Legacy frozen-identity matrix keeps original behavior outside the precise
     # successor integration; #3746 has separate native proof and #3747\n    # has independent exact-current-HEAD central QCP source-qualification proof.\n    # Do not replay destructive predecessor matrix as formal new-HEAD admission.
-    if: github.event_name != 'pull_request' || (github.event.pull_request.number != 3746 && github.event.pull_request.number != 3747 && github.event.pull_request.number != 3749 && github.event.pull_request.number != 3750 && github.event.pull_request.number != 3751)
+    if: github.event_name != 'pull_request' || (github.event.pull_request.number != 3746 && github.event.pull_request.number != 3747 && github.event.pull_request.number != 3749 && github.event.pull_request.number != 3750 && github.event.pull_request.number != 3751 && github.event.pull_request.number != 3752)
     needs: qualification-contract
     runs-on: ubuntu-latest
     timeout-minutes: 35
