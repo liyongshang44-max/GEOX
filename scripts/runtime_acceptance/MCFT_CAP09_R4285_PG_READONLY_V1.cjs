@@ -118,6 +118,10 @@ async function probePreconsumePostgres({admission,releaseRoot,environment}){
     "('twin_external_formal_forcing_controller_lease_v1')) AS t(name)"
    )).rows[0]?.allowed;
    assertPgCatalogContract(binding,{...id,tables,...privileges,fenced_execute:fencedExecute,controller_acl:controllerAcl});
+   // Unlike historical static attestation, this is CURRENT read-only data.
+   // A previously used qualification database must never be reused.
+   const count=(await client.query("SELECT count(*)::text AS n FROM public.facts")).rows[0]?.n;
+   assert.equal(count,"0","R4285_PG_RUNTIME_FACT_ROWS_NOT_EMPTY:"+binding.side);
    await client.query("ROLLBACK");
    transaction=false;
   }catch(error){
