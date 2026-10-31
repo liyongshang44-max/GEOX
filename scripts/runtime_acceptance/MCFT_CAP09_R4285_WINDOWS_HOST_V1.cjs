@@ -222,7 +222,7 @@ function buildAdmission(input,env=process.env){
   owner_envelope_sha256:sha(Buffer.from(lineage.canonical(ownerEnv))),
   lineage_envelope_sha256:sha(Buffer.from(lineage.canonical(lineageEnv))),
   adoption_envelope_sha256:sha(Buffer.from(lineage.canonical(adoptionEnv))),
-  qcp70_raw_sha256:sha(fileBytes(nativeInput.qcp_raw_file)),
+  qcp71_raw_sha256:sha(fileBytes(nativeInput.qcp_raw_file)),
   installed_material_digest:adoption.material_digest,
   release_binding_sha256:sha(fileBytes(nativeInput.release_binding_file)),
   resource_owner_envelope_sha256:sha(Buffer.from(lineage.canonical(resEnv))),
