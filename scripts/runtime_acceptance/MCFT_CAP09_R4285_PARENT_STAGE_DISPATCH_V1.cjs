@@ -18,7 +18,7 @@ async function dispatchConsumedStage(authority,step) {
  assert.equal(step.previous_sha256.length,64,"PARENT_PREVIOUS_RECEIPT_SHA_REQUIRED");
  assert(step.env&&typeof step.env==="object","PARENT_CHILD_ENV_REQUIRED");
  const ticket=cap.issueStageCapability(authority,{id:step.id,script:step.script,previous_sha256:step.previous_sha256});
- const env={...step.env,MCFT_ATTEMPT3_V2_CHILD:"1",
+ const env={...step.env,MCFT_R4285_CHILD:"1",
   MCFT_GOVERNED_RETRY_TICKET:ticket.ticket,
   MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256:step.previous_sha256,
   MCFT_GOVERNED_RETRY_STAGE:step.id};
