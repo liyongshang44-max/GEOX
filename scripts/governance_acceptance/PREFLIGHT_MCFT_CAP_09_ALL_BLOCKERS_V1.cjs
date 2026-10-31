@@ -2108,10 +2108,106 @@ function main() {
     }catch(e){r4285ContractProof=fail(e);return r4285ContractProof;}
   }
 
+  const R4285_HOST_BASE="4de4973b2b908f614fc4889022c8e0a33b577fec";
+  const R4285_HOST_QCP71_CHECK="CAP09_R4285_HOST_EXACT_SOURCE_ADMISSION_V1";
+  const R4285_HOST_QCP71_RESOLVER="CAP09_R4285_HOST_EXACT_SOURCE_SUCCESSOR_V1";
+  let r4285HostSuccessorProof=null;
+  function verifyR4285HostQcp71(){
+    if(r4285HostSuccessorProof)return r4285HostSuccessorProof;
+    const assert=require("node:assert/strict");
+    const g=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:4194304}).trim();
+    const reject=e=>({status:"FAIL",reason_code:"HOLD_R4285_HOST_QCP71:"+String(e.message||e).slice(0,360),
+      historic_qcp70_preserved:false,permit_issued:false,permit_consumed:false,
+      execute_authorized:false,production_authorized:false});
+    try{
+      assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","R4285_QCP71_STAGE");
+      assert.equal(args.base,R4285_HOST_BASE,"R4285_QCP71_EXACT_BASE");
+      assert.equal(g("rev-parse","HEAD"),args.head,"R4285_QCP71_HEAD");
+      assert.equal(g("merge-base",args.base,args.head),args.base,"R4285_QCP71_ANCESTRY");
+      assert.equal(plan.status,"PASS","R4285_QCP71_PLAN");
+      assert.deepEqual(plan.unknown_changed_paths,[],"R4285_QCP71_UNKNOWN_PATHS");
+      assert.deepEqual(plan.authority_errors,[],"R4285_QCP71_AUTHORITY_ERRORS");
+      assert.deepEqual(plan.resolver_errors,[],"R4285_QCP71_RESOLVER_ERRORS");
+      const qcp="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+      const before=JSON.parse(g("show",args.base+":"+qcp));
+      assert.equal(before.checks.length,70,"R4285_QCP71_FROZEN_QCP70");
+      assert.equal(authority.checks.length,71,"R4285_QCP71_FINAL_COUNT");
+      assert.deepEqual(authority.checks.slice(0,70),before.checks,"R4285_QCP71_PREDECESSOR_CHECK_MUTATION");
+      assert.equal(authority.checks[70].check_id,R4285_HOST_QCP71_CHECK,"R4285_QCP71_NEW_CHECK_ID");
+      assert.deepEqual(authority.checks[70].resolver_ids,[R4285_HOST_QCP71_RESOLVER]);
+      const beforeResolvers=before.dependency_resolvers;
+      const retained=Object.fromEntries(Object.entries(authority.dependency_resolvers)
+        .filter(([id])=>id!==R4285_HOST_QCP71_RESOLVER));
+      assert.deepEqual(retained,beforeResolvers,"R4285_QCP71_HISTORIC_RESOLVERS_MUTATED");
+      const owned=authority.dependency_resolvers[R4285_HOST_QCP71_RESOLVER];
+      assert.equal(owned?.kind,"EXACT_PATH_SET","R4285_QCP71_REGISTERED_SCOPE");
+      const paths=g("diff","--name-only",args.base,args.head).split(/\r?\n/).filter(Boolean).sort();
+      assert.deepEqual(changed.slice().sort(),paths,"R4285_QCP71_PLANNED_DIFF");
+      assert.deepEqual(owned.paths.slice().sort(),paths,"R4285_QCP71_EXACT_OWNER_SCOPE");
+      const old=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
+      assert.equal(old.SOURCE_PATHS.length,23,"R4285_QCP71_HISTORICAL_23_REQUIRED");
+      const protectedFiles=[...old.SOURCE_PATHS,
+        "scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_STAGE_RECEIPTS_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V2.ts",
+        "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V2.ts",
+        "scripts/runtime_acceptance/MCFT_CAP09_REAL_CONTROLLED_DELAY_V1.cjs"];
+      for(const p of new Set(protectedFiles))
+        assert.equal(g("rev-parse",args.base+":"+p),g("rev-parse",args.head+":"+p),
+          "R4285_QCP71_HISTORIC_SOURCE_CHANGED:"+p);
+      assert.equal(process.env.GITHUB_ACTIONS,"true","R4285_QCP71_NATIVE_CI_ONLY");
+      assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request","R4285_QCP71_PR_EVENT_ONLY");
+      const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+      assert.equal(event.repository?.full_name,"liyongshang44-max/GEOX");
+      assert.equal(event.pull_request?.number,3756,"R4285_QCP71_EXACT_PR");
+      assert.equal(event.pull_request?.base?.sha,args.base,"R4285_QCP71_PR_BASE");
+      assert.equal(event.pull_request?.head?.sha,args.head,"R4285_QCP71_PR_HEAD");
+      const diagnostics=runDiagnostic(authority.checks[70].diagnostic_command,{},
+        "R4285_QCP71_HOST_NONAUTHORIZING_SYNTHETIC_REGRESSION");
+      assert.equal(diagnostics.status,"PASS","R4285_QCP71_NEGATIVE_TESTS");
+      r4285HostSuccessorProof={
+        status:"PASS",source_head_sha:args.head,base_sha:args.base,
+        exact_registered_successor_paths:paths.length,
+        frozen_qcp70_definitions_preserved:true,historic_fullchain_23_source_blobs_preserved:true,
+        historical_permit_source_blobs_preserved:true,
+        synthetic_tests_pass:true,live_windows_test_run:false,
+        owner_signed:false,lineage_signed:false,adoption_signed:false,
+        permit_issued:false,permit_consumed:false,execute_authorized:false,
+        original_six_stages_executed:0,production_authorized:false
+      };
+      return r4285HostSuccessorProof;
+    }catch(e){r4285HostSuccessorProof=reject(e);return r4285HostSuccessorProof;}
+  }
+
   for (const decision of plan.decisions) {
     let result;
     const common = {
       check_id: decision.check_id,
+    // QCP71 is an exact successor of #3755 protected main. The 70 prior
+    // checks retain immutable definitions and are NOT re-certified by
+    // this source-only gate; only the newly registered Host check can PASS.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===R4285_HOST_BASE&&
+      authority.checks.length===71&&authority.checks.some(c=>c.check_id===decision.check_id)){
+      const proof=verifyR4285HostQcp71(),ok=proof.status==="PASS";
+      const isCurrent=decision.check_id===R4285_HOST_QCP71_CHECK;
+      result={...common,
+        execution:"R4285_QCP71_HOST_EXACT_SOURCE_AND_HISTORIC_BLOB_PRESERVATION",
+        status:ok?(isCurrent?"PASS":"NOT_APPLICABLE"):"FAIL",
+        reason_code:ok?(isCurrent?"CURRENT_R4285_HOST_EXACT_SOURCE_AND_NEGATIVES_PASS":
+          "PRIOR_QCP70_SOURCE_CHECK_NOT_REISSUED_ON_CURRENT_HEAD"):proof.reason_code,
+        current_source:proof,source_only:true,permit_issued:false,permit_consumed:false,
+        execute_authorized:false,original_six_stages_executed:0,production_authorized:false};
+      if(!ok)blockers.push({blocker_class:"R4285_QCP71_SUCCESSOR_SOURCE_HOLD",
+        check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
+
       applicability: decision.status,
       reason_code: decision.reason_code,
       dependency_digest: decision.dependency_digest ?? null,
