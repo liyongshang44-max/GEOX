@@ -4,8 +4,8 @@ const n=require('./MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs');
 const sha=x=>crypto.createHash('sha256').update(x).digest('hex');
 const SOURCE='a'.repeat(40),BASE='b'.repeat(40),MERGE='c'.repeat(40),TREE='d'.repeat(40);
 const ZIP=Buffer.from('test-only-native-zip-placeholder'),RAW=Buffer.from(JSON.stringify(fixture().machine));
-function fixture(count=70){
- const qcp={checks:Array.from({length:count},(_,i)=>({check_id:i===66?n.CHECK:i===69?n.CURRENT_CHECK:'DEFINITION_'+String(i).padStart(3,'0')})),dependency_resolvers:{NATIVE_OWNER:{kind:'EXACT_PATH_SET',paths:[
+function fixture(count=71){
+ const qcp={checks:Array.from({length:count},(_,i)=>({check_id:i===66?n.CHECK:i===69?n.CURRENT_CHECK:i===70?'CAP09_R4285_HOST_EXACT_SOURCE_ADMISSION_V1':'DEFINITION_'+String(i).padStart(3,'0')})),dependency_resolvers:{NATIVE_OWNER:{kind:'EXACT_PATH_SET',paths:[
  'scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs',
  'scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs',
  'scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs',
@@ -37,14 +37,29 @@ test('QCP67 original native source result remains independently exact',()=>{
  assert.equal(s.checks,67);assert.equal(s.passed,66);assert.equal(s.na,1);});
 test('normal source PR native QCP and CI + exact first-parent merge is proof only',()=>{
  let x=withProof();assert.equal(x.subject_sha,MERGE);assert.equal(x.source_qcp_only,true);});
-test('QCP69 is not sufficient for exact QCP70 adoption',()=>{const f=fixture();f.qcp.checks.pop();assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/QCP70_MANIFEST/);});
-test('QCP70 green without new consumer source ownership does not qualify it',()=>{const f=fixture();delete f.qcp.dependency_resolvers;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/NEW_SOURCE_PATH_UNREGISTERED/);});
-test('native QCP result not on source SHA is rejected',()=>{const f=fixture();f.machine.head_sha=MERGE;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/QCP_RAW/);});
-test('native QCP result wrong base is rejected',()=>{const f=fixture();f.machine.base_sha=MERGE;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/WRONG_BASE/);});
-test('new R4285 successor contract check not PASS is rejected',()=>{const f=fixture();f.machine.results[69].status='NOT_APPLICABLE';f.machine.results[69].reason_code='non-applicable';f.machine.counts.pass--;f.machine.counts.not_applicable++;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/QCP70_CONTRACT_CHECK_NOT_PASS/);});
-test('zero missing and exact check set are mandatory',()=>{const f=fixture();f.machine.results[3].check_id='unregistered';assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/CHECK_ID/);});
-test('unknown paths and unresolved counts fail closed',()=>{const f=fixture();f.machine.counts.unknown_changed_paths=1;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/UNRESOLVED/);});
-test('missing NOT_APPLICABLE reason fails closed',()=>{const f=fixture();delete f.machine.results[1].reason_code;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/NA_WITHOUT_REASON/);});
+test('new QCP71 exactly requires the successor Host check on qualified source SHA',()=>{
+ const f=fixture();const pass=n.checkQcp71(f.machine,f.qcp,SOURCE,BASE);
+ assert.equal(pass.checks,71);
+ for(const update of [
+  f=>{f.machine.results[70].status='NOT_APPLICABLE';f.machine.results[70].reason_code='historical';f.machine.counts.pass--;f.machine.counts.not_applicable++;},
+  f=>{f.qcp.checks.pop();},
+  f=>{f.machine.counts.unknown_changed_paths=1;},
+  f=>{f.machine.head_sha=MERGE;}
+ ]){
+  const x=fixture();update(x);assert.throws(()=>n.checkQcp71(x.machine,x.qcp,SOURCE,BASE));
+ }
+});
+test('historic QCP70 cannot be passed to QCP71 Adoption verification',()=>{
+ const f=fixture(70);assert.throws(()=>n.checkQcp71(f.machine,f.qcp,SOURCE,BASE),/QCP71/);
+});
+test('QCP69 is not sufficient for exact QCP70 adoption',()=>{const f=fixture(70);f.qcp.checks.pop();assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/QCP70_MANIFEST/);});
+test('QCP70 green without new consumer source ownership does not qualify it',()=>{const f=fixture(70);delete f.qcp.dependency_resolvers;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/NEW_SOURCE_PATH_UNREGISTERED/);});
+test('native QCP result not on source SHA is rejected',()=>{const f=fixture(70);f.machine.head_sha=MERGE;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/QCP_RAW/);});
+test('native QCP result wrong base is rejected',()=>{const f=fixture(70);f.machine.base_sha=MERGE;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/WRONG_BASE/);});
+test('new R4285 successor contract check not PASS is rejected',()=>{const f=fixture(70);f.machine.results[69].status='NOT_APPLICABLE';f.machine.results[69].reason_code='non-applicable';f.machine.counts.pass--;f.machine.counts.not_applicable++;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/QCP70_CONTRACT_CHECK_NOT_PASS/);});
+test('zero missing and exact check set are mandatory',()=>{const f=fixture(70);f.machine.results[3].check_id='unregistered';assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/CHECK_ID/);});
+test('unknown paths and unresolved counts fail closed',()=>{const f=fixture(70);f.machine.counts.unknown_changed_paths=1;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/UNRESOLVED/);});
+test('missing NOT_APPLICABLE reason fails closed',()=>{const f=fixture(70);delete f.machine.results[1].reason_code;assert.throws(()=>n.checkQcp70(f.machine,f.qcp,SOURCE,BASE),/NA_WITHOUT_REASON/);});
 test('merging wrong tree cannot inherit QCP source evidence',()=>assert.throws(()=>withProof(({live})=>live.mergeCommit.tree.sha='e'.repeat(40)),/MERGE_TREE/));
 test('merge with wrong parents cannot inherit native QCP',()=>assert.throws(()=>withProof(({live})=>live.mergeCommit.parents=[{sha:SOURCE},{sha:BASE}]),/MERGE_PARENTS/));
 test('current main moved cannot claim exact-current Subject',()=>assert.throws(()=>withProof(({live})=>live.main.object.sha='e'.repeat(40)),/LIVE_MAIN/));
