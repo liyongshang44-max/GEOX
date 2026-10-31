@@ -235,11 +235,11 @@ function readHistoricalDa9MinioLedger(root,expectedStartSha=DA9_MINIO_STARTED_SH
 }
 function auditFixedLedger(root){
  const before=fullIndex(root);
- const disposition=readHistoricalDa9MinioLedger(root);
  const rows=[
   consumedRead(root,OLD_V1,V1_SHA,'geox_mcft_cap09_consumed_permit_v1'),
   consumedRead(root,OLD_V2,V2_SHA,'geox_mcft_cap09_consumed_permit_attempt3_v2')
  ];
+ const disposition=readHistoricalDa9MinioLedger(root);
  const after=fullIndex(root);
  guard(JSON.stringify(before.entries)===JSON.stringify(after.entries),'LEDGER_TOCTOU_CHANGED');
  const consumedRuns=before.entries.filter(x=>x[1]==='D'&&/^run-[a-f0-9]{12}$/.test(x[0])).map(x=>x[0].slice(4)).sort();
