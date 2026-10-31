@@ -1,6 +1,6 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict"),crypto=require("node:crypto");
-const fs=require("node:fs"),os=require("node:os"),path=require("node:path");
+const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),cp=require("node:child_process");
 const atomic=require("./MCFT_CAP09_R4285_PERMIT_ATOMIC_V1.cjs");
 const execution=require("./MCFT_CAP09_R4285_EXECUTION_APPROVAL_V1.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
@@ -36,8 +36,16 @@ function execFixture(){
  const context={subject_sha,host_id:lineage.HOST,nonce,
   permit_envelope_sha256:"a".repeat(64),adoption_envelope_sha256:"b".repeat(64),
   cto_decision_sha256:sha(bytes),
-  cto_native_proof:execution.verifyNativeCtoComment(comment,bytes,{
-   subject_sha,nonce,permit_envelope_sha256:"a".repeat(64)},{now})};
+  cto_native_proof:null};
+ const originalNativeFetch=cp.execFileSync;
+ cp.execFileSync=(command,args)=>{
+  assert.equal(command,"curl.exe");
+  assert(args.includes("https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/987654321"));
+  return JSON.stringify(comment);
+ };
+ try{context.cto_native_proof=execution.verifyLiveNativeCtoDecision(987654321,bytes,{
+   subject_sha,nonce,permit_envelope_sha256:"a".repeat(64)},{now});}
+ finally{cp.execFileSync=originalNativeFetch;}
  const p={schema_version:"MCFT_CAP09_R4285_PHYSICAL_EXECUTION_APPROVAL_V1",
   issuer_id:"TESTONLY",key_id:"ED25519_TEST",run_id:lineage.RUN,
   parent_run_id:lineage.ORIGINAL_PARENT,failed_predecessor_run_id:lineage.PREV,
@@ -125,14 +133,17 @@ test("native CTO decision must be genuine owner source, exact bytes, unedited an
   x=>{x.url="https://example.com"},x=>{x.body="{}"}
  ]){
   const x=structuredClone(live);mutate(x);
-  assert.throws(()=>execution.verifyNativeCtoComment(x,bytes,f.context,{now:f.now}));
+  assert.throws(()=>execution.inspectNativeCtoComment(x,bytes,f.context,{now:f.now}));
  }
  const wrong={...p,nonce:"f".repeat(64)},wrongText=lineage.canonical(wrong);
- assert.throws(()=>execution.verifyNativeCtoComment({...native,body:wrongText},
+ assert.throws(()=>execution.inspectNativeCtoComment({...native,body:wrongText},
   Buffer.from(wrongText),f.context,{now:f.now}));
- assert.throws(()=>execution.verifyNativeCtoComment(live,Buffer.from(body+" "),f.context,{now:f.now}));
- assert.throws(()=>execution.verifyNativeCtoComment(live,bytes,f.context,{now:f.now+400000}));
+ assert.throws(()=>execution.inspectNativeCtoComment(live,Buffer.from(body+" "),f.context,{now:f.now}));
+ assert.throws(()=>execution.inspectNativeCtoComment(live,bytes,f.context,{now:f.now+400000}));
  assert.throws(()=>execution.assertNativeCtoProvenance({...f.context.cto_native_proof},
+  f.context,{now:f.now}),/REAL_NATIVE_PROVENANCE/);
+ const merelyInspected=execution.inspectNativeCtoComment(live,bytes,f.context,{now:f.now});
+ assert.throws(()=>execution.assertNativeCtoProvenance(merelyInspected,
   f.context,{now:f.now}),/REAL_NATIVE_PROVENANCE/);
 });
 test("execution approval may not substitute matching local CTO digest for native proof",()=>{
