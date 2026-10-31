@@ -20,7 +20,7 @@ function fakeSigner(){
   now:Date.now()};
  const p={schema_version:"MCFT_CAP09_R4285_PURPOSE_SPECIFIC_LINEAGE_V1",
   issuer_id:"TEST_ONLY_OPERATOR",key_id:"TEST_ONLY_KEY",run_id:gate.RUN,
-  failed_predecessor_run_id:gate.PREV,parent_run_id:"72dc0304a21a",
+  failed_predecessor_run_id:gate.PREV,parent_run_id:gate.ORIGINAL_PARENT,
   attempt_ordinal:4,subject_sha:ctx.subject_sha,host_id:gate.HOST,
   scope:"ISOLATED_QUALIFICATION_TEST_ONLY",production_authorized:false,
   decision:"APPROVE_R4285_LINEAGE_NOT_ADOPTION_OR_PERMIT",
@@ -49,8 +49,16 @@ test("incorrect Ed25519 signature or old Attempt-3 run fails closed",()=>{
 });
 test("wrong or missing attempt ordinal never defaults to Attempt-4",()=>{
  const {p,ctx,trust,sign}=fakeSigner();
- for(const attempt_ordinal of [null,3,0,3.5,"4"])
+ for(const attempt_ordinal of [null,3,0,3.5,"4",5,6])
   assert.throws(()=>gate.verifySignedLineage(sign({...p,attempt_ordinal}),trust,ctx));
+});
+test("original historical parent is distinct from direct failed predecessor",()=>{
+ const {p,ctx,trust,sign}=fakeSigner();
+ assert.equal(gate.ORIGINAL_PARENT,"72dc0304a21a");
+ assert.notEqual(gate.ORIGINAL_PARENT,gate.PREV);
+ for(const parent_run_id of [gate.PREV,"da9db7129607","f".repeat(12),null])
+  assert.throws(()=>gate.verifySignedLineage(sign({...p,parent_run_id}),trust,ctx),/ORIGINAL_PARENT_SEMANTICS_CHANGED/);
+ assert.throws(()=>gate.verifySignedLineage(sign({...p,failed_predecessor_run_id:gate.ORIGINAL_PARENT}),trust,ctx));
 });
 test("expired, revoked, unapproved and production scope fails closed",()=>{
  const {p,ctx,trust,sign}=fakeSigner();
