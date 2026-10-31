@@ -277,8 +277,7 @@ async function execute(input,env=process.env){
  // All early checks are read only; they cannot be bypassed by --execute.
  const {state}=await dynamicPreflight(input,env);
  const ctoBytes=fileBytes(input.cto_decision_file);
- const ctoNative=approval.fetchNativeCtoComment(input.cto_decision_comment_id);
- const ctoProof=approval.verifyNativeCtoComment(ctoNative,ctoBytes,{
+ const ctoProof=approval.verifyLiveNativeCtoDecision(input.cto_decision_comment_id,ctoBytes,{
   subject_sha:state.permitProof.subject_sha,
   nonce:state.permitProof.nonce,
   permit_envelope_sha256:state.permitProof.envelope_sha256});
@@ -295,8 +294,7 @@ async function execute(input,env=process.env){
  assert.equal(check.status,0,"R4285_SCIENCE_SELFTEST_FAILED");
  // Native CTO permission and dynamic resource status must remain valid
  // immediately before irreversible consumption. No stage is started here.
- const reloadedCto=approval.fetchNativeCtoComment(input.cto_decision_comment_id);
- approval.verifyNativeCtoComment(reloadedCto,ctoBytes,{
+ approval.verifyLiveNativeCtoDecision(input.cto_decision_comment_id,ctoBytes,{
   subject_sha:state.permitProof.subject_sha,nonce:state.permitProof.nonce,
   permit_envelope_sha256:state.permitProof.envelope_sha256});
  await dynamicPreflight(input,env);
