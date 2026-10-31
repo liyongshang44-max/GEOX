@@ -210,6 +210,7 @@ function buildAdmission(input,env=process.env){
  const owner=resource.verify(resEnv,trust,{subject_sha:adoption.subject_sha,
   host_id:lineage.HOST,readback_sha256:resourceSha,now:Date.now()});
  resource.bindSignedToReadback(resEnv.payload,readback);
+ resource.assertDynamicFreshness(resEnv.payload,readback);
  assert.equal(owner.run_id,RUN);
  checkResourceEnv(resEnv.payload,env);
  const plan=json(input.plan_file),observed=json(input.observations_file);
