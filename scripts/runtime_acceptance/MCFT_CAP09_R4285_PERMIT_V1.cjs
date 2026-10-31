@@ -13,7 +13,7 @@ const SHA=/^[a-f0-9]{64}$/,HEAD=/^[a-f0-9]{40}$/;
 const valid=new WeakSet();
 const BINDINGS=Object.freeze([
  "inventory_sha256","authority_registry_sha256","owner_envelope_sha256",
- "lineage_envelope_sha256","adoption_envelope_sha256","qcp70_raw_sha256",
+ "lineage_envelope_sha256","adoption_envelope_sha256","qcp71_raw_sha256",
  "installed_material_digest","release_binding_sha256","resource_owner_envelope_sha256",
  "resource_readback_sha256","historic_fullchain_attestation_sha256",
  "plan_sha256","observations_sha256"
