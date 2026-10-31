@@ -104,7 +104,9 @@ function main(): void {
   let realPipelineDelayDigest: string | null = null;
   let realPipelineDelayCount = 0;
   if (governed) {
-    const signedObserved = process.env.MCFT_ATTEMPT3_V2_CHILD === "1"
+    const signedObserved = process.env.MCFT_R4285_CHILD === "1"
+      ? createRequire(import.meta.url)("./MCFT_CAP09_R4285_CHILD_STAGE_V1.cjs").observed()
+      : process.env.MCFT_ATTEMPT3_V2_CHILD === "1"
       ? createRequire(import.meta.url)("./MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs").observed()
       : createRequire(import.meta.url)("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs")
         .hostBundle(required("MCFT_GOVERNED_RETRY_BUNDLE")).bundle.observed;
