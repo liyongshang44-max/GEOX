@@ -1,6 +1,6 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict");
-const crypto=require("node:crypto"),fs=require("node:fs"),path=require("node:path");
+const crypto=require("node:crypto"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process");
 const adoption=require("./MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs");
 const a3=require("../governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs");
 
@@ -19,7 +19,17 @@ function fixture(){
  // QCP66 adds a separate nonauthorizing R4285 source check. Historic
  // Adoption V2 QCP65 is a signed fixed-size contract and MUST continue
  // to operate only on its original 65 definitions, in their original order.
- assert.equal(currentQcp.checks.length,66,"QCP66_MUST_CONTAIN_EXACT_ONE_EXTRA_TECHNICAL_CHECK");
+ // Read the 66-check exact frozen *source*, without accepting an extra
+ // check as historical Adoption V2 authority. The new QCP67 is qualified
+ // separately and must preserve every old check definition and resolver.
+ const oldRaw=cp.execFileSync("git",["show","16205320c30365ff81b305fb7490029912e09a18:docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"],{cwd:root,encoding:"utf8"});
+ const oldQcp=JSON.parse(oldRaw);
+ assert.equal(oldQcp.checks.length,66,"PINNED_HISTORICAL_QCP66_REQUIRED");
+ assert.equal(currentQcp.checks.length,67,"CURRENT_QCP67_REQUIRED");
+ assert.deepEqual(currentQcp.checks.slice(0,66),oldQcp.checks,"HISTORIC_QCP66_DEFINITIONS_CHANGED");
+ const inheritedResolvers=Object.fromEntries(Object.entries(currentQcp.dependency_resolvers).filter(([id])=>id!=="CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1"));
+ assert.deepEqual(inheritedResolvers,oldQcp.dependency_resolvers,"HISTORIC_QCP66_RESOLVERS_CHANGED");
+ assert.equal(currentQcp.checks[66].check_id,"CAP09_R4285_NATIVE_ADOPTION_CONSUMER_SOURCE_ONLY_V1");
  const extra=currentQcp.checks[65];
  assert.equal(extra.check_id,"CAP09_R4285_PURPOSE_SPECIFIC_SIGNED_EVIDENCE_HOST_READONLY_V1");
  assert.equal(extra.carry_forward_policy,
