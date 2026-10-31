@@ -1669,6 +1669,14 @@
         "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
       ]
+    },
+    "CAP09_R4285_REGISTERED_SOURCE_READONLY_EXACT_THREE_PATHS_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap09-r4285-registered-source-readonly-v1.yml",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs"
+      ]
     }
   },
   "checks": [
@@ -3645,6 +3653,34 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node --test scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs"
+    },
+    {
+      "check_id": "CAP09_R4285_REGISTERED_SOURCE_NATIVE_READBACK_TEST_ONLY_V1",
+      "owner": "MCFT_CAP09_R4285_REGISTERED_PERMIT_SOURCE_NATIVE_READBACK_NONAUTHORIZING",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-R4285-FORMAL-AUTHORITY-SOURCE-SCOPE-REVIEW-20261031.md",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.cjs"
+      ],
+      "resolver_ids": [
+        "CAP09_R4285_REGISTERED_SOURCE_READONLY_EXACT_THREE_PATHS_V1"
+      ],
+      "historical_evidence_policy": "NONE_QCP67_REMAINS_IMMUTABLE_R4285_OWNER_ORDINAL_AND_WINDOWS_NATIVE_READBACK_NOT_YET_PROVEN",
+      "execution_workflow": ".github/workflows/mcft-cap09-r4285-registered-source-readonly-v1.yml",
+      "execution_workflow_status": "SOURCE_ONLY_SYNTHETIC_NEGATIVE_TESTS_NOT_WINDOWS_NATIVE_READBACK",
+      "fail_policy": "FAIL_CLOSED_EXACT_THREE_PATHS_NO_UNREGISTERED_SOURCES_NO_PERMIT_NO_EXECUTION",
+      "carry_forward_policy": "NONE_PREVIOUS_QCP67_MERGE_IS_SCOPE_ONLY_NOT_LEDGER_READBACK",
+      "requalification_triggers": [
+        "CAP09_R4285_REGISTERED_SOURCE_READONLY_EXACT_THREE_PATHS_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node --test scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs"
     }
   ],
   "non_effects": {
