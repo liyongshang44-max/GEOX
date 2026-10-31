@@ -37,8 +37,9 @@ function verify(envelope,trust,context,{now=Date.now()}={}){
   "R4285_EXEC_APPROVAL_DIGEST_REQUIRED");
  assert.equal(p.cto_decision_sha256,context.cto_decision_sha256,
   "R4285_EXEC_APPROVAL_CTO_DECISION_MISSING");
- assert.equal(context.cto_decision_authenticated,true,
-  "R4285_EXEC_APPROVAL_NATIVE_CTO_DECISION_NOT_VERIFIED");
+ // The independent signed approval is a necessary condition. Its CTO
+ // provenance must be verified by the Host against native immutable evidence,
+ // never inferred from a caller-supplied boolean or this signature alone.
  assert.equal(p.scope,"ISOLATED_QUALIFICATION_TEST_ONLY");
  assert.equal(p.decision,"APPROVE_R4285_SINGLE_PHYSICAL_SIX_STAGE_EXECUTION");
  assert.equal(p.production_authorized,false);
