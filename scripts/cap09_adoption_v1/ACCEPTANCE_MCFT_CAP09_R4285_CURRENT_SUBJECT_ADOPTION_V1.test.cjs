@@ -83,7 +83,7 @@ function ownerPayload(reportBytes,registryBytes){return {schema_version:'MCFT_CA
  scope:'ISOLATED_QUALIFICATION_TEST_ONLY',
  decision:'APPROVE_BOUNDED_INVENTORY_AS_EXHAUSTIVE_AND_ADJUDICATE_ORDINAL_ONLY',
  production_authorized:false,permit_authorized:false,issued_at:start,expires_at:end};}
-function adoptionPayload(ctx){return {schema_version:'MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1',
+function adoptionPayload(ctx){return {schema_version:'MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V2',
  issuer_id:'owner',key_id:'key1',run_id:g.RUN,subject_sha:subject,host_id:g.HOST,attempt_ordinal:4,
  scope:'ISOLATED_QUALIFICATION_TEST_ONLY',
  ...ctx,issued_at:start,expires_at:end,decision:'APPROVE_R4285_CURRENT_SUBJECT_ADOPTION_NOT_PERMIT',
@@ -185,4 +185,13 @@ test('independent Owner decision still requires signature and exact domain',()=>
  assert.throws(()=>g.verifyOwnerInventoryDecision({reportBytes:b,registryBytes:r,
   envelope:{payload:ownerPayload(b,r),signature_base64:Buffer.alloc(64).toString('base64')},
   trust:trusted,subjectSha:subject,now}),/SIGNATURE_NOT_AUTHENTIC/);
+});
+
+test('old V1 Adoption signature cannot authorize new QCP70 payload',()=>{
+ const ctx={subject_sha:subject,inventory_sha256:'1'.repeat(64),owner_decision_sha256:'2'.repeat(64),
+ authority_registry_sha256:'3'.repeat(64),lineage_envelope_sha256:'4'.repeat(64),
+ native_qcp70_result_sha256:'5'.repeat(64),installed_material_digest:'6'.repeat(64),
+ release_binding_sha256:'7'.repeat(64)};
+ const p=adoptionPayload(Object.fromEntries(Object.entries(ctx).filter(([k])=>k!=='subject_sha')));
+ assert.throws(()=>g.verifySignedAdoption({envelope:sign(p,g.DOMAIN_ADOPTION_V1),trust:trusted,context:ctx,now}),/SIGNATURE_NOT_AUTHENTIC/);
 });
