@@ -78,12 +78,12 @@ jobs:
           # exact-delta Host test is pinned to the accepted #3750 source.
           # The current source is still separately checked by QCP67.
           if [ "${{ github.event.pull_request.number }}" = "3751" ]; then
-            HIST_3750='f3fe7ab190c211c648379e4dbc7453172fb6f862'
+            HIST_3749='6210cbfe692aa4d0efd06649ab02c45597158fbc'
             HOST_TEST='scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs'
-            test "$(git rev-parse "HEAD:$HOST_TEST")" = "$(git rev-parse "$HIST_3750:$HOST_TEST")" || { echo 'HOLD_HISTORIC_3749_HOST_TEST_BYTES_CHANGED'; exit 1; }
-            HIST_3750_ROOT="$RUNNER_TEMP/cap09_3750_historical_host_source"
-            git worktree add --detach "$HIST_3750_ROOT" "$HIST_3750"
-            (cd "$HIST_3750_ROOT" && test "$(git rev-parse HEAD)" = "$HIST_3750" && node --test "$HOST_TEST")
+            test "$(git rev-parse "HEAD:$HOST_TEST")" = "$(git rev-parse "$HIST_3749:$HOST_TEST")" || { echo 'HOLD_HISTORIC_3749_HOST_TEST_BYTES_CHANGED'; exit 1; }
+            HIST_3749_ROOT="$RUNNER_TEMP/cap09_3749_historical_host_source"
+            git worktree add --detach "$HIST_3749_ROOT" "$HIST_3749"
+            (cd "$HIST_3749_ROOT" && test "$(git rev-parse HEAD)" = "$HIST_3749" && node --test "$HOST_TEST")
           else
             node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs
           fi
