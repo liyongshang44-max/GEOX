@@ -97,4 +97,17 @@ function bindSignedToReadback(signed,readback){
  assert.equal(readback.facts.production_authorized,false);
  return true;
 }
-module.exports={DOMAIN,FIELDS,FACT_BINDINGS,validateFacts,verify,verifyReadbackFile,bindSignedToReadback};
+function assertDynamicFreshness(signed,readback,{now=Date.now()}={}){
+ // A long-lived Ed25519 certificate is NOT proof of current resource ownership.
+ // The independent raw readback must be recent when checking/consuming Permit.
+ assert(bindSignedToReadback(signed,readback),"R4285_RESOURCE_SIGNED_RAW_MATCH_REQUIRED");
+ const observed=time(readback.facts.observed_at),issued=time(signed.issued_at),expiry=time(signed.expires_at);
+ assert(observed<=now&&now-observed<=120000,"R4285_RESOURCE_DYNAMIC_READBACK_EXPIRED");
+ assert(observed<=issued&&issued<=now&&now<expiry,"R4285_RESOURCE_DYNAMIC_SIGNER_WINDOW");
+ assert.equal(readback.facts.owner_exclusive,true,"R4285_RESOURCE_DYNAMIC_EXCLUSIVE_REQUIRED");
+ assert.equal(readback.facts.production_bindings_present,false,"R4285_RESOURCE_DYNAMIC_PRODUCTION_BOUND");
+ return Object.freeze({status:"R4285_RECENT_SIGNED_RESOURCE_READBACK_NOT_A_LIVE_PROBE",
+  host_id:signed.host_id,run_id:signed.run_id,observed_at:signed.observed_at,
+  no_production:true});
+}
+module.exports={DOMAIN,FIELDS,FACT_BINDINGS,validateFacts,verify,verifyReadbackFile,bindSignedToReadback,assertDynamicFreshness};
