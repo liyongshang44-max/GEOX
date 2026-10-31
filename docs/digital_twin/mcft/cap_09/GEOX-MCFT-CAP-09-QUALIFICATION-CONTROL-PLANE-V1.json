@@ -1694,6 +1694,20 @@
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs"
       ]
+    },
+    "CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_NINE_PATHS_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs",
+        "scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -3727,6 +3741,34 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node --test scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs"
+    },
+    {
+      "check_id": "CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_V1",
+      "owner": "MCFT_CAP09_R4285_PRE_SIGN_BOUNDED_REGISTRY_TO_INVENTORY_OWNER_ADOPTION_CONTRACT",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs"
+      ],
+      "resolver_ids": [
+        "CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_NINE_PATHS_V1"
+      ],
+      "historical_evidence_policy": "HISTORICAL_QCP69_AND_E9_NATIVE_REGISTRY_RAW_SHA_PRESERVED_NO_OWNER_OR_PERMIT_PROMOTION",
+      "execution_workflow": ".github/workflows/mcft-cap09-r4285-registered-source-readonly-v1.yml",
+      "execution_workflow_status": "SYNTHETIC_PRE_SIGN_COMPATIBILITY_NEGATIVES_NO_OWNER_SIGNATURE_AND_NO_NEW_WINDOWS_PRODUCER",
+      "fail_policy": "EXACT_NINE_PATHS_AND_REGISTERED_HISTORIC_RAW_SHA_NOT_AN_UNBOUNDED_APPROVAL",
+      "carry_forward_policy": "NONE_PREDECESSOR_QCP69_REMAINS_HISTORICAL_NOT_NEW_HEAD_QUALIFICATION",
+      "requalification_triggers": [
+        "CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_NINE_PATHS_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node --test scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs"
     }
   ],
   "non_effects": {

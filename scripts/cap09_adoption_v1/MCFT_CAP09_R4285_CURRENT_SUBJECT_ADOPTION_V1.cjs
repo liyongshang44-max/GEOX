@@ -16,7 +16,8 @@ const FIRST_FAILURE='00a5eb698fcd9ed0d18689fdd6e25df9e4b2e321e412d8565fec12a04b3
 const SHA=/^[a-f0-9]{64}$/,HEAD=/^[a-f0-9]{40}$/;
 const REPORT_SCHEMA='R4285_ALL_ATTEMPTS_SOURCE_REVIEW_V1';
 const DOMAIN_OWNER='GEOX_MCFT_CAP09_R4285_OWNER_INVENTORY_AND_ORDINAL_V1\n';
-const DOMAIN_ADOPTION='GEOX_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1\n';
+const DOMAIN_ADOPTION_V1='GEOX_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1\n';
+const DOMAIN_ADOPTION='GEOX_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V2\n';
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 function exact(obj,keys,code){assert(obj&&typeof obj==='object'&&!Array.isArray(obj),code);assert.deepEqual(Object.keys(obj).sort(),[...keys].sort(),code);}
 function canonical(o){
@@ -67,6 +68,109 @@ function checkInventoryReport(report){
  assert.equal(report.owner_review,'HOLD_NO_PURPOSE_SPECIFIC_APPROVAL_SIGNED');
  return {status:'BOUNDED_NATIVE_INVENTORY_VERIFIED_NOT_GLOBAL_COMPLETENESS',candidate_ordinal:4};
 }
+
+// The exact immutable Registry was read on registered Windows host from
+// #3754 protected main. Not an authorization, signature, Permit or new root.
+const REGISTRY_ORIGIN_HEAD='e9eeacc292204d519cb5e86d3d3ded93573e1b38';
+const REGISTRY_RAW_SHA256='b4febc84121e9ffd4a840a6064800c70e1777d099e5c3d880c5a71c57335d1c4';
+const REGISTRY_POLICY_MERGE='96861b78674571adf4414b88c3a2894b61de2eb5';
+const REGISTRY_POLICY_SHA='ffb5742647594ec1ac144f1d3831ecbbffe2144bd9a765c1a8d4f3c855c30b62';
+const REGISTRY_TRUST_SHA='dce2a16f6a82779873dfe25b30194f0445f23b894f5eb41c41a7274b1eb19cf7';
+const REGISTRY_LEDGER_ROOT='D:\\gptdown\\MCFT-CAP09-AUTHORITY-LEDGER';
+const REGISTRY_SNAPSHOT='a827a892ff1393cefea6a31ca9da978271f951387ad25a1a6df7f638a6e86a14';
+const HISTORIC_DA9='da9_minio_f023601082cd0367655ae26bbbdd0649';
+const HISTORIC_DA9_STARTED='354ad465f2a53d8ca80b2c9573239808b7f69647e6448c41f68643492df5fcdd';
+const HISTORIC_DA9_SIGNED='f023601082cd0367655ae26bbbdd06497395fe65431daba5f731e2dd7641907b';
+const REGISTERED_PERMIT_SOURCES=Object.freeze([
+ 'scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs',
+ 'scripts/cap09_adoption_v1/da9-retry-bundle-v2.cjs',
+ 'scripts/cap09_adoption_v1/da9-retry-bundle.cjs',
+ 'scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs',
+ 'scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs',
+ 'scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs',
+ 'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs',
+ 'scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_PREFLIGHT_V1.cjs',
+ 'scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs',
+ 'scripts/runtime_acceptance/MCFT_CAP09_WINDOWS_LOCAL_QUALIFICATION_ENTRY_V1.ps1'
+].sort());
+const REGISTERED_NONPERMIT_SOURCES=Object.freeze([
+ 'scripts/cap09_adoption_v1/da9-minio-closure-v1.cjs',
+ 'scripts/cap09_adoption_v1/da9-minio-disposition-v1.cjs',
+ 'scripts/cap09_adoption_v1/da9-minio-exact-delete-v1.cjs'
+].sort());
+function checkNativeRegistry(registry,report){
+ exact(registry,['schema_version','status','host_id','run_id','source_head_sha','scope','scope_limit',
+ 'source_policy_merge_sha','source_policy_sha256','source_trust_sha256','registered_source_count',
+ 'registered_sources','registered_issuer_count','historic_nonpermit_source_count','historic_nonpermit_sources',
+ 'registered_authority_roots','enumeration_complete','unknown_authority_sources_count',
+ 'unreadable_sources_count','scan_truncated','ledger','authorized_by_owner',
+ 'owner_ordinal_adjudicated','permit_authorized','permit_issued','permit_consumed_by_this_readback',
+ 'execution_authorized','production_authorized'],'R4285_REGISTRY_EXACT_FIELDS');
+ assert.equal(registry.schema_version,'MCFT_CAP09_R4285_AUTHORITY_ROOT_REGISTRY_READBACK_V1');
+ assert.equal(registry.status,'REGISTERED_SOURCE_LEDGER_READBACK_COMPLETE_TEST_ONLY_NOT_OWNER_APPROVAL');
+ assert.equal(registry.host_id,HOST);assert.equal(registry.run_id,RUN);
+ assert.equal(registry.source_head_sha,REGISTRY_ORIGIN_HEAD,'R4285_REGISTRY_HISTORIC_SOURCE_VERSION');
+ assert.equal(registry.scope,'ALL_REGISTERED_CAP09_FORMAL_PERMIT_AUTHORITIES');
+ assert.equal(registry.scope_limit,'REGISTERED_CAP09_TEST_ONLY_NOT_ALL_WINDOWS_SOURCES');
+ assert.equal(registry.source_policy_merge_sha,REGISTRY_POLICY_MERGE);
+ assert.equal(registry.source_policy_sha256,REGISTRY_POLICY_SHA);
+ assert.equal(registry.source_trust_sha256,REGISTRY_TRUST_SHA);
+ assert.equal(registry.registered_source_count,10);
+ assert.deepEqual(registry.registered_sources,REGISTERED_PERMIT_SOURCES);
+ assert.equal(registry.registered_issuer_count,2);
+ assert.equal(registry.historic_nonpermit_source_count,3);
+ assert.deepEqual(registry.historic_nonpermit_sources,REGISTERED_NONPERMIT_SOURCES);
+ assert.deepEqual(registry.registered_authority_roots,[REGISTRY_LEDGER_ROOT]);
+ assert.equal(registry.enumeration_complete,true);
+ assert.equal(registry.unknown_authority_sources_count,0);
+ assert.equal(registry.unreadable_sources_count,0);
+ assert.equal(registry.scan_truncated,false);
+ for(const field of ['authorized_by_owner','owner_ordinal_adjudicated','permit_authorized',
+ 'permit_issued','permit_consumed_by_this_readback','execution_authorized','production_authorized'])
+  assert.equal(registry[field],false,'R4285_UNAUTHORIZED_REGISTRY_GRANT:'+field);
+ const l=registry.ledger;assert(l&&typeof l==='object');
+ assert.equal(l.snapshot_before_sha256,REGISTRY_SNAPSHOT);
+ assert.equal(l.snapshot_after_sha256,REGISTRY_SNAPSHOT);
+ assert.equal(l.indexed_files,21);assert.equal(l.indexed_directories,9);
+ assert(Array.isArray(l.consumed)&&l.consumed.length===2);
+ for(const [i,expected] of [[0,['da9db7129607',PREV2_CONSUMED,'geox_mcft_cap09_consumed_permit_v1']],
+ [1,[OLD,PREV_CONSUMED,'geox_mcft_cap09_consumed_permit_attempt3_v2']]]){
+  const c=l.consumed[i];
+  assert.equal(c.run_id,expected[0]);assert.equal(c.consumed_sha256,expected[1]);
+  assert.equal(c.schema_version,expected[2]);assert.equal(c.pair_bytes_equal,true);
+  assert.equal(c.production_authorized,false);
+  assert.equal(c.nonce,i===0?
+   'c8f4bd197ef422f3694f39adc6fcb8a3b67af06a897fe75c219728e40fb13bc0':
+   'b3a312063716dce0f59b145c7d89fc1e3fb1aa53dc23d17e59934ba873ff6d93',
+   'R4285_HISTORIC_NONCE_INVALID');
+ }
+ const d=l.historic_nonpermit_disposition;
+ assert.equal(d?.namespace,HISTORIC_DA9);
+ assert.equal(d.classification,'HISTORIC_NONPERMIT_SOURCE_DISPOSITION');
+ assert.equal(d.source_run_id,'da9db7129607');
+ assert.equal(d.started_receipt_sha256,HISTORIC_DA9_STARTED);
+ assert.equal(d.signed_disposition_sha256,HISTORIC_DA9_SIGNED);
+ assert.equal(d.one_shot_receipt_count,3);
+ assert.deepEqual(d.deletion?.map(x=>[x.file,x.exit_code]),[['DELETE_1.json',0],['DELETE_2.json',0]]);
+ assert.deepEqual(d.deletion?.map(x=>x.receipt_sha256),[
+  '419fe785f5c1a18ae392c337b67211e0b2308bf6345e98ab69a8644427458d43',
+  '802b4fa77b4853123081e431353fbdb69c1323c10023ee8702c44ac25aaad9b7'
+ ],'R4285_DA9_EXACT_DELETE_RECEIPT_DIGESTS');
+ for(const field of ['permit_issued','execution_authorized','production_authorized'])
+  assert.equal(d[field],false,'R4285_DA9_NONPERMIT');
+ if(report){
+  checkInventoryReport(report);
+  assert.equal(report.ledger_review.root,registry.registered_authority_roots[0]);
+  assert.deepEqual(report.ledger_review.verified_consumed_runs.map(x=>x.run_id).sort(),
+   l.consumed.map(x=>x.run_id).sort());
+  assert.equal(report.native_evidence.attempt2.receipt_sha256,l.consumed[0].consumed_sha256);
+  assert.equal(report.native_evidence.attempt3.consumption_sha256,l.consumed[1].consumed_sha256);
+ }
+ return {status:'EXACT_WINDOWS_REGISTRY_VERIFIED_NOT_OWNER_APPROVAL',
+  registered_source_count:10,history_receipts:2,nonpermit_ledger_count:1,
+  raw_source_head:REGISTRY_ORIGIN_HEAD,no_grant:true};
+}
+
 const OWNER_FIELDS=Object.freeze(['schema_version','issuer_id','key_id','run_id','subject_sha','host_id',
  'inventory_sha256','authority_registry_sha256','authority_scope','authority_registry_complete',
  'historical_attempt1_evidence_level','old_inventory_sha256','attempt2_consumed_sha256',
@@ -98,7 +202,7 @@ function verifyOwnerInventoryDecision({reportBytes,registryBytes,envelope,trust,
  const report=JSON.parse(reportBytes.toString('utf8').replace(/^\uFEFF/,''));
  const registry=JSON.parse(registryBytes.toString('utf8').replace(/^\uFEFF/,''));
  const reportSha=sha(reportBytes),registrySha=sha(registryBytes);
- checkInventoryReport(report);assert(SHA.test(reportSha)&&SHA.test(registrySha));
+ checkNativeRegistry(registry,report);assert(SHA.test(reportSha)&&SHA.test(registrySha));
  assert(HEAD.test(subjectSha),'R4285_EXACT_HEAD_REQUIRED');
  const p=signed(envelope,trust,DOMAIN_OWNER,OWNER_FIELDS,now);
  assert.equal(p.schema_version,'MCFT_CAP09_R4285_OWNER_INVENTORY_AND_ORDINAL_V1');
@@ -127,7 +231,7 @@ function verifyOwnerInventoryDecision({reportBytes,registryBytes,envelope,trust,
  assert.equal(registry.unknown_authority_sources_count,0);
  assert.equal(registry.registered_authority_roots?.length,1);
  assert.equal(registry.registered_authority_roots[0],report.ledger_review.root);
- assert.equal(registry.authorized_by_owner,true);
+ assert.equal(registry.authorized_by_owner,false,'R4285_PRODUCER_CANNOT_SELF_AUTHORIZE');
  assert.equal(registry.production_authorized,false);
  return Object.freeze({status:'OWNER_SIGNED_INVENTORY_AND_ORDINAL_VERIFIED_NOT_ADOPTION',ordinal:4,
   inventory_sha256:reportSha,owner_decision_sha256:sha(Buffer.from(canonical(envelope))),
@@ -135,11 +239,11 @@ function verifyOwnerInventoryDecision({reportBytes,registryBytes,envelope,trust,
 }
 const ADOPTION_FIELDS=Object.freeze(['schema_version','issuer_id','key_id','run_id','subject_sha','host_id',
  'attempt_ordinal','scope','inventory_sha256','owner_decision_sha256','authority_registry_sha256',
- 'lineage_envelope_sha256','native_qcp67_result_sha256','installed_material_digest',
+ 'lineage_envelope_sha256','native_qcp70_result_sha256','installed_material_digest',
  'release_binding_sha256','issued_at','expires_at','decision','production_authorized','permit_authorized']);
 function verifySignedAdoption({envelope,trust,context,now=Date.now()}){
  const p=signed(envelope,trust,DOMAIN_ADOPTION,ADOPTION_FIELDS,now);
- assert.equal(p.schema_version,'MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1');
+ assert.equal(p.schema_version,'MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V2');
  assert.equal(p.run_id,RUN);assert.equal(p.host_id,HOST);
  assert.equal(p.subject_sha,context.subject_sha);
  assert(HEAD.test(p.subject_sha));assert.equal(p.attempt_ordinal,4);
@@ -149,7 +253,7 @@ function verifySignedAdoption({envelope,trust,context,now=Date.now()}){
   owner_decision_sha256:context.owner_decision_sha256,
   authority_registry_sha256:context.authority_registry_sha256,
   lineage_envelope_sha256:context.lineage_envelope_sha256,
-  native_qcp67_result_sha256:context.native_qcp67_result_sha256,
+  native_qcp70_result_sha256:context.native_qcp70_result_sha256,
   installed_material_digest:context.installed_material_digest,
   release_binding_sha256:context.release_binding_sha256})){
   assert(SHA.test(expected)&&p[key]===expected,'R4285_ADOPTION_DIGEST_MISMATCH:'+key);
@@ -166,6 +270,11 @@ function examineReadiness({inventoryBytes,authorityRegistryBytes,ownerEnvelope,
  const inventory=JSON.parse(inventoryBytes.toString('utf8').replace(/^\uFEFF/,''));
  const inventorySha=sha(inventoryBytes);const authorityRegistrySha=authorityRegistryBytes?sha(authorityRegistryBytes):null;
  const report=checkInventoryReport(inventory);
+ if(authorityRegistryBytes){
+  assert(Buffer.isBuffer(authorityRegistryBytes),'R4285_REGISTRY_RAW_REQUIRED');
+  const reg=JSON.parse(authorityRegistryBytes.toString('utf8').replace(/^\uFEFF/,''));
+  checkNativeRegistry(reg,inventory);
+ }
  if(!ownerEnvelope)return Object.freeze({status:'HOLD_OWNER_PURPOSE_SPECIFIC_INVENTORY_AND_ORDINAL',
   stage:'CURRENT_SUBJECT_ADOPTION',inventory:report.status,attempt1_evidence_level:'HISTORICAL_ONLY',
   permit_issued:false,execution_authorized:false});
@@ -179,5 +288,6 @@ function examineReadiness({inventoryBytes,authorityRegistryBytes,ownerEnvelope,
   permit_issued:false,execution_authorized:false});
 }
 module.exports={RUN,HOST,OLD,PREV_CONSUMED,PREV_FAILED,PREV2_CONSUMED,OLD_INVENTORY,
- DOMAIN_OWNER,DOMAIN_ADOPTION,OWNER_FIELDS,ADOPTION_FIELDS,canonical,readBound,
- checkInventoryReport,verifyOwnerInventoryDecision,verifySignedAdoption,examineReadiness};
+ DOMAIN_OWNER,DOMAIN_ADOPTION_V1,DOMAIN_ADOPTION,OWNER_FIELDS,ADOPTION_FIELDS,canonical,readBound,
+ checkInventoryReport,checkNativeRegistry,verifyOwnerInventoryDecision,verifySignedAdoption,examineReadiness,
+ REGISTRY_ORIGIN_HEAD,REGISTRY_RAW_SHA256,REGISTRY_LEDGER_ROOT};

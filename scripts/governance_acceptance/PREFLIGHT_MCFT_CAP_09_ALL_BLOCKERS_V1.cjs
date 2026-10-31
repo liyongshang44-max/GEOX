@@ -2009,6 +2009,105 @@ function main() {
     }catch(e){r4285Da9Proof=fail(e);return r4285Da9Proof;}
   }
 
+  const R4285_CONTRACT_BASE="e9eeacc292204d519cb5e86d3d3ded93573e1b38";
+  const R4285_CONTRACT_CHECK="CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_V1";
+  const R4285_CONTRACT_RESOLVER="CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_NINE_PATHS_V1";
+  let r4285ContractProof=null;
+  function verifyR4285PresignContract(){
+    if(r4285ContractProof)return r4285ContractProof;
+    const assert=require("node:assert/strict");
+    const g=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:25000,maxBuffer:2097152}).trim();
+    const fail=e=>({status:"FAIL",reason_code:"HOLD_R4285_PRESIGN_SCOPE:"+String(e.message||e).slice(0,350),
+      native_ledger_readback:false,permit_issued:false,execute_authorized:false});
+    try{
+      assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","PRESIGN_CONTRACT_STAGE");
+      assert.equal(args.base,R4285_CONTRACT_BASE,"PRESIGN_CONTRACT_BASE");
+      assert.equal(g("rev-parse","HEAD"),args.head,"PRESIGN_CONTRACT_HEAD");
+      assert.equal(g("merge-base",args.base,args.head),args.base,"PRESIGN_CONTRACT_ANCESTRY");
+      assert.equal(plan.status,"PASS","PRESIGN_CONTRACT_PLAN");
+      assert.deepEqual(plan.unknown_changed_paths,[],"PRESIGN_CONTRACT_UNKNOWN_PATH");
+      assert.deepEqual(plan.authority_errors,[],"PRESIGN_CONTRACT_AUTHORITY");
+      assert.deepEqual(plan.resolver_errors,[],"PRESIGN_CONTRACT_RESOLVER");
+      const qcp="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+      const paths=[
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",qcp,
+        "scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs",
+        "scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
+      ].sort();
+      assert.deepEqual(g("diff","--name-only",args.base,args.head).split(/\r?\n/).filter(Boolean).sort(),
+        paths,"PRESIGN_CONTRACT_EXACT_DELTA");
+      assert.deepEqual(changed.slice().sort(),paths,"PRESIGN_CONTRACT_PLAN_DELTA");
+      const before=JSON.parse(g("show",args.base+":"+qcp));
+      assert.equal(before.checks.length,69,"PRESIGN_CONTRACT_ACCEPTED_QCP69");
+      assert.equal(authority.checks.length,70,"PRESIGN_CONTRACT_QCP70");
+      assert.deepEqual(authority.checks.slice(0,69),before.checks,"PRESIGN_CONTRACT_QCP69_MUTATED");
+      assert.equal(authority.checks[69].check_id,R4285_CONTRACT_CHECK,"PRESIGN_CONTRACT_CHECK_ID");
+      const prior=Object.fromEntries(Object.entries(authority.dependency_resolvers)
+        .filter(([id])=>id!==R4285_CONTRACT_RESOLVER));
+      assert.deepEqual(prior,before.dependency_resolvers,"PRESIGN_CONTRACT_PREDECESSOR_RESOLVERS");
+      assert.equal(authority.dependency_resolvers[R4285_CONTRACT_RESOLVER]?.kind,"EXACT_PATH_SET");
+      assert.deepEqual(authority.dependency_resolvers[R4285_CONTRACT_RESOLVER].paths.slice().sort(),paths,
+        "PRESIGN_CONTRACT_OWNERSHIP_PATHS");
+      assert.deepEqual(authority.checks[69].resolver_ids,[R4285_CONTRACT_RESOLVER]);
+      // The actual #3753 protected-main merge remains the source base; no
+      // caller field may replace authentic GitHub event or rewrite old trust.
+      assert.equal(g("show","-s","--format=%P",args.base),
+        "c26362fe4c27baec7764b074cad2d86a0632f0f7 51e1cb364907db56f4015c5ce826f8dcb8b6e808",
+        "PRESIGN_CONTRACT_3754_NATIVE_MERGE_PARENT");
+      assert.equal(g("rev-parse",args.base+"^{tree}"),
+        g("rev-parse","51e1cb364907db56f4015c5ce826f8dcb8b6e808^{tree}"),
+        "PRESIGN_CONTRACT_3754_NATIVE_MERGE_TREE");
+      const trust="scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json";
+      assert.equal(g("rev-parse",args.base+":"+trust),
+        "61d7949d49a2707aef5844e90440c4566584fbe7","PRESIGN_CONTRACT_TRUST_BLOB");
+      assert.equal(g("rev-parse",args.base+":"+R4285_FORMAL_SCOPE_DOCUMENT),
+        R4285_FORMAL_SCOPE_DOCUMENT_BLOB,"PRESIGN_CONTRACT_ADOPTED_POLICY");
+      const frozen=[trust,R4285_FORMAL_SCOPE_DOCUMENT,
+        "scripts/cap09_adoption_v1/da9-minio-disposition-v1.cjs",
+        "scripts/cap09_adoption_v1/da9-minio-exact-delete-v1.cjs",
+        "scripts/cap09_adoption_v1/da9-minio-closure-v1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_PREFLIGHT_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.cjs"
+      ];
+      // The old permit, scientific source and historical failure proofs retain
+      // exactly the same Git blobs; no cross-subject signature carry-forward.
+      const full=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
+      assert.equal(full.SOURCE_PATHS.length,23,"PRESIGN_CONTRACT_FROZEN23");
+      for(const rel of [...new Set([...frozen,...full.SOURCE_PATHS])]){
+        assert.equal(g("rev-parse",args.base+":"+rel),g("rev-parse",args.head+":"+rel),
+          "PRESIGN_CONTRACT_HISTORICAL_DRIFT:"+rel);
+      }
+      assert.equal(process.env.GITHUB_ACTIONS,"true","PRESIGN_CONTRACT_NATIVE_GITHUB_ACTIONS");
+      assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request","PRESIGN_CONTRACT_NATIVE_PR_EVENT");
+      const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+      assert.equal(event.repository?.full_name,"liyongshang44-max/GEOX","PRESIGN_CONTRACT_REPO");
+      assert.equal(event.pull_request?.number,3755,"PRESIGN_CONTRACT_PR");
+      assert.equal(event.pull_request?.base?.sha,args.base,"PRESIGN_CONTRACT_PR_BASE");
+      assert.equal(event.pull_request?.head?.sha,args.head,"PRESIGN_CONTRACT_PR_HEAD");
+      assert.equal(event.pull_request?.head?.repo?.full_name,"liyongshang44-max/GEOX");
+      const neg=runDiagnostic("node --test scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs",
+        {},"R4285_PRESIGN_CONTRACT_SYNTHETIC_NEGATIVES");
+      assert.equal(neg.status,"PASS","PRESIGN_CONTRACT_NEGATIVE_TESTS_FAILED");
+      r4285ContractProof={status:"PASS",base_sha:args.base,subject_sha:args.head,
+        historical_qcp69_preserved:true,historic_permit_source_blobs_unchanged:true,
+        original_producer_and_da9_source_blobs_unchanged:true,exact_changed_paths:paths.length,
+        negative_tests_pass:true,windows_native_readback_not_repeated:true,
+        registry_complete_bounded_physical_e9:true,owner_signature:false,ordinal_adjudicated:false,
+        permit_issued:false,permit_consumed:false,execute_authorized:false,
+        production_authorized:false};
+      return r4285ContractProof;
+    }catch(e){r4285ContractProof=fail(e);return r4285ContractProof;}
+  }
+
   for (const decision of plan.decisions) {
     let result;
     const common = {
@@ -2020,6 +2119,24 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    // #3755 current Consumer qualification: source-only, not a real Owner approval.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===R4285_CONTRACT_BASE&&
+      (R4285_FORMAL_SCOPE_OLD_CHECKS.has(decision.check_id)||
+       decision.check_id===R4285_READBACK_CHECK||
+       decision.check_id===R4285_DA9_CHECK||
+       decision.check_id==="CAP09_R4285_NATIVE_ADOPTION_CONSUMER_SOURCE_ONLY_V1"||
+       decision.check_id===R4285_CONTRACT_CHECK)){
+      const proof=verifyR4285PresignContract(),ok=proof.status==="PASS";
+      const current=decision.check_id===R4285_CONTRACT_CHECK;
+      result={...common,execution:"R4285_QCP70_EXACT_PRE_SIGN_CONSUMER_CONTRACT",
+       status:ok?(current?"PASS":"NOT_APPLICABLE"):"FAIL",
+       reason_code:ok?(current?"CURRENT_QCP70_EXACT_CONTRACT_NEGATIVES_PASS":
+        "PREDECESSOR_EXACT_PR_QUALIFICATION_NOT_REISSUED"):proof.reason_code,
+       source_only_proof:proof,owner_signed:false,permit_issued:false,
+       permit_consumed:false,execute_authorized:false,production_authorized:false};
+      if(!ok)blockers.push({blocker_class:"R4285_QCP70_CONTRACT_HOLD",check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
     // #3754 exact post-merge physical first-failure correction is only a
     // source-only successor of QCP68, never a new authority or ledger readback.
     if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===R4285_DA9_BASE&&
