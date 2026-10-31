@@ -179,7 +179,8 @@ function auditFixedLedger(root){
  return {snapshot_before_sha256:before.sha256,snapshot_after_sha256:after.sha256,
   indexed_files:after.files,indexed_directories:after.directories,consumed:rows};
 }
-function runNative(argv,root=path.resolve(__dirname,'../..')){
+function runNative(argv){
+ const root=path.resolve(__dirname,'../..');
  guard(argv.length===1&&argv[0]==='--readback-only','READBACK_ONLY_CLI');
  guard(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'WINDOWS_ONLY');
  const registered=verifyNativeRegistration(root);
