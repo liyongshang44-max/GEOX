@@ -22,7 +22,7 @@ const CTO_FIELDS=Object.freeze(["schema_version","run_id","parent_run_id",
  "failed_predecessor_run_id","attempt_ordinal","host_id","subject_sha",
  "nonce","permit_envelope_sha256","scope","decision","production_authorized",
  "valid_from","expires_at"]);
-function verifyNativeCtoComment(nativeComment,rawBytes,context,{now=Date.now()}={}){
+function inspectNativeCtoComment(nativeComment,rawBytes,context,{now=Date.now()}={}){
  assert(Buffer.isBuffer(rawBytes)&&rawBytes.length>0&&rawBytes.length<=8192,
   "R4285_CTO_NATIVE_BODY_BYTES_REQUIRED");
  assert(nativeComment&&typeof nativeComment==="object","R4285_CTO_NATIVE_COMMENT_REQUIRED");
@@ -63,11 +63,10 @@ function verifyNativeCtoComment(nativeComment,rawBytes,context,{now=Date.now()}=
   nonce:v.nonce,permit_envelope_sha256:v.permit_envelope_sha256,
   created_at:nativeComment.created_at,valid_from:v.valid_from,expires_at:v.expires_at,
   cto_decision_sha256:sha(rawBytes),production_authorized:false});
- verifiedCto.add(result);return result;
+ return result;
 }
 function fetchNativeCtoComment(commentId){
- assert(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS,
-  "R4285_CTO_NATIVE_WINDOWS_HOST_ONLY");
+ // This function is read-only. Real Windows enforcement belongs to Host.
  assert(Number.isSafeInteger(commentId)&&commentId>0,"R4285_CTO_NATIVE_ID");
  const cp=require("node:child_process");
  const bytes=cp.execFileSync("curl.exe",[
@@ -76,6 +75,14 @@ function fetchNativeCtoComment(commentId){
   "-H","X-GitHub-Api-Version: 2022-11-28",
   COMMENT_PREFIX+commentId],{encoding:"utf8",timeout:25000,maxBuffer:524288,windowsHide:true});
  return JSON.parse(bytes);
+}
+function verifyLiveNativeCtoDecision(commentId,rawBytes,context,{now=Date.now()}={}){
+ // The provenance capability is minted ONLY after a real native API fetch.
+ // Supplying an arbitrary JSON object to inspectNativeCtoComment cannot mint it.
+ const native=fetchNativeCtoComment(commentId);
+ const proof=inspectNativeCtoComment(native,rawBytes,context,{now});
+ verifiedCto.add(proof);
+ return proof;
 }
 function assertNativeCtoProvenance(proof,ctx,{now=Date.now()}={}){
  assert(proof&&verifiedCto.has(proof),"R4285_CTO_REAL_NATIVE_PROVENANCE_REQUIRED");
@@ -156,4 +163,4 @@ function assertVerified(a,prepared){
  return true;
 }
 module.exports={DOMAIN,FIELDS,CTO_FIELDS,verify,assertVerified,
- verifyNativeCtoComment,fetchNativeCtoComment,assertNativeCtoProvenance};
+ inspectNativeCtoComment,verifyLiveNativeCtoDecision,assertNativeCtoProvenance};
