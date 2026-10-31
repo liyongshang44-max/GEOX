@@ -264,6 +264,41 @@ function verifySignedAdoption({envelope,trust,context,now=Date.now()}){
   subject_sha:p.subject_sha,run_id:RUN,adoption_digest_sha256:sha(Buffer.from(canonical(envelope))),
   execution_authorized:false,permit_authorized:false});
 }
+
+/*
+ * V3 is a separate, versioned current-subject Adoption signature domain:
+ * QCP71 and the final R4285 Host must be qualified before any real signing.
+ * Historical V1/V2 domains and payload interpretation are not modified.
+ */
+const DOMAIN_ADOPTION_V3='GEOX_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V3\\n'.replace('\\n','\n');
+const ADOPTION_V3_FIELDS=Object.freeze(ADOPTION_FIELDS.map(k=>
+ k==='native_qcp70_result_sha256'?'native_qcp71_result_sha256':k));
+function verifySignedAdoptionV3({envelope,trust,context,now=Date.now()}){
+ const p=signed(envelope,trust,DOMAIN_ADOPTION_V3,ADOPTION_V3_FIELDS,now);
+ assert.equal(p.schema_version,'MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V3');
+ assert.equal(p.run_id,RUN);assert.equal(p.host_id,HOST);
+ assert.equal(p.subject_sha,context.subject_sha);
+ assert(HEAD.test(p.subject_sha));assert.equal(p.attempt_ordinal,4);
+ assert.equal(p.scope,'ISOLATED_QUALIFICATION_TEST_ONLY');
+ for(const [key,expected] of Object.entries({
+  inventory_sha256:context.inventory_sha256,
+  owner_decision_sha256:context.owner_decision_sha256,
+  authority_registry_sha256:context.authority_registry_sha256,
+  lineage_envelope_sha256:context.lineage_envelope_sha256,
+  native_qcp71_result_sha256:context.native_qcp71_result_sha256,
+  installed_material_digest:context.installed_material_digest,
+  release_binding_sha256:context.release_binding_sha256
+ })){
+  assert(SHA.test(expected)&&p[key]===expected,'R4285_ADOPTION_V3_DIGEST_MISMATCH:'+key);
+ }
+ assert.equal(p.decision,'APPROVE_R4285_CURRENT_SUBJECT_ADOPTION_NOT_PERMIT');
+ assert.equal(p.production_authorized,false);assert.equal(p.permit_authorized,false);
+ return Object.freeze({status:'R4285_SIGNED_ADOPTION_V3_VERIFIED_NOT_PERMIT',
+  subject_sha:p.subject_sha,run_id:RUN,
+  adoption_digest_sha256:sha(Buffer.from(canonical(envelope))),
+  execution_authorized:false,permit_authorized:false});
+}
+
 function examineReadiness({inventoryBytes,authorityRegistryBytes,ownerEnvelope,
  adoptionEnvelope,trust,subjectSha,sourceQualification,materialQualification,lineageQualification,now=Date.now()}){
  assert(Buffer.isBuffer(inventoryBytes),'R4285_INVENTORY_RAW_REQUIRED');
@@ -288,6 +323,6 @@ function examineReadiness({inventoryBytes,authorityRegistryBytes,ownerEnvelope,
   permit_issued:false,execution_authorized:false});
 }
 module.exports={RUN,HOST,OLD,PREV_CONSUMED,PREV_FAILED,PREV2_CONSUMED,OLD_INVENTORY,
- DOMAIN_OWNER,DOMAIN_ADOPTION_V1,DOMAIN_ADOPTION,OWNER_FIELDS,ADOPTION_FIELDS,canonical,readBound,
- checkInventoryReport,checkNativeRegistry,verifyOwnerInventoryDecision,verifySignedAdoption,examineReadiness,
+ DOMAIN_OWNER,DOMAIN_ADOPTION_V1,DOMAIN_ADOPTION,DOMAIN_ADOPTION_V3,OWNER_FIELDS,ADOPTION_FIELDS,ADOPTION_V3_FIELDS,canonical,readBound,
+ checkInventoryReport,checkNativeRegistry,verifyOwnerInventoryDecision,verifySignedAdoption,verifySignedAdoptionV3,examineReadiness,
  REGISTRY_ORIGIN_HEAD,REGISTRY_RAW_SHA256,REGISTRY_LEDGER_ROOT};
