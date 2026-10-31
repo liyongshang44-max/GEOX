@@ -296,4 +296,4 @@ async function execute({admission,plan,observed,outputRoot,firstBase,environment
   final_receipt_sha256:result.final_receipt_sha256,
   output:outputRoot,production_authorized:false};
 }
-module.exports={STAGES,boundStages,checkPreconsume,preflight,execute,scopedDbConnectionBindings,assertPgCatalogContract,REQUIRED_PUBLIC_TABLES};
+module.exports={STAGES,boundStages,checkPreconsume,preflight,execute,probePreconsumePostgres,scopedDbConnectionBindings,assertPgCatalogContract,REQUIRED_PUBLIC_TABLES};
