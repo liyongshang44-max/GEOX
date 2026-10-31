@@ -300,6 +300,7 @@ async function execute(input,env=process.env){
  await dynamicPreflight(input,env);
  lineage.verifyExactMain(input.source_root,state.permitProof.subject_sha);
  assert(atomic.isPrepared(state.prepared),"R4285_HOST_PREPARE_EXPIRED");
+ resource.assertDynamicFreshness(state.resEnv.payload,state.readback);
  // Atomic burn is irreversible. Any later stage failure must stop, no retry.
  const consumed=atomic.consumeForQualifiedHost(state.prepared,authorized);
  const authority=stages.initializeStageAuthority(consumed,state.permitEnv.payload,
