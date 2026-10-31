@@ -1725,7 +1725,7 @@ function main() {
         R4285_FORMAL_SCOPE_DOCUMENT_BLOB,"R4285_SCOPE_DOCUMENT_BYTES_CHANGED");
       const policy=fs.readFileSync(path.join(ROOT,R4285_FORMAL_SCOPE_DOCUMENT),"utf8");
       assert(policy.includes("FORMAL_AUTHORITY_SCOPE       = HOLD")&&
-        policy.includes("NOT EFFECTIVE")&&policy.includes("R4285_EXECUTE                = FORBIDDEN"),
+        policy.includes("proposed, not effective")&&policy.includes("R4285_EXECUTE                = FORBIDDEN"),
         "R4285_SCOPE_POLICY_GRANT_OR_HOLD_MUTATED");
       const qBefore=JSON.parse(g("show",args.base+":"+qcp));
       assert.equal(qBefore.checks.length,67,"R4285_SCOPE_PREDECESSOR_QCP67_REQUIRED");
