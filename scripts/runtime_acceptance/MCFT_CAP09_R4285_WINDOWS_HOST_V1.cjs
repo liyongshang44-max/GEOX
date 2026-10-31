@@ -20,9 +20,9 @@ const stages=require("./MCFT_CAP09_R4285_STAGE_CAPABILITY_V1.cjs");
 const child=require("./MCFT_CAP09_R4285_CHILD_STAGE_V1.cjs");
 const dispatch=require("./MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_V1.cjs");
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
-const receipts=require("./MCFT_CAP09_STAGE_RECEIPTS_V1.cjs");
-const legacyReadOnly=require("./MCFT_CAP09_ATTEMPT3_HOST_V2.cjs");
-const current=require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
+const receipts=require("./MCFT_CAP09_R4285_STAGE_RECEIPTS_V1.cjs");
+const pgReadOnly=require("./MCFT_CAP09_R4285_PG_READONLY_V1.cjs");
+const current=require("./MCFT_CAP09_R4285_CURRENT_BASELINE_EXECUTION_V1.cjs");
 const {freshStageLaunch}=require("./MCFT_CAP09_STAGE_START_CLOCK_V1.cjs");
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
 const RUN="4285c3ce342c";
@@ -215,7 +215,7 @@ function buildAdmission(input,env=process.env){
 }
 async function dynamicPreflight(input,env=process.env){
  const state=buildAdmission(input,env);
- await legacyReadOnly.probePreconsumePostgres({
+ await pgReadOnly.probePreconsumePostgres({
   admission:{resourceEnvelope:state.resEnv,permitEnvelope:state.permitEnv,
    releaseRoot:input.release_root},releaseRoot:input.release_root,environment:env});
  const storage=await probeS3ReadOnly(input.release_root,state.resEnv.payload,env);
