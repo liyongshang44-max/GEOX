@@ -22,6 +22,25 @@ const ROOT='D:\\gptdown\\MCFT-CAP09-AUTHORITY-LEDGER';
 const OLD_V1='da9db7129607',OLD_V2='6ff9b41f6f7f';
 const V1_SHA='f8c55961e2b4972e8e2b92ad0d788b6030240f97e2bc274edf206fb5833ea21a';
 const V2_SHA='753c83f4dbc87ee91d8ee01499353940b29009f3671616826dba5da32ddd94fb';
+// Historic DA9 MinIO one-shot disposition is a NON-PERMIT ledger namespace.
+// Its source exists on the adopted #3752 protected main. Do not reclassify it
+// as an extra Permit issuer, and never skip its raw bytes in fullIndex.
+const DA9_MINIO_DIR='da9_minio_f023601082cd0367655ae26bbbdd0649';
+const DA9_MINIO_SIGNED_SHA='f023601082cd0367655ae26bbbdd06497395fe65431daba5f731e2dd7641907b';
+const DA9_MINIO_STARTED_SHA='354ad465f2a53d8ca80b2c9573239808b7f69647e6448c41f68643492df5fcdd';
+const DA9_MINIO_SUBJECT='77cdeeefc8b27901f3cc44b4edc203d8b8f513a3';
+const DA9_MINIO_BUCKET='mcft-cap09-requal-da9db7129607';
+const DA9_MINIO_SOURCE_BLOBS=Object.freeze({
+ 'scripts/cap09_adoption_v1/da9-minio-disposition-v1.cjs':'6838859e295a777410a3d4bbe0ee73e5668d213c',
+ 'scripts/cap09_adoption_v1/da9-minio-exact-delete-v1.cjs':'89704234c282e4293ff7e75da7b6b70f94c455c6',
+ 'scripts/cap09_adoption_v1/da9-minio-closure-v1.cjs':'355f1fce3b04361d8981e39db26f839e907bd4db'
+});
+const DA9_MINIO_OBJECTS=Object.freeze([
+ Object.freeze({key:'negative/qualification/iam-probe-da9db7129607-v1.txt',
+  content_sha256:'9644be2c235939884b2d12dace3c455ea26f6e4ab78fb8f9316da33bf3671a95'}),
+ Object.freeze({key:'positive/qualification/iam-probe-da9db7129607-v1.txt',
+  content_sha256:'96b91f40a611b726561cff9e81a7ea60bb8cbc363f75f9e60aad6598ac53a7d8'})
+]);
 const SOURCE_BLOBS=Object.freeze({
  'scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs':'80a7c6d721a219430d9d99e9cad075bc9cdf6e41',
  'scripts/runtime_acceptance/MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs':'77e726f1e0ee4a623d6ea7492f660accd424cbe0',
@@ -74,7 +93,7 @@ function verifyNativeRegistration(root){
  guard(remote===head,'REMOTE_MAIN_OR_LOCAL_HEAD_MISMATCH');
  guard(cp.spawnSync('git',['-C',root,'merge-base','--is-ancestor',MERGE,head],
   {timeout:30000,windowsHide:true}).status===0,'POLICY_MERGE_NOT_ANCESTOR');
- for(const [rel,blob] of [[POLICY,POLICY_BLOB],[TRUST,TRUST_BLOB],...Object.entries(SOURCE_BLOBS)]){
+ for(const [rel,blob] of [[POLICY,POLICY_BLOB],[TRUST,TRUST_BLOB],...Object.entries(SOURCE_BLOBS),...Object.entries(DA9_MINIO_SOURCE_BLOBS)]){
   guard(git(root,'rev-parse',MERGE+':'+rel)===blob,'REGISTERED_BLOB_DRIFT:'+rel);
   guard(git(root,'rev-parse','HEAD:'+rel)===blob,'SOURCE_VERSION_UNREGISTERED:'+rel);
   guard(git(root,'hash-object','--',path.join(root,...rel.split('/')))===blob,'INSTALLED_BYTES_DRIFT:'+rel);
@@ -124,7 +143,7 @@ function fullIndex(root){
   for(const name of names){
    guard(name!=='.'&&name!=='..'&&!name.includes('/')&&!name.includes('\\'),'LEDGER_BAD_NAME');
    const rel=relative?relative+'/'+name:name,file=path.join(at,name);
-   if(depth===0)guard(/^run-[a-f0-9]{12}$/.test(name)||/^nonce-[a-f0-9]{64}$/.test(name),
+   if(depth===0)guard(/^run-[a-f0-9]{12}$/.test(name)||/^nonce-[a-f0-9]{64}$/.test(name)||name===DA9_MINIO_DIR,
     'UNREGISTERED_ROOT_CHILD:'+name);
    const s=fs.lstatSync(file,{bigint:true});
    guard(!s.isSymbolicLink(),'LEDGER_SYMLINK:'+rel);
@@ -167,8 +186,56 @@ function consumedRead(root,runId,expectedSha,expectedSchema){
  return {run_id:runId,nonce:p.nonce,consumed_sha256:sha(data),schema_version:record.schema_version,
   pair_bytes_equal:true,production_authorized:false};
 }
+// A distinct historical evidence-disposition transaction shares the *same*
+// Trust ledger root. It cannot be silently ignored nor promoted into Permit.
+function readHistoricalDa9MinioLedger(root,expectedStartSha=DA9_MINIO_STARTED_SHA){
+ guard(H64.test(expectedStartSha),'DA9_EXPECTED_STARTED_SHA_INVALID');
+ const at=path.join(root,DA9_MINIO_DIR);
+ directory(at);
+ const children=fs.readdirSync(at).sort();
+ guard(JSON.stringify(children)===JSON.stringify(['DELETE_1.json','DELETE_2.json','STARTED.json']),
+  'DA9_ONE_SHOT_FILES_UNEXPECTED');
+ const bytes=regular(path.join(at,'STARTED.json'));
+ guard(sha(bytes)===expectedStartSha,'DA9_STARTED_EXACT_BYTES_CHANGED');
+ const started=JSON.parse(bytes.toString('utf8'));
+ const keys=['schema_version','run_id','subject_sha','ledger_id','signed_disposition_sha256',
+  'verified_at_utc','started_at_utc','source_bucket','execution_authorized','production_authorized'].sort();
+ guard(JSON.stringify(Object.keys(started).sort())===JSON.stringify(keys),'DA9_STARTED_SCHEMA_FIELDS');
+ guard(started.schema_version==='DA9_MINIO_SOURCE_DELETE_STARTED_V1'&&
+  started.run_id===OLD_V1&&started.subject_sha===DA9_MINIO_SUBJECT&&
+  started.ledger_id===DA9_MINIO_DIR&&
+  started.signed_disposition_sha256===DA9_MINIO_SIGNED_SHA&&
+  started.ledger_id==='da9_minio_'+started.signed_disposition_sha256.slice(0,32)&&
+  started.source_bucket===DA9_MINIO_BUCKET&&
+  started.execution_authorized===false&&started.production_authorized===false,
+  'DA9_STARTED_PROVENANCE_OR_AUTHORITY');
+ const ts=s=>Date.parse(s);
+ guard(Number.isFinite(ts(started.verified_at_utc))&&Number.isFinite(ts(started.started_at_utc))&&
+  ts(started.verified_at_utc)<=ts(started.started_at_utc),'DA9_STARTED_TIME_INVALID');
+ const deletion=[];
+ for(let i=0;i<2;i++){
+  const filename='DELETE_'+(i+1)+'.json',data=regular(path.join(at,filename));
+  const row=JSON.parse(data.toString('utf8')),expected=DA9_MINIO_OBJECTS[i];
+  guard(JSON.stringify(Object.keys(row).sort())===
+   JSON.stringify(['key','version_id','content_sha256','started_at_utc','finished_at_utc','exit_code','operation'].sort()),
+   'DA9_DELETE_SCHEMA_FIELDS:'+filename);
+  guard(row.key===expected.key&&row.version_id===null&&
+   row.content_sha256===expected.content_sha256&&row.operation==='DELETE_EXACT_KEY'&&
+   row.exit_code===0,'DA9_DELETE_EXACT_OBJECT_OR_STATUS:'+filename);
+  guard(Number.isFinite(ts(row.started_at_utc))&&Number.isFinite(ts(row.finished_at_utc))&&
+   ts(row.started_at_utc)>=ts(started.started_at_utc)&&
+   ts(row.finished_at_utc)>=ts(row.started_at_utc),'DA9_DELETE_TIME_INVALID:'+filename);
+  deletion.push({file:filename,key:row.key,receipt_sha256:sha(data),exit_code:row.exit_code});
+ }
+ return {namespace:DA9_MINIO_DIR,classification:'HISTORIC_NONPERMIT_SOURCE_DISPOSITION',
+  source_run_id:OLD_V1,started_receipt_sha256:sha(bytes),
+  signed_disposition_sha256:started.signed_disposition_sha256,
+  deletion,one_shot_receipt_count:3,permit_issued:false,execution_authorized:false,
+  production_authorized:false};
+}
 function auditFixedLedger(root){
  const before=fullIndex(root);
+ const disposition=readHistoricalDa9MinioLedger(root);
  const rows=[
   consumedRead(root,OLD_V1,V1_SHA,'geox_mcft_cap09_consumed_permit_v1'),
   consumedRead(root,OLD_V2,V2_SHA,'geox_mcft_cap09_consumed_permit_attempt3_v2')
@@ -180,7 +247,8 @@ function auditFixedLedger(root){
  guard(JSON.stringify(consumedRuns)===JSON.stringify([OLD_V1,OLD_V2].sort()),'EXTRA_OR_MISSING_RUN_SLOT');
  guard(JSON.stringify(consumedNonces)===JSON.stringify(rows.map(r=>r.nonce).sort()),'EXTRA_OR_MISSING_NONCE_SLOT');
  return {snapshot_before_sha256:before.sha256,snapshot_after_sha256:after.sha256,
-  indexed_files:after.files,indexed_directories:after.directories,consumed:rows};
+  indexed_files:after.files,indexed_directories:after.directories,consumed:rows,
+  historic_nonpermit_disposition:disposition};
 }
 function runNative(argv){
  const root=path.resolve(__dirname,'../..');
@@ -196,6 +264,8 @@ function runNative(argv){
   source_policy_merge_sha:MERGE,source_policy_sha256:registered.policy_sha256,
   source_trust_sha256:registered.trust_sha256,registered_source_count:Object.keys(SOURCE_BLOBS).length,
   registered_sources:Object.keys(SOURCE_BLOBS).sort(),registered_issuer_count:registered.trust.issuers.length,
+  historic_nonpermit_source_count:Object.keys(DA9_MINIO_SOURCE_BLOBS).length,
+  historic_nonpermit_sources:Object.keys(DA9_MINIO_SOURCE_BLOBS).sort(),
   registered_authority_roots:[registered.trust.ledger_root],enumeration_complete:true,
   unknown_authority_sources_count:0,unreadable_sources_count:0,scan_truncated:false,
   ledger:review,authorized_by_owner:false,owner_ordinal_adjudicated:false,permit_authorized:false,
@@ -210,4 +280,5 @@ if(require.main===module){
   production_authorized:false}));process.exitCode=1;}
 }
 module.exports={MERGE,SOURCE,BASE,POLICY_SHA,TRUST_SHA,ROOT,RUN,HOST,SOURCE_BLOBS,
- verifyNativeRegistration,fullIndex,consumedRead,auditFixedLedger,runNative};
+ DA9_MINIO_DIR,DA9_MINIO_STARTED_SHA,DA9_MINIO_SIGNED_SHA,DA9_MINIO_SOURCE_BLOBS,
+ verifyNativeRegistration,fullIndex,consumedRead,readHistoricalDa9MinioLedger,auditFixedLedger,runNative};
