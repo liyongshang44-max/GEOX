@@ -7,6 +7,7 @@
  */
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
 const permit=require("./MCFT_CAP09_R4285_PERMIT_V1.cjs");
+const execution=require("./MCFT_CAP09_R4285_EXECUTION_APPROVAL_V1.cjs");
 const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
 const RUN="4285c3ce342c";
@@ -47,10 +48,12 @@ function readExact(file){
  * installed-release/source-tree checks and Permit verifies its own signature.
  * Both capabilities are unforgeable in this process, not caller status strings.
  */
-function prepare({nativeAdoption,permitProof,trust,sourceMainProof}){
+function prepare({nativeAdoption,permitProof,trust,sourceRoot}){
  assert(native.isNativeVerified(nativeAdoption),"R4285_ATOMIC_NATIVE_ADOPTION_REQUIRED");
  assert(permit.isVerified(permitProof),"R4285_ATOMIC_GENUINE_R4285_PERMIT_REQUIRED");
- assert(sourceMainProof===true,"R4285_ATOMIC_LIVE_EXACT_MAIN_RECHECK_REQUIRED");
+ assert(typeof sourceRoot==="string"&&path.isAbsolute(sourceRoot),
+  "R4285_ATOMIC_LIVE_MAIN_SOURCE_REQUIRED");
+ lineage.verifyExactMain(sourceRoot,permitProof.subject_sha);
  assert.equal(nativeAdoption.run_id,RUN,"R4285_ATOMIC_ADOPTION_RUN_WRONG");
  assert.equal(permitProof.run_id,RUN,"R4285_ATOMIC_PERMIT_RUN_WRONG");
  assert.equal(nativeAdoption.subject_sha,permitProof.subject_sha,"R4285_ATOMIC_SUBJECT_MISMATCH");
@@ -68,20 +71,19 @@ function prepare({nativeAdoption,permitProof,trust,sourceMainProof}){
   resource_owner_envelope_sha256:permitProof.resource_owner_envelope_sha256,
   permit_envelope_sha256:permitProof.envelope_sha256,
   permit_expires_at:permitProof.expires_at,
-  root:trust.ledger_root,status:"R4285_ATOMIC_PREPARED_NOT_CONSUMED",
+  root:trust.ledger_root,source_root:sourceRoot,status:"R4285_ATOMIC_PREPARED_NOT_CONSUMED",
   execute_authorized:false,production_authorized:false
  });
  accepted.add(proof);
  return proof;
 }
 function isPrepared(x){return !!x&&accepted.has(x);}
-function consumeForQualifiedHost(prepared,{executionApproval,assertExecutionApproval}){
+function consumeForQualifiedHost(prepared,executionApproval){
  assert(isPrepared(prepared),"R4285_ATOMIC_PREPARED_CAPABILITY_REQUIRED");
  // The signed, purpose-specific physical execution approval is separate
  // from Owner/Lineage/Adoption and Permit; the caller cannot pass a boolean.
- assert(typeof assertExecutionApproval==="function",
-  "R4285_ATOMIC_EXECUTION_APPROVAL_CONSUMER_REQUIRED");
- assertExecutionApproval(executionApproval,prepared);
+ execution.assertVerified(executionApproval,prepared);
+ lineage.verifyExactMain(prepared.source_root,prepared.subject_sha);
  assert(Date.now()<Date.parse(prepared.permit_expires_at),"R4285_ATOMIC_PERMIT_EXPIRED");
  const dirs=assertUnreserved(prepared.root,prepared.nonce);
  // Burn the in-process permission BEFORE any I/O. If a partial filesystem
