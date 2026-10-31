@@ -1304,8 +1304,6 @@ function main() {
   // historic PR-bound diagnostics. No signature or execution is inherited.
   const R4285_NATIVE_BASE="16205320c30365ff81b305fb7490029912e09a18";
   const R4285_NATIVE_CHECK="CAP09_R4285_NATIVE_ADOPTION_CONSUMER_SOURCE_ONLY_V1";
-  const R4285_NATIVE_OLD_CHECKS=new Set([...R4285_HOST_READONLY_HISTORIC_CHECKS,
-    "CAP09_R4285_PURPOSE_SPECIFIC_SIGNED_EVIDENCE_HOST_READONLY_V1"]);
   let r4285NativeProof=null;
   function verifyR4285NativeSource(){
     if(r4285NativeProof)return r4285NativeProof;
@@ -1402,6 +1400,8 @@ function main() {
     "DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1",
     "CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY"
   ]);
+  const R4285_NATIVE_OLD_CHECKS=new Set([...R4285_HOST_READONLY_HISTORIC_CHECKS,
+    "CAP09_R4285_PURPOSE_SPECIFIC_SIGNED_EVIDENCE_HOST_READONLY_V1"]);
   let r4285HostSourceProof=null;
   function verifyR4285HostSourceOnly(){
     if(r4285HostSourceProof)return r4285HostSourceProof;
