@@ -10,7 +10,7 @@ const permits=require("./MCFT_CAP09_R4285_PERMIT_ATOMIC_V1.cjs");
 const canonical=require("../governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.cjs").canonical;
 const STAGE_DOMAIN="GEOX_MCFT_CAP09_HOST_STAGE_R4285_V1\n";
 const privateStageKeys=new WeakMap();
-const {hashFile}=require("./MCFT_CAP09_STAGE_RECEIPTS_V1.cjs");
+const {hashFile}=require("./MCFT_CAP09_R4285_STAGE_RECEIPTS_V1.cjs");
 // V2 parent/child separation: never imports or consumes a legacy V1 Permit.
 const STAGES=Object.freeze(["PRODUCER","TIMING_1","TIMING_2","TIMING_3","CONTROLLED_DELAY","AGGREGATE"]);
 const HEX40=/^[a-f0-9]{40}$/,HEX64=/^[a-f0-9]{64}$/,RUN=/^[a-f0-9]{12}$/;
