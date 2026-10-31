@@ -123,3 +123,94 @@ test('malformed consumed JSON cannot be called complete',()=>temp(root=>{
  const a=setup(root);fs.writeFileSync(path.join(a.r,'CONSUMED.json'),'{partial');
  assert.throws(()=>p.consumedRead(root,run,a.digest,'geox_mcft_cap09_consumed_permit_v1'));
 }));
+
+const DA9='da9_minio_f023601082cd0367655ae26bbbdd0649';
+function syntheticDa9(root){
+ const dir=path.join(root,DA9);
+ fs.mkdirSync(dir);
+ const started={schema_version:'DA9_MINIO_SOURCE_DELETE_STARTED_V1',
+  run_id:'da9db7129607',subject_sha:'77cdeeefc8b27901f3cc44b4edc203d8b8f513a3',
+  ledger_id:DA9,signed_disposition_sha256:
+   'f023601082cd0367655ae26bbbdd06497395fe65431daba5f731e2dd7641907b',
+  verified_at_utc:'2026-10-16T17:00:00.000Z',started_at_utc:'2026-10-16T17:00:01.000Z',
+  source_bucket:'mcft-cap09-requal-da9db7129607',
+  execution_authorized:false,production_authorized:false};
+ const bytes=Buffer.from(JSON.stringify(started)+'\n');
+ fs.writeFileSync(path.join(dir,'STARTED.json'),bytes);
+ const objs=[
+  ['negative/qualification/iam-probe-da9db7129607-v1.txt','9644be2c235939884b2d12dace3c455ea26f6e4ab78fb8f9316da33bf3671a95'],
+  ['positive/qualification/iam-probe-da9db7129607-v1.txt','96b91f40a611b726561cff9e81a7ea60bb8cbc363f75f9e60aad6598ac53a7d8']
+ ];
+ objs.forEach(([key,content_sha256],i)=>{
+  const row={key,version_id:null,content_sha256,started_at_utc:'2026-10-16T17:00:02.000Z',
+   finished_at_utc:'2026-10-16T17:00:03.000Z',exit_code:0,operation:'DELETE_EXACT_KEY'};
+  fs.writeFileSync(path.join(dir,'DELETE_'+(i+1)+'.json'),JSON.stringify(row)+'\n');
+ });
+ return {dir,started,digest:sha(bytes)};
+}
+test('historical shared ledger root is indexed; DA9 one-shot is NOT a Permit root',()=>temp(root=>{
+ const fixture=syntheticDa9(root);
+ const index=p.fullIndex(root);
+ assert.equal(index.entries.some(row=>row[0]===DA9&&row[1]==='D'),true);
+ assert.equal(index.files,3);
+ const proof=p.readHistoricalDa9MinioLedger(root,fixture.digest);
+ assert.equal(proof.namespace,DA9);
+ assert.equal(proof.classification,'HISTORIC_NONPERMIT_SOURCE_DISPOSITION');
+ assert.equal(proof.one_shot_receipt_count,3);
+ assert.deepEqual(proof.deletion.map(x=>x.exit_code),[0,0]);
+ assert.equal(proof.permit_issued,false);
+ assert.equal(proof.execution_authorized,false);
+ assert.equal(proof.production_authorized,false);
+}));
+test('real DA9 STARTED raw SHA remains fixed and synthetic bytes cannot qualify',()=>temp(root=>{
+ syntheticDa9(root);
+ assert.equal(p.DA9_MINIO_STARTED_SHA,
+  '354ad465f2a53d8ca80b2c9573239808b7f69647e6448c41f68643492df5fcdd');
+ assert.throws(()=>p.readHistoricalDa9MinioLedger(root),/DA9_STARTED_EXACT_BYTES_CHANGED/);
+}));
+test('unregistered extra DA9 namespace never gets wildcard admission',()=>temp(root=>{
+ syntheticDa9(root);
+ fs.mkdirSync(path.join(root,'da9_minio_'+('a'.repeat(32))));
+ assert.throws(()=>p.fullIndex(root),/UNREGISTERED_ROOT_CHILD/);
+}));
+test('DA9 extra or missing one-shot receipts hold',()=>temp(root=>{
+ const f=syntheticDa9(root);
+ fs.writeFileSync(path.join(f.dir,'DELETE_3.json'),'{}');
+ assert.throws(()=>p.readHistoricalDa9MinioLedger(root,f.digest),/DA9_ONE_SHOT_FILES_UNEXPECTED/);
+ fs.rmSync(path.join(f.dir,'DELETE_3.json'));
+ fs.rmSync(path.join(f.dir,'DELETE_2.json'));
+ assert.throws(()=>p.readHistoricalDa9MinioLedger(root,f.digest),/DA9_ONE_SHOT_FILES_UNEXPECTED/);
+}));
+test('DA9 altered STARTED signed identity holds even if caller knows its new digest',()=>temp(root=>{
+ const f=syntheticDa9(root);
+ f.started.subject_sha='a'.repeat(40);
+ const bytes=Buffer.from(JSON.stringify(f.started)+'\n');
+ fs.writeFileSync(path.join(f.dir,'STARTED.json'),bytes);
+ assert.throws(()=>p.readHistoricalDa9MinioLedger(root,sha(bytes)),/DA9_STARTED_PROVENANCE_OR_AUTHORITY/);
+}));
+test('DA9 corrupted deletion receipts and nonzero exit fail closed',()=>temp(root=>{
+ const f=syntheticDa9(root),del=path.join(f.dir,'DELETE_1.json');
+ const row=JSON.parse(fs.readFileSync(del,'utf8'));
+ row.exit_code=1;
+ fs.writeFileSync(del,JSON.stringify(row));
+ assert.throws(()=>p.readHistoricalDa9MinioLedger(root,f.digest),/DA9_DELETE_EXACT_OBJECT_OR_STATUS/);
+ row.exit_code=0;row.content_sha256='f'.repeat(64);
+ fs.writeFileSync(del,JSON.stringify(row));
+ assert.throws(()=>p.readHistoricalDa9MinioLedger(root,f.digest),/DA9_DELETE_EXACT_OBJECT_OR_STATUS/);
+}));
+test('DA9 unrecognized receipt field and swapped object order hold',()=>temp(root=>{
+ const f=syntheticDa9(root),del=path.join(f.dir,'DELETE_2.json');
+ const row=JSON.parse(fs.readFileSync(del,'utf8'));
+ row.extra='claim';
+ fs.writeFileSync(del,JSON.stringify(row));
+ assert.throws(()=>p.readHistoricalDa9MinioLedger(root,f.digest),/DA9_DELETE_SCHEMA_FIELDS/);
+ delete row.extra;row.key='negative/qualification/iam-probe-da9db7129607-v1.txt';
+ fs.writeFileSync(del,JSON.stringify(row));
+ assert.throws(()=>p.readHistoricalDa9MinioLedger(root,f.digest),/DA9_DELETE_EXACT_OBJECT_OR_STATUS/);
+}));
+test('DA9 source creator registration remains separate from ten Permit-source blobs',()=>{
+ assert.equal(Object.keys(p.SOURCE_BLOBS).length,10);
+ assert.equal(Object.keys(p.DA9_MINIO_SOURCE_BLOBS).length,3);
+ assert.equal(p.DA9_MINIO_SOURCE_BLOBS['scripts/cap09_adoption_v1/da9-minio-exact-delete-v1.cjs'],
+  '89704234c282e4293ff7e75da7b6b70f94c455c6');
+});
