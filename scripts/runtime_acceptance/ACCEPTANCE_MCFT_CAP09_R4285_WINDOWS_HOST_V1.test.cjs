@@ -8,6 +8,7 @@ const approval=require("./MCFT_CAP09_R4285_EXECUTION_APPROVAL_V1.cjs");
 const child=require("./MCFT_CAP09_R4285_CHILD_STAGE_V1.cjs");
 const cap=require("./MCFT_CAP09_R4285_STAGE_CAPABILITY_V1.cjs");
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
+const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs");
 const sha=p=>crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
 const base="4de4973b2b908f614fc4889022c8e0a33b577fec";
 const ROOT=path.resolve(__dirname,"../..");
@@ -90,4 +91,44 @@ test("Windows Host refuses unqualified invocation before touching physical resou
  assert.equal(result.status,"HOLD_R4285_HOST");
  assert.equal(result.production_authorized,false);
  assert.equal(result.auto_retry,false);
+});
+
+test("expired static Resource Owner signature cannot promote stale dynamic observation",()=>{
+ const now=Date.now(),start=new Date(now-5000).toISOString();
+ const facts=Object.fromEntries(resource.FACT_BINDINGS.map(k=>[k,"BOUND"]));
+ Object.assign(facts,{run_id:host.RUN,observed_at:start,owner_exclusive:true,production_bindings_present:false,production_authorized:false});
+ const signed={...facts,readback_sha256:"a".repeat(64),issued_at:new Date(now-4000).toISOString(),expires_at:new Date(now+1000000).toISOString()};
+ const readback={status:"RAW_READBACK_BYTES_MATCH_NOT_AUTHORITY",sha256:signed.readback_sha256,facts};
+ assert.equal(resource.assertDynamicFreshness(signed,readback,{now}).status,"R4285_RECENT_SIGNED_RESOURCE_READBACK_NOT_A_LIVE_PROBE");
+ assert.throws(()=>resource.assertDynamicFreshness(signed,readback,{now:now+121000}),/DYNAMIC_READBACK_EXPIRED/);
+ assert.throws(()=>resource.assertDynamicFreshness({...signed,owner_exclusive:false},readback,{now}));
+ assert.throws(()=>resource.assertDynamicFreshness(signed,{...readback,facts:{...facts,production_bindings_present:true}},{now}));
+});
+test("forged Stage Ticket is rejected before creating a SPENT marker or launching a stage",()=>{
+ const os=require("node:os"),root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-fake-ticket-"));
+ try{
+  const dir=path.join(root,"run-"+host.RUN);fs.mkdirSync(dir);
+  const capability=require("./MCFT_CAP09_R4285_STAGE_CAPABILITY_V1.cjs");
+  const key=crypto.generateKeyPairSync("ed25519");
+  fs.writeFileSync(path.join(dir,"STAGE_R4285_PUBLIC_KEY.pem"),key.publicKey.export({type:"spki",format:"pem"}));
+  const receipt=Buffer.from('{"not":"valid"}');
+  fs.writeFileSync(path.join(dir,"CONSUMED.json"),receipt);
+  const script=path.join(root,"dummy.cjs");fs.writeFileSync(script,"// no effects\n");
+  const previous_sha256=crypto.createHash("sha256").update(receipt).digest("hex");
+  const p={schema_version:"geox_mcft_cap09_host_stage_capability_r4285_v1",id:"PRODUCER",
+   ordinal:0,run_id:host.RUN,nonce:"d".repeat(64),subject_sha:"a".repeat(40),
+   envelope_sha256:"b".repeat(64),parent_pid:process.ppid,script_sha256:sha(script),
+   previous_sha256,issued_at:new Date(Date.now()-1000).toISOString(),
+   expires_at:new Date(Date.now()+30000).toISOString()};
+  const untrusted=crypto.generateKeyPairSync("ed25519");
+  const canonical=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs").canonical;
+  const signature_base64=crypto.sign(null,Buffer.from("GEOX_MCFT_CAP09_HOST_STAGE_R4285_V1\n"+canonical(p)),untrusted.privateKey).toString("base64");
+  const ticket=path.join(dir,"STAGE_TICKET_R4285_PRODUCER.json");
+  fs.writeFileSync(ticket,JSON.stringify({payload:p,signature_base64}));
+  assert.throws(()=>capability.consumeStageCapability({
+   ticket,run_directory:dir,id:"PRODUCER",run_id:host.RUN,nonce:p.nonce,
+   subject_sha:p.subject_sha,envelope_sha256:p.envelope_sha256,script,previous_sha256
+  }),/CAP_BAD_SIGNATURE/);
+  assert.equal(fs.existsSync(path.join(dir,"SPENT_R4285_PRODUCER")),false);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
