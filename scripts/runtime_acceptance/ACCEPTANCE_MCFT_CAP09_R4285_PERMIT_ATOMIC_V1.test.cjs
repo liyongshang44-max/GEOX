@@ -14,13 +14,38 @@ function execFixture(){
    not_before:new Date(now-10000).toISOString(),not_after:new Date(now+300000).toISOString(),
    public_key_pem:kp.publicKey.export({type:"spki",format:"pem"}),
    spki_sha256:sha(kp.publicKey.export({type:"spki",format:"der"}))}]};
+ const ctoPayload={
+  schema_version:"MCFT_CAP09_R4285_CTO_NATIVE_EXECUTION_DECISION_V1",
+  run_id:lineage.RUN,parent_run_id:lineage.ORIGINAL_PARENT,
+  failed_predecessor_run_id:lineage.PREV,attempt_ordinal:4,
+  subject_sha,host_id:lineage.HOST,nonce,
+  permit_envelope_sha256:"a".repeat(64),
+  scope:"ISOLATED_QUALIFICATION_TEST_ONLY",
+  decision:"APPROVE_R4285_ONE_PHYSICAL_SIX_STAGE_EXECUTION",
+  production_authorized:false,
+  valid_from:new Date(now-10000).toISOString(),
+  expires_at:new Date(now+280000).toISOString()
+ };
+ const body=lineage.canonical(ctoPayload),bytes=Buffer.from(body);
+ const comment={id:987654321,
+  url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/987654321",
+  issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3756",
+  author_association:"OWNER",user:{login:"liyongshang44-max"},
+  created_at:new Date(now-20000).toISOString(),
+  updated_at:new Date(now-20000).toISOString(),body};
  const context={subject_sha,host_id:lineage.HOST,nonce,
   permit_envelope_sha256:"a".repeat(64),adoption_envelope_sha256:"b".repeat(64),
-  cto_decision_sha256:"c".repeat(64)};
+  cto_decision_sha256:sha(bytes),
+  cto_native_proof:execution.verifyNativeCtoComment(comment,bytes,{
+   subject_sha,nonce,permit_envelope_sha256:"a".repeat(64)},{now})};
  const p={schema_version:"MCFT_CAP09_R4285_PHYSICAL_EXECUTION_APPROVAL_V1",
   issuer_id:"TESTONLY",key_id:"ED25519_TEST",run_id:lineage.RUN,
   parent_run_id:lineage.ORIGINAL_PARENT,failed_predecessor_run_id:lineage.PREV,
-  attempt_ordinal:4,...context,scope:"ISOLATED_QUALIFICATION_TEST_ONLY",
+  attempt_ordinal:4,subject_sha,host_id:lineage.HOST,nonce,
+  permit_envelope_sha256:context.permit_envelope_sha256,
+  adoption_envelope_sha256:context.adoption_envelope_sha256,
+  cto_decision_sha256:context.cto_decision_sha256,
+  scope:"ISOLATED_QUALIFICATION_TEST_ONLY",
   decision:"APPROVE_R4285_SINGLE_PHYSICAL_SIX_STAGE_EXECUTION",
   issued_at:new Date(now-1000).toISOString(),expires_at:new Date(now+240000).toISOString(),
   production_authorized:false};
@@ -69,4 +94,53 @@ test("fresh run and nonce slots exist independently, old V2 run slot is not a re
 test("no issuer, signer, retry, reset, restore, deletion or stage launch is exported",()=>{
  for(const name of Object.keys(atomic))assert(!/sign|issue|reset|restore|delete|retry|dispatch/i.test(name));
  assert.equal(atomic.RUN,lineage.RUN);
+});
+
+test("native CTO decision must be genuine owner source, exact bytes, unedited and valid",()=>{
+ const f=execFixture();
+ const native={
+  id:987654321,url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/987654321",
+  issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3756",
+  user:{login:"liyongshang44-max"},author_association:"OWNER",
+  created_at:new Date(f.now-20000).toISOString(),
+  updated_at:new Date(f.now-20000).toISOString()
+ };
+ const p={
+  schema_version:"MCFT_CAP09_R4285_CTO_NATIVE_EXECUTION_DECISION_V1",
+  run_id:lineage.RUN,parent_run_id:lineage.ORIGINAL_PARENT,
+  failed_predecessor_run_id:lineage.PREV,attempt_ordinal:4,
+  host_id:lineage.HOST,subject_sha:f.context.subject_sha,
+  nonce:f.context.nonce,permit_envelope_sha256:f.context.permit_envelope_sha256,
+  scope:"ISOLATED_QUALIFICATION_TEST_ONLY",
+  decision:"APPROVE_R4285_ONE_PHYSICAL_SIX_STAGE_EXECUTION",
+  production_authorized:false,
+  valid_from:new Date(f.now-10000).toISOString(),
+  expires_at:new Date(f.now+280000).toISOString()
+ };
+ const body=lineage.canonical(p),live={...native,body},bytes=Buffer.from(body);
+ for(const mutate of [
+  x=>{x.user.login="outsider"},x=>{x.author_association="NONE"},
+  x=>{x.updated_at=new Date(f.now+1000).toISOString()},
+  x=>{x.issue_url="https://api.github.com/repos/liyongshang44-max/GEOX/issues/3755"},
+  x=>{x.url="https://example.com"},x=>{x.body="{}"}
+ ]){
+  const x=structuredClone(live);mutate(x);
+  assert.throws(()=>execution.verifyNativeCtoComment(x,bytes,f.context,{now:f.now}));
+ }
+ const wrong={...p,nonce:"f".repeat(64)},wrongText=lineage.canonical(wrong);
+ assert.throws(()=>execution.verifyNativeCtoComment({...native,body:wrongText},
+  Buffer.from(wrongText),f.context,{now:f.now}));
+ assert.throws(()=>execution.verifyNativeCtoComment(live,Buffer.from(body+" "),f.context,{now:f.now}));
+ assert.throws(()=>execution.verifyNativeCtoComment(live,bytes,f.context,{now:f.now+400000}));
+ assert.throws(()=>execution.assertNativeCtoProvenance({...f.context.cto_native_proof},
+  f.context,{now:f.now}),/REAL_NATIVE_PROVENANCE/);
+});
+test("execution approval may not substitute matching local CTO digest for native proof",()=>{
+ const f=execFixture();
+ assert.throws(()=>execution.verify(f.sign(),f.trust,{...f.context,cto_native_proof:null},{now:f.now}),
+  /REAL_NATIVE_PROVENANCE/);
+ assert.throws(()=>execution.verify(f.sign(),f.trust,{...f.context,
+  cto_native_proof:{...f.context.cto_native_proof}},{now:f.now}),/REAL_NATIVE_PROVENANCE/);
+ assert.throws(()=>execution.verify(f.sign(),f.trust,{...f.context,
+  cto_decision_sha256:"c".repeat(64)},{now:f.now}));
 });
