@@ -16,7 +16,8 @@ const FIRST_FAILURE='00a5eb698fcd9ed0d18689fdd6e25df9e4b2e321e412d8565fec12a04b3
 const SHA=/^[a-f0-9]{64}$/,HEAD=/^[a-f0-9]{40}$/;
 const REPORT_SCHEMA='R4285_ALL_ATTEMPTS_SOURCE_REVIEW_V1';
 const DOMAIN_OWNER='GEOX_MCFT_CAP09_R4285_OWNER_INVENTORY_AND_ORDINAL_V1\n';
-const DOMAIN_ADOPTION='GEOX_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1\n';
+const DOMAIN_ADOPTION_V1='GEOX_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1\n';
+const DOMAIN_ADOPTION='GEOX_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V2\n';
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 function exact(obj,keys,code){assert(obj&&typeof obj==='object'&&!Array.isArray(obj),code);assert.deepEqual(Object.keys(obj).sort(),[...keys].sort(),code);}
 function canonical(o){
@@ -235,7 +236,7 @@ const ADOPTION_FIELDS=Object.freeze(['schema_version','issuer_id','key_id','run_
  'release_binding_sha256','issued_at','expires_at','decision','production_authorized','permit_authorized']);
 function verifySignedAdoption({envelope,trust,context,now=Date.now()}){
  const p=signed(envelope,trust,DOMAIN_ADOPTION,ADOPTION_FIELDS,now);
- assert.equal(p.schema_version,'MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1');
+ assert.equal(p.schema_version,'MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V2');
  assert.equal(p.run_id,RUN);assert.equal(p.host_id,HOST);
  assert.equal(p.subject_sha,context.subject_sha);
  assert(HEAD.test(p.subject_sha));assert.equal(p.attempt_ordinal,4);
@@ -280,6 +281,6 @@ function examineReadiness({inventoryBytes,authorityRegistryBytes,ownerEnvelope,
   permit_issued:false,execution_authorized:false});
 }
 module.exports={RUN,HOST,OLD,PREV_CONSUMED,PREV_FAILED,PREV2_CONSUMED,OLD_INVENTORY,
- DOMAIN_OWNER,DOMAIN_ADOPTION,OWNER_FIELDS,ADOPTION_FIELDS,canonical,readBound,
+ DOMAIN_OWNER,DOMAIN_ADOPTION_V1,DOMAIN_ADOPTION,OWNER_FIELDS,ADOPTION_FIELDS,canonical,readBound,
  checkInventoryReport,checkNativeRegistry,verifyOwnerInventoryDecision,verifySignedAdoption,examineReadiness,
  REGISTRY_ORIGIN_HEAD,REGISTRY_RAW_SHA256,REGISTRY_LEDGER_ROOT};
