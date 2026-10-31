@@ -35,21 +35,33 @@ function fixture(){
   "c26362fe4c27baec7764b074cad2d86a0632f0f7:docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"],
   {cwd:root,encoding:"utf8"}));
  assert.equal(adopted68.checks.length,68,"PINNED_ADOPTED_QCP68_REQUIRED");
- assert.equal(currentQcp.checks.length,69,"CURRENT_QCP69_REQUIRED");
+ const adopted69=JSON.parse(cp.execFileSync("git",["show",
+  "e9eeacc292204d519cb5e86d3d3ded93573e1b38:docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"],
+  {cwd:root,encoding:"utf8"}));
+ assert.equal(adopted69.checks.length,69,"PINNED_ADOPTED_QCP69");
+ assert.equal(currentQcp.checks.length,70,"CURRENT_QCP70_REQUIRED");
+ assert.deepEqual(currentQcp.checks.slice(0,69),adopted69.checks,"HISTORICAL_QCP69_DEFINITIONS_CHANGED");
+ const r69=Object.fromEntries(Object.entries(currentQcp.dependency_resolvers)
+  .filter(([id])=>id!=="CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_NINE_PATHS_V1"));
+ assert.deepEqual(r69,adopted69.dependency_resolvers,"HISTORICAL_QCP69_RESOLVERS_CHANGED");
+ assert.equal(currentQcp.checks[69].check_id,"CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_V1");
  assert.deepEqual(currentQcp.checks.slice(0,68),adopted68.checks,"HISTORICAL_QCP68_DEFINITIONS_CHANGED");
  const predecessorResolvers=Object.fromEntries(Object.entries(currentQcp.dependency_resolvers).filter(([id])=>
-  id!=="CAP09_R4285_DA9_HISTORIC_NONPERMIT_LEDGER_EXACT_SEVEN_PATHS_V1"));
+  id!=="CAP09_R4285_DA9_HISTORIC_NONPERMIT_LEDGER_EXACT_SEVEN_PATHS_V1"&&
+  id!=="CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_NINE_PATHS_V1"));
  assert.deepEqual(predecessorResolvers,adopted68.dependency_resolvers,"HISTORICAL_QCP68_RESOLVERS_CHANGED");
  assert.deepEqual(currentQcp.checks.slice(0,67),adoptedQcp.checks,"HISTORICAL_QCP67_DEFINITIONS_CHANGED");
  const historicalResolvers=Object.fromEntries(Object.entries(currentQcp.dependency_resolvers).filter(([id])=>
   id!=="CAP09_R4285_REGISTERED_SOURCE_READONLY_EXACT_THREE_PATHS_V1"&&
-  id!=="CAP09_R4285_DA9_HISTORIC_NONPERMIT_LEDGER_EXACT_SEVEN_PATHS_V1"));
+  id!=="CAP09_R4285_DA9_HISTORIC_NONPERMIT_LEDGER_EXACT_SEVEN_PATHS_V1"&&
+  id!=="CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_NINE_PATHS_V1"));
  assert.deepEqual(historicalResolvers,adoptedQcp.dependency_resolvers,"HISTORICAL_QCP67_RESOLVERS_CHANGED");
  assert.deepEqual(currentQcp.checks.slice(0,66),oldQcp.checks,"HISTORIC_QCP66_DEFINITIONS_CHANGED");
  const inheritedResolvers=Object.fromEntries(Object.entries(currentQcp.dependency_resolvers).filter(([id])=>
   id!=="CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1"&&
   id!=="CAP09_R4285_REGISTERED_SOURCE_READONLY_EXACT_THREE_PATHS_V1"&&
-  id!=="CAP09_R4285_DA9_HISTORIC_NONPERMIT_LEDGER_EXACT_SEVEN_PATHS_V1"));
+  id!=="CAP09_R4285_DA9_HISTORIC_NONPERMIT_LEDGER_EXACT_SEVEN_PATHS_V1"&&
+  id!=="CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_NINE_PATHS_V1"));
  assert.deepEqual(inheritedResolvers,oldQcp.dependency_resolvers,"HISTORIC_QCP66_RESOLVERS_CHANGED");
  assert.equal(currentQcp.checks[66].check_id,"CAP09_R4285_NATIVE_ADOPTION_CONSUMER_SOURCE_ONLY_V1");
  assert.equal(currentQcp.checks[67].check_id,"CAP09_R4285_REGISTERED_SOURCE_NATIVE_READBACK_TEST_ONLY_V1");
