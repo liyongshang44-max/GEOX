@@ -404,9 +404,15 @@ test('installed_material_collector_allows_exact_signed_child_stage_names',()=>{
  const v2=['MCFT_ATTEMPT3_V2_CHILD','MCFT_ATTEMPT3_V2_LEDGER_ROOT',
   'MCFT_ATTEMPT3_V2_NONCE','MCFT_ATTEMPT3_V2_PERMIT_ENVELOPE_SHA256',
   'MCFT_ATTEMPT3_V2_OBSERVED_FILE','MCFT_ATTEMPT3_V2_OBSERVATIONS_SHA256'];
- assert.equal(m.CHILD_STAGE_ENVIRONMENT_NAMES.length,25);
- assert.equal(new Set(m.CHILD_STAGE_ENVIRONMENT_NAMES).size,25);
+ const r4285=['MCFT_R4285_CHILD','MCFT_R4285_LEDGER_ROOT','MCFT_R4285_NONCE',
+  'MCFT_R4285_PERMIT_ENVELOPE_SHA256','MCFT_R4285_OBSERVED_FILE',
+  'MCFT_R4285_OBSERVATIONS_SHA256'];
+ assert.equal(m.CHILD_STAGE_ENVIRONMENT_NAMES.length,31);
+ assert.equal(new Set(m.CHILD_STAGE_ENVIRONMENT_NAMES).size,31);
  for(const name of v2)assert(m.CHILD_STAGE_ENVIRONMENT_NAMES.includes(name),'V2_CHILD_ENV_NOT_IN_SIGNED_MATERIAL:'+name);
+ for(const name of r4285)assert(m.CHILD_STAGE_ENVIRONMENT_NAMES.includes(name),'R4285_CHILD_ENV_NOT_IN_SIGNED_MATERIAL:'+name);
+ assert(m.CHILD_STAGE_ENVIRONMENT_NAMES.indexOf(v2[0])<m.CHILD_STAGE_ENVIRONMENT_NAMES.indexOf(r4285[0]),
+  'R4285_CHILD_ENV_MUST_NOT_REDEFINE_PREDECESSOR_NAMES');
  const child={...env,MCFT_SUBJECT_SHA:'a'.repeat(40),MCFT_GOVERNED_RETRY_STAGE:'PRODUCER',MCFT_GOVERNED_RETRY_TICKET:'fixture-ticket'};
  assert.equal(m.verify(profile,root,child).digest,p.profile_sha256);
  child.NODE_OPTIONS='--require untrusted';assert.throws(()=>m.verify(profile,root,child));
