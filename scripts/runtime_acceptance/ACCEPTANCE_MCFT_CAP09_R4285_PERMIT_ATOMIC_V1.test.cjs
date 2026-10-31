@@ -155,3 +155,21 @@ test("execution approval may not substitute matching local CTO digest for native
  assert.throws(()=>execution.verify(f.sign(),f.trust,{...f.context,
   cto_decision_sha256:"c".repeat(64)},{now:f.now}));
 });
+
+test("simulated crash between nonce and run-slot reservations permanently fails closed",()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-crash-"));
+ try{
+  const nonce="f".repeat(64),paths=atomic.slotPaths(root,nonce);
+  // Simulate a power loss immediately after the first exclusive mkdir.
+  fs.mkdirSync(paths.nonce);
+  assert.equal(fs.existsSync(paths.run),false);
+  assert.throws(()=>atomic.assertUnreserved(root,nonce),/ALREADY_RESERVED/);
+  // No recovery/delete/reset API exists and the attempted Run remains blocked.
+  fs.mkdirSync(paths.run);
+  assert.throws(()=>atomic.assertUnreserved(root,nonce),/ALREADY_RESERVED/);
+  const another=atomic.slotPaths(root,"a".repeat(64));
+  assert.equal(another.run,paths.run);
+  assert.throws(()=>atomic.assertUnreserved(root,"a".repeat(64)),/ALREADY_RESERVED/);
+  assert.equal(fs.existsSync(path.join(paths.run,"CONSUMED.json")),false);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
