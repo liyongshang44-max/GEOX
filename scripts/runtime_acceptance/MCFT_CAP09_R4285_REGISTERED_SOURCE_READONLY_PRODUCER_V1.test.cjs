@@ -104,6 +104,15 @@ test('zero-byte existing stage log is allowed in full index',()=>temp(root=>{
  const a=setup(root);fs.writeFileSync(path.join(a.r,'stderr.log'),'');
  const i=p.fullIndex(root);assert.equal(i.files,3);
 }));
+test('directory root inode and device are bound into the snapshot even with equal child names',()=>{
+ temp(a=>temp(b=>{
+  const before=p.fullIndex(a),other=p.fullIndex(b);
+  assert.equal(before.entries[0][0],'.');
+  assert.equal(before.entries[0][1],'ROOT');
+  assert.equal(before.entries[0].length,6);
+  assert.notDeepEqual(before.entries[0],other.entries[0]);
+ }));
+});
 test('stable full indexes bind names, identity and raw content digest',()=>temp(root=>{
  const a=setup(root);const before=p.fullIndex(root);
  assert.deepEqual(p.fullIndex(root).entries,before.entries);
