@@ -1708,6 +1708,43 @@
         "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
       ]
+    },
+    "CAP09_R4285_HOST_EXACT_SOURCE_SUCCESSOR_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+        ".github/workflows/mcft-cap09-r4285-host-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs",
+        "scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs",
+        "scripts/cap09_adoption_v1/installed-material.cjs",
+        "scripts/cap09_adoption_v1/test-offline-context.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_V1.test.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PERMIT_ATOMIC_V1.test.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PERMIT_V1.test.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_WINDOWS_HOST_V1.test.cjs",
+        "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP09_R4285_TIMING_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_CHILD_STAGE_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_CONTROLLED_DELAY_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_CURRENT_BASELINE_EXECUTION_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_EXECUTION_APPROVAL_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_PG_READONLY_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_CAPABILITY_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_RECEIPTS_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP09_R4285_PRODUCER_V1.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP09_R4285_TIMING_V1.ts"
+      ]
     }
   },
   "checks": [
@@ -3769,6 +3806,35 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node --test scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs"
+    },
+    {
+      "check_id": "CAP09_R4285_HOST_EXACT_SOURCE_ADMISSION_V1",
+      "owner": "MCFT_CAP09_R4285_FINAL_HOST_SCIENCE_PRESERVING_SOURCE_ADMISSION",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-R4285-FORMAL-AUTHORITY-SOURCE-SCOPE-REVIEW-20261031.md",
+        "scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs"
+      ],
+      "resolver_ids": [
+        "CAP09_R4285_HOST_EXACT_SOURCE_SUCCESSOR_V1"
+      ],
+      "historical_evidence_policy": "HISTORIC_ATTEMPT1_TO_ATTEMPT3_FROZEN_TRUST_LEDGER_AND_FULLCHAIN_23_SOURCE_BLOBS_PRESERVED",
+      "execution_workflow": ".github/workflows/mcft-cap09-r4285-host-v1.yml",
+      "execution_workflow_status": "SYNTHETIC_NONAUTHORIZING_SOURCE_REGRESSION_ONLY_NO_PERMIT_CONSUMED_NO_REAL_WINDOWS_EXECUTE",
+      "fail_policy": "EXACT_R4285_SUCCESSOR_PATH_SET_AND_HISTORIC_23_SOURCE_BLOBS_FAIL_CLOSED",
+      "carry_forward_policy": "NONE_HISTORIC_QCP70_REMAINS_PRIOR_HEAD_SOURCE_ONLY",
+      "requalification_triggers": [
+        "CAP09_R4285_HOST_EXACT_SOURCE_SUCCESSOR_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_V1.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PERMIT_V1.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PERMIT_ATOMIC_V1.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_WINDOWS_HOST_V1.test.cjs"
     }
   ],
   "non_effects": {

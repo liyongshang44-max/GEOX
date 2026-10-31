@@ -10,6 +10,7 @@ const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_pro
 const REPO='liyongshang44-max/GEOX',RUN='4285c3ce342c',HOST='LAPTOP-STN2A2P1';
 const CHECK='CAP09_R4285_NATIVE_ADOPTION_CONSUMER_SOURCE_ONLY_V1';
 const CURRENT_CHECK='CAP09_R4285_PRE_SIGN_CONSUMER_CONTRACT_EXACT_V1';
+const NEW_HOST_CHECK='CAP09_R4285_HOST_EXACT_SOURCE_ADMISSION_V1';
 const QCP_PATH='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
 const TRUST_PATH='scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json';
 const NATIVE_FULLCHAIN='scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs';
@@ -113,6 +114,45 @@ function checkQcp70(machine,definitions,sourceHead,baseHead){
  assert.deepEqual([...observed].sort(),[...expected].sort());
  return Object.freeze({status:'NATIVE_QCP70_SOURCE_MACHINE_VERIFIED_NOT_MERGE_HEAD_RUN',source_head:sourceHead,checks:70,passed,na});
 }
+function checkQcp71(machine,definitions,sourceHead,baseHead){
+ assert(HEAD.test(sourceHead)&&HEAD.test(baseHead)&&sourceHead!==baseHead,'R4285_QCP_SOURCE_ID');
+ assert(machine?.status==='PASS'&&machine.head_sha===sourceHead,'R4285_QCP_RAW_NOT_SOURCE_PASS');
+ assert(machine.base_sha===baseHead&&machine.stage==='SUCCESSOR_SUBJECT_PRE_MERGE','R4285_QCP_WRONG_BASE_STAGE');
+ const counts=machine.counts||{};
+ for(const key of ['fail','unknown','forbidden','authority_errors','unknown_changed_paths','blocker_count'])
+  assert.equal(counts[key],0,'R4285_QCP_UNRESOLVED:'+key);
+ assert.equal(counts.total_checks,71,'R4285_QCP71_REQUIRED');
+ assert.equal(counts.pass+counts.not_applicable,71,'R4285_QCP71_COUNTS_INCOMPLETE');
+ assert.deepEqual(machine.blockers,[],'R4285_QCP_BLOCKERS');
+ assert(Array.isArray(definitions?.checks)&&definitions.checks.length===71,'R4285_QCP71_MANIFEST_REQUIRED');
+ const expected=new Set(definitions.checks.map(x=>x.check_id));
+ assert.equal(expected.size,71,'R4285_QCP_DEFINITION_DUPLICATED');
+ assert(expected.has(CHECK),'R4285_QCP_PREDECESSOR_CHECK_MISSING');
+ assert(expected.has(CURRENT_CHECK),'R4285_QCP71_CONTRACT_CHECK_MISSING');
+  assert(expected.has(NEW_HOST_CHECK),'R4285_QCP71_HOST_CHECK_MISSING');
+ // A green historical QCP71 cannot qualify newly added adoption code unless
+ // the CURRENT QCP authority manifest actually owns its precise source paths.
+ const owned=new Set(Object.values(definitions.dependency_resolvers||{}).flatMap(r=>
+  r&&r.kind==='EXACT_PATH_SET'&&Array.isArray(r.paths)?r.paths:[]));
+ for(const p of [
+  'scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs',
+  'scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs',
+  'scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs',
+  'scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs'])
+  assert(owned.has(p),'R4285_QCP_ADOPTION_NEW_SOURCE_PATH_UNREGISTERED:'+p);
+ assert(Array.isArray(machine.results)&&machine.results.length===71,'R4285_QCP71_RESULTS_REQUIRED');
+ const observed=new Set();let passed=0,na=0;
+ for(const r of machine.results){
+  assert(r&&expected.has(r.check_id)&&!observed.has(r.check_id),'R4285_QCP_CHECK_ID_UNKNOWN_OR_DUPLICATE');
+  observed.add(r.check_id);assert(['PASS','NOT_APPLICABLE'].includes(r.status),'R4285_QCP_UNRESOLVED_STATUS');
+  if(r.status==='PASS')passed++;
+  else {na++;assert(typeof r.reason_code==='string'&&r.reason_code.length>0,'R4285_QCP_NA_WITHOUT_REASON')}
+  if(r.check_id===NEW_HOST_CHECK)assert.equal(r.status,'PASS','R4285_QCP71_CONTRACT_CHECK_NOT_PASS');
+ }
+ assert.equal(passed,counts.pass);assert.equal(na,counts.not_applicable);
+ assert.deepEqual([...observed].sort(),[...expected].sort());
+ return Object.freeze({status:'NATIVE_QCP71_SOURCE_MACHINE_VERIFIED_NOT_MERGE_HEAD_RUN',source_head:sourceHead,checks:71,passed,na});
+}
 function nativeGithubGet(urlPath){
  assert(/^\/(?:pulls\/[1-9]\d*|git\/commits\/[0-9a-f]{40}|git\/ref\/heads\/main|actions\/runs\/[1-9]\d*(?:\/attempts\/[1-9]\d*\/jobs\?per_page=100|\/artifacts\?per_page=100)?)$/.test(urlPath),'R4285_GITHUB_ENDPOINT_NOT_ALLOWED');
  const curl=process.platform==='win32'?'curl.exe':'curl';
@@ -173,8 +213,8 @@ function verifyGitHubNativeProof(meta,live,raw,zip,definitions,zipRaw){
  assert.equal(sha(zip),meta.qcp_zip_sha256,'R4285_NATIVE_ZIP_CHANGED');
  assert(typeof zipRaw==='function'&&zipRaw(zip).equals(raw),'R4285_NATIVE_RAW_NOT_IN_GITHUB_ARTIFACT');
  const machine=JSON.parse(raw.toString('utf8').replace(/^\uFEFF/,''));
- const check=checkQcp70(machine,definitions,meta.source_head_sha,meta.base_sha);
- return Object.freeze({status:'GITHUB_NATIVE_MERGED_EXACT_QCP70_AND_CI_VERIFIED_NOT_ADOPTION',subject_sha:meta.subject_sha,
+ const check=checkQcp71(machine,definitions,meta.source_head_sha,meta.base_sha);
+ return Object.freeze({status:'GITHUB_NATIVE_MERGED_EXACT_QCP71_AND_CI_VERIFIED_NOT_ADOPTION',subject_sha:meta.subject_sha,
   source_head:meta.source_head_sha,source_qcp_only:true,merge_exact_tree:true,qcp:check});
 }
 function fetchLive(meta){
@@ -188,6 +228,7 @@ function fetchLive(meta){
  qcpArtifacts:nativeGithubGet('/actions/runs/'+meta.qcp_run_id+'/artifacts?per_page=100'),
  ciRun:nativeGithubGet('/actions/runs/'+meta.ci_run_id)};
 }
+const liveNativeAdoptions=new WeakSet();
 const INPUT_FIELDS=['source_root','release_root','inventory_file','inventory_sha256',
  'authority_registry_file','authority_registry_sha256','owner_envelope_file','trust_file',
  'signed_evidence_input_file','qcp_provenance_file','qcp_provenance_sha256',
@@ -268,20 +309,23 @@ function checkNativeAdoption(input,{now=Date.now()}={}){
  const qualified=verifyGitHubNativeProof(provenance,fetchLive(provenance),raw,zipped,definitions,upstream.zipRaw);
  assert.equal(qualified.subject_sha,subject);
  const adoptionEnv=readJson(input.adoption_envelope_file);
- const adopter=native.verifySignedAdoption({envelope:adoptionEnv,trust,now,context:{subject_sha:subject,
+ const adopter=native.verifySignedAdoptionV3({envelope:adoptionEnv,trust,now,context:{subject_sha:subject,
   inventory_sha256:input.inventory_sha256,authority_registry_sha256:input.authority_registry_sha256,
   owner_decision_sha256:owner.owner_decision_sha256,lineage_envelope_sha256:lineageSha,
-  native_qcp70_result_sha256:sha(raw),installed_material_digest:checked.digest,
+  native_qcp71_result_sha256:sha(raw),installed_material_digest:checked.digest,
   release_binding_sha256:input.release_binding_sha256}});
- return Object.freeze({schema_version:'MCFT_CAP09_R4285_NATIVE_CURRENT_SUBJECT_ADOPTION_CONSUMER_V1',
+ const result=Object.freeze({schema_version:'MCFT_CAP09_R4285_NATIVE_CURRENT_SUBJECT_ADOPTION_CONSUMER_V1',
   status:'NATIVE_R4285_CURRENT_SUBJECT_ADOPTION_VERIFIED_NOT_PERMIT',run_id:RUN,subject_sha:subject,
   owner_ordinal:owner.ordinal,owner_inventory_sha256:input.inventory_sha256,
-  qcp70_source_run_id:provenance.qcp_run_id,qcp_executed_at_merge_head:false,
+  qcp71_source_run_id:provenance.qcp_run_id,qcp_executed_at_merge_head:false,
   source_and_merge_proven:qualified.status,material_digest:checked.digest,
   lineage:'NATIVE_R4285_SIGNED_LINEAGE_AND_FULLCHAIN_VERIFIED',adoption_digest:adopter.adoption_digest_sha256,
   resource_owner_fresh_signed:false,permit_issued:false,permit_consumed:false,
   host_execution_ready:false,execution_authorized:false,stage_count:0,production_authorized:false});
+ liveNativeAdoptions.add(result);
+ return result;
 }
+function isNativeVerified(x){return !!x&&liveNativeAdoptions.has(x);}
 function run(argv){
  assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'R4285_NATIVE_WINDOWS_ONLY');
  assert(argv.length===3&&argv[0]==='--adoption-check-only'&&argv[1]==='--input'&&path.isAbsolute(argv[2]),
@@ -291,4 +335,4 @@ function run(argv){
 if(require.main===module){try{console.log(JSON.stringify(run(process.argv.slice(2)),null,2));}
  catch(e){console.error(JSON.stringify({status:'HOLD_R4285_NATIVE_ADOPTION',first_blocker:String(e.message||e).slice(0,260),
   permit_issued:false,permit_consumed:false,execution_authorized:false,stage_count:0,production_authorized:false}));process.exitCode=1}}
-module.exports={RUN,CHECK,CURRENT_CHECK,QCP_PATH,INPUT_FIELDS,checkQcp67,checkQcp70,verifyGitHubNativeProof,checkInput,gitExactMain,checkNativeAdoption,run};
+module.exports={RUN,CHECK,CURRENT_CHECK,QCP_PATH,INPUT_FIELDS,checkQcp67,checkQcp70,checkQcp71,verifyGitHubNativeProof,checkInput,gitExactMain,checkNativeAdoption,isNativeVerified,run};

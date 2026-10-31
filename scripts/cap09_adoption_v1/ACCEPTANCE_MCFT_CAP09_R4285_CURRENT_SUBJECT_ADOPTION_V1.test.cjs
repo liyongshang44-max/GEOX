@@ -197,3 +197,33 @@ test('old V1 Adoption signature cannot authorize new QCP70 payload',()=>{
  const p=adoptionPayload(Object.fromEntries(Object.entries(ctx).filter(([k])=>k!=='subject_sha')));
  assert.throws(()=>g.verifySignedAdoption({envelope:sign(p,g.DOMAIN_ADOPTION_V1),trust:trusted,context:ctx,now}),/SIGNATURE_NOT_AUTHENTIC/);
 });
+
+
+test('final R4285 Adoption V3 verifies only QCP71-bound exact current subject',()=>{
+ const ctx={subject_sha:subject,inventory_sha256:'1'.repeat(64),owner_decision_sha256:'2'.repeat(64),
+  authority_registry_sha256:'3'.repeat(64),lineage_envelope_sha256:'4'.repeat(64),
+  native_qcp71_result_sha256:'5'.repeat(64),installed_material_digest:'6'.repeat(64),
+  release_binding_sha256:'7'.repeat(64)};
+ const p={...adoptionPayload(Object.fromEntries(Object.entries(ctx).filter(([k])=>k!=='subject_sha'))),
+  schema_version:'MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V3'};
+ const v=g.verifySignedAdoptionV3({envelope:sign(p,g.DOMAIN_ADOPTION_V3),trust:trusted,context:ctx,now});
+ assert.equal(v.execution_authorized,false);assert.equal(v.permit_authorized,false);
+ assert.equal(v.run_id,g.RUN);assert.equal(v.subject_sha,subject);
+ assert.notEqual(g.DOMAIN_ADOPTION,g.DOMAIN_ADOPTION_V3);
+ assert.notEqual(g.DOMAIN_ADOPTION_V1,g.DOMAIN_ADOPTION_V3);
+ for(const x of [
+  {native_qcp71_result_sha256:'e'.repeat(64)}, {run_id:'6ff9b41f6f7f'},
+  {attempt_ordinal:5},{permit_authorized:true},{production_authorized:true},
+  {scope:'PRODUCTION'}
+ ])assert.throws(()=>g.verifySignedAdoptionV3({envelope:sign({...p,...x},g.DOMAIN_ADOPTION_V3),trust:trusted,context:ctx,now}));
+ assert.throws(()=>g.verifySignedAdoptionV3({envelope:sign(p,g.DOMAIN_ADOPTION),trust:trusted,context:ctx,now}));
+});
+test('legacy QCP70 V2 payload cannot be replayed as QCP71 V3 Adoption',()=>{
+ const ctx={subject_sha:subject,inventory_sha256:'1'.repeat(64),owner_decision_sha256:'2'.repeat(64),
+  authority_registry_sha256:'3'.repeat(64),lineage_envelope_sha256:'4'.repeat(64),
+  native_qcp71_result_sha256:'5'.repeat(64),installed_material_digest:'6'.repeat(64),
+  release_binding_sha256:'7'.repeat(64)};
+ const p=adoptionPayload({...Object.fromEntries(Object.entries(ctx).filter(([k])=>k!=='subject_sha')),
+  native_qcp70_result_sha256:ctx.native_qcp71_result_sha256});
+ assert.throws(()=>g.verifySignedAdoptionV3({envelope:sign(p,g.DOMAIN_ADOPTION),trust:trusted,context:ctx,now}));
+});

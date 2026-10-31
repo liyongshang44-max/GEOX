@@ -5,7 +5,7 @@
  */
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
 const cp=require("node:child_process"),crypto=require("node:crypto");
-const RUN="4285c3ce342c",PREV="6ff9b41f6f7f";
+const RUN="4285c3ce342c",PREV="6ff9b41f6f7f",ORIGINAL_PARENT="72dc0304a21a";
 const HISTORIC_SUBJECT="5d69b8a3f254600726bc10f0404f1330de1e4562";
 const HOST="LAPTOP-STN2A2P1";
 const DOMAIN="GEOX_MCFT_CAP09_R4285_PURPOSE_SPECIFIC_SUCCESSOR_LINEAGE_V1\n";
@@ -88,8 +88,8 @@ function verifySignedLineage(envelope,trust,ctx){
  assert.equal(p.schema_version,"MCFT_CAP09_R4285_PURPOSE_SPECIFIC_LINEAGE_V1");
  assert.equal(p.run_id,RUN);
  assert.equal(p.failed_predecessor_run_id,PREV);
- assert(RUN12.test(p.parent_run_id),"R4285_PARENT_ID_REQUIRED");
- assert(Number.isSafeInteger(p.attempt_ordinal)&&p.attempt_ordinal>3,"R4285_ADJUDICATED_ORDINAL_REQUIRED");
+ assert.equal(p.parent_run_id,ORIGINAL_PARENT,"R4285_ORIGINAL_PARENT_SEMANTICS_CHANGED");
+ assert.equal(p.attempt_ordinal,4,"R4285_ATTEMPT4_ORDINAL_REQUIRED");
  assert.equal(p.subject_sha,ctx.subject_sha,"R4285_LINEAGE_SUBJECT_MISMATCH");
  assert(HEX40.test(ctx.subject_sha),"R4285_LINEAGE_SOURCE_SHA_INVALID");
  assert.equal(p.host_id,HOST);
@@ -192,6 +192,6 @@ function review(input){
   stage_count:0,production_authorized:false
  });
 }
-module.exports={RUN,PREV,HISTORIC_SUBJECT,HOST,DOMAIN,RCP,LINEAGE_FIELDS,canonical,
+module.exports={RUN,PREV,ORIGINAL_PARENT,HISTORIC_SUBJECT,HOST,DOMAIN,RCP,LINEAGE_FIELDS,canonical,
  verifyPredecessor,verifyBoundResources,verifySignedLineage,
  verifyFullchainCarryforward,verifyExactMain,review};
