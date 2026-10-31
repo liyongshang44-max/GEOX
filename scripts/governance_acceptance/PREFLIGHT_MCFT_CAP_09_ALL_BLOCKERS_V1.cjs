@@ -1298,6 +1298,94 @@ function main() {
   // the new exact five-path review has no scientific runtime, producer,
   // Stage3 body, or prior Permit mutation. Native #3749 CI/QCP and original
   // immutable source blobs remain the required inherited technical basis.
+  // #3751: a new test-only Native Adoption source changes QCP metadata, not
+  // historical scientific, DA9, Frozen V13, Stage3 or Permit code. Verify
+  // every changed path and prior native main before recording N/A for those
+  // historic PR-bound diagnostics. No signature or execution is inherited.
+  const R4285_NATIVE_BASE="16205320c30365ff81b305fb7490029912e09a18";
+  const R4285_NATIVE_CHECK="CAP09_R4285_NATIVE_ADOPTION_CONSUMER_SOURCE_ONLY_V1";
+  let r4285NativeProof=null;
+  function verifyR4285NativeSource(){
+    if(r4285NativeProof)return r4285NativeProof;
+    const assert=require("node:assert/strict");
+    const git=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:20000,maxBuffer:2097152}).trim();
+    const fail=e=>({status:"FAIL",reason_code:"HOLD_R4285_NATIVE_SOURCE:"+String(e.message||e).slice(0,260),permit:false});
+    try{
+      assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE");
+      assert.equal(args.base,R4285_NATIVE_BASE,"R4285_NATIVE_EXACT_BASE");
+      assert.equal(git("rev-parse","HEAD"),args.head,"R4285_NATIVE_EXACT_HEAD");
+      assert.equal(git("merge-base",args.base,args.head),args.base,"R4285_NATIVE_NOT_DESCENDANT");
+      const expected=[".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json","scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs","scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs","scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs","scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs","scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"];
+      const delta=git("diff","--name-only",args.base,args.head).split("\n").filter(Boolean).sort();
+      assert.deepEqual(delta,expected,"R4285_NATIVE_UNCLASSIFIED_SOURCE_DELTA");
+      const qrel="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",old=JSON.parse(git("show",args.base+":"+qrel));
+      assert.equal(old.checks.length,66,"R4285_NATIVE_BASE_QCP66");
+      assert.equal(authority.checks.length,67,"R4285_NATIVE_CURRENT_QCP67");
+      assert.deepEqual(authority.checks.slice(0,66),old.checks,"R4285_NATIVE_OLD_QCP66_CHANGED");
+      assert.equal(authority.checks[66].check_id,R4285_NATIVE_CHECK);
+      const oldResolvers=Object.fromEntries(Object.entries(authority.dependency_resolvers).filter(([id])=>id!=="CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1"));
+      assert.deepEqual(oldResolvers,old.dependency_resolvers,"R4285_NATIVE_OLD_RESOLVERS_CHANGED");
+      assert.deepEqual(authority.dependency_resolvers.CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1.paths,expected,"R4285_NATIVE_EXACT_TEN_PATHS");
+      const specs=[
+        [".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",[
+          ['"\u0024{{ github.event.pull_request.number }}" = "3750" ]; }; then','"\u0024{{ github.event.pull_request.number }}" = "3750" ] || [ "\u0024{{ github.event.pull_request.number }}" = "3751" ]; }; then'],
+          ["github.event.pull_request.number != 3750)","github.event.pull_request.number != 3750 && github.event.pull_request.number != 3751)"]]],
+        [".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",[
+          ["github.event.pull_request.number != 3750)","github.event.pull_request.number != 3750 && github.event.pull_request.number != 3751)"],
+          ["github.event.pull_request.number == 3750)","github.event.pull_request.number == 3750 || github.event.pull_request.number == 3751)"]]]];
+      specs.push([".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",[[
+        '          node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs',
+        '          # #3751 only changes R4285 native Adoption; the #3749/#3750\n          # exact-delta Host test is pinned to the accepted #3750 source.\n          # The current source is still separately checked by QCP67.\n          if [ "${{ github.event.pull_request.number }}" = "3751" ]; then\n            HIST_3749=\'6210cbfe692aa4d0efd06649ab02c45597158fbc\'\n            HOST_TEST=\'scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs\'\n            test "$(git rev-parse "HEAD:$HOST_TEST")" = "$(git rev-parse "$HIST_3749:$HOST_TEST")" || { echo \'HOLD_HISTORIC_3749_HOST_TEST_BYTES_CHANGED\'; exit 1; }\n            HIST_3749_ROOT="$RUNNER_TEMP/cap09_3749_historical_host_source"\n            git worktree add --detach "$HIST_3749_ROOT" "$HIST_3749"\n            (cd "$HIST_3749_ROOT" && test "$(git rev-parse HEAD)" = "$HIST_3749" && node --test "$HOST_TEST")\n          else\n            node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs\n          fi'
+      ]]]);
+      for(const [name,edits] of specs){
+        let body=git("show",args.base+":"+name);
+        for(const [before,after] of edits){assert.equal(body.split(before).length,2,"R4285_NATIVE_YAML_ANCHOR:"+name);body=body.replace(before,after);}
+        assert.equal(fs.readFileSync(path.join(ROOT,name),"utf8").trim(),body,"R4285_NATIVE_YAML_SCOPE_CHANGED:"+name);
+      }
+      const full=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
+      const protectedPaths=[...new Set([...full.SOURCE_PATHS,
+        "scripts/runtime_acceptance/MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_PARENT_STAGE_DISPATCH_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs"] )];
+      assert.equal(full.SOURCE_PATHS.length,23,"R4285_NATIVE_FULLCHAIN_PATH_SET");
+      for(const name of protectedPaths)assert.equal(git("rev-parse",args.base+":"+name),git("rev-parse",args.head+":"+name),"R4285_NATIVE_PROTECTED_BLOB_DRIFT:"+name);
+      assert.equal((plan.unknown_changed_paths||[]).length,0,"R4285_NATIVE_UNKNOWN_PATHS");
+      assert.equal((plan.authority_errors||[]).length,0,"R4285_NATIVE_AUTHORITY_ERRORS");
+      assert.equal((plan.resolver_errors||[]).length,0,"R4285_NATIVE_RESOLVER_ERRORS");
+      assert.equal(process.env.GITHUB_ACTIONS,"true","R4285_NATIVE_GITHUB_ONLY");
+      assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request","R4285_NATIVE_PR_ONLY");
+      const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+      assert.equal(event.pull_request?.number,3751,"R4285_NATIVE_PR_NUMBER");
+      assert.equal(event.pull_request?.base?.sha,args.base,"R4285_NATIVE_EVENT_BASE");
+      assert.equal(event.pull_request?.head?.sha,args.head,"R4285_NATIVE_EVENT_HEAD");
+      assert.equal(event.pull_request?.head?.repo?.full_name,"liyongshang44-max/GEOX");
+      assert(process.env.GH_TOKEN,"R4285_NATIVE_TOKEN_REQUIRED");
+      const native=id=>JSON.parse(cp.execFileSync("curl",["--fail","--silent","--show-error","--max-time","25",
+        "-H","Accept: application/vnd.github+json","-H","Authorization: Bearer "+process.env.GH_TOKEN,
+        "https://api.github.com/repos/liyongshang44-max/GEOX/actions/runs/"+id],
+        {cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:2097152}));
+      const previous="f3fe7ab190c211c648379e4dbc7453172fb6f862";
+      assert.equal(git("merge-base",previous,args.base),previous,"R4285_NATIVE_PREVIOUS_SOURCE_NOT_ANCESTOR");
+      for(const [id,workflow] of [[41097784174,"mcft-cap-09-qualification-control-plane-v1"],[41097784855,"ci"]]){
+        const x=native(id);assert.equal(x.head_sha,previous,"R4285_NATIVE_OLD_WORKFLOW_HEAD");
+        assert.equal(x.name,workflow);assert.equal(x.event,"pull_request");
+        assert.equal(x.status,"completed");assert.equal(x.conclusion,"success","R4285_NATIVE_OLD_WORKFLOW_FAILED");
+      }
+      const test=runDiagnostic("node --test scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",{},R4285_NATIVE_CHECK);
+      assert.equal(test.status,"PASS","R4285_NATIVE_NEGATIVE_TESTS_FAILED");
+      r4285NativeProof={status:"PASS",schema_version:"R4285_NATIVE_CURRENT_SOURCE_QCP67_ONLY_V1",
+        base_sha:args.base,subject_sha:args.head,changed_files:expected.length,
+        historic_qcp66_preserved:true,historic_protected_blobs:protectedPaths.length,
+        previous_qcp_run:41097784174,previous_ci_run:41097784855,
+        owner_inventory_signed:false,ordinal_adjudicated:false,adoption_issued:false,
+        permit_issued:false,execute_authorized:false,original_stage_count:0,production_authorized:false};
+      return r4285NativeProof;
+    }catch(e){r4285NativeProof=fail(e);return r4285NativeProof;}
+  }
+
   const R4285_HOST_READONLY_BASE="c2d9a6f9f7cf46c43f0c2fb0a36e01edc52aaa5c";
   const R4285_HOST_READONLY_NEW_CHECK="CAP09_R4285_PURPOSE_SPECIFIC_SIGNED_EVIDENCE_HOST_READONLY_V1";
   const R4285_HOST_READONLY_HISTORIC_CHECKS=new Set([
@@ -1312,6 +1400,8 @@ function main() {
     "DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1",
     "CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY"
   ]);
+  const R4285_NATIVE_OLD_CHECKS=new Set([...R4285_HOST_READONLY_HISTORIC_CHECKS,
+    "CAP09_R4285_PURPOSE_SPECIFIC_SIGNED_EVIDENCE_HOST_READONLY_V1"]);
   let r4285HostSourceProof=null;
   function verifyR4285HostSourceOnly(){
     if(r4285HostSourceProof)return r4285HostSourceProof;
@@ -1596,6 +1686,21 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    // R4285 Native Adoption technical source is distinct from older QCP66.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===R4285_NATIVE_BASE&&
+       (R4285_NATIVE_OLD_CHECKS.has(decision.check_id)||decision.check_id===R4285_NATIVE_CHECK)){
+      const proof=verifyR4285NativeSource();const ok=proof.status==="PASS";
+      const current=decision.check_id===R4285_NATIVE_CHECK;
+      result={...common,execution:"R4285_EXACT_QCP67_DISTINCT_SOURCE_QUALIFICATION",
+        status:ok?(current?"PASS":"NOT_APPLICABLE"):"FAIL",
+        reason_code:ok?(current?"R4285_NATIVE_QCP67_SOURCE_AND_NEGATIVE_TESTS_PASS":"PR_BOUND_HISTORIC_CHECK_NOT_APPLICABLE_TO_EXACT_R4285_NATIVE_ADOPTION_SOURCE_DELTA"):proof.reason_code,
+        current_source:proof,old_signatures_transferred:false,
+        adoption_signed:false,owner_inventory_signed:false,permit_issued:false,
+        permit_consumed:false,execute_authorized:false,original_six_stage_count:0,
+        production_authorized:false};
+      if(!ok)blockers.push({blocker_class:"R4285_NATIVE_SOURCE_BOUNDARY_NOT_QUALIFIED",check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
     // Post-#3749 R4285 independent signed-evidence Host source admission:
     // prior exact-subject technical history is preserved, not replayed as
     // current Authorization. Current signature verifier and Host negative

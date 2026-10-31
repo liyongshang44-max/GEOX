@@ -74,7 +74,19 @@ jobs:
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.test.cjs
-          node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs
+          # #3751 only changes R4285 native Adoption; the #3749/#3750
+          # exact-delta Host test is pinned to the accepted #3750 source.
+          # The current source is still separately checked by QCP67.
+          if [ "${{ github.event.pull_request.number }}" = "3751" ]; then
+            HIST_3749='6210cbfe692aa4d0efd06649ab02c45597158fbc'
+            HOST_TEST='scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs'
+            test "$(git rev-parse "HEAD:$HOST_TEST")" = "$(git rev-parse "$HIST_3749:$HOST_TEST")" || { echo 'HOLD_HISTORIC_3749_HOST_TEST_BYTES_CHANGED'; exit 1; }
+            HIST_3749_ROOT="$RUNNER_TEMP/cap09_3749_historical_host_source"
+            git worktree add --detach "$HIST_3749_ROOT" "$HIST_3749"
+            (cd "$HIST_3749_ROOT" && test "$(git rev-parse HEAD)" = "$HIST_3749" && node --test "$HOST_TEST")
+          else
+            node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs
+          fi
           node --test scripts/runtime_acceptance/RUN_MCFT_CAP09_ATTEMPT3_HOST_V2_WINDOWS.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_REAL_LEDGER_READBACK_V1.test.cjs
       - name: Verify original 3747 scope at its frozen source; reject inherited current approval
