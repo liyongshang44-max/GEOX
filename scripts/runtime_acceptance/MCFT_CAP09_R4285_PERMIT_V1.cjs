@@ -96,6 +96,10 @@ function verifyReadOnly(envelope,trust,ctx,{now=Date.now()}={}){
  const proof=Object.freeze({status:"R4285_TEST_ONLY_PERMIT_VERIFIED_NOT_CONSUMED_NOT_EXECUTED",
   run_id:RUN,subject_sha:p.subject_sha,nonce:p.nonce,expires_at:p.expires_at,
   envelope_sha256:sha(Buffer.from(lineage.canonical(envelope))),
+  adoption_envelope_sha256:p.adoption_envelope_sha256,
+  lineage_envelope_sha256:p.lineage_envelope_sha256,
+  resource_owner_envelope_sha256:p.resource_owner_envelope_sha256,
+  release_binding_sha256:p.release_binding_sha256,
   production_authorized:false,permit_consumed:false,execute_authorized:false});
  valid.add(proof);
  return proof;
