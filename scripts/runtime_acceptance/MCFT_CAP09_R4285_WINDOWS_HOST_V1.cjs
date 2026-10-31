@@ -26,6 +26,23 @@ const current=require("./MCFT_CAP09_R4285_CURRENT_BASELINE_EXECUTION_V1.cjs");
 const {freshStageLaunch}=require("./MCFT_CAP09_STAGE_START_CLOCK_V1.cjs");
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
 const RUN="4285c3ce342c";
+const REQUIRED_HOST_SOURCES=Object.freeze([
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs",
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_V1.cjs",
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_EXECUTION_APPROVAL_V1.cjs",
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_V1.cjs",
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_CAPABILITY_V1.cjs",
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_V1.cjs",
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_CHILD_STAGE_V1.cjs",
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_CURRENT_BASELINE_EXECUTION_V1.cjs",
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_RECEIPTS_V1.cjs",
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_PG_READONLY_V1.cjs",
+ "scripts/governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs",
+ "scripts/runtime_acceptance/RUN_MCFT_CAP09_R4285_PRODUCER_V1.ts",
+ "scripts/runtime_acceptance/RUN_MCFT_CAP09_R4285_TIMING_V1.ts",
+ "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP09_R4285_TIMING_V1.ts",
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_CONTROLLED_DELAY_V1.cjs"
+]);
 const FILES=Object.freeze({
  PRODUCER:"MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V2_RESULT.json",
  TIMING_1:"MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_SAMPLE1_V2_RESULT.json",
@@ -111,6 +128,17 @@ async function probeS3ReadOnly(releaseRoot,p,env){
   return Object.freeze({status:"R4285_REAL_S3_EMPTY_PRIVATE_SCOPED_READONLY",
    operations:4,no_write:true});
  }finally{client.destroy();}
+}
+function verifyBoundHostSources(input,profile,binding){
+ const installed=new Map(profile.files.map(f=>[f.path,f.sha256]));
+ const released=new Map(binding.files.map(f=>[f.path,f.sha256]));
+ for(const rel of REQUIRED_HOST_SOURCES){
+  const file=path.join(input.release_root,...rel.split("/"));
+  const digest=sha(fileBytes(file));
+  assert.equal(installed.get(rel),digest,"R4285_HOST_NEW_SOURCE_NOT_INSTALLED:"+rel);
+  assert.equal(released.get(rel),digest,"R4285_HOST_NEW_SOURCE_NOT_RELEASE_BOUND:"+rel);
+ }
+ return true;
 }
 function resolveStages({input,profile,permitPayload,trust,plan,observed,env}){
  scheduler.validateStagePlan(plan);
@@ -209,6 +237,7 @@ function buildAdmission(input,env=process.env){
  assert(permit.isVerified(permitProof));
  const prepared=atomic.prepare({nativeAdoption:adoption,permitProof,trust,sourceRoot:input.source_root});
  const profile=json(nativeInput.material_file);
+ verifyBoundHostSources(input,profile,json(nativeInput.release_binding_file));
  const steps=resolveStages({input,profile,permitPayload:permitEnv.payload,trust,plan,observed,env});
  return Object.freeze({adoption,permitProof,permitEnv,prepared,context,
   trust,resEnv,plan,observed,steps,profile,nativeInput,readback});
@@ -291,5 +320,5 @@ if(require.main===module)run().then(x=>console.log(JSON.stringify(x,null,2))).ca
   run_id:RUN,production_authorized:false,auto_retry:false}));
  process.exitCode=1;
 });
-module.exports={RUN,INPUTS,EXEC_INPUTS,checkInput,hostOnly,checkResourceEnv,resolveStages,
+module.exports={RUN,INPUTS,EXEC_INPUTS,REQUIRED_HOST_SOURCES,checkInput,hostOnly,checkResourceEnv,verifyBoundHostSources,resolveStages,
  buildAdmission,probeS3ReadOnly,preflight,execute,parse,run};
