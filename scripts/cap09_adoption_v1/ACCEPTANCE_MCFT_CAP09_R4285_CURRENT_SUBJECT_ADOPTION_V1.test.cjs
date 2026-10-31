@@ -64,7 +64,7 @@ function registryObject(){
  classification:'HISTORIC_NONPERMIT_SOURCE_DISPOSITION',source_run_id:'da9db7129607',
  started_receipt_sha256:'354ad465f2a53d8ca80b2c9573239808b7f69647e6448c41f68643492df5fcdd',
  signed_disposition_sha256:'f023601082cd0367655ae26bbbdd06497395fe65431daba5f731e2dd7641907b',
- deletion:[{file:'DELETE_1.json',exit_code:0},{file:'DELETE_2.json',exit_code:0}],
+ deletion:[{file:'DELETE_1.json',exit_code:0,receipt_sha256:'419fe785f5c1a18ae392c337b67211e0b2308bf6345e98ab69a8644427458d43'},{file:'DELETE_2.json',exit_code:0,receipt_sha256:'802b4fa77b4853123081e431353fbdb69c1323c10023ee8702c44ac25aaad9b7'}],
  one_shot_receipt_count:3,permit_issued:false,execution_authorized:false,production_authorized:false}},
  authorized_by_owner:false,owner_ordinal_adjudicated:false,permit_authorized:false,permit_issued:false,
  permit_consumed_by_this_readback:false,execution_authorized:false,production_authorized:false};
@@ -155,6 +155,8 @@ test('real Windows Registry provenance fields must be exact',()=>{
   x=>x.ledger.consumed[1].consumed_sha256='0'.repeat(64),
   x=>x.ledger.historic_nonpermit_disposition.namespace='unregistered',
   x=>x.ledger.historic_nonpermit_disposition.deletion[0].exit_code=1,
+  x=>x.ledger.historic_nonpermit_disposition.deletion[0].receipt_sha256='f'.repeat(64),
+  x=>x.ledger.consumed[0].nonce='f'.repeat(64),
   x=>x.unknown_authority_sources_count=1,
   x=>x.permit_authorized=true,
   x=>delete x.ledger.historic_nonpermit_disposition
