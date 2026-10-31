@@ -51,7 +51,7 @@ function observed(env=process.env){
 function childTargets(){
  assert(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS,"CAP09_R4285_WINDOWS_ONLY");
  const data=assertChildContract(process.env,process.argv[1]);
- const e=require("./MCFT_CAP_09_CURRENT_BASELINE_EXECUTION_V1.cjs");
+ const e=require("./MCFT_CAP09_R4285_CURRENT_BASELINE_EXECUTION_V1.cjs");
  const targets=e.isolatedTargets({isolated_run_id:data.run_id,
   qualification_first_base:must(process.env,"MCFT_QUALIFICATION_FIRST_BASE")},process.env);
  assert.equal(path.resolve(targets.out),path.resolve(must(process.env,"MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR")));
