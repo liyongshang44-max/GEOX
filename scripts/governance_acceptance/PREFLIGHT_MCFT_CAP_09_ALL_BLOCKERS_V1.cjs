@@ -1909,6 +1909,106 @@ function main() {
     }catch(e){r4285ReadbackProof=fail(e);return r4285ReadbackProof;}
   }
 
+  // Post-#3753 first physical Windows readback found a historical DA9 MinIO
+  // evidence-disposition child of the Trust ledger root. This QCP69 source
+  // correction is strictly non-Permit and cannot requalify historic Composer.
+  const R4285_DA9_BASE="c26362fe4c27baec7764b074cad2d86a0632f0f7";
+  const R4285_DA9_CHECK="CAP09_R4285_DA9_NONPERMIT_LEDGER_CORRECTION_TEST_ONLY_V1";
+  const R4285_DA9_RESOLVER="CAP09_R4285_DA9_HISTORIC_NONPERMIT_LEDGER_EXACT_SEVEN_PATHS_V1";
+  let r4285Da9Proof=null;
+  function verifyR4285Da9ExactCorrection(){
+    if(r4285Da9Proof)return r4285Da9Proof;
+    const assert=require("node:assert/strict");
+    const g=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:25000,maxBuffer:2097152}).trim();
+    const fail=e=>({status:"FAIL",reason_code:"HOLD_R4285_DA9_SCOPE:"+String(e.message||e).slice(0,350),
+      native_ledger_readback:false,permit_issued:false,execute_authorized:false});
+    try{
+      assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","DA9_CORRECTION_STAGE");
+      assert.equal(args.base,R4285_DA9_BASE,"DA9_CORRECTION_BASE");
+      assert.equal(g("rev-parse","HEAD"),args.head,"DA9_CORRECTION_HEAD");
+      assert.equal(g("merge-base",args.base,args.head),args.base,"DA9_CORRECTION_ANCESTRY");
+      assert.equal(plan.status,"PASS","DA9_CORRECTION_PLAN");
+      assert.deepEqual(plan.unknown_changed_paths,[],"DA9_CORRECTION_UNKNOWN_PATH");
+      assert.deepEqual(plan.authority_errors,[],"DA9_CORRECTION_AUTHORITY");
+      assert.deepEqual(plan.resolver_errors,[],"DA9_CORRECTION_RESOLVER");
+      const qcp="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+      const paths=[
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",qcp,
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs"
+      ].sort();
+      assert.deepEqual(g("diff","--name-only",args.base,args.head).split(/\\r?\\n/).filter(Boolean).sort(),
+        paths,"DA9_CORRECTION_EXACT_DELTA");
+      assert.deepEqual(changed.slice().sort(),paths,"DA9_CORRECTION_PLAN_DELTA");
+      const before=JSON.parse(g("show",args.base+":"+qcp));
+      assert.equal(before.checks.length,68,"DA9_CORRECTION_ACCEPTED_QCP68");
+      assert.equal(authority.checks.length,69,"DA9_CORRECTION_QCP69");
+      assert.deepEqual(authority.checks.slice(0,68),before.checks,"DA9_CORRECTION_QCP68_MUTATED");
+      assert.equal(authority.checks[68].check_id,R4285_DA9_CHECK,"DA9_CORRECTION_CHECK_ID");
+      const prior=Object.fromEntries(Object.entries(authority.dependency_resolvers)
+        .filter(([id])=>id!==R4285_DA9_RESOLVER));
+      assert.deepEqual(prior,before.dependency_resolvers,"DA9_CORRECTION_PREDECESSOR_RESOLVERS");
+      assert.equal(authority.dependency_resolvers[R4285_DA9_RESOLVER]?.kind,"EXACT_PATH_SET");
+      assert.deepEqual(authority.dependency_resolvers[R4285_DA9_RESOLVER].paths.slice().sort(),paths,
+        "DA9_CORRECTION_OWNERSHIP_PATHS");
+      assert.deepEqual(authority.checks[68].resolver_ids,[R4285_DA9_RESOLVER]);
+      // The actual #3753 protected-main merge remains the source base; no
+      // caller field may replace authentic GitHub event or rewrite old trust.
+      assert.equal(g("show","-s","--format=%P",args.base),
+        "96861b78674571adf4414b88c3a2894b61de2eb5 bd0d23f2aa47b90e2843c41212919821acdb94c8",
+        "DA9_CORRECTION_3753_NATIVE_MERGE_PARENT");
+      assert.equal(g("rev-parse",args.base+"^{tree}"),
+        g("rev-parse","bd0d23f2aa47b90e2843c41212919821acdb94c8^{tree}"),
+        "DA9_CORRECTION_3753_NATIVE_MERGE_TREE");
+      const trust="scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json";
+      assert.equal(g("rev-parse",args.base+":"+trust),
+        "61d7949d49a2707aef5844e90440c4566584fbe7","DA9_CORRECTION_TRUST_BLOB");
+      assert.equal(g("rev-parse",args.base+":"+R4285_FORMAL_SCOPE_DOCUMENT),
+        R4285_FORMAL_SCOPE_DOCUMENT_BLOB,"DA9_CORRECTION_ADOPTED_POLICY");
+      const frozen=[trust,R4285_FORMAL_SCOPE_DOCUMENT,
+        "scripts/cap09_adoption_v1/da9-minio-disposition-v1.cjs",
+        "scripts/cap09_adoption_v1/da9-minio-exact-delete-v1.cjs",
+        "scripts/cap09_adoption_v1/da9-minio-closure-v1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_PREFLIGHT_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs"
+      ];
+      // The old permit, scientific source and historical failure proofs retain
+      // exactly the same Git blobs; no cross-subject signature carry-forward.
+      const full=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
+      assert.equal(full.SOURCE_PATHS.length,23,"DA9_CORRECTION_FROZEN23");
+      for(const rel of [...new Set([...frozen,...full.SOURCE_PATHS])]){
+        assert.equal(g("rev-parse",args.base+":"+rel),g("rev-parse",args.head+":"+rel),
+          "DA9_CORRECTION_HISTORICAL_DRIFT:"+rel);
+      }
+      assert.equal(process.env.GITHUB_ACTIONS,"true","DA9_CORRECTION_NATIVE_GITHUB_ACTIONS");
+      assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request","DA9_CORRECTION_NATIVE_PR_EVENT");
+      const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+      assert.equal(event.repository?.full_name,"liyongshang44-max/GEOX","DA9_CORRECTION_REPO");
+      assert.equal(event.pull_request?.number,3754,"DA9_CORRECTION_PR");
+      assert.equal(event.pull_request?.base?.sha,args.base,"DA9_CORRECTION_PR_BASE");
+      assert.equal(event.pull_request?.head?.sha,args.head,"DA9_CORRECTION_PR_HEAD");
+      assert.equal(event.pull_request?.head?.repo?.full_name,"liyongshang44-max/GEOX");
+      const neg=runDiagnostic("node --test scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs",
+        {},"R4285_DA9_CORRECTION_SYNTHETIC_NEGATIVES");
+      assert.equal(neg.status,"PASS","DA9_CORRECTION_NEGATIVE_TESTS_FAILED");
+      r4285Da9Proof={status:"PASS",base_sha:args.base,subject_sha:args.head,
+        historical_qcp68_preserved:true,historic_permit_source_blobs_unchanged:true,
+        nonpermit_da9_source_blobs_unchanged:true,exact_changed_paths:paths.length,
+        negative_tests_pass:true,windows_native_readback:false,
+        registry_complete:false,owner_signature:false,ordinal_adjudicated:false,
+        permit_issued:false,permit_consumed:false,execute_authorized:false,
+        production_authorized:false};
+      return r4285Da9Proof;
+    }catch(e){r4285Da9Proof=fail(e);return r4285Da9Proof;}
+  }
+
   for (const decision of plan.decisions) {
     let result;
     const common = {
@@ -1920,6 +2020,26 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    // #3754 exact post-merge physical first-failure correction is only a
+    // source-only successor of QCP68, never a new authority or ledger readback.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===R4285_DA9_BASE&&
+      (R4285_FORMAL_SCOPE_OLD_CHECKS.has(decision.check_id)||
+       decision.check_id===R4285_READBACK_CHECK||decision.check_id===R4285_DA9_CHECK)){
+      const proof=verifyR4285Da9ExactCorrection(),ok=proof.status==="PASS";
+      const current=decision.check_id===R4285_DA9_CHECK;
+      result={...common,execution:"R4285_QCP69_EXACT_HISTORIC_DA9_NONPERMIT_LEDGER_CORRECTION",
+        status:ok?(current?"PASS":"NOT_APPLICABLE"):"FAIL",
+        reason_code:ok?(current?"CURRENT_QCP69_EXACT_SEVEN_PATH_SOURCE_NEGATIVES_PASS":
+          "HISTORICAL_EXACT_PR_GATE_NOT_APPLICABLE_TO_QCP69_SOURCE_DELTA"):proof.reason_code,
+        source_correction_proof:proof,
+        historical_qcp68_pass_not_reissued:true,native_windows_readback:false,
+        owner_inventory_signed:false,ordinal_adjudicated:false,
+        permit_issued:false,permit_consumed:false,execute_authorized:false,
+        original_six_stages_executed:0,production_authorized:false};
+      if(!ok)blockers.push({blocker_class:"R4285_QCP69_DA9_SOURCE_SCOPE_FAILED",
+        check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
     // #3753 has an isolated, QCP68-owned read-only Producer/source delta.
     // Exact #3752 merge + unchanged old 67 definitions, historical runtime
     // source bytes and all eight changed paths are required before old
