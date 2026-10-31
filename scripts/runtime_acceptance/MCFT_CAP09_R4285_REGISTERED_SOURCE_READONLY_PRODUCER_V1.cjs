@@ -132,7 +132,7 @@ function fullIndex(root){
     entries.push([rel,'D',String(s.dev),String(s.ino),String(s.mtimeNs),String(s.ctimeNs)]);
     walk(file,rel,depth+1);
    }else{
-    guard(s.isFile()&&s.size>0n&&s.size<=8n*1024n*1024n,'LEDGER_FILE_BOUND:'+rel);
+    guard(s.isFile()&&s.size>=0n&&s.size<=8n*1024n*1024n,'LEDGER_FILE_BOUND:'+rel);
     total+=Number(s.size);guard(total<=96*1024*1024,'LEDGER_BYTES_TRUNCATED');
     const data=fs.readFileSync(file);
     guard(BigInt(data.length)===s.size,'LEDGER_RACE_SIZE:'+rel);
