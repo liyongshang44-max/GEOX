@@ -1653,6 +1653,15 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_V1.test.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_PREFLIGHT_V1.cjs"
       ]
+    },
+    "CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        "scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs",
+        "scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -3601,6 +3610,34 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_V1.test.cjs"
+    },
+    {
+      "check_id": "CAP09_R4285_NATIVE_ADOPTION_CONSUMER_SOURCE_ONLY_V1",
+      "owner": "MCFT_CAP09_R4285_NATIVE_ADOPTION_CURRENT_SOURCE_TEST_ONLY",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs"
+      ],
+      "resolver_ids": [
+        "CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1"
+      ],
+      "historical_evidence_policy": "NONE_HISTORIC_QCP66_AND_ATTEMPT3_ADOPTION_NOT_SUCCESSOR_AUTHORITY",
+      "execution_workflow": ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+      "execution_workflow_status": "READONLY_NATIVE_ADOPTION_CONTRACT_TESTS_NO_OWNER_SIGNATURE_OR_PERMIT",
+      "fail_policy": "FAIL_CLOSED_CURRENT_FOUR_SOURCE_PATHS_NATIVE_QCP67_OWNER_AND_LINEAGE_STILL_REQUIRED",
+      "carry_forward_policy": "NONE_NO_HISTORIC_OR_SOURCE_ONLY_CARRY_FORWARD_TO_LIVE_HOST",
+      "requalification_triggers": [
+        "CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node --test scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs"
     }
   ],
   "non_effects": {
