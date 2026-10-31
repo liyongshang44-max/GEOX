@@ -55,7 +55,12 @@ const CHILD_STAGE_ENVIRONMENT_NAMES=Object.freeze([
  // parent cannot introduce an unbound environment surface after collection.
  'MCFT_ATTEMPT3_V2_CHILD','MCFT_ATTEMPT3_V2_LEDGER_ROOT',
  'MCFT_ATTEMPT3_V2_NONCE','MCFT_ATTEMPT3_V2_PERMIT_ENVELOPE_SHA256',
- 'MCFT_ATTEMPT3_V2_OBSERVED_FILE','MCFT_ATTEMPT3_V2_OBSERVATIONS_SHA256'
+ 'MCFT_ATTEMPT3_V2_OBSERVED_FILE','MCFT_ATTEMPT3_V2_OBSERVATIONS_SHA256',
+ // Independent R4285 child-only domain. Existing Attempt-3 names remain
+ // unchanged and its previously signed installed profiles are not rewritten.
+ 'MCFT_R4285_CHILD','MCFT_R4285_LEDGER_ROOT','MCFT_R4285_NONCE',
+ 'MCFT_R4285_PERMIT_ENVELOPE_SHA256','MCFT_R4285_OBSERVED_FILE',
+ 'MCFT_R4285_OBSERVATIONS_SHA256'
 ]);
 function collect(root,python,powershell,output,environment=process.env){
  root=fs.realpathSync(path.resolve(root));output=path.resolve(output);c.noLinks(root);assert(fs.statSync(root).isDirectory(),'MATERIAL_ROOT_REQUIRED');assert(outside(root,output),'MATERIAL_OUTPUT_MUST_BE_OUTSIDE_RELEASE');
