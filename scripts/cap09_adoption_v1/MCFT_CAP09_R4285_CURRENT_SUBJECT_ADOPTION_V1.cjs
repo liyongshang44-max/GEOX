@@ -139,7 +139,10 @@ function checkNativeRegistry(registry,report){
   assert.equal(c.run_id,expected[0]);assert.equal(c.consumed_sha256,expected[1]);
   assert.equal(c.schema_version,expected[2]);assert.equal(c.pair_bytes_equal,true);
   assert.equal(c.production_authorized,false);
-  assert(SHA.test(c.nonce),'R4285_HISTORIC_NONCE_INVALID');
+  assert.equal(c.nonce,i===0?
+   'c8f4bd197ef422f3694f39adc6fcb8a3b67af06a897fe75c219728e40fb13bc0':
+   'b3a312063716dce0f59b145c7d89fc1e3fb1aa53dc23d17e59934ba873ff6d93',
+   'R4285_HISTORIC_NONCE_INVALID');
  }
  const d=l.historic_nonpermit_disposition;
  assert.equal(d?.namespace,HISTORIC_DA9);
@@ -149,6 +152,10 @@ function checkNativeRegistry(registry,report){
  assert.equal(d.signed_disposition_sha256,HISTORIC_DA9_SIGNED);
  assert.equal(d.one_shot_receipt_count,3);
  assert.deepEqual(d.deletion?.map(x=>[x.file,x.exit_code]),[['DELETE_1.json',0],['DELETE_2.json',0]]);
+ assert.deepEqual(d.deletion?.map(x=>x.receipt_sha256),[
+  '419fe785f5c1a18ae392c337b67211e0b2308bf6345e98ab69a8644427458d43',
+  '802b4fa77b4853123081e431353fbdb69c1323c10023ee8702c44ac25aaad9b7'
+ ],'R4285_DA9_EXACT_DELETE_RECEIPT_DIGESTS');
  for(const field of ['permit_issued','execution_authorized','production_authorized'])
   assert.equal(d[field],false,'R4285_DA9_NONPERMIT');
  if(report){
