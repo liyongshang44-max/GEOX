@@ -1940,7 +1940,7 @@ function main() {
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs"
       ].sort();
-      assert.deepEqual(g("diff","--name-only",args.base,args.head).split(/\\r?\\n/).filter(Boolean).sort(),
+      assert.deepEqual(g("diff","--name-only",args.base,args.head).split(/\r?\n/).filter(Boolean).sort(),
         paths,"DA9_CORRECTION_EXACT_DELTA");
       assert.deepEqual(changed.slice().sort(),paths,"DA9_CORRECTION_PLAN_DELTA");
       const before=JSON.parse(g("show",args.base+":"+qcp));
@@ -1977,7 +1977,7 @@ function main() {
         "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_PREFLIGHT_V1.cjs",
-        "scripts/runtime_acceptance/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs"
+        "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs"
       ];
       // The old permit, scientific source and historical failure proofs retain
       // exactly the same Git blobs; no cross-subject signature carry-forward.
