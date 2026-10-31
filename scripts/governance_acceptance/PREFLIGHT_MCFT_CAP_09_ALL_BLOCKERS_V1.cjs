@@ -1317,7 +1317,7 @@ function main() {
       assert.equal(args.base,R4285_NATIVE_BASE,"R4285_NATIVE_EXACT_BASE");
       assert.equal(git("rev-parse","HEAD"),args.head,"R4285_NATIVE_EXACT_HEAD");
       assert.equal(git("merge-base",args.base,args.head),args.base,"R4285_NATIVE_NOT_DESCENDANT");
-      const expected=[".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json","scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs","scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs","scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs","scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs","scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"];
+      const expected=[".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json","scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs","scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs","scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs","scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs","scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"];
       const delta=git("diff","--name-only",args.base,args.head).split("\n").filter(Boolean).sort();
       assert.deepEqual(delta,expected,"R4285_NATIVE_UNCLASSIFIED_SOURCE_DELTA");
       const qrel="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",old=JSON.parse(git("show",args.base+":"+qrel));
@@ -1327,7 +1327,7 @@ function main() {
       assert.equal(authority.checks[66].check_id,R4285_NATIVE_CHECK);
       const oldResolvers=Object.fromEntries(Object.entries(authority.dependency_resolvers).filter(([id])=>id!=="CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1"));
       assert.deepEqual(oldResolvers,old.dependency_resolvers,"R4285_NATIVE_OLD_RESOLVERS_CHANGED");
-      assert.deepEqual(authority.dependency_resolvers.CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1.paths,expected,"R4285_NATIVE_EXACT_NINE_PATHS");
+      assert.deepEqual(authority.dependency_resolvers.CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1.paths,expected,"R4285_NATIVE_EXACT_TEN_PATHS");
       const specs=[
         [".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",[
           ['"\u0024{{ github.event.pull_request.number }}" = "3750" ]; }; then','"\u0024{{ github.event.pull_request.number }}" = "3750" ] || [ "\u0024{{ github.event.pull_request.number }}" = "3751" ]; }; then'],
@@ -1335,6 +1335,10 @@ function main() {
         [".github/workflows/mcft-cap09-stage3-testonly-dual-heartbeat-v1.yml",[
           ["github.event.pull_request.number != 3750)","github.event.pull_request.number != 3750 && github.event.pull_request.number != 3751)"],
           ["github.event.pull_request.number == 3750)","github.event.pull_request.number == 3750 || github.event.pull_request.number == 3751)"]]]];
+      specs.push([".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",[[
+        'node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs',
+        '          # #3751 only changes R4285 native Adoption; the #3749/#3750\n          # exact-delta Host test is pinned to the accepted #3750 source.\n          # The current source is still separately checked by QCP67.\n          if [ "${{ github.event.pull_request.number }}" = "3751" ]; then\n            HIST_3750=\'f3fe7ab190c211c648379e4dbc7453172fb6f862\'\n            HOST_TEST=\'scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs\'\n            test "$(git rev-parse "HEAD:$HOST_TEST")" = "$(git rev-parse "$HIST_3750:$HOST_TEST")" || { echo \'HOLD_HISTORIC_3749_HOST_TEST_BYTES_CHANGED\'; exit 1; }\n            HIST_3750_ROOT="$RUNNER_TEMP/cap09_3750_historical_host_source"\n            git worktree add --detach "$HIST_3750_ROOT" "$HIST_3750"\n            (cd "$HIST_3750_ROOT" && test "$(git rev-parse HEAD)" = "$HIST_3750" && node --test "$HOST_TEST")\n          else\n            node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs\n          fi'
+      ]]]);
       for(const [name,edits] of specs){
         let body=git("show",args.base+":"+name);
         for(const [before,after] of edits){assert.equal(body.split(before).length,2,"R4285_NATIVE_YAML_ANCHOR:"+name);body=body.replace(before,after);}
