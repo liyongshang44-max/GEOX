@@ -113,7 +113,10 @@ const STAGES=Object.freeze(['A0','A18D','O00','O01','O02','O03','O04','O05','O06
 // per-run non-Permit artifacts are indexed as bytes, never interpreted as grants.
 function fullIndex(root){
  directory(root);
- let entries=[],num=0,total=0;
+ const rootStat=fs.lstatSync(root,{bigint:true});
+ guard(rootStat.isDirectory()&&!rootStat.isSymbolicLink(),'LEDGER_ROOT_IDENTITY_INVALID');
+ let entries=[['.','ROOT',String(rootStat.dev),String(rootStat.ino),
+  String(rootStat.mtimeNs),String(rootStat.ctimeNs)]],num=0,total=0;
  function walk(at,relative,depth){
   guard(depth<=7,'LEDGER_INDEX_DEPTH_LIMIT');
   const names=fs.readdirSync(at).sort();
