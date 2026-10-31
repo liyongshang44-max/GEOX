@@ -87,9 +87,8 @@ test('extra future run slot is indexed but cannot be confused with old consumed 
  assert.throws(()=>p.auditFixedLedger(root));
 }));
 test('symbolic linked nonce is rejected, no traversal',()=>temp(root=>{
- const a=setup(root);const outside=path.join(root,'elsewhere');
- fs.mkdirSync(outside);fs.rmSync(a.n,{recursive:true});
- try{fs.symlinkSync(outside,a.n,'dir');}
+ const a=setup(root);fs.rmSync(a.n,{recursive:true});
+ try{fs.symlinkSync(a.r,a.n,'dir');}
  catch(e){if(e.code==='EPERM')return;throw e;}
  assert.throws(()=>p.fullIndex(root),/LEDGER_SYMLINK|LEDGER_REPARSE/);
 }));
