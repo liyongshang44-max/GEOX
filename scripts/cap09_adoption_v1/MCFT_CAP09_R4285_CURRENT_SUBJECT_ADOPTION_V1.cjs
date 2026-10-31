@@ -270,7 +270,7 @@ function verifySignedAdoption({envelope,trust,context,now=Date.now()}){
  * QCP71 and the final R4285 Host must be qualified before any real signing.
  * Historical V1/V2 domains and payload interpretation are not modified.
  */
-const DOMAIN_ADOPTION_V3='GEOX_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V3\\n'.replace('\\n','\n');
+const DOMAIN_ADOPTION_V3='GEOX_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V3\n';
 const ADOPTION_V3_FIELDS=Object.freeze(ADOPTION_FIELDS.map(k=>
  k==='native_qcp70_result_sha256'?'native_qcp71_result_sha256':k));
 function verifySignedAdoptionV3({envelope,trust,context,now=Date.now()}){
