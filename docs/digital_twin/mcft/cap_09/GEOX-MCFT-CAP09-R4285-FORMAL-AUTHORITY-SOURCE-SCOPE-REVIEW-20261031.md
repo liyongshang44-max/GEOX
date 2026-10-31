@@ -52,6 +52,46 @@ Before any native Registry Producer can emit `REGISTERED_SOURCE_COMPLETENESS=PAS
 
 This instrument is **proposed policy text**, not a source registry, new authority, effective amendment, or request to sign per-test results. The existing Owner inventory/ordinal decision is still intended to be a **single** later signed fixed-digest decision after source completeness and readback.
 
+## 3A. Narrow governance addendum: formal Permit acceptance namespace (proposed, not effective)
+
+### 3A.1 Formal registrar and signer source of authority
+
+- **Registrar:** the single `ACCOUNTABLE_SINGLE_OPERATOR` already identified by the repository-controlled `MCFT_CAP09_RETRY_TRUST_V1.json`, specifically `mcft_cap09_operator_mylr1`. This role may propose, formally approve and revoke registrations of **CAP-09 TEST_ONLY Permit acceptors, eligible Ed25519 issuer keys and registered consumption roots** through a purpose-scoped, attributable GitHub protected-main governance change or independently verified Ed25519 governance instrument. It is *not* a new key, independent second natural person, CI identity or separate Registry service.
+- **Approval:** an attributed native approval by the authorized Owner for this **exact governance diff**, and its subsequent successful merge into protected main, are mandatory if the GitHub route is used. A comment or bot-generated green check is not authenticated policy adoption. The effective identity is the merged commit SHA, tree and this file's native Git blob and byte SHA-256, re-read from protected main. Any edit, supersession or revocation must go through a new explicitly approved, append-only protected-main successor. This document remains a **candidate** until that happens.
+- **Existing trust:** only the repository-owned Retry Trust bytes at `scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json`, **Git blob `61d7949d49a2707aef5844e90440c4566584fbe7`**, **raw SHA-256 `dce2a16f6a82779873dfe25b30194f0445f23b894f5eb41c41a7274b1eb19cf7`**, are covered by this proposed V1 registration scope. The raw SHA-256 must be recomputed on the actual host; the configured file must be exactly the already-reviewed bytes. No `adopted=false` / `execution_enabled=false` change is permitted.
+- **Issuer registration:** two keys are present under those exact bytes: Owner `mcft_cap09_operator_mylr1` (`ACCOUNTABLE_SINGLE_OPERATOR`, SPKI `223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365`) and `mcft_cap09_independent_retry_governance` (`INDEPENDENT_RETRY_GOVERNANCE`, SPKI `ef7459a5918e35c90913532a7c8af545fbca4fec0b7dc95916797db3303fa870`). Either may sign only within the exact historical domain and effective signer restrictions of the particular Permit generation; listing a key is **not** issuing a valid Permit. Unknown/revoked/expired keys HOLD.
+- **External signing implementation:** cryptographic issuer *identity* is the adopted key registration and purpose-separated Permit signature, **not the path of whatever off-repository program possesses the private key**. Thus the Attempt-3 V2 physical signing executable remains an unresolved **implementation-provenance** question, not automatic evidence of an additional issuer registration. If the registered scope requires executable provenance, fail closed until it is verified; it must never silently be invented.
+- **Registrar changes:** addition/removal/revocation of keys, signer domains, consumer entrypoints or ledger roots is **not allowed through a caller-provided JSON field, output path, new private key or mutable runtime environment**. It requires an accountable-Owner approved policy successor binding exact old/new Trust and source bytes; revocation invalidates subsequent admission, never erases old ledger receipts.
+
+### 3A.2 Exactly bounded consumption roots and entrypoint registrations
+
+Candidate registered Ledger Root set (**one**, not yet formally effective):
+
+```text
+D:\gptdown\MCFT-CAP09-AUTHORITY-LEDGER
+```
+
+This root is configured in the exact Retry Trust listed above. Its discovery is a scoped contractual assertion **only after formal adoption**, not a statement that another arbitrary Windows directory could not exist.
+
+- `PERMIT_V1`: `MCFT_CAP09_RETRY_PERMIT_V1.cjs` verification / consumption via `MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs` and `MCFT_CAP09_WINDOWS_LOCAL_QUALIFICATION_ENTRY_V1.ps1`. Signer codepaths `da9-retry-bundle.cjs` and `da9-retry-bundle-v2.cjs` exist only for fixed historical Attempt-2 identities. Accepted signature domain `GEOX_MCFT_CAP09_ISOLATED_RETRY_PERMIT_V1\\n`, consumed schema `geox_mcft_cap09_consumed_permit_v1`; **historical, not new R4285**.
+- `PERMIT_ATTEMPT3_V2`: `MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs` verification, `MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs` atomic consumption, `MCFT_CAP09_ATTEMPT3_HOST_V2.cjs` official Host. Accepted domain `GEOX_MCFT_CAP09_ISOLATED_RETRY_PERMIT_ATTEMPT3_V2\\n`, consumed schema `geox_mcft_cap09_consumed_permit_attempt3_v2`; **historical consumed and not reusable**. External V2 signer-program provenance is unresolved; a valid signature from an existing registered key would prove the *issuer*, not the exact signer executable.
+- `R4285`: `MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs` and `MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_PREFLIGHT_V1.cjs` are **read-only only**. No successor Permit signer, verifier for a new domain, atomic consumption, or child-capability issuer has been registered, implemented or admitted. This addendum **does not create** them.
+- `QCP_EVIDENCE`: the 67-check central QCP Evidence Registry is not part of this Permit issuer/consumer root namespace; no qualification evidence is recast as execution authority.
+
+Any formally registered CAP-09 Permit writer/consumer not in this source-versioned set, new root, altered signature domain, changed installed executable, or unknown host process claiming formal registration is an explicit **HOLD** requiring additive supersession. Neither the Host nor Producer may infer it is safe from absence of a filename hit. The registered set is limited to **this CAP-09 governance namespace** and does not claim universal visibility into all software on the Windows host.
+
+### 3A.3 Exact effect and Producer sequencing
+
+1. **CANDIDATE** now: repository source review alone has no right to close the formal-scope gate. The Owner must explicitly approve these registered authorities/roots as the exhaustive permitted **formal CAP-09 registration namespace**, with the affected source identities and Trust raw SHA-256, by a verifiable permitted governance action. A merge without applicable approved governance or a detached comment is not enough.
+2. **DEFINED**, only after the authorized native approval, protected-main merge, exact content/subject/Trust binding and valid verification of registration change chain. Re-read the policy's native protected-main bytes and record its blob identity. All prior versions remain historical and cannot retroactively authorize Permit consumption.
+3. **READBACK**, after DEFINED only: run the source-backed Windows **read-only** Producer against every registered source and root, cross-check source image and Host, gather actual twin run/nonce receipts and report all unknown/unreadable/extra/truncated/racy states as HOLD. An Owner-granted source scope does not fabricate host readback.
+4. **OWNER ORDINAL**, only after native readback and full R4285 inventory closure: obtain exactly one `ACCOUNTABLE_SINGLE_OPERATOR` purpose-specific Ed25519 signed inventory+ordinal decision binding fixed bytes and explicitly `permit_authorized=false`. `4` stays a candidate before that signature. No extra person is needed solely because the signer and verifier are separate code paths.
+5. **PERMIT / EXECUTE** remain HOLD/FORBIDDEN under this entire policy. No route, file or status in this addendum permits running original six stages.
+
+### 3A.4 Governance acceptance negatives
+
+Reject: unauthenticated approving identity; unmerged/draft/changed policy; Trust SHA-256 or Git blob mismatch; unregistered/revoked issuer; unexpected second Ledger Root; unidentified V1/V2 runtime acceptance writer; missing signed source scope; alternate subject/Host; changed source bytes; incomplete issuer/consumer inventory; truncated, unreadable or changing native readback; old consumed Run reuse; Owner-supplied `authorized_by_owner:true` without independent attestation; test fixture passed off as actual authority.
+
 ## 4. Windows native read-only Producer admission requirements (implementation deferred)
 
 **Do not implement or run a Producer that can claim `PASS` until §3 is formally adopted or existing sufficient scope authority is produced.** At adoption, the smallest successor should reuse Retry Trust and original V1/V2 readback invariants. Exact mandatory controls:
