@@ -1,0 +1,32 @@
+name: mcft-cap09-r4285-registered-source-readonly-v1
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs'
+      - '.github/workflows/mcft-cap09-r4285-registered-source-readonly-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+
+permissions:
+  contents: read
+
+jobs:
+  nonauthorizing-source-negative-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Read-only Producer synthetic negative-contract tests
+        run: node --test scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs
+      - name: No authorization, permit or physical acceptance
+        run: |
+          echo 'SOURCE_ONLY_TESTS_NOT_WINDOWS_READBACK'
+          echo 'R4285_OWNER_SIGNATURE=HOLD'
+          echo 'R4285_PERMIT=HOLD'
+          echo 'R4285_EXECUTE=FORBIDDEN'
