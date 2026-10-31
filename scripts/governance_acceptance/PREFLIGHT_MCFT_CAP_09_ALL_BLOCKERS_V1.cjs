@@ -1804,6 +1804,111 @@ function main() {
     }catch(e){r4285ScopeProof=fail(e);return r4285ScopeProof;}
   }
 
+  // #3753: independently bounded QCP68 successor for the already adopted
+  // #3752 governance namespace. Old PR-specific exact-delta and historic
+  // Composer diagnostics remain historically FAIL/NA; never reinterpret
+  // their result as current source science, adoption, ordinal or Permit.
+  const R4285_READBACK_BASE="96861b78674571adf4414b88c3a2894b61de2eb5";
+  const R4285_READBACK_CHECK="CAP09_R4285_REGISTERED_SOURCE_NATIVE_READBACK_TEST_ONLY_V1";
+  const R4285_READBACK_RESOLVER="CAP09_R4285_REGISTERED_SOURCE_READONLY_EXACT_THREE_PATHS_V1";
+  let r4285ReadbackProof=null;
+  function verifyR4285ReadbackSuccessor(){
+    if(r4285ReadbackProof)return r4285ReadbackProof;
+    const assert=require("node:assert/strict");
+    const g=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:25000,maxBuffer:2097152}).trim();
+    const fail=e=>({status:"FAIL",reason_code:"HOLD_R4285_READBACK_SCOPE:"+String(e.message||e).slice(0,330),
+      historical_science_requalified:false,owner_signature_verified:false,
+      ledger_readback:false,permit_issued:false,execution_authorized:false});
+    try{
+      assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","R4285_READBACK_STAGE");
+      assert.equal(args.base,R4285_READBACK_BASE,"R4285_READBACK_EXACT_ADOPTED_MAIN");
+      assert.equal(g("rev-parse","HEAD"),args.head,"R4285_READBACK_EXACT_HEAD");
+      assert.equal(g("merge-base",args.base,args.head),args.base,"R4285_READBACK_ANCESTRY");
+      assert.equal(plan.status,"PASS","R4285_READBACK_PLANNER");
+      assert.deepEqual(plan.unknown_changed_paths,[],"R4285_READBACK_UNKNOWN_PATHS");
+      assert.deepEqual(plan.authority_errors,[],"R4285_READBACK_AUTHORITY_ERRORS");
+      assert.deepEqual(plan.resolver_errors,[],"R4285_READBACK_RESOLVER_ERRORS");
+      const qcp="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+      const paths=[
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+        ".github/workflows/mcft-cap09-r4285-registered-source-readonly-v1.yml",
+        qcp,
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs"
+      ].sort();
+      const delta=g("diff","--name-only",args.base,args.head).split(/\r?\n/).filter(Boolean).sort();
+      assert.deepEqual(delta,paths,"R4285_READBACK_UNREGISTERED_PR_DELTA");
+      assert.deepEqual(changed.slice().sort(),paths,"R4285_READBACK_UNREGISTERED_PLAN_DELTA");
+      const before=JSON.parse(g("show",args.base+":"+qcp));
+      assert.equal(before.checks.length,67,"R4285_READBACK_ADOPTED_QCP67_REQUIRED");
+      assert.equal(authority.checks.length,68,"R4285_READBACK_QCP68_REQUIRED");
+      assert.deepEqual(authority.checks.slice(0,67),before.checks,"R4285_READBACK_QCP67_CHANGED");
+      assert.equal(authority.checks[67].check_id,R4285_READBACK_CHECK,"R4285_READBACK_QCP68_CHECK_ID");
+      const old=before.dependency_resolvers,current=authority.dependency_resolvers;
+      const prior=Object.fromEntries(Object.entries(current).filter(([id])=>id!==R4285_READBACK_RESOLVER));
+      assert.deepEqual(prior,old,"R4285_READBACK_QCP67_RESOLVERS_CHANGED");
+      assert.equal(current[R4285_READBACK_RESOLVER]?.kind,"EXACT_PATH_SET");
+      assert.deepEqual(current[R4285_READBACK_RESOLVER].paths.slice().sort(),paths,
+        "R4285_READBACK_QCP68_SOURCE_PATHS_INCOMPLETE");
+      assert.deepEqual(authority.checks[67].resolver_ids,[R4285_READBACK_RESOLVER]);
+      assert.equal(g("rev-parse",args.base+":"+R4285_FORMAL_SCOPE_DOCUMENT),
+        R4285_FORMAL_SCOPE_DOCUMENT_BLOB,"R4285_READBACK_POLICY_NOT_ADOPTED");
+      assert.equal(g("rev-parse",args.head+":"+R4285_FORMAL_SCOPE_DOCUMENT),
+        R4285_FORMAL_SCOPE_DOCUMENT_BLOB,"R4285_READBACK_POLICY_CHANGED");
+      const t="scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json";
+      assert.equal(g("rev-parse",args.base+":"+t),"61d7949d49a2707aef5844e90440c4566584fbe7",
+        "R4285_READBACK_RETRY_TRUST_NOT_REGISTERED");
+      const frozen=[
+        t,"scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_PREFLIGHT_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_3747_INHERITED_SCOPE_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FROZEN_V13_REQUALIFICATION_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_STAGE3_HEARTBEAT_POSTMERGE_SIGNED_PRESERVATION_V1.cjs"
+      ];
+      const full=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
+      assert.equal(full.SOURCE_PATHS.length,23,"R4285_READBACK_HISTORICAL_23_SOURCE_PATHS");
+      for(const rel of [...new Set([...frozen,...full.SOURCE_PATHS])]){
+        assert.equal(g("rev-parse",args.base+":"+rel),g("rev-parse",args.head+":"+rel),
+          "R4285_READBACK_HISTORICAL_SOURCE_DRIFT:"+rel);
+      }
+      // Native PR event and protected-main exact tree identity, not a
+      // caller-provided authorized_by_owner boolean.
+      assert.equal(process.env.GITHUB_ACTIONS,"true","R4285_READBACK_QCP_NATIVE_REQUIRED");
+      assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request","R4285_READBACK_PR_EVENT");
+      const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+      assert.equal(event.repository?.full_name,"liyongshang44-max/GEOX","R4285_READBACK_REPO");
+      assert.equal(event.pull_request?.number,3753,"R4285_READBACK_PR");
+      assert.equal(event.pull_request?.base?.sha,args.base,"R4285_READBACK_EVENT_BASE");
+      assert.equal(event.pull_request?.head?.sha,args.head,"R4285_READBACK_EVENT_HEAD");
+      assert.equal(event.pull_request?.head?.repo?.full_name,"liyongshang44-max/GEOX");
+      assert.equal(g("show","-s","--format=%P",args.base),
+        "43b7c467fe1eb55eb72359d0d15372feccf8f1cb 3dd409810748b5ef9f361fb1b7a2003786e4475b",
+        "R4285_READBACK_ADOPTED_MERGE_PARENTS");
+      assert.equal(g("rev-parse",args.base+"^{tree}"),
+        g("rev-parse","3dd409810748b5ef9f361fb1b7a2003786e4475b^{tree}"),
+        "R4285_READBACK_ADOPTED_MERGE_TREE");
+      const neg=runDiagnostic("node --test scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs",
+        {},"R4285_READBACK_SUCCESSOR_NEGATIVE_TESTS");
+      assert.equal(neg.status,"PASS","R4285_READBACK_NEGATIVE_TEST_FAILED");
+      r4285ReadbackProof={status:"PASS",subject_sha:args.head,base_sha:args.base,
+        qcp67_historical_definitions_unchanged:true,historical_23_source_blobs_unchanged:true,
+        complete_exact_changed_paths:paths.length,producer_synthetic_negative_tests:"PASS",
+        source_scope_adopted_prior_main:true,
+        real_windows_readback_performed:false,registry_complete:false,
+        owner_ordinal_signed:false,permit_issued:false,permit_consumed:false,
+        execute_authorized:false,original_six_stages_executed:0,production_authorized:false};
+      return r4285ReadbackProof;
+    }catch(e){r4285ReadbackProof=fail(e);return r4285ReadbackProof;}
+  }
+
   for (const decision of plan.decisions) {
     let result;
     const common = {
@@ -1815,6 +1920,31 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    // #3753 has an isolated, QCP68-owned read-only Producer/source delta.
+    // Exact #3752 merge + unchanged old 67 definitions, historical runtime
+    // source bytes and all eight changed paths are required before old
+    // exact-PR / prior-Composer checks can be N/A rather than inherited PASS.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE" &&
+       args.base===R4285_READBACK_BASE &&
+       R4285_FORMAL_SCOPE_OLD_CHECKS.has(decision.check_id)){
+      const proof=verifyR4285ReadbackSuccessor();
+      const ok=proof.status==="PASS";
+      result={...common,
+        execution:"R4285_QCP68_READONLY_PRODUCER_EXACT_SOURCE_BOUNDARY",
+        status:ok?"NOT_APPLICABLE":"FAIL",
+        reason_code:ok?
+          "HISTORICAL_EXACT_PR_OR_OLD_COMPOSER_NOT_APPLICABLE_TO_VERIFIED_R4285_READONLY_DELTA":
+          proof.reason_code,
+        independent_readonly_source_proof:proof,
+        historical_qualification_reissued:false,
+        original_signatures_transferred:false,registry_live_readback:false,
+        owner_inventory_signed:false,ordinal_adjudicated:false,
+        permit_issued:false,permit_consumed:false,execute_authorized:false,
+        original_six_stages_executed:0,production_authorized:false};
+      if(!ok)blockers.push({blocker_class:"R4285_QCP68_READONLY_SOURCE_BOUNDARY_FAILED",
+        check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
     // R4285 #3752 scope-only successor: old frozen/PR-bound checks are
     // NOT_APPLICABLE after exact source-graph verification, not green-lit.
     // A failure of that proof is a real blocking failure, not an exemption.

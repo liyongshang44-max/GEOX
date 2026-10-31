@@ -25,11 +25,24 @@ function fixture(){
  const oldRaw=cp.execFileSync("git",["show","16205320c30365ff81b305fb7490029912e09a18:docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"],{cwd:root,encoding:"utf8"});
  const oldQcp=JSON.parse(oldRaw);
  assert.equal(oldQcp.checks.length,66,"PINNED_HISTORICAL_QCP66_REQUIRED");
- assert.equal(currentQcp.checks.length,67,"CURRENT_QCP67_REQUIRED");
+ // The adopted #3752 QCP67 remains exact; QCP68 is an additive, test-only
+ // R4285 Producer check. Never rewrite historical QCP65/66/67 evidence.
+ const adoptedQcp=JSON.parse(cp.execFileSync("git",["show",
+  "96861b78674571adf4414b88c3a2894b61de2eb5:docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"],
+  {cwd:root,encoding:"utf8"}));
+ assert.equal(adoptedQcp.checks.length,67,"PINNED_ADOPTED_QCP67_REQUIRED");
+ assert.equal(currentQcp.checks.length,68,"CURRENT_QCP68_REQUIRED");
+ assert.deepEqual(currentQcp.checks.slice(0,67),adoptedQcp.checks,"HISTORICAL_QCP67_DEFINITIONS_CHANGED");
+ const historicalResolvers=Object.fromEntries(Object.entries(currentQcp.dependency_resolvers).filter(([id])=>
+  id!=="CAP09_R4285_REGISTERED_SOURCE_READONLY_EXACT_THREE_PATHS_V1"));
+ assert.deepEqual(historicalResolvers,adoptedQcp.dependency_resolvers,"HISTORICAL_QCP67_RESOLVERS_CHANGED");
  assert.deepEqual(currentQcp.checks.slice(0,66),oldQcp.checks,"HISTORIC_QCP66_DEFINITIONS_CHANGED");
- const inheritedResolvers=Object.fromEntries(Object.entries(currentQcp.dependency_resolvers).filter(([id])=>id!=="CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1"));
+ const inheritedResolvers=Object.fromEntries(Object.entries(currentQcp.dependency_resolvers).filter(([id])=>
+  id!=="CAP09_R4285_NATIVE_ADOPTION_EXACT_FOUR_PATHS_V1"&&
+  id!=="CAP09_R4285_REGISTERED_SOURCE_READONLY_EXACT_THREE_PATHS_V1"));
  assert.deepEqual(inheritedResolvers,oldQcp.dependency_resolvers,"HISTORIC_QCP66_RESOLVERS_CHANGED");
  assert.equal(currentQcp.checks[66].check_id,"CAP09_R4285_NATIVE_ADOPTION_CONSUMER_SOURCE_ONLY_V1");
+ assert.equal(currentQcp.checks[67].check_id,"CAP09_R4285_REGISTERED_SOURCE_NATIVE_READBACK_TEST_ONLY_V1");
  const extra=currentQcp.checks[65];
  assert.equal(extra.check_id,"CAP09_R4285_PURPOSE_SPECIFIC_SIGNED_EVIDENCE_HOST_READONLY_V1");
  assert.equal(extra.carry_forward_policy,
