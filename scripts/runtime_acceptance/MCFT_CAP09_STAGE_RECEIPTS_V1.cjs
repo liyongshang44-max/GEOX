@@ -30,7 +30,9 @@ async function runRecordedStage(spec) {
   assert(/^[a-f0-9]{12}$/.test(claim.run_id),"STAGE_CLAIM_RUN_REQUIRED");
   assert(/^[a-f0-9]{64}$/.test(claim.nonce),"STAGE_CLAIM_NONCE_REQUIRED");
   assert.equal(claim.id,spec.id,"STAGE_CLAIM_ID_MISMATCH");
-  if(claim.schema_version!==undefined)assert.equal(claim.schema_version,"geox_mcft_cap09_child_stage_claim_attempt3_v2","STAGE_CLAIM_SCHEMA_NOT_ALLOWED");
+  if(claim.schema_version!==undefined)assert(["geox_mcft_cap09_child_stage_claim_attempt3_v2",
+  "geox_mcft_cap09_child_stage_claim_r4285_v1"].includes(claim.schema_version),
+  "STAGE_CLAIM_SCHEMA_NOT_ALLOWED");
   assert(!fs.existsSync(claim.file),"STAGE_CLAIM_REUSE_FORBIDDEN");
  }
  const directory=path.join(spec.directory,spec.id);
