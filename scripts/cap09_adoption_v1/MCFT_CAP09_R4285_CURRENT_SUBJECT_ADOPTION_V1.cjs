@@ -231,7 +231,7 @@ function verifyOwnerInventoryDecision({reportBytes,registryBytes,envelope,trust,
 }
 const ADOPTION_FIELDS=Object.freeze(['schema_version','issuer_id','key_id','run_id','subject_sha','host_id',
  'attempt_ordinal','scope','inventory_sha256','owner_decision_sha256','authority_registry_sha256',
- 'lineage_envelope_sha256','native_qcp67_result_sha256','installed_material_digest',
+ 'lineage_envelope_sha256','native_qcp70_result_sha256','installed_material_digest',
  'release_binding_sha256','issued_at','expires_at','decision','production_authorized','permit_authorized']);
 function verifySignedAdoption({envelope,trust,context,now=Date.now()}){
  const p=signed(envelope,trust,DOMAIN_ADOPTION,ADOPTION_FIELDS,now);
@@ -245,7 +245,7 @@ function verifySignedAdoption({envelope,trust,context,now=Date.now()}){
   owner_decision_sha256:context.owner_decision_sha256,
   authority_registry_sha256:context.authority_registry_sha256,
   lineage_envelope_sha256:context.lineage_envelope_sha256,
-  native_qcp67_result_sha256:context.native_qcp67_result_sha256,
+  native_qcp70_result_sha256:context.native_qcp70_result_sha256,
   installed_material_digest:context.installed_material_digest,
   release_binding_sha256:context.release_binding_sha256})){
   assert(SHA.test(expected)&&p[key]===expected,'R4285_ADOPTION_DIGEST_MISMATCH:'+key);
@@ -264,7 +264,7 @@ function examineReadiness({inventoryBytes,authorityRegistryBytes,ownerEnvelope,
  const report=checkInventoryReport(inventory);
  if(authorityRegistryBytes){
   assert(Buffer.isBuffer(authorityRegistryBytes),'R4285_REGISTRY_RAW_REQUIRED');
-  const reg=JSON.parse(authorityRegistryBytes.toString('utf8').replace(/^\\uFEFF/,''));
+  const reg=JSON.parse(authorityRegistryBytes.toString('utf8').replace(/^\uFEFF/,''));
   checkNativeRegistry(reg,inventory);
  }
  if(!ownerEnvelope)return Object.freeze({status:'HOLD_OWNER_PURPOSE_SPECIFIC_INVENTORY_AND_ORDINAL',
