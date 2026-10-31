@@ -6,7 +6,7 @@
  */
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
 const cap=require("./MCFT_CAP09_R4285_STAGE_CAPABILITY_V1.cjs");
-const receipts=require("./MCFT_CAP09_STAGE_RECEIPTS_V1.cjs");
+const receipts=require("./MCFT_CAP09_R4285_STAGE_RECEIPTS_V1.cjs");
 const permits=require("./MCFT_CAP09_R4285_PERMIT_ATOMIC_V1.cjs");
 async function dispatchConsumedStage(authority,step) {
  permits.assertConsumed(authority.consumed);
