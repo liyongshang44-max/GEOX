@@ -8,7 +8,7 @@
  * required input it fails closed BEFORE Run/Nonce reservation.
  */
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
-const cp=require("node:child_process"),crypto=require("node:crypto");
+const cp=require("node:child_process"),crypto=require("node:crypto"),os=require("node:os");
 const c=require("../cap09_adoption_v1/contract.cjs");
 const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
@@ -54,7 +54,7 @@ const FILES=Object.freeze({
 const INPUTS=Object.freeze(["source_root","release_root","native_adoption_input_file",
  "permit_envelope_file","resource_envelope_file","resource_readback_file",
  "plan_file","observations_file","output_root","first_base"]);
-const EXEC_INPUTS=Object.freeze([...INPUTS,"execution_approval_file","cto_decision_file"]);
+const EXEC_INPUTS=Object.freeze([...INPUTS,"execution_approval_file","cto_decision_file","cto_decision_comment_id"]);
 function fileBytes(p,limit=16*1024*1024){
  assert(typeof p==="string"&&path.isAbsolute(p),"R4285_HOST_ABSOLUTE_FILE_REQUIRED");
  let cursor=path.resolve(p),original=cursor;
@@ -75,6 +75,9 @@ function checkInput(data,execute){
  exact(data,execute?EXEC_INPUTS:INPUTS,"R4285_HOST_INPUT_EXACT");
  for(const [name,v] of Object.entries(data)){
   if(name==="first_base")continue;
+  if(name==="cto_decision_comment_id"){
+   assert(Number.isSafeInteger(v)&&v>0,"R4285_HOST_CTO_NATIVE_COMMENT_ID_REQUIRED");continue;
+  }
   assert(typeof v==="string"&&path.isAbsolute(v),"R4285_HOST_ABSOLUTE_INPUT:"+name);
  }
  assert(/^\d{4}-\d\d-\d\dT\d\d:00:00\.000Z$/.test(data.first_base)&&
@@ -83,6 +86,8 @@ function checkInput(data,execute){
 }
 function hostOnly(env=process.env,platform=process.platform){
  assert(platform==="win32"&&!env.CI&&!env.GITHUB_ACTIONS,"R4285_HOST_REAL_WINDOWS_ONLY");
+ if(platform==="win32")assert.equal(os.hostname().toUpperCase(),lineage.HOST.toUpperCase(),
+  "R4285_HOST_PHYSICAL_MACHINE_IDENTITY_MISMATCH");
  for(const k of ["NODE_OPTIONS","NODE_PATH","PYTHONPATH","PYTHONHOME",
   "MCFT_R4285_CHILD","MCFT_ATTEMPT3_V2_CHILD","MCFT_GOVERNED_RETRY_TICKET"])
   assert(!env[k],"R4285_HOST_INJECTED_OR_CHILD_ENV:"+k);
@@ -269,20 +274,31 @@ function writeOnce(file,value){
 async function execute(input,env=process.env){
  checkInput(input,true);
  // All early checks are read only; they cannot be bypassed by --execute.
- await dynamicPreflight(input,env);
+ const {state}=await dynamicPreflight(input,env);
  const ctoBytes=fileBytes(input.cto_decision_file);
- const {state}=await dynamicPreflight(input,env); // short-window second readback
+ const ctoNative=approval.fetchNativeCtoComment(input.cto_decision_comment_id);
+ const ctoProof=approval.verifyNativeCtoComment(ctoNative,ctoBytes,{
+  subject_sha:state.permitProof.subject_sha,
+  nonce:state.permitProof.nonce,
+  permit_envelope_sha256:state.permitProof.envelope_sha256});
  const execEnv=json(input.execution_approval_file);
  const authorized=approval.verify(execEnv,state.trust,{
   subject_sha:state.permitProof.subject_sha,host_id:lineage.HOST,
   nonce:state.permitProof.nonce,
   permit_envelope_sha256:state.permitProof.envelope_sha256,
   adoption_envelope_sha256:state.permitProof.adoption_envelope_sha256,
-  cto_decision_sha256:sha(ctoBytes)});
+  cto_decision_sha256:sha(ctoBytes),cto_native_proof:ctoProof});
  const check=cp.spawnSync(env.MCFT_PYTHON_EXECUTABLE||"python",[
   path.join(input.release_root,"apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py"),"selftest"
  ],{cwd:input.release_root,timeout:60000,encoding:"utf8",maxBuffer:1024*1024});
  assert.equal(check.status,0,"R4285_SCIENCE_SELFTEST_FAILED");
+ // Native CTO permission and dynamic resource status must remain valid
+ // immediately before irreversible consumption. No stage is started here.
+ const reloadedCto=approval.fetchNativeCtoComment(input.cto_decision_comment_id);
+ approval.verifyNativeCtoComment(reloadedCto,ctoBytes,{
+  subject_sha:state.permitProof.subject_sha,nonce:state.permitProof.nonce,
+  permit_envelope_sha256:state.permitProof.envelope_sha256});
+ await dynamicPreflight(input,env);
  lineage.verifyExactMain(input.source_root,state.permitProof.subject_sha);
  assert(atomic.isPrepared(state.prepared),"R4285_HOST_PREPARE_EXPIRED");
  // Atomic burn is irreversible. Any later stage failure must stop, no retry.
