@@ -2053,15 +2053,15 @@ function main() {
       assert.equal(authority.dependency_resolvers[R4285_CONTRACT_RESOLVER]?.kind,"EXACT_PATH_SET");
       assert.deepEqual(authority.dependency_resolvers[R4285_CONTRACT_RESOLVER].paths.slice().sort(),paths,
         "PRESIGN_CONTRACT_OWNERSHIP_PATHS");
-      assert.deepEqual(authority.checks[68].resolver_ids,[R4285_CONTRACT_RESOLVER]);
+      assert.deepEqual(authority.checks[69].resolver_ids,[R4285_CONTRACT_RESOLVER]);
       // The actual #3753 protected-main merge remains the source base; no
       // caller field may replace authentic GitHub event or rewrite old trust.
       assert.equal(g("show","-s","--format=%P",args.base),
         "c26362fe4c27baec7764b074cad2d86a0632f0f7 51e1cb364907db56f4015c5ce826f8dcb8b6e808",
-        "PRESIGN_CONTRACT_3753_NATIVE_MERGE_PARENT");
+        "PRESIGN_CONTRACT_3754_NATIVE_MERGE_PARENT");
       assert.equal(g("rev-parse",args.base+"^{tree}"),
         g("rev-parse","51e1cb364907db56f4015c5ce826f8dcb8b6e808^{tree}"),
-        "PRESIGN_CONTRACT_3753_NATIVE_MERGE_TREE");
+        "PRESIGN_CONTRACT_3754_NATIVE_MERGE_TREE");
       const trust="scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json";
       assert.equal(g("rev-parse",args.base+":"+trust),
         "61d7949d49a2707aef5844e90440c4566584fbe7","PRESIGN_CONTRACT_TRUST_BLOB");
@@ -2098,7 +2098,7 @@ function main() {
         {},"R4285_PRESIGN_CONTRACT_SYNTHETIC_NEGATIVES");
       assert.equal(neg.status,"PASS","PRESIGN_CONTRACT_NEGATIVE_TESTS_FAILED");
       r4285ContractProof={status:"PASS",base_sha:args.base,subject_sha:args.head,
-        historical_qcp68_preserved:true,historic_permit_source_blobs_unchanged:true,
+        historical_qcp69_preserved:true,historic_permit_source_blobs_unchanged:true,
         original_producer_and_da9_source_blobs_unchanged:true,exact_changed_paths:paths.length,
         negative_tests_pass:true,windows_native_readback_not_repeated:true,
         registry_complete_bounded_physical_e9:true,owner_signature:false,ordinal_adjudicated:false,
