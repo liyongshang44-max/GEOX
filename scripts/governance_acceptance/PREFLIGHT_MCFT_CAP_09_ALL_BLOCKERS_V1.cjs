@@ -2189,6 +2189,13 @@ function main() {
     let result;
     const common = {
       check_id: decision.check_id,
+      applicability: decision.status,
+      reason_code: decision.reason_code,
+      dependency_digest: decision.dependency_digest ?? null,
+      historical_dependency_digest: decision.historical_dependency_digest ?? null,
+      dependency_digest_match: decision.dependency_digest_match ?? false,
+      historical_evidence_ref: decision.historical_evidence_ref ?? null,
+    };
     // QCP71 is an exact successor of #3755 protected main. The 70 prior
     // checks retain immutable definitions and are NOT re-certified by
     // this source-only gate; only the newly registered Host check can PASS.
@@ -2208,13 +2215,6 @@ function main() {
       results.push(result);continue;
     }
 
-      applicability: decision.status,
-      reason_code: decision.reason_code,
-      dependency_digest: decision.dependency_digest ?? null,
-      historical_dependency_digest: decision.historical_dependency_digest ?? null,
-      dependency_digest_match: decision.dependency_digest_match ?? false,
-      historical_evidence_ref: decision.historical_evidence_ref ?? null,
-    };
     // #3755 current Consumer qualification: source-only, not a real Owner approval.
     if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===R4285_CONTRACT_BASE&&
       (R4285_FORMAL_SCOPE_OLD_CHECKS.has(decision.check_id)||
