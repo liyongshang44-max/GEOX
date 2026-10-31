@@ -188,6 +188,7 @@ function fetchLive(meta){
  qcpArtifacts:nativeGithubGet('/actions/runs/'+meta.qcp_run_id+'/artifacts?per_page=100'),
  ciRun:nativeGithubGet('/actions/runs/'+meta.ci_run_id)};
 }
+const liveNativeAdoptions=new WeakSet();
 const INPUT_FIELDS=['source_root','release_root','inventory_file','inventory_sha256',
  'authority_registry_file','authority_registry_sha256','owner_envelope_file','trust_file',
  'signed_evidence_input_file','qcp_provenance_file','qcp_provenance_sha256',
@@ -273,7 +274,7 @@ function checkNativeAdoption(input,{now=Date.now()}={}){
   owner_decision_sha256:owner.owner_decision_sha256,lineage_envelope_sha256:lineageSha,
   native_qcp70_result_sha256:sha(raw),installed_material_digest:checked.digest,
   release_binding_sha256:input.release_binding_sha256}});
- return Object.freeze({schema_version:'MCFT_CAP09_R4285_NATIVE_CURRENT_SUBJECT_ADOPTION_CONSUMER_V1',
+ const result=Object.freeze({schema_version:'MCFT_CAP09_R4285_NATIVE_CURRENT_SUBJECT_ADOPTION_CONSUMER_V1',
   status:'NATIVE_R4285_CURRENT_SUBJECT_ADOPTION_VERIFIED_NOT_PERMIT',run_id:RUN,subject_sha:subject,
   owner_ordinal:owner.ordinal,owner_inventory_sha256:input.inventory_sha256,
   qcp70_source_run_id:provenance.qcp_run_id,qcp_executed_at_merge_head:false,
@@ -281,7 +282,10 @@ function checkNativeAdoption(input,{now=Date.now()}={}){
   lineage:'NATIVE_R4285_SIGNED_LINEAGE_AND_FULLCHAIN_VERIFIED',adoption_digest:adopter.adoption_digest_sha256,
   resource_owner_fresh_signed:false,permit_issued:false,permit_consumed:false,
   host_execution_ready:false,execution_authorized:false,stage_count:0,production_authorized:false});
+ liveNativeAdoptions.add(result);
+ return result;
 }
+function isNativeVerified(x){return !!x&&liveNativeAdoptions.has(x);}
 function run(argv){
  assert(process.platform==='win32'&&!process.env.CI&&!process.env.GITHUB_ACTIONS,'R4285_NATIVE_WINDOWS_ONLY');
  assert(argv.length===3&&argv[0]==='--adoption-check-only'&&argv[1]==='--input'&&path.isAbsolute(argv[2]),
@@ -291,4 +295,4 @@ function run(argv){
 if(require.main===module){try{console.log(JSON.stringify(run(process.argv.slice(2)),null,2));}
  catch(e){console.error(JSON.stringify({status:'HOLD_R4285_NATIVE_ADOPTION',first_blocker:String(e.message||e).slice(0,260),
   permit_issued:false,permit_consumed:false,execution_authorized:false,stage_count:0,production_authorized:false}));process.exitCode=1}}
-module.exports={RUN,CHECK,CURRENT_CHECK,QCP_PATH,INPUT_FIELDS,checkQcp67,checkQcp70,verifyGitHubNativeProof,checkInput,gitExactMain,checkNativeAdoption,run};
+module.exports={RUN,CHECK,CURRENT_CHECK,QCP_PATH,INPUT_FIELDS,checkQcp67,checkQcp70,verifyGitHubNativeProof,checkInput,gitExactMain,checkNativeAdoption,isNativeVerified,run};
