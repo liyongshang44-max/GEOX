@@ -1682,6 +1682,18 @@
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs"
       ]
+    },
+    "CAP09_R4285_DA9_HISTORIC_NONPERMIT_LEDGER_EXACT_SEVEN_PATHS_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs"
+      ]
     }
   },
   "checks": [
@@ -3679,6 +3691,35 @@
       "carry_forward_policy": "NONE_PREVIOUS_QCP67_MERGE_IS_SCOPE_ONLY_NOT_LEDGER_READBACK",
       "requalification_triggers": [
         "CAP09_R4285_REGISTERED_SOURCE_READONLY_EXACT_THREE_PATHS_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node --test scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.test.cjs"
+    },
+    {
+      "check_id": "CAP09_R4285_DA9_NONPERMIT_LEDGER_CORRECTION_TEST_ONLY_V1",
+      "owner": "MCFT_CAP09_R4285_DA9_HISTORIC_NONPERMIT_LEDGER_PHYSICAL_FIRST_FAILURE_CORRECTION",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-R4285-FORMAL-AUTHORITY-SOURCE-SCOPE-REVIEW-20261031.md",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_REGISTERED_SOURCE_READONLY_PRODUCER_V1.cjs",
+        "scripts/cap09_adoption_v1/da9-minio-exact-delete-v1.cjs"
+      ],
+      "resolver_ids": [
+        "CAP09_R4285_DA9_HISTORIC_NONPERMIT_LEDGER_EXACT_SEVEN_PATHS_V1"
+      ],
+      "historical_evidence_policy": "HISTORIC_DA9_MINIO_DISPOSITION_IS_NONPERMIT_EVIDENCE_QCP68_AND_ALL_PRIOR_CHECKS_PRESERVED",
+      "execution_workflow": ".github/workflows/mcft-cap09-r4285-registered-source-readonly-v1.yml",
+      "execution_workflow_status": "SYNTHETIC_NEGATIVE_TESTS_NOT_NATIVE_WINDOWS_READBACK",
+      "fail_policy": "FAIL_CLOSED_EXACT_SEVEN_PATHS_AND_ONE_EXACT_HISTORIC_DA9_NAMESPACE_WITH_BYTES_DIGEST",
+      "carry_forward_policy": "NONE_PREVIOUS_QCP68_PASS_NOT_THIS_CORRECTED_HEAD_AND_WINDOWS_READBACK_STILL_REQUIRED",
+      "requalification_triggers": [
+        "CAP09_R4285_DA9_HISTORIC_NONPERMIT_LEDGER_EXACT_SEVEN_PATHS_V1"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",
