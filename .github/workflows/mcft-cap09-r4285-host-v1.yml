@@ -1,0 +1,39 @@
+name: MCFT CAP-09 R4285 successor Host source and synthetic gates
+on:
+  pull_request:
+    paths:
+      - "scripts/runtime_acceptance/MCFT_CAP09_R4285_*"
+      - "scripts/runtime_acceptance/RUN_MCFT_CAP09_R4285_*"
+      - "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP09_R4285_*"
+      - "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_*"
+      - "scripts/governance_acceptance/MCFT_CAP09_R4285_*"
+      - "scripts/cap09_adoption_v1/installed-material.cjs"
+      - "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_*"
+      - "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+      - ".github/workflows/mcft-cap09-r4285-host-v1.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-only-negative-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: R4285 signed-domain, non-consuming ledger and Host negatives
+        run: |
+          node --test \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_SIGNED_EVIDENCE_V1.test.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PERMIT_V1.test.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PERMIT_ATOMIC_V1.test.cjs \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_WINDOWS_HOST_V1.test.cjs
+      - name: Native Adoption and pre-sign hold regressions
+        run: |
+          node --test \
+            scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.test.cjs \
+            scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.test.cjs
