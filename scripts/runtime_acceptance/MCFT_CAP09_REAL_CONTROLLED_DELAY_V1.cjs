@@ -98,15 +98,12 @@ module.exports={PHASES,deriveDelayPlan,validateRealDelayPlan,executeRealDelay};
 if(require.main===module){
  (async()=>{
   // Entry is always real-host gated; synthetic E2E tests import pure exports.
-  const r4285=process.env.MCFT_R4285_CHILD === "1";
   const v2=process.env.MCFT_ATTEMPT3_V2_CHILD === "1";
-  assert(!(r4285&&v2),"R4285_DELAY_LEGACY_CHILD_FLAGS_FORBIDDEN");
-  const host=r4285?require("./MCFT_CAP09_R4285_CHILD_STAGE_V1.cjs"):
-    v2?require("./MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs"):
+  const host=v2?require("./MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.cjs"):
     require("./MCFT_CAP09_GOVERNED_RETRY_HOST_V1.cjs");
   const targets=host.childTargets();
   const runId=process.env.MCFT_GOVERNED_RETRY_RUN_ID,subjectSha=process.env.MCFT_SUBJECT_SHA;
-  const signedObserved=(r4285||v2)?host.observed():
+  const signedObserved=v2?host.observed():
     host.hostBundle(process.env.MCFT_GOVERNED_RETRY_BUNDLE).bundle.observed;
   const samples=[1,2,3].map(i=>path.join(targets.out,`MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_SAMPLE${i}_V2_RESULT.json`));
   const providerReceipt=require("./MCFT_CAP09_REAL_PROVIDER_RESPONSE_DELAY_V1.cjs").verifyEvidence(
