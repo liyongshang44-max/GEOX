@@ -70,7 +70,7 @@ function inspectNativeComment(comment,raw,ctx,{now=Date.now()}={}){
  const p=JSON.parse(comment.body);assert.equal(comment.body,canonical(p),"V2_NATIVE_NOT_CANONICAL");
  checkIntent(p,ctx,{now,createdAt:comment.created_at});
  return Object.freeze({status:"V2_INSPECTED_ONLY_NOT_LIVE",sha256:sha(raw),id:comment.id,
-  subject_sha:p.subject_sha,nonce:p.nonce,expires_at:p.expires_at});
+  subject_sha:p.subject_sha,nonce:p.nonce,created_at:comment.created_at,expires_at:p.expires_at});
 }
 function liveIntent(commentId,raw,ctx){
  assert(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS,"V2_NATIVE_WINDOWS_REQUIRED");
