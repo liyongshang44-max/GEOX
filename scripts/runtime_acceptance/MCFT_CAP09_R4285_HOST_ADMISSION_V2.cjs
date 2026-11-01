@@ -13,6 +13,7 @@ const pg=require("./MCFT_CAP09_R4285_PG_READONLY_V1.cjs");
 const owner=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
+const verifiedFinal=new WeakMap();
 function noUnsafeEnvironment(env){
  assert(!env.CI&&!env.GITHUB_ACTIONS&&!env.NODE_OPTIONS&&!env.NODE_PATH&&!env.PYTHONPATH&&!env.PYTHONHOME,
  "V2_HOST_INJECTED_ENV");
@@ -61,9 +62,15 @@ async function verifyDynamicReadOnly(s,{now=Date.now()}={}){
   nonce:s.ctx.nonce,permit_envelope_sha256:s.permitProof.envelope_sha256,
   resource_readback_sha256:s.readback.sha256,intent_sha256:s.intent.sha256},{now:usedAt});
  owner.assertDynamicFreshness(s.resourceEnvelope.payload,s.readback,{now:usedAt});
- return Object.freeze({status:"R4285_V2_FINAL_READONLY_BINDING_VERIFIED_NOT_PREFLIGHT_OR_EXECUTION",
+ const report=Object.freeze({status:"R4285_V2_FINAL_READONLY_BINDING_VERIFIED_NOT_PREFLIGHT_OR_EXECUTION",
   run_id:v2.RUN,subject_sha:s.ctx.subject_sha,s3:storage.status,
   owner_age_ms:usedAt-Date.parse(s.readback.facts.observed_at),
   permit_consumed:false,execute_authorized:false,production_authorized:false,stage_count:0});
+ verifiedFinal.set(report,final);
+ return report;
 }
-module.exports={verifyDynamicReadOnly,noUnsafeEnvironment};
+function requireVerifiedFinal(report){
+ assert(verifiedFinal.has(report),"V2_FINAL_READONLY_HOST_CAPABILITY_REQUIRED");
+ return verifiedFinal.get(report);
+}
+module.exports={verifyDynamicReadOnly,noUnsafeEnvironment,requireVerifiedFinal};
