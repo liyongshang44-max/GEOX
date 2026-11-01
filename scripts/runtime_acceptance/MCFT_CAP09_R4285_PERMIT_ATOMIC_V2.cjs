@@ -6,10 +6,10 @@
  * attempt. No rollback/retry/cleanup mechanism is exported.
  */
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
-const permit=require("./MCFT_CAP09_R4285_PERMIT_V1.cjs");
+const permit=require("./MCFT_CAP09_R4285_PERMIT_V2.cjs");
 const v2=require("./MCFT_CAP09_R4285_ADMISSION_V2.cjs");
 const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs");
-const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs");
+const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V2.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
 const RUN="4285c3ce342c";
 const accepted=new WeakSet(),consumed=new WeakSet();
