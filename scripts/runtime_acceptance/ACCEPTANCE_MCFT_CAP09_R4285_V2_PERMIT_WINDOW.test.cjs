@@ -3,7 +3,7 @@
  * no resources are queried, no Permit is issued or consumed in the Host. */
 const test=require("node:test"),assert=require("node:assert/strict"),crypto=require("node:crypto");
 const v2=require("./MCFT_CAP09_R4285_ADMISSION_V2.cjs");
-const permit=require("./MCFT_CAP09_R4285_PERMIT_V1.cjs");
+const permit=require("./MCFT_CAP09_R4285_PERMIT_V2.cjs");
 const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs");
 const canonical=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs").canonical;
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
@@ -62,7 +62,7 @@ function makeFixture(){
   installed_material_digest:ctx.material_digest,release_binding_sha256:ctx.release_binding_sha256,
   resource_owner_envelope_sha256:sha(Buffer.from(canonical(ownerEnvelope))),
   resource_readback_sha256:readback.sha256});
- const payload={schema_version:"MCFT_CAP09_R4285_SIGNED_ISOLATED_TEST_PERMIT_V1",
+ const payload={schema_version:"MCFT_CAP09_R4285_SIGNED_ISOLATED_TEST_PERMIT_V2",
   issuer_id:issuer.issuer_id,key_id:issuer.key_id,run_id:permit.RUN,nonce:ctx.nonce,
   parent_run_id:permit.PARENT,failed_predecessor_run_id:permit.FAILED_PREDECESSOR,
   attempt_ordinal:4,subject_sha:ctx.subject_sha,host_id:ctx.host_id,
