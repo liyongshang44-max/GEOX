@@ -15,7 +15,8 @@ const stage=require("./MCFT_CAP09_R4285_STAGE_CAPABILITY_V2.cjs");
 const dispatch=require("./MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_V2.cjs");
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
-const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs");
+const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V2.cjs");
+const build=require("./MCFT_CAP09_R4285_BUILD_ADMISSION_V2.cjs");
 const contract=require("../cap09_adoption_v1/contract.cjs");
 const {freshStageLaunch}=require("./MCFT_CAP09_STAGE_START_CLOCK_V1.cjs");
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
@@ -113,7 +114,7 @@ function prepareBoundState(i,env=process.env){
  v1.hostOnly(env);checkInputs(i,"--preflight-only");
  const base=Object.fromEntries(v1.INPUTS.map(k=>[k,i[k]]));
  // This is the *single* full Native Adoption in the V2 invocation.
- const state=v1.buildAdmission(base,env);
+ const state=build.buildAdmissionV2(base,env);
  const ctx=basicContext({i,adoption:state.adoption,nativeInput:state.nativeInput,
   plan:state.plan,observed:state.observed,nonce:state.permitProof.nonce,
   resource_scope_sha256:v2.scopeDigest(state.readback.facts)});
