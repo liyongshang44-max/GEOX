@@ -70,7 +70,7 @@ function inspectNativeComment(comment,raw,ctx,{now=Date.now()}={}){
  return Object.freeze({status:"V2_INSPECTED_ONLY_NOT_LIVE",sha256:sha(raw),id:comment.id,
   subject_sha:p.subject_sha,nonce:p.nonce,expires_at:p.expires_at});
 }
-function liveIntent(commentId,raw,ctx,{now=Date.now()}={}){
+function liveIntent(commentId,raw,ctx){
  assert(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS,"V2_NATIVE_WINDOWS_REQUIRED");
  assert(Number.isSafeInteger(commentId)&&commentId>0,"V2_COMMENT_ID");
  const url="https://api.github.com/repos/"+REPO+"/issues/comments/"+commentId;
@@ -78,7 +78,10 @@ function liveIntent(commentId,raw,ctx,{now=Date.now()}={}){
   "--max-time","20","-H","Accept: application/vnd.github+json",
   "-H","X-GitHub-Api-Version: 2022-11-28",url],
   {encoding:"utf8",timeout:25000,maxBuffer:524288,windowsHide:true});
- const proof=inspectNativeComment(JSON.parse(reply),raw,ctx,{now});liveIntents.add(proof);return proof;
+ const measuredNow=Date.now();
+ const inspected=inspectNativeComment(JSON.parse(reply),raw,ctx,{now:measuredNow});
+ const proof=Object.freeze({...inspected,checked_at:new Date(measuredNow).toISOString()});
+ liveIntents.add(proof);return proof;
 }
 function requireLiveIntent(proof,ctx,{now=Date.now()}={}){
  assert(liveIntents.has(proof),"V2_NATIVE_CTO_PROVENANCE_REQUIRED");
@@ -160,16 +163,23 @@ function verifyFinal(env,trust,{stable,intent,permitProof,permitEnv,ownerEnv,rea
  {now=Date.now()}={}){
  requireStable(stable,intent,ctx,{now});
  checkActualPermit(permitProof,permitEnv,ownerEnv,readback,observed,ctx,{now});
+ // Do not reuse the earlier CTO intent capability: a later deletion/edit must be observed.
+ assert(Buffer.isBuffer(ctx.intent_raw_bytes),"V2_CTO_INTENT_ORIGINAL_RAW_REQUIRED");
+ const refreshed=liveIntent(intent.id,ctx.intent_raw_bytes,ctx);
+ assert.equal(refreshed.sha256,intent.sha256,"V2_CTO_INTENT_CHANGED_AT_FINAL");
  const final=inspectFinal(env,trust,{...ctx,
   permit_envelope_sha256:permitProof.envelope_sha256,
   resource_owner_envelope_sha256:permitProof.resource_owner_envelope_sha256,
-  resource_readback_sha256:readback.sha256,intent_sha256:intent.sha256},{now});
+  resource_readback_sha256:readback.sha256,intent_sha256:refreshed.sha256},{now});
  assert(utc(final.expires_at)<=utc(intent.expires_at),"V2_FINAL_OUTLIVES_CTO_INTENT");
- liveFinals.add(final);return final;
+ const live=Object.freeze({...final,cto_rechecked_at:refreshed.checked_at});
+ liveFinals.add(live);return live;
 }
 function assertFinal(final,ctx,{now=Date.now()}={}){
  assert(liveFinals.has(final),"V2_FINAL_NOT_LIVE_VERIFIED");
  assert(now<utc(final.expires_at),"V2_FINAL_EXPIRED_AT_CONSUMPTION");
+ assert(now>=utc(final.cto_rechecked_at)&&now-utc(final.cto_rechecked_at)<=15000,
+  "V2_CTO_NATIVE_RECHECK_TOO_OLD");
  for(const k of ["nonce","permit_envelope_sha256","resource_readback_sha256","intent_sha256"])
   assert.equal(final[k],ctx[k],"V2_FINAL_CONSUME_BINDING:"+k);
  return true;
