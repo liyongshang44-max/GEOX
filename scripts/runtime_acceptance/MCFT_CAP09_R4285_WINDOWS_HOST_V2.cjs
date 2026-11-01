@@ -117,6 +117,14 @@ function writeOnce(file,obj){
 }
 function prepareBoundState(i,env=process.env,session=null){
  v1.hostOnly(env);checkInputs(i,session?"--session-preflight-only":"--preflight-only");
+ if(session){
+  assert(native.isNativeVerified(session.adoption),
+   "V2_SESSION_NATIVE_IN_PROCESS_PROVENANCE_REQUIRED");
+  v2.requireStable(session.stable,session.intent,session.ctx,{now:Date.now()});
+  for(const [key,p] of Object.entries(session.pinned_inputs))
+   assert.equal(sha(fileBytes(p)),session.pinned_digests[key],
+    "V2_SESSION_PINNED_SOURCE_INPUT_CHANGED:"+key);
+ }
  const base=Object.fromEntries(v1.INPUTS.map(k=>[k,i[k]]));
  // This is the *single* full Native Adoption in the V2 invocation.
  const state=build.buildAdmissionV2(base,env,session?
@@ -128,12 +136,7 @@ function prepareBoundState(i,env=process.env,session=null){
  ctx.intent_raw_bytes=raw;
  let intent,stable;
  if(session){
-  // Pre-Owner nonserialized source contracts must still be byte-identical at
-  // their later signed use. Never trust a JSON "stable PASS" or mutable path.
-  for(const [key,p] of Object.entries(session.pinned_inputs))
-   assert.equal(sha(fileBytes(p)),session.pinned_digests[key],
-    "V2_SESSION_PINNED_SOURCE_INPUT_CHANGED:"+key);
-  // A reference to a live session can never be read back from a JSON receipt.
+  // No serialized receipt can impersonate the genuine in-process Native proof.
   assert(native.isNativeVerified(session.adoption),
    "V2_SESSION_NATIVE_IN_PROCESS_PROVENANCE_REQUIRED");
   const b=session.ctx;
