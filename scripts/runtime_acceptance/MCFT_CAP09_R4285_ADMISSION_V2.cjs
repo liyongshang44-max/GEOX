@@ -8,6 +8,8 @@ const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE
 const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs");
 const permit=require("./MCFT_CAP09_R4285_PERMIT_V1.cjs");
 const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs");
+const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
+const contract=require("../cap09_adoption_v1/contract.cjs");
 const RUN=permit.RUN,HOST=permit.HOST,REPO="liyongshang44-max/GEOX",AUTHORITY_PR=3757;
 const HEX64=/^[a-f0-9]{64}$/,HEAD=/^[a-f0-9]{40}$/;
 const DOMAIN="GEOX_MCFT_CAP09_R4285_FINAL_EXECUTION_APPROVAL_V2\n";
@@ -113,6 +115,25 @@ function requireStable(proof,intent,ctx,{now=Date.now()}={}){
 }
 function scopeDigest(facts){const s=Object.fromEntries(RESOURCE_FIELDS.map(k=>[k,facts[k]]));
  assert.equal(s.bucket,"mcft-cap09-requal-"+RUN);return sha(Buffer.from(canonical(s)));}
+const FROZEN_TIMEOUTS=Object.freeze([3600000,1800000,1800000,1800000,1200000,600000]);
+function frozenBudget(plan,observed,ctx){
+ scheduler.validateStagePlan(plan);
+ assert.deepEqual(plan.stages.map(x=>x.timeout_ms),FROZEN_TIMEOUTS,
+   "V2_PLAN_APPROVED_STAGE_TIMEOUTS_CHANGED");
+ const total=plan.stages.reduce((sum,row)=>sum+row.timeout_ms,0);
+ assert.equal(total,10800000,"V2_PLAN_APPROVED_TOTAL_CHANGED");
+ assert.equal(contract.digest(plan),ctx.plan_sha256,"V2_SIGNED_PLAN_DIGEST_CHANGED");
+ assert.equal(contract.digest(observed),ctx.observations_sha256,"V2_SIGNED_OBSERVATIONS_DIGEST_CHANGED");
+ const provider=observed?.real_provider_response_delay_plan;
+ const pipeline=observed?.real_pipeline_delay_plan;
+ assert.equal(provider?.response_delay_ms,1000,"V2_APPROVED_PROVIDER_DELAY_CHANGED");
+ assert.equal(pipeline?.promotion_queue_delay_ms,1000,"V2_APPROVED_PROMOTION_DELAY_CHANGED");
+ assert.equal(pipeline?.post_commit_readback_delay_ms,1000,"V2_APPROVED_READBACK_DELAY_CHANGED");
+ assert.equal(provider?.first_base,ctx.first_base,"V2_APPROVED_PROVIDER_BASE_CHANGED");
+ assert.equal(pipeline?.first_base,ctx.first_base,"V2_APPROVED_PIPELINE_BASE_CHANGED");
+ assert.equal(ctx.total_stage_budget_ms,total,"V2_CALLER_STAGE_BUDGET_NOT_FROM_PLAN");
+ return total;
+}
 function checkActualPermit(proof,permitEnv,ownerEnv,readback,observed,ctx,{now=Date.now()}={}){
  assert(permit.isVerified(proof),"V2_REAL_PERMIT_REQUIRED");
  assert.equal(proof.run_id,RUN);assert.equal(proof.subject_sha,ctx.subject_sha);
@@ -124,11 +145,9 @@ function checkActualPermit(proof,permitEnv,ownerEnv,readback,observed,ctx,{now=D
  assert.equal(permitEnv.payload.observations_sha256,ctx.observations_sha256,"V2_OBS_DRIFT");
  assert.equal(permitEnv.payload.installed_material_digest,ctx.material_digest,"V2_MATERIAL_DRIFT");
  assert.equal(permitEnv.payload.release_binding_sha256,ctx.release_binding_sha256,"V2_RELEASE_DRIFT");
- // Permit freshness must be rechecked at the actual admission instant. A
- // previously minted V1 WeakSet proof is not a perpetual time capability.
- assert(Number.isSafeInteger(ctx.total_stage_budget_ms)&&ctx.total_stage_budget_ms>0,
-  "V2_STAGE_BUDGET_REQUIRED");
- assert(now+ctx.total_stage_budget_ms+60000<Date.parse(permitEnv.payload.expires_at),
+ // Bound every time budget to the actual, signed six-stage Plan, not caller JSON.
+ const total=frozenBudget(ctx.plan,observed,ctx);
+ assert(now+total+60000<Date.parse(permitEnv.payload.expires_at),
   "V2_PERMIT_REMAINING_STAGE_BUDGET");
  assert(Date.parse(permitEnv.payload.expires_at)<=Date.parse(ownerEnv.payload.expires_at),
   "V2_PERMIT_OUTLIVES_OWNER");
@@ -196,6 +215,6 @@ function assertFinal(final,ctx,{now=Date.now()}={}){
   assert.equal(final[k],ctx[k],"V2_FINAL_CONSUME_BINDING:"+k);
  return true;
 }
-module.exports={RUN,HOST,AUTHORITY_PR,DOMAIN,INTENT_FIELDS,FINAL_FIELDS,RESOURCE_FIELDS,
+module.exports={RUN,HOST,AUTHORITY_PR,DOMAIN,INTENT_FIELDS,FINAL_FIELDS,RESOURCE_FIELDS,FROZEN_TIMEOUTS,frozenBudget,
  context,checkIntent,inspectNativeComment,liveIntent,requireLiveIntent,stableNative,
  requireStable,scopeDigest,checkActualPermit,inspectFinal,verifyFinal,assertFinal};
