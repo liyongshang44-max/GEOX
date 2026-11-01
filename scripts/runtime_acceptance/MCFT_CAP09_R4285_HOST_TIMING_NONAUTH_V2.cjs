@@ -8,6 +8,7 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("n
  cp=require("node:child_process"),os=require("node:os");
 const {performance}=require("node:perf_hooks");
 const installed=require("../cap09_adoption_v1/installed-material.cjs");
+const parallel=require("./MCFT_CAP09_R4285_MATERIAL_FULL_PARALLEL_V2.cjs");
 const v1=require("./MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs");
 const RUN="4285c3ce342c",HOST="LAPTOP-STN2A2P1";
 const FIELDS=["source_root","release_root","material_file"];
@@ -124,14 +125,29 @@ async function run(x){
   owner_age_reset_or_simulated:false,permit_issued:false,permit_consumed:false,
   execution_authorized:false,original_six_stages_executed:0,production_authorized:false};
 }
+async function parallelRun(x){
+ checkWindows();input(x);
+ const profile=jsonRegular(x.material_file);
+ const record=await measure("FULL_MATERIAL_SHA256_PARALLEL_V2",
+  ()=>parallel.verify(profile,x.release_root,process.env));
+ return {schema_version:"MCFT_CAP09_R4285_V2_PARALLEL_FULL_MATERIAL_TIMING_V1",
+  status:"NON_AUTHORIZED_FULL_SHA256_COMPONENT_TIMING_NOT_HOST_OR_OWNER_ADMISSION",
+  measured_at_utc:new Date().toISOString(),run_id:RUN,host_id:HOST,
+  material:record,all_material_and_tools_bytes_revalidated:record.status==="MEASURED_NONAUTH",
+  immutable_runtime_source_qualified:false,
+  owner_producer_invoked:false,owner_fresh:false,
+  permit_issued:false,permit_consumed:false,execution_authorized:false,
+  original_six_stages_executed:0,production_authorized:false};
+}
 function parse(argv){
- assert(argv.length===3&&argv[0]==="--timing-only"&&argv[1]==="--input"&&path.isAbsolute(argv[2]),
+ assert(argv.length===3&&["--timing-only","--timing-parallel-only"].includes(argv[0])&&argv[1]==="--input"&&path.isAbsolute(argv[2]),
   "TIMING_ONLY_MODE_AND_INPUT_REQUIRED");
  return jsonRegular(argv[2]);
 }
-if(require.main===module)run(parse(process.argv.slice(2))).then(x=>console.log(JSON.stringify(x,null,2)))
+if(require.main===module)(process.argv[2]==="--timing-parallel-only"?
+ parallelRun(parse(process.argv.slice(2))):run(parse(process.argv.slice(2)))).then(x=>console.log(JSON.stringify(x,null,2)))
  .catch(e=>{console.error(JSON.stringify({status:"HOLD_NONAUTH_TIMING",reason_code:
   e?.code==="ERR_ASSERTION"&&rejectSecrets(e.message||"")?String(e.message).slice(0,140):
   "NONAUTH_TIMING_FAILED",permit_issued:false,permit_consumed:false,
   execution_authorized:false,original_six_stages_executed:0}));process.exitCode=1;});
-module.exports={FIELDS,input,parse,run};
+module.exports={FIELDS,input,parse,run,parallelRun};
