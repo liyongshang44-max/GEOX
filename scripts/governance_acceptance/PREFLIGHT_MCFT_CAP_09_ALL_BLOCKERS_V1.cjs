@@ -2185,6 +2185,85 @@ function main() {
     }catch(e){r4285HostSuccessorProof=reject(e);return r4285HostSuccessorProof;}
   }
 
+
+  // Exact #3757 V2 successor of protected QCP71. This is source-only.
+  // Existing V1 QCP71 and all historical 23 Full-chain blob identities
+  // are retained unchanged; the old checks are not re-certified here.
+  const R4285_V2_BASE="12ae85febf1f0afb8d761abb0cb83dda96d734d3";
+  const R4285_V2_PR=3757;
+  const R4285_V2_CHECK="CAP09_R4285_HOST_ADMISSION_V2_EXACT_SOURCE_REVIEW_V1";
+  const R4285_V2_RESOLVER="CAP09_R4285_HOST_ADMISSION_V2_EXACT_SUCCESSOR_V1";
+  let r4285V2Proof=null;
+  function verifyR4285V2Qcp72(){
+    if(r4285V2Proof)return r4285V2Proof;
+    const assert=require("node:assert/strict");
+    const g=(...xs)=>cp.execFileSync("git",xs,
+      {cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:4194304}).trim();
+    const hold=e=>({status:"FAIL",
+      reason_code:"HOLD_R4285_V2_QCP72:"+String(e.message||e).slice(0,360),
+      permit_issued:false,execute_authorized:false,production_authorized:false});
+    try{
+      assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","V2_QCP72_STAGE");
+      assert.equal(args.base,R4285_V2_BASE,"V2_QCP72_EXACT_PROTECTED_BASE");
+      assert.equal(g("rev-parse","HEAD"),args.head,"V2_QCP72_EXACT_HEAD");
+      assert.equal(g("merge-base",args.base,args.head),args.base,"V2_QCP72_ANCESTRY");
+      assert.equal(plan.status,"PASS","V2_QCP72_APPLICABILITY_PLAN");
+      assert.deepEqual(plan.unknown_changed_paths,[],"V2_QCP72_UNKNOWN_PATHS");
+      assert.deepEqual(plan.authority_errors,[],"V2_QCP72_AUTHORITY_ERRORS");
+      assert.deepEqual(plan.resolver_errors,[],"V2_QCP72_RESOLVER_ERRORS");
+      const qcp="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+      const before=JSON.parse(g("show",args.base+":"+qcp));
+      assert.equal(before.checks.length,71,"V2_QCP72_FROZEN_QCP71");
+      assert.equal(authority.checks.length,72,"V2_QCP72_CURRENT_COUNT");
+      assert.deepEqual(authority.checks.slice(0,71),before.checks,"V2_QCP72_HISTORICAL_CHECK_DRIFT");
+      assert.equal(authority.checks[71].check_id,R4285_V2_CHECK,"V2_QCP72_EXACT_CHECK");
+      assert.deepEqual(authority.checks[71].resolver_ids,[R4285_V2_RESOLVER]);
+      const retained=Object.fromEntries(Object.entries(authority.dependency_resolvers)
+        .filter(([id])=>id!==R4285_V2_RESOLVER));
+      assert.deepEqual(retained,before.dependency_resolvers,"V2_QCP72_HISTORICAL_RESOLVER_DRIFT");
+      const owned=authority.dependency_resolvers[R4285_V2_RESOLVER];
+      assert.equal(owned?.kind,"EXACT_PATH_SET","V2_QCP72_REGISTERED_SET");
+      const paths=g("diff","--name-only",args.base,args.head).split(/\r?\n/).filter(Boolean).sort();
+      assert.deepEqual(changed.slice().sort(),paths,"V2_QCP72_PLANNED_DIFF");
+      assert.deepEqual(owned.paths.slice().sort(),paths,"V2_QCP72_EXACT_SUCCESSOR_PATHS");
+      const frozen=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
+      assert.equal(frozen.SOURCE_PATHS.length,23,"V2_QCP72_FROZEN23");
+      const oldSources=[...frozen.SOURCE_PATHS,
+        "scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_EXECUTION_APPROVAL_V1.cjs"];
+      for(const rel of new Set(oldSources)){
+        assert.equal(g("rev-parse",args.base+":"+rel),g("rev-parse",args.head+":"+rel),
+          "V2_QCP72_FROZEN_SOURCE_CHANGED:"+rel);
+      }
+      assert.equal(process.env.GITHUB_ACTIONS,"true","V2_QCP72_NATIVE_ACTION_REQUIRED");
+      assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request","V2_QCP72_NATIVE_PR_ONLY");
+      const ev=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+      assert.equal(ev.repository?.full_name,"liyongshang44-max/GEOX","V2_QCP72_REPO");
+      assert.equal(ev.pull_request?.number,R4285_V2_PR,"V2_QCP72_EXACT_PR");
+      assert.equal(ev.pull_request?.base?.sha,args.base,"V2_QCP72_BASE_BIND");
+      assert.equal(ev.pull_request?.head?.sha,args.head,"V2_QCP72_HEAD_BIND");
+      assert.equal(ev.pull_request?.head?.repo?.full_name,"liyongshang44-max/GEOX");
+      const negative=runDiagnostic(authority.checks[71].diagnostic_command,{},
+        "R4285_V2_QCP72_SYNTHETIC_NEGATIVES");
+      assert.equal(negative.status,"PASS","V2_QCP72_NEGATIVE_TESTS");
+      r4285V2Proof={status:"PASS",base_sha:args.base,source_head_sha:args.head,
+        exact_changed_paths:paths.length,historical_qcp71_preserved:true,
+        historic_fullchain_source_23_preserved:true,
+        contract_tests_only:true,windows_native_proof:false,owner_fresh:false,
+        permit_issued:false,permit_consumed:false,execute_authorized:false,
+        production_authorized:false,original_six_stages_executed:0};
+      return r4285V2Proof;
+    }catch(e){r4285V2Proof=hold(e);return r4285V2Proof;}
+  }
+
   for (const decision of plan.decisions) {
     let result;
     const common = {
@@ -2196,6 +2275,23 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    // QCP72 is the independent #3757 V2 source-only successor of QCP71.
+    // It must never turn historic 71 checks into false current-head PASS.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===R4285_V2_BASE&&
+      authority.checks.length===72&&authority.checks.some(c=>c.check_id===decision.check_id)){
+      const proof=verifyR4285V2Qcp72(),ok=proof.status==="PASS";
+      const current=decision.check_id===R4285_V2_CHECK;
+      result={...common,execution:"R4285_V2_QCP72_EXACT_SOURCE_TEST_ONLY",
+        status:ok?(current?"PASS":"NOT_APPLICABLE"):"FAIL",
+        reason_code:ok?(current?"CURRENT_R4285_V2_EXACT_SOURCE_NEGATIVES_PASS":
+          "HISTORICAL_QCP71_NOT_REISSUED_ON_V2_HEAD"):proof.reason_code,
+        current_source:proof,source_only:true,owner_signed:false,
+        permit_issued:false,permit_consumed:false,execute_authorized:false,
+        production_authorized:false,original_six_stages_executed:0};
+      if(!ok)blockers.push({blocker_class:"R4285_V2_QCP72_SOURCE_HOLD",
+        check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
     // QCP71 is an exact successor of #3755 protected main. The 70 prior
     // checks retain immutable definitions and are NOT re-certified by
     // this source-only gate; only the newly registered Host check can PASS.
