@@ -26,7 +26,7 @@ async function verifyDynamicReadOnly(s,{now=Date.now()}={}){
  v2.requireStable(s.stable,s.intent,s.ctx,{now});
  noUnsafeEnvironment(s.environment);
  assert(s.nativeInput&&s.resourceEnvelope&&s.readback&&s.permitEnvelope&&
-  s.permitProof&&s.finalEnvelope&&s.trust&&s.observations&&s.profile&&s.releaseBinding,
+  s.permitProof&&s.finalEnvelope&&s.trust&&s.plan&&s.observations&&s.profile&&s.releaseBinding,
   "V2_HOST_ALL_ORIGINAL_BINDINGS_REQUIRED");
  assert.equal(s.nativeInput.release_root,s.releaseRoot,"V2_RELEASE_SPLIT");
  assert.equal(s.nativeInput.source_root,s.sourceRoot,"V2_SOURCE_SPLIT");
@@ -44,7 +44,7 @@ async function verifyDynamicReadOnly(s,{now=Date.now()}={}){
  owner.bindSignedToReadback(s.resourceEnvelope.payload,s.readback);
  v1.checkResourceEnv(s.resourceEnvelope.payload,s.environment);
  v2.checkActualPermit(s.permitProof,s.permitEnvelope,s.resourceEnvelope,
-  s.readback,s.observations,s.ctx,{now:Date.now()});
+  s.readback,s.observations,{...s.ctx,plan:s.plan},{now:Date.now()});
  await pg.probePreconsumePostgres({
   admission:{resourceEnvelope:s.resourceEnvelope,permitEnvelope:s.permitEnvelope,
    releaseRoot:s.releaseRoot},releaseRoot:s.releaseRoot,environment:s.environment});
@@ -54,7 +54,7 @@ async function verifyDynamicReadOnly(s,{now=Date.now()}={}){
  const final=v2.verifyFinal(s.finalEnvelope,s.trust,{
   stable:s.stable,intent:s.intent,permitProof:s.permitProof,
   permitEnv:s.permitEnvelope,ownerEnv:s.resourceEnvelope,
-  readback:s.readback,observed:s.observations,ctx:s.ctx});
+  readback:s.readback,observed:s.observations,ctx:{...s.ctx,plan:s.plan}});
  // Consumable authorization is intentionally NOT returned.
  const usedAt=Date.now();
  v2.assertFinal(final,{
