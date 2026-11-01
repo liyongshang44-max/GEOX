@@ -10,6 +10,7 @@ const permit=require("./MCFT_CAP09_R4285_PERMIT_V1.cjs");
 const v2=require("./MCFT_CAP09_R4285_ADMISSION_V2.cjs");
 const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs");
 const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs");
+const material=require("../cap09_adoption_v1/installed-material.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
 const RUN="4285c3ce342c";
 const accepted=new WeakSet(),consumed=new WeakSet();
@@ -50,7 +51,7 @@ function readExact(file){
  * Both capabilities are unforgeable in this process, not caller status strings.
  */
 function prepare({nativeAdoption,permitProof,trust,sourceRoot,stable,intent,ctx,
- resourceEnvelope,readback,plan,observed,permitEnvelope}){
+ resourceEnvelope,readback,plan,observed,permitEnvelope,releaseRoot,profile,environment}){
  assert(native.isNativeVerified(nativeAdoption),"R4285_ATOMIC_NATIVE_ADOPTION_REQUIRED");
  assert(permit.isVerified(permitProof),"R4285_ATOMIC_GENUINE_R4285_PERMIT_REQUIRED");
  v2.requireStable(stable,intent,ctx);
@@ -69,6 +70,8 @@ function prepare({nativeAdoption,permitProof,trust,sourceRoot,stable,intent,ctx,
  assert.equal(trust.host_id,permit.HOST,"R4285_ATOMIC_TRUST_HOST_WRONG");
  assert.equal(typeof trust.ledger_root,"string","R4285_ATOMIC_MISSING_ROOT");
  assertUnreserved(trust.ledger_root,permitProof.nonce);
+ assert(typeof releaseRoot==="string"&&path.isAbsolute(releaseRoot)&&profile&&environment,
+   "V2_ATOMIC_RELEASE_RECHECK_INPUT_REQUIRED");
  const proof=Object.freeze({
   run_id:RUN,subject_sha:permitProof.subject_sha,nonce:permitProof.nonce,
   adoption_digest:permitProof.adoption_envelope_sha256,
@@ -78,6 +81,7 @@ function prepare({nativeAdoption,permitProof,trust,sourceRoot,stable,intent,ctx,
   permit_expires_at:permitProof.expires_at,
   owner_readback_sha256:readback.sha256,intent_sha256:intent.sha256,
   resource_envelope:resourceEnvelope,readback,plan,observed,ctx,
+  release_root:releaseRoot,material_profile:profile,environment,
   stable,intent,permit_envelope:permitEnvelope,permit_proof:permitProof,
   root:trust.ledger_root,source_root:sourceRoot,status:"R4285_ATOMIC_PREPARED_NOT_CONSUMED",
   execute_authorized:false,production_authorized:false
@@ -100,6 +104,15 @@ function consumeForQualifiedHost(prepared,finalApproval){
   {...prepared.ctx,plan:prepared.plan},{now:Date.now()});
  resource.assertDynamicFreshness(prepared.resource_envelope.payload,prepared.readback);
  lineage.verifyExactMain(prepared.source_root,prepared.subject_sha);
+ // No one-hour cached identity can mask changed installed bytes or tools.
+ // Full read-only verification happens immediately before the irreversible burn;
+ // its actual latency is charged against the same 120-second Owner age.
+ const checked=material.verify(prepared.material_profile,prepared.release_root,prepared.environment);
+ assert.equal(checked.digest,prepared.ctx.material_digest,"V2_ATOMIC_INSTALLED_MATERIAL_DRIFT");
+ resource.assertDynamicFreshness(prepared.resource_envelope.payload,prepared.readback);
+ v2.checkActualPermit(prepared.permit_proof,prepared.permit_envelope,
+   prepared.resource_envelope,prepared.readback,prepared.observed,
+   {...prepared.ctx,plan:prepared.plan},{now:Date.now()});
  assert(Date.now()<Date.parse(prepared.permit_expires_at),"R4285_ATOMIC_PERMIT_EXPIRED");
  const dirs=assertUnreserved(prepared.root,prepared.nonce);
  // Burn the in-process permission BEFORE any I/O. If a partial filesystem
