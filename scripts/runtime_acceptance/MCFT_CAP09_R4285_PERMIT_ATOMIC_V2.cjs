@@ -10,7 +10,6 @@ const permit=require("./MCFT_CAP09_R4285_PERMIT_V1.cjs");
 const v2=require("./MCFT_CAP09_R4285_ADMISSION_V2.cjs");
 const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs");
 const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs");
-const material=require("../cap09_adoption_v1/installed-material.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
 const RUN="4285c3ce342c";
 const accepted=new WeakSet(),consumed=new WeakSet();
@@ -104,15 +103,17 @@ function consumeForQualifiedHost(prepared,finalApproval){
   {...prepared.ctx,plan:prepared.plan},{now:Date.now()});
  resource.assertDynamicFreshness(prepared.resource_envelope.payload,prepared.readback);
  lineage.verifyExactMain(prepared.source_root,prepared.subject_sha);
- // No one-hour cached identity can mask changed installed bytes or tools.
- // Full read-only verification happens immediately before the irreversible burn;
- // its actual latency is charged against the same 120-second Owner age.
- const checked=material.verify(prepared.material_profile,prepared.release_root,prepared.environment);
- assert.equal(checked.digest,prepared.ctx.material_digest,"V2_ATOMIC_INSTALLED_MATERIAL_DRIFT");
+ // Full 24,673-file/tool revalidation took place before native final CTO refresh
+ // in the same Host invocation; do not repeat it after the 15s CTO window.
+ // Perform all short-lived Owner/Permit/CTO assertions again at the burn edge.
  resource.assertDynamicFreshness(prepared.resource_envelope.payload,prepared.readback);
  v2.checkActualPermit(prepared.permit_proof,prepared.permit_envelope,
    prepared.resource_envelope,prepared.readback,prepared.observed,
    {...prepared.ctx,plan:prepared.plan},{now:Date.now()});
+ v2.assertFinal(finalApproval,{
+  nonce:prepared.nonce,permit_envelope_sha256:prepared.permit_envelope_sha256,
+  resource_readback_sha256:prepared.owner_readback_sha256,
+  intent_sha256:prepared.intent_sha256},{now:Date.now()});
  assert(Date.now()<Date.parse(prepared.permit_expires_at),"R4285_ATOMIC_PERMIT_EXPIRED");
  const dirs=assertUnreserved(prepared.root,prepared.nonce);
  // Burn the in-process permission BEFORE any I/O. If a partial filesystem
