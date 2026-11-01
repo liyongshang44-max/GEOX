@@ -22,11 +22,15 @@ function fileBytes(p,max=16*1024*1024){
  return fs.readFileSync(p);
 }
 function json(p){return JSON.parse(fileBytes(p).toString("utf8").replace(/^\uFEFF/,""))}
-function buildAdmissionV2(input,env=process.env){
+function buildAdmissionV2(input,env=process.env,{verifiedNativeAdoption}={}){
  v1.hostOnly(env);
  const nativeInput=json(input.native_adoption_input_file);
- const adoption=native.checkNativeAdoption(nativeInput);
- assert(native.isNativeVerified(adoption),"R4285_HOST_NATIVE_ADOPTION_MISSING");
+ // A genuine in-process Native WeakSet capability may be carried forward from
+ // the SAME Windows Host process, BEFORE physical Owner observation. No
+ // serialized PASS, cross-process cache, or caller asserted boolean can skip it.
+ const adoption=verifiedNativeAdoption===undefined?
+  native.checkNativeAdoption(nativeInput):verifiedNativeAdoption;
+ assert(native.isNativeVerified(adoption),"R4285_V2_NATIVE_IN_PROCESS_CAPABILITY_REQUIRED");
  assert.equal(nativeInput.source_root,input.source_root,"R4285_HOST_SOURCE_ROOT_SPLIT");
  assert.equal(path.resolve(nativeInput.release_root),path.resolve(input.release_root),
   "R4285_HOST_RELEASE_ROOT_SPLIT");
