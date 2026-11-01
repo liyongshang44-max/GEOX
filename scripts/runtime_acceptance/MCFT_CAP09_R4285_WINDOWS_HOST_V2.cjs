@@ -18,6 +18,8 @@ const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE
 const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V2.cjs");
 const build=require("./MCFT_CAP09_R4285_BUILD_ADMISSION_V2.cjs");
 const contract=require("../cap09_adoption_v1/contract.cjs");
+const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs");
+const {setTimeout:delay}=require("node:timers/promises");
 const {freshStageLaunch}=require("./MCFT_CAP09_STAGE_START_CLOCK_V1.cjs");
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
 const HEX64=/^[a-f0-9]{64}$/;
@@ -26,7 +28,9 @@ const READY_KEYS=["source_root","release_root","native_adoption_input_file",
  "cto_intent_comment_id","nonce","resource_scope_sha256"];
 const FULL_KEYS=[...v1.INPUTS,"cto_intent_file","cto_intent_comment_id",
  "final_execution_approval_file"];
-const EXECUTABLE_MODES=Object.freeze(["--readiness-only","--preflight-only","--execute"]);
+const SESSION_KEYS=[...FULL_KEYS,"nonce","resource_scope_sha256"];
+const EXECUTABLE_MODES=Object.freeze(["--readiness-only","--preflight-only","--execute",
+ "--session-preflight-only","--session-execute"]);
 function fileBytes(p,max=16*1024*1024){
  assert(typeof p==="string"&&path.isAbsolute(p),"V2_CLI_ABSOLUTE_FILE");
  let current=path.resolve(p);
@@ -45,7 +49,8 @@ function keys(x,list){
 }
 function checkInputs(i,mode){
  assert(EXECUTABLE_MODES.includes(mode),"V2_CLI_UNSUPPORTED_MODE");
- keys(i,mode==="--readiness-only"?READY_KEYS:FULL_KEYS);
+ keys(i,mode==="--readiness-only"?READY_KEYS:
+ mode.startsWith("--session-")?SESSION_KEYS:FULL_KEYS);
  for(const [k,v] of Object.entries(i)){
   if(k==="cto_intent_comment_id"){
    assert(Number.isSafeInteger(v)&&v>0,"V2_CLI_CTO_COMMENT_ID");continue;
@@ -110,24 +115,44 @@ function writeOnce(file,obj){
  try{fs.writeFileSync(fd,Buffer.from(JSON.stringify(obj,null,2)+"\n"));fs.fsyncSync(fd);}
  finally{fs.closeSync(fd);}
 }
-function prepareBoundState(i,env=process.env){
+function prepareBoundState(i,env=process.env,session=null){
  v1.hostOnly(env);checkInputs(i,"--preflight-only");
  const base=Object.fromEntries(v1.INPUTS.map(k=>[k,i[k]]));
  // This is the *single* full Native Adoption in the V2 invocation.
- const state=build.buildAdmissionV2(base,env);
+ const state=build.buildAdmissionV2(base,env,session?
+  {verifiedNativeAdoption:session.adoption}:{});
  const ctx=basicContext({i,adoption:state.adoption,nativeInput:state.nativeInput,
   plan:state.plan,observed:state.observed,nonce:state.permitProof.nonce,
   resource_scope_sha256:v2.scopeDigest(state.readback.facts)});
  const raw=fileBytes(i.cto_intent_file,8192);
  ctx.intent_raw_bytes=raw;
- const intent=v2.liveIntent(i.cto_intent_comment_id,raw,ctx);
+ let intent,stable;
+ if(session){
+  // A reference to a live session can never be read back from a JSON receipt.
+  assert(native.isNativeVerified(session.adoption),
+   "V2_SESSION_NATIVE_IN_PROCESS_PROVENANCE_REQUIRED");
+  const b=session.ctx;
+  for(const k of ["run_id","subject_sha","host_id","nonce","authority_pr_number",
+   "first_base","plan_sha256","observations_sha256","material_digest",
+   "release_binding_sha256","resource_scope_sha256","adoption_expires_at",
+   "total_stage_budget_ms"])
+   assert.equal(ctx[k],b[k],"V2_SESSION_EXACT_CONTEXT_DRIFT:"+k);
+  assert.equal(raw.toString("hex"),session.intent_raw.toString("hex"),
+   "V2_SESSION_CTO_INTENT_BYTES_CHANGED");
+  intent=session.intent;stable=session.stable;
+  v2.requireStable(stable,intent,ctx,{now:Date.now()});
+  assert(Date.parse(state.readback.facts.observed_at)>=session.owner_not_before,
+   "V2_SESSION_OWNER_NOT_COLLECTED_AFTER_NATIVE_AND_CTO");
+ }else{
+  intent=v2.liveIntent(i.cto_intent_comment_id,raw,ctx);
+  stable=v2.stableNative({adoption:state.adoption,nativeInput:state.nativeInput,intent,ctx});
+ }
  assert(Date.parse(state.readback.facts.observed_at)>=Date.parse(intent.created_at),
   "V2_OWNER_MUST_FOLLOW_CTO_PREAUTH");
- const stable=v2.stableNative({adoption:state.adoption,nativeInput:state.nativeInput,intent,ctx});
  return {state,ctx,intent,stable,base};
 }
-async function fullAdmission(i,env=process.env){
- const prepared=prepareBoundState(i,env),{state,ctx,intent,stable}=prepared;
+async function fullAdmission(i,env=process.env,session=null){
+ const prepared=prepareBoundState(i,env,session),{state,ctx,intent,stable}=prepared;
  const s={
   stable,intent,ctx,nativeInput:state.nativeInput,
   sourceRoot:i.source_root,releaseRoot:i.release_root,
@@ -141,20 +166,21 @@ async function fullAdmission(i,env=process.env){
  const report=await host.verifyDynamicReadOnly(s);
  return {...prepared,report,final:host.requireVerifiedFinal(report)};
 }
-async function preflight(i,env=process.env){
+async function preflight(i,env=process.env,session=null){
  v1.hostOnly(env);checkInputs(i,"--preflight-only");
- const result=await fullAdmission(i,env);
+ const result=await fullAdmission(i,env,session);
  return Object.freeze({schema_version:"MCFT_CAP09_R4285_V2_SIGNED_PREFLIGHT_V1",
   status:"V2_SIGNED_PREFLIGHT_PASS_NO_PERMIT_CONSUMED_NO_EXECUTION",
   ...result.report,status:"V2_SIGNED_PREFLIGHT_PASS_NO_PERMIT_CONSUMED_NO_EXECUTION",
   permit_consumed:false,execute_authorized:false,stage_count:0});
 }
-async function execute(i,env=process.env){
+async function execute(i,env=process.env,session=null){
  v1.hostOnly(env);checkInputs(i,"--execute");
- // Execute mode is explicitly selected by the human operator; no auto-chain
- // from readiness or preflight. Run science selfcheck BEFORE reading recent Owner.
- checkScience(i.release_root,env);
- const {state,ctx,stable,intent,report,final}=await fullAdmission(i,env);
+ // In the same-process session, scientific selftest ran before Owner acquisition.
+ // Legacy direct execute remains fail-closed; signed session execute is the only
+ // V2 entrypoint allowed to reach irreversible consumption.
+ assert(session,"V2_DIRECT_EXECUTE_FORBIDDEN_USE_SAME_PROCESS_SESSION");
+ const {state,ctx,stable,intent,report,final}=await fullAdmission(i,env,session);
  assert.equal(report.status,"R4285_V2_FINAL_READONLY_BINDING_VERIFIED_NOT_PREFLIGHT_OR_EXECUTION");
  const prepared=atomic.prepare({nativeAdoption:state.adoption,permitProof:state.permitProof,
   trust:state.trust,sourceRoot:i.source_root,stable,intent,ctx,
@@ -186,6 +212,98 @@ async function execute(i,env=process.env){
   final_receipt_sha256:result.final_receipt_sha256,
   permit_consumed:true,production_authorized:false});
 }
+
+const PENDING_FILES=Object.freeze(["resource_readback_file","resource_envelope_file",
+ "permit_envelope_file","final_execution_approval_file"]);
+function assertUncollected(i){
+ for(const key of PENDING_FILES)assert(!fs.existsSync(i[key]),
+  "V2_SESSION_PREEXISTING_SIGNED_OR_OWNER_FILE:"+key);
+}
+function rawOwnerGate(file,subject,notBefore,{now=Date.now()}={}){
+ const bytes=fileBytes(file,1048575),digest=sha(bytes);
+ const readback=resource.verifyReadbackFile(file,digest);
+ const facts=readback.facts,obs=Date.parse(facts.observed_at);
+ assert.equal(facts.subject_sha,subject,"V2_SESSION_READBACK_SUBJECT");
+ assert.equal(facts.host_id,v2.HOST,"V2_SESSION_READBACK_HOST");
+ assert(Number.isFinite(obs)&&obs>=notBefore&&obs<=now,
+  "V2_SESSION_OWNER_PREEXISTS_OR_CLOCK_INVALID");
+ assert(now-obs<=120000,"V2_SESSION_OWNER_120S_EXPIRED");
+ return {readback,observed_at_ms:obs};
+}
+async function waitForRealOwnerAndSignatures(i,session){
+ // The independent producer and independent signers run OUTSIDE this Host.
+ // They must atomically publish their genuine files only after the Host prints
+ // WAIT_REAL_WINDOWS_OWNER_PRODUCER. No in-process signer, no synthesized Owner.
+ const maxUntil=Math.min(Date.parse(session.stable.minted_at)+3600000,
+  Date.parse(session.intent.expires_at),Date.parse(session.ctx.adoption_expires_at));
+ assert(maxUntil>Date.now(),"V2_SESSION_AUTHORITIES_EXPIRED_BEFORE_OWNER");
+ let firstObserved=null;
+ for(;;){
+  const now=Date.now();
+  assert(now<maxUntil,"V2_SESSION_STABLE_OR_INTENT_EXPIRED_WAITING");
+  v2.requireStable(session.stable,session.intent,session.ctx,{now});
+  if(fs.existsSync(i.resource_readback_file)){
+   const raw=rawOwnerGate(i.resource_readback_file,session.ctx.subject_sha,
+    session.owner_not_before,{now});
+   if(firstObserved===null)firstObserved=raw.observed_at_ms;
+   assert.equal(raw.observed_at_ms,firstObserved,"V2_SESSION_OWNER_OBSERVED_AT_REPLACED");
+   assert(now<firstObserved+120000,"V2_SESSION_OWNER_BUDGET_EXHAUSTED");
+   if(PENDING_FILES.every(k=>fs.existsSync(i[k]))){
+    // No simulated authority is returned. Admission re-reads *every* file and
+    // validates the signed Owner, real Permit and final CTO Ed25519 approval.
+    return Object.freeze({observed_at_ms:firstObserved,
+     remaining_ms:firstObserved+120000-Date.now()});
+   }
+  }else{
+   assert(firstObserved===null,"V2_SESSION_OWNER_READBACK_REMOVED");
+  }
+  await delay(100);
+ }
+}
+async function prepareSameProcessSession(i,env=process.env,{executeMode=false}={}){
+ v1.hostOnly(env);
+ checkInputs(i,executeMode?"--session-execute":"--session-preflight-only");
+ // No previously produced Owner/Permit/Final bytes may be recycled to enter
+ // this newly started session. The stale file is never deleted or overwritten.
+ assertUncollected(i);
+ if(executeMode)checkScience(i.release_root,env);
+ const ni=json(i.native_adoption_input_file);
+ assert.equal(ni.source_root,i.source_root,"V2_SESSION_SOURCE_SPLIT");
+ assert.equal(path.resolve(ni.release_root),path.resolve(i.release_root),"V2_SESSION_RELEASE_SPLIT");
+ const adoption=native.checkNativeAdoption(ni);
+ assert(native.isNativeVerified(adoption),"V2_SESSION_REAL_NATIVE_REQUIRED");
+ const plan=json(i.plan_file),observed=json(i.observations_file);
+ const ctx=basicContext({i,adoption,nativeInput:ni,plan,observed,
+  nonce:i.nonce,resource_scope_sha256:i.resource_scope_sha256});
+ lineage.verifyExactMain(i.source_root,ctx.subject_sha);
+ // Human CTO intent MUST exist prior to new Owner physical observation.
+ const raw=fileBytes(i.cto_intent_file,8192);
+ const intent=v2.liveIntent(i.cto_intent_comment_id,raw,ctx);
+ const stable=v2.stableNative({adoption,nativeInput:ni,intent,ctx});
+ assert(Date.parse(i.first_base)>Date.now()+60000,"V2_SESSION_FIRST_BASE_TOO_SOON");
+ // Recheck there is no prefabricated Owner before signalling producer.
+ assertUncollected(i);
+ const ownerNotBefore=Date.now();
+ return Object.freeze({adoption,ctx,intent,stable,intent_raw:raw,
+  owner_not_before:ownerNotBefore});
+}
+async function sameProcessSession(i,env=process.env,{executeMode=false}={}){
+ const session=await prepareSameProcessSession(i,env,{executeMode});
+ console.log(JSON.stringify({schema_version:"MCFT_CAP09_R4285_V2_LIVE_SESSION_GATE_V1",
+  status:"WAIT_REAL_WINDOWS_OWNER_PRODUCER_NOT_PREFLIGHT",
+  run_id:v2.RUN,subject_sha:session.ctx.subject_sha,
+  owner_not_before_utc:new Date(session.owner_not_before).toISOString(),
+  owner_readback_path:i.resource_readback_file,
+  required_signed_files:PENDING_FILES.slice(1).map(k=>i[k]),
+  stable_qualification_in_this_process:true,permit_consumed:false,
+  execution_authorized:false,production_authorized:false}));
+ await waitForRealOwnerAndSignatures(i,session);
+ // The original observed_at must remain within 120 seconds after expensive
+ // signed probes and material full hash, not merely upon file publication.
+ if(executeMode)return execute(i,env,session);
+ return preflight(i,env,session);
+}
+
 function parse(argv){
  assert(Array.isArray(argv)&&argv.length===3&&EXECUTABLE_MODES.includes(argv[0])
   &&argv[1]==="--input"&&path.isAbsolute(argv[2]),"V2_CLI_MODE_INPUT_REQUIRED");
@@ -196,8 +314,11 @@ async function run(argv=process.argv.slice(2),env=process.env){
  const data=json(input);
  checkInputs(data,mode);
  if(mode==="--readiness-only")return readiness(data,env);
+ if(mode==="--session-preflight-only")return sameProcessSession(data,env);
+ if(mode==="--session-execute")return sameProcessSession(data,env,{executeMode:true});
  if(mode==="--preflight-only")return preflight(data,env);
- return execute(data,env);
+ // Direct V2 --execute would repeat a serial Native after Owner observation.
+ throw Error("V2_DIRECT_EXECUTE_FORBIDDEN_USE_SESSION_EXECUTE");
 }
 if(require.main===module)run().then(x=>console.log(JSON.stringify(x,null,2))).catch(e=>{
  console.error(JSON.stringify({status:"HOLD_R4285_V2_WINDOWS_HOST",
@@ -206,4 +327,6 @@ if(require.main===module)run().then(x=>console.log(JSON.stringify(x,null,2))).ca
   production_authorized:false,auto_retry:false}));
  process.exitCode=1;
 });
-module.exports={READY_KEYS,FULL_KEYS,checkInputs,basicContext,parse,readiness,preflight,execute,run};
+module.exports={READY_KEYS,FULL_KEYS,SESSION_KEYS,PENDING_FILES,checkInputs,basicContext,parse,
+ rawOwnerGate,assertUncollected,prepareSameProcessSession,waitForRealOwnerAndSignatures,
+ sameProcessSession,readiness,preflight,execute,run};
