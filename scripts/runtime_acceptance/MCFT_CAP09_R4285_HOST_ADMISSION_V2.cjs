@@ -13,7 +13,7 @@ const pg=require("./MCFT_CAP09_R4285_PG_READONLY_V1.cjs");
 const owner=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
-const installed=require("../cap09_adoption_v1/installed-material.cjs");
+const fullParallel=require("./MCFT_CAP09_R4285_MATERIAL_FULL_PARALLEL_V2.cjs");
 const verifiedFinal=new WeakMap();
 function noUnsafeEnvironment(env){
  assert(!env.CI&&!env.GITHUB_ACTIONS&&!env.NODE_OPTIONS&&!env.NODE_PATH&&!env.PYTHONPATH&&!env.PYTHONHOME,
@@ -53,7 +53,7 @@ async function verifyDynamicReadOnly(s,{now=Date.now()}={}){
  const storage=await v1.probeS3ReadOnly(s.releaseRoot,s.resourceEnvelope.payload,s.environment);
  // Full dynamic material/tool revalidation is charged to the Owner's 120s
  // before final CTO live refetch. This cannot be replaced by a WeakSet cache.
- const liveMaterial=installed.verify(s.profile,s.releaseRoot,s.environment);
+ const liveMaterial=await fullParallel.verify(s.profile,s.releaseRoot,s.environment);
  assert.equal(liveMaterial.digest,s.ctx.material_digest,"V2_INSTALLED_MATERIAL_OR_TOOLS_DRIFT");
  // Final Ed25519 approval verifier performs another REAL GitHub native
  // CTO-intent refetch (fail closed if deleted/edited/expired).
