@@ -7,10 +7,10 @@ const now=Date.now();
 const ctx={run_id:v.RUN,host_id:v.HOST,subject_sha:"a".repeat(40),nonce:"e".repeat(64),
  plan_sha256:"1".repeat(64),observations_sha256:"2".repeat(64),material_digest:"3".repeat(64),
  release_binding_sha256:"4".repeat(64),resource_scope_sha256:"5".repeat(64),
- authority_pr_number:3756,first_base:"2026-12-01T00:00:00.000Z"};
+ authority_pr_number:3757,first_base:"2026-12-01T00:00:00.000Z"};
 function intent(){return {schema_version:"MCFT_CAP09_R4285_CTO_PREAUTH_INTENT_V2",
  run_id:v.RUN,parent_run_id:"72dc0304a21a",failed_predecessor_run_id:"6ff9b41f6f7f",
- attempt_ordinal:4,authority_pr_number:3756,subject_sha:ctx.subject_sha,host_id:ctx.host_id,
+ attempt_ordinal:4,authority_pr_number:3757,subject_sha:ctx.subject_sha,host_id:ctx.host_id,
  nonce:ctx.nonce,plan_sha256:ctx.plan_sha256,observations_sha256:ctx.observations_sha256,
  first_base:ctx.first_base,material_digest:ctx.material_digest,
  release_binding_sha256:ctx.release_binding_sha256,resource_scope_sha256:ctx.resource_scope_sha256,
@@ -33,7 +33,7 @@ test("intent cannot preauthorize Permit or Execute and expiration fails",()=>{
 test("synthetic GitHub comment inspection never yields native capability",()=>{
  const body=canonical(intent()),raw=Buffer.from(body);
  const c={id:17,url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/17",
- issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3756",
+ issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3757",
  user:{login:"liyongshang44-max"},author_association:"OWNER",
  created_at:new Date(now-4000).toISOString(),updated_at:new Date(now-4000).toISOString(),body};
  const p=v.inspectNativeComment(c,raw,ctx,{now});
