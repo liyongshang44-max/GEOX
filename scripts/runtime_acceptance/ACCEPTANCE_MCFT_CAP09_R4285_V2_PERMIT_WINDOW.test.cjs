@@ -45,9 +45,12 @@ function makeFixture(){
   spki_sha256:sha(keys.publicKey.export({format:"der",type:"spki"}))};
  const trust={schema_version:"geox_mcft_cap09_retry_trust_v1",
   host_id:permit.HOST,operator_id:issuer.issuer_id,issuers:[issuer]};
+ const plan={schema_version:"geox_mcft_cap09_retry_stage_plan_v2",
+  stages:require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs").STAGES.map((id,i)=>({
+    id,timeout_ms:[3600000,1800000,1800000,1800000,1200000,600000][i]}))};
  const ctx={run_id:permit.RUN,host_id:permit.HOST,subject_sha:"a".repeat(40),nonce:"7".repeat(64),
   first_base,authority_pr_number:3757,
-  plan_sha256:"2".repeat(64),observations_sha256:sha(Buffer.from(canonical(observed))),
+  plan,plan_sha256:sha(Buffer.from(canonical(plan))),observations_sha256:sha(Buffer.from(canonical(observed))),
   material_digest:"3".repeat(64),release_binding_sha256:"4".repeat(64),
   resource_scope_sha256:v2.scopeDigest(readback.facts),
   total_stage_budget_ms:10800000,adoption_expires_at:adoptionExpiry};
@@ -102,4 +105,28 @@ test("V2 rejects Permit outliving Adoption and mismatched Material",()=>{
  assert.throws(()=>v2.checkActualPermit(a.proof,a.permitEnv,a.ownerEnvelope,
   a.readback,a.observed,{...a.ctx,material_digest:"f".repeat(64)},
   {now:a.now}),/V2_MATERIAL_DRIFT/);
+});
+
+test("CTO: caller cannot shrink remaining budget while signed Plan remains 180 min",()=>{
+ const a=makeFixture();
+ assert.throws(()=>v2.checkActualPermit(a.proof,a.permitEnv,a.ownerEnvelope,
+  a.readback,a.observed,{...a.ctx,total_stage_budget_ms:1000},{now:a.now}),
+  /V2_CALLER_STAGE_BUDGET_NOT_FROM_PLAN/);
+});
+test("CTO: signed Plan and six-stage timeout drift must fail closed",()=>{
+ const a=makeFixture(),old=a.ctx.plan;
+ const changed={...old,stages:old.stages.map((x,i)=>i===1?{...x,timeout_ms:1000}:x)};
+ assert.throws(()=>v2.checkActualPermit(a.proof,a.permitEnv,a.ownerEnvelope,
+  a.readback,a.observed,{...a.ctx,plan:changed,total_stage_budget_ms:9001000},{now:a.now}),
+  /V2_PLAN_APPROVED_STAGE_TIMEOUTS_CHANGED/);
+ assert.throws(()=>v2.checkActualPermit(a.proof,a.permitEnv,a.ownerEnvelope,
+  a.readback,a.observed,{...a.ctx,plan_sha256:"f".repeat(64)},{now:a.now}),
+  /V2_PLAN_DRIFT/);
+});
+test("CTO: preapproved observation delay change must fail closed",()=>{
+ const a=makeFixture(),bad={...a.observed,
+  real_pipeline_delay_plan:{...a.observed.real_pipeline_delay_plan,promotion_queue_delay_ms:5}};
+ assert.throws(()=>v2.frozenBudget(a.ctx.plan,bad,{
+  ...a.ctx,observations_sha256:sha(Buffer.from(canonical(bad)))
+ }),/V2_APPROVED_PROMOTION_DELAY_CHANGED/);
 });
