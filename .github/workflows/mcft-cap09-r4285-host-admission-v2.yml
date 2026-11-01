@@ -5,6 +5,11 @@ on:
     paths:
       - 'scripts/runtime_acceptance/MCFT_CAP09_R4285_ADMISSION_V2.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_ADMISSION_V2.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V2.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_V2.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_CAPABILITY_V2.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_V2.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_WINDOWS_EXECUTION_WIRING.test.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_ADMISSION_V2.test.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_ADMISSION_V2.test.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_PERMIT_WINDOW.test.cjs'
@@ -22,6 +27,10 @@ jobs:
         run: |
           node --check scripts/runtime_acceptance/MCFT_CAP09_R4285_ADMISSION_V2.cjs
           node --check scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_ADMISSION_V2.cjs
-          node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_ADMISSION_V2.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_ADMISSION_V2.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_PERMIT_WINDOW.test.cjs
+          node --check scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V2.cjs
+          node --check scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_V2.cjs
+          node --check scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_CAPABILITY_V2.cjs
+          node --check scripts/runtime_acceptance/MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_V2.cjs
+          node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_ADMISSION_V2.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_ADMISSION_V2.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_PERMIT_WINDOW.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_WINDOWS_EXECUTION_WIRING.test.cjs
       - name: No permit or physical action on CI
         run: echo 'NON_AUTHORIZED_SYNTHETIC_CONTRACT_TESTS_ONLY'
