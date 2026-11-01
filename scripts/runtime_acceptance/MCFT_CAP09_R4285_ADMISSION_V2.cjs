@@ -124,6 +124,16 @@ function checkActualPermit(proof,permitEnv,ownerEnv,readback,observed,ctx,{now=D
  assert.equal(permitEnv.payload.observations_sha256,ctx.observations_sha256,"V2_OBS_DRIFT");
  assert.equal(permitEnv.payload.installed_material_digest,ctx.material_digest,"V2_MATERIAL_DRIFT");
  assert.equal(permitEnv.payload.release_binding_sha256,ctx.release_binding_sha256,"V2_RELEASE_DRIFT");
+ // Permit freshness must be rechecked at the actual admission instant. A
+ // previously minted V1 WeakSet proof is not a perpetual time capability.
+ assert(Number.isSafeInteger(ctx.total_stage_budget_ms)&&ctx.total_stage_budget_ms>0,
+  "V2_STAGE_BUDGET_REQUIRED");
+ assert(now+ctx.total_stage_budget_ms+60000<Date.parse(permitEnv.payload.expires_at),
+  "V2_PERMIT_REMAINING_STAGE_BUDGET");
+ assert(Date.parse(permitEnv.payload.expires_at)<=Date.parse(ownerEnv.payload.expires_at),
+  "V2_PERMIT_OUTLIVES_OWNER");
+ assert(Date.parse(permitEnv.payload.expires_at)<=utc(ctx.adoption_expires_at),
+  "V2_PERMIT_OUTLIVES_ADOPTION");
  assert.equal(sha(Buffer.from(canonical(observed))),ctx.observations_sha256,"V2_OBS_BYTES_DRIFT");
  assert.equal(observed.real_provider_response_delay_plan.first_base,ctx.first_base,"V2_BASE_PROVIDER");
  assert.equal(observed.real_pipeline_delay_plan.first_base,ctx.first_base,"V2_BASE_PIPELINE");
@@ -172,6 +182,8 @@ function verifyFinal(env,trust,{stable,intent,permitProof,permitEnv,ownerEnv,rea
   resource_owner_envelope_sha256:permitProof.resource_owner_envelope_sha256,
   resource_readback_sha256:readback.sha256,intent_sha256:refreshed.sha256},{now});
  assert(utc(final.expires_at)<=utc(intent.expires_at),"V2_FINAL_OUTLIVES_CTO_INTENT");
+ assert(utc(final.expires_at)<=utc(permitEnv.payload.expires_at),
+  "V2_FINAL_OUTLIVES_PERMIT");
  const live=Object.freeze({...final,cto_rechecked_at:refreshed.checked_at});
  liveFinals.add(live);return live;
 }
