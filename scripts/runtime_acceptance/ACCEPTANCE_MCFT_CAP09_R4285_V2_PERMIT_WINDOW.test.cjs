@@ -88,7 +88,7 @@ test("V2 rejects readback replacement, Owner signature change and Observations d
   {...a.ownerEnvelope,signature_base64:"CHANGED"},a.readback,a.observed,a.ctx,{now:a.now}),
   /OWNER_ENVELOPE_DRIFT/);
  assert.throws(()=>v2.checkActualPermit(a.proof,a.permitEnv,a.ownerEnvelope,
-  a.readback,{...a.observed,other:true},a.ctx,{now:a.now}),/OBS_BYTES_DRIFT/);
+  a.readback,{...a.observed,other:true},a.ctx,{now:a.now}),/V2_SIGNED_OBSERVATIONS_DIGEST_CHANGED/);
 });
 test("V2 rejects expired 120s observations and stale remaining Permit budget",()=>{
  const a=makeFixture();
