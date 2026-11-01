@@ -116,7 +116,7 @@ function writeOnce(file,obj){
  finally{fs.closeSync(fd);}
 }
 function prepareBoundState(i,env=process.env,session=null){
- v1.hostOnly(env);checkInputs(i,"--preflight-only");
+ v1.hostOnly(env);checkInputs(i,session?"--session-preflight-only":"--preflight-only");
  const base=Object.fromEntries(v1.INPUTS.map(k=>[k,i[k]]));
  // This is the *single* full Native Adoption in the V2 invocation.
  const state=build.buildAdmissionV2(base,env,session?
@@ -167,7 +167,7 @@ async function fullAdmission(i,env=process.env,session=null){
  return {...prepared,report,final:host.requireVerifiedFinal(report)};
 }
 async function preflight(i,env=process.env,session=null){
- v1.hostOnly(env);checkInputs(i,"--preflight-only");
+ v1.hostOnly(env);checkInputs(i,session?"--session-preflight-only":"--preflight-only");
  const result=await fullAdmission(i,env,session);
  return Object.freeze({schema_version:"MCFT_CAP09_R4285_V2_SIGNED_PREFLIGHT_V1",
   status:"V2_SIGNED_PREFLIGHT_PASS_NO_PERMIT_CONSUMED_NO_EXECUTION",
@@ -175,7 +175,7 @@ async function preflight(i,env=process.env,session=null){
   permit_consumed:false,execute_authorized:false,stage_count:0});
 }
 async function execute(i,env=process.env,session=null){
- v1.hostOnly(env);checkInputs(i,"--execute");
+ v1.hostOnly(env);checkInputs(i,session?"--session-execute":"--execute");
  // In the same-process session, scientific selftest ran before Owner acquisition.
  // Legacy direct execute remains fail-closed; signed session execute is the only
  // V2 entrypoint allowed to reach irreversible consumption.
