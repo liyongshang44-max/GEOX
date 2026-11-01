@@ -145,7 +145,8 @@ async function preflight(i,env=process.env){
  const result=await fullAdmission(i,env);
  return Object.freeze({schema_version:"MCFT_CAP09_R4285_V2_SIGNED_PREFLIGHT_V1",
   status:"V2_SIGNED_PREFLIGHT_PASS_NO_PERMIT_CONSUMED_NO_EXECUTION",
-  ...result.report,permit_consumed:false,execute_authorized:false,stage_count:0});
+  ...result.report,status:"V2_SIGNED_PREFLIGHT_PASS_NO_PERMIT_CONSUMED_NO_EXECUTION",
+  permit_consumed:false,execute_authorized:false,stage_count:0});
 }
 async function execute(i,env=process.env){
  v1.hostOnly(env);checkInputs(i,"--execute");
