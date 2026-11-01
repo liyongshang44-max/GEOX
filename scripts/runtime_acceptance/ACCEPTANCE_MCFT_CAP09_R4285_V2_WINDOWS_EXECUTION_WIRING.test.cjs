@@ -6,6 +6,9 @@ const atomic=require("./MCFT_CAP09_R4285_PERMIT_ATOMIC_V2.cjs");
 const stage=require("./MCFT_CAP09_R4285_STAGE_CAPABILITY_V2.cjs");
 const parent=require("./MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_V2.cjs");
 const v1host=require("./MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs");
+const builder=require("./MCFT_CAP09_R4285_BUILD_ADMISSION_V2.cjs");
+const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V2.cjs");
+const newPermit=require("./MCFT_CAP09_R4285_PERMIT_V2.cjs");
 const child=require("./MCFT_CAP09_R4285_CHILD_STAGE_V1.cjs");
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
 test("V2 has genuine three-mode runnable Host entrypoint and original six-stage dispatcher",()=>{
@@ -13,6 +16,10 @@ test("V2 has genuine three-mode runnable Host entrypoint and original six-stage 
  assert.deepEqual(host.parse(["--preflight-only","--input","/tmp/preflight.json"]).mode,"--preflight-only");
  assert.deepEqual(host.parse(["--execute","--input","/tmp/execute.json"]).mode,"--execute");
  assert.equal(typeof host.execute,"function");
+ assert.equal(typeof builder.buildAdmissionV2,"function");
+ assert.equal(typeof native.checkQcp72,"function");
+ assert(newPermit.BINDINGS.includes("qcp72_raw_sha256"));
+ assert(!newPermit.BINDINGS.includes("qcp71_raw_sha256"));
  assert.equal(typeof host.preflight,"function");
  assert.equal(typeof host.readiness,"function");
  assert.equal(typeof parent.dispatchConsumedStageR4285,"function");
