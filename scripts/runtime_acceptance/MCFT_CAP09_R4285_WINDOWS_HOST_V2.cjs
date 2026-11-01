@@ -128,6 +128,11 @@ function prepareBoundState(i,env=process.env,session=null){
  ctx.intent_raw_bytes=raw;
  let intent,stable;
  if(session){
+  // Pre-Owner nonserialized source contracts must still be byte-identical at
+  // their later signed use. Never trust a JSON "stable PASS" or mutable path.
+  for(const [key,p] of Object.entries(session.pinned_inputs))
+   assert.equal(sha(fileBytes(p)),session.pinned_digests[key],
+    "V2_SESSION_PINNED_SOURCE_INPUT_CHANGED:"+key);
   // A reference to a live session can never be read back from a JSON receipt.
   assert(native.isNativeVerified(session.adoption),
    "V2_SESSION_NATIVE_IN_PROCESS_PROVENANCE_REQUIRED");
@@ -281,10 +286,18 @@ async function prepareSameProcessSession(i,env=process.env,{executeMode=false}={
  const intent=v2.liveIntent(i.cto_intent_comment_id,raw,ctx);
  const stable=v2.stableNative({adoption,nativeInput:ni,intent,ctx});
  assert(Date.parse(i.first_base)>Date.now()+60000,"V2_SESSION_FIRST_BASE_TOO_SOON");
+ const pinnedInputs=Object.freeze({
+  native_adoption_input_file:i.native_adoption_input_file,
+  plan_file:i.plan_file,observations_file:i.observations_file,
+  cto_intent_file:i.cto_intent_file
+ });
+ const pinnedDigests=Object.freeze(Object.fromEntries(Object.entries(pinnedInputs)
+  .map(([k,p])=>[k,sha(fileBytes(p))])));
  // Recheck there is no prefabricated Owner before signalling producer.
  assertUncollected(i);
  const ownerNotBefore=Date.now();
  return Object.freeze({adoption,ctx,intent,stable,intent_raw:raw,
+  pinned_inputs:pinnedInputs,pinned_digests:pinnedDigests,
   owner_not_before:ownerNotBefore});
 }
 async function sameProcessSession(i,env=process.env,{executeMode=false}={}){
