@@ -8,7 +8,7 @@ const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE
 const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V1.cjs");
 const permit=require("./MCFT_CAP09_R4285_PERMIT_V1.cjs");
 const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs");
-const RUN=permit.RUN,HOST=permit.HOST,REPO="liyongshang44-max/GEOX";
+const RUN=permit.RUN,HOST=permit.HOST,REPO="liyongshang44-max/GEOX",AUTHORITY_PR=3757;
 const HEX64=/^[a-f0-9]{64}$/,HEAD=/^[a-f0-9]{40}$/;
 const DOMAIN="GEOX_MCFT_CAP09_R4285_FINAL_EXECUTION_APPROVAL_V2\n";
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
@@ -33,7 +33,7 @@ function context(ctx){
  assert(ctx&&ctx.run_id===RUN&&ctx.host_id===HOST&&HEAD.test(ctx.subject_sha),"V2_IDENTITY");
  for(const k of ["nonce","plan_sha256","observations_sha256","material_digest",
   "release_binding_sha256","resource_scope_sha256"])assert(HEX64.test(ctx[k]),"V2_DIGEST:"+k);
- assert(Number.isSafeInteger(ctx.authority_pr_number)&&ctx.authority_pr_number>0,"V2_PR");
+ assert.equal(ctx.authority_pr_number,AUTHORITY_PR,"V2_EXACT_SUCCESSOR_PR");
  assert(/^\d{4}-\d\d-\d\dT\d\d:00:00\.000Z$/.test(ctx.first_base)&&
   new Date(ctx.first_base).toISOString()===ctx.first_base,"V2_BASE");
  return ctx;
@@ -196,6 +196,6 @@ function assertFinal(final,ctx,{now=Date.now()}={}){
   assert.equal(final[k],ctx[k],"V2_FINAL_CONSUME_BINDING:"+k);
  return true;
 }
-module.exports={RUN,HOST,DOMAIN,INTENT_FIELDS,FINAL_FIELDS,RESOURCE_FIELDS,
+module.exports={RUN,HOST,AUTHORITY_PR,DOMAIN,INTENT_FIELDS,FINAL_FIELDS,RESOURCE_FIELDS,
  context,checkIntent,inspectNativeComment,liveIntent,requireLiveIntent,stableNative,
  requireStable,scopeDigest,checkActualPermit,inspectFinal,verifyFinal,assertFinal};
