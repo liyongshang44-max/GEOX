@@ -158,7 +158,8 @@ async function execute(i,env=process.env){
  const prepared=atomic.prepare({nativeAdoption:state.adoption,permitProof:state.permitProof,
   trust:state.trust,sourceRoot:i.source_root,stable,intent,ctx,
   resourceEnvelope:state.resEnv,readback:state.readback,plan:state.plan,
-  observed:state.observed,permitEnvelope:state.permitEnv});
+  observed:state.observed,permitEnvelope:state.permitEnv,
+  releaseRoot:i.release_root,profile:state.profile,environment:env});
  // Last qualified instant before irreversible one-time ledger reservation.
  v2.assertFinal(final,{nonce:ctx.nonce,
   permit_envelope_sha256:state.permitProof.envelope_sha256,
