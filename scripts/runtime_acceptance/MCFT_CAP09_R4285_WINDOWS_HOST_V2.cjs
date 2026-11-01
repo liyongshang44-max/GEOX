@@ -275,11 +275,14 @@ async function prepareSameProcessSession(i,env=process.env,{executeMode=false}={
  // this newly started session. The stale file is never deleted or overwritten.
  assertUncollected(i);
  if(executeMode)checkScience(i.release_root,env);
+ const nativeInputOriginalSha=sha(fileBytes(i.native_adoption_input_file));
  const ni=json(i.native_adoption_input_file);
  assert.equal(ni.source_root,i.source_root,"V2_SESSION_SOURCE_SPLIT");
  assert.equal(path.resolve(ni.release_root),path.resolve(i.release_root),"V2_SESSION_RELEASE_SPLIT");
  const adoption=native.checkNativeAdoption(ni);
  assert(native.isNativeVerified(adoption),"V2_SESSION_REAL_NATIVE_REQUIRED");
+ assert.equal(sha(fileBytes(i.native_adoption_input_file)),nativeInputOriginalSha,
+  "V2_SESSION_NATIVE_INPUT_CHANGED_DURING_CRYPTOGRAPHIC_CHECK");
  const plan=json(i.plan_file),observed=json(i.observations_file);
  const ctx=basicContext({i,adoption,nativeInput:ni,plan,observed,
   nonce:i.nonce,resource_scope_sha256:i.resource_scope_sha256});
