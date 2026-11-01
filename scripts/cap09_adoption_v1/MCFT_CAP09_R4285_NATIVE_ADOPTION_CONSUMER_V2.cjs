@@ -319,6 +319,23 @@ function checkNativeAdoption(input,{now=Date.now()}={}){
  const ownerConsumerRel='scripts/cap09_adoption_v1/MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V1.cjs';
  const materialIndex=new Map(profile.files.map(x=>[x.path,x.sha256]));
  const releaseIndex=new Map(bound.files.map(x=>[x.path,x.sha256]));
+ const v2CriticalSources=[
+  "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_ADOPTION_V4_V2.cjs",
+  "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_BUILD_ADMISSION_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_ADMISSION_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_ADMISSION_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_CAPABILITY_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_V2.cjs"
+ ];
+ for(const rel of v2CriticalSources){
+  const digest=sha(readRootFile(releaseRoot,rel));
+  assert.equal(materialIndex.get(rel),digest,"R4285_V2_MATERIAL_SOURCE_UNBOUND:"+rel);
+  assert.equal(releaseIndex.get(rel),digest,"R4285_V2_RELEASE_SOURCE_UNBOUND:"+rel);
+ }
  for(const rel of [nativeConsumerRel,ownerConsumerRel]){
   const digest=sha(readRootFile(releaseRoot,rel));
   assert.equal(materialIndex.get(rel),digest,'R4285_NATIVE_UNBOUND_INSTALLED_CONSUMER:'+rel);
@@ -343,8 +360,8 @@ function checkNativeAdoption(input,{now=Date.now()}={}){
   owner_decision_sha256:owner.owner_decision_sha256,lineage_envelope_sha256:lineageSha,
   native_qcp72_result_sha256:sha(raw),installed_material_digest:checked.digest,
   release_binding_sha256:input.release_binding_sha256}});
- const result=Object.freeze({schema_version:'MCFT_CAP09_R4285_NATIVE_CURRENT_SUBJECT_ADOPTION_CONSUMER_V1',
-  status:'NATIVE_R4285_CURRENT_SUBJECT_ADOPTION_VERIFIED_NOT_PERMIT',run_id:RUN,subject_sha:subject,
+ const result=Object.freeze({schema_version:'MCFT_CAP09_R4285_NATIVE_CURRENT_SUBJECT_ADOPTION_CONSUMER_V2',
+  status:'NATIVE_R4285_QCP72_ADOPTION_V4_VERIFIED_NOT_PERMIT',run_id:RUN,subject_sha:subject,
   owner_ordinal:owner.ordinal,owner_inventory_sha256:input.inventory_sha256,
   qcp72_source_run_id:provenance.qcp_run_id,qcp_executed_at_merge_head:false,
   source_and_merge_proven:qualified.status,material_digest:checked.digest,
