@@ -33,5 +33,22 @@ The exact six-stage timeouts are frozen at `3600000,1800000,1800000,1800000,1200
 
 Do not call an intent structural inspection or a signed final approval execution authorization without real live provenance.
 
+## Native V4 and independent Owner — real same-process rendezvous
+
+The supported new modes are `--session-preflight-only` and `--session-execute` in `MCFT_CAP09_R4285_WINDOWS_HOST_V2.cjs`. The old direct `--execute` command now fails closed. `--readiness-only` still has a different result type and never transports an authorization capability to another process.
+
+Session input: all original V2 full signed Host fields plus `nonce` and `resource_scope_sha256` (two exact 64-character lowercase SHA256-style values). Inputs include the preexisting Native Adoption input, signed CTO intent file/comment ID, Plan, Observations and future paths for raw Resource Owner Readback, signed Owner Envelope, actual signed V2 Permit, and final V2 Ed25519 execution approval. All paths absolute. All four future Owner/Permit/final files MUST NOT exist when the session begins; they are never overwritten or removed.
+
+After successful REAL Windows Native V4/QCP72/complete Material qualification, a valid live GitHub CTO preauthorization intent and exact Plan/Observations check, the Host retains the non-serializable Native and stable-proof capabilities in the SAME Node process. It emits `WAIT_REAL_WINDOWS_OWNER_PRODUCER_NOT_PREFLIGHT` with the physical Owner-not-before instant, and waits. The real external independent Owner Producer must then publish its original readback. Real signers separately publish the signed Owner Envelope, V2 Permit, and V2 final approval. The Host does NOT fabricate or run the Producer, create signatures, or issue a Permit. File presence alone is not authorization; all raw bytes and Ed25519 bindings are verified afterward.
+
+The Owner `observed_at` MUST be at or after the in-process Native+CTO readiness gate, must be unmodified, and may not be older than 120000ms at any dynamic check or atomic consumption. Stale/replaced Owner, mismatched Subject/Nonce/scope, drifted pre-Owner signed input, expired stable proof/CTO comment, or missing signatures fails closed with no retry. The signed Host admission uses the same Native WeakSet proof instead of redoing the serial Native Material scan AFTER Owner. It still does full concurrent SHA256 for all 24673 material files and all tool hashes, actual PG/S3 read-only probes, live CTO refetch and final Permit/Owner validity checks before irreversible burn.
+
+Operator command only AFTER a new legal signed V4 installed release is available (not authorized at present):
+
+```powershell
+node 'D:\<QUALIFIED_V2_RELEASE>\scripts\runtime_acceptance\MCFT_CAP09_R4285_WINDOWS_HOST_V2.cjs' --session-preflight-only --input 'D:\<SESSION_INPUT>.json'
+```
+
+`--session-execute` is a separate future explicitly authorized action and is FORBIDDEN under current CTO disposition. The existing independent Owner Producer and signers are external dependencies and are not reconstructed in this PR. No historical V1 subject, signature or Permit is upgraded. Windows owner-observed-to-consumption continuous timing is still HOLD; this source integration is not a physical admission PASS.
 ## Release gates
 New Subject and Material qualification after merge; applicable QCP; real Windows Host, real PG/S3 read-only checks; negative tests for changed readback, expired owner, nonce reuse, modified material, GitHub deletion and competing consumes. No old signature automatically transfers.
