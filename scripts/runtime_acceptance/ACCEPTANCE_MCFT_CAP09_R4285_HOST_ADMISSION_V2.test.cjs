@@ -3,7 +3,7 @@ const test=require("node:test"),assert=require("node:assert/strict");
 const v2host=require("./MCFT_CAP09_R4285_HOST_ADMISSION_V2.cjs");
 test("V2 Host exports a read-only admission boundary only",()=>{
  const exports=Object.keys(v2host);
- assert.deepEqual(exports.sort(),["noUnsafeEnvironment","verifyDynamicReadOnly"].sort());
+ assert.deepEqual(exports.sort(),["noUnsafeEnvironment","verifyDynamicReadOnly","requireVerifiedFinal"].sort());
  assert(!exports.some(k=>/^(execute|consume|sign|issue|preflight)$/i.test(k)));
 });
 test("forged stable identity never reaches Windows PG/S3 or ordinary V1 preflight",async()=>{
@@ -12,4 +12,10 @@ test("forged stable identity never reaches Windows PG/S3 or ordinary V1 prefligh
 });
 test("V2 no-permit and no-Owner inputs fail closed before resource checks",async()=>{
  await assert.rejects(v2host.verifyDynamicReadOnly({}),/STABLE_INPUT_REQUIRED/);
+});
+
+test("V2 final proof cannot be fabricated from ordinary read-only status",()=>{
+ assert.throws(()=>v2host.requireVerifiedFinal({
+   status:"R4285_V2_FINAL_READONLY_BINDING_VERIFIED_NOT_PREFLIGHT_OR_EXECUTION"
+ }),/V2_FINAL_READONLY_HOST_CAPABILITY_REQUIRED/);
 });
