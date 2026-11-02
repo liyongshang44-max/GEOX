@@ -617,6 +617,18 @@ function nativeBucketAnonymousMatches(x,alias){
  return x.status==="success"&&x.operation==="get"&&
   x.bucket===alias+"/"+BUCKET&&x.permission==="private";
 }
+// The Windows native double-read witnessed 5/78 containers with Mounts
+// array permutations only. Mount order is not part of mount ownership.
+// Preserve every FULL mount record, including unknown fields, duplicates,
+// flags and nested-array order. Other inspect fields remain strict.
+function nativeMountsStableOrder(mounts){
+ assert(Array.isArray(mounts)&&mounts.every(m=>m&&typeof m==="object"&&
+  !Array.isArray(m)),"HOLD_NATIVE_MOUNTS_FORMAT");
+ return [...mounts].sort((a,b)=>{
+  const x=lineage.canonical(a),y=lineage.canonical(b);
+  return x<y?-1:x>y?1:0;
+ });
+}
 function nativeStableProjection(label,b){
  // Docker inspect returns a multiline JSON array; mc and docker ps use JSONL.
  // Only reconcile stable identities, not uptime/metrics.
@@ -676,7 +688,8 @@ function nativeStableProjection(label,b){
    "HOLD_NATIVE_INSPECT_ID");
   return lineage.canonical(c.map(y=>({
    Id:y.Id,Name:y.Name,
-   Labels:y.Config?.Labels||{},Mounts:y.Mounts||[],
+   Labels:y.Config?.Labels||{},
+   Mounts:nativeMountsStableOrder(y.Mounts||[]),
    Ports:y.NetworkSettings?.Ports||{},
    PortBindings:y.HostConfig?.PortBindings||{},
    EnvDigest:sha(Buffer.from(lineage.canonical(y.Config?.Env||[])))

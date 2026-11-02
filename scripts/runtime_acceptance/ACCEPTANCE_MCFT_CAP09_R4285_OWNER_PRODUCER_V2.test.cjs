@@ -592,3 +592,39 @@ test("real Windows native anonymous get reports private, not none; bind exact op
   else process.env[envName]=previous;
  }
 });
+
+test("Docker native inspect only Mounts top-level ordering is immaterial; all content is retained",()=>{
+ const wrap=x=>Buffer.from(JSON.stringify([x]),"utf8");
+ const mounts=[
+  {Type:"volume",Name:"alpha",Source:"/volumes/alpha",Destination:"/db",
+   Driver:"local",Mode:"rw",RW:true,Propagation:"rprivate"},
+  {Type:"bind",Source:"/local/data",Destination:"/data",
+   Mode:"ro",RW:false,Propagation:"rprivate",Options:{nonrecursive:false,
+    labels:["first","second"]}}
+ ];
+ const baseline={Id:"a".repeat(64),Name:"/r4285-contained",
+  Config:{Labels:{"run":"4285c3ce342c"},Env:["A=private fixture"]},
+  Mounts:mounts,NetworkSettings:{Ports:{"9000/tcp":[{HostIp:"127.0.0.1",
+   HostPort:"59292"}]}},HostConfig:{PortBindings:{"9000/tcp":[
+    {HostIp:"127.0.0.1",HostPort:"59292"}]}}};
+ const original=p.nativeStableProjection("CONTAINERS_INSPECT",wrap(baseline));
+ const permuted=p.nativeStableProjection("CONTAINERS_INSPECT",wrap({
+  ...baseline,Mounts:[...mounts].reverse()}));
+ assert.equal(permuted,original);
+ const differs=changed=>assert.notEqual(
+  p.nativeStableProjection("CONTAINERS_INSPECT",wrap(changed)),original);
+ differs({...baseline,Mounts:[mounts[0]]}); // Missing mount
+ differs({...baseline,Mounts:[...mounts,mounts[0]]}); // Duplicate not erased
+ differs({...baseline,Mounts:[{...mounts[0],RW:false},mounts[1]]});
+ differs({...baseline,Mounts:[{...mounts[0],Source:"/other"},mounts[1]]});
+ differs({...baseline,Mounts:[{...mounts[0],UnexpectedField:"extra"},mounts[1]]});
+ differs({...baseline,Mounts:[mounts[0],{...mounts[1],
+  Options:{nonrecursive:false,labels:["second","first"]}}]});
+ differs({...baseline,Config:{...baseline.Config,Env:["A=changed"]}});
+ differs({...baseline,Config:{...baseline.Config,Labels:{"run":"other"}}});
+ differs({...baseline,NetworkSettings:{Ports:{}}});
+ differs({...baseline,HostConfig:{PortBindings:{}}});
+ differs({...baseline,Name:"/other"});
+ assert.throws(()=>p.nativeStableProjection("CONTAINERS_INSPECT",wrap({
+  ...baseline,Mounts:{invalid:true}})),/HOLD_NATIVE_MOUNTS_FORMAT/);
+});
