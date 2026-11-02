@@ -273,9 +273,37 @@ function replacementPolicyV2(){
 function replacementPolicyBytesV2(){
  return Buffer.from(lineage.canonical(replacementPolicyV2())+"\n","utf8");
 }
+// MinIO may reserialize an inline IAM policy with reordered arrays.
+// Only Action, Resource and Statement ordering is immaterial. All fields,
+// types, values, multiplicities, Sid, Effect and strict namespace remain exact.
+function normalizeReplacementPolicyOrderV2(policy){
+ const code="OWNER_BINDING_POLICY_SEVEN_EXACT_PAIRS_REQUIRED";
+ const keySet=(v,keys)=>v&&typeof v==="object"&&!Array.isArray(v)&&
+  Object.keys(v).sort().join("\u0000")===keys.slice().sort().join("\u0000");
+ assert(keySet(policy,["Version","Statement"]),code);
+ assert(policy.Version==="2012-10-17"&&Array.isArray(policy.Statement)&&
+  policy.Statement.length===2,code);
+ const statements=policy.Statement.map(s=>{
+  assert(keySet(s,["Sid","Effect","Action","Resource"]),code);
+  assert(typeof s.Sid==="string"&&s.Effect==="Allow",code);
+  for(const k of ["Action","Resource"]){
+   const a=s[k];
+   assert(Array.isArray(a)&&a.length>0&&
+    a.every(v=>typeof v==="string"&&v.length>0)&&
+    new Set(a).size===a.length,code);
+  }
+  return {Sid:s.Sid,Effect:s.Effect,
+   Action:[...s.Action].sort(),Resource:[...s.Resource].sort()};
+ }).sort((a,b)=>a.Sid<b.Sid?-1:a.Sid>b.Sid?1:0);
+ assert(new Set(statements.map(s=>s.Sid)).size===2,code);
+ return {Version:policy.Version,Statement:statements};
+}
 function verifyReplacementPolicyV2(policy){
- assert.equal(lineage.canonical(policy),lineage.canonical(replacementPolicyV2()),
+ // Fail closed without embedding the IAM policy in assertion-error text.
+ assert(lineage.canonical(normalizeReplacementPolicyOrderV2(policy))===
+  lineage.canonical(normalizeReplacementPolicyOrderV2(replacementPolicyV2())),
   "OWNER_BINDING_POLICY_SEVEN_EXACT_PAIRS_REQUIRED");
+ // The signed 510-byte policy source and SHA are NEVER rewritten or reordered.
  return Object.freeze({sha256:sha(replacementPolicyBytesV2()),pairs:7,
   bucket_arn:BUCKET_ARN,raw_prefix_arn:RAW_ARN,candidate_prefix_arn:CANDIDATE_ARN});
 }

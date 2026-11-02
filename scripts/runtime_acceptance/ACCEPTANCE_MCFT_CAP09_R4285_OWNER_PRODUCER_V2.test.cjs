@@ -181,6 +181,35 @@ test("V2 successor policy fixes precisely seven bucket/object Action/Resource pa
   policy.Statement[0],{...policy.Statement[1],Action:["s3:GetObject","s3:PutObject","s3:DeleteObject"]}
  ]}),/OWNER_BINDING_POLICY_SEVEN_EXACT_PAIRS_REQUIRED/);
 });
+test("MinIO inline IAM readback may reorder arrays only; seven exact pairs and metadata remain strict",()=>{
+ const policy=p.replacementPolicyV2();
+ const reordered={...policy,Statement:[
+  {...policy.Statement[1],
+   Action:policy.Statement[1].Action.slice().reverse(),
+   Resource:policy.Statement[1].Resource.slice().reverse()},
+  {...policy.Statement[0],
+   Action:policy.Statement[0].Action.slice().reverse(),
+   Resource:policy.Statement[0].Resource.slice().reverse()}
+ ]};
+ const check=p.verifyReplacementPolicyV2(reordered);
+ assert.equal(check.pairs,7);
+ assert.equal(check.sha256,p.verifyReplacementPolicyV2(policy).sha256);
+ const hold=x=>assert.throws(()=>p.verifyReplacementPolicyV2(x),
+  /OWNER_BINDING_POLICY_SEVEN_EXACT_PAIRS_REQUIRED/);
+ hold({...policy,Version:"2008-10-17"});
+ hold({...policy,Condition:{StringEquals:{source:"test"}}});
+ hold({...policy,Statement:[{...policy.Statement[0],Sid:"ChangedSid"},policy.Statement[1]]});
+ hold({...policy,Statement:[{...policy.Statement[0],Effect:"Deny"},policy.Statement[1]]});
+ hold({...policy,Statement:[{...policy.Statement[0],Principal:"*"},policy.Statement[1]]});
+ hold({...policy,Statement:[{...policy.Statement[0],Condition:{Bool:{"aws:SecureTransport":"false"}}},policy.Statement[1]]});
+ hold({...policy,Statement:[{...policy.Statement[0],
+  Action:[...policy.Statement[0].Action,policy.Statement[0].Action[0]]},
+  policy.Statement[1]]});
+ hold({...policy,Statement:[{...policy.Statement[0],
+  Resource:["arn:aws:s3:::some-other-bucket"]},policy.Statement[1]]});
+ hold({...policy,Statement:[policy.Statement[0],policy.Statement[0]]});
+ hold({...policy,Statement:[{...policy.Statement[0],Action:"s3:ListBucket"},policy.Statement[1]]});
+});
 test("V2 responsibility assignment has genuine Ed25519 authority but never physical Owner PASS",()=>{
  const crypto=require("node:crypto");
  const hash=b=>crypto.createHash("sha256").update(b).digest("hex");
