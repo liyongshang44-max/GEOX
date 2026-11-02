@@ -725,7 +725,7 @@ function liveReachability(i,env,alias,account,details,target,now){
  try{host=JSON.parse(native.toString("utf8").replace(/^\uFEFF/,""));}
  catch{throw Error("HOLD_NATIVE_HOST_CENSUS_JSON_UNREADABLE");}
  return assessNativeReachability({users,accounts,policy,idps,host,
-  details,target,parent,account,s3Port,pgPort,now});
+  details,target,parent,account,s3Port,pgPort,now:Date.now()});
 }
 
 function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
@@ -822,7 +822,13 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
  // reachability cannot be inferred from docker inspection plus 5 mc calls.
  // Fail closed until an exact independently observable complete source is
  // available; never promote signer's empty unresolved[] into that proof.
- return liveReachability(i,env,alias,acct,details,target,now);
+ const qualified=liveReachability(i,env,alias,acct,details,target,now);
+ const completed=Date.now();
+ // A native source may become stale during multiple read-only calls.
+ for(const [capsule,kind] of [[control,"CONTROL"],[inventory,"INVENTORY"]])
+  assert(completed-Date.parse(capsule.observed_at)<=120000,
+   "HOLD_NATIVE_"+kind+"_EXPIRED_DURING_LIVE_CENSUS");
+ return qualified;
 }
 
 function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
