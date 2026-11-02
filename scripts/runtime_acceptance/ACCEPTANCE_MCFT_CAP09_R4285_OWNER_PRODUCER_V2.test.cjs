@@ -480,3 +480,35 @@ test("large authentic raw capsule fits bounded signed transport without projecti
    stdout_base64:Buffer.alloc(7*1048576,0x79).toString("base64")}}
  },"CONTROL"),/HOLD_NATIVE_CAPTURE_CONTROL_UNCOMPRESSED_BOUND/);
 });
+
+test("two native readbacks with reordered inline policy arrays reconcile without hiding IAM changes",()=>{
+ const policy=p.replacementPolicyV2();
+ const reorder={...policy,Statement:[
+  {...policy.Statement[1],Action:[...policy.Statement[1].Action].reverse(),
+   Resource:[...policy.Statement[1].Resource].reverse()},
+  {...policy.Statement[0],Action:[...policy.Statement[0].Action].reverse()}
+ ]};
+ const wrap=v=>Buffer.from(JSON.stringify({status:"success",
+  accessKey:"R4285_SAFE_FIXTURE_ID",policy:JSON.stringify(v)})+"\n");
+ const captured=wrap(policy),current=wrap(reorder);
+ assert.notDeepEqual(captured,current);
+ assert.equal(p.nativeStableProjection("POLICY_INFO",captured),
+  p.nativeStableProjection("POLICY_INFO",current));
+ const reject=x=>assert.throws(()=>p.nativeStableProjection("POLICY_INFO",wrap(x)),
+  /OWNER_BINDING_POLICY_SEVEN_EXACT_PAIRS_REQUIRED/);
+ reject({...policy,Statement:[{...policy.Statement[0],
+  Action:[policy.Statement[0].Action[0],policy.Statement[0].Action[0],
+   ...policy.Statement[0].Action.slice(1)]},policy.Statement[1]]});
+ reject({...policy,Statement:[policy.Statement[0],
+  {...policy.Statement[1],Resource:["arn:aws:s3:::foreign/*"]}]});
+ reject({...policy,Statement:[policy.Statement[0],
+  {...policy.Statement[1],Effect:"Deny"}]});
+ reject({...policy,Condition:{"StringEquals":{"key":"value"}}});
+ const text=fs.readFileSync(path.join(__dirname,
+  "MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs"),"utf8");
+ const compare=text.split("function nativeCommand(record,tool,args,label){")[1]
+  ?.split("\nconst REACH_IDPS=")[0];
+ assert(compare&&compare.includes(
+  "assert(nativeStableProjection(label,raw)===nativeStableProjection(label,observed),"));
+ assert(!compare.includes("assert.equal(nativeStableProjection("));
+});

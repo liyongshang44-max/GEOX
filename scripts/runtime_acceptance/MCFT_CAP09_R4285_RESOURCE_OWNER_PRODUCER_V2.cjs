@@ -627,8 +627,11 @@ function nativeStableProjection(label,b){
   };
   walk(x);
   assert(found.length===1,"HOLD_NATIVE_POLICY_ONE_DOCUMENT_REQUIRED");
-  verifyReplacementPolicyV2(JSON.parse(found[0]));
-  return found[0];
+  const policy=JSON.parse(found[0]);
+  verifyReplacementPolicyV2(policy);
+  // Native MinIO readbacks may reorder policy arrays between two calls.
+  // Reconcile strictly validated policy semantics, not serialization order.
+  return lineage.canonical(normalizeReplacementPolicyOrderV2(policy));
  }
  if(label==="CONTAINERS_ALL"){
   const ids=x.map(y=>y.ID||y.Id);
@@ -666,7 +669,8 @@ function nativeCommand(record,tool,args,label){
  assert(raw.length>0&&raw.toString("base64")===record.stdout_base64,
   "HOLD_NATIVE_"+label+"_BASE64");
  const observed=nativeRead(tool,args);
- assert.equal(nativeStableProjection(label,raw),nativeStableProjection(label,observed),
+ // Boolean-only comparison: no native stdout or policy JSON in error details.
+ assert(nativeStableProjection(label,raw)===nativeStableProjection(label,observed),
   "HOLD_NATIVE_"+label+"_CURRENT_IDENTITY_OR_SCOPE_DRIFT");
  return observed;
 }
@@ -1211,7 +1215,7 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
  FORMAL_SURFACES,CTO_DECISION_DOMAIN_V1,NATIVE_CONTROL_SCHEMA,NATIVE_INVENTORY_SCHEMA,
- encodeNativeCapsule,sourceJson,parseDisabledIdentity,assessNativeReachability,
+ encodeNativeCapsule,sourceJson,nativeStableProjection,parseDisabledIdentity,assessNativeReachability,
  verifyNativeSourceRaw,captureCurrentNativeSourceOnly,sourceOnly,
  verifyFormalEvidence,composeFormalReadback,
  requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};
