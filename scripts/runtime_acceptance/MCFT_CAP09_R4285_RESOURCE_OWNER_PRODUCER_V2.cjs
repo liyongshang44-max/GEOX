@@ -158,6 +158,8 @@ async function probePg(i,env){
   positive_login_restricted:a.restricted_role,negative_login_restricted:b.restricted_role,
   fenced_writer_execute_allowed:true,direct_fact_insert_forbidden:true,
   pg_owner_id:"pgdb:"+a.oid+":"+b.oid+":"+a.owner_role,
+  probe_command_families:["BEGIN TRANSACTION READ ONLY","pg_catalog.pg_database","pg_catalog.pg_roles",
+   "pg_catalog.pg_class","has_table_privilege","has_function_privilege","29x SELECT count(*) per database","ROLLBACK"],
   probes:{positive:{table_count:a.tables,owner:a.owner_role},
    negative:{table_count:b.tables,owner:b.owner_role}}};
 }
@@ -209,7 +211,9 @@ async function probeS3(i,env){
   return {status:"PASS_SCOPED_READONLY",bucket_endpoint:i.bucket_endpoint,bucket:BUCKET,
    bucket_exists:true,bucket_empty_including_versions_multipart:true,
    bucket_private:true,s3_owner_id:ownerId,
-   probe_operations:6};
+   probe_operations:6,
+   probe_commands:["HeadBucket","ListObjectsV2","ListObjectVersions",
+    "ListMultipartUploads","GetBucketAcl","GetBucketPolicy"]};
  }finally{client.destroy();}
 }
 async function timed(label,fn){
