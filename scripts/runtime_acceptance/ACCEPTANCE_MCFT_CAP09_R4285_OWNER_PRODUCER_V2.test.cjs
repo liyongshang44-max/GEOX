@@ -345,3 +345,42 @@ test("formal CLI cannot use an unmerged or forged protected-main subject",()=>{
    "external-r4285-raw.json")),true);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+
+test("native reachable scope has a bounded synthetic PASS and targeted HOLD cases",()=>{
+ const target={Id:"a".repeat(64),HostConfig:{PortBindings:{
+  "9000/tcp":[{HostIp:"127.0.0.1",HostPort:"59292"}]}},
+  NetworkSettings:{Networks:{private:{}}},Config:{Labels:{run:"4285c3ce342c"}}};
+ const base={users:[],accounts:["test-account"],policy:[],
+  idps:["identity_ldap","identity_openid","identity_plugin","policy_plugin"]
+   .map(name=>({name,disabled:true})),
+  details:[target],target,account:"test-account",parent:"root-account",
+  s3Port:59292,pgPort:55492,now:Date.parse("2026-11-02T10:00:30.000Z"),
+  host:{schema:"R4285_HOST_REACHABILITY_V1",observed_at:"2026-11-02T10:00:00.000Z",
+   process_count:55,service_count:40,process_refs:[],service_refs:[],
+   inaccessible_apps:[],config_unreadable:[],listeners:[
+    {port:59292,address:"127.0.0.1"},{port:55492,address:"127.0.0.1"}]}};
+ assert.equal(p.assessNativeReachability(base).status,"NATIVE_REACHABLE_SCOPE_VERIFIED");
+ const fails=(diff,reason)=>assert.throws(()=>p.assessNativeReachability({
+  ...base,...diff}),new RegExp(reason));
+ fails({accounts:["test-account","foreign"]},"HOLD_NATIVE_OTHER_MINIO_SERVICE_ACCOUNT");
+ fails({users:["foreign"]},"HOLD_NATIVE_OTHER_MINIO_USER");
+ fails({idps:[{name:"identity_ldap",disabled:false},...base.idps.slice(1)]},
+  "HOLD_NATIVE_EXTERNAL_AUTH_PLUGIN");
+ fails({details:[target,{Id:"b".repeat(64),Config:{Labels:{}},
+  NetworkSettings:{Networks:{private:{}}}}]},
+  "HOLD_NATIVE_UNAUTHORIZED_DOCKER_NETWORK_PEER");
+ fails({host:{...base.host,process_refs:[123]}},"HOLD_NATIVE_HOST_PROCESS_REFS");
+ fails({host:{...base.host,service_refs:["foreign-service"]}},
+  "HOLD_NATIVE_HOST_SERVICE_REFS");
+ fails({host:{...base.host,config_unreadable:[4]}},"HOLD_NATIVE_HOST_CONFIG_UNREADABLE");
+ fails({host:{...base.host,observed_at:"2026-11-02T09:50:00.000Z"}},
+  "HOLD_NATIVE_HOST_STALE");
+ fails({host:{...base.host,listeners:[
+  {port:59292,address:"0.0.0.0"},{port:55492,address:"127.0.0.1"}]}},
+  "HOLD_NATIVE_HOST_LISTENER_NOT_LOOPBACK");
+ assert.equal(p.parseDisabledIdentity(Buffer.from("identity_ldap enable=off"),
+  "identity_ldap").disabled,true);
+ assert.throws(()=>p.parseDisabledIdentity(
+  Buffer.from("identity_ldap enable=on server_addr=ldap.example:389"),
+  "identity_ldap"),/HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED/);
+});

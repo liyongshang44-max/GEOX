@@ -617,6 +617,117 @@ function nativeCommand(record,tool,args,label){
   "HOLD_NATIVE_"+label+"_CURRENT_IDENTITY_OR_SCOPE_DRIFT");
  return observed;
 }
+
+const REACH_IDPS=Object.freeze(["identity_ldap","identity_openid","identity_plugin","policy_plugin"]);
+function parseDisabledIdentity(raw,name){
+ assert(REACH_IDPS.includes(name),"HOLD_NATIVE_IDP_NAME");
+ const s=raw.toString("utf8");
+ assert(s.length>0&&s.length<32768&&s.includes(name)&&
+  /\b(?:enable|enabled|status)\s*=\s*(?:off|false|0)\b/i.test(s),
+  "HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ assert(!/\b(?:config_url|server_addr|url|endpoint)\s*=\s*["']?(?:https?:\/\/|ldaps?:\/\/|[\w.-]+:\d+)/i.test(s),
+  "HOLD_NATIVE_IDP_ACTIVE_ENDPOINT");
+ return {name,disabled:true};
+}
+function normalizeMinioList(raw,kind){
+ const a=nativeJsonLines(raw,"HOLD_NATIVE_"+kind+"_RAW_UNPARSEABLE")
+  .flatMap(x=>Array.isArray(x)?x:[x]);
+ const out=[];
+ for(const x of a){
+  assert(x&&typeof x==="object"&&x.status==="success",
+   "HOLD_NATIVE_"+kind+"_NOT_SUCCESS");
+  if(kind==="POLICY"){
+   assert(Array.isArray(x.policyMappings),"HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+   for(const m of x.policyMappings){
+    assert(Array.isArray(m.users)&&Array.isArray(m.groups)&&
+     m.users.length===0&&m.groups.length===0,
+     "HOLD_NATIVE_OTHER_POLICY_PRINCIPAL_REACHABLE");
+   }
+   continue;
+  }
+  const key=kind==="USERS"?"users":"accounts";
+  if(typeof x.accessKey==="string"){out.push(x.accessKey);continue;}
+  assert(Array.isArray(x[key]),"HOLD_NATIVE_"+kind+"_INVENTORY_INCOMPLETE");
+  for(const y of x[key]){
+   const id=typeof y==="string"?y:y?.accessKey;
+   assert(typeof id==="string"&&id.length>0,"HOLD_NATIVE_"+kind+"_IDENTITY_UNKNOWN");
+   out.push(id);
+  }
+ }
+ return out;
+}
+function assessNativeReachability(f){
+ assert(Array.isArray(f.users)&&f.users.every(x=>x===f.parent),
+  "HOLD_NATIVE_OTHER_MINIO_USER");
+ assert(Array.isArray(f.accounts)&&f.accounts.length===1&&f.accounts[0]===f.account,
+  "HOLD_NATIVE_OTHER_MINIO_SERVICE_ACCOUNT");
+ assert(Array.isArray(f.policy)&&f.policy.length===0,
+  "HOLD_NATIVE_OTHER_POLICY_BINDING");
+ assert(Array.isArray(f.idps)&&f.idps.length===4&&
+  f.idps.every((x,i)=>x.name===REACH_IDPS[i]&&x.disabled===true),
+  "HOLD_NATIVE_EXTERNAL_AUTH_PLUGIN");
+ const d=f.details,t=f.target;
+ assert(Array.isArray(d)&&t&&d.some(x=>x.Id===t.Id),
+  "HOLD_NATIVE_TARGET_NOT_IN_DOCKER_CENSUS");
+ const hostPorts=Object.values(t.HostConfig?.PortBindings||{}).flatMap(x=>x||[]);
+ assert(hostPorts.some(x=>Number(x.HostPort)===f.s3Port&&x.HostIp==="127.0.0.1")&&
+  hostPorts.every(x=>["127.0.0.1","::1"].includes(x.HostIp)),
+  "HOLD_NATIVE_NONLOOPBACK_DOCKER_PUBLISH");
+ const ns=Object.keys(t.NetworkSettings?.Networks||{});
+ assert(ns.length>0,"HOLD_NATIVE_DOCKER_NETWORK_UNOBSERVED");
+ for(const peer of d.filter(x=>x.Id!==t.Id)){
+  if(ns.some(n=>peer.NetworkSettings?.Networks?.[n]))
+   assert(JSON.stringify(peer.Config?.Labels||{}).includes(RUN),
+    "HOLD_NATIVE_UNAUTHORIZED_DOCKER_NETWORK_PEER");
+ }
+ const h=f.host;
+ assert(h&&h.schema==="R4285_HOST_REACHABILITY_V1","HOLD_NATIVE_HOST_SCHEMA");
+ const at=Date.parse(h.observed_at);
+ assert(Number.isFinite(at)&&at<=f.now&&f.now-at<=120000,
+  "HOLD_NATIVE_HOST_STALE");
+ assert(Number.isInteger(h.process_count)&&h.process_count>0&&
+  Number.isInteger(h.service_count)&&h.service_count>0,"HOLD_NATIVE_HOST_CENSUS_EMPTY");
+ for(const name of ["process_refs","service_refs","inaccessible_apps","config_unreadable"])
+  assert(Array.isArray(h[name])&&h[name].length===0,
+   "HOLD_NATIVE_HOST_"+name.toUpperCase());
+ assert(Array.isArray(h.listeners),"HOLD_NATIVE_HOST_LISTENERS_NOT_CAPTURED");
+ for(const port of [f.s3Port,f.pgPort]){
+  const rows=h.listeners.filter(x=>x.port===port);
+  assert(rows.length>=1&&rows.every(x=>["127.0.0.1","::1"].includes(x.address)),
+   "HOLD_NATIVE_HOST_LISTENER_NOT_LOOPBACK");
+ }
+ return Object.freeze({status:"NATIVE_REACHABLE_SCOPE_VERIFIED",
+  owner_exclusive:true,production_bindings_present:false,
+  covered_surfaces:FORMAL_SURFACES});
+}
+function liveReachability(i,env,alias,account,details,target,now){
+ const parent=env.MCFT_CAP09_R4285_PARENT_ACCESS_KEY_ID;
+ assert(typeof parent==="string"&&/^[A-Za-z0-9_.-]{2,128}$/.test(parent),
+  "HOLD_NATIVE_PARENT_ID_REQUIRED");
+ const mc=args=>nativeRead("mc",args);
+ const idps=REACH_IDPS.map(name=>parseDisabledIdentity(
+  mc(["admin","config","get",alias,name]),name));
+ const users=normalizeMinioList(mc(["--json","admin","user","list",alias]),"USERS");
+ const accounts=normalizeMinioList(mc(
+  ["--json","admin","user","svcacct","ls",alias,parent]),"ACCOUNTS");
+ const policy=normalizeMinioList(mc(
+  ["--json","admin","policy","entities",alias]),"POLICY");
+ const s3Port=Number(new URL(i.bucket_endpoint).port),pgPort=i.database_port;
+ const tokens=[BUCKET,POS,NEG,"127.0.0.1:"+s3Port,"127.0.0.1:"+pgPort];
+ const ps="$ErrorActionPreference='Stop'\n$ports=__PORTS__\n$tokens=__TOKENS__\n$p=@(Get-CimInstance Win32_Process -ErrorAction Stop)\n$s=@(Get-CimInstance Win32_Service -ErrorAction Stop | Where-Object {$_.State -eq 'Running'})\n$ph=New-Object System.Collections.ArrayList\n$sh=New-Object System.Collections.ArrayList\n$unknown=New-Object System.Collections.ArrayList\n$cfg=New-Object System.Collections.ArrayList\nforeach($q in $p){\n if([int]$q.ProcessId -eq [int]$PID){continue}\n $cmd=[string]$q.CommandLine\n $name=[string]$q.Name\n if([string]::IsNullOrWhiteSpace($cmd)){\n  if($name -match '(?i)^(node|python|java|postgres|minio|mc|docker|geox)'){[void]$unknown.Add([int]$q.ProcessId)}\n  continue\n }\n foreach($v in $tokens){if($cmd.Contains($v)){[void]$ph.Add([int]$q.ProcessId);break}}\n if($name -match '(?i)^(node|python|java|postgres|minio|geox)'){\n  foreach($m in [regex]::Matches($cmd,'(?i)(?:--config|--env-file)\\s+\"([^\"]+)\"')){\n   try{\n    $f=$m.Groups[1].Value\n    if(!(Test-Path -LiteralPath $f -PathType Leaf)){throw 'NOFILE'}\n    $c=[IO.File]::ReadAllText($f)\n    foreach($v in $tokens){if($c.Contains($v)){[void]$ph.Add([int]$q.ProcessId);break}}\n   }catch{[void]$cfg.Add([int]$q.ProcessId)}\n  }\n }\n}\nforeach($q in $s){\n $cmd=[string]$q.PathName\n if([string]::IsNullOrWhiteSpace($cmd)){\n  if([string]$q.Name -match '(?i)(minio|postgres|geox|docker)'){[void]$unknown.Add([string]$q.Name)}\n  continue\n }\n foreach($v in $tokens){if($cmd.Contains($v)){[void]$sh.Add([string]$q.Name);break}}\n}\n$l=@(Get-NetTCPConnection -State Listen -ErrorAction Stop |\n Where-Object {$ports -contains [int]$_.LocalPort} |\n ForEach-Object {@{port=[int]$_.LocalPort;address=[string]$_.LocalAddress}})\n@{schema='R4285_HOST_REACHABILITY_V1';observed_at=[DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')\n process_count=$p.Count;service_count=$s.Count;process_refs=@($ph|Select-Object -Unique)\n service_refs=@($sh|Select-Object -Unique);inaccessible_apps=@($unknown|Select-Object -Unique)\n config_unreadable=@($cfg|Select-Object -Unique);listeners=$l} | ConvertTo-Json -Compress -Depth 5";
+ const quote=x=>"'"+x.replace(/'/g,"''")+"'";
+ const script=ps.replace("__TOKENS__","@("+tokens.map(quote).join(",")+")")
+  .replace("__PORTS__","@("+s3Port+","+pgPort+")");
+ const native=nativeRead("powershell.exe",
+  ["-NoProfile","-NonInteractive","-EncodedCommand",
+   Buffer.from(script,"utf16le").toString("base64")]);
+ let host;
+ try{host=JSON.parse(native.toString("utf8").replace(/^\uFEFF/,""));}
+ catch{throw Error("HOLD_NATIVE_HOST_CENSUS_JSON_UNREADABLE");}
+ return assessNativeReachability({users,accounts,policy,idps,host,
+  details,target,parent,account,s3Port,pgPort,now});
+}
+
 function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
  {now=Date.now(),env=process.env}={}){
  // This verifier is Windows-only at the formal CLI. Linux CI may exercise
@@ -711,7 +822,7 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
  // reachability cannot be inferred from docker inspection plus 5 mc calls.
  // Fail closed until an exact independently observable complete source is
  // available; never promote signer's empty unresolved[] into that proof.
- throw Error("HOLD_NATIVE_EXTERNAL_PRINCIPALS_AND_HOST_APPLICATION_REACHABILITY_UNVERIFIED");
+ return liveReachability(i,env,alias,acct,details,target,now);
 }
 
 function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
@@ -980,5 +1091,6 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
  FORMAL_SURFACES,CTO_DECISION_DOMAIN_V1,NATIVE_CONTROL_SCHEMA,NATIVE_INVENTORY_SCHEMA,
- sourceJson,verifyNativeSourceRaw,sourceOnly,verifyFormalEvidence,composeFormalReadback,
+ sourceJson,parseDisabledIdentity,assessNativeReachability,
+ verifyNativeSourceRaw,sourceOnly,verifyFormalEvidence,composeFormalReadback,
  requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};
