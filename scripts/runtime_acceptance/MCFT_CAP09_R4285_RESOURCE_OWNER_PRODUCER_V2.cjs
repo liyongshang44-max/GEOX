@@ -7,7 +7,7 @@
  * cannot independently prove (notably global exclusive ownership).
  */
 const assert=require("node:assert/strict");
-const fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto"),os=require("node:os");
+const fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto"),os=require("node:os"),zlib=require("node:zlib");
 const {performance}=require("node:perf_hooks");
 const owner=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs");
 const pgContract=require("./MCFT_CAP09_R4285_PG_READONLY_V1.cjs");
@@ -495,11 +495,36 @@ const NATIVE_CONTROL_COMMANDS=Object.freeze([
  "ADMIN_INFO","POLICY_INFO","SERVICE_ACCOUNT_INFO","BUCKET_STAT","BUCKET_ANONYMOUS"]);
 const NATIVE_INVENTORY_COMMANDS=Object.freeze([
  "CONTAINERS_ALL","CONTAINERS_INSPECT","VOLUME_INSPECT"]);
+// The CLI returns complete native bytes; base64-expanded Docker inventory
+// can exceed the bounded 1 MiB signed capsule. Gzip is lossless and in-memory,
+// with strict limits on BOTH encoded and inflated sizes. No fields are dropped.
+const NATIVE_CAPSULE_MAX_BYTES=1048576;
+const NATIVE_CAPSULE_MAX_INFLATED_BYTES=8388608;
+function encodeNativeCapsule(capsule,kind){
+ const raw=Buffer.from(JSON.stringify(capsule),"utf8");
+ assert(raw.length>0&&raw.length<=NATIVE_CAPSULE_MAX_INFLATED_BYTES,
+  "HOLD_NATIVE_CAPTURE_"+kind+"_UNCOMPRESSED_BOUND");
+ if(raw.length<NATIVE_CAPSULE_MAX_BYTES)return raw;
+ const encoded=zlib.gzipSync(raw,{level:9});
+ assert(encoded.length>0&&encoded.length<NATIVE_CAPSULE_MAX_BYTES,
+  "HOLD_NATIVE_CAPTURE_"+kind+"_COMPRESSED_BOUND");
+ return encoded;
+}
 function sourceJson(b,kind){
- assert(Buffer.isBuffer(b)&&b.length>0&&b.length<1048576,
+ assert(Buffer.isBuffer(b)&&b.length>0&&b.length<NATIVE_CAPSULE_MAX_BYTES,
   "HOLD_NATIVE_"+kind+"_BYTES");
+ let raw=b;
+ if(b.length>=2&&b[0]===0x1f&&b[1]===0x8b){
+  try{
+   raw=zlib.gunzipSync(b,{maxOutputLength:NATIVE_CAPSULE_MAX_INFLATED_BYTES});
+  }catch{
+   throw Error("HOLD_NATIVE_"+kind+"_GZIP_INVALID_OR_UNBOUNDED");
+  }
+  assert(raw.length>0&&raw.length<=NATIVE_CAPSULE_MAX_INFLATED_BYTES,
+   "HOLD_NATIVE_"+kind+"_INFLATED_BOUND");
+ }
  let x;
- try{x=JSON.parse(b.toString("utf8").replace(/^\uFEFF/,""));}
+ try{x=JSON.parse(raw.toString("utf8").replace(/^\uFEFF/,""));}
  catch{throw Error("HOLD_NATIVE_"+kind+"_RAW_JSON_NOT_NATIVE_CAPSULE");}
  exact(x,["schema_version","run_id","subject_sha","host_id","observed_at","commands"],
   "HOLD_NATIVE_"+kind+"_SCHEMA");
@@ -1080,13 +1105,12 @@ function captureCurrentNativeSourceOnly(i,env=process.env){
  };
  const base={run_id:RUN,subject_sha:i.subject_sha,host_id:HOST,
   observed_at:observedAt};
- const controlBytes=Buffer.from(JSON.stringify({
-  schema_version:NATIVE_CONTROL_SCHEMA,...base,commands:mc}));
- const inventoryBytes=Buffer.from(JSON.stringify({
-  schema_version:NATIVE_INVENTORY_SCHEMA,...base,commands:dk}));
- // Internal 1 MiB per capsule bound is part of the frozen source contract.
- assert(controlBytes.length<1048576&&inventoryBytes.length<1048576,
-  "HOLD_NATIVE_CAPTURE_CAPSULE_TOO_LARGE");
+ const controlBytes=encodeNativeCapsule({
+  schema_version:NATIVE_CONTROL_SCHEMA,...base,commands:mc},"CONTROL");
+ const inventoryBytes=encodeNativeCapsule({
+  schema_version:NATIVE_INVENTORY_SCHEMA,...base,commands:dk},"INVENTORY");
+ // Each signed source is still <1 MiB after reversible, bounded encoding.
+ // Replayed native observations must match the ORIGINAL decompressed stdout.
  const scope=verifyNativeSourceRaw(i,controlBytes,inventoryBytes,{env});
  return {status:scope.status,control_sha256:sha(controlBytes),
   inventory_sha256:sha(inventoryBytes),observed_at:observedAt,
@@ -1159,7 +1183,7 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
  FORMAL_SURFACES,CTO_DECISION_DOMAIN_V1,NATIVE_CONTROL_SCHEMA,NATIVE_INVENTORY_SCHEMA,
- sourceJson,parseDisabledIdentity,assessNativeReachability,
+ encodeNativeCapsule,sourceJson,parseDisabledIdentity,assessNativeReachability,
  verifyNativeSourceRaw,captureCurrentNativeSourceOnly,sourceOnly,
  verifyFormalEvidence,composeFormalReadback,
  requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};

@@ -419,3 +419,35 @@ test("replacement access-key policy is embedded; no nonexistent named MinIO poli
  assert(source.includes("HOLD_NATIVE_INLINE_POLICY_ACCESS_KEY_IDENTITY"));
  assert(source.includes('verifyReplacementPolicyV2(JSON.parse(found[0]))'));
 });
+
+test("large authentic raw capsule fits bounded signed transport without projection loss",()=>{
+ const zlib=require("node:zlib");
+ const witness={schema_version:p.NATIVE_CONTROL_SCHEMA,run_id:p.RUN,
+  subject_sha:"a".repeat(40),host_id:p.HOST,
+  observed_at:"2026-11-02T10:00:00.000Z",commands:{
+   ADMIN_INFO:{argv:["--json","admin","info","r4285"],
+    stdout_base64:Buffer.alloc(900000,0x78).toString("base64"),exit_code:0}
+  }};
+ const plain=Buffer.from(JSON.stringify(witness));
+ assert(plain.length>1048576,"fixture exceeds old 1 MiB transport");
+ const encoded=p.encodeNativeCapsule(witness,"CONTROL");
+ assert(encoded.length<1048576);
+ assert.equal(encoded[0],0x1f);
+ assert.equal(encoded[1],0x8b);
+ assert.deepEqual(p.sourceJson(encoded,"CONTROL"),witness);
+ assert.deepEqual(zlib.gunzipSync(encoded),plain);
+ assert.deepEqual(p.sourceJson(p.encodeNativeCapsule({
+  ...witness,commands:{}
+ },"CONTROL"),"CONTROL"),{...witness,commands:{}});
+ // Truncated/tampered gzip and oversized inflation cannot bypass source gate.
+ assert.throws(()=>p.sourceJson(encoded.subarray(0,encoded.length-1),"CONTROL"),
+  /HOLD_NATIVE_CONTROL_GZIP_INVALID_OR_UNBOUNDED/);
+ const bomb=zlib.gzipSync(Buffer.alloc(9*1048576,0x78));
+ assert(bomb.length<1048576);
+ assert.throws(()=>p.sourceJson(bomb,"CONTROL"),
+  /HOLD_NATIVE_CONTROL_GZIP_INVALID_OR_UNBOUNDED/);
+ assert.throws(()=>p.encodeNativeCapsule({
+  ...witness,commands:{RECORD:{argv:[],exit_code:0,
+   stdout_base64:Buffer.alloc(7*1048576,0x79).toString("base64")}}
+ },"CONTROL"),/HOLD_NATIVE_CAPTURE_CONTROL_UNCOMPRESSED_BOUND/);
+});
