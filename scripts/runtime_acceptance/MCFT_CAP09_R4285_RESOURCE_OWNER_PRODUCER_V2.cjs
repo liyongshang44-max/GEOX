@@ -493,37 +493,134 @@ function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
  // No operator-created Boolean, bare file hash or old Docker summary qualifies.
  assert(native_audit&&typeof native_audit==="object"&&!Array.isArray(native_audit),
   "HOLD_INDEPENDENT_NATIVE_AUDIT_PROVENANCE_REQUIRED");
- const fields=["schema_version","source_receipt_sha256","control_sha256",
-  "inventory_sha256","subject_sha","run_id","host_id","covered_surfaces",
-  "unresolved_reachable_sources","bucket_private","owner_exclusive",
-  "production_bindings_present","s3_owner_id","verified_at"];
- exact(native_audit,fields,"HOLD_NATIVE_AUDIT_EXACT_SOURCE_CONTRACT");
- assert.equal(native_audit.schema_version,"MCFT_CAP09_R4285_NATIVE_AUDIT_VERIFIED_V1",
+ exact(native_audit,["payload","signature_base64"],"HOLD_NATIVE_AUDIT_ENVELOPE");
+ const a=native_audit.payload;
+ const fields=["schema_version","issuer_id","key_id","run_id","subject_sha","host_id",
+  "control_sha256","inventory_sha256","covered_surfaces","unresolved_reachable_sources",
+  "bucket_private","owner_exclusive","production_bindings_present","s3_owner_id",
+  "verified_at","expires_at","account_expires_at","control_capture_method",
+  "inventory_capture_method"];
+ exact(a,fields,"HOLD_NATIVE_AUDIT_EXACT_SOURCE_CONTRACT");
+ assert.equal(a.schema_version,"MCFT_CAP09_R4285_NATIVE_AUDIT_VERIFIED_V1",
   "HOLD_NATIVE_AUDIT_SOURCE_SCHEMA");
- assert.equal(native_audit.run_id,RUN,"HOLD_NATIVE_AUDIT_RUN");
- assert.equal(native_audit.subject_sha,i.subject_sha,"HOLD_NATIVE_AUDIT_SUBJECT");
- assert.equal(native_audit.host_id,HOST,"HOLD_NATIVE_AUDIT_HOST");
- assert.equal(native_audit.control_sha256,sha(control_bytes),"HOLD_NATIVE_CONTROL_DIGEST");
- assert.equal(native_audit.inventory_sha256,sha(inventory_bytes),"HOLD_NATIVE_INVENTORY_DIGEST");
- assert.deepEqual(native_audit.covered_surfaces,FORMAL_SURFACES,
-  "HOLD_NATIVE_AUDIT_COVERAGE");
- assert.deepEqual(native_audit.unresolved_reachable_sources,[],
-  "HOLD_NATIVE_AUDIT_REACHABILITY");
- assert.equal(native_audit.s3_owner_id,bound.responsibility_record_id,
-  "HOLD_NATIVE_AUDIT_OWNER_SOURCE");
- assert.equal(native_audit.bucket_private,true,"HOLD_NATIVE_BUCKET_PRIVATE");
- assert.equal(native_audit.owner_exclusive,true,"HOLD_NATIVE_OWNER_EXCLUSIVE");
- assert.equal(native_audit.production_bindings_present,false,
-  "HOLD_NATIVE_PRODUCTION_BINDINGS");
- assert(X.test(native_audit.source_receipt_sha256),"HOLD_NATIVE_SOURCE_RECEIPT");
- const verifiedAt=Date.parse(native_audit.verified_at);
- assert(Number.isFinite(verifiedAt)&&verifiedAt<=now&&now-verifiedAt<=120000,
-  "HOLD_NATIVE_SOURCE_STALE");
- // A self-declared JSON receipt is not an authenticated physical source.
- // Until a trusted native verifier is enrolled in the existing source chain,
- // no source-verified token can be constructed by parsing this object.
- throw Error("HOLD_NATIVE_SOURCE_RECEIPT_AUTHENTICATOR_NOT_CONNECTED");
+ assert.equal(a.run_id,RUN,"HOLD_NATIVE_AUDIT_RUN");
+ assert.equal(a.subject_sha,i.subject_sha,"HOLD_NATIVE_AUDIT_SUBJECT");
+ assert.equal(a.host_id,HOST,"HOLD_NATIVE_AUDIT_HOST");
+ assert.equal(a.control_sha256,sha(control_bytes),"HOLD_NATIVE_CONTROL_DIGEST");
+ assert.equal(a.inventory_sha256,sha(inventory_bytes),"HOLD_NATIVE_INVENTORY_DIGEST");
+ assert.deepEqual(a.covered_surfaces,FORMAL_SURFACES,"HOLD_NATIVE_AUDIT_COVERAGE");
+ assert.deepEqual(a.unresolved_reachable_sources,[],"HOLD_NATIVE_AUDIT_REACHABILITY");
+ assert.equal(a.s3_owner_id,bound.responsibility_record_id,"HOLD_NATIVE_AUDIT_OWNER_SOURCE");
+ assert.equal(a.bucket_private,true,"HOLD_NATIVE_BUCKET_PRIVATE");
+ assert.equal(a.owner_exclusive,true,"HOLD_NATIVE_OWNER_EXCLUSIVE");
+ assert.equal(a.production_bindings_present,false,"HOLD_NATIVE_PRODUCTION_BINDINGS");
+ assert.equal(a.control_capture_method,"MINIO_NATIVE_ADMIN_READONLY",
+  "HOLD_NATIVE_CONTROL_CAPTURE_METHOD");
+ assert.equal(a.inventory_capture_method,"WINDOWS_DOCKER_AND_APPLICATION_READONLY",
+  "HOLD_NATIVE_INVENTORY_CAPTURE_METHOD");
+ // Reuse the EXISTING trust registry; a separate qualified auditor cannot
+ // be minted by this module or replaced by the accountable Owner signer.
+ assert.equal(trust?.schema_version,"geox_mcft_cap09_retry_trust_v1",
+  "HOLD_NATIVE_AUDITOR_TRUST");
+ const matches=trust.issuers.filter(k=>k.issuer_id===a.issuer_id&&k.key_id===a.key_id);
+ assert.equal(matches.length,1,"HOLD_NATIVE_AUDITOR_NOT_IN_EXISTING_TRUST");
+ const auditor=matches[0];
+ assert.equal(auditor.revoked,false,"HOLD_NATIVE_AUDITOR_REVOKED");
+ assert.equal(auditor.role,"INDEPENDENT_RESOURCE_AUDITOR","HOLD_NATIVE_AUDITOR_ROLE");
+ assert.notEqual(auditor.issuer_id,envelope.payload.issuer_id,
+  "HOLD_NATIVE_AUDITOR_NOT_INDEPENDENT");
+ const iso=s=>{assert(typeof s==="string"&&Number.isFinite(Date.parse(s))&&
+  new Date(s).toISOString()===s,"HOLD_NATIVE_AUDIT_TIME");return Date.parse(s);};
+ const issued=iso(a.verified_at),expires=iso(a.expires_at);
+ assert(issued<=now&&now-issued<=120000&&now<expires&&expires-issued<=86400000,
+  "HOLD_NATIVE_AUDIT_FRESHNESS");
+ assert(iso(a.account_expires_at)>now+10860000,
+  "HOLD_NATIVE_ACCOUNT_EXECUTION_BUDGET");
+ assert(iso(auditor.not_before)<=issued&&expires<=iso(auditor.not_after),
+  "HOLD_NATIVE_AUDITOR_KEY_WINDOW");
+ const pub=crypto.createPublicKey(auditor.public_key_pem);
+ assert.equal(pub.asymmetricKeyType,"ed25519","HOLD_NATIVE_AUDITOR_KEY_TYPE");
+ assert.equal(sha(pub.export({type:"spki",format:"der"})),auditor.spki_sha256,
+  "HOLD_NATIVE_AUDITOR_KEY_ID");
+ const sig=Buffer.from(native_audit.signature_base64,"base64");
+ assert(sig.length===64&&sig.toString("base64")===native_audit.signature_base64,
+  "HOLD_NATIVE_AUDITOR_SIG_FORMAT");
+ const domain="GEOX_MCFT_CAP09_R4285_NATIVE_CONTROL_INVENTORY_AUDIT_V1\n";
+ assert(crypto.verify(null,Buffer.from(domain+lineage.canonical(a)),pub,sig),
+  "HOLD_NATIVE_AUDITOR_SIGNATURE");
+ const native=Object.freeze({
+  kind:"NATIVE_AUTHENTICATED_SOURCE",verifier:"R4285_NATIVE",
+  bucket_private:true,owner_exclusive:true,production_bindings_present:false,
+  s3_owner_id:bound.responsibility_record_id,control_sha256:a.control_sha256,
+  inventory_sha256:a.inventory_sha256,
+  source_receipt_sha256:sha(Buffer.from(lineage.canonical(native_audit))),
+  audit_issuer_id:a.issuer_id});
+ FORMAL_NATIVE_CAPABILITIES.add(native);
+ return native;
 }
+
+// The official command is only valid for a subject matching the locally
+// fetched protected-main ref, not an unmerged PR or a fixture branch.
+function requireLocalProtectedMain(i){
+ const {spawnSync}=require("node:child_process");
+ const run=args=>{
+  const r=spawnSync("git",["-C",i.source_root,...args],{
+   encoding:"utf8",timeout:10000,windowsHide:true});
+  assert(r.status===0&&/^[0-9a-f]{40}\s*$/.test(r.stdout||""),
+   "OWNER_FORMAL_PROTECTED_MAIN_GIT_UNAVAILABLE");
+  return r.stdout.trim();
+ };
+ assert.equal(run(["rev-parse","HEAD"]),i.subject_sha,
+  "OWNER_FORMAL_SOURCE_HEAD_MISMATCH");
+ assert.equal(run(["rev-parse","refs/remotes/origin/main"]),i.subject_sha,
+  "OWNER_FORMAL_PROTECTED_MAIN_SUBJECT_REQUIRED");
+}
+function boundedFile(file,max=1048576){
+ assert(typeof file==="string"&&path.isAbsolute(file),"OWNER_FORMAL_ABSOLUTE_SOURCE");
+ noLinks(file);
+ const st=fs.statSync(file);
+ assert(st.isFile()&&st.size>0&&st.size<max,"OWNER_FORMAL_SOURCE_FILE_BOUNDS");
+ return fs.readFileSync(file);
+}
+function loadFormalSourceSpec(file){
+ const spec=JSON.parse(boundedFile(file,16384).toString("utf8").replace(/^\uFEFF/,""));
+ exact(spec,["binding_envelope_file","trust_file","native_audit_file",
+  "control_evidence_file","inventory_evidence_file","parent_principal_sha256"],
+  "OWNER_FORMAL_SOURCE_SPEC_EXACT");
+ const get=f=>JSON.parse(boundedFile(spec[f]).toString("utf8").replace(/^\uFEFF/,""));
+ return {envelope:get("binding_envelope_file"),trust:get("trust_file"),
+  native_audit:get("native_audit_file"),
+  control_bytes:boundedFile(spec.control_evidence_file),
+  inventory_bytes:boundedFile(spec.inventory_evidence_file),
+  parent_principal_sha256:spec.parent_principal_sha256};
+}
+async function produceFormalRaw(i,sources,output,env=process.env){
+ host();validateInput(i);requireLocalProtectedMain(i);
+ assert(typeof output==="string"&&path.isAbsolute(output),"OWNER_FORMAL_OUTPUT_ABSOLUTE");
+ assert(!fs.existsSync(output),"OWNER_FORMAL_OUTPUT_EXISTS");
+ noLinks(path.dirname(output));
+ // If no independently signed authenticated native source can be verified,
+ // neither live PG/S3 nor any formal raw file may be produced.
+ const verified=verifyFormalEvidence(i,sources);
+ const observedAt=new Date().toISOString();
+ const pg=await probePg(i,env),s3=await probeS3(i,env);
+ const raw=composeFormalReadback(i,verified,pg,s3,{
+  observedAt,completedAt:new Date().toISOString(),
+  sourceSha:sha(fs.readFileSync(__filename))});
+ const bytes=Buffer.from(lineage.canonical(raw)+"\n","utf8");
+ const fd=fs.openSync(output,"wx",0o600);
+ try{fs.writeFileSync(fd,bytes);}finally{fs.closeSync(fd);}
+ return {status:"FORMAL_RAW_ONLY_UNSIGNED_NO_PERMIT",run_id:RUN,
+  sha256:sha(bytes),observed_at:raw.observed_at,formal_signed:false,
+  permit_issued:false,execution_authorized:false,physical_stages:0};
+}
+function parseFormal(argv){
+ assert(argv.length===7&&argv[0]==="--produce-raw"&&argv[1]==="--input"&&
+  argv[3]==="--sources"&&argv[5]==="--output","OWNER_FORMAL_CLI_EXACT");
+ return {i:parse(["--diagnostic-only","--input",argv[2]]),
+  sources:loadFormalSourceSpec(argv[4]),output:argv[6]};
+}
+
 function composeFormalReadback(i,source,pg,s3,{observedAt,completedAt,sourceSha}){
  assert(source&&typeof source==="object"&&FORMAL_NATIVE_CAPABILITIES.has(source),
   "OWNER_FORMAL_VERIFIED_NATIVE_SOURCE_REQUIRED");
@@ -574,7 +671,19 @@ function parse(argv){
  const input=JSON.parse(fs.readFileSync(argv[2],"utf8").replace(/^\uFEFF/,""));
  return validateInput(input);
 }
-if(require.main===module){
+if(require.main===module&&process.argv[2]==="--produce-raw"){
+ Promise.resolve().then(()=>parseFormal(process.argv.slice(2)))
+  .then(x=>produceFormalRaw(x.i,x.sources,x.output)).then(x=>{
+   process.stdout.write(JSON.stringify(x)+"\n");
+  }).catch(e=>{
+   const reason=/^(OWNER_FORMAL_|OWNER_BINDING_|HOLD_NATIVE_)/.test(e?.message||"")?
+    e.message:"OWNER_FORMAL_SOURCE_OR_PHYSICAL_PROBE_NOT_QUALIFIED";
+   process.stdout.write(JSON.stringify({status:"HOLD_FORMAL_READBACK_NOT_ISSUED",
+    reason_code:reason,formal_signed:false,permit_issued:false,
+    execution_authorized:false,physical_stages:0})+"\n");
+   process.exitCode=2;
+  });
+}else if(require.main===module){
  Promise.resolve().then(()=>diagnostic(
   parse(process.argv.slice(2)),process.env,
   {s3Only:process.argv[2]==="--s3-only-diagnostic"})).then(x=>{
@@ -596,4 +705,5 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  probePg,probeS3,timed,diagnostic,parse,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
- FORMAL_SURFACES,verifyFormalEvidence,composeFormalReadback};
+ FORMAL_SURFACES,verifyFormalEvidence,composeFormalReadback,
+ requireLocalProtectedMain,loadFormalSourceSpec,produceFormalRaw,parseFormal};
