@@ -408,3 +408,14 @@ test("native Windows survey scans quoted and unquoted process/service config ref
  assert(part.includes("String(s3Port),String(pgPort)"));
  assert(!part.includes("console.log($c)"));
 });
+
+test("replacement access-key policy is embedded; no nonexistent named MinIO policy dependency",()=>{
+ const source=fs.readFileSync(path.join(__dirname,
+  "MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs"),"utf8");
+ assert(!source.includes("MCFT_CAP09_R4285_EXISTING_MC_POLICY"));
+ assert(!source.includes('"admin","policy","info"'));
+ const command='"--json","admin","accesskey","info",alias,acct';
+ assert(source.includes(command));
+ assert(source.includes("HOLD_NATIVE_INLINE_POLICY_ACCESS_KEY_IDENTITY"));
+ assert(source.includes('verifyReplacementPolicyV2(JSON.parse(found[0]))'));
+});

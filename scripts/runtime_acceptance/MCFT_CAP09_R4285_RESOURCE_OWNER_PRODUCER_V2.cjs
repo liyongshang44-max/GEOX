@@ -744,9 +744,8 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
  assert(Math.abs(Date.parse(control.observed_at)-Date.parse(inventory.observed_at))<=120000,
   "HOLD_NATIVE_SOURCE_CLOCK_DIVERGENCE");
  const alias=env.MCFT_CAP09_R4285_EXISTING_MC_ALIAS;
- const policy=env.MCFT_CAP09_R4285_EXISTING_MC_POLICY;
  const acct=env.MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID;
- for(const [v,k] of [[alias,"ALIAS"],[policy,"POLICY"],[acct,"ACCOUNT"]])
+ for(const [v,k] of [[alias,"ALIAS"],[acct,"ACCOUNT"]])
   assert(typeof v==="string"&&/^[A-Za-z0-9_.-]{2,128}$/.test(v),
    "HOLD_NATIVE_EXISTING_"+k+"_IDENTITY_REQUIRED");
  const cc=control.commands,ic=inventory.commands;
@@ -754,7 +753,7 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
  exact(ic,NATIVE_INVENTORY_COMMANDS,"HOLD_NATIVE_INVENTORY_COMMAND_SET");
  const cs=[
   ["ADMIN_INFO",["--json","admin","info",alias]],
-  ["POLICY_INFO",["--json","admin","policy","info",alias,policy]],
+  ["POLICY_INFO",["--json","admin","accesskey","info",alias,acct]],
   ["SERVICE_ACCOUNT_INFO",["--json","admin","user","svcacct","info",alias,acct]],
   ["BUCKET_STAT",["--json","stat",alias+"/"+BUCKET]],
   ["BUCKET_ANONYMOUS",["--json","anonymous","get",alias+"/"+BUCKET]]
@@ -772,6 +771,10 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
   "HOLD_NATIVE_MINIO_ACCOUNT_UNVERIFIED");
  assert(m.BUCKET_STAT.some(x=>deepHas(x,BUCKET)),
   "HOLD_NATIVE_BUCKET_NOT_NATIVE");
+ // The policy is INLINE on this exact access key, not an installed named
+ // MinIO policy. Bind both native access-key identity and all seven pairs.
+ assert(m.POLICY_INFO.some(x=>deepHas(x,acct)),
+  "HOLD_NATIVE_INLINE_POLICY_ACCESS_KEY_IDENTITY");
  // POLICY_INFO was reconciled against the exact seven-pair policy by
  // nativeStableProjection() from both captured and live native data.
  assert(typeof nativeStableProjection("POLICY_INFO",
@@ -1048,9 +1051,8 @@ function captureCurrentNativeSourceOnly(i,env=process.env){
  // immediately rechecked through the SAME fixed native verifier path.
  host();validateInput(i);
  const alias=env.MCFT_CAP09_R4285_EXISTING_MC_ALIAS;
- const policy=env.MCFT_CAP09_R4285_EXISTING_MC_POLICY;
  const acct=env.MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID;
- for(const v of [alias,policy,acct])
+ for(const v of [alias,acct])
   assert(typeof v==="string"&&/^[A-Za-z0-9_.-]{2,128}$/.test(v),
    "HOLD_NATIVE_EXISTING_MC_IDENTITY_REQUIRED");
  const observedAt=new Date().toISOString();
@@ -1058,7 +1060,7 @@ function captureCurrentNativeSourceOnly(i,env=process.env){
   exit_code:0});
  const mc={
   ADMIN_INFO:record("mc",["--json","admin","info",alias]),
-  POLICY_INFO:record("mc",["--json","admin","policy","info",alias,policy]),
+  POLICY_INFO:record("mc",["--json","admin","accesskey","info",alias,acct]),
   SERVICE_ACCOUNT_INFO:record("mc",["--json","admin","user","svcacct","info",alias,acct]),
   BUCKET_STAT:record("mc",["--json","stat",alias+"/"+BUCKET]),
   BUCKET_ANONYMOUS:record("mc",["--json","anonymous","get",alias+"/"+BUCKET])
