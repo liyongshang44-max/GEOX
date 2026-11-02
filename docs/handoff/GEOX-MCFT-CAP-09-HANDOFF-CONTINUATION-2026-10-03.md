@@ -1,3 +1,15 @@
+# 2026-11-02 — CTO 取消额外独立签发：责任裁决回归既有 ACCOUNTABLE_SINGLE_OPERATOR
+
+> **本段替代下文旧记录对“独立审计者额外签发”作为当前必需前置的要求，不删除旧历史正文。** 用户 CTO 明确裁决“**不需要独立签发，我来裁决**”。这仅改变责任裁决主体及证据接线，不授予 Permit/Execute，也不抹去 Source 真实性缺口。
+
+- 原 #3757 Draft 在已合格的 `4863d97206cad2ae0389aba4b3e27588676c3a64`（42 runs = 39 SUCCESS / 3 SKIPPED）基础上，单次精确 HEAD 前向变更至 `5361d5cf3814a65484ec0e9cb5395594e1442ff7`；只改原 Producer V2 和对应已有测试，仍 Open / Draft / 未合并。
+- 正式 `--produce-raw` 不再要求第二名 `INDEPENDENT_RETRY_GOVERNANCE` 对 Native Audit 另行签署，也不注册新角色或平行 authority；改由**已有、仓库登记的同一个 `ACCOUNTABLE_SINGLE_OPERATOR`** 为具体 control/inventory 原始字节、exact Subject/Host/Run、资源独占与生产引用覆盖范围作限定 **CTO_SCOPE_DECISION_V1**。决策和已存在 Owner Authority Binding V2 必须由同一 issuer/key 验证，保留旧 Ed25519 信任根，不允许无凭据 JSON PASS。裁决域 `GEOX_MCFT_CAP09_R4285_CTO_SCOPE_DECISION_V1`；权威源指向 CTO #6571636092，但该旧评论本身不自动证明新的物理事实。
+- 必须按本机原始证据明确适用范围并使 `unresolved_reachable_sources=[]`；未知可达生产引用仍 HOLD，不能以 78 容器有限检查伪称全球独占。PG/S3 仅在正式后继 protected main 同一 Windows 进程 **fresh** 再观测，签署与 120s 契约、V1 `FACT_BINDINGS` 不变；旧 8/8 S3 与 PG 历史证据不重跑。
+- 该新 HEAD 的 GitHub CI/QCP72 在本段记录时仍未最终齐绿；必须以 `5361d5cf...` 实际结果为准，不借旧 HEAD 的 SUCCESS。不得在 Draft PR 签正式 Owner/Permit，不允许 merge/execute，原六阶段 0/6。
+- 工程源事实：`SOURCE_PATCH_SUBMITTED=true`；`INDEPENDENT_SECOND_SIGNER_REQUIRED=false`；`CURRENT_CTO_SCOPED_DECISION_SIGNED=false`；`FORMAL_OWNER_READBACK_ISSUED=false`；`PERMIT=HOLD`；`EXECUTE=FORBIDDEN`。签署和批准的区别继续保留。
+
+---
+
 # 2026-11-02 — R4285 唯一剩余 Producer 正式接线已开始（只认新 HEAD / 非授权）
 
 > 原 #3298 第二份 Continuation 仅顶部增补，保留全部旧正文为原样后缀，不改第一份 handoff、不新建第三份。以下是源码已落地及后续真实性边界，**不是已签署的 Owner 或 Host 物理执行成功**。
