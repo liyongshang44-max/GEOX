@@ -128,3 +128,24 @@ test("bounded synthetic PG failure does not leak server text or untrusted table 
  assert.equal(tampered.status,"HOLD");
  assert.equal(tampered.denied_tables,undefined);
 });
+
+test("scoped S3 probe uses only the original four read operations",async()=>{
+ const source=fs.readFileSync(path.join(__dirname,"MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs"),"utf8");
+ const block=source.split("async function probeS3(i,env){")[1]?.split("\nasync function timed(label,fn){")[0];
+ assert(block,"S3 bounded source is present");
+ for(const operation of ["HeadBucketCommand","ListObjectsV2Command",
+  "ListObjectVersionsCommand","ListMultipartUploadsCommand"])
+  assert(block.includes(operation),"missing four-read operation: "+operation);
+ assert(!block.includes("GetBucketAclCommand"));
+ assert(!block.includes("GetBucketPolicyCommand"));
+ const scoped=await p.timed("S3_BUCKET_PRIVATE_VERSIONS_MULTIPART_READONLY",
+  async()=>({status:"PASS_SCOPED_DATA_PLANE_ONLY",
+   bucket_exists:true,bucket_empty_including_versions_multipart:true,
+   bucket_private_verified:false,independent_control_plane_verified:false}));
+ assert.equal(scoped.status,"HOLD_INDEPENDENT_CONTROL_PLANE");
+ assert.equal(scoped.result.bucket_private_verified,false);
+ assert(p.unresolved({status:"PASS_SCOPED_READONLY"},scoped)
+  .includes("S3_INDEPENDENT_ACL_POLICY_OWNER_NOT_PROVEN"));
+ assert(!p.unresolved({status:"PASS_SCOPED_READONLY"},scoped)
+  .includes("PG_AUTHENTICATED_SCOPE_AND_ACL_NOT_PROVEN"));
+});
