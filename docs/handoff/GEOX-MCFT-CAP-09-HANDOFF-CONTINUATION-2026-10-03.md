@@ -1,3 +1,61 @@
+# 2026-11-02 — R4285 / #3757 / Windows SDK packaging blocker · CTO continuation（本次最高优先级）
+
+> **本段为第二份 Active Continuation 的前置增补。** 仓库 `liyongshang44-max/GEOX`，原文件 `docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-10-03.md`，保留其后全部历史原文字节。第一份 `GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md` 不修改；第三份 handoff 不新建。该文档不是签名、Release Binding、正式 Resource Owner、Permit、执行许可或生产权威。与实时源码不一致时，以 GitHub 当前受保护 main/指定 PR 精确 HEAD、原始本机证据及原生 Consumer 的实际结果为准。以下记录截至 2026-11-02 本轮 Windows 回执及 GitHub 原生回读，不得自动推广到后续 HEAD。
+
+## 0. 接任 CTO 30 秒定位（立即按此继续，禁止从旧日期重启施工）
+
+- **CTO 唯一目标**：以最短可审计路径完成 `MCFT-9 / CAP-09` 隔离 `R4285` 的单次六阶段最终验收，保持 fail-closed，避免无限扩大资格制度/诊断脚本；不是重新设计农业功能、搭建新基础设施或通过 CI 冒充实际验收。
+- **工程线**：[PR #3757](https://github.com/liyongshang44-max/GEOX/pull/3757) 原 PR、`mcft/r4285-host-admission-v2-boundary`，GitHub 2026-11-02 回读 exact HEAD `8b716131ceef7baee47da4681c3f54b7f7fa7fe6`，OPEN/Draft/Unmerged，base `main`、观察到的 base SHA `12ae85febf1f0afb8d761abb0cb83dda96d734d3`。**此为 PR 源码版本，不能作为已受保护 main 的正式签署 Subject**。当 PR HEAD 再变，必须重新读取，不复用此处 CI。
+- **文档线**：[PR #3298](https://github.com/liyongshang44-max/GEOX/pull/3298) 的现有第二份 handoff；仅此文档前置增补，保持 Draft/OPEN/Unmerged；**不要把 handoff 写入 #3757 技术资格的 changed-file 集合，不要新开 PR，也不得未经专门裁决修改 protected main**。
+- **永久边界**：Run ID `4285c3ce342c`；历史 `parent_run_id=72dc0304a21a`；单独失败前驱 `6ff9b41f6f7f`；attempt ordinal `4`；Windows Host `LAPTOP-STN2A2P1`；既有 PG `127.0.0.1:55492`、S3 `http://127.0.0.1:59292`、Bucket `mcft-cap09-requal-4285c3ce342c`。生产授权 false。**MERGE=HOLD; FORMAL_OWNER=NOT_ISSUED; PERMIT=HOLD; EXECUTE=FORBIDDEN; SIX_STAGES=0/6**。
+- **最新第一阻断**：Windows 的隔离候选包实际 `pnpm install --frozen-lockfile --ignore-scripts` PASS（pnpm 9.15.4，478 packages），但随后 V2 packaging gate **4/5 PASS、1 FAIL**，`ERR_REQUIRE_ESM`，具体 `tsx@4.21.0/dist/loader.mjs` 被 `require()` 加载。发生在 `ACCEPTANCE_MCFT_CAP09_R4285_HOST_ADMISSION_V2.test.cjs:46:3` 的 `require(resolved)`；**不是 SDK 未安装、不是 PG 错、不是 S3 403、更不是实际 S3 readback 的结果**。原 PowerShell 在 `HOLD_CANDIDATE_RUNTIME_PACKAGING_GATE` 立即抛错，后面的 DPAPI 解封、Access Key SHA 校验、`MCFT_CAP09_R4285_S3_READBACK_V2.cjs` 和四种 API 两组八请求**均未执行**。
+- **下一步只做一个源码级最小修复**：#3757 的包装合同只需证明 `tsx` 模块安装、解析于精确候选根且其预期入口可加载/执行；**不要对已解析到 ESM `loader.mjs` 使用 CommonJS `require(resolved)`**。根据仓库实际 Node/tsx 合同改成兼容的 ESM `import()` 验证或合法的 CLI/exports 检测，维持 fail-closed、真实依赖版本与已冻结源码约束；**先记录与本次 Windows 进程一致的 `node -p "process.version + ' ' + process.execPath"`，不能以另一份 Node 24 报告代替本进程运行版本**。本次对话未修补该测试或再次实测，任何修复均须新 exact HEAD、CI/QCP72 重新验证，不能修改历史签名/Material 来让测试变绿。
+- 这台机器的隔离候选路径是 `D:\gptdown\R4285-SDK-CANDIDATE-8b716131-f6a9e9b7`。已 clone exact HEAD，已 frozen 安装，**不要无故重新克隆/重装**；保留作为本次失败原始物理回执。新 HEAD 修复资格后对新干净候选做最小必要验证，不能把旧 candidate 的安装目录伪装成冻结 Material/Release。
+- **GitHub 检查时点**：此 exact `8b716...` 上 42 个工作流记录中，37 `success`、3 `skipped`、2 `in_progress`（主 `ci` 与 `mcft-cap-09-post-merge-v13-control-plane-v1`）；专门 R4285 V2 negative、EA5E2 等已完成检查有 SUCCESS，但**总体未 final green**，绝对不能写为 CI 全绿或批准合并。
+
+## 1. 过去两天 CTO 授权与实证，按权限层级继承
+
+1. CTO 已批准在 **原 #3757 内**开发 V2 Host 单进程 `--session-preflight-only`/`--session-execute` 架构，避免 Owner 新鲜采集后重新运行 60.785 秒 Native Adoption；但**单进程软件设计不等于实际 120 秒新鲜读回合格**。原串行 Material 24,673 文件计时 **323,129.618 ms**；完整 8 并发 SHA-256 **27,939.892 ms** 且 Digest 为 `74f639d6e0899eb1da0377a5b30c88a57463a2db48ba806dce7cdbc85c04c50d`。27.94 秒仅是 Material 分项，不是签署→Permit→Host 全链实测；Owner 120 秒时限不可重置/模拟/推迟检查。
+2. **PG 线已按 CTO 裁决冻结**：独立 Producer 原生正负库受限只读诊断最终 `PG_STATUS=PASS_SCOPED_READONLY`，`PG_ELAPSED_MS=213.838`，`public.facts` 精确零行，29 张表目录，另有 25 张 Twin 表 SELECT 按设计拒绝。**其余 28 张表行数未全部验证**，不得宣称所有表空，也不得扩大 PG 受限账号权限。早期 `42501`/25 denied tables 是权限边界，不应直接以加 SELECT GRANT 修“绿灯”。避免重复数据库/角色/密码/ACL 施工。
+3. **S3 旧身份纠错**：旧 CurrentUser DPAPI Access ID 可内存恢复，但 `mc admin accesskey info` 对该精确 ID `NOT_FOUND`；限定管理范围里无对应 SA，不能外推“所有命名空间均已删除”。CTO 正式关闭旧账号续期排查，批准创建**全新的独立 R4285 TEST_ONLY**受限身份、独立生命周期，不沿用旧授权。新最小策略文件 **510 bytes**、SHA256 `A39176392C2362DD3F07647A84FFC49A4D4D25C6398947849E100F03D180735B`，唯一 Bucket `arn:aws:s3:::mcft-cap09-requal-4285c3ce342c`，两个对象前缀 `mcft-cap09-formal-raw-v1/sha256/*` 与 `mcft-cap09-formal-candidate-v1/sha256/*`，共**七组**精确 Action/Resource，不能借机扩大 ACL/Policy 管理或其它 Bucket。父 Root principal SHA256 `B00AF1DF7905D1D6F64FE7CA99374D85C88CAB16685A27A6B8F204AE78DCABBF`。
+4. **MinIO 物理身份边界已核实**：部署 `ddbc6bb9-eb52-4b95-8324-b556697f8c0e`；MinIO `RELEASE.2025-04-22T22-12-26Z`，源码 commit `0d7408fc9969caf07de6a8c3a84f9fbb10a6739e` 的 GetBucketACL 返回 placeholder，因此 `HOLD_ACL_OWNER_ID_MISSING` **不证明无人拥有 Bucket**。绝不能再次开发 ACL P3/P4，不能把 Deployment ID/Volume ID/哈希冒充 `s3_owner_id`。控制面对象/版本/未完成上传的既有只读检查 PASS；不等于全局 IAM 独占。专属 Volume `mcftcap09-r4285c3ce342c-s3data`、专属 MinIO/Proxy/PG 与有限 Docker 主机引用审计已经做过；Host process command-line、外部配置的覆盖范围有限，不得凭局部检索宣称全局生产绑定为零。
+5. 外部认证（OIDC、LDAP、identity plugin、policy plugin）默认记录曾被误读为 ACTIVE；后续原生配置发现关键 enable/url/server 字段空，这部分诊断已关闭。也不要重查历史 Issuer、重复做 IAM 权限列表、重建 MinIO/Docker/PG。
+6. **创建前 Root/策略原生资格已实际 PASS**：Windows PowerShell 5.1 执行 `R4285-ONE-TIME-REPLACEMENT-ACCOUNT-SECURE-V4B.ps1` 的无 `-Create` 预检，`V4B_SOURCE_SHA256=PASS`、`PARENT_MINIO_ROOT_NATIVE_ADMIN_AUTH=PASS`、Deployment 精确匹配、七组策略 PASS、有效期设为 `2026-11-05T05:52:27Z`；V4B 修正了 V4 的 `HOLD_PARENT_ADMIN_INFO_JSON`（`mc alias import` 成功提示混入 JSON），之前 V3 的 `mc alias set` 原生预检也 PASS，但 V3 以子进程 argv 传 Root Secret，只可作为历史只读检查，不能按安全创建标准沿用。
+7. 最新操作员 SDK 验证脚本对本地 **`R4285-REPLACEMENT-CREATE-ATTEMPT-ONCE.json` 与 `R4285-REPLACEMENT-CREATE-RESPONSE-CURRENTUSER.dpapi` 的存在性检查已通过**（否则会在 clone 前 HOLD）；这只证明 **marker/sealed receipt 文件存在**，**不独立证明**服务端新账号当前有效、该 `ExpectedKeySHA=D2750D767455AE4D11AF9C96B10B7935C5F2F2BD7DB4D032E80C1AB573352BF1` 已核实（身份 SHA 检查在失败测试之后）或四项原生 S3 访问成功。**不得再次运行 `-Create`，也不得用本次失败解释为可重试创建**。到期日期必须用当前 UTC 和服务器实际状态复核，不能静默续期。私有路径：`D:\gptdown\CAP09-NEW-4285c3ce342c-PRIVATE-DO-NOT-UPLOAD`，禁止将 DPAPI、原始 Access ID、Secret、PG 密码、Root 环境或明文创建响应写入 GitHub/聊天。
+8. **Resource Owner Binding V2** 已在 #3757 有 Ed25519 验签、精确 `subject_sha`、资源与原生证据摘要绑定的源码路径，但不能从 helper 存在推导正式 Producer 原始 Readback 已签发。最终签名须绑定**合并后 protected main 的新 exact Subject**，不能提前用 PR HEAD 签将来要复用的正式 Owner。Session V2 正式 Producer、Permit Issuer、Host 连贯流程与有效时间预算需在真实 Windows 现场证明；只读资料与测试样本不能冒充权限或签名。
+9. 历史 Owner Inventory+Ordinal / Lineage / Adoption V3 签署的有效期及 Material/Subject 身份属于旧时间窗口；历史 `2026-11-01T11:21:09.554Z` 已过期，旧 S3 身份 `2026-11-01T18:26:32Z` 已过期。不得复用旧 Envelope 或旧 Account；不能只看签名验证 PASS 而忽略时效和作用域。
+
+## 2. 2026-11-02 最新 SKU / SDK 补丁与 Windows 首次运行：精确失败证据
+
+- #3757 exact `8b716131ceef7baee47da4681c3f54b7f7fa7fe6` 通过原 PR 提交**根目录 direct dependency `@aws-sdk/client-s3=3.922.0`、精确 pnpm lockfile**，原依赖保留；新增的 EA5E2 dependency digest mismatch 已按当前图重算并在开发端报告 PASS；`44/44` V2 合同/Node `24.19.0` 本地验证为开发侧历史报告，**不自动等于当前 Windows 结果或新 HEAD 完整 CI**。
+- 操作员真实 Windows：`git clone --no-checkout --single-branch --branch mcft/r4285-host-admission-v2-boundary`，detached exact HEAD，`pnpm 9.15.4 install --frozen-lockfile --ignore-scripts` PASS；包 **478**，AWS SDK **3.922.0**、`pg@8.18.0`、`tsx@4.21.0` 已在候选中安装。此次没有触及历史冻结 `installed-runtime` 或签署 Material。
+- 随后的测试 `node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_ADMISSION_V2.test.cjs` 显示：
+  - `V2 Host exports a read-only admission boundary only` PASS；
+  - `forged stable identity never reaches Windows PG/S3 or ordinary V1 preflight` PASS；
+  - `V2 no-permit and no-Owner inputs fail closed before resource checks` PASS；
+  - `V2 final proof cannot be fabricated from ordinary read-only status` PASS；
+  - `V2 candidate declares, locks and loads the real root S3 runtime` **FAIL `ERR_REQUIRE_ESM`**，由 `require(resolved)` 加载 `node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/loader.mjs` 触发，代码行 `:46:3`。结果 **tests=5, pass=4, fail=1**。
+- PowerShell 抛 `HOLD_CANDIDATE_RUNTIME_PACKAGING_GATE`，因此后续 `$Dirty` 检查、DPAPI Unprotect、`ExpectedKeySHA`、S3 readback 进程都**未执行**；不能发布 `READBACK_NATIVE_EXIT` 或 Schema `R4285_S3_READBACK_V2` PASS；不能说新账号已完成四项真实权限验证。
+- **最小修复验收**：在 #3757 精确定位上述 test 中 `for(const name of ["pg","tsx"]) { ... require(resolved) }`。保持 `pg` 的合法 CJS 装载验证，`tsx` 的 ESM 使用支持的 `import()`/版本明示的导出合同或启动功能验证，不通过跳过整个 test、硬编码 PASS、改 Node 运行时为别的版本来掩盖问题。采用能够在 **Windows operator actual Node** 及明确的 Linux CI Node 版本上复现的负例/正例；只修改必要源码，保持 SDK exact lock/dependency、QCP72/EA5E2、历史原始材料不变。经最小修复的 exact HEAD GitHub 全资格 + Windows 真实 test PASS 才能重新进入 S3 readback。
+- 修复前**不进行第二次 S3 账户创建**，不重复大范围检索/CI 修补/无意义并发 SHA 优化，不提前启动 Owner 120 秒窗口。尚未真实调用任何 S3 读回的本次失败不能触发 IAM/桶权限修改。
+
+## 3. 唯一剩余关键路径、权限边界和禁止项
+
+`#3757 最小 packaging gate 修复 → 全套新 HEAD CI/QCP72/EA5E2 实际合格 → Windows exact clean candidate 在正确 Node 上真实包装测试 PASS → 从已有 DPAPI 安全解封一次（只内存、不打印）且与 marker/服务端身份精确核对 → S3 四项 API 两组真实只读回读（原 Host/Producer API，不另写绕过实现） → 受限身份、Owner 资源归属/生产未绑定的独立证据与正式 Producer CLI 最小接线 → 在真有足够预算时冻结/合并 #3757 → 重新绑定并正式签署合并后 main Subject、原生 Resource Owner → 经独立 CTO 用途专属批准的 Permit → 真实 ≤120 秒连续 Host preflight → **最后才请求单独六阶段物理执行授权**。`
+
+- 原 `--preflight-only` 不消费 Permit，但必须已有有效 Permit；任何 Runtime/SDK/JSON/PASS 状态都不能提升为 `permit_issued`、`owner_exclusive`、`execution_authorized`。
+- 非授权计时、只读 S3（包括 HeadBucket/ListObjectsV2/ListObjectVersions/ListMultipartUploads）**不等于** Bucket/GetObject/PutObject 全实际授权，更不等于 global exclusive ownership。
+- 如果完整关键路径实测超过 120 秒，立即报告 `HOLD_RESOURCE_WINDOW_LATENCY` 与第一真实超时点；禁止通过修改 observed_at、延长合同、重置新鲜度或预签未知后续字节绕过。
+- 禁止重建原 MinIO/PG/Proxy、改已消费账本、修历史失败前驱、把旧 QCP71 bytes 替换为 QCP72、添加平行 authority registry、新建第三份 handoff/新 PR、误用已过期旧签名；源码变更只能在原 #3757 经真实门禁。
+- **PS5.1 踩坑**：不要把 `if {...}` 和 `else {...}` 分别粘贴为独立交互命令（`else` 会被当 cmdlet）；多个赋值和 throw 后不能继续打印虚假 `PASS`；`Get-FileHash` 对不存在的文件必须先 `Test-Path -PathType Leaf`；行结束符/UTF8 写入会导致签名 SHA 漂移，固定 byte-for-byte 哈希；Git for Windows 不保证支持 `:(glob)**/package.json`，使用已确认的 `git ls-files` 标准模式并逐字节校验；PowerShell ``@(...)`/`ConvertFrom-Json` 与 Docker 多对象结果可能折叠为一个数组对象导致 `Count=1`、输出数十个 ID，不能将这种失真库存提升为 Owner 事实；不要不设深度地遍历 `D:\gptdown` 478 个旧工程目录；不从搜索到的旧文件推断当前 Source/Subject。
+- **技术/业务分界**：所有既有成功证据必须注明是 `historical PASS`、`current exact-source PASS`、`native physical PASS`、`time-valid`、`authorized` 哪一级。不得把历史不可变签署、运行时可加载、IAM 认证、资源隔离、Owner 独占、Permit 和六阶段执行混为一个“验收通过”。
+
+## 4. Handoff 更新的仓库操作规范（必须保留给下一任）
+
+只更新现有第二份 continuation，沿用 **#3298** 当前真实 HEAD：先冻结父提交和旧文件原始 Blob，创建独立顶部 UTF-8 payload，确认新内容以**完整旧正文为精确后缀**（`oldContent===newContent.slice(prefixBytesLength)`），无删改旧正文；只包含这一条 docs 路径构造 Git blob/tree 与单父 commit，更新 `#3298` 分支前检查 expected old head，禁止 force-push / 对 main 动手。提交后核对 `ahead_by=1`、`behind_by=0`（以旧 #3298 parent 为基线）、**1 changed file / 0 deletions**，并实际回读文件的前置段落。大文本不要通过一行 Python/base64 carrier 串改，避免 UTF-8/换行与 Git object identity 问题。成功后记下 commit、路径与旧/new blob SHA。不得将 #3298 handoff commit 当作 #3757 CI、QCP、Release 或 Owner authority。
+
+---
+
 ### 2026-10-27 — #3744 three-source exact CI evidence enrolled in independent central QCP; formal independent governance still HOLD
 
 - All new successor exact HEAD general CIs now **SUCCESS**: [#3741 `ef3649e40f0d3ab542fe9f365275708b23c53cab`, CI 40516250068](https://github.com/liyongshang44-max/GEOX/actions/runs/40516250068); [#3742 `96ae42a7aeb3be83933faadafb65f1b72379b2cf`, CI 40516837352](https://github.com/liyongshang44-max/GEOX/actions/runs/40516837352); [#3743 `cd18701600346840b7e4cc3611a7108f2e713490`, CI 40517266880](https://github.com/liyongshang44-max/GEOX/actions/runs/40517266880). Each dedicated technical workflow also SUCCESS (40516250234, 40516836986, 40517266887). Source three Artifact IDs / ZIP digests: `12739696790` / `sha256:2b2ed72d...`, `12738798554` / `sha256:8936f407...`, `12738863652` / `sha256:0a05c94f...`. #3742 deliberately has NO Artifact and emits historic-six signed-source read-only evidence in actual Job log; no new-signature authorization.
