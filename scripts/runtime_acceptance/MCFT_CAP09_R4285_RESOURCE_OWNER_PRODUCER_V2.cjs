@@ -151,6 +151,23 @@ async function pgOne(pg,binding){
    "FROM (VALUES ('twin_external_formal_forcing_base_cursor_v1'),"+
    "('twin_external_formal_forcing_base_target_v1'),"+
    "('twin_external_formal_forcing_controller_lease_v1')) AS t(name)")).rows[0].allowed;
+
+  // Inventory all 29 effective SELECT privileges with PG native catalog
+  // functions before doing ANY table count. A denied table is an explicit
+  // HOLD, never silently skipped, granted or replaced with estimated rows.
+  phase="TABLE_SELECT_PRIVILEGES";
+  const selectRights=(await client.query(
+   "SELECT t.name::text AS name, has_table_privilege(current_user,"+
+   "format('%I.%I','public',t.name),'SELECT') AS allowed "+
+   "FROM unnest($1::text[]) AS t(name)",
+   [pgContract.REQUIRED_PUBLIC_TABLES])).rows;
+  assert.equal(selectRights.length,29,"OWNER_PRODUCER_PG_SELECT_ACL_INVENTORY_INCOMPLETE");
+  const denied=selectRights.filter(x=>x.allowed!==true).map(x=>x.name);
+  if(denied.length){
+   const e=Error("OWNER_PRODUCER_PG_TABLE_SELECT_DENIED");
+   e.denied_tables=denied;
+   throw e;
+  }
   phase="TABLE_COUNTS";
   const counts=[];
   for(const name of pgContract.REQUIRED_PUBLIC_TABLES){
@@ -163,7 +180,18 @@ async function pgOne(pg,binding){
    counts,databaseOwner:own[0].owner,databaseOid:own[0].oid,
    roleCaps:roles[0],expectedRole:binding.role,expectedDb:binding.db});
  }catch(error){
-  throw Error(pgFailureCode(error,binding.side,phase));
+  const safelyClassified=Error(
+   error?.message==="OWNER_PRODUCER_PG_TABLE_SELECT_DENIED"?
+    "OWNER_PRODUCER_PG_"+binding.side.toUpperCase()+"_TABLE_SELECT_DENIED":
+    pgFailureCode(error,binding.side,phase));
+  if(Array.isArray(error?.denied_tables)){
+   // Only public names from the frozen 29-table allowlist, never server text.
+   const safe=error.denied_tables.filter(name=>
+    pgContract.REQUIRED_PUBLIC_TABLES.includes(name));
+   if(safe.length===error.denied_tables.length)
+    safelyClassified.denied_tables=safe;
+  }
+  throw safelyClassified;
  }finally{
   if(client){if(started){try{await client.query("ROLLBACK");}catch{}}
    client.release();}
@@ -252,7 +280,11 @@ async function timed(label,fn){
   const reason=typeof e?.message==="string"&&
    /^OWNER_PRODUCER_[A-Z0-9_:]+$/.test(e.message)?
    e.message:"OWNER_PRODUCER_COMPONENT_UNAVAILABLE";
-  return {component:label,status:"HOLD",elapsed_ms:round(performance.now()-now),reason_code:reason};
+  const result={component:label,status:"HOLD",
+   elapsed_ms:round(performance.now()-now),reason_code:reason};
+  if(Array.isArray(e?.denied_tables)&&e.denied_tables.every(name=>
+   pgContract.REQUIRED_PUBLIC_TABLES.includes(name)))result.denied_tables=e.denied_tables;
+  return result;
  }
 }
 function unresolved(pg,s3){
