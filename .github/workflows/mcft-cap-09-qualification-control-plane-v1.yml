@@ -255,6 +255,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - uses: pnpm/action-setup@v4
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 3757
+        with:
+          version: 9.15.4
+      - name: Install QCP72 candidate runtime dependencies
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 3757
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
       - name: Require governed successor predecessor and zero production bindings
         shell: bash
         run: |
