@@ -1,3 +1,16 @@
+# 2026-11-02 — R4285 接任后真实 Windows packaging PASS / GitHub 39 SUCCESS（最新现场进度）
+
+> 本次仍是原 #3298 第二份 continuation 的**仅顶部增补**，只包含操作员实际回执与精确 GitHub 原生回读；此前全部正文逐字节后缀保留。本段不是 S3 权限、Resource Owner、Permit 或六阶段执行授权。
+
+- **工程原 PR #3757** 仍 **Open / Draft / Unmerged**，exact HEAD `ec5301de39168f43c0913caffb537355653a4ffd`，即先前单文件修复 `tsx` ESM 包装测试的版本。工程修复只在 #3757，文档只在 #3298。没有触碰 main。
+- **真实 Windows 操作员报告**：机器 `LAPTOP-STN2A2P1`，`node v24.19.0`（Volta `C:\Users\mylr1\AppData\Local\Volta\tools\image\node\24.19.0\node.exe`），`pnpm 9.15.4`；保留旧 `8b716131...` 失败候选，利用原 clone `git fetch` / detached `git worktree add` 创建新 exact `ec5301de...` 候选，不重复克隆。冻结 `pnpm install --frozen-lockfile --ignore-scripts` **PASS**，478 packages；SDK `@aws-sdk/client-s3 3.922.0`、`pg 8.18.0`、`tsx 4.21.0`。真实 `ACCEPTANCE_MCFT_CAP09_R4285_HOST_ADMISSION_V2.test.cjs` **5/5 PASS / 0 FAIL / ~1425ms**，`WINDOWS_PACKAGING_GATE=PASS_NONAUTHORIZING_ONLY`。本段仅把用户提交的原始控制台文字列为现场报告，不冒充 GitHub 原生运行或正式签署凭据。
+- GitHub 对相同 `ec5301de...` 的 **42 个 PR 触发工作流已全部结束：39 SUCCESS、3 SKIPPED、0 FAILURE**。主 `ci` [41404411938](https://github.com/liyongshang44-max/GEOX/actions/runs/41404411938) 的 `build-test` 与 `acceptance` 均 SUCCESS；中央 QCP72 [41404411901](https://github.com/liyongshang44-max/GEOX/actions/runs/41404411901) 的 `applicability-and-blocker-inventory` SUCCESS；Post-Merge V13 [41404411930](https://github.com/liyongshang44-max/GEOX/actions/runs/41404411930) SUCCESS；R4285 Host 合同 [41404412199](https://github.com/liyongshang44-max/GEOX/actions/runs/41404412199)、EA5E2 [41404412422](https://github.com/liyongshang44-max/GEOX/actions/runs/41404412422)、Adoption [41404412511](https://github.com/liyongshang44-max/GEOX/actions/runs/41404412511) SUCCESS。**这些是技术资格结果，不是正式合并/Producer/Owner/Permit 授权**。
+- **立即下一步**：不要重新碰 SDK/PG/MinIO 或再次签发账号。以同一 detached Windows candidate `D:\gptdown\R4285-SDK-CANDIDATE-ec5301de-packaging-v2`，在既有 TEST_ONLY replacement create marker + CurrentUser DPAPI 原密封 receipt 完整、身份与到期时间有效时，执行**仓库原 `MCFT_CAP09_R4285_S3_READBACK_V2.cjs`**。它仅串行调用 Host V1 与 Producer V2 四种真实 S3 只读 API 各一次，合计八次；PS51 操作员包装仅允许原有私有输入内存解封后通过 Node 子进程 STDIN 提供，不能把 raw Access ID/Secret 放 argv、环境、磁盘、GitHub 或聊天。若 DPAPI 源格式不是已有合同（CurrentUser、null entropy、原创建 JSON），**FAIL CLOSED / NO RETRY**。
+- **重要：现场 S3 仍然 NOT_TESTED**，并无 `READBACK_NATIVE_EXIT=0` 或 `S3_DATA_PLANE=PASS` 回执。未来的八次只读 PASS 也**不等于**独立控制面 Owner exclusivity、生产未绑定、正式 Resource Owner 签署、Permit 或任何写入许可。S3 新 TEST_ONLY 账号原定到期 `2026-11-05T05:52:27Z`，需要实时 UTC 校验；过期直接 HOLD，不自动续期。
+- 必须继续维持 `MERGE=HOLD / FORMAL_OWNER=NOT_ISSUED / PERMIT=HOLD / EXECUTE=FORBIDDEN / SIX_STAGES=0/6`。不要把这次 Windows 包装通过误记为 Host 的 120 秒完整时序合格。
+
+---
+
 # 2026-11-02 — R4285 接任 CTO 继续施工：tsx ESM 包装测试单文件修复（优先于下文旧 first-red）
 
 > 本段是原第二份 Active Continuation 的又一次**顶部增补**。本次只改 #3298 的这一份 handoff；其后旧正文必须逐字节保留。以下为当前源码/CI 核验，不是 Windows Resource Owner、Permit、执行或生产授权。仓库 `liyongshang44-max/GEOX`。
