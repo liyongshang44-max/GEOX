@@ -384,3 +384,15 @@ test("native reachable scope has a bounded synthetic PASS and targeted HOLD case
   Buffer.from("identity_ldap enable=on server_addr=ldap.example:389"),
   "identity_ldap"),/HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED/);
 });
+
+test("ephemeral current capture mode requires a real bounded Windows input and cannot mint owner",()=>{
+ assert.throws(()=>p.sourceOnly(["--verify-source-only","--input",
+  "nonexistent","--capture-current"]),/OWNER_PRODUCER_ONLY_DIAGNOSTIC_ALLOWED/);
+ const source=fs.readFileSync(path.join(__dirname,
+  "MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs"),"utf8");
+ const body=source.split("function captureCurrentNativeSourceOnly(i,env=process.env){")[1]
+  ?.split("\nfunction sourceOnly(argv){")[0];
+ assert(body&&body.includes("verifyNativeSourceRaw(i,controlBytes,inventoryBytes"));
+ assert(body.includes("raw_bytes_persisted:false"));
+ assert(!body.includes("fs.writeFileSync")&&!body.includes("fs.openSync"));
+});

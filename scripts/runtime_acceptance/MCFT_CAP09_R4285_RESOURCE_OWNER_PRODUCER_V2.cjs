@@ -1041,7 +1041,63 @@ function parse(argv){
 // Source-only entrypoint is safe on the Draft PR: no signed Owner,
 // PG/S3 probe, Permit, resource write, or requirement to pretend this HEAD is
 // protected main. It returns only a bounded native provenance/HOLD verdict.
+
+function captureCurrentNativeSourceOnly(i,env=process.env){
+ // Ephemeral collection: do not write raw MinIO/Docker CLI stdout or any
+ // Config.Env secrets to disk, GitHub logs or stdout. The captured bytes are
+ // immediately rechecked through the SAME fixed native verifier path.
+ host();validateInput(i);
+ const alias=env.MCFT_CAP09_R4285_EXISTING_MC_ALIAS;
+ const policy=env.MCFT_CAP09_R4285_EXISTING_MC_POLICY;
+ const acct=env.MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID;
+ for(const v of [alias,policy,acct])
+  assert(typeof v==="string"&&/^[A-Za-z0-9_.-]{2,128}$/.test(v),
+   "HOLD_NATIVE_EXISTING_MC_IDENTITY_REQUIRED");
+ const observedAt=new Date().toISOString();
+ const record=(tool,args)=>({argv:args,stdout_base64:nativeRead(tool,args).toString("base64"),
+  exit_code:0});
+ const mc={
+  ADMIN_INFO:record("mc",["--json","admin","info",alias]),
+  POLICY_INFO:record("mc",["--json","admin","policy","info",alias,policy]),
+  SERVICE_ACCOUNT_INFO:record("mc",["--json","admin","user","svcacct","info",alias,acct]),
+  BUCKET_STAT:record("mc",["--json","stat",alias+"/"+BUCKET]),
+  BUCKET_ANONYMOUS:record("mc",["--json","anonymous","get",alias+"/"+BUCKET])
+ };
+ const psArgs=["ps","--all","--no-trunc","--format","{{json .}}"];
+ const containers=record("docker",psArgs);
+ const ids=nativeJsonLines(Buffer.from(containers.stdout_base64,"base64"),
+  "HOLD_NATIVE_CAPTURE_DOCKER_PS").map(x=>x.ID||x.Id);
+ assert(ids.length>0&&ids.length<=256&&new Set(ids).size===ids.length&&
+  ids.every(x=>typeof x==="string"&&/^[a-f0-9]{64}$/.test(x)),
+  "HOLD_NATIVE_CAPTURE_DOCKER_COMPLETE_IDENTITIES");
+ const dk={
+  CONTAINERS_ALL:containers,
+  CONTAINERS_INSPECT:record("docker",["inspect","--type","container",...ids]),
+  VOLUME_INSPECT:record("docker",["volume","inspect",
+   "mcftcap09-r4285c3ce342c-s3data"])
+ };
+ const base={run_id:RUN,subject_sha:i.subject_sha,host_id:HOST,
+  observed_at:observedAt};
+ const controlBytes=Buffer.from(JSON.stringify({
+  schema_version:NATIVE_CONTROL_SCHEMA,...base,commands:mc}));
+ const inventoryBytes=Buffer.from(JSON.stringify({
+  schema_version:NATIVE_INVENTORY_SCHEMA,...base,commands:dk}));
+ // Internal 1 MiB per capsule bound is part of the frozen source contract.
+ assert(controlBytes.length<1048576&&inventoryBytes.length<1048576,
+  "HOLD_NATIVE_CAPTURE_CAPSULE_TOO_LARGE");
+ const scope=verifyNativeSourceRaw(i,controlBytes,inventoryBytes,{env});
+ return {status:scope.status,control_sha256:sha(controlBytes),
+  inventory_sha256:sha(inventoryBytes),observed_at:observedAt,
+  owner_issued:false,permit_issued:false,execution_authorized:false,
+  six_stages_executed:0,raw_bytes_persisted:false};
+}
+
 function sourceOnly(argv){
+ if(argv.length===4&&argv[0]==="--verify-source-only"&&
+  argv[1]==="--input"&&argv[3]==="--capture-current"){
+  const i=parse(["--diagnostic-only","--input",argv[2]]);
+  return captureCurrentNativeSourceOnly(i);
+ }
  assert(argv.length===7&&argv[0]==="--verify-source-only"&&argv[1]==="--input"&&
   argv[3]==="--control-raw"&&argv[5]==="--inventory-raw",
   "OWNER_NATIVE_SOURCE_ONLY_EXACT_CLI");
@@ -1098,5 +1154,6 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
  FORMAL_SURFACES,CTO_DECISION_DOMAIN_V1,NATIVE_CONTROL_SCHEMA,NATIVE_INVENTORY_SCHEMA,
  sourceJson,parseDisabledIdentity,assessNativeReachability,
- verifyNativeSourceRaw,sourceOnly,verifyFormalEvidence,composeFormalReadback,
+ verifyNativeSourceRaw,captureCurrentNativeSourceOnly,sourceOnly,
+ verifyFormalEvidence,composeFormalReadback,
  requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};
