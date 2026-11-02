@@ -327,6 +327,10 @@ test("forged source labels never qualify as independent native capability",()=>{
 });
 
 
+test("native source-only mode denies incomplete CLI and never invokes Owner signer",()=>{
+ assert.throws(()=>p.sourceOnly(["--verify-source-only","--input","fake"]),
+  /OWNER_NATIVE_SOURCE_ONLY_EXACT_CLI/);
+});
 test("formal CLI cannot use an unmerged or forged protected-main subject",()=>{
  const {root,i}=context();
  try{

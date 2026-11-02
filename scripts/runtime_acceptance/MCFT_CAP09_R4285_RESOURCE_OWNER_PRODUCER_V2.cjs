@@ -856,7 +856,31 @@ function parse(argv){
  const input=JSON.parse(fs.readFileSync(argv[2],"utf8").replace(/^\uFEFF/,""));
  return validateInput(input);
 }
-if(require.main===module&&process.argv[2]==="--produce-raw"){
+// Source-only entrypoint is safe on the Draft PR: no signed Owner,
+// PG/S3 probe, Permit, resource write, or requirement to pretend this HEAD is
+// protected main. It returns only a bounded native provenance/HOLD verdict.
+function sourceOnly(argv){
+ assert(argv.length===7&&argv[0]==="--verify-source-only"&&argv[1]==="--input"&&
+  argv[3]==="--control-raw"&&argv[5]==="--inventory-raw",
+  "OWNER_NATIVE_SOURCE_ONLY_EXACT_CLI");
+ const i=parse(["--diagnostic-only","--input",argv[2]]);
+ return verifyNativeSourceRaw(i,boundedFile(argv[4]),boundedFile(argv[6]));
+}
+if(require.main===module&&process.argv[2]==="--verify-source-only"){
+ Promise.resolve().then(()=>sourceOnly(process.argv.slice(2))).then(()=>{
+  // No success elevation until all external reachable source families are
+  // explicitly attested by native data, not the CTO's JSON declaration.
+  process.stdout.write(JSON.stringify({status:"NATIVE_SOURCE_SCOPE_VERIFIED_NOT_OWNER",
+   owner_issued:false,permit_issued:false,execution_authorized:false,stage_count:0})+"\n");
+ }).catch(e=>{
+  const reason=/^(OWNER_|HOLD_NATIVE_)/.test(e?.message||"")?
+   e.message:"HOLD_NATIVE_SOURCE_UNAVAILABLE";
+  process.stdout.write(JSON.stringify({status:"HOLD_NATIVE_SOURCE_NOT_QUALIFIED",
+   reason_code:reason,owner_issued:false,permit_issued:false,
+   execution_authorized:false,stage_count:0})+"\n");
+  process.exitCode=2;
+ });
+}else if(require.main===module&&process.argv[2]==="--produce-raw"){
  Promise.resolve().then(()=>parseFormal(process.argv.slice(2)))
   .then(x=>produceFormalRaw(x.i,x.sources,x.output)).then(x=>{
    process.stdout.write(JSON.stringify(x)+"\n");
@@ -891,5 +915,5 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
  FORMAL_SURFACES,CTO_DECISION_DOMAIN_V1,NATIVE_CONTROL_SCHEMA,NATIVE_INVENTORY_SCHEMA,
- sourceJson,verifyNativeSourceRaw,verifyFormalEvidence,composeFormalReadback,
+ sourceJson,verifyNativeSourceRaw,sourceOnly,verifyFormalEvidence,composeFormalReadback,
  requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};
