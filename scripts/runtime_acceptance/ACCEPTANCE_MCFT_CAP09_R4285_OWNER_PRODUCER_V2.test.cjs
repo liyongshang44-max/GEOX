@@ -513,3 +513,27 @@ test("two native readbacks with reordered inline policy arrays reconcile without
   "assert(nativeStableProjection(label,raw)===nativeStableProjection(label,observed),"));
  assert(!compare.includes("assert.equal(nativeStableProjection("));
 });
+
+test("native mc stat binds bucket folder identity (with slash) and never accepts unrelated names",()=>{
+ const bucket=p.BUCKET;
+ const wrap=x=>Buffer.from(JSON.stringify(x)+"\n","utf8");
+ const ok=wrap({status:"success",type:"folder",key:bucket+"/"});
+ const ok2=wrap({status:"success",type:"folder",name:bucket});
+ assert.equal(p.nativeStableProjection("BUCKET_STAT",ok),
+  JSON.stringify({bucket_verified:true,bucket}));
+ assert.equal(p.nativeStableProjection("BUCKET_STAT",ok),
+  p.nativeStableProjection("BUCKET_STAT",ok2));
+ const rejects=[
+  {status:"success",type:"folder",key:"other-bucket/"},
+  {status:"success",type:"file",key:bucket+"/"},
+  {status:"error",type:"folder",key:bucket+"/"},
+  {status:"success",type:"folder",key:bucket+"/some-object"},
+  {status:"success",type:"folder",key:""},
+  {status:"success",type:"folder",url:"https://example/"+bucket},
+  {status:"success",type:"folder",key:bucket+"/",name:"different"}
+ ];
+ for(const bad of rejects){
+  assert.throws(()=>p.nativeStableProjection("BUCKET_STAT",wrap(bad)),
+   /HOLD_NATIVE_BUCKET_NOT_NATIVE/);
+ }
+});

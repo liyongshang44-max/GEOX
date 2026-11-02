@@ -593,6 +593,15 @@ function nativeRead(tool,args){
  return child.stdout;
 }
 
+// mc stat names the bucket directory as either "bucket" or "bucket/".
+// A successful exact-path native stat is the authority; never search arbitrary
+// nested strings for a bare bucket name or accept an unrelated object stat.
+function nativeBucketStatMatches(x){
+ if(!x||typeof x!=="object"||Array.isArray(x)||
+  x.status!=="success"||x.type!=="folder")return false;
+ const values=[x.key,x.name].filter(v=>typeof v==="string");
+ return values.length>0&&values.every(v=>v===BUCKET||v===BUCKET+"/");
+}
 function nativeStableProjection(label,b){
  // Docker inspect returns a multiline JSON array; mc and docker ps use JSONL.
  // Only reconcile stable identities, not uptime/metrics.
@@ -604,8 +613,11 @@ function nativeStableProjection(label,b){
  if(label==="ADMIN_INFO")
   return JSON.stringify({deployment_verified:x.some(o=>
    deepHas(o,"ddbc6bb9-eb52-4b95-8324-b556697f8c0e"))});
- if(label==="BUCKET_STAT")
-  return JSON.stringify({bucket_verified:x.some(o=>deepHas(o,BUCKET))});
+ if(label==="BUCKET_STAT"){
+  assert(x.length===1&&nativeBucketStatMatches(x[0]),
+   "HOLD_NATIVE_BUCKET_NOT_NATIVE");
+  return JSON.stringify({bucket_verified:true,bucket:BUCKET});
+ }
  if(label==="BUCKET_ANONYMOUS")
   return JSON.stringify({no_anonymous_access:x.some(o=>deepHas(o,"none"))});
  if(label==="SERVICE_ACCOUNT_INFO"){
@@ -826,7 +838,7 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
   "HOLD_NATIVE_MINIO_DEPLOYMENT_UNVERIFIED");
  assert(m.SERVICE_ACCOUNT_INFO.some(x=>deepHas(x,acct)),
   "HOLD_NATIVE_MINIO_ACCOUNT_UNVERIFIED");
- assert(m.BUCKET_STAT.some(x=>deepHas(x,BUCKET)),
+ assert(m.BUCKET_STAT.length===1&&nativeBucketStatMatches(m.BUCKET_STAT[0]),
   "HOLD_NATIVE_BUCKET_NOT_NATIVE");
  // The policy is INLINE on this exact access key, not an installed named
  // MinIO policy. Bind both native access-key identity and all seven pairs.
