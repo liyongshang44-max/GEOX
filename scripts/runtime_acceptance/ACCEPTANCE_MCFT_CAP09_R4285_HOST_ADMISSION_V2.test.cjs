@@ -22,8 +22,8 @@ test("V2 final proof cannot be fabricated from ordinary read-only status",()=>{
 
 // Exercise the same root resolution used by the frozen Host and V2 Producer.
 // This is a packaging gate, with no credentials, resource requests or authority.
-test("V2 candidate declares, locks and loads the real root S3 runtime",()=>{
- const fs=require("node:fs"),path=require("node:path");
+test("V2 candidate declares, locks and loads the real root S3 runtime",async()=>{
+ const fs=require("node:fs"),path=require("node:path"),{pathToFileURL}=require("node:url");
  const root=path.resolve(__dirname,"../..");
  const pkg=JSON.parse(fs.readFileSync(path.join(root,"package.json"),"utf8"));
  const version=pkg.dependencies["@aws-sdk/client-s3"];
@@ -43,6 +43,7 @@ test("V2 candidate declares, locks and loads the real root S3 runtime",()=>{
  for(const name of ["pg","tsx"]){
   const resolved=fs.realpathSync(require.resolve(name,{paths:[root]}));
   assert(!path.relative(root,resolved).startsWith(".."),name+"_OUTSIDE_CANDIDATE_ROOT");
-  require(resolved);
+  if(name==="tsx") await import(pathToFileURL(resolved).href);
+  else require(resolved);
  }
 });
