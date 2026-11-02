@@ -149,3 +149,17 @@ test("scoped S3 probe uses only the original four read operations",async()=>{
  assert(!p.unresolved({status:"PASS_SCOPED_READONLY"},scoped)
   .includes("PG_AUTHENTICATED_SCOPE_AND_ACL_NOT_PROVEN"));
 });
+
+test("S3-only mode is explicit NONAUTH and formal readback route stays forbidden",()=>{
+ const {root,i}=context();
+ try{
+  const input=path.join(root,"owner-input.json");
+  fs.writeFileSync(input,JSON.stringify(i));
+  assert.equal(p.parse(["--s3-only-diagnostic","--input",input]).subject_sha,i.subject_sha);
+  assert.equal(p.parse(["--diagnostic-only","--input",input]).subject_sha,i.subject_sha);
+  for(const mode of ["--produce-raw","--sign-owner","--session-execute"]){
+   assert.throws(()=>p.parse([mode,"--input",input]),
+    /OWNER_PRODUCER_ONLY_DIAGNOSTIC_ALLOWED/);
+  }
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
