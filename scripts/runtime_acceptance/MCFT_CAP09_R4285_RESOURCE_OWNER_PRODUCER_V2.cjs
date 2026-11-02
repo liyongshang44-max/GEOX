@@ -238,6 +238,127 @@ async function probePg(i,env){
     database_owner_exclusivity_verified:false,
     denied_select_tables:b.denied_select_tables}}};
 }
+/*
+ * Forward-only R4285 Owner Authority Binding V2.
+ * This is a signed responsibility assignment and exact successor S3 policy
+ * source, not a fabricated MinIO ACL owner, live control readback, Owner PASS,
+ * or authority to issue Permit/execute.
+ */
+const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
+const OWNER_BINDING_DOMAIN_V2="GEOX_MCFT_CAP09_R4285_RESOURCE_RESPONSIBILITY_ASSIGNMENT_V2\n";
+const OWNER_BINDING_ID_DOMAIN_V2="GEOX_MCFT_CAP09_R4285_RESPONSIBILITY_RECORD_ID_V2\n";
+const BUCKET_ARN="arn:aws:s3:::"+BUCKET;
+const RAW_ARN=BUCKET_ARN+"/mcft-cap09-formal-raw-v1/sha256/*";
+const CANDIDATE_ARN=BUCKET_ARN+"/mcft-cap09-formal-candidate-v1/sha256/*";
+const ASSIGNMENT_FIELDS_V2=Object.freeze([
+ "schema_version","issuer_id","key_id","run_id","subject_sha","host_id",
+ "scope","production_authorized","authority_comment_id","authorized_operator_id",
+ "issued_at","expires_at","minio_deployment_id","volume_name","bucket_endpoint",
+ "bucket","bucket_arn","raw_prefix_arn","candidate_prefix_arn",
+ "parent_principal_sha256","policy_sha256","control_evidence_sha256",
+ "inventory_evidence_sha256"
+]);
+function replacementPolicyV2(){
+ // Seven exact Action/Resource pairs. Prefix wildcards are deliberately
+ // limited to the two signed R4285 object namespaces; no bucket-wide '*' ARN.
+ return {Version:"2012-10-17",Statement:[
+  {Sid:"R4285BucketInventoryOnly",Effect:"Allow",
+   Action:["s3:ListBucket","s3:ListBucketVersions","s3:ListBucketMultipartUploads"],
+   Resource:[BUCKET_ARN]},
+  {Sid:"R4285FormalSha256EvidenceOnly",Effect:"Allow",
+   Action:["s3:GetObject","s3:PutObject"],
+   Resource:[RAW_ARN,CANDIDATE_ARN]}
+ ]};
+}
+function replacementPolicyBytesV2(){
+ return Buffer.from(lineage.canonical(replacementPolicyV2())+"\n","utf8");
+}
+function verifyReplacementPolicyV2(policy){
+ assert.equal(lineage.canonical(policy),lineage.canonical(replacementPolicyV2()),
+  "OWNER_BINDING_POLICY_SEVEN_EXACT_PAIRS_REQUIRED");
+ return Object.freeze({sha256:sha(replacementPolicyBytesV2()),pairs:7,
+  bucket_arn:BUCKET_ARN,raw_prefix_arn:RAW_ARN,candidate_prefix_arn:CANDIDATE_ARN});
+}
+function verifyOwnerAuthorityBindingV2(envelope,trust,ctx){
+ // Two independent raw-source byte strings must be supplied. SHA equivalence
+ // proves binding only; it cannot certify probe provenance or physical truth.
+ exact(envelope,["payload","signature_base64"],"OWNER_BINDING_ENVELOPE_EXACT");
+ const p=envelope.payload;
+ exact(p,ASSIGNMENT_FIELDS_V2,"OWNER_BINDING_PAYLOAD_EXACT");
+ assert.equal(p.schema_version,"MCFT_CAP09_R4285_OWNER_AUTHORITY_BINDING_V2");
+ assert.equal(p.run_id,RUN);
+ assert.equal(p.subject_sha,ctx?.subject_sha,"OWNER_BINDING_SUBJECT");
+ assert(H.test(p.subject_sha),"OWNER_BINDING_SUBJECT_FORMAT");
+ assert.equal(p.host_id,HOST,"OWNER_BINDING_HOST");
+ assert.equal(ctx.host_id,HOST,"OWNER_BINDING_CONTEXT_HOST");
+ assert.equal(p.scope,"R4285_ISOLATED_QUALIFICATION_TEST_ONLY");
+ assert.equal(p.production_authorized,false,"OWNER_BINDING_PRODUCTION_FORBIDDEN");
+ assert.equal(p.authority_comment_id,6569014082,"OWNER_BINDING_CTO_SOURCE_CHANGED");
+ assert.equal(p.minio_deployment_id,"ddbc6bb9-eb52-4b95-8324-b556697f8c0e",
+  "OWNER_BINDING_DEPLOYMENT");
+ assert.equal(p.volume_name,"mcftcap09-r4285c3ce342c-s3data","OWNER_BINDING_VOLUME");
+ assert.equal(p.bucket_endpoint,"http://127.0.0.1:59292/","OWNER_BINDING_ENDPOINT");
+ assert.equal(p.bucket,BUCKET,"OWNER_BINDING_BUCKET");
+ assert.equal(p.bucket_arn,BUCKET_ARN,"OWNER_BINDING_BUCKET_ARN");
+ assert.equal(p.raw_prefix_arn,RAW_ARN,"OWNER_BINDING_RAW_ARN");
+ assert.equal(p.candidate_prefix_arn,CANDIDATE_ARN,"OWNER_BINDING_CANDIDATE_ARN");
+ assert.equal(p.policy_sha256,verifyReplacementPolicyV2(replacementPolicyV2()).sha256,
+  "OWNER_BINDING_POLICY_SHA");
+ assert(X.test(p.parent_principal_sha256)&&
+  p.parent_principal_sha256===ctx.parent_principal_sha256,
+  "OWNER_BINDING_PARENT_SOURCE");
+ for(const [field,bytes] of [
+  ["control_evidence_sha256",ctx.control_evidence_bytes],
+  ["inventory_evidence_sha256",ctx.inventory_evidence_bytes]
+ ]){
+  assert(Buffer.isBuffer(bytes)&&bytes.length>0&&bytes.length<1048576,
+   "OWNER_BINDING_INDEPENDENT_RAW_BYTES_REQUIRED:"+field);
+  assert(X.test(p[field])&&p[field]===sha(bytes),
+   "OWNER_BINDING_INDEPENDENT_RAW_DIGEST:"+field);
+ }
+ assert.equal(trust?.schema_version,"geox_mcft_cap09_retry_trust_v1",
+  "OWNER_BINDING_TRUST_SCHEMA");
+ assert.equal(trust.host_id,HOST,"OWNER_BINDING_TRUST_HOST");
+ assert(Array.isArray(trust.issuers),"OWNER_BINDING_TRUST_ISSUERS");
+ assert.equal(p.authorized_operator_id,trust.operator_id,
+  "OWNER_BINDING_ACCOUNTABLE_OPERATOR");
+ const candidates=trust.issuers.filter(k=>k.issuer_id===p.issuer_id&&k.key_id===p.key_id);
+ assert.equal(candidates.length,1,"OWNER_BINDING_SIGNER_UNIQUE");
+ const signer=candidates[0];
+ assert.equal(signer.revoked,false,"OWNER_BINDING_SIGNER_REVOKED");
+ assert.equal(signer.role,"ACCOUNTABLE_SINGLE_OPERATOR","OWNER_BINDING_ROLE");
+ assert.equal(signer.issuer_id,trust.operator_id,"OWNER_BINDING_SIGNER_AUTHORITY");
+ const time=t=>{
+  assert(typeof t==="string"&&Number.isFinite(Date.parse(t))&&
+   new Date(t).toISOString()===t,"OWNER_BINDING_UTC");
+  return Date.parse(t);
+ };
+ const now=ctx.now??Date.now(),issued=time(p.issued_at),expires=time(p.expires_at);
+ assert(issued<=now&&now<expires&&expires-issued<=86400000,
+  "OWNER_BINDING_WINDOW");
+ assert(time(signer.not_before)<=issued&&expires<=time(signer.not_after),
+  "OWNER_BINDING_KEY_WINDOW");
+ const pub=crypto.createPublicKey(signer.public_key_pem);
+ assert.equal(pub.asymmetricKeyType,"ed25519","OWNER_BINDING_KEY_TYPE");
+ assert.equal(sha(pub.export({type:"spki",format:"der"})),signer.spki_sha256,
+  "OWNER_BINDING_KEY_FINGERPRINT");
+ const sig=Buffer.from(envelope.signature_base64,"base64");
+ assert(sig.length===64&&sig.toString("base64")===envelope.signature_base64,
+  "OWNER_BINDING_SIGNATURE_FORMAT");
+ assert(crypto.verify(null,Buffer.from(OWNER_BINDING_DOMAIN_V2+lineage.canonical(p)),pub,sig),
+  "OWNER_BINDING_SIGNATURE_INVALID");
+ const responsibilityRecordId="r4285owner:"+sha(Buffer.from(
+  OWNER_BINDING_ID_DOMAIN_V2+lineage.canonical(p))).slice(0,40);
+ return Object.freeze({
+  status:"R4285_SIGNED_RESPONSIBILITY_AND_RAW_DIGESTS_BOUND_NOT_PHYSICAL_OWNER",
+  responsibility_record_id:responsibilityRecordId,
+  run_id:RUN,subject_sha:p.subject_sha,policy_sha256:p.policy_sha256,
+  signer_operator_id:trust.operator_id,control_readback_provenance_verified:false,
+  owner_exclusive_verified:false,production_bindings_absent_verified:false,
+  formal_readback_issued:false,permit_issued:false,execute_authorized:false
+ });
+}
+
 function assertS3Private(acl,policyResult){
  assert(acl?.Owner?.ID && /^[A-Za-z0-9_.:-]{12,128}$/.test(acl.Owner.ID),
   "OWNER_PRODUCER_S3_OWNER_ID_UNAVAILABLE");
