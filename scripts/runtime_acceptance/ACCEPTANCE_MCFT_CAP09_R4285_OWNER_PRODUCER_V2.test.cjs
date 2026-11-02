@@ -446,7 +446,8 @@ test("replacement access-key policy is embedded; no nonexistent named MinIO poli
  const command='"--json","admin","accesskey","info",alias,acct';
  assert(source.includes(command));
  assert(source.includes("HOLD_NATIVE_INLINE_POLICY_ACCESS_KEY_IDENTITY"));
- assert(source.includes('verifyReplacementPolicyV2(JSON.parse(found[0]))'));
+ assert(source.includes('verifyReplacementPolicyV2(policy)'));
+ assert(source.includes('return lineage.canonical(normalizeReplacementPolicyOrderV2(policy));'));
 });
 
 test("large authentic raw capsule fits bounded signed transport without projection loss",()=>{
