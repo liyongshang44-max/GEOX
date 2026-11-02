@@ -1,3 +1,26 @@
+# 2026-11-02 — R4285 接任 CTO 继续施工：tsx ESM 包装测试单文件修复（优先于下文旧 first-red）
+
+> 本段是原第二份 Active Continuation 的又一次**顶部增补**。本次只改 #3298 的这一份 handoff；其后旧正文必须逐字节保留。以下为当前源码/CI 核验，不是 Windows Resource Owner、Permit、执行或生产授权。仓库 `liyongshang44-max/GEOX`。
+
+## 1. 已完成的工程修复：不可重复施工
+
+- 在**原 Draft PR #3757** `mcft/r4285-host-admission-v2-boundary`，旧 HEAD `8b716131ceef7baee47da4681c3f54b7f7fa7fe6` 已以**单文件**快进至新 HEAD `ec5301de39168f43c0913caffb537355653a4ffd`，提交 `fix(mcft-cap09): load tsx ESM correctly in R4285 packaging gate`。
+- 唯一改动是 `scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_ADMISSION_V2.test.cjs`：测试回调变为 `async`，`tsx` 通过 `await import(pathToFileURL(resolved).href)` 实际加载 ESM，`pg` 继续用 CommonJS `require`。保留 root 内 `realpath`、SDK 精确依赖/lockfile/真实 exports 检查，单文件差异 +4/−3；没有跳过验证、改 S3 API、改 Host/Producer、改权限或篡改冻结材料。
+- GitHub 更新使用 old HEAD lease，回读 **#3757 仍 Open/Draft**、新 HEAD 精确一致；#3298 的正文不进入 #3757 的 changed-file 集合。
+- 在新 HEAD 的 GitHub Actions 中：`R4285 Host Admission V2 contract negatives` [41404412199](https://github.com/liyongshang44-max/GEOX/actions/runs/41404412199)、`MCFT CAP-09 R4285 successor Host source and synthetic gates` [41404412206](https://github.com/liyongshang44-max/GEOX/actions/runs/41404412206)、EA5E2 runtime dependency graph [41404412422](https://github.com/liyongshang44-max/GEOX/actions/runs/41404412422)、Adoption V2 Attempt-3 engineering [41404412511](https://github.com/liyongshang44-max/GEOX/actions/runs/41404412511) 均已独立观察到 SUCCESS。**新 HEAD 的主 CI、中央 QCP 和其它延迟工作流在本段写入前尚未取得 final full green；必须再次读取，不得推定。**
+- 上一个 Windows 精确候选 `D:\gptdown\R4285-SDK-CANDIDATE-8b716131-f6a9e9b7` 的 **4/5 PASS、ERR_REQUIRE_ESM** 是已定位的历史物理失败证据；**新的 `ec5301de...` 尚未在真实 Windows operator Node 上重验**。旧报错不再是未修代码，但不能因此宣布 Windows PASS。
+
+## 2. 下一操作者精确顺序
+
+1. GitHub 实时检查 **#3757 HEAD 是否仍为 `ec5301de39168f43c0913caffb537355653a4ffd`**，并要求该 HEAD 的主 CI、中央 QCP72、EA5E2、Adoption 和 R4285 Host 检查全部按实际门禁合格；如有红项，读取第一真实失败，不推测。
+2. 在原 Windows 操作员上先打印 `node -p "process.version + ' ' + process.execPath"` 和 pnpm 版本。**保留旧失败候选，不回退不覆盖**；可从旧 clone 用 `git fetch` + `git worktree add --detach` 建立新精确 HEAD 的独立候选，而不是重复 clone 全仓；新候选执行 `pnpm install --frozen-lockfile --ignore-scripts`，再执行 `node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_ADMISSION_V2.test.cjs`。以该真实 Node、真实进程 exit、全 5 项和 HEAD 绑定为准，不能引用 Node 24 Linux CI 冒充 Windows。
+3. **只有包装门禁实际 PASS 后**，才通过原有 DPAPI 内存解封和原有 `MCFT_CAP09_R4285_S3_READBACK_V2.cjs` 原生调用核对账号 SHA/到期、Host V1 与 Producer V2 各四项只读请求。未发生真实调用前 `S3_DATA_PLANE=NOT_TESTED`。不得再次创建 S3 账户、扩大 ACL、重建 PG/MinIO、复用旧身份或输出敏感字节；账号原设到期 `2026-11-05T05:52:27Z`，必须现场核实仍有效。
+4. 真实 PG scoped read-only 历史 PASS 不重复跑；随后仍需独立控制面/Owner exclusivity、保护 main exact Subject、签署窗口、Permit 和完整 <=120 秒连续 Host 时序的正式证据。在可审计的非授权资格与独立批准齐备之前：**MERGE=HOLD / FORMAL_OWNER=NOT_ISSUED / PERMIT=HOLD / EXECUTE=FORBIDDEN / SIX_STAGES=0/6**。
+
+本增补不修改第一份 handoff、不新增第三份，也不赋予新的 Source/Material/Release/Signature authority。下方保留 2026-11-02 先前交接及更早全部正文，仅“tsx 未修补”这一即时状态被本段更新。
+
+---
+
 # 2026-11-02 — R4285 / #3757 / Windows SDK packaging blocker · CTO continuation（本次最高优先级）
 
 > **本段为第二份 Active Continuation 的前置增补。** 仓库 `liyongshang44-max/GEOX`，原文件 `docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-CONTINUATION-2026-10-03.md`，保留其后全部历史原文字节。第一份 `GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md` 不修改；第三份 handoff 不新建。该文档不是签名、Release Binding、正式 Resource Owner、Permit、执行许可或生产权威。与实时源码不一致时，以 GitHub 当前受保护 main/指定 PR 精确 HEAD、原始本机证据及原生 Consumer 的实际结果为准。以下记录截至 2026-11-02 本轮 Windows 回执及 GitHub 原生回读，不得自动推广到后续 HEAD。
