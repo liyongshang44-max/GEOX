@@ -467,6 +467,102 @@ async function diagnostic(i,env=process.env,{s3Only=false}={}){
   formal_resource_readback_written:false,permit_issued:false,permit_consumed:false,
   execution_authorized:false,production_authorized:false,original_six_stages_executed:0};
 }
+
+// Formal source-bound raw preparation. Existing V2 responsibility signature
+// authenticates exact material bytes, but DOES NOT certify their native origin.
+// Never convert scope-limited legacy findings into unqualified Owner PASS.
+const FORMAL_SURFACES=Object.freeze([
+ "MINIO_CURRENT_IAM_AND_BUCKET","WINDOWS_CURRENT_DOCKER_AND_STORAGE",
+ "NETWORK_INGRESS","APPLICATION_PRODUCTION_REFERENCES",
+ "EXTERNAL_PRINCIPAL_REACHABILITY"
+]);
+function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
+ const {envelope,trust,control_bytes,inventory_bytes,parent_principal_sha256,
+  native_audit}=inputs||{};
+ assert(Buffer.isBuffer(control_bytes)&&control_bytes.length>0&&control_bytes.length<1048576,
+  "OWNER_FORMAL_CONTROL_RAW_BYTES_REQUIRED");
+ assert(Buffer.isBuffer(inventory_bytes)&&inventory_bytes.length>0&&inventory_bytes.length<1048576,
+  "OWNER_FORMAL_INVENTORY_RAW_BYTES_REQUIRED");
+ assert(!control_bytes.equals(inventory_bytes),"OWNER_FORMAL_TWO_DISTINCT_SOURCES_REQUIRED");
+ const bound=verifyOwnerAuthorityBindingV2(envelope,trust,{
+  subject_sha:i.subject_sha,host_id:HOST,parent_principal_sha256,
+  control_evidence_bytes:control_bytes,inventory_evidence_bytes:inventory_bytes,now});
+ // Native provenance is a distinct fact from signed SHA-256 equality.
+ // No operator-created Boolean, bare file hash or old Docker summary qualifies.
+ assert(native_audit&&typeof native_audit==="object"&&!Array.isArray(native_audit),
+  "HOLD_INDEPENDENT_NATIVE_AUDIT_PROVENANCE_REQUIRED");
+ const fields=["schema_version","source_receipt_sha256","control_sha256",
+  "inventory_sha256","subject_sha","run_id","host_id","covered_surfaces",
+  "unresolved_reachable_sources","bucket_private","owner_exclusive",
+  "production_bindings_present","s3_owner_id","verified_at"];
+ exact(native_audit,fields,"HOLD_NATIVE_AUDIT_EXACT_SOURCE_CONTRACT");
+ assert.equal(native_audit.schema_version,"MCFT_CAP09_R4285_NATIVE_AUDIT_VERIFIED_V1",
+  "HOLD_NATIVE_AUDIT_SOURCE_SCHEMA");
+ assert.equal(native_audit.run_id,RUN,"HOLD_NATIVE_AUDIT_RUN");
+ assert.equal(native_audit.subject_sha,i.subject_sha,"HOLD_NATIVE_AUDIT_SUBJECT");
+ assert.equal(native_audit.host_id,HOST,"HOLD_NATIVE_AUDIT_HOST");
+ assert.equal(native_audit.control_sha256,sha(control_bytes),"HOLD_NATIVE_CONTROL_DIGEST");
+ assert.equal(native_audit.inventory_sha256,sha(inventory_bytes),"HOLD_NATIVE_INVENTORY_DIGEST");
+ assert.deepEqual(native_audit.covered_surfaces,FORMAL_SURFACES,
+  "HOLD_NATIVE_AUDIT_COVERAGE");
+ assert.deepEqual(native_audit.unresolved_reachable_sources,[],
+  "HOLD_NATIVE_AUDIT_REACHABILITY");
+ assert.equal(native_audit.s3_owner_id,bound.responsibility_record_id,
+  "HOLD_NATIVE_AUDIT_OWNER_SOURCE");
+ assert.equal(native_audit.bucket_private,true,"HOLD_NATIVE_BUCKET_PRIVATE");
+ assert.equal(native_audit.owner_exclusive,true,"HOLD_NATIVE_OWNER_EXCLUSIVE");
+ assert.equal(native_audit.production_bindings_present,false,
+  "HOLD_NATIVE_PRODUCTION_BINDINGS");
+ assert(X.test(native_audit.source_receipt_sha256),"HOLD_NATIVE_SOURCE_RECEIPT");
+ const verifiedAt=Date.parse(native_audit.verified_at);
+ assert(Number.isFinite(verifiedAt)&&verifiedAt<=now&&now-verifiedAt<=120000,
+  "HOLD_NATIVE_SOURCE_STALE");
+ // A self-declared JSON receipt is not an authenticated physical source.
+ // Until a trusted native verifier is enrolled in the existing source chain,
+ // no source-verified token can be constructed by parsing this object.
+ throw Error("HOLD_NATIVE_SOURCE_RECEIPT_AUTHENTICATOR_NOT_CONNECTED");
+}
+function composeFormalReadback(i,source,pg,s3,{observedAt,completedAt,sourceSha}){
+ assert(source&&source.kind==="NATIVE_AUTHENTICATED_SOURCE"&&source.verifier==="R4285_NATIVE",
+  "OWNER_FORMAL_VERIFIED_NATIVE_SOURCE_REQUIRED");
+ assert.equal(pg?.status,"PASS_SCOPED_READONLY","OWNER_FORMAL_FRESH_PG_REQUIRED");
+ assert.equal(s3?.status,"PASS_SCOPED_DATA_PLANE_ONLY","OWNER_FORMAL_FRESH_S3_REQUIRED");
+ assert.equal(s3.bucket,BUCKET,"OWNER_FORMAL_S3_SCOPE");
+ assert.equal(s3.bucket_endpoint,i.bucket_endpoint,"OWNER_FORMAL_S3_ENDPOINT");
+ assert.equal(s3.bucket_exists,true,"OWNER_FORMAL_S3_BUCKET_MISSING");
+ assert.equal(s3.bucket_empty_including_versions_multipart,true,
+  "OWNER_FORMAL_S3_NOT_EMPTY");
+ assert.equal(s3.probe_operations,4,"OWNER_FORMAL_S3_NOT_FOUR_NATIVE_READS");
+ const start=Date.parse(observedAt),end=Date.parse(completedAt);
+ assert(Number.isFinite(start)&&Number.isFinite(end)&&end>=start&&end-start<=120000,
+  "OWNER_FORMAL_READBACK_STALE");
+ assert(X.test(sourceSha),"OWNER_FORMAL_SOURCE_SHA");
+ return Object.freeze({
+  schema_version:SCHEMA,status:"PASS",run_id:RUN,host_id:HOST,
+  subject_sha:i.subject_sha,probe_type:PROBE,probe_source_sha256:sourceSha,
+  observed_at:observedAt,completed_at:completedAt,production_authorized:false,
+  database_host:pg.database_host,database_port:pg.database_port,
+  positive_database:pg.positive_database,negative_database:pg.negative_database,
+  audit_user:pg.audit_user,positive_rows_zero:pg.positive_rows_zero,
+  negative_rows_zero:pg.negative_rows_zero,
+  positive_database_exists:pg.positive_database_exists,
+  negative_database_exists:pg.negative_database_exists,
+  positive_login_restricted:pg.positive_login_restricted,
+  negative_login_restricted:pg.negative_login_restricted,
+  fenced_writer_execute_allowed:pg.fenced_writer_execute_allowed,
+  direct_fact_insert_forbidden:pg.direct_fact_insert_forbidden,
+  pg_owner_id:pg.pg_owner_id,bucket_endpoint:i.bucket_endpoint,bucket:BUCKET,
+  bucket_exists:s3.bucket_exists,
+  bucket_empty_including_versions_multipart:s3.bucket_empty_including_versions_multipart,
+  bucket_private:source.bucket_private,
+  production_bindings_present:source.production_bindings_present,
+  owner_exclusive:source.owner_exclusive,s3_owner_id:source.s3_owner_id,
+  source_evidence_sha256:Object.freeze({
+   control:source.control_sha256,inventory:source.inventory_sha256,
+   verified_receipt:source.source_receipt_sha256})
+ });
+}
+
 function parse(argv){
  assert(argv.length===3&&["--diagnostic-only","--s3-only-diagnostic"].includes(argv[0])&&
   argv[1]==="--input"&&
@@ -497,4 +593,5 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  parseUrl,pgTarget,s3Target,pgFailureCode,probeCatalogFacts,assertS3Private,unresolved,
  probePg,probeS3,timed,diagnostic,parse,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
- replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2};
+ replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
+ FORMAL_SURFACES,verifyFormalEvidence,composeFormalReadback};
