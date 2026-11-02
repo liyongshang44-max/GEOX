@@ -1105,10 +1105,14 @@ function sourceOnly(argv){
  return verifyNativeSourceRaw(i,boundedFile(argv[4]),boundedFile(argv[6]));
 }
 if(require.main===module&&process.argv[2]==="--verify-source-only"){
- Promise.resolve().then(()=>sourceOnly(process.argv.slice(2))).then(()=>{
+ Promise.resolve().then(()=>sourceOnly(process.argv.slice(2))).then(result=>{
   // No success elevation until all external reachable source families are
   // explicitly attested by native data, not the CTO's JSON declaration.
   process.stdout.write(JSON.stringify({status:"NATIVE_SOURCE_SCOPE_VERIFIED_NOT_OWNER",
+   control_sha256:result?.control_sha256||null,
+   inventory_sha256:result?.inventory_sha256||null,
+   source_observed_at:result?.observed_at||null,
+   raw_bytes_persisted:false,
    owner_issued:false,permit_issued:false,execution_authorized:false,stage_count:0})+"\n");
  }).catch(e=>{
   const reason=/^(OWNER_|HOLD_NATIVE_)/.test(e?.message||"")?
