@@ -1,3 +1,19 @@
+# 2026-11-02 — R4285 唯一剩余 Producer 正式接线已开始（只认新 HEAD / 非授权）
+
+> 原 #3298 第二份 Continuation 仅顶部增补，保留全部旧正文为原样后缀，不改第一份 handoff、不新建第三份。以下是源码已落地及后续真实性边界，**不是已签署的 Owner 或 Host 物理执行成功**。
+
+- CTO 独立去重裁决：[原 #3757 评论 6571636092](https://github.com/liyongshang44-max/GEOX/pull/3757#issuecomment-6571636092) 固定唯一代码任务：既有 Owner Authority Binding V2 + 原有控制/Inventory 有界证据 + 当次真实 PG/S3 → 正式原始 Readback；SDK、PG 构建、S3 八次数据面、MinIO ACL/外部插件、78 容器和旧签署等不重新施工。
+- **原工程 PR #3757** 已在原 Draft 分支从已验收 `ec5301de39168f43c0913caffb537355653a4ffd` 前向提交 **6 次**，最新 exact HEAD `4863d97206cad2ae0389aba4b3e27588676c3a64`。比较前沿仅 **2 个原有源码文件**：`scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs` 与 `ACCEPTANCE_MCFT_CAP09_R4285_OWNER_PRODUCER_V2.test.cjs`。不动历史 Owner V1、Host、Permit、Trust、QCP71、PG/S3 实现、package/lockfile 或 main。
+- Producer 新增 `--produce-raw --input <abs> --sources <abs> --output <abs>`；只在**真实受保护 main HEAD 与远端 main 一致、工作区清洁**时准入，复用原 Native Adoption Consumer V2 的 `gitExactMain`，不是 PR HEAD 的执行后门。指定 Trust 原始字节须与 **repository-registered** `scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json` 精确相等；来源证明先于任何 PG/S3 新鲜读回。
+- 保留已实现的 `verifyOwnerAuthorityBindingV2()`，对两份独立非空原始来源材料校验 SHA、父 principal/精确资源与责任记录。增加一份**独立签署的 Native Audit 收据**对当前控制面/Container/网络/生产应用引用/外部可达来源的覆盖范围进行具名背书；角色复用原 Trust 已登记 `INDEPENDENT_RETRY_GOVERNANCE`，不能在输入 JSON 中自添 Trust issuer；要求不同于责任签署者、Ed25519/时间/字段/范围/摘要验签，任何 `unresolved_reachable_sources` 非空即 HOLD。此证据须来自真实原生捕获，不得手工构造所谓 PASS，合成 CI 签名只用于测负例/接线。
+- 实际 `produceFormalRaw` 仅在上述来源合格后 **同一次 Windows 进程真实调用已有 `probePg()` + `probeS3()`**；保持 PG positive/negative and S3 four-read 原实现与 120 秒观测预算，生成原 V1 `FACT_BINDINGS` 对应字段、以签署责任记录派生 `s3_owner_id`，用 `wx` 和 0600 模式一次写出原始 SHA-256 可复验文本；输出必须位于 source_root/release_root 之外，绝不自签 Owner 或调用 Permit/Execute。
+- 已新增合成正例和多项负例，包括伪造普通 `kind=verified` 不具不可伪造模块内能力、独立签名来源摘要漂移、缺失可达路径、`owner_exclusive=false`、S3 少于 4 次、main/Trust 身份不匹配、输出路径落在 source/release 内。**这些是源码合成验证，不是当前原始控制面真实签署**。
+- 此 HEAD 的 GitHub 全资格在本段写入时**尚未获得 final CI/QCP72 green**，必须单独回读最新 exact HEAD，不能借用上一 HEAD 的 39 SUCCESS。既有 S3 8 次 TEST_ONLY Windows 回执与 PG 历史有界 PASS 继续接受，不再重跑。
+- **真正尚缺**：当前实际控制面/生产引用 Inventory 原始字节和经本机真实独立来源复核的收据、合并后 protected main 的合法 Owner V2/原始 Readback 实签、独立 Permit 与 <=120 秒连续 Host 会话。因此 `CONTROL_INVENTORY_SOURCE_PROVENANCE=HOLD_UNTIL_NATIVE_SIGNED`、`OWNER=NOT_ISSUED`、`MERGE=HOLD`、`PERMIT=HOLD`、`EXECUTE=FORBIDDEN`、`SIX_STAGES=0/6`。
+- **接任下一步**：先读取 #3757 最新 HEAD 与 exact CI/QCP72；若红，修首个有证据的 source/test 红项且仅改原两文件。若绿，独立对现有受控原始材料和授权审核者做精确合规校验，再申请合并前 CTO 源码裁决；绝不提前对 Draft PR HEAD 签正式 Owner/Permit，不建新 Registry/PR/脚本包，也不重新调查 MinIO/PG/SDK。
+
+---
+
 # 2026-11-02 — R4285 S3 八次 Windows 原生只读 PASS / Owner 来源仍 HOLD（接任最新检查点）
 
 > 此段为原 Draft PR #3298 的**仅顶部增补**。旧文精确保留为完整后缀；不修改第一份 handoff、不新建第三份、不触碰 #3757 工程源码/main。现场回执为操作员通过聊天提交，现已与同 HEAD 仓库原生调用程序的代码范围核对；不等于独立签署的物理 Owner。
