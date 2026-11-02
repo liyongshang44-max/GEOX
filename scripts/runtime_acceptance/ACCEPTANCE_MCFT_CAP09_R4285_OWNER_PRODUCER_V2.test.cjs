@@ -628,3 +628,70 @@ test("Docker native inspect only Mounts top-level ordering is immaterial; all co
  assert.throws(()=>p.nativeStableProjection("CONTAINERS_INSPECT",wrap({
   ...baseline,Mounts:{invalid:true}})),/HOLD_NATIVE_MOUNTS_FORMAT/);
 });
+
+test("native empty-IDP endpoint configurations qualify only with exact parsed keys and no container overrides",()=>{
+ const inactive={
+  identity_ldap:'identity_ldap server_addr= srv_record_name= enable= lookup_bind_dn=',
+  identity_openid:'identity_openid enable= config_url= claim_name=policy',
+  identity_plugin:'identity_plugin url= token=',
+  policy_plugin:'policy_plugin url='
+ };
+ for(const [name,raw] of Object.entries(inactive)){
+  assert.deepEqual(p.parseDisabledIdentity(Buffer.from(raw),name),
+   {name,disabled:true});
+ }
+ const reject=(name,raw,code)=>assert.throws(
+  ()=>p.parseDisabledIdentity(Buffer.from(raw),name),new RegExp(code));
+ reject("identity_ldap",
+  "identity_ldap server_addr=ldap.example:389 srv_record_name= enable=",
+  "HOLD_NATIVE_IDP_ACTIVE_ENDPOINT");
+ reject("identity_ldap",
+  "identity_ldap server_addr= srv_record_name=_ldap._tcp.example enable=",
+  "HOLD_NATIVE_IDP_ACTIVE_ENDPOINT");
+ reject("identity_openid","identity_openid enable=on config_url=",
+  "HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ reject("identity_openid",
+  "identity_openid config_url=https://idp.example enable=",
+  "HOLD_NATIVE_IDP_ACTIVE_ENDPOINT");
+ reject("identity_plugin","identity_plugin url=https://idp.example",
+  "HOLD_NATIVE_IDP_ACTIVE_ENDPOINT");
+ reject("policy_plugin","policy_plugin url=http://policy.example",
+  "HOLD_NATIVE_IDP_ACTIVE_ENDPOINT");
+ reject("identity_plugin","identity_plugin token=abc",
+  "HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ reject("identity_openid","identity_openid enable=maybe config_url=",
+  "HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ reject("identity_openid","identity_openid enable= enable=off config_url=",
+  "HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ reject("identity_openid","identity_openid config_url= config_url=other",
+  "HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ reject("identity_openid","identity_openid config_url= garbage",
+  "HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ reject("identity_openid","identity_openid config_url=other enable=off",
+  "HOLD_NATIVE_IDP_ACTIVE_ENDPOINT");
+ reject("identity_plugin","identity_plugin url= endpoint=https://other.example",
+  "HOLD_NATIVE_IDP_ACTIVE_ENDPOINT");
+ assert.deepEqual(p.parseDisabledIdentity(
+  Buffer.from('identity_plugin url="" endpoint=""'),"identity_plugin"),
+  {name:"identity_plugin",disabled:true});
+});
+
+test("native target container IDP overrides fail closed without leaking values",()=>{
+ const target=x=>({Config:{Env:x}});
+ p.assertNoIdpContainerEnvOverrides(target([
+  "MINIO_ROOT_USER=dummy","MINIO_ROOT_PASSWORD=never log"
+ ]));
+ const prefixes=["MINIO_IDENTITY_LDAP","MINIO_IDENTITY_OPENID",
+  "MINIO_IDENTITY_PLUGIN","MINIO_POLICY_PLUGIN"];
+ for(const prefix of prefixes){
+  for(const k of [prefix,prefix+"_URL",prefix+"_ENABLE"]){
+   assert.throws(()=>p.assertNoIdpContainerEnvOverrides(target([
+    "SAFE=value",k+"=secret value"
+   ])),/HOLD_NATIVE_IDP_ENV_OVERRIDE/);
+  }
+ }
+ assert.throws(()=>p.assertNoIdpContainerEnvOverrides({Config:{}}),
+  /HOLD_NATIVE_IDP_CONTAINER_ENV_UNOBSERVED/);
+ assert.throws(()=>p.assertNoIdpContainerEnvOverrides(target(["malformed"])),
+  /HOLD_NATIVE_IDP_CONTAINER_ENV_UNOBSERVED/);
+});

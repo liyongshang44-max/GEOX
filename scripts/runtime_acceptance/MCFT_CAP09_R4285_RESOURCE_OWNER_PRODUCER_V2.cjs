@@ -722,13 +722,62 @@ function nativeCommand(record,tool,args,label){
 const REACH_IDPS=Object.freeze(["identity_ldap","identity_openid","identity_plugin","policy_plugin"]);
 function parseDisabledIdentity(raw,name){
  assert(REACH_IDPS.includes(name),"HOLD_NATIVE_IDP_NAME");
+ assert(Buffer.isBuffer(raw),"HOLD_NATIVE_IDP_RAW_REQUIRED");
  const s=raw.toString("utf8");
- assert(s.length>0&&s.length<32768&&s.includes(name)&&
-  /\b(?:enable|enabled|status)\s*=\s*(?:off|false|0)\b/i.test(s),
+ assert(s.length>0&&s.length<32768,"HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ // mc admin config get yields a single subsystem-prefixed config line.
+ // Parse EXACT key=value boundaries so empty URL fields cannot consume the
+ // next key, and never print values (they may include secrets).
+ const header=new RegExp("^\\s*"+name+"(?=\\s|$)").exec(s);
+ assert(header,"HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ const rest=s.slice(header[0].length);
+ const pattern=/(?<!\S)([A-Za-z_][A-Za-z0-9_]*)=(?:"([^"]*)"|'([^']*)'|(\S*))/g;
+ const values=new Map();
+ let cursor=0,m,count=0;
+ while((m=pattern.exec(rest))!==null){
+  assert(/^\s*$/.test(rest.slice(cursor,m.index))&&
+   !values.has(m[1])&&++count<=80,
+   "HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+  values.set(m[1],m[2]??m[3]??m[4]);
+  cursor=pattern.lastIndex;
+ }
+ assert(count>0&&/^\s*$/.test(rest.slice(cursor)),
   "HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
- assert(!/\b(?:config_url|server_addr|url|endpoint)\s*=\s*["']?(?:https?:\/\/|ldaps?:\/\/|[\w.-]+:\d+)/i.test(s),
-  "HOLD_NATIVE_IDP_ACTIVE_ENDPOINT");
+ const required={identity_ldap:"server_addr",identity_openid:"config_url",
+  identity_plugin:"url",policy_plugin:"url"}[name];
+ const flags=["enable","enabled","status"].filter(k=>values.has(k));
+ assert(flags.length<=1,"HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ const state=flags.length?values.get(flags[0]).toLowerCase():null;
+ assert(state===null||state===""||
+  ["off","false","0"].includes(state),
+  "HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ // Explicit off is sufficient without an endpoint key; empty/absent enable
+ // instead requires that the native provider's mandatory endpoint key exists.
+ if(state===null||state==="")
+  assert(values.has(required),"HOLD_NATIVE_IDP_ENABLED_OR_UNRESOLVED");
+ for(const k of ["server_addr","config_url","url","endpoint","srv_record_name"]){
+  if(values.has(k))
+   assert(values.get(k)==="","HOLD_NATIVE_IDP_ACTIVE_ENDPOINT");
+ }
+ // Alternative provider URL/address keys also cannot smuggle a connection.
+ for(const [k,v] of values){
+  if(/(?:^|_)(?:url|uri|addr|endpoint)$/.test(k))
+   assert(v==="","HOLD_NATIVE_IDP_ACTIVE_ENDPOINT");
+ }
  return {name,disabled:true};
+}
+function assertNoIdpContainerEnvOverrides(target){
+ const env=target?.Config?.Env;
+ assert(Array.isArray(env),"HOLD_NATIVE_IDP_CONTAINER_ENV_UNOBSERVED");
+ const blocked=["MINIO_IDENTITY_LDAP","MINIO_IDENTITY_OPENID",
+  "MINIO_IDENTITY_PLUGIN","MINIO_POLICY_PLUGIN"];
+ for(const entry of env){
+  assert(typeof entry==="string"&&entry.includes("="),
+   "HOLD_NATIVE_IDP_CONTAINER_ENV_UNOBSERVED");
+  const k=entry.slice(0,entry.indexOf("=")).toUpperCase();
+  assert(!blocked.some(prefix=>k===prefix||k.startsWith(prefix+"_")),
+   "HOLD_NATIVE_IDP_ENV_OVERRIDE");
+ }
 }
 function normalizeMinioList(raw,kind){
  const a=nativeJsonLines(raw,"HOLD_NATIVE_"+kind+"_RAW_UNPARSEABLE")
@@ -923,6 +972,9 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
     (v.includes(BUCKET)||v.includes("127.0.0.1:55492")||
      v.includes("127.0.0.1:59292"))));
  assert.equal(references.length,0,"HOLD_NATIVE_PRODUCTION_BINDINGS_FOUND");
+ // Bind native empty/disabled config to the target container environment.
+ // No four-provider MINIO_* environment overrides may bypass the config read.
+ assertNoIdpContainerEnvOverrides(target);
  // Remaining external principals, process listeners, host apps and IAM
  // reachability cannot be inferred from docker inspection plus 5 mc calls.
  // Fail closed until an exact independently observable complete source is
@@ -1260,7 +1312,7 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
  FORMAL_SURFACES,CTO_DECISION_DOMAIN_V1,NATIVE_CONTROL_SCHEMA,NATIVE_INVENTORY_SCHEMA,
- encodeNativeCapsule,sourceJson,nativeStableProjection,nativeBucketAnonymousMatches,parseDisabledIdentity,assessNativeReachability,
+ encodeNativeCapsule,sourceJson,nativeStableProjection,nativeBucketAnonymousMatches,parseDisabledIdentity,assertNoIdpContainerEnvOverrides,assessNativeReachability,
  verifyNativeSourceRaw,captureCurrentNativeSourceOnly,sourceOnly,
  verifyFormalEvidence,composeFormalReadback,
  requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};
