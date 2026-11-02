@@ -595,9 +595,19 @@ function loadFormalSourceSpec(file,sourceRoot){
   inventory_bytes:boundedFile(spec.inventory_evidence_file),
   parent_principal_sha256:spec.parent_principal_sha256};
 }
+function assertFormalOutputSeparate(i,output){
+ assert(typeof output==="string"&&path.isAbsolute(output),
+  "OWNER_FORMAL_OUTPUT_ABSOLUTE");
+ for(const root of [i.source_root,i.release_root]){
+  const relative=path.relative(root,output);
+  assert(relative===".."||relative.startsWith(".."+path.sep),
+   "OWNER_FORMAL_OUTPUT_INSIDE_SOURCE_OR_RELEASE");
+ }
+ return true;
+}
 async function produceFormalRaw(i,sources,output,env=process.env){
  host();validateInput(i);requireLocalProtectedMain(i);
- assert(typeof output==="string"&&path.isAbsolute(output),"OWNER_FORMAL_OUTPUT_ABSOLUTE");
+ assertFormalOutputSeparate(i,output);
  assert(!fs.existsSync(output),"OWNER_FORMAL_OUTPUT_EXISTS");
  noLinks(path.dirname(output));
  // If no independently signed authenticated native source can be verified,
@@ -707,4 +717,4 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
  FORMAL_SURFACES,verifyFormalEvidence,composeFormalReadback,
- requireLocalProtectedMain,loadFormalSourceSpec,produceFormalRaw,parseFormal};
+ requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};

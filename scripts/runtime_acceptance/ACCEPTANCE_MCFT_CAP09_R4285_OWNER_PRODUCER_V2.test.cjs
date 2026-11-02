@@ -350,5 +350,9 @@ test("formal CLI cannot use an unmerged or forged protected-main subject",()=>{
   assert.throws(()=>p.parseFormal(["--produce-raw","--input","x"]),
    /OWNER_FORMAL_CLI_EXACT/);
   assert.throws(()=>p.loadFormalSourceSpec(path.join(root,"not-there.json"),root),/ENOENT/);
+  assert.throws(()=>p.assertFormalOutputSeparate(i,path.join(root,"raw.json")),
+   /OWNER_FORMAL_OUTPUT_INSIDE_SOURCE_OR_RELEASE/);
+  assert.equal(p.assertFormalOutputSeparate(i,path.join(os.tmpdir(),
+   "external-r4285-raw.json")),true);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
