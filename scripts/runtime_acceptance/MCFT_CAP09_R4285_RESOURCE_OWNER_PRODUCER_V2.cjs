@@ -20,6 +20,21 @@ const BUCKET="mcft-cap09-requal-"+RUN;
 const FENCED=pgContract.FENCED_WRITER;
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
 const round=n=>Math.round(n*1000)/1000;
+const PG_SAFELIST=new Set(["28P01","28000","3D000","42501","42P01","42883",
+ "42703","42601","57P03","53300","08001","08006","ECONNREFUSED",
+ "ETIMEDOUT","ENOTFOUND","EHOSTUNREACH","ECONNRESET","EAI_AGAIN"]);
+function pgFailureCode(error,side,phase){
+ // Never serialize pg Error.message, query text, connectionString, cause,
+ // stack, parameters or credentials. Only audited constant error categories.
+ assert(["positive","negative"].includes(side),"OWNER_PRODUCER_DIAGNOSTIC_SIDE");
+ assert(/^[A-Z0-9_]+$/.test(phase),"OWNER_PRODUCER_DIAGNOSTIC_PHASE");
+ if(error?.code==="ERR_ASSERTION"&&
+  /^OWNER_PRODUCER_PG_[A-Z0-9_]+$/.test(error.message||""))
+  return error.message;
+ const code=typeof error?.code==="string"&&PG_SAFELIST.has(error.code)?
+  error.code:"UNKNOWN";
+ return "OWNER_PRODUCER_PG_"+side.toUpperCase()+"_"+phase+"_"+code;
+}
 const keys=["source_root","release_root","subject_sha","database_port","bucket_endpoint"];
 function exact(o,fields,label){
  assert(o&&typeof o==="object"&&!Array.isArray(o),label);
@@ -60,7 +75,7 @@ function parseUrl(raw,i,side){
   +url.port===i.database_port&&!url.search&&!url.hash&&url.password&&
   decodeURIComponent(url.pathname.slice(1))===db&&decodeURIComponent(url.username)===role,
   "OWNER_PRODUCER_PG_SCOPE_MISMATCH:"+side);
- return {db,role,raw};
+ return {db,role,raw,side};
 }
 function pgTarget(i,env){
  const positive=parseUrl(env.DATABASE_URL,i,"positive");
@@ -108,16 +123,22 @@ function probeCatalogFacts(data){
 async function pgOne(pg,binding){
  const pool=new pg.Pool({connectionString:binding.raw,max:1,connectionTimeoutMillis:5000,
   query_timeout:5000,statement_timeout:5000});
- let client,started=false;
+ let client,started=false,phase="CONNECT";
  try{
   client=await pool.connect();
+  phase="BEGIN_READ_ONLY";
   await client.query("BEGIN TRANSACTION READ ONLY");started=true;
+  phase="IDENTITY";
   const id=(await client.query("SELECT session_user::text AS session_user,current_user::text AS current_user,current_database()::text AS database")).rows[0];
+  phase="DATABASE_CATALOG";
   const own=(await client.query("SELECT d.oid::int AS oid,r.rolname::text AS owner FROM pg_database d JOIN pg_roles r ON r.oid=d.datdba WHERE d.datname=current_database() AND d.datallowconn=true AND d.datistemplate=false")).rows;
   assert.equal(own.length,1,"OWNER_PRODUCER_PG_DATABASE_CATALOG_MISMATCH");
+  phase="ROLE_CATALOG";
   const roles=(await client.query("SELECT rolsuper,rolcreatedb,rolcreaterole,rolreplication,rolbypassrls FROM pg_roles WHERE rolname=session_user")).rows;
   assert.equal(roles.length,1,"OWNER_PRODUCER_PG_ROLE_NOT_IN_CATALOG");
+  phase="TABLE_CATALOG";
   const tables=(await client.query("SELECT c.relname::text AS name FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') ORDER BY c.relname")).rows.map(x=>x.name);
+  phase="FENCED_ACL";
   const p=(await client.query(
    "SELECT to_regprocedure($1::text) IS NOT NULL AS fenced_exists,"+
    "has_table_privilege(current_user,'public.facts','INSERT') AS direct_insert",[FENCED])).rows[0];
@@ -130,15 +151,19 @@ async function pgOne(pg,binding){
    "FROM (VALUES ('twin_external_formal_forcing_base_cursor_v1'),"+
    "('twin_external_formal_forcing_base_target_v1'),"+
    "('twin_external_formal_forcing_controller_lease_v1')) AS t(name)")).rows[0].allowed;
+  phase="TABLE_COUNTS";
   const counts=[];
   for(const name of pgContract.REQUIRED_PUBLIC_TABLES){
    // Names are frozen constants, never caller-supplied SQL.
    const r=await client.query('SELECT count(*)::text AS n FROM public."'+name+'"');
    counts.push(r.rows[0]?.n);
   }
+  phase="FACT_CONTRACT";
   return probeCatalogFacts({id,tables,acl:{...p,fenced_execute:fencedExecute,controller_acl:controller},
    counts,databaseOwner:own[0].owner,databaseOid:own[0].oid,
    roleCaps:roles[0],expectedRole:binding.role,expectedDb:binding.db});
+ }catch(error){
+  throw Error(pgFailureCode(error,binding.side,phase));
  }finally{
   if(client){if(started){try{await client.query("ROLLBACK");}catch{}}
    client.release();}
@@ -222,7 +247,8 @@ async function timed(label,fn){
   const result=await fn();return {component:label,status:"PASS_SCOPED_READONLY",
    elapsed_ms:round(performance.now()-now),result};
  }catch(e){
-  const reason=e?.code==="ERR_ASSERTION"&&/^OWNER_PRODUCER_/.test(e.message||"")?
+  const reason=typeof e?.message==="string"&&
+   /^OWNER_PRODUCER_[A-Z0-9_:]+$/.test(e.message)?
    e.message:"OWNER_PRODUCER_COMPONENT_UNAVAILABLE";
   return {component:label,status:"HOLD",elapsed_ms:round(performance.now()-now),reason_code:reason};
  }
@@ -263,6 +289,8 @@ function parse(argv){
 if(require.main===module){
  Promise.resolve().then(()=>diagnostic(parse(process.argv.slice(2)))).then(x=>{
   process.stdout.write(JSON.stringify(x,null,2)+"\n");
+  // A completed diagnostic is not a successfully qualified Owner.
+  if(x.status!=="PASS")process.exitCode=2;
  }).catch(e=>{
   const reason=e?.code==="ERR_ASSERTION"&&/^OWNER_PRODUCER_/.test(e.message||"")?
    e.message:"OWNER_PRODUCER_DIAGNOSTIC_NOT_AVAILABLE";
@@ -274,5 +302,5 @@ if(require.main===module){
  });
 }
 module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
- parseUrl,pgTarget,s3Target,probeCatalogFacts,assertS3Private,unresolved,
+ parseUrl,pgTarget,s3Target,pgFailureCode,probeCatalogFacts,assertS3Private,unresolved,
  probePg,probeS3,diagnostic,parse};
