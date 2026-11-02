@@ -1,3 +1,17 @@
+# 2026-11-02 — #3757 原生 CONTROL/INVENTORY 来源真实性门禁纠错（最新代码前沿；无新签署）
+
+> CTO 精确审查权威：[#3757 评论 6573925778](https://github.com/liyongshang44-max/GEOX/pull/3757#issuecomment-6573925778)。本段仅原第二份 handoff 顶部增补；旧全文作为完全不变后缀，第一份交接及 main 不变。**旧章节的 `5361d5cf...` 为前驱，不是目前最新审查 HEAD。**
+
+- 源代码原 PR #3757 在 `5361d5cf3814a65484ec0e9cb5395594e1442ff7` 的 **39 SUCCESS/3 SKIPPED** 基线上继续，只改原有 `MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs` 与对应既有 `ACCEPTANCE_MCFT_CAP09_R4285_OWNER_PRODUCER_V2.test.cjs`；本次接线修复最新 HEAD `ccbf560992e7eaaeeb57ea5e7737c803356cda02`（2026-11-02，最新新 HEAD CI/QCP72 结果尚待精确独立回读）。
+- **问题是签名≠物理事实。** 之前 `verifyFormalEvidence` 接受任意两份不同非空字符串经合法 operator 签名/摘要匹配，即可把 `covered_surfaces`、`owner_exclusive=true`、`production_bindings_present=false` 变成可信 WeakSet 身份和 V1 Readback PASS。CTO 原单 `ACCOUNTABLE_SINGLE_OPERATOR` 裁决身份保留，不增加第二签署人。
+- 新增 `sourceJson / verifyNativeSourceRaw` 门禁：必须解出 **两份类型化原生来源 RAW**（控制面、Docker/应用 Inventory），精确绑定 Run/Host/Subject/观察时间/固定只读命令，针对本机已装的 `mc` / `docker` 使用无 shell 原生只读回读，核对稳定身份和资源政策；对 MinIO deployment/account/exact 7-pair policy/bucket/no-anonymous 及 Docker 完整容器身份、volume 归属、有限主机绑定进行结构判断。原始 CLI 可变 uptime 不作不可靠的全文等同。**不再从操作员签署的 JSON 空数组推导外部生产引用不存在**。
+- 原单元测试已改成**决定性负例**：任意控制文本与任意 Inventory 文本，即使与合法 operator 的签名和 SHA 完全一致，也在 `HOLD_NATIVE_CONTROL_RAW_JSON_NOT_NATIVE_CAPSULE` 被拒绝；模拟仅一份结构化伪 RAW 也被拒绝；不能获得 WeakSet 能力或物理 Owner PASS。对真实 Windows 未采集的新数据不得冒称原生 PASS。
+- 已添加仅源验证入口 `--verify-source-only --input <abs> --control-raw <abs> --inventory-raw <abs>`，不做 PG/S3 业务探测、不签 Owner、不消费 Permit、不跑六阶段；真实本机证据仍须由操作员在有授权的 Windows 运行。当前代码在尚未可靠证明**宿主机应用与外部可达主体**时保留明确 `HOLD_NATIVE_EXTERNAL_PRINCIPALS_AND_HOST_APPLICATION_REACHABILITY_UNVERIFIED`，不是永久物理 PASS 声明。
+- 已接受的 Windows 5/5 包装、Host4/Producer4 S3 scoped 8/8、PG bounded、Parent/Policy、Docker 78 容器和既有 IAM/IdP 静态范围均不再重做；本次源码变动不触碰历史 Owner V1、Host、Permit、SDK、pnpm-lock、main。当前 `MERGE=HOLD / FORMAL_OWNER=NOT_ISSUED / PERMIT=HOLD / EXECUTE=FORBIDDEN / ORIGINAL_SIX_STAGES=0/6`。
+- **下一唯一行动**：回读 `ccbf5609...` 的实际 main CI/QCP72/contract negatives；只在真实匹配既有 Windows native RAW 原始材料时执行一次 source-only。若原始材料与类型化命令容器不匹配，先报告**第一个具体格式/来源阻断**，不重建基础设施或升级旧证据；之后 CTO 再裁决源码是否具备合并审查资格。
+
+---
+
 # 2026-11-02 — CTO 取消额外独立签发：责任裁决回归既有 ACCOUNTABLE_SINGLE_OPERATOR
 
 > **本段替代下文旧记录对“独立审计者额外签发”作为当前必需前置的要求，不删除旧历史正文。** 用户 CTO 明确裁决“**不需要独立签发，我来裁决**”。这仅改变责任裁决主体及证据接线，不授予 Permit/Execute，也不抹去 Source 真实性缺口。
