@@ -328,6 +328,7 @@ function checkNativeAdoption(input,{now=Date.now()}={}){
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_ADMISSION_V2.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_ADMISSION_V2.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_MATERIAL_FULL_PARALLEL_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_V2.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_CAPABILITY_V2.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_V2.cjs"
