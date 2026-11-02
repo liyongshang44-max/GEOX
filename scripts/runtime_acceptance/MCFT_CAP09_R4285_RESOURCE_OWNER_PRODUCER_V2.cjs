@@ -604,6 +604,19 @@ function nativeBucketStatMatches(x){
  const values=[x.key,x.name].filter(v=>typeof v==="string");
  return values.length>0&&values.every(v=>v===BUCKET||v===BUCKET+"/");
 }
+// Native Windows mc --json anonymous get reports {operation:"get",
+// status:"success",bucket:"alias/bucket",permission:"private"}.
+// Bind the exact read operation, exact alias/bucket and a private scope.
+// Public/download/upload/readwrite, missing or unexpected fields fail closed.
+function nativeBucketAnonymousMatches(x,alias){
+ if(!x||typeof x!=="object"||Array.isArray(x)||
+  typeof alias!=="string"||!(/^[A-Za-z0-9_.-]{2,128}$/.test(alias)))return false;
+ const keys=["bucket","operation","permission","status"];
+ if(Object.keys(x).sort().join("\u0000")!==keys.slice().sort().join("\u0000"))
+  return false;
+ return x.status==="success"&&x.operation==="get"&&
+  x.bucket===alias+"/"+BUCKET&&x.permission==="private";
+}
 function nativeStableProjection(label,b){
  // Docker inspect returns a multiline JSON array; mc and docker ps use JSONL.
  // Only reconcile stable identities, not uptime/metrics.
@@ -620,8 +633,12 @@ function nativeStableProjection(label,b){
    "HOLD_NATIVE_BUCKET_NOT_NATIVE");
   return JSON.stringify({bucket_verified:true,bucket:BUCKET});
  }
- if(label==="BUCKET_ANONYMOUS")
-  return JSON.stringify({no_anonymous_access:x.some(o=>deepHas(o,"none"))});
+ if(label==="BUCKET_ANONYMOUS"){
+  const alias=process.env.MCFT_CAP09_R4285_EXISTING_MC_ALIAS;
+  assert(x.length===1&&nativeBucketAnonymousMatches(x[0],alias),
+   "HOLD_NATIVE_BUCKET_ANONYMOUS_SCOPE_NOT_PROVEN");
+  return JSON.stringify({no_anonymous_access:true,bucket:alias+"/"+BUCKET});
+ }
  if(label==="SERVICE_ACCOUNT_INFO"){
   const acct=process.env.MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID;
   return JSON.stringify({account_verified:x.some(o=>deepHas(o,acct))});
@@ -852,7 +869,8 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
   Buffer.from(cc.POLICY_INFO.stdout_base64,"base64"))==="string",
   "HOLD_NATIVE_MINIO_POLICY_SCOPE_NOT_RECONCILED");
  // The source must prove no public bucket exposure, not merely say private.
- assert(m.BUCKET_ANONYMOUS.some(x=>deepHas(x,"none")),
+ assert(m.BUCKET_ANONYMOUS.length===1&&
+  nativeBucketAnonymousMatches(m.BUCKET_ANONYMOUS[0],alias),
   "HOLD_NATIVE_BUCKET_ANONYMOUS_SCOPE_NOT_PROVEN");
  const psArgs=["ps","--all","--no-trunc","--format","{{json .}}"];
  const containersText=nativeCommand(ic.CONTAINERS_ALL,"docker",psArgs,"CONTAINERS_ALL");
@@ -1229,7 +1247,7 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
  FORMAL_SURFACES,CTO_DECISION_DOMAIN_V1,NATIVE_CONTROL_SCHEMA,NATIVE_INVENTORY_SCHEMA,
- encodeNativeCapsule,sourceJson,nativeStableProjection,parseDisabledIdentity,assessNativeReachability,
+ encodeNativeCapsule,sourceJson,nativeStableProjection,nativeBucketAnonymousMatches,parseDisabledIdentity,assessNativeReachability,
  verifyNativeSourceRaw,captureCurrentNativeSourceOnly,sourceOnly,
  verifyFormalEvidence,composeFormalReadback,
  requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};

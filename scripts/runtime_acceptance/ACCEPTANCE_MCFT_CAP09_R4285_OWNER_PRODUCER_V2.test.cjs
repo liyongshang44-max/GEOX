@@ -548,3 +548,47 @@ test("native mc stat binds bucket folder identity (with slash) and never accepts
    /HOLD_NATIVE_BUCKET_NOT_NATIVE/);
  }
 });
+
+test("real Windows native anonymous get reports private, not none; bind exact operation and bucket",()=>{
+ const alias="r4285",bucket=alias+"/"+p.BUCKET;
+ const live={operation:"get",status:"success",bucket,permission:"private"};
+ assert.equal(p.nativeBucketAnonymousMatches(live,alias),true);
+ const envName="MCFT_CAP09_R4285_EXISTING_MC_ALIAS";
+ const previous=process.env[envName];
+ const json=x=>Buffer.from(JSON.stringify(x)+"\n");
+ try{
+  process.env[envName]=alias;
+  assert.equal(p.nativeStableProjection("BUCKET_ANONYMOUS",json(live)),
+   JSON.stringify({no_anonymous_access:true,bucket}));
+  const failures=[
+   {...live,permission:"none"}, // Unsupported native value is NOT an alias for private.
+   {...live,permission:"public"},
+   {...live,permission:"download"},
+   {...live,permission:"upload"},
+   {...live,permission:"readwrite"},
+   {...live,permission:"Private"},
+   {...live,status:"error"},
+   {...live,operation:"set"},
+   {...live,operation:"ls"},
+   {...live,bucket:p.BUCKET},
+   {...live,bucket:alias+"/wrong-bucket"},
+   {...live,bucket:alias+"/"+p.BUCKET+"/object"},
+   {...live,permission:undefined},
+   {...live,extra:"ignored"},
+   {status:"success",permission:"private",bucket},
+   {operation:"get",status:"success",permission:"private"}
+  ];
+  for(const bad of failures){
+   assert.equal(p.nativeBucketAnonymousMatches(bad,alias),false);
+   assert.throws(()=>p.nativeStableProjection("BUCKET_ANONYMOUS",json(bad)),
+    /HOLD_NATIVE_BUCKET_ANONYMOUS_SCOPE_NOT_PROVEN/);
+  }
+  assert.throws(()=>p.nativeStableProjection("BUCKET_ANONYMOUS",
+   Buffer.concat([json(live),json(live)])),
+   /HOLD_NATIVE_BUCKET_ANONYMOUS_SCOPE_NOT_PROVEN/);
+  assert.equal(p.nativeBucketAnonymousMatches(live,"different-alias"),false);
+ }finally{
+  if(previous===undefined)delete process.env[envName];
+  else process.env[envName]=previous;
+ }
+});
