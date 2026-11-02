@@ -328,22 +328,27 @@ function unresolved(pg,s3){
  blockers.push("PRODUCTION_BINDINGS_ABSENT_NOT_INDEPENDENTLY_PROVEN");
  return blockers;
 }
-async function diagnostic(i,env=process.env){
+async function diagnostic(i,env=process.env,{s3Only=false}={}){
  host();validateInput(i);noLinks(__filename);
  const start=Date.now(),source_sha=sha(fs.readFileSync(__filename));
- const pg=await timed("PG_DUAL_DATABASE_READONLY",()=>probePg(i,env));
+ const pg=s3Only?
+  {component:"PG_DUAL_DATABASE_READONLY",status:"NOT_REPROBED_S3_ONLY",
+   elapsed_ms:0,prior_pg_evidence_not_promoted:true}:
+  await timed("PG_DUAL_DATABASE_READONLY",()=>probePg(i,env));
  const s3=await timed("S3_BUCKET_PRIVATE_VERSIONS_MULTIPART_READONLY",()=>probeS3(i,env));
  const blockers=unresolved(pg,s3);
  return {schema_version:"MCFT_CAP09_R4285_OWNER_PRODUCER_NONAUTH_DIAGNOSTIC_V1",
   status:"HOLD_NONAUTH_DIAGNOSTIC_NOT_SIGNED_OWNER",run_id:RUN,host_id:HOST,
   subject_sha:i.subject_sha,probe_type:PROBE,probe_source_sha256:source_sha,
   observed_at:new Date(start).toISOString(),completed_at:new Date().toISOString(),
-  pg,s3,blockers,source_qualified:false,owner_exclusive_verified:false,
+  pg,s3,blockers,diagnostic_mode:s3Only?"S3_ONLY":"PG_AND_S3",
+  source_qualified:false,owner_exclusive_verified:false,
   formal_resource_readback_written:false,permit_issued:false,permit_consumed:false,
   execution_authorized:false,production_authorized:false,original_six_stages_executed:0};
 }
 function parse(argv){
- assert(argv.length===3&&argv[0]==="--diagnostic-only"&&argv[1]==="--input"&&
+ assert(argv.length===3&&["--diagnostic-only","--s3-only-diagnostic"].includes(argv[0])&&
+  argv[1]==="--input"&&
   path.isAbsolute(argv[2]),"OWNER_PRODUCER_ONLY_DIAGNOSTIC_ALLOWED");
  noLinks(argv[2]);const st=fs.statSync(argv[2]);
  assert(st.isFile()&&st.size>0&&st.size<16384,"OWNER_PRODUCER_INPUT_FILE_INVALID");
@@ -351,7 +356,9 @@ function parse(argv){
  return validateInput(input);
 }
 if(require.main===module){
- Promise.resolve().then(()=>diagnostic(parse(process.argv.slice(2)))).then(x=>{
+ Promise.resolve().then(()=>diagnostic(
+  parse(process.argv.slice(2)),process.env,
+  {s3Only:process.argv[2]==="--s3-only-diagnostic"})).then(x=>{
   process.stdout.write(JSON.stringify(x,null,2)+"\n");
   // A completed diagnostic is not a successfully qualified Owner.
   if(x.status!=="PASS")process.exitCode=2;
