@@ -337,4 +337,4 @@ if(require.main===module){
 }
 module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  parseUrl,pgTarget,s3Target,pgFailureCode,probeCatalogFacts,assertS3Private,unresolved,
- probePg,probeS3,diagnostic,parse};
+ probePg,probeS3,timed,diagnostic,parse};
