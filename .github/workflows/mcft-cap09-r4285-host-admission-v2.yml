@@ -22,6 +22,8 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_NATIVE_SIGNATURE.test.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP09_R4285_MATERIAL_FULL_PARALLEL_V2.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PARALLEL_MATERIAL_V2.test.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_OWNER_PRODUCER_V2.test.cjs'
       - '.github/workflows/mcft-cap09-r4285-host-admission-v2.yml'
 jobs:
   contract-negatives:
@@ -46,6 +48,7 @@ jobs:
           node --check scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_V2.cjs
           node --check scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_TIMING_NONAUTH_V2.cjs
           node --check scripts/runtime_acceptance/MCFT_CAP09_R4285_MATERIAL_FULL_PARALLEL_V2.cjs
-          node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_ADMISSION_V2.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_ADMISSION_V2.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_PERMIT_WINDOW.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_WINDOWS_EXECUTION_WIRING.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_ACTUAL_CHILD_CONSUME.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_NATIVE_SIGNATURE.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PARALLEL_MATERIAL_V2.test.cjs
+          node --check scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs
+          node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_ADMISSION_V2.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_ADMISSION_V2.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_PERMIT_WINDOW.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_WINDOWS_EXECUTION_WIRING.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_ACTUAL_CHILD_CONSUME.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_NATIVE_SIGNATURE.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PARALLEL_MATERIAL_V2.test.cjs scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_OWNER_PRODUCER_V2.test.cjs
       - name: No permit or physical action on CI
         run: echo 'NON_AUTHORIZED_SYNTHETIC_CONTRACT_TESTS_ONLY'
