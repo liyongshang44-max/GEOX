@@ -471,6 +471,8 @@ async function diagnostic(i,env=process.env,{s3Only=false}={}){
 // Formal source-bound raw preparation. Existing V2 responsibility signature
 // authenticates exact material bytes, but DOES NOT certify their native origin.
 // Never convert scope-limited legacy findings into unqualified Owner PASS.
+// Unexported capability. Source labels and signatures alone cannot mint this.
+const FORMAL_NATIVE_CAPABILITIES=new WeakSet();
 const FORMAL_SURFACES=Object.freeze([
  "MINIO_CURRENT_IAM_AND_BUCKET","WINDOWS_CURRENT_DOCKER_AND_STORAGE",
  "NETWORK_INGRESS","APPLICATION_PRODUCTION_REFERENCES",
@@ -523,7 +525,7 @@ function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
  throw Error("HOLD_NATIVE_SOURCE_RECEIPT_AUTHENTICATOR_NOT_CONNECTED");
 }
 function composeFormalReadback(i,source,pg,s3,{observedAt,completedAt,sourceSha}){
- assert(source&&source.kind==="NATIVE_AUTHENTICATED_SOURCE"&&source.verifier==="R4285_NATIVE",
+ assert(source&&typeof source==="object"&&FORMAL_NATIVE_CAPABILITIES.has(source),
   "OWNER_FORMAL_VERIFIED_NATIVE_SOURCE_REQUIRED");
  assert.equal(pg?.status,"PASS_SCOPED_READONLY","OWNER_FORMAL_FRESH_PG_REQUIRED");
  assert.equal(s3?.status,"PASS_SCOPED_DATA_PLANE_ONLY","OWNER_FORMAL_FRESH_S3_REQUIRED");

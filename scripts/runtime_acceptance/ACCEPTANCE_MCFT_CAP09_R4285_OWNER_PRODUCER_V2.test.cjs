@@ -261,34 +261,20 @@ test("formal source rejects self-declared control/inventory receipts before any 
    sourceSha:"a".repeat(64)}),/OWNER_FORMAL_VERIFIED_NATIVE_SOURCE_REQUIRED/);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
-test("source-bound assembly preserves frozen V1 FACT_BINDINGS and rejects stale or partial probes",()=>{
+test("forged source labels never qualify as independent native capability",()=>{
  const {root,i}=context();
  try{
   const source={kind:"NATIVE_AUTHENTICATED_SOURCE",verifier:"R4285_NATIVE",
-   bucket_private:true,production_bindings_present:false,owner_exclusive:true,
-   s3_owner_id:"r4285owner:"+"a".repeat(40),
-   control_sha256:"a".repeat(64),inventory_sha256:"b".repeat(64),
-   source_receipt_sha256:"c".repeat(64)};
-  const pg={status:"PASS_SCOPED_READONLY",database_host:"127.0.0.1",
-   database_port:i.database_port,positive_database:P,negative_database:N,
-   audit_user:"cap09_"+R+"_p_evidence",positive_rows_zero:true,
-   negative_rows_zero:true,positive_database_exists:true,negative_database_exists:true,
-   positive_login_restricted:true,negative_login_restricted:true,
-   fenced_writer_execute_allowed:true,direct_fact_insert_forbidden:true,
-   pg_owner_id:"pgdb:456:789:postgres"};
+   bucket_private:true,owner_exclusive:true,production_bindings_present:false,
+   s3_owner_id:"r4285owner:"+"a".repeat(40)};
+  const pg={status:"PASS_SCOPED_READONLY"};
   const s3={status:"PASS_SCOPED_DATA_PLANE_ONLY",bucket:p.BUCKET,
    bucket_endpoint:i.bucket_endpoint,bucket_exists:true,
    bucket_empty_including_versions_multipart:true,probe_operations:4};
-  const at="2026-11-02T07:00:00.000Z";
-  const opts={observedAt:at,completedAt:"2026-11-02T07:00:01.000Z",
-   sourceSha:"a".repeat(64)};
-  const raw=p.composeFormalReadback(i,source,pg,s3,opts);
-  assert.equal(raw.status,"PASS");
-  for(const name of require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs").FACT_BINDINGS)
-   assert(Object.hasOwn(raw,name),"V1 fact missing: "+name);
-  assert.throws(()=>p.composeFormalReadback(i,source,pg,{...s3,probe_operations:3},opts),
-   /OWNER_FORMAL_S3_NOT_FOUR_NATIVE_READS/);
   assert.throws(()=>p.composeFormalReadback(i,source,pg,s3,{
-   ...opts,completedAt:"2026-11-02T07:02:01.000Z"}),/OWNER_FORMAL_READBACK_STALE/);
+   observedAt:new Date().toISOString(),completedAt:new Date().toISOString(),
+   sourceSha:"a".repeat(64)}),/OWNER_FORMAL_VERIFIED_NATIVE_SOURCE_REQUIRED/);
+  assert.throws(()=>p.parse(["--diagnostic-only","--input",
+   path.join(root,"missing-input.json")]),/ENOENT/);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
