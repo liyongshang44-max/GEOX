@@ -163,3 +163,84 @@ test("S3-only mode is explicit NONAUTH and formal readback route stays forbidden
   }
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+
+
+test("V2 successor policy fixes precisely seven bucket/object Action/Resource pairs",()=>{
+ const policy=p.replacementPolicyV2(),checked=p.verifyReplacementPolicyV2(policy);
+ assert.equal(checked.pairs,7);
+ assert.match(checked.sha256,/^[a-f0-9]{64}$/);
+ assert.equal(p.replacementPolicyBytesV2().at(-1),10);
+ assert.deepEqual(policy.Statement.map(x=>x.Action.length*x.Resource.length),[3,4]);
+ assert.equal(policy.Statement[0].Resource[0],"arn:aws:s3:::mcft-cap09-requal-4285c3ce342c");
+ for(const action of ["s3:GetBucketAcl","s3:GetBucketPolicy","s3:DeleteObject"])
+  assert(!JSON.stringify(policy).includes(action));
+ assert.throws(()=>p.verifyReplacementPolicyV2({...policy,Statement:[
+  {...policy.Statement[0],Resource:["*"]},policy.Statement[1]
+ ]}),/OWNER_BINDING_POLICY_SEVEN_EXACT_PAIRS_REQUIRED/);
+ assert.throws(()=>p.verifyReplacementPolicyV2({...policy,Statement:[
+  policy.Statement[0],{...policy.Statement[1],Action:["s3:GetObject","s3:PutObject","s3:DeleteObject"]}
+ ]}),/OWNER_BINDING_POLICY_SEVEN_EXACT_PAIRS_REQUIRED/);
+});
+test("V2 responsibility assignment has genuine Ed25519 authority but never physical Owner PASS",()=>{
+ const crypto=require("node:crypto");
+ const hash=b=>crypto.createHash("sha256").update(b).digest("hex");
+ const canonical=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs").canonical;
+ const {publicKey,privateKey}=crypto.generateKeyPairSync("ed25519");
+ const now=Date.parse("2026-11-02T04:30:00.000Z");
+ const bytesA=Buffer.from("fixture-control-readback-NOT-real"),bytesB=Buffer.from("fixture-inventory-NOT-real");
+ const parent=hash(Buffer.from("nonproduction-fixture-parent"));
+ const issuer="operator-fixture-v2",kid="fixture-signing-key";
+ const trust={schema_version:"geox_mcft_cap09_retry_trust_v1",host_id:p.HOST,
+  operator_id:issuer,issuers:[{issuer_id:issuer,key_id:kid,revoked:false,
+  role:"ACCOUNTABLE_SINGLE_OPERATOR",public_key_pem:publicKey.export({format:"pem",type:"spki"}),
+  spki_sha256:hash(publicKey.export({format:"der",type:"spki"})),
+  not_before:"2026-11-02T04:00:00.000Z",not_after:"2026-11-03T04:00:00.000Z"}]};
+ const policy=p.verifyReplacementPolicyV2(p.replacementPolicyV2());
+ const payload={
+  schema_version:"MCFT_CAP09_R4285_OWNER_AUTHORITY_BINDING_V2",issuer_id:issuer,
+  key_id:kid,run_id:p.RUN,subject_sha:"a".repeat(40),host_id:p.HOST,
+  scope:"R4285_ISOLATED_QUALIFICATION_TEST_ONLY",production_authorized:false,
+  authority_comment_id:6569014082,authorized_operator_id:issuer,
+  issued_at:"2026-11-02T04:29:00.000Z",expires_at:"2026-11-02T08:29:00.000Z",
+  minio_deployment_id:"ddbc6bb9-eb52-4b95-8324-b556697f8c0e",
+  volume_name:"mcftcap09-r4285c3ce342c-s3data",
+  bucket_endpoint:"http://127.0.0.1:59292/",
+  bucket:p.BUCKET,bucket_arn:policy.bucket_arn,raw_prefix_arn:policy.raw_prefix_arn,
+  candidate_prefix_arn:policy.candidate_prefix_arn,
+  parent_principal_sha256:parent,policy_sha256:policy.sha256,
+  control_evidence_sha256:hash(bytesA),inventory_evidence_sha256:hash(bytesB)
+ };
+ const sign=q=>({payload:q,signature_base64:crypto.sign(null,
+  Buffer.from(p.OWNER_BINDING_DOMAIN_V2+canonical(q)),privateKey).toString("base64")});
+ const ctx={subject_sha:payload.subject_sha,host_id:p.HOST,
+  parent_principal_sha256:parent,control_evidence_bytes:bytesA,
+  inventory_evidence_bytes:bytesB,now};
+ const valid=p.verifyOwnerAuthorityBindingV2(sign(payload),trust,ctx);
+ assert.equal(valid.status,"R4285_SIGNED_RESPONSIBILITY_AND_RAW_DIGESTS_BOUND_NOT_PHYSICAL_OWNER");
+ assert.match(valid.responsibility_record_id,/^r4285owner:[a-f0-9]{40}$/);
+ assert.equal(valid.owner_exclusive_verified,false);
+ assert.equal(valid.production_bindings_absent_verified,false);
+ assert.equal(valid.formal_readback_issued,false);
+ assert.throws(()=>p.verifyOwnerAuthorityBindingV2(sign(payload),trust,{
+  ...ctx,control_evidence_bytes:Buffer.from("tampered")}),/OWNER_BINDING_INDEPENDENT_RAW_DIGEST/);
+ assert.throws(()=>p.verifyOwnerAuthorityBindingV2(sign(payload),trust,{
+  ...ctx,parent_principal_sha256:"0".repeat(64)}),/OWNER_BINDING_PARENT_SOURCE/);
+ assert.throws(()=>p.verifyOwnerAuthorityBindingV2(sign({...payload,bucket:"other"}),trust,ctx),
+  /OWNER_BINDING_BUCKET/);
+ assert.throws(()=>p.verifyOwnerAuthorityBindingV2(sign({...payload,policy_sha256:"0".repeat(64)}),trust,ctx),
+  /OWNER_BINDING_POLICY_SHA/);
+ assert.throws(()=>p.verifyOwnerAuthorityBindingV2(sign({...payload,authorized_operator_id:"unbound"}),trust,ctx),
+  /OWNER_BINDING_ACCOUNTABLE_OPERATOR/);
+ assert.throws(()=>p.verifyOwnerAuthorityBindingV2(sign(payload),{
+  ...trust,issuers:[{...trust.issuers[0],revoked:true}]},ctx),
+  /OWNER_BINDING_SIGNER_REVOKED/);
+ assert.throws(()=>p.verifyOwnerAuthorityBindingV2(sign(payload),{
+  ...trust,issuers:[{...trust.issuers[0],role:"ADMIN"}]},ctx),
+  /OWNER_BINDING_ROLE/);
+ assert.throws(()=>p.verifyOwnerAuthorityBindingV2(sign(payload),trust,{...ctx,now:Date.parse("2026-11-02T09:00:00Z")}),
+  /OWNER_BINDING_WINDOW/);
+ const altered=sign(payload);altered.payload={...payload,minio_deployment_id:"other"};
+ assert.throws(()=>p.verifyOwnerAuthorityBindingV2(altered,trust,ctx),/OWNER_BINDING_DEPLOYMENT/);
+ const forged=sign(payload);forged.payload={...payload,issued_at:"2026-11-02T04:29:10.000Z"};
+ assert.throws(()=>p.verifyOwnerAuthorityBindingV2(forged,trust,ctx),/OWNER_BINDING_SIGNATURE_INVALID/);
+});
