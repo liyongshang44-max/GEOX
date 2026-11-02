@@ -539,6 +539,66 @@ function nativeRead(tool,args){
   "HOLD_NATIVE_COMMAND_NOT_AUTHENTICATED");
  return child.stdout;
 }
+
+function nativeStableProjection(label,b){
+ // Native command outputs can contain changing uptime/metrics. Compare only
+ // exact identities and control-relevant facts, never volatile formatted text.
+ const x=nativeJsonLines(b,"HOLD_NATIVE_"+label+"_RESPONSE_FORMAT");
+ if(label==="ADMIN_INFO")
+  return JSON.stringify({deployment_verified:x.some(o=>
+   deepHas(o,"ddbc6bb9-eb52-4b95-8324-b556697f8c0e"))});
+ if(label==="BUCKET_STAT")
+  return JSON.stringify({bucket_verified:x.some(o=>deepHas(o,BUCKET))});
+ if(label==="BUCKET_ANONYMOUS")
+  return JSON.stringify({no_anonymous_access:x.some(o=>deepHas(o,"none"))});
+ if(label==="SERVICE_ACCOUNT_INFO"){
+  const acct=process.env.MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID;
+  return JSON.stringify({account_verified:x.some(o=>deepHas(o,acct))});
+ }
+ if(label==="POLICY_INFO"){
+  const found=[];
+  const walk=(v,d=0)=>{
+   if(d>20||!v)return;
+   if(typeof v==="string"){
+    if(v[0]==="{"){try{walk(JSON.parse(v),d+1);}catch{}}
+   }else if(Array.isArray(v))for(const y of v)walk(y,d+1);
+   else if(typeof v==="object"){
+    if(v.Version==="2012-10-17"&&Array.isArray(v.Statement))
+     found.push(lineage.canonical(v));
+    else for(const y of Object.values(v))walk(y,d+1);
+   }
+  };
+  walk(x);
+  assert(found.length===1,"HOLD_NATIVE_POLICY_ONE_DOCUMENT_REQUIRED");
+  verifyReplacementPolicyV2(JSON.parse(found[0]));
+  return found[0];
+ }
+ if(label==="CONTAINERS_ALL"){
+  const ids=x.map(y=>y.ID||y.Id);
+  assert(ids.every(v=>typeof v==="string"&&/^[a-f0-9]{64}$/.test(v)),
+   "HOLD_NATIVE_CONTAINER_ID_FORMAT");
+  return JSON.stringify(ids);
+ }
+ if(label==="CONTAINERS_INSPECT"){
+  const c=x.length===1&&Array.isArray(x[0])?x[0]:x;
+  assert(c.every(y=>typeof y.Id==="string"),
+   "HOLD_NATIVE_INSPECT_ID");
+  return lineage.canonical(c.map(y=>({
+   Id:y.Id,Name:y.Name,
+   Labels:y.Config?.Labels||{},Mounts:y.Mounts||[],
+   Ports:y.NetworkSettings?.Ports||{},
+   PortBindings:y.HostConfig?.PortBindings||{},
+   EnvDigest:sha(Buffer.from(lineage.canonical(y.Config?.Env||[])))
+  })));
+ }
+ if(label==="VOLUME_INSPECT"){
+  const v=x.length===1&&Array.isArray(x[0])?x[0]:x;
+  return lineage.canonical(v.map(y=>({
+   Name:y.Name,Driver:y.Driver,Labels:y.Labels||{},Mountpoint:y.Mountpoint})));
+ }
+ throw Error("HOLD_NATIVE_PROJECTION_UNKNOWN_COMMAND");
+}
+
 function nativeCommand(record,tool,args,label){
  exact(record,["argv","stdout_base64","exit_code"],"HOLD_NATIVE_"+label+"_RECORD");
  assert.deepEqual(record.argv,args,"HOLD_NATIVE_"+label+"_ARGV");
@@ -549,7 +609,8 @@ function nativeCommand(record,tool,args,label){
  assert(raw.length>0&&raw.toString("base64")===record.stdout_base64,
   "HOLD_NATIVE_"+label+"_BASE64");
  const observed=nativeRead(tool,args);
- assert(raw.equals(observed),"HOLD_NATIVE_"+label+"_CURRENT_STDOUT_DRIFT");
+ assert.equal(nativeStableProjection(label,raw),nativeStableProjection(label,observed),
+  "HOLD_NATIVE_"+label+"_CURRENT_IDENTITY_OR_SCOPE_DRIFT");
  return observed;
 }
 function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
