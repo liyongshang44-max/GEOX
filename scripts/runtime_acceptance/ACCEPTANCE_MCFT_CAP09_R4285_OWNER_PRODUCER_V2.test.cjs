@@ -245,17 +245,12 @@ test("V2 responsibility assignment has genuine Ed25519 authority but never physi
  assert.throws(()=>p.verifyOwnerAuthorityBindingV2(forged,trust,ctx),/OWNER_BINDING_SIGNATURE_INVALID/);
  // Synthetic POSITIVE proves exact source/signature wiring only, not a real
  // Windows native source or permission to sign/issue/execute.
- const independent=crypto.generateKeyPairSync("ed25519");
- const govId="mcft_cap09_independent_retry_governance",govKey="fixture-independent";
- const govTrust={...trust,issuers:[...trust.issuers,{
-  issuer_id:govId,key_id:govKey,revoked:false,
-  role:"INDEPENDENT_RETRY_GOVERNANCE",
-  public_key_pem:independent.publicKey.export({format:"pem",type:"spki"}),
-  spki_sha256:hash(independent.publicKey.export({format:"der",type:"spki"})),
-  not_before:"2026-11-02T04:00:00.000Z",not_after:"2026-11-03T04:00:00.000Z"}]};
+ // The existing V2 operator alone adjudicates scope; no independent key.
  const scope={
-  schema_version:"MCFT_CAP09_R4285_NATIVE_AUDIT_VERIFIED_V1",
-  issuer_id:govId,key_id:govKey,run_id:p.RUN,subject_sha:payload.subject_sha,
+  schema_version:"MCFT_CAP09_R4285_CTO_SCOPE_DECISION_V1",
+  authority_comment_id:6571636092,
+  decision_scope:"R4285_TEST_ONLY_DECLARED_REACHABLE_SURFACES",
+  issuer_id:issuer,key_id:kid,run_id:p.RUN,subject_sha:payload.subject_sha,
   host_id:p.HOST,control_sha256:hash(bytesA),inventory_sha256:hash(bytesB),
   covered_surfaces:p.FORMAL_SURFACES,
   unresolved_reachable_sources:[],bucket_private:true,owner_exclusive:true,
@@ -265,13 +260,13 @@ test("V2 responsibility assignment has genuine Ed25519 authority but never physi
   account_expires_at:"2026-11-05T05:52:27.000Z",
   control_capture_method:"MINIO_NATIVE_ADMIN_READONLY",
   inventory_capture_method:"WINDOWS_DOCKER_AND_APPLICATION_READONLY"};
- const signAudit=q=>({payload:q,signature_base64:crypto.sign(null,
-  Buffer.from("GEOX_MCFT_CAP09_R4285_NATIVE_CONTROL_INVENTORY_AUDIT_V1\n"+canonical(q)),
-  independent.privateKey).toString("base64")});
+ const signDecision=q=>({payload:q,signature_base64:crypto.sign(null,
+  Buffer.from(p.CTO_DECISION_DOMAIN_V1+canonical(q)),
+  privateKey).toString("base64")});
  const {root,i}=context();
  try{
-  const inputs={envelope:sign(payload),trust:govTrust,control_bytes:bytesA,
-   inventory_bytes:bytesB,parent_principal_sha256:parent,native_audit:signAudit(scope)};
+  const inputs={envelope:sign(payload),trust,control_bytes:bytesA,
+   inventory_bytes:bytesB,parent_principal_sha256:parent,cto_decision:signDecision(scope)};
   const provenance=p.verifyFormalEvidence(i,inputs,{now});
   assert.equal(provenance.s3_owner_id,valid.responsibility_record_id);
   const pg={status:"PASS_SCOPED_READONLY",database_host:"127.0.0.1",
@@ -291,12 +286,12 @@ test("V2 responsibility assignment has genuine Ed25519 authority but never physi
   for(const f of require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs").FACT_BINDINGS)
    assert(Object.hasOwn(bound,f),"missing V1 fact "+f);
   assert.throws(()=>p.verifyFormalEvidence(i,{
-   ...inputs,native_audit:signAudit({...scope,unresolved_reachable_sources:["external"]})},{now}),
-   /HOLD_NATIVE_AUDIT_REACHABILITY/);
+   ...inputs,cto_decision:signDecision({...scope,unresolved_reachable_sources:["external"]})},{now}),
+   /HOLD_CTO_UNRESOLVED_REACHABILITY/);
   assert.throws(()=>p.verifyFormalEvidence(i,{
-   ...inputs,native_audit:{...inputs.native_audit,
+   ...inputs,cto_decision:{...inputs.cto_decision,
     payload:{...scope,owner_exclusive:false}}},{now}),
-   /HOLD_NATIVE_OWNER_EXCLUSIVE/);
+   /HOLD_CTO_EXCLUSIVE_NOT_ACCEPTED/);
   assert.throws(()=>p.verifyFormalEvidence(i,{
    ...inputs,inventory_bytes:Buffer.from("tampered")},{now}),
    /OWNER_BINDING_INDEPENDENT_RAW_DIGEST/);
@@ -304,6 +299,16 @@ test("V2 responsibility assignment has genuine Ed25519 authority but never physi
    ...s3,probe_operations:3},{
    observedAt,completedAt:"2026-11-02T04:29:41.000Z",sourceSha:"f".repeat(64)}),
    /OWNER_FORMAL_S3_NOT_FOUR_NATIVE_READS/);
+  assert.throws(()=>p.verifyFormalEvidence(i,{...inputs,
+   cto_decision:signDecision({...scope,issuer_id:"another-person"})},{now}),
+   /HOLD_CTO_OPERATOR_ID/);
+  assert.throws(()=>p.verifyFormalEvidence(i,{...inputs,
+   cto_decision:signDecision({...scope,authority_comment_id:42})},{now}),
+   /HOLD_CTO_AUTHORITY_COMMENT/);
+  assert.throws(()=>p.verifyFormalEvidence(i,{...inputs,
+   cto_decision:{...inputs.cto_decision,
+    payload:{...scope,production_bindings_present:true}}},{now}),
+   /HOLD_CTO_PRODUCTION_REFERENCES_REMAIN/);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 

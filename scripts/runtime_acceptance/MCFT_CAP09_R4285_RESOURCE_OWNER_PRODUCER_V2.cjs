@@ -478,9 +478,15 @@ const FORMAL_SURFACES=Object.freeze([
  "NETWORK_INGRESS","APPLICATION_PRODUCTION_REFERENCES",
  "EXTERNAL_PRINCIPAL_REACHABILITY"
 ]);
+// The existing ACCOUNTABLE_SINGLE_OPERATOR is the CTO's authority for
+// adjudicating the scope of existing evidence. No independent issuer, new
+// registry, or second person's signature is required. The CTO decision uses
+// the SAME pre-existing operator key as Owner Authority Binding V2.
+// It cannot create physical facts, grant Permit or sign frozen Owner V1.
+const CTO_DECISION_DOMAIN_V1="GEOX_MCFT_CAP09_R4285_CTO_SCOPE_DECISION_V1\n";
 function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
  const {envelope,trust,control_bytes,inventory_bytes,parent_principal_sha256,
-  native_audit}=inputs||{};
+  cto_decision}=inputs||{};
  assert(Buffer.isBuffer(control_bytes)&&control_bytes.length>0&&control_bytes.length<1048576,
   "OWNER_FORMAL_CONTROL_RAW_BYTES_REQUIRED");
  assert(Buffer.isBuffer(inventory_bytes)&&inventory_bytes.length>0&&inventory_bytes.length<1048576,
@@ -489,76 +495,78 @@ function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
  const bound=verifyOwnerAuthorityBindingV2(envelope,trust,{
   subject_sha:i.subject_sha,host_id:HOST,parent_principal_sha256,
   control_evidence_bytes:control_bytes,inventory_evidence_bytes:inventory_bytes,now});
- // Native provenance is a distinct fact from signed SHA-256 equality.
- // No operator-created Boolean, bare file hash or old Docker summary qualifies.
- assert(native_audit&&typeof native_audit==="object"&&!Array.isArray(native_audit),
-  "HOLD_INDEPENDENT_NATIVE_AUDIT_PROVENANCE_REQUIRED");
- exact(native_audit,["payload","signature_base64"],"HOLD_NATIVE_AUDIT_ENVELOPE");
- const a=native_audit.payload;
+ // This is the CTO's accountable, bounded adjudication of the two exact
+ // evidence byte streams. Mere labels or a SHA file without the registered
+ // operator signature are not accepted. Open reachable production references
+ // remain HOLD; a signed decision does not invent native capture.
+ assert(cto_decision&&typeof cto_decision==="object"&&!Array.isArray(cto_decision),
+  "HOLD_CTO_SCOPE_DECISION_REQUIRED");
+ exact(cto_decision,["payload","signature_base64"],"HOLD_CTO_DECISION_ENVELOPE");
+ const a=cto_decision.payload;
  const fields=["schema_version","issuer_id","key_id","run_id","subject_sha","host_id",
   "control_sha256","inventory_sha256","covered_surfaces","unresolved_reachable_sources",
   "bucket_private","owner_exclusive","production_bindings_present","s3_owner_id",
   "verified_at","expires_at","account_expires_at","control_capture_method",
-  "inventory_capture_method"];
- exact(a,fields,"HOLD_NATIVE_AUDIT_EXACT_SOURCE_CONTRACT");
- assert.equal(a.schema_version,"MCFT_CAP09_R4285_NATIVE_AUDIT_VERIFIED_V1",
-  "HOLD_NATIVE_AUDIT_SOURCE_SCHEMA");
- assert.equal(a.run_id,RUN,"HOLD_NATIVE_AUDIT_RUN");
- assert.equal(a.subject_sha,i.subject_sha,"HOLD_NATIVE_AUDIT_SUBJECT");
- assert.equal(a.host_id,HOST,"HOLD_NATIVE_AUDIT_HOST");
- assert.equal(a.control_sha256,sha(control_bytes),"HOLD_NATIVE_CONTROL_DIGEST");
- assert.equal(a.inventory_sha256,sha(inventory_bytes),"HOLD_NATIVE_INVENTORY_DIGEST");
- assert.deepEqual(a.covered_surfaces,FORMAL_SURFACES,"HOLD_NATIVE_AUDIT_COVERAGE");
- assert.deepEqual(a.unresolved_reachable_sources,[],"HOLD_NATIVE_AUDIT_REACHABILITY");
- assert.equal(a.s3_owner_id,bound.responsibility_record_id,"HOLD_NATIVE_AUDIT_OWNER_SOURCE");
- assert.equal(a.bucket_private,true,"HOLD_NATIVE_BUCKET_PRIVATE");
- assert.equal(a.owner_exclusive,true,"HOLD_NATIVE_OWNER_EXCLUSIVE");
- assert.equal(a.production_bindings_present,false,"HOLD_NATIVE_PRODUCTION_BINDINGS");
+  "inventory_capture_method","authority_comment_id","decision_scope"];
+ exact(a,fields,"HOLD_CTO_DECISION_EXACT_FIELDS");
+ assert.equal(a.schema_version,"MCFT_CAP09_R4285_CTO_SCOPE_DECISION_V1",
+  "HOLD_CTO_DECISION_SCHEMA");
+ assert.equal(a.authority_comment_id,6571636092,"HOLD_CTO_AUTHORITY_COMMENT");
+ assert.equal(a.decision_scope,"R4285_TEST_ONLY_DECLARED_REACHABLE_SURFACES",
+  "HOLD_CTO_SCOPE_EXCEEDS_TEST_ONLY");
+ assert.equal(a.run_id,RUN,"HOLD_CTO_RUN");
+ assert.equal(a.subject_sha,i.subject_sha,"HOLD_CTO_SUBJECT");
+ assert.equal(a.host_id,HOST,"HOLD_CTO_HOST");
+ assert.equal(a.control_sha256,sha(control_bytes),"HOLD_CTO_CONTROL_DIGEST");
+ assert.equal(a.inventory_sha256,sha(inventory_bytes),"HOLD_CTO_INVENTORY_DIGEST");
+ assert.deepEqual(a.covered_surfaces,FORMAL_SURFACES,"HOLD_CTO_DECLARED_SURFACE_COVERAGE");
+ assert.deepEqual(a.unresolved_reachable_sources,[],"HOLD_CTO_UNRESOLVED_REACHABILITY");
+ assert.equal(a.s3_owner_id,bound.responsibility_record_id,"HOLD_CTO_OWNER_BINDING");
+ assert.equal(a.bucket_private,true,"HOLD_CTO_BUCKET_PRIVATE_NOT_ESTABLISHED");
+ assert.equal(a.owner_exclusive,true,"HOLD_CTO_EXCLUSIVE_NOT_ACCEPTED");
+ assert.equal(a.production_bindings_present,false,"HOLD_CTO_PRODUCTION_REFERENCES_REMAIN");
  assert.equal(a.control_capture_method,"MINIO_NATIVE_ADMIN_READONLY",
-  "HOLD_NATIVE_CONTROL_CAPTURE_METHOD");
+  "HOLD_CTO_CONTROL_ORIGIN");
  assert.equal(a.inventory_capture_method,"WINDOWS_DOCKER_AND_APPLICATION_READONLY",
-  "HOLD_NATIVE_INVENTORY_CAPTURE_METHOD");
- // Reuse the EXISTING trust registry; a separate qualified auditor cannot
- // be minted by this module or replaced by the accountable Owner signer.
+  "HOLD_CTO_INVENTORY_ORIGIN");
+ // CTO and Owner V2 are the SAME registered accountable operator. No separate
+ // INDEPENDENT_RETRY_GOVERNANCE signature or newly registered auditor is used.
  assert.equal(trust?.schema_version,"geox_mcft_cap09_retry_trust_v1",
-  "HOLD_NATIVE_AUDITOR_TRUST");
+  "HOLD_CTO_TRUST");
+ assert.equal(a.issuer_id,trust.operator_id,"HOLD_CTO_OPERATOR_ID");
+ assert.equal(a.issuer_id,envelope.payload.issuer_id,"HOLD_CTO_OWNER_ISSUER_DIFFERENT");
+ assert.equal(a.key_id,envelope.payload.key_id,"HOLD_CTO_OWNER_KEY_DIFFERENT");
  const matches=trust.issuers.filter(k=>k.issuer_id===a.issuer_id&&k.key_id===a.key_id);
- assert.equal(matches.length,1,"HOLD_NATIVE_AUDITOR_NOT_IN_EXISTING_TRUST");
- const auditor=matches[0];
- assert.equal(auditor.revoked,false,"HOLD_NATIVE_AUDITOR_REVOKED");
- assert.equal(auditor.role,"INDEPENDENT_RETRY_GOVERNANCE","HOLD_NATIVE_AUDITOR_ROLE");
- assert.equal(auditor.issuer_id,"mcft_cap09_independent_retry_governance",
-  "HOLD_NATIVE_AUDITOR_ID");
- assert.notEqual(auditor.issuer_id,envelope.payload.issuer_id,
-  "HOLD_NATIVE_AUDITOR_NOT_INDEPENDENT");
- const iso=s=>{assert(typeof s==="string"&&Number.isFinite(Date.parse(s))&&
-  new Date(s).toISOString()===s,"HOLD_NATIVE_AUDIT_TIME");return Date.parse(s);};
+ assert.equal(matches.length,1,"HOLD_CTO_OPERATOR_NOT_REGISTERED");
+ const operator=matches[0];
+ assert.equal(operator.revoked,false,"HOLD_CTO_OPERATOR_REVOKED");
+ assert.equal(operator.role,"ACCOUNTABLE_SINGLE_OPERATOR","HOLD_CTO_ACCOUNTABLE_ROLE");
+ const iso=v=>{assert(typeof v==="string"&&Number.isFinite(Date.parse(v))&&
+  new Date(v).toISOString()===v,"HOLD_CTO_TIME");return Date.parse(v);};
  const issued=iso(a.verified_at),expires=iso(a.expires_at);
  assert(issued<=now&&now-issued<=120000&&now<expires&&expires-issued<=86400000,
-  "HOLD_NATIVE_AUDIT_FRESHNESS");
- assert(iso(a.account_expires_at)>now+10860000,
-  "HOLD_NATIVE_ACCOUNT_EXECUTION_BUDGET");
- assert(iso(auditor.not_before)<=issued&&expires<=iso(auditor.not_after),
-  "HOLD_NATIVE_AUDITOR_KEY_WINDOW");
- const pub=crypto.createPublicKey(auditor.public_key_pem);
- assert.equal(pub.asymmetricKeyType,"ed25519","HOLD_NATIVE_AUDITOR_KEY_TYPE");
- assert.equal(sha(pub.export({type:"spki",format:"der"})),auditor.spki_sha256,
-  "HOLD_NATIVE_AUDITOR_KEY_ID");
- const sig=Buffer.from(native_audit.signature_base64,"base64");
- assert(sig.length===64&&sig.toString("base64")===native_audit.signature_base64,
-  "HOLD_NATIVE_AUDITOR_SIG_FORMAT");
- const domain="GEOX_MCFT_CAP09_R4285_NATIVE_CONTROL_INVENTORY_AUDIT_V1\n";
- assert(crypto.verify(null,Buffer.from(domain+lineage.canonical(a)),pub,sig),
-  "HOLD_NATIVE_AUDITOR_SIGNATURE");
- const native=Object.freeze({
-  kind:"NATIVE_AUTHENTICATED_SOURCE",verifier:"R4285_NATIVE",
+  "HOLD_CTO_DECISION_FRESHNESS");
+ assert(iso(a.account_expires_at)>now+10860000,"HOLD_CTO_ACCOUNT_EXECUTION_BUDGET");
+ assert(iso(operator.not_before)<=issued&&expires<=iso(operator.not_after),
+  "HOLD_CTO_OPERATOR_KEY_WINDOW");
+ const pub=crypto.createPublicKey(operator.public_key_pem);
+ assert.equal(pub.asymmetricKeyType,"ed25519","HOLD_CTO_KEY_TYPE");
+ assert.equal(sha(pub.export({type:"spki",format:"der"})),operator.spki_sha256,
+  "HOLD_CTO_KEY_FINGERPRINT");
+ const sig=Buffer.from(cto_decision.signature_base64,"base64");
+ assert(sig.length===64&&sig.toString("base64")===cto_decision.signature_base64,
+  "HOLD_CTO_SIGNATURE_FORMAT");
+ assert(crypto.verify(null,Buffer.from(CTO_DECISION_DOMAIN_V1+lineage.canonical(a)),
+  pub,sig),"HOLD_CTO_SIGNATURE_INVALID");
+ const qualified=Object.freeze({
+  kind:"CTO_SCOPED_SOURCE_ACCEPTED",verifier:"ACCOUNTABLE_SINGLE_OPERATOR",
   bucket_private:true,owner_exclusive:true,production_bindings_present:false,
   s3_owner_id:bound.responsibility_record_id,control_sha256:a.control_sha256,
   inventory_sha256:a.inventory_sha256,
-  source_receipt_sha256:sha(Buffer.from(lineage.canonical(native_audit))),
-  audit_issuer_id:a.issuer_id});
- FORMAL_NATIVE_CAPABILITIES.add(native);
- return native;
+  source_receipt_sha256:sha(Buffer.from(lineage.canonical(cto_decision))),
+  cto_operator_id:a.issuer_id});
+ FORMAL_NATIVE_CAPABILITIES.add(qualified);
+ return qualified;
 }
 
 // The official command is only valid for a subject matching the locally
@@ -582,7 +590,7 @@ function boundedFile(file,max=1048576){
 }
 function loadFormalSourceSpec(file,sourceRoot){
  const spec=JSON.parse(boundedFile(file,16384).toString("utf8").replace(/^\uFEFF/,""));
- exact(spec,["binding_envelope_file","trust_file","native_audit_file",
+ exact(spec,["binding_envelope_file","trust_file","cto_decision_file",
   "control_evidence_file","inventory_evidence_file","parent_principal_sha256"],
   "OWNER_FORMAL_SOURCE_SPEC_EXACT");
  const get=f=>JSON.parse(boundedFile(spec[f]).toString("utf8").replace(/^\uFEFF/,""));
@@ -590,7 +598,7 @@ function loadFormalSourceSpec(file,sourceRoot){
  assert(boundedFile(trustPath).equals(boundedFile(spec.trust_file)),
   "OWNER_FORMAL_TRUST_NOT_REPOSITORY_REGISTERED");
  return {envelope:get("binding_envelope_file"),trust:get("trust_file"),
-  native_audit:get("native_audit_file"),
+  cto_decision:get("cto_decision_file"),
   control_bytes:boundedFile(spec.control_evidence_file),
   inventory_bytes:boundedFile(spec.inventory_evidence_file),
   parent_principal_sha256:spec.parent_principal_sha256};
@@ -610,7 +618,7 @@ async function produceFormalRaw(i,sources,output,env=process.env){
  assertFormalOutputSeparate(i,output);
  assert(!fs.existsSync(output),"OWNER_FORMAL_OUTPUT_EXISTS");
  noLinks(path.dirname(output));
- // If no independently signed authenticated native source can be verified,
+ // If the accountable CTO has not signed the exact scoped source decision,
  // neither live PG/S3 nor any formal raw file may be produced.
  const verified=verifyFormalEvidence(i,sources);
  const observedAt=new Date().toISOString();
@@ -687,7 +695,7 @@ if(require.main===module&&process.argv[2]==="--produce-raw"){
   .then(x=>produceFormalRaw(x.i,x.sources,x.output)).then(x=>{
    process.stdout.write(JSON.stringify(x)+"\n");
   }).catch(e=>{
-   const reason=/^(OWNER_FORMAL_|OWNER_BINDING_|HOLD_NATIVE_)/.test(e?.message||"")?
+   const reason=/^(OWNER_FORMAL_|OWNER_BINDING_|HOLD_CTO_)/.test(e?.message||"")?
     e.message:"OWNER_FORMAL_SOURCE_OR_PHYSICAL_PROBE_NOT_QUALIFIED";
    process.stdout.write(JSON.stringify({status:"HOLD_FORMAL_READBACK_NOT_ISSUED",
     reason_code:reason,formal_signed:false,permit_issued:false,
@@ -716,5 +724,5 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  probePg,probeS3,timed,diagnostic,parse,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
- FORMAL_SURFACES,verifyFormalEvidence,composeFormalReadback,
+ FORMAL_SURFACES,CTO_DECISION_DOMAIN_V1,verifyFormalEvidence,composeFormalReadback,
  requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};
