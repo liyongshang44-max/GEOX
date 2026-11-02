@@ -267,48 +267,28 @@ test("V2 responsibility assignment has genuine Ed25519 authority but never physi
  try{
   const inputs={envelope:sign(payload),trust,control_bytes:bytesA,
    inventory_bytes:bytesB,parent_principal_sha256:parent,cto_decision:signDecision(scope)};
-  const provenance=p.verifyFormalEvidence(i,inputs,{now});
-  assert.equal(provenance.s3_owner_id,valid.responsibility_record_id);
-  const pg={status:"PASS_SCOPED_READONLY",database_host:"127.0.0.1",
-   database_port:i.database_port,positive_database:P,negative_database:N,
-   audit_user:"cap09_"+R+"_p_evidence",positive_rows_zero:true,
-   negative_rows_zero:true,positive_database_exists:true,
-   negative_database_exists:true,positive_login_restricted:true,
-   negative_login_restricted:true,fenced_writer_execute_allowed:true,
-   direct_fact_insert_forbidden:true,pg_owner_id:"pgdb:456:789:postgres"};
-  const s3={status:"PASS_SCOPED_DATA_PLANE_ONLY",bucket:p.BUCKET,
-   bucket_endpoint:i.bucket_endpoint,bucket_exists:true,
-   bucket_empty_including_versions_multipart:true,probe_operations:4};
-  const observedAt="2026-11-02T04:29:40.000Z";
-  const bound=p.composeFormalReadback(i,provenance,pg,s3,{
-   observedAt,completedAt:"2026-11-02T04:29:41.000Z",sourceSha:"f".repeat(64)});
-  assert.equal(bound.status,"PASS");
-  for(const f of require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs").FACT_BINDINGS)
-   assert(Object.hasOwn(bound,f),"missing V1 fact "+f);
+  // Decisive negative: both arbitrary, different nonempty text sources with
+  // matching SHA-256 and a valid registered operator signature MUST NOT mint
+  // a native-source capability or PASS Resource Readback.
+  assert.throws(()=>p.verifyFormalEvidence(i,inputs,{now}),
+   /HOLD_NATIVE_CONTROL_RAW_JSON_NOT_NATIVE_CAPSULE/);
+  const forgedControl={schema_version:p.NATIVE_CONTROL_SCHEMA,run_id:p.RUN,
+   subject_sha:payload.subject_sha,host_id:p.HOST,
+   observed_at:"2026-11-02T04:29:30.000Z",
+   commands:{ADMIN_INFO:{argv:[],stdout_base64:"e30=",exit_code:0}}};
+  const controlBytes=Buffer.from(JSON.stringify(forgedControl));
+  const changedPayload={...payload,control_evidence_sha256:hash(controlBytes)};
+  const forgedScope={...scope,control_sha256:hash(controlBytes)};
   assert.throws(()=>p.verifyFormalEvidence(i,{
-   ...inputs,cto_decision:signDecision({...scope,unresolved_reachable_sources:["external"]})},{now}),
-   /HOLD_CTO_UNRESOLVED_REACHABILITY/);
-  assert.throws(()=>p.verifyFormalEvidence(i,{
-   ...inputs,cto_decision:{...inputs.cto_decision,
-    payload:{...scope,owner_exclusive:false}}},{now}),
-   /HOLD_CTO_EXCLUSIVE_NOT_ACCEPTED/);
-  assert.throws(()=>p.verifyFormalEvidence(i,{
-   ...inputs,inventory_bytes:Buffer.from("tampered")},{now}),
-   /OWNER_BINDING_INDEPENDENT_RAW_DIGEST/);
-  assert.throws(()=>p.composeFormalReadback(i,provenance,pg,{
-   ...s3,probe_operations:3},{
-   observedAt,completedAt:"2026-11-02T04:29:41.000Z",sourceSha:"f".repeat(64)}),
-   /OWNER_FORMAL_S3_NOT_FOUR_NATIVE_READS/);
-  assert.throws(()=>p.verifyFormalEvidence(i,{...inputs,
-   cto_decision:signDecision({...scope,issuer_id:"another-person"})},{now}),
-   /HOLD_CTO_OPERATOR_ID/);
-  assert.throws(()=>p.verifyFormalEvidence(i,{...inputs,
-   cto_decision:signDecision({...scope,authority_comment_id:42})},{now}),
-   /HOLD_CTO_AUTHORITY_COMMENT/);
-  assert.throws(()=>p.verifyFormalEvidence(i,{...inputs,
-   cto_decision:{...inputs.cto_decision,
-    payload:{...scope,production_bindings_present:true}}},{now}),
-   /HOLD_CTO_PRODUCTION_REFERENCES_REMAIN/);
+   ...inputs,envelope:sign(changedPayload),control_bytes:controlBytes,
+   cto_decision:signDecision(forgedScope)},{now}),
+   /HOLD_NATIVE_INVENTORY_RAW_JSON_NOT_NATIVE_CAPSULE/);
+  assert.throws(()=>p.composeFormalReadback(i,{status:"PASS"},
+   {status:"PASS_SCOPED_READONLY"},{status:"PASS_SCOPED_DATA_PLANE_ONLY"},{
+   observedAt:"2026-11-02T04:29:40.000Z",
+   completedAt:"2026-11-02T04:29:41.000Z",
+   sourceSha:"f".repeat(64)}),
+   /OWNER_FORMAL_VERIFIED_NATIVE_SOURCE_REQUIRED/);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 

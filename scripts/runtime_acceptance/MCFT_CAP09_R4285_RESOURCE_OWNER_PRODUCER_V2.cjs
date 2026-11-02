@@ -484,6 +484,171 @@ const FORMAL_SURFACES=Object.freeze([
 // the SAME pre-existing operator key as Owner Authority Binding V2.
 // It cannot create physical facts, grant Permit or sign frozen Owner V1.
 const CTO_DECISION_DOMAIN_V1="GEOX_MCFT_CAP09_R4285_CTO_SCOPE_DECISION_V1\n";
+
+// The signed CTO decision is deliberately NOT the native witness. These two
+// exact raw-source capsules are compared against fresh READ-ONLY native CLI
+// stdout on the Windows host before any capability can be minted. No operator
+// supplied "captured:true", method name, or digest can replace a native read.
+const NATIVE_CONTROL_SCHEMA="MCFT_CAP09_R4285_MINIO_NATIVE_CONTROL_RAW_V1";
+const NATIVE_INVENTORY_SCHEMA="MCFT_CAP09_R4285_WINDOWS_DOCKER_NATIVE_INVENTORY_RAW_V1";
+const NATIVE_CONTROL_COMMANDS=Object.freeze([
+ "ADMIN_INFO","POLICY_INFO","SERVICE_ACCOUNT_INFO","BUCKET_STAT","BUCKET_ANONYMOUS"]);
+const NATIVE_INVENTORY_COMMANDS=Object.freeze([
+ "CONTAINERS_ALL","CONTAINERS_INSPECT","VOLUME_INSPECT"]);
+function sourceJson(b,kind){
+ assert(Buffer.isBuffer(b)&&b.length>0&&b.length<1048576,
+  "HOLD_NATIVE_"+kind+"_BYTES");
+ let x;
+ try{x=JSON.parse(b.toString("utf8").replace(/^\uFEFF/,""));}
+ catch{throw Error("HOLD_NATIVE_"+kind+"_RAW_JSON_NOT_NATIVE_CAPSULE");}
+ exact(x,["schema_version","run_id","subject_sha","host_id","observed_at","commands"],
+  "HOLD_NATIVE_"+kind+"_SCHEMA");
+ assert.equal(x.schema_version,
+  kind==="CONTROL"?NATIVE_CONTROL_SCHEMA:NATIVE_INVENTORY_SCHEMA,
+  "HOLD_NATIVE_"+kind+"_CAPTURE_SCHEMA");
+ assert.equal(x.run_id,RUN,"HOLD_NATIVE_"+kind+"_RUN");
+ assert.equal(x.host_id,HOST,"HOLD_NATIVE_"+kind+"_HOST");
+ assert(H.test(x.subject_sha),"HOLD_NATIVE_"+kind+"_SUBJECT");
+ assert(typeof x.observed_at==="string"&&Number.isFinite(Date.parse(x.observed_at))&&
+  new Date(x.observed_at).toISOString()===x.observed_at,"HOLD_NATIVE_"+kind+"_OBSERVED_AT");
+ return x;
+}
+function nativeJsonLines(b,code){
+ let parsed;
+ try{
+  const lines=b.toString("utf8").split(/\r?\n/).filter(Boolean);
+  assert(lines.length>0&&lines.length<=200,"HOLD_NATIVE_JSON_LINE_COUNT");
+  parsed=lines.map(x=>JSON.parse(x));
+ }catch{throw Error(code);}
+ return parsed;
+}
+function deepHas(x,value,depth=0){
+ if(depth>24||x===null||x===undefined)return false;
+ if(typeof x==="string")return x===value;
+ if(Array.isArray(x))return x.some(v=>deepHas(v,value,depth+1));
+ if(typeof x==="object")return Object.values(x).some(v=>deepHas(v,value,depth+1));
+ return false;
+}
+function nativeRead(tool,args){
+ // Nonmutating fixed command families, no shell interpolation, no secrets or
+ // raw stderr returned to operator. SDK/PG/S3 existing probes are untouched.
+ const child=require("node:child_process").spawnSync(tool,args,{
+  encoding:null,windowsHide:true,shell:false,timeout:15000,maxBuffer:1024*1024,
+  stdio:["ignore","pipe","pipe"]});
+ assert(!child.error&&child.status===0&&Buffer.isBuffer(child.stdout),
+  "HOLD_NATIVE_COMMAND_NOT_AUTHENTICATED");
+ return child.stdout;
+}
+function nativeCommand(record,tool,args,label){
+ exact(record,["argv","stdout_base64","exit_code"],"HOLD_NATIVE_"+label+"_RECORD");
+ assert.deepEqual(record.argv,args,"HOLD_NATIVE_"+label+"_ARGV");
+ assert.equal(record.exit_code,0,"HOLD_NATIVE_"+label+"_EXIT");
+ assert(typeof record.stdout_base64==="string"&&record.stdout_base64.length>0&&
+  record.stdout_base64.length<1398104,"HOLD_NATIVE_"+label+"_ENCODING");
+ const raw=Buffer.from(record.stdout_base64,"base64");
+ assert(raw.length>0&&raw.toString("base64")===record.stdout_base64,
+  "HOLD_NATIVE_"+label+"_BASE64");
+ const observed=nativeRead(tool,args);
+ assert(raw.equals(observed),"HOLD_NATIVE_"+label+"_CURRENT_STDOUT_DRIFT");
+ return observed;
+}
+function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
+ {now=Date.now(),env=process.env}={}){
+ // This verifier is Windows-only at the formal CLI. Linux CI may exercise
+ // structurally invalid inputs, never a synthetic physical PASS.
+ host();validateInput(i);
+ const control=sourceJson(controlBytes,"CONTROL");
+ const inventory=sourceJson(inventoryBytes,"INVENTORY");
+ assert.equal(control.subject_sha,i.subject_sha,"HOLD_NATIVE_CONTROL_SUBJECT");
+ assert.equal(inventory.subject_sha,i.subject_sha,"HOLD_NATIVE_INVENTORY_SUBJECT");
+ for(const [s,k] of [[control,"CONTROL"],[inventory,"INVENTORY"]]){
+  const at=Date.parse(s.observed_at);
+  assert(at<=now&&now-at<=120000,"HOLD_NATIVE_"+k+"_STALE");
+ }
+ assert(Math.abs(Date.parse(control.observed_at)-Date.parse(inventory.observed_at))<=120000,
+  "HOLD_NATIVE_SOURCE_CLOCK_DIVERGENCE");
+ const alias=env.MCFT_CAP09_R4285_EXISTING_MC_ALIAS;
+ const policy=env.MCFT_CAP09_R4285_EXISTING_MC_POLICY;
+ const acct=env.MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID;
+ for(const [v,k] of [[alias,"ALIAS"],[policy,"POLICY"],[acct,"ACCOUNT"]])
+  assert(typeof v==="string"&&/^[A-Za-z0-9_.-]{2,128}$/.test(v),
+   "HOLD_NATIVE_EXISTING_"+k+"_IDENTITY_REQUIRED");
+ const cc=control.commands,ic=inventory.commands;
+ exact(cc,NATIVE_CONTROL_COMMANDS,"HOLD_NATIVE_CONTROL_COMMAND_SET");
+ exact(ic,NATIVE_INVENTORY_COMMANDS,"HOLD_NATIVE_INVENTORY_COMMAND_SET");
+ const cs=[
+  ["ADMIN_INFO",["--json","admin","info",alias]],
+  ["POLICY_INFO",["--json","admin","policy","info",alias,policy]],
+  ["SERVICE_ACCOUNT_INFO",["--json","admin","user","svcacct","info",alias,acct]],
+  ["BUCKET_STAT",["--json","stat",alias+"/"+BUCKET]],
+  ["BUCKET_ANONYMOUS",["--json","anonymous","get",alias+"/"+BUCKET]]
+ ];
+ const m={};
+ for(const [key,args] of cs)
+  m[key]=nativeJsonLines(nativeCommand(cc[key],"mc",args,key),
+   "HOLD_NATIVE_CONTROL_"+key+"_JSON_UNSUPPORTED");
+ // A command transcript is not an inventory of other principals. Require
+ // the actual IAM/policy resource keys, account and deployment in distinct
+ // CLI responses, not in signed summary fields.
+ assert(m.ADMIN_INFO.some(x=>deepHas(x,"ddbc6bb9-eb52-4b95-8324-b556697f8c0e")),
+  "HOLD_NATIVE_MINIO_DEPLOYMENT_UNVERIFIED");
+ assert(m.SERVICE_ACCOUNT_INFO.some(x=>deepHas(x,acct)),
+  "HOLD_NATIVE_MINIO_ACCOUNT_UNVERIFIED");
+ assert(m.BUCKET_STAT.some(x=>deepHas(x,BUCKET)),
+  "HOLD_NATIVE_BUCKET_NOT_NATIVE");
+ const policyText=JSON.stringify(m.POLICY_INFO);
+ for(const name of [BUCKET,"s3:ListBucket","s3:ListBucketVersions",
+   "s3:ListBucketMultipartUploads","s3:GetObject","s3:PutObject"])
+  assert(policyText.includes(JSON.stringify(name)),
+   "HOLD_NATIVE_MINIO_POLICY_SCOPE_NOT_RECONCILED");
+ // The source must prove no public bucket exposure, not merely say private.
+ assert(m.BUCKET_ANONYMOUS.some(x=>deepHas(x,"none")),
+  "HOLD_NATIVE_BUCKET_ANONYMOUS_SCOPE_NOT_PROVEN");
+ const psArgs=["ps","--all","--no-trunc","--format","{{json .}}"];
+ const containersText=nativeCommand(ic.CONTAINERS_ALL,"docker",psArgs,"CONTAINERS_ALL");
+ const containers=nativeJsonLines(containersText,"HOLD_NATIVE_DOCKER_PS_JSON");
+ const ids=containers.map(x=>x.ID||x.Id);
+ assert(ids.length>=1&&ids.length<=256&&new Set(ids).size===ids.length&&
+  ids.every(x=>typeof x==="string"&&/^[a-f0-9]{64}$/.test(x)),
+  "HOLD_NATIVE_DOCKER_COMPLETE_CONTAINER_IDENTITIES");
+ const detailsText=nativeCommand(ic.CONTAINERS_INSPECT,"docker",
+  ["inspect","--type","container",...ids],"CONTAINERS_INSPECT");
+ let details;
+ try{details=JSON.parse(detailsText.toString("utf8"));}catch{
+  throw Error("HOLD_NATIVE_DOCKER_INSPECT_JSON");}
+ assert(Array.isArray(details)&&details.length===ids.length&&
+  new Set(details.map(x=>x.Id)).size===ids.length&&
+  details.every(x=>ids.includes(x.Id)),"HOLD_NATIVE_DOCKER_INSPECT_COMPLETENESS");
+ const volumeName="mcftcap09-r4285c3ce342c-s3data";
+ const volText=nativeCommand(ic.VOLUME_INSPECT,"docker",
+  ["volume","inspect",volumeName],"VOLUME_INSPECT");
+ let vols;
+ try{vols=JSON.parse(volText.toString("utf8"));}catch{
+  throw Error("HOLD_NATIVE_DOCKER_VOLUME_JSON");}
+ assert(Array.isArray(vols)&&vols.length===1&&vols[0].Name===volumeName,
+  "HOLD_NATIVE_DOCKER_VOLUME_WRONG");
+ // A full container list and each corresponding inspect (not a subset) must
+ // support that the run volume is not mounted by other projects. Do not copy
+ // or serialize Config.Env: it can contain secrets.
+ const mountUsers=details.filter(x=>(x.Mounts||[]).some(y=>y.Name===volumeName));
+ assert(mountUsers.length===1,"HOLD_NATIVE_VOLUME_OWNER_NOT_EXCLUSIVE");
+ const target=mountUsers[0];
+ assert(JSON.stringify(target.Config?.Labels||{}).includes(RUN),
+  "HOLD_NATIVE_VOLUME_OWNER_RUN_LABEL_MISSING");
+ // Application refs: inspect all existing containers for run DB/S3 endpoint
+ // references. Any other container referencing the run is a live blocker.
+ const references=details.filter(x=>x.Id!==target.Id&&
+  (x.Config?.Env||[]).some(v=>typeof v==="string"&&
+    (v.includes(BUCKET)||v.includes("127.0.0.1:55492")||
+     v.includes("127.0.0.1:59292"))));
+ assert.equal(references.length,0,"HOLD_NATIVE_PRODUCTION_BINDINGS_FOUND");
+ // Remaining external principals, process listeners, host apps and IAM
+ // reachability cannot be inferred from docker inspection plus 5 mc calls.
+ // Fail closed until an exact independently observable complete source is
+ // available; never promote signer's empty unresolved[] into that proof.
+ throw Error("HOLD_NATIVE_EXTERNAL_PRINCIPALS_AND_HOST_APPLICATION_REACHABILITY_UNVERIFIED");
+}
+
 function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
  const {envelope,trust,control_bytes,inventory_bytes,parent_principal_sha256,
   cto_decision}=inputs||{};
@@ -495,6 +660,7 @@ function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
  const bound=verifyOwnerAuthorityBindingV2(envelope,trust,{
   subject_sha:i.subject_sha,host_id:HOST,parent_principal_sha256,
   control_evidence_bytes:control_bytes,inventory_evidence_bytes:inventory_bytes,now});
+ verifyNativeSourceRaw(i,control_bytes,inventory_bytes,{now});
  // This is the CTO's accountable, bounded adjudication of the two exact
  // evidence byte streams. Mere labels or a SHA file without the registered
  // operator signature are not accepted. Open reachable production references
@@ -724,5 +890,6 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  probePg,probeS3,timed,diagnostic,parse,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
- FORMAL_SURFACES,CTO_DECISION_DOMAIN_V1,verifyFormalEvidence,composeFormalReadback,
+ FORMAL_SURFACES,CTO_DECISION_DOMAIN_V1,NATIVE_CONTROL_SCHEMA,NATIVE_INVENTORY_SCHEMA,
+ sourceJson,verifyNativeSourceRaw,verifyFormalEvidence,composeFormalReadback,
  requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};
