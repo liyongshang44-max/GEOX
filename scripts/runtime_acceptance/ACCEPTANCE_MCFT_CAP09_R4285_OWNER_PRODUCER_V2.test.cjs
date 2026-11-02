@@ -30,16 +30,28 @@ test("current R4285 scoped urls validate before any connection and forbid landos
    /OWNER_PRODUCER_S3_HISTORIC_PORT/);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
-test("PG source facts require verified exact roles all 29 empty tables and fenced ACL",()=>{
+test("PG source facts preserve 29-table schema, enforce facts-zero without widening Evidence SELECT",()=>{
  const names=require("./MCFT_CAP09_R4285_PG_READONLY_V1.cjs").REQUIRED_PUBLIC_TABLES;
  const facts={id:{session_user:"cap09_"+R+"_p_evidence",current_user:"cap09_"+R+"_p_evidence",
   database:P},expectedRole:"cap09_"+R+"_p_evidence",expectedDb:P,
-  tables:names.slice(),counts:names.map(()=>"0"),databaseOwner:"cap09_4285c3ce342c_owner",
+  tables:names.slice(),factsCount:"0",
+  selectRights:names.map(name=>({name,allowed:["facts",
+   "twin_external_formal_forcing_base_cursor_v1",
+   "twin_external_formal_forcing_base_target_v1",
+   "twin_external_formal_forcing_controller_lease_v1"].includes(name)})),
+  databaseOwner:"cap09_4285c3ce342c_owner",
   databaseOid:45673,acl:{fenced_exists:true,fenced_execute:true,direct_insert:false,controller_acl:true},
   roleCaps:{rolsuper:false,rolcreatedb:false,rolcreaterole:false,rolreplication:false,rolbypassrls:false}};
- assert.equal(p.probeCatalogFacts(facts).tables,29);
- assert.throws(()=>p.probeCatalogFacts({...facts,counts:facts.counts.map((n,i)=>i===0?"1":n)}),
-  /OWNER_PRODUCER_PG_NONEMPTY/);
+ const observed=p.probeCatalogFacts(facts);
+ assert.equal(observed.tables,29);
+ assert.equal(observed.facts_rows_zero,true);
+ assert.equal(observed.other_28_table_rows_verified,false);
+ assert.equal(observed.denied_select_tables.length,25);
+ assert.throws(()=>p.probeCatalogFacts({...facts,factsCount:"1"}),
+  /OWNER_PRODUCER_PG_FACTS_NOT_EMPTY/);
+ assert.throws(()=>p.probeCatalogFacts({...facts,selectRights:facts.selectRights.map(x=>
+  x.name==="facts"?{...x,allowed:false}:x)}),
+  /OWNER_PRODUCER_PG_REQUIRED_SELECT_DENIED/);
  assert.throws(()=>p.probeCatalogFacts({...facts,acl:{...facts.acl,direct_insert:true}}),
   /OWNER_PRODUCER_PG_FENCED_ACL_INVALID/);
  assert.throws(()=>p.probeCatalogFacts({...facts,roleCaps:{...facts.roleCaps,rolsuper:true}}),
@@ -75,8 +87,8 @@ test("PG diagnostic distinguishes positive/negative phases with safe codes only"
   "OWNER_PRODUCER_PG_POSITIVE_CONNECT_ECONNREFUSED");
  assert.equal(p.pgFailureCode({code:"28P01",message:"password=UNSAFE_SECRET"},"negative","CONNECT"),
   "OWNER_PRODUCER_PG_NEGATIVE_CONNECT_28P01");
- assert.equal(p.pgFailureCode({code:"42501",detail:"secret database ACL"},"positive","TABLE_COUNTS"),
-  "OWNER_PRODUCER_PG_POSITIVE_TABLE_COUNTS_42501");
+ assert.equal(p.pgFailureCode({code:"42501",detail:"secret database ACL"},"positive","FACTS_COUNT"),
+  "OWNER_PRODUCER_PG_POSITIVE_FACTS_COUNT_42501");
  assert.equal(p.pgFailureCode({code:"undefined",message:"secret credential URL"},"positive","TABLE_CATALOG"),
   "OWNER_PRODUCER_PG_POSITIVE_TABLE_CATALOG_UNKNOWN");
  assert.equal(p.pgFailureCode({code:"ERR_ASSERTION",message:"OWNER_PRODUCER_PG_EXACT_29_TABLES"},
@@ -85,7 +97,7 @@ test("PG diagnostic distinguishes positive/negative phases with safe codes only"
   /OWNER_PRODUCER_DIAGNOSTIC_SIDE/);
 });
 
-test("PG 42501 discovery is a bounded named-table HOLD without leaking server text",async()=>{
+test("bounded synthetic PG failure does not leak server text or untrusted table names",async()=>{
  const table=require("./MCFT_CAP09_R4285_PG_READONLY_V1.cjs").REQUIRED_PUBLIC_TABLES[0];
  const classified=await p.timed("PG_DUAL_DATABASE_READONLY",async()=>{
   const e=Error("OWNER_PRODUCER_PG_POSITIVE_TABLE_SELECT_DENIED");
