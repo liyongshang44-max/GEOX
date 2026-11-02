@@ -593,12 +593,14 @@ function nativeRead(tool,args){
  return child.stdout;
 }
 
-// mc stat names the bucket directory as either "bucket" or "bucket/".
-// A successful exact-path native stat is the authority; never search arbitrary
-// nested strings for a bare bucket name or accept an unrelated object stat.
+// Windows mc RELEASE.2025-08-13 may return exact bucket stat as
+// {status:"success",name:"bucket/", ...} without a "type" field.
+// Require native command's exact bucket path and exact bucket identity;
+// explicit non-folder types, other buckets and object paths remain rejected.
 function nativeBucketStatMatches(x){
  if(!x||typeof x!=="object"||Array.isArray(x)||
-  x.status!=="success"||x.type!=="folder")return false;
+  x.status!=="success"||
+  (x.type!==undefined&&x.type!=="folder"))return false;
  const values=[x.key,x.name].filter(v=>typeof v==="string");
  return values.length>0&&values.every(v=>v===BUCKET||v===BUCKET+"/");
 }

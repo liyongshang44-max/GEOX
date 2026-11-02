@@ -519,11 +519,22 @@ test("native mc stat binds bucket folder identity (with slash) and never accepts
  const wrap=x=>Buffer.from(JSON.stringify(x)+"\n","utf8");
  const ok=wrap({status:"success",type:"folder",key:bucket+"/"});
  const ok2=wrap({status:"success",type:"folder",name:bucket});
+ // Real Windows mc: status=success, name=bucket/, no type or key.
+ const nativeObserved=wrap({status:"success",name:bucket+"/",
+  location:"us-east-1",size:0,Versioning:{},Usage:{}});
  assert.equal(p.nativeStableProjection("BUCKET_STAT",ok),
   JSON.stringify({bucket_verified:true,bucket}));
  assert.equal(p.nativeStableProjection("BUCKET_STAT",ok),
   p.nativeStableProjection("BUCKET_STAT",ok2));
+ assert.equal(p.nativeStableProjection("BUCKET_STAT",ok),
+  p.nativeStableProjection("BUCKET_STAT",nativeObserved));
  const rejects=[
+  {status:"success",name:"other-bucket/"},
+  {status:"success",name:bucket+"/nested"},
+  {status:"error",name:bucket+"/"},
+  {status:"success",type:"file",name:bucket+"/"},
+  {status:"success",type:null,name:bucket+"/"},
+  {status:"success",name:bucket+"/",key:"different"},
   {status:"success",type:"folder",key:"other-bucket/"},
   {status:"success",type:"file",key:bucket+"/"},
   {status:"error",type:"folder",key:bucket+"/"},
