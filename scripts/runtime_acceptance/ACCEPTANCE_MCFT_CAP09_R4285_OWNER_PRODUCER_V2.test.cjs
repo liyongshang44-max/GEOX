@@ -243,6 +243,68 @@ test("V2 responsibility assignment has genuine Ed25519 authority but never physi
  assert.throws(()=>p.verifyOwnerAuthorityBindingV2(altered,trust,ctx),/OWNER_BINDING_DEPLOYMENT/);
  const forged=sign(payload);forged.payload={...payload,issued_at:"2026-11-02T04:29:10.000Z"};
  assert.throws(()=>p.verifyOwnerAuthorityBindingV2(forged,trust,ctx),/OWNER_BINDING_SIGNATURE_INVALID/);
+ // Synthetic POSITIVE proves exact source/signature wiring only, not a real
+ // Windows native source or permission to sign/issue/execute.
+ const independent=crypto.generateKeyPairSync("ed25519");
+ const govId="mcft_cap09_independent_retry_governance",govKey="fixture-independent";
+ const govTrust={...trust,issuers:[...trust.issuers,{
+  issuer_id:govId,key_id:govKey,revoked:false,
+  role:"INDEPENDENT_RETRY_GOVERNANCE",
+  public_key_pem:independent.publicKey.export({format:"pem",type:"spki"}),
+  spki_sha256:hash(independent.publicKey.export({format:"der",type:"spki"})),
+  not_before:"2026-11-02T04:00:00.000Z",not_after:"2026-11-03T04:00:00.000Z"}]};
+ const scope={
+  schema_version:"MCFT_CAP09_R4285_NATIVE_AUDIT_VERIFIED_V1",
+  issuer_id:govId,key_id:govKey,run_id:p.RUN,subject_sha:payload.subject_sha,
+  host_id:p.HOST,control_sha256:hash(bytesA),inventory_sha256:hash(bytesB),
+  covered_surfaces:p.FORMAL_SURFACES,
+  unresolved_reachable_sources:[],bucket_private:true,owner_exclusive:true,
+  production_bindings_present:false,s3_owner_id:valid.responsibility_record_id,
+  verified_at:"2026-11-02T04:29:30.000Z",
+  expires_at:"2026-11-02T05:29:30.000Z",
+  account_expires_at:"2026-11-05T05:52:27.000Z",
+  control_capture_method:"MINIO_NATIVE_ADMIN_READONLY",
+  inventory_capture_method:"WINDOWS_DOCKER_AND_APPLICATION_READONLY"};
+ const signAudit=q=>({payload:q,signature_base64:crypto.sign(null,
+  Buffer.from("GEOX_MCFT_CAP09_R4285_NATIVE_CONTROL_INVENTORY_AUDIT_V1\n"+canonical(q)),
+  independent.privateKey).toString("base64")});
+ const {root,i}=context();
+ try{
+  const inputs={envelope:sign(payload),trust:govTrust,control_bytes:bytesA,
+   inventory_bytes:bytesB,parent_principal_sha256:parent,native_audit:signAudit(scope)};
+  const provenance=p.verifyFormalEvidence(i,inputs,{now});
+  assert.equal(provenance.s3_owner_id,valid.responsibility_record_id);
+  const pg={status:"PASS_SCOPED_READONLY",database_host:"127.0.0.1",
+   database_port:i.database_port,positive_database:P,negative_database:N,
+   audit_user:"cap09_"+R+"_p_evidence",positive_rows_zero:true,
+   negative_rows_zero:true,positive_database_exists:true,
+   negative_database_exists:true,positive_login_restricted:true,
+   negative_login_restricted:true,fenced_writer_execute_allowed:true,
+   direct_fact_insert_forbidden:true,pg_owner_id:"pgdb:456:789:postgres"};
+  const s3={status:"PASS_SCOPED_DATA_PLANE_ONLY",bucket:p.BUCKET,
+   bucket_endpoint:i.bucket_endpoint,bucket_exists:true,
+   bucket_empty_including_versions_multipart:true,probe_operations:4};
+  const observedAt="2026-11-02T04:29:40.000Z";
+  const bound=p.composeFormalReadback(i,provenance,pg,s3,{
+   observedAt,completedAt:"2026-11-02T04:29:41.000Z",sourceSha:"f".repeat(64)});
+  assert.equal(bound.status,"PASS");
+  for(const f of require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V1.cjs").FACT_BINDINGS)
+   assert(Object.hasOwn(bound,f),"missing V1 fact "+f);
+  assert.throws(()=>p.verifyFormalEvidence(i,{
+   ...inputs,native_audit:signAudit({...scope,unresolved_reachable_sources:["external"]})},{now}),
+   /HOLD_NATIVE_AUDIT_REACHABILITY/);
+  assert.throws(()=>p.verifyFormalEvidence(i,{
+   ...inputs,native_audit:{...inputs.native_audit,
+    payload:{...scope,owner_exclusive:false}}},{now}),
+   /HOLD_NATIVE_OWNER_EXCLUSIVE/);
+  assert.throws(()=>p.verifyFormalEvidence(i,{
+   ...inputs,inventory_bytes:Buffer.from("tampered")},{now}),
+   /OWNER_BINDING_INDEPENDENT_RAW_DIGEST/);
+  assert.throws(()=>p.composeFormalReadback(i,provenance,pg,{
+   ...s3,probe_operations:3},{
+   observedAt,completedAt:"2026-11-02T04:29:41.000Z",sourceSha:"f".repeat(64)}),
+   /OWNER_FORMAL_S3_NOT_FOUR_NATIVE_READS/);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 
 
