@@ -284,9 +284,9 @@ test("formal CLI cannot use an unmerged or forged protected-main subject",()=>{
  const {root,i}=context();
  try{
   assert.throws(()=>p.requireLocalProtectedMain(i),
-   /OWNER_FORMAL_PROTECTED_MAIN_GIT_UNAVAILABLE/);
+   /OWNER_FORMAL_PROTECTED_MAIN_NATIVE_VERIFY_HOLD/);
   assert.throws(()=>p.parseFormal(["--produce-raw","--input","x"]),
    /OWNER_FORMAL_CLI_EXACT/);
-  assert.throws(()=>p.loadFormalSourceSpec(path.join(root,"not-there.json")),/ENOENT/);
+  assert.throws(()=>p.loadFormalSourceSpec(path.join(root,"not-there.json"),root),/ENOENT/);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });

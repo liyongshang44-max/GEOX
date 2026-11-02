@@ -526,7 +526,9 @@ function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
  assert.equal(matches.length,1,"HOLD_NATIVE_AUDITOR_NOT_IN_EXISTING_TRUST");
  const auditor=matches[0];
  assert.equal(auditor.revoked,false,"HOLD_NATIVE_AUDITOR_REVOKED");
- assert.equal(auditor.role,"INDEPENDENT_RESOURCE_AUDITOR","HOLD_NATIVE_AUDITOR_ROLE");
+ assert.equal(auditor.role,"INDEPENDENT_RETRY_GOVERNANCE","HOLD_NATIVE_AUDITOR_ROLE");
+ assert.equal(auditor.issuer_id,"mcft_cap09_independent_retry_governance",
+  "HOLD_NATIVE_AUDITOR_ID");
  assert.notEqual(auditor.issuer_id,envelope.payload.issuer_id,
   "HOLD_NATIVE_AUDITOR_NOT_INDEPENDENT");
  const iso=s=>{assert(typeof s==="string"&&Number.isFinite(Date.parse(s))&&
@@ -562,18 +564,14 @@ function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
 // The official command is only valid for a subject matching the locally
 // fetched protected-main ref, not an unmerged PR or a fixture branch.
 function requireLocalProtectedMain(i){
- const {spawnSync}=require("node:child_process");
- const run=args=>{
-  const r=spawnSync("git",["-C",i.source_root,...args],{
-   encoding:"utf8",timeout:10000,windowsHide:true});
-  assert(r.status===0&&/^[0-9a-f]{40}\s*$/.test(r.stdout||""),
-   "OWNER_FORMAL_PROTECTED_MAIN_GIT_UNAVAILABLE");
-  return r.stdout.trim();
- };
- assert.equal(run(["rev-parse","HEAD"]),i.subject_sha,
-  "OWNER_FORMAL_SOURCE_HEAD_MISMATCH");
- assert.equal(run(["rev-parse","refs/remotes/origin/main"]),i.subject_sha,
-  "OWNER_FORMAL_PROTECTED_MAIN_SUBJECT_REQUIRED");
+ // Reuse the CURRENT registered native consumer's remote-main + clean
+ // worktree contract instead of a stale local origin/main tracking ref.
+ try{
+  require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V2.cjs")
+   .gitExactMain(i.source_root,i.subject_sha);
+ }catch{
+  throw Error("OWNER_FORMAL_PROTECTED_MAIN_NATIVE_VERIFY_HOLD");
+ }
 }
 function boundedFile(file,max=1048576){
  assert(typeof file==="string"&&path.isAbsolute(file),"OWNER_FORMAL_ABSOLUTE_SOURCE");
@@ -582,12 +580,15 @@ function boundedFile(file,max=1048576){
  assert(st.isFile()&&st.size>0&&st.size<max,"OWNER_FORMAL_SOURCE_FILE_BOUNDS");
  return fs.readFileSync(file);
 }
-function loadFormalSourceSpec(file){
+function loadFormalSourceSpec(file,sourceRoot){
  const spec=JSON.parse(boundedFile(file,16384).toString("utf8").replace(/^\uFEFF/,""));
  exact(spec,["binding_envelope_file","trust_file","native_audit_file",
   "control_evidence_file","inventory_evidence_file","parent_principal_sha256"],
   "OWNER_FORMAL_SOURCE_SPEC_EXACT");
  const get=f=>JSON.parse(boundedFile(spec[f]).toString("utf8").replace(/^\uFEFF/,""));
+ const trustPath=path.join(sourceRoot,"scripts","runtime_acceptance","MCFT_CAP09_RETRY_TRUST_V1.json");
+ assert(boundedFile(trustPath).equals(boundedFile(spec.trust_file)),
+  "OWNER_FORMAL_TRUST_NOT_REPOSITORY_REGISTERED");
  return {envelope:get("binding_envelope_file"),trust:get("trust_file"),
   native_audit:get("native_audit_file"),
   control_bytes:boundedFile(spec.control_evidence_file),
@@ -617,8 +618,8 @@ async function produceFormalRaw(i,sources,output,env=process.env){
 function parseFormal(argv){
  assert(argv.length===7&&argv[0]==="--produce-raw"&&argv[1]==="--input"&&
   argv[3]==="--sources"&&argv[5]==="--output","OWNER_FORMAL_CLI_EXACT");
- return {i:parse(["--diagnostic-only","--input",argv[2]]),
-  sources:loadFormalSourceSpec(argv[4]),output:argv[6]};
+ const i=parse(["--diagnostic-only","--input",argv[2]]);
+ return {i,sources:loadFormalSourceSpec(argv[4],i.source_root),output:argv[6]};
 }
 
 function composeFormalReadback(i,source,pg,s3,{observedAt,completedAt,sourceSha}){
