@@ -1,3 +1,25 @@
+# 2026-11-02 — R4285 S3 八次 Windows 原生只读 PASS / Owner 来源仍 HOLD（接任最新检查点）
+
+> 此段为原 Draft PR #3298 的**仅顶部增补**。旧文精确保留为完整后缀；不修改第一份 handoff、不新建第三份、不触碰 #3757 工程源码/main。现场回执为操作员通过聊天提交，现已与同 HEAD 仓库原生调用程序的代码范围核对；不等于独立签署的物理 Owner。
+
+## 已关闭：无需再次施工或重跑
+
+- **工程 PR #3757** 现场和 GitHub exact HEAD 同为 `ec5301de39168f43c0913caffb537355653a4ffd`，仍 Open/Draft/Unmerged。该 HEAD 的 GitHub 42 次 PR 工作流 **39 SUCCESS / 3 SKIPPED / 0 pending / 0 failure**（包含主 CI、QCP72、EA5E2、Adoption V2、R4285 Host），此前测试包装 Windows 5/5 PASS。
+- **2026-11-02 Windows S3 原生执行回执**：`node v24.19.0`；现有 TEST_ONLY 新账号 `ONE_TIME_MARKER_SCOPE=PASS`、`CURRENTUSER_DPAPI=PASS`、`NEW_ACCOUNT_ID_SHA256=PASS`；账号到期 `2026-11-05T05:52:27Z`，本次执行时 `EXPIRY_WINDOW=VALID`，以后必须按真实 UTC 重新检查。
+- 原有 `MCFT_CAP09_R4285_S3_READBACK_V2.cjs` 原生返回 `READBACK_NATIVE_EXIT=0`，`HOST_V1_S3_PROBE STATUS=PASS OPERATIONS=4` 与 `PRODUCER_V2_S3_FOUR_READS STATUS=PASS OPERATIONS=4`；结论严格为 `S3_DATA_PLANE=PASS_8_NATIVE_READONLY_OPERATIONS_TEST_ONLY`。没有打印或上传原始 Access ID/Secret，未创建第二账号、未扩 IAM/ACL。
+- 八次操作是每个组件的 `HeadBucket`、`ListObjectsV2`、`ListObjectVersions`、`ListMultipartUploads`；本轮输出没有每请求的物理耗时，**不得编造或倒推 `S3_WINDOWS_READONLY_MS`**，也不证明 GetObject/PutObject、独立 ACL/Policy 或生产全局隔离。
+- 既有 PostgreSQL 受限正负库 `PASS_SCOPED_READONLY`、事实表精确零行、29 表目录及原合格回执保留；此次 S3 readback 未重新跑 PG，不应把过去 PG 213.838ms 记成当前新鲜 Owner 证据。
+
+## 当前唯一第一阻断与既有 CTO 授权边界
+
+- 源码核查：`MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs` 当前 CLI **只有 `--diagnostic-only` / `--s3-only-diagnostic`**，`unresolved()` 保留 `OWNER_EXCLUSIVE_CONTROL_PLANE_NOT_PROVEN` 与 `PRODUCTION_BINDINGS_ABSENT_NOT_INDEPENDENTLY_PROVEN`；Ed25519 `verifyOwnerAuthorityBindingV2()` 仅是责任绑定的 SOURCE 边界，返回 `owner_exclusive_verified=false`、`formal_readback_issued=false`。这不是缺 SDK、PG、S3 data-plane 或需要再次发现 MinIO ACL Owner 的故障。
+- 已有 CTO PR #3757 评论 `6569014082`、`6569162599` 批准**同一个原 PR 内的最小 V2 正式 Producer/Owner 来源接线**：真实 `ACCOUNTABLE_SINGLE_OPERATOR` 责任指定、独立可信控制面原始字节、可覆盖的 IAM/部署/应用生产引用 inventory、当次 PG/S3 实际只读观测、不可伪造来源与 exact `run_id/subject_sha/host_id/资源` 绑定。可复用此前已核验的有限范围原始证据，但不能把“检索范围内没发现”升级为全局无生产绑定；不追加平行 registry/诊断包。
+- **下一任务**：先用现有受控审计原始证据确定可独立重核的范围及残余不可控来源。没有真实责任主体或受控 inventory 来源时精确停在 `HOLD_AUTHORIZED_OWNER_ASSIGNMENT_SOURCE` / `HOLD_INDEPENDENT_CONTROL_PLANE_PROVENANCE`，不使用操作员手填的 JSON PASS。仅在真实来源可接线时补最小正式 Windows Readback V1 的 fail-closed Producer 与必要负例，重新跑 #3757 exact HEAD CI/QCP72。
+- **签署顺序不可倒置**：#3757 仍未合并 main；任何正式 Owner/Permit 的 `subject_sha` 必须以后续**受保护 main 的实际合并后 exact HEAD** 为准。当前 S3 回执和责任绑定函数不授权提前签署。之后还需真实资源 120 秒新鲜窗口及 180 分钟六阶段预算/账号有效期与独立执行许可。
+- **冻结**：`INDEPENDENT_CONTROL_PLANE=NOT_VERIFIED / RESOURCE_OWNER=NOT_ISSUED / PERMIT=HOLD / MERGE=HOLD / EXECUTE=FORBIDDEN / SIX_STAGES=0/6`。不重复 S3/PG/SDK、旧凭据搜索、IAM/ACL 探索、历史 Full-chain，也不提前启动物理阶段。
+
+---
+
 # 2026-11-02 — R4285 接任后真实 Windows packaging PASS / GitHub 39 SUCCESS（最新现场进度）
 
 > 本次仍是原 #3298 第二份 continuation 的**仅顶部增补**，只包含操作员实际回执与精确 GitHub 原生回读；此前全部正文逐字节后缀保留。本段不是 S3 权限、Resource Owner、Permit 或六阶段执行授权。
