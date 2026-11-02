@@ -1760,6 +1760,7 @@
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_ADMISSION_V2.test.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_HOST_ADMISSION_V2.test.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_OWNER_PRODUCER_V2.test.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PARALLEL_MATERIAL_V2.test.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_ACTUAL_CHILD_CONSUME.test.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_V2_NATIVE_SIGNATURE.test.cjs",
@@ -1773,6 +1774,7 @@
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_V2.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_V2.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_V2.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_CAPABILITY_V2.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V2.cjs"
       ]
