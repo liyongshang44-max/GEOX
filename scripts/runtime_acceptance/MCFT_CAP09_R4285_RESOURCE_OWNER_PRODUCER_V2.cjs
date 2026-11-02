@@ -103,7 +103,7 @@ function noLinks(p){
 }
 function probeCatalogFacts(data){
  // Entire physical observation must be within a READ ONLY transaction.
- const {id,tables,acl,counts,databaseOwner,databaseOid,roleCaps}=data;
+ const {id,tables,acl,factsCount,selectRights,databaseOwner,databaseOid,roleCaps}=data;
  assert.equal(id.session_user,data.expectedRole,"OWNER_PRODUCER_PG_SESSION_LOGIN");
  assert.equal(id.current_user,data.expectedRole,"OWNER_PRODUCER_PG_EFFECTIVE_LOGIN");
  assert.equal(id.database,data.expectedDb,"OWNER_PRODUCER_PG_DATABASE_ID");
@@ -112,13 +112,29 @@ function probeCatalogFacts(data){
   acl.controller_acl===true,"OWNER_PRODUCER_PG_FENCED_ACL_INVALID");
  assert(roleCaps && Object.values(roleCaps).every(x=>x===false),
   "OWNER_PRODUCER_PG_LOGIN_NOT_RESTRICTED");
- assert(counts.length===29&&counts.every(x=>x==="0"),"OWNER_PRODUCER_PG_NONEMPTY");
+ // Host contract: 29 exact public table identities, and exact
+ // public.facts row counts using the scoped Evidence-login authority.
+ assert.equal(factsCount,"0","OWNER_PRODUCER_PG_FACTS_NOT_EMPTY");
+ assert(Array.isArray(selectRights)&&selectRights.length===29,
+  "OWNER_PRODUCER_PG_SELECT_ACL_INVENTORY_INCOMPLETE");
+ const controllerNames=["twin_external_formal_forcing_base_cursor_v1",
+  "twin_external_formal_forcing_base_target_v1",
+  "twin_external_formal_forcing_controller_lease_v1"];
+ for(const n of ["facts",...controllerNames]){
+  assert(selectRights.some(x=>x.name===n&&x.allowed===true),
+   "OWNER_PRODUCER_PG_REQUIRED_SELECT_DENIED");
+ }
+ assert.deepEqual(selectRights.map(x=>x.name).sort(),tables.slice().sort(),
+  "OWNER_PRODUCER_PG_SELECT_ACL_NAMES_MISMATCH");
  assert(Number.isInteger(databaseOid)&&databaseOid>0&&
   /^[a-z_][a-z0-9_]{3,62}$/.test(databaseOwner)&&
   !["postgres","qual_admin","qual_dedicated_admin"].includes(databaseOwner),
   "OWNER_PRODUCER_PG_DATABASE_OWNER_NOT_RESTRICTED");
  return {owner_role:databaseOwner,oid:databaseOid,role:data.expectedRole,
-  tables:tables.length,all_tables_empty:true,restricted_role:true};
+  tables:tables.length,facts_rows_zero:true,
+  // 28 non-facts tables are not claimed empty by the scoped identity.
+  other_28_table_rows_verified:false,restricted_role:true,
+  denied_select_tables:selectRights.filter(x=>x.allowed!==true).map(x=>x.name)};
 }
 async function pgOne(pg,binding){
  const pool=new pg.Pool({connectionString:binding.raw,max:1,connectionTimeoutMillis:5000,
@@ -152,9 +168,9 @@ async function pgOne(pg,binding){
    "('twin_external_formal_forcing_base_target_v1'),"+
    "('twin_external_formal_forcing_controller_lease_v1')) AS t(name)")).rows[0].allowed;
 
-  // Inventory all 29 effective SELECT privileges with PG native catalog
-  // functions before doing ANY table count. A denied table is an explicit
-  // HOLD, never silently skipped, granted or replaced with estimated rows.
+  // Inventory 29 exact SELECT grants. No COUNT on Twin internal tables
+  // lacking Evidence SELECT privilege: intentional least-privilege design.
+  // No denial is interpreted as a zero-row table.
   phase="TABLE_SELECT_PRIVILEGES";
   const selectRights=(await client.query(
    "SELECT t.name::text AS name, has_table_privilege(current_user,"+
@@ -162,22 +178,11 @@ async function pgOne(pg,binding){
    "FROM unnest($1::text[]) AS t(name)",
    [pgContract.REQUIRED_PUBLIC_TABLES])).rows;
   assert.equal(selectRights.length,29,"OWNER_PRODUCER_PG_SELECT_ACL_INVENTORY_INCOMPLETE");
-  const denied=selectRights.filter(x=>x.allowed!==true).map(x=>x.name);
-  if(denied.length){
-   const e=Error("OWNER_PRODUCER_PG_TABLE_SELECT_DENIED");
-   e.denied_tables=denied;
-   throw e;
-  }
-  phase="TABLE_COUNTS";
-  const counts=[];
-  for(const name of pgContract.REQUIRED_PUBLIC_TABLES){
-   // Names are frozen constants, never caller-supplied SQL.
-   const r=await client.query('SELECT count(*)::text AS n FROM public."'+name+'"');
-   counts.push(r.rows[0]?.n);
-  }
+  phase="FACTS_COUNT";
+  const factsCount=(await client.query("SELECT count(*)::text AS n FROM public.facts")).rows[0]?.n;
   phase="FACT_CONTRACT";
   return probeCatalogFacts({id,tables,acl:{...p,fenced_execute:fencedExecute,controller_acl:controller},
-   counts,databaseOwner:own[0].owner,databaseOid:own[0].oid,
+   factsCount,selectRights,databaseOwner:own[0].owner,databaseOid:own[0].oid,
    roleCaps:roles[0],expectedRole:binding.role,expectedDb:binding.db});
  }catch(error){
   const safelyClassified=Error(
@@ -208,15 +213,19 @@ async function probePg(i,env){
  // Catalog IDs are direct authenticated DB data, not a caller-provided label.
  return {status:"PASS_SCOPED_READONLY",positive_database:POS,negative_database:NEG,
   database_host:"127.0.0.1",database_port:i.database_port,audit_user:a.role,
-  positive_rows_zero:a.all_tables_empty,negative_rows_zero:b.all_tables_empty,
+  positive_rows_zero:a.facts_rows_zero,negative_rows_zero:b.facts_rows_zero,
+  verified_zero_table:"public.facts",other_28_table_rows_verified:false,
   positive_database_exists:true,negative_database_exists:true,
   positive_login_restricted:a.restricted_role,negative_login_restricted:b.restricted_role,
   fenced_writer_execute_allowed:true,direct_fact_insert_forbidden:true,
   pg_owner_id:"pgdb:"+a.oid+":"+b.oid+":"+a.owner_role,
   probe_command_families:["BEGIN TRANSACTION READ ONLY","pg_catalog.pg_database","pg_catalog.pg_roles",
-   "pg_catalog.pg_class","has_table_privilege","has_function_privilege","29x SELECT count(*) per database","ROLLBACK"],
-  probes:{positive:{table_count:a.tables,owner:a.owner_role},
-   negative:{table_count:b.tables,owner:b.owner_role}}};
+   "pg_catalog.pg_class","29x has_table_privilege SELECT per database",
+    "has_function_privilege","1x public.facts exact COUNT per database","ROLLBACK"],
+  probes:{positive:{table_count:a.tables,owner:a.owner_role,
+    denied_select_tables:a.denied_select_tables},
+   negative:{table_count:b.tables,owner:b.owner_role,
+    denied_select_tables:b.denied_select_tables}}};
 }
 function assertS3Private(acl,policyResult){
  assert(acl?.Owner?.ID && /^[A-Za-z0-9_.:-]{12,128}$/.test(acl.Owner.ID),
