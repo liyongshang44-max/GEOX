@@ -396,3 +396,15 @@ test("ephemeral current capture mode requires a real bounded Windows input and c
  assert(body.includes("raw_bytes_persisted:false"));
  assert(!body.includes("fs.writeFileSync")&&!body.includes("fs.openSync"));
 });
+
+test("native Windows survey scans quoted and unquoted process/service config references without exposing contents",()=>{
+ const s=fs.readFileSync(path.join(__dirname,
+  "MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs"),"utf8");
+ const part=s.split("function liveReachability(i,env,alias,account,details,target,now){")[1]
+  ?.split("\nfunction verifyNativeSourceRaw(")[0];
+ assert(part&&part.includes("$serviceFlags="));
+ assert(part.includes("$flags="));
+ assert(part.includes("if(!$f){$f=$m.Groups[2].Value}"));
+ assert(part.includes("String(s3Port),String(pgPort)"));
+ assert(!part.includes("console.log($c)"));
+});
