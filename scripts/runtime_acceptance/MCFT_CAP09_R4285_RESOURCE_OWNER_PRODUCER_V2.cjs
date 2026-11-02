@@ -126,11 +126,20 @@ function probeCatalogFacts(data){
  }
  assert.deepEqual(selectRights.map(x=>x.name).sort(),tables.slice().sort(),
   "OWNER_PRODUCER_PG_SELECT_ACL_NAMES_MISMATCH");
+ // Database ownership belongs to the PostgreSQL control plane and must
+ // NOT be confused with scoped Evidence login permissions. Database owner may
+ // legitimately be the cluster bootstrap/admin role; restricted access is
+ // independently proven from the authenticated session_user and pg_roles.
+ // An owner name/DB OID is only a current catalog identity, NOT proof of
+ // exclusive Resource Owner authority or absence of production bindings.
  assert(Number.isInteger(databaseOid)&&databaseOid>0&&
-  /^[a-z_][a-z0-9_]{3,62}$/.test(databaseOwner)&&
-  !["postgres","qual_admin","qual_dedicated_admin"].includes(databaseOwner),
-  "OWNER_PRODUCER_PG_DATABASE_OWNER_NOT_RESTRICTED");
- return {owner_role:databaseOwner,oid:databaseOid,role:data.expectedRole,
+  typeof databaseOwner==="string"&&
+  /^[a-z_][a-z0-9_]{0,62}$/.test(databaseOwner),
+  "OWNER_PRODUCER_PG_DATABASE_OWNER_CATALOG_INVALID");
+ return {owner_role:databaseOwner,oid:databaseOid,
+  database_owner_restriction_verified:false,
+  database_owner_exclusivity_verified:false,
+  role:data.expectedRole,
   tables:tables.length,facts_rows_zero:true,
   // 28 non-facts tables are not claimed empty by the scoped identity.
   other_28_table_rows_verified:false,restricted_role:true,
@@ -222,9 +231,11 @@ async function probePg(i,env){
   probe_command_families:["BEGIN TRANSACTION READ ONLY","pg_catalog.pg_database","pg_catalog.pg_roles",
    "pg_catalog.pg_class","29x has_table_privilege SELECT per database",
     "has_function_privilege","1x public.facts exact COUNT per database","ROLLBACK"],
-  probes:{positive:{table_count:a.tables,owner:a.owner_role,
+  probes:{positive:{table_count:a.tables,database_catalog_owner:a.owner_role,
+    database_owner_exclusivity_verified:false,
     denied_select_tables:a.denied_select_tables},
-   negative:{table_count:b.tables,owner:b.owner_role,
+   negative:{table_count:b.tables,database_catalog_owner:b.owner_role,
+    database_owner_exclusivity_verified:false,
     denied_select_tables:b.denied_select_tables}}};
 }
 function assertS3Private(acl,policyResult){
