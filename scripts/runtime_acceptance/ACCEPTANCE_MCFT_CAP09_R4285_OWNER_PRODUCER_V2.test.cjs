@@ -69,3 +69,18 @@ test("no fabricated Owner PASS from two successful scoped diagnostics",()=>{
   assert.equal(p.validateInput(i),i);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+
+test("PG diagnostic distinguishes positive/negative phases with safe codes only",()=>{
+ assert.equal(p.pgFailureCode({code:"ECONNREFUSED",message:"postgres://password@127.0.0.1"},"positive","CONNECT"),
+  "OWNER_PRODUCER_PG_POSITIVE_CONNECT_ECONNREFUSED");
+ assert.equal(p.pgFailureCode({code:"28P01",message:"password=UNSAFE_SECRET"},"negative","CONNECT"),
+  "OWNER_PRODUCER_PG_NEGATIVE_CONNECT_28P01");
+ assert.equal(p.pgFailureCode({code:"42501",detail:"secret database ACL"},"positive","TABLE_COUNTS"),
+  "OWNER_PRODUCER_PG_POSITIVE_TABLE_COUNTS_42501");
+ assert.equal(p.pgFailureCode({code:"undefined",message:"secret credential URL"},"positive","TABLE_CATALOG"),
+  "OWNER_PRODUCER_PG_POSITIVE_TABLE_CATALOG_UNKNOWN");
+ assert.equal(p.pgFailureCode({code:"ERR_ASSERTION",message:"OWNER_PRODUCER_PG_EXACT_29_TABLES"},
+  "negative","FACT_CONTRACT"),"OWNER_PRODUCER_PG_EXACT_29_TABLES");
+ assert.throws(()=>p.pgFailureCode({code:"28P01"},"other","CONNECT"),
+  /OWNER_PRODUCER_DIAGNOSTIC_SIDE/);
+});
