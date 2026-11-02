@@ -84,3 +84,24 @@ test("PG diagnostic distinguishes positive/negative phases with safe codes only"
  assert.throws(()=>p.pgFailureCode({code:"28P01"},"other","CONNECT"),
   /OWNER_PRODUCER_DIAGNOSTIC_SIDE/);
 });
+
+test("PG 42501 discovery is a bounded named-table HOLD without leaking server text",async()=>{
+ const table=require("./MCFT_CAP09_R4285_PG_READONLY_V1.cjs").REQUIRED_PUBLIC_TABLES[0];
+ const classified=await p.timed("PG_DUAL_DATABASE_READONLY",async()=>{
+  const e=Error("OWNER_PRODUCER_PG_POSITIVE_TABLE_SELECT_DENIED");
+  e.denied_tables=[table];
+  e.detail="postgres://untrusted:SECRET@127.0.0.1";
+  throw e;
+ });
+ assert.equal(classified.status,"HOLD");
+ assert.equal(classified.reason_code,"OWNER_PRODUCER_PG_POSITIVE_TABLE_SELECT_DENIED");
+ assert.deepEqual(classified.denied_tables,[table]);
+ assert(!JSON.stringify(classified).includes("SECRET"));
+ const tampered=await p.timed("PG_DUAL_DATABASE_READONLY",async()=>{
+  const e=Error("OWNER_PRODUCER_PG_POSITIVE_TABLE_SELECT_DENIED");
+  e.denied_tables=["../../some-sensitive-table"];
+  throw e;
+ });
+ assert.equal(tampered.status,"HOLD");
+ assert.equal(tampered.denied_tables,undefined);
+});
