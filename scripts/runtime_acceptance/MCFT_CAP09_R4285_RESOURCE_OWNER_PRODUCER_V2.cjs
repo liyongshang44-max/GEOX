@@ -250,51 +250,58 @@ function assertS3Private(acl,policyResult){
  return acl.Owner.ID;
 }
 async function probeS3(i,env){
+ // The preexisting restricted account performs only the four approved
+ // read-only S3 data-plane calls. No ACL/policy privilege expansion.
  s3Target(i,env);
- const sdk=require(require.resolve("@aws-sdk/client-s3",{paths:[i.release_root]}));
- const {S3Client,HeadBucketCommand,ListObjectsV2Command,ListObjectVersionsCommand,
-  ListMultipartUploadsCommand,GetBucketAclCommand,GetBucketPolicyCommand}=sdk;
- for(const f of [S3Client,HeadBucketCommand,ListObjectsV2Command,ListObjectVersionsCommand,
-  ListMultipartUploadsCommand,GetBucketAclCommand,GetBucketPolicyCommand])
-  assert(typeof f==="function","OWNER_PRODUCER_S3_SDK_REQUIRED");
+ let sdk;
+ try{sdk=require(require.resolve("@aws-sdk/client-s3",{paths:[i.release_root]}));}
+ catch{throw Error("OWNER_PRODUCER_S3_CLIENT_MODULE_UNAVAILABLE");}
+ const {S3Client,HeadBucketCommand,ListObjectsV2Command,
+  ListObjectVersionsCommand,ListMultipartUploadsCommand}=sdk;
+ for(const f of [S3Client,HeadBucketCommand,ListObjectsV2Command,
+  ListMultipartUploadsCommand])
+  assert(typeof f==="function","OWNER_PRODUCER_S3_CLIENT_INCOMPLETE");
  const client=new S3Client({endpoint:i.bucket_endpoint,region:env.MCFT_CAP09_FORMAL_RAW_REGION,
   forcePathStyle:true,maxAttempts:1,credentials:{
    accessKeyId:env.MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID,
    secretAccessKey:env.MCFT_CAP09_FORMAL_RAW_SECRET_ACCESS_KEY}});
+ let phase="HEAD_BUCKET";
  try{
   await client.send(new HeadBucketCommand({Bucket:BUCKET}));
+  phase="LIST_OBJECTS";
   const objects=await client.send(new ListObjectsV2Command({Bucket:BUCKET,MaxKeys:2}));
-  const versions=await client.send(new ListObjectVersionsCommand({Bucket:BUCKET,MaxKeys:2}));
-  const uploads=await client.send(new ListMultipartUploadsCommand({Bucket:BUCKET,MaxUploads:2}));
   assert(!objects.IsTruncated&&!(objects.Contents||[]).length,
    "OWNER_PRODUCER_S3_OBJECTS_EXIST");
+  phase="LIST_VERSIONS";
+  const versions=await client.send(new ListObjectVersionsCommand({Bucket:BUCKET,MaxKeys:2}));
   assert(!versions.IsTruncated&&!(versions.Versions||[]).length&&
    !(versions.DeleteMarkers||[]).length,
    "OWNER_PRODUCER_S3_VERSIONS_OR_MARKERS_EXIST");
+  phase="LIST_MULTIPART";
+  const uploads=await client.send(new ListMultipartUploadsCommand({Bucket:BUCKET,MaxUploads:2}));
   assert(!uploads.IsTruncated&&!(uploads.Uploads||[]).length,
    "OWNER_PRODUCER_S3_MULTIPART_EXIST");
-  const acl=await client.send(new GetBucketAclCommand({Bucket:BUCKET}));
-  let policy="UNPROVEN";
-  try{await client.send(new GetBucketPolicyCommand({Bucket:BUCKET}));policy="POLICY_PRESENT";}
-  catch(e){
-   // Only an unambiguous NoSuchBucketPolicy response is admissible.
-   if(["NoSuchBucketPolicy","NoSuchBucketPolicyException"].includes(e?.name))
-    policy="NO_BUCKET_POLICY";
-   else throw Error("OWNER_PRODUCER_S3_POLICY_READ_UNAVAILABLE");
-  }
-  const ownerId=assertS3Private(acl,policy);
-  return {status:"PASS_SCOPED_READONLY",bucket_endpoint:i.bucket_endpoint,bucket:BUCKET,
-   bucket_exists:true,bucket_empty_including_versions_multipart:true,
-   bucket_private:true,s3_owner_id:ownerId,
-   probe_operations:6,
-   probe_commands:["HeadBucket","ListObjectsV2","ListObjectVersions",
-    "ListMultipartUploads","GetBucketAcl","GetBucketPolicy"]};
+  return {status:"PASS_SCOPED_DATA_PLANE_ONLY",bucket_endpoint:i.bucket_endpoint,
+   bucket:BUCKET,bucket_exists:true,bucket_empty_including_versions_multipart:true,
+   bucket_private_verified:false,s3_owner_id_verified:false,
+   independent_control_plane_verified:false,production_bindings_absence_verified:false,
+   probe_operations:4,probe_commands:["HeadBucket","ListObjectsV2",
+    "ListObjectVersions","ListMultipartUploads"]};
+ }catch(e){
+  // Never serialize SDK errors containing signed headers/URLs.
+  if(typeof e?.message==="string"&&/^OWNER_PRODUCER_S3_[A-Z0-9_]+$/.test(e.message))throw e;
+  const allowed=new Set(["AccessDenied","InvalidAccessKeyId","SignatureDoesNotMatch",
+   "ExpiredToken","NoSuchBucket","NotImplemented","ECONNREFUSED","ETIMEDOUT"]);
+  const code=allowed.has(e?.name)?e.name:allowed.has(e?.code)?e.code:"UNKNOWN";
+  throw Error("OWNER_PRODUCER_S3_"+phase+"_"+code);
  }finally{client.destroy();}
 }
 async function timed(label,fn){
  const now=performance.now();
  try{
-  const result=await fn();return {component:label,status:"PASS_SCOPED_READONLY",
+  const result=await fn();return {component:label,
+   status:result?.status==="PASS_SCOPED_DATA_PLANE_ONLY"?
+    "HOLD_INDEPENDENT_CONTROL_PLANE":"PASS_SCOPED_READONLY",
    elapsed_ms:round(performance.now()-now),result};
  }catch(e){
   const reason=typeof e?.message==="string"&&
@@ -310,7 +317,10 @@ async function timed(label,fn){
 function unresolved(pg,s3){
  const blockers=[];
  if(pg.status!=="PASS_SCOPED_READONLY")blockers.push("PG_AUTHENTICATED_SCOPE_AND_ACL_NOT_PROVEN");
- if(s3.status!=="PASS_SCOPED_READONLY")blockers.push("S3_EMPTY_VERSIONS_MULTIPART_PRIVATE_NOT_PROVEN");
+ if(s3.status!=="PASS_SCOPED_READONLY")blockers.push(
+  s3.status==="HOLD_INDEPENDENT_CONTROL_PLANE"?
+   "S3_INDEPENDENT_ACL_POLICY_OWNER_NOT_PROVEN":
+   "S3_EMPTY_VERSIONS_MULTIPART_PRIVATE_NOT_PROVEN");
  // Complete global ownership and absence of all production bindings cannot
  // be inferred from two scoped logins and a single bucket ACL. Formal owner
  // exclusivity needs separately verifiable current resource-control evidence.
