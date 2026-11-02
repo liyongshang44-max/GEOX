@@ -556,9 +556,9 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
  {now=Date.now(),env=process.env}={}){
  // This verifier is Windows-only at the formal CLI. Linux CI may exercise
  // structurally invalid inputs, never a synthetic physical PASS.
- host();validateInput(i);
  const control=sourceJson(controlBytes,"CONTROL");
  const inventory=sourceJson(inventoryBytes,"INVENTORY");
+ host();validateInput(i);
  assert.equal(control.subject_sha,i.subject_sha,"HOLD_NATIVE_CONTROL_SUBJECT");
  assert.equal(inventory.subject_sha,i.subject_sha,"HOLD_NATIVE_INVENTORY_SUBJECT");
  for(const [s,k] of [[control,"CONTROL"],[inventory,"INVENTORY"]]){
