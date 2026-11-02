@@ -495,4 +495,6 @@ if(require.main===module){
 }
 module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  parseUrl,pgTarget,s3Target,pgFailureCode,probeCatalogFacts,assertS3Private,unresolved,
- probePg,probeS3,timed,diagnostic,parse};
+ probePg,probeS3,timed,diagnostic,parse,
+ OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
+ replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2};
