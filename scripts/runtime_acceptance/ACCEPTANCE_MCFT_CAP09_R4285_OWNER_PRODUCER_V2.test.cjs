@@ -695,3 +695,57 @@ test("native target container IDP overrides fail closed without leaking values",
  assert.throws(()=>p.assertNoIdpContainerEnvOverrides(target(["malformed"])),
   /HOLD_NATIVE_IDP_CONTAINER_ENV_UNOBSERVED/);
 });
+
+test("native Windows USERS no-output success is empty, but other IAM lists cannot be silently empty",()=>{
+ const empty=Buffer.alloc(0);
+ assert.deepEqual(p.normalizeMinioList(empty,"USERS"),[]);
+ for(const kind of ["ACCOUNTS","POLICY"])
+  assert.throws(()=>p.normalizeMinioList(empty,kind),
+   new RegExp("HOLD_NATIVE_"+kind+"_RAW_UNPARSEABLE"));
+ assert.throws(()=>p.normalizeMinioList(Buffer.from(" \n"),"USERS"),
+  /HOLD_NATIVE_USERS_RAW_UNPARSEABLE/);
+ assert.throws(()=>p.normalizeMinioList(Buffer.from("not json"),"USERS"),
+  /HOLD_NATIVE_USERS_RAW_UNPARSEABLE/);
+ assert.throws(()=>p.normalizeMinioList(Buffer.from("{}\n"),"USERS"),
+  /HOLD_NATIVE_USERS_NOT_SUCCESS/);
+ assert.deepEqual(p.normalizeMinioList(
+  Buffer.from('{"status":"success","users":["foreign"]}\n'),"USERS"),["foreign"]);
+
+});
+
+test("native policy entities parse strict status/result with omitted empty mappings and reject every live association",()=>{
+ const wrap=x=>Buffer.from(JSON.stringify(x)+"\n");
+ const clean={status:"success",result:{timestamp:"2026-11-03T00:00:00Z"}};
+ const check=x=>assert.deepEqual(p.normalizeMinioList(wrap(x),"POLICY"),[]);
+ check(clean);
+ check({...clean,result:{timestamp:clean.result.timestamp,
+  userMappings:[],groupMappings:[],policyMappings:[]}});
+ check({...clean,result:{timestamp:clean.result.timestamp,policyMappings:[]}});
+ const hold=(x,reason)=>assert.throws(
+  ()=>p.normalizeMinioList(wrap(x),"POLICY"),new RegExp(reason));
+ for(const key of ["userMappings","groupMappings","policyMappings"]){
+  hold({...clean,result:{...clean.result,[key]:[{user:"foreign",policies:["admin"]}]}},
+   "HOLD_NATIVE_OTHER_POLICY_PRINCIPAL_REACHABLE");
+  hold({...clean,result:{...clean.result,[key]:null}},
+   "HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+  hold({...clean,result:{...clean.result,[key]:{}}},
+   "HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+ }
+ hold({...clean,extra:"unverified"},"HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+ hold({...clean,result:{timestamp:clean.result.timestamp,unexpected:[]}},
+  "HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+ hold({...clean,result:{}},"HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+ hold({...clean,result:null},"HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+ hold({...clean,result:[]},"HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+ hold({...clean,result:{timestamp:"not a date"}},"HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+ hold({...clean,status:"error"},"HOLD_NATIVE_POLICY_NOT_SUCCESS");
+ assert.throws(()=>p.normalizeMinioList(
+  Buffer.concat([wrap(clean),wrap(clean)]),"POLICY"),
+  /HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED/);
+ assert.throws(()=>p.normalizeMinioList(
+  Buffer.from('{"status":"success","policyMappings":[]}\n'),"POLICY"),
+  /HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED/);
+ const key="R4285_SAFE_FIXTURE_ACCESSKEY";
+ assert.deepEqual(p.normalizeMinioList(wrap({status:"success",
+  accessKey:key,expiration:"2026-11-05T05:52:27Z"}),"ACCOUNTS"),[key]);
+});

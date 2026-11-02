@@ -780,18 +780,38 @@ function assertNoIdpContainerEnvOverrides(target){
  }
 }
 function normalizeMinioList(raw,kind){
+ assert(Buffer.isBuffer(raw)&&["USERS","ACCOUNTS","POLICY"].includes(kind),
+  "HOLD_NATIVE_IAM_LIST_KIND");
+ // The authenticated Windows mc user list emits ZERO stdout bytes for
+ // no MinIO-managed users. Do not accept whitespace, command failures,
+ // or zero-byte responses for ACCOUNTS/POLICY as evidence of absence.
+ if(kind==="USERS"&&raw.length===0)return [];
  const a=nativeJsonLines(raw,"HOLD_NATIVE_"+kind+"_RAW_UNPARSEABLE")
   .flatMap(x=>Array.isArray(x)?x:[x]);
  const out=[];
  for(const x of a){
-  assert(x&&typeof x==="object"&&x.status==="success",
+  assert(x&&typeof x==="object"&&!Array.isArray(x)&&x.status==="success",
    "HOLD_NATIVE_"+kind+"_NOT_SUCCESS");
   if(kind==="POLICY"){
-   assert(Array.isArray(x.policyMappings),"HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
-   for(const m of x.policyMappings){
-    assert(Array.isArray(m.users)&&Array.isArray(m.groups)&&
-     m.users.length===0&&m.groups.length===0,
-     "HOLD_NATIVE_OTHER_POLICY_PRINCIPAL_REACHABLE");
+   // Native mc emits {status:"success",result:{timestamp,...Mappings}},
+   // not top-level policyMappings. Missing omitempty arrays mean zero,
+   // but ANY mapping, malformed result, or extra field is a HOLD.
+   assert(a.length===1&&
+    Object.keys(x).sort().join("|")==="result|status"&&
+    x.result&&typeof x.result==="object"&&!Array.isArray(x.result),
+    "HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+   const result=x.result;
+   const allowed=["timestamp","userMappings","groupMappings","policyMappings"];
+   assert(Object.keys(result).every(k=>allowed.includes(k))&&
+    typeof result.timestamp==="string"&&
+    Number.isFinite(Date.parse(result.timestamp)),
+    "HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+   for(const key of ["userMappings","groupMappings","policyMappings"]){
+    if(Object.prototype.hasOwnProperty.call(result,key)){
+     assert(Array.isArray(result[key]),
+      "HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
+     assert(result[key].length===0,"HOLD_NATIVE_OTHER_POLICY_PRINCIPAL_REACHABLE");
+    }
    }
    continue;
   }
@@ -1307,7 +1327,7 @@ if(require.main===module&&process.argv[2]==="--verify-source-only"){
  });
 }
 module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
- parseUrl,pgTarget,s3Target,pgFailureCode,probeCatalogFacts,assertS3Private,unresolved,
+ parseUrl,pgTarget,s3Target,pgFailureCode,probeCatalogFacts,assertS3Private,unresolved,normalizeMinioList,
  probePg,probeS3,timed,diagnostic,parse,
  OWNER_BINDING_DOMAIN_V2,ASSIGNMENT_FIELDS_V2,replacementPolicyV2,
  replacementPolicyBytesV2,verifyReplacementPolicyV2,verifyOwnerAuthorityBindingV2,
