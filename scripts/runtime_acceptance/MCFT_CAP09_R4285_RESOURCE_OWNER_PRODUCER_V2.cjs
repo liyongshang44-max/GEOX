@@ -172,7 +172,9 @@ async function pgOne(pg,binding){
 }
 async function probePg(i,env){
  const target=pgTarget(i,env);
- const pg=require(require.resolve("pg",{paths:[i.release_root]}));
+ let pg;
+ try{pg=require(require.resolve("pg",{paths:[i.release_root]}));}
+ catch{throw Error("OWNER_PRODUCER_PG_CLIENT_MODULE_UNAVAILABLE");}
  const a=await pgOne(pg,target.positive),b=await pgOne(pg,target.negative);
  assert(a.oid!==b.oid&&a.role!==b.role,"OWNER_PRODUCER_PG_SCOPE_COLLISION");
  // Catalog IDs are direct authenticated DB data, not a caller-provided label.
