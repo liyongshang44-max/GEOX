@@ -47,6 +47,17 @@ test("PG source facts preserve 29-table schema, enforce facts-zero without widen
  assert.equal(observed.facts_rows_zero,true);
  assert.equal(observed.other_28_table_rows_verified,false);
  assert.equal(observed.denied_select_tables.length,25);
+ assert.equal(observed.database_owner_exclusivity_verified,false);
+ // A current cluster DB owner can be postgres; it must not be conflated
+ // with the separately authenticated/restricted Evidence login.
+ const adminOwned=p.probeCatalogFacts({...facts,databaseOwner:"postgres"});
+ assert.equal(adminOwned.owner_role,"postgres");
+ assert.equal(adminOwned.database_owner_restriction_verified,false);
+ assert.equal(adminOwned.database_owner_exclusivity_verified,false);
+ assert.throws(()=>p.probeCatalogFacts({...facts,databaseOwner:""}),
+  /OWNER_PRODUCER_PG_DATABASE_OWNER_CATALOG_INVALID/);
+ assert.throws(()=>p.probeCatalogFacts({...facts,databaseOid:0}),
+  /OWNER_PRODUCER_PG_DATABASE_OWNER_CATALOG_INVALID/);
  assert.throws(()=>p.probeCatalogFacts({...facts,factsCount:"1"}),
   /OWNER_PRODUCER_PG_FACTS_NOT_EMPTY/);
  assert.throws(()=>p.probeCatalogFacts({...facts,selectRights:facts.selectRights.map(x=>
