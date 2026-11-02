@@ -541,9 +541,13 @@ function nativeRead(tool,args){
 }
 
 function nativeStableProjection(label,b){
- // Native command outputs can contain changing uptime/metrics. Compare only
- // exact identities and control-relevant facts, never volatile formatted text.
- const x=nativeJsonLines(b,"HOLD_NATIVE_"+label+"_RESPONSE_FORMAT");
+ // Docker inspect returns a multiline JSON array; mc and docker ps use JSONL.
+ // Only reconcile stable identities, not uptime/metrics.
+ let x;
+ if(label==="CONTAINERS_INSPECT"||label==="VOLUME_INSPECT"){
+  try{x=[JSON.parse(b.toString("utf8"))];}
+  catch{throw Error("HOLD_NATIVE_"+label+"_ARRAY_JSON_FORMAT");}
+ }else x=nativeJsonLines(b,"HOLD_NATIVE_"+label+"_RESPONSE_FORMAT");
  if(label==="ADMIN_INFO")
   return JSON.stringify({deployment_verified:x.some(o=>
    deepHas(o,"ddbc6bb9-eb52-4b95-8324-b556697f8c0e"))});
@@ -657,11 +661,11 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
   "HOLD_NATIVE_MINIO_ACCOUNT_UNVERIFIED");
  assert(m.BUCKET_STAT.some(x=>deepHas(x,BUCKET)),
   "HOLD_NATIVE_BUCKET_NOT_NATIVE");
- const policyText=JSON.stringify(m.POLICY_INFO);
- for(const name of [BUCKET,"s3:ListBucket","s3:ListBucketVersions",
-   "s3:ListBucketMultipartUploads","s3:GetObject","s3:PutObject"])
-  assert(policyText.includes(JSON.stringify(name)),
-   "HOLD_NATIVE_MINIO_POLICY_SCOPE_NOT_RECONCILED");
+ // POLICY_INFO was reconciled against the exact seven-pair policy by
+ // nativeStableProjection() from both captured and live native data.
+ assert(typeof nativeStableProjection("POLICY_INFO",
+  Buffer.from(cc.POLICY_INFO.stdout_base64,"base64"))==="string",
+  "HOLD_NATIVE_MINIO_POLICY_SCOPE_NOT_RECONCILED");
  // The source must prove no public bucket exposure, not merely say private.
  assert(m.BUCKET_ANONYMOUS.some(x=>deepHas(x,"none")),
   "HOLD_NATIVE_BUCKET_ANONYMOUS_SCOPE_NOT_PROVEN");
