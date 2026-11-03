@@ -1453,6 +1453,25 @@ function captureCurrentNativeSourceOnly(i,env=process.env,protectedDir=null){
 }
 
 
+
+function verifyProtectedOnly(argv){
+ assert(argv.length===5&&argv[0]==="--verify-protected-only"&&
+  argv[1]==="--input"&&argv[3]==="--protected-dir"&&
+  typeof argv[4]==="string"&&path.isAbsolute(argv[4]),
+  "HOLD_HANDOFF_VERIFY_CLI_ARGS");
+ const i=parse(["--diagnostic-only","--input",argv[2]]);
+ const files=handoffPaths(argv[4]);
+ const proof=readProtectedHandoff(i,files.CONTROL,files.INVENTORY);
+ const c=sha(proof.control_bytes),v=sha(proof.inventory_bytes);
+ proof.control_bytes.fill(0);proof.inventory_bytes.fill(0);
+ return {status:"PROTECTED_BYTES_RECONCILED_NOT_NATIVE_OR_OWNER",
+  control_sha256:c,inventory_sha256:v,
+  manifest_sha256:sha(fs.readFileSync(files.MANIFEST)),
+  source_observed_at:proof.manifest.observed_at,
+  native_freshness_replayed:false,owner_issued:false,permit_issued:false,
+  execute_authorized:false,stage_count:0};
+}
+
 function protectedHandoffOnly(argv,env=process.env){
  assert(argv.length===5&&
   ["--capture-protected-only","--handoff-timing-only"].includes(argv[0])&&
@@ -1530,6 +1549,17 @@ if(require.main===module&&process.argv[2]==="--verify-source-only"){
    execution_authorized:false,stage_count:0})+"\n");
   process.exitCode=2;
  });
+}else if(require.main===module&&process.argv[2]==="--verify-protected-only"){
+ Promise.resolve().then(()=>verifyProtectedOnly(process.argv.slice(2))).then(x=>{
+  process.stdout.write(JSON.stringify(x)+"\n");
+ }).catch(e=>{
+  const reason=/^(OWNER_|HOLD_HANDOFF_)/.test(e?.message||"")?
+   e.message:"HOLD_HANDOFF_INDEPENDENT_RECONCILIATION";
+  process.stdout.write(JSON.stringify({status:"HOLD_HANDOFF_BYTES_NOT_RECONCILED",
+   reason_code:reason,owner_issued:false,permit_issued:false,
+   execute_authorized:false,stage_count:0})+"\n");
+  process.exitCode=2;
+ });
 }else if(require.main===module&&process.argv[2]==="--produce-raw"){
  Promise.resolve().then(()=>parseFormal(process.argv.slice(2)))
   .then(x=>produceFormalRaw(x.i,x.sources,x.output)).then(x=>{
@@ -1568,6 +1598,6 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  encodeNativeCapsule,sourceJson,nativeStableProjection,nativeBucketAnonymousMatches,parseDisabledIdentity,assertNoIdpContainerEnvOverrides,assessNativeReachability,
  verifyNativeSourceRaw,captureCurrentNativeSourceOnly,sourceOnly,
  HANDOFF_SCHEMA,CIPHER_SCHEMA,HANDOFF_FILES,handoffPaths,checkHandoffManifest,
- checkHandoffCipher,readProtectedHandoff,storeProtectedHandoff,protectedHandoffOnly,
+ checkHandoffCipher,readProtectedHandoff,storeProtectedHandoff,protectedHandoffOnly,verifyProtectedOnly,
  verifyFormalEvidence,composeFormalReadback,
  requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};

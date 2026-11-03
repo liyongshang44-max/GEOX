@@ -789,3 +789,19 @@ test("protected native handoff is exact-subject, manifest-bound, closed and non-
   "--capture-protected-only","--input","a","--protected-dir","relative"]),
   /HOLD_HANDOFF_CLI_ARGS/);
 });
+
+test("independent protected handoff reconciliation never promotes source or Owner",()=>{
+ assert.throws(()=>p.verifyProtectedOnly([
+  "--verify-protected-only","--input","x","--protected-dir","relative"]),
+  /HOLD_HANDOFF_VERIFY_CLI_ARGS/);
+ assert.throws(()=>p.verifyProtectedOnly([
+  "--verify-protected-only","--input","x","--protected-dir","/tmp","--execute"]),
+  /HOLD_HANDOFF_VERIFY_CLI_ARGS/);
+ const s=fs.readFileSync(path.join(__dirname,"MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs"),"utf8");
+ const block=s.split("function verifyProtectedOnly(argv){")[1]
+  ?.split("\nfunction protectedHandoffOnly(")[0];
+ assert(block&&block.includes("readProtectedHandoff"));
+ assert(block.includes("native_freshness_replayed:false"));
+ assert(!block.includes("verifyNativeSourceRaw("));
+ assert(!block.includes("produceFormalRaw("));
+});

@@ -81,3 +81,9 @@ The non-authorizing timing mode reports a monotonic capture→seal→decrypt→h
 120 seconds. It does NOT measure a real signed Owner→signer→Permit→final approval
 or six-stage consumer and cannot qualify that complete 120s bound. Full-session
 real Windows timing remains HOLD. No execution permission or Permit is issued.
+
+A separately launched same-user, non-authorizing integrity check uses
+`--verify-protected-only --input <SOURCEONLY_INPUT> --protected-dir <EXISTING_PRIVATE_DIRECTORY>`.
+It recomputes both decrypted original byte SHA-256 values and the manifest hash.
+It does not replay native MinIO/Docker, renew freshness, sign Owner or issue Permit;
+the formal Producer must independently replay and bind source on final protected main.
