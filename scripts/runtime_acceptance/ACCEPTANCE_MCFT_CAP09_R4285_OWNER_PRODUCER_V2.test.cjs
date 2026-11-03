@@ -1,7 +1,7 @@
 "use strict";
 /* No network, no signed Owner, no credentials and no physical R4285 stages. */
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),
- os=require("node:os"),path=require("node:path");
+ os=require("node:os"),path=require("node:path"),crypto=require("node:crypto");
 const p=require("./MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs");
 const R="4285c3ce342c",P="mcft_cap09_requal_"+R+"_positive",N="mcft_cap09_requal_"+R+"_negative";
 function context(){
@@ -419,8 +419,8 @@ test("ephemeral current capture mode requires a real bounded Windows input and c
   "nonexistent","--capture-current"]),/OWNER_PRODUCER_ONLY_DIAGNOSTIC_ALLOWED/);
  const source=fs.readFileSync(path.join(__dirname,
   "MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V2.cjs"),"utf8");
- const body=source.split("function captureCurrentNativeSourceOnly(i,env=process.env){")[1]
-  ?.split("\nfunction sourceOnly(argv){")[0];
+ const body=source.split("function captureCurrentNativeSourceOnly(i,env=process.env,protectedDir=null){")[1]
+  ?.split("\nfunction protectedHandoffOnly(")[0];
  assert(body&&body.includes("verifyNativeSourceRaw(i,controlBytes,inventoryBytes"));
  assert(body.includes("raw_bytes_persisted:false"));
  assert(!body.includes("fs.writeFileSync")&&!body.includes("fs.openSync"));
