@@ -52,3 +52,32 @@ node 'D:\<QUALIFIED_V2_RELEASE>\scripts\runtime_acceptance\MCFT_CAP09_R4285_WIND
 `--session-execute` is a separate future explicitly authorized action and is FORBIDDEN under current CTO disposition. The existing independent Owner Producer and signers are external dependencies and are not reconstructed in this PR. No historical V1 subject, signature or Permit is upgraded. Windows owner-observed-to-consumption continuous timing is still HOLD; this source integration is not a physical admission PASS.
 ## Release gates
 New Subject and Material qualification after merge; applicable QCP; real Windows Host, real PG/S3 read-only checks; negative tests for changed readback, expired owner, nonce reuse, modified material, GitHub deletion and competing consumes. No old signature automatically transfers.
+
+## Protected native raw handoff — bounded pre-merge implementation (NOT OWNER)
+New non-authorizing Producer modes:
+`--capture-protected-only --input <SOURCEONLY_INPUT> --protected-dir <NEW_PRIVATE_DIRECTORY>` and
+`--handoff-timing-only --input <SOURCEONLY_INPUT> --protected-dir <NEW_PRIVATE_DIRECTORY>`.
+These run only on the registered Windows host, require the existing read-only native
+source gates, create a **never-existing** private directory with inheritance-disabled
+current-user-only Windows DACL, and write two **DPAPI CurrentUser encrypted**
+original capsules (`CONTROL.dpapi.json`, `INVENTORY.dpapi.json`)
+followed by an untrusted, exact manifest (`MANIFEST.json`). All files use
+exclusive `wx` creation and fsync, no overwrite. **No raw MinIO/Docker JSON
+or Config.Env is written in plaintext**. The manifest contains exact original raw
+SHA-256 digests for signing preparation but does not prove authority.
+An incomplete directory fails closed and must never be automatically reused.
+
+The existing formal source specification still has the same six keys, but its
+`control_evidence_file` / `inventory_evidence_file` must point
+to the two encrypted files in the **same private directory**. Formal Producer
+decrypts in memory under the same Windows CurrentUser, rechecks ciphertext
+and full plaintext byte SHA-256, exact Run/Host/Subject/observed_at and native
+live read-only data **before** any physical readback or signed capability.
+The existing Ed25519 Owner responsibility + CTO scope SHA-256 contracts bind
+the original plaintext bytes unchanged. No new issuer/registry/trust schema.
+
+The non-authorizing timing mode reports a monotonic capture→seal→decrypt→hash
+**source-prefix** duration and whether its original observed_at remains within
+120 seconds. It does NOT measure a real signed Owner→signer→Permit→final approval
+or six-stage consumer and cannot qualify that complete 120s bound. Full-session
+real Windows timing remains HOLD. No execution permission or Permit is issued.

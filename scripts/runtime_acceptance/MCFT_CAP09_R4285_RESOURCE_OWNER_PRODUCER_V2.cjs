@@ -1113,7 +1113,180 @@ function boundedFile(file,max=1048576){
  assert(st.isFile()&&st.size>0&&st.size<max,"OWNER_FORMAL_SOURCE_FILE_BOUNDS");
  return fs.readFileSync(file);
 }
-function loadFormalSourceSpec(file,sourceRoot){
+
+// Exact-source handoff. DPAPI protects the complete original MinIO and Docker
+// bytes under the *current Windows user*. The disk never receives plaintext.
+// The untrusted manifest gives signers hashes, NOT source authority or Owner.
+const HANDOFF_SCHEMA="MCFT_CAP09_R4285_PROTECTED_HANDOFF_V1";
+const CIPHER_SCHEMA="MCFT_CAP09_R4285_CURRENTUSER_DPAPI_V1";
+const HANDOFF_FILES={CONTROL:"CONTROL.dpapi.json",INVENTORY:"INVENTORY.dpapi.json",
+ MANIFEST:"MANIFEST.json"};
+function handoffPaths(dir){
+ assert(typeof dir==="string"&&path.isAbsolute(dir),"HOLD_HANDOFF_DIR_ABSOLUTE");
+ return Object.fromEntries(Object.entries(HANDOFF_FILES).map(([k,v])=>[k,path.join(dir,v)]));
+}
+function handoffDir(i,dir,create=false){
+ const p=handoffPaths(dir);
+ for(const root of [i.source_root,i.release_root]){
+  const rel=path.relative(root,path.resolve(dir));
+  assert(rel===".."||rel.startsWith(".."+path.sep),"HOLD_HANDOFF_INSIDE_REPO_OR_RELEASE");
+ }
+ if(create){
+  assert(!fs.existsSync(dir),"HOLD_HANDOFF_ALREADY_EXISTS");
+  noLinks(path.dirname(dir));
+  fs.mkdirSync(dir,{recursive:false,mode:0o700});
+ }
+ noLinks(dir);
+ assert(fs.lstatSync(dir).isDirectory(),"HOLD_HANDOFF_NOT_DIR");
+ return p;
+}
+function psCall(lines,{input=null,maxBuffer=2097152}={}){
+ const cp=require("node:child_process").spawnSync("powershell.exe",
+  ["-NoProfile","-NonInteractive","-EncodedCommand",
+   Buffer.from(lines.join("\n"),"utf16le").toString("base64")],
+  {input,encoding:null,windowsHide:true,shell:false,timeout:20000,maxBuffer,
+   stdio:[input===null?"ignore":"pipe","pipe","pipe"]});
+ assert(!cp.error&&cp.status===0&&Buffer.isBuffer(cp.stdout),
+  "HOLD_HANDOFF_WINDOWS_PROTECTION_FAILED");
+ return cp.stdout;
+}
+function handoffAcl(dir,set=false){
+ assert(process.platform==="win32","HOLD_HANDOFF_WINDOWS_ONLY");
+ const p=Buffer.from(dir,"utf8").toString("base64");
+ const lines=[
+  "$ErrorActionPreference='Stop'",
+  "$p=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('"+p+"'))",
+  "$me=[Security.Principal.WindowsIdentity]::GetCurrent().User"
+ ];
+ if(set)lines.push(
+  "$acl=New-Object Security.AccessControl.DirectorySecurity",
+  "$acl.SetAccessRuleProtection($true,$false)",
+  "$inh=[Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit",
+  "$rule=[Security.AccessControl.FileSystemAccessRule]::new($me,[Security.AccessControl.FileSystemRights]::FullControl,$inh,[Security.AccessControl.PropagationFlags]::None,[Security.AccessControl.AccessControlType]::Allow)",
+  "$acl.AddAccessRule($rule)",
+  "[IO.Directory]::SetAccessControl($p,$acl)"
+ );
+ lines.push(
+  "$actual=[IO.Directory]::GetAccessControl($p)",
+  "if(!$actual.AreAccessRulesProtected){throw 'INHERITED_ACL'}",
+  "$rules=@($actual.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier]))",
+  "if($rules.Count -ne 1 -or $rules[0].IdentityReference.Value -cne $me.Value -or $rules[0].AccessControlType -ne [Security.AccessControl.AccessControlType]::Allow -or ($rules[0].FileSystemRights -band [Security.AccessControl.FileSystemRights]::FullControl) -ne [Security.AccessControl.FileSystemRights]::FullControl){throw 'ACL_SCOPE'}"
+ );
+ assert(psCall(lines,{maxBuffer:4096}).length===0,"HOLD_HANDOFF_DACL_SCOPE");
+ return true;
+}
+function handoffDpapi(op,raw,kind,i){
+ assert(process.platform==="win32"&&["Protect","Unprotect"].includes(op)&&
+  ["CONTROL","INVENTORY"].includes(kind)&&Buffer.isBuffer(raw)&&
+  raw.length>0&&raw.length<2*1048576,"HOLD_HANDOFF_DPAPI_ARGS");
+ const entropy=Buffer.from("GEOX_R4285_NATIVE_HANDOFF_DPAPI_V1\n"+
+  lineage.canonical({kind,run_id:RUN,subject_sha:i.subject_sha,host_id:HOST}));
+ const lines=[
+  "$ErrorActionPreference='Stop'",
+  "Add-Type -AssemblyName System.Security",
+  "$mem=New-Object IO.MemoryStream",
+  "[Console]::OpenStandardInput().CopyTo($mem)",
+  "$bytes=$mem.ToArray()",
+  "$entropy=[Convert]::FromBase64String('"+entropy.toString("base64")+"')",
+  "$scope=[Security.Cryptography.DataProtectionScope]::CurrentUser",
+  "$result=[Security.Cryptography.ProtectedData]::"+op+"($bytes,$entropy,$scope)",
+  "[Console]::OpenStandardOutput().Write($result,0,$result.Length)"
+ ];
+ const out=psCall(lines,{input:raw});
+ assert(out.length>0&&out.length<2*1048576,"HOLD_HANDOFF_DPAPI_BYTES");
+ return out;
+}
+function writeOnceHandoff(file,bytes){
+ const fd=fs.openSync(file,"wx",0o600);
+ try{fs.writeFileSync(fd,bytes);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}
+}
+function checkHandoffManifest(m,i){
+ exact(m,["schema_version","run_id","host_id","subject_sha","observed_at",
+  "control_sha256","inventory_sha256","control_cipher_sha256","inventory_cipher_sha256",
+  "owner_issued","permit_issued","execute_authorized"],"HOLD_HANDOFF_MANIFEST_FIELDS");
+ assert(m.schema_version===HANDOFF_SCHEMA&&m.run_id===RUN&&m.host_id===HOST&&
+  m.subject_sha===i.subject_sha&&H.test(m.subject_sha)&&
+  typeof m.observed_at==="string"&&Number.isFinite(Date.parse(m.observed_at))&&
+  new Date(m.observed_at).toISOString()===m.observed_at,
+  "HOLD_HANDOFF_MANIFEST_IDENTITY");
+ for(const k of ["control_sha256","inventory_sha256","control_cipher_sha256","inventory_cipher_sha256"])
+  assert(X.test(m[k]),"HOLD_HANDOFF_SHA");
+ assert(m.control_sha256!==m.inventory_sha256&&m.owner_issued===false&&
+  m.permit_issued===false&&m.execute_authorized===false,"HOLD_HANDOFF_AUTHORITY");
+ return m;
+}
+function checkHandoffCipher(e,kind,m){
+ exact(e,["schema_version","kind","run_id","host_id","subject_sha","observed_at",
+  "raw_sha256","raw_length","cipher_sha256","cipher_base64"],"HOLD_HANDOFF_CIPHER_FIELDS");
+ const lower=kind.toLowerCase();
+ assert(e.schema_version===CIPHER_SCHEMA&&e.kind===kind&&e.run_id===m.run_id&&
+  e.host_id===m.host_id&&e.subject_sha===m.subject_sha&&
+  e.observed_at===m.observed_at&&e.raw_sha256===m[lower+"_sha256"]&&
+  e.cipher_sha256===m[lower+"_cipher_sha256"]&&
+  Number.isInteger(e.raw_length)&&e.raw_length>0&&e.raw_length<NATIVE_CAPSULE_MAX_BYTES&&
+  typeof e.cipher_base64==="string"&&e.cipher_base64.length>0&&
+  e.cipher_base64.length<3*1048576,"HOLD_HANDOFF_CIPHER_IDENTITY");
+ const cipher=Buffer.from(e.cipher_base64,"base64");
+ assert(cipher.length>0&&cipher.length<2*1048576&&
+  cipher.toString("base64")===e.cipher_base64&&sha(cipher)===e.cipher_sha256,
+  "HOLD_HANDOFF_CIPHER_DIGEST");
+ return cipher;
+}
+function storeProtectedHandoff(i,dir,control,inventory,observed_at){
+ host();validateInput(i);
+ const paths=handoffDir(i,dir,true);
+ handoffAcl(dir,true);
+ const m={schema_version:HANDOFF_SCHEMA,run_id:RUN,host_id:HOST,
+  subject_sha:i.subject_sha,observed_at,
+  control_sha256:sha(control),inventory_sha256:sha(inventory),
+  control_cipher_sha256:"0".repeat(64),inventory_cipher_sha256:"0".repeat(64),
+  owner_issued:false,permit_issued:false,execute_authorized:false};
+ assert(m.control_sha256!==m.inventory_sha256,"HOLD_HANDOFF_DISTINCT_SOURCES");
+ for(const [kind,raw] of [["CONTROL",control],["INVENTORY",inventory]]){
+  const parsed=sourceJson(raw,kind);
+  assert(parsed.subject_sha===i.subject_sha&&parsed.observed_at===observed_at,
+   "HOLD_HANDOFF_RAW_SUBJECT_TIME");
+  const cipher=handoffDpapi("Protect",raw,kind,i);
+  const lower=kind.toLowerCase();
+  m[lower+"_cipher_sha256"]=sha(cipher);
+  const e={schema_version:CIPHER_SCHEMA,kind,run_id:RUN,host_id:HOST,
+   subject_sha:i.subject_sha,observed_at,raw_sha256:sha(raw),raw_length:raw.length,
+   cipher_sha256:sha(cipher),cipher_base64:cipher.toString("base64")};
+  writeOnceHandoff(paths[kind],Buffer.from(JSON.stringify(e)+"\n"));
+  cipher.fill(0);
+ }
+ checkHandoffManifest(m,i);
+ writeOnceHandoff(paths.MANIFEST,Buffer.from(lineage.canonical(m)+"\n"));
+ handoffAcl(dir);
+ return {control_sha256:m.control_sha256,inventory_sha256:m.inventory_sha256,
+  manifest_sha256:sha(fs.readFileSync(paths.MANIFEST)),observed_at,
+  raw_bytes_persisted:false,protected_ciphertext_persisted:true};
+}
+function readProtectedHandoff(i,controlFile,inventoryFile){
+ host();validateInput(i);
+ const dir=path.dirname(controlFile),paths=handoffDir(i,dir);
+ assert(path.resolve(controlFile)===paths.CONTROL&&
+  path.resolve(inventoryFile)===paths.INVENTORY,"HOLD_HANDOFF_PAIR_PATHS");
+ handoffAcl(dir);
+ for(const file of Object.values(paths))noLinks(file);
+ const m=checkHandoffManifest(JSON.parse(boundedFile(paths.MANIFEST,8192).toString("utf8")),i);
+ const result={manifest:m};
+ for(const kind of ["CONTROL","INVENTORY"]){
+  const e=JSON.parse(boundedFile(paths[kind],3*1048576).toString("utf8"));
+  const cipher=checkHandoffCipher(e,kind,m);
+  const raw=handoffDpapi("Unprotect",cipher,kind,i);cipher.fill(0);
+  assert(raw.length===e.raw_length&&sha(raw)===e.raw_sha256,
+   "HOLD_HANDOFF_RAW_DIGEST");
+  const parsed=sourceJson(raw,kind);
+  assert(parsed.subject_sha===i.subject_sha&&parsed.observed_at===m.observed_at,
+   "HOLD_HANDOFF_RAW_IDENTITY");
+  result[kind.toLowerCase()+"_bytes"]=raw;
+ }
+ return result;
+}
+
+function loadFormalSourceSpec(file,i){
+ const sourceRoot=i.source_root;
  const spec=JSON.parse(boundedFile(file,16384).toString("utf8").replace(/^\uFEFF/,""));
  exact(spec,["binding_envelope_file","trust_file","cto_decision_file",
   "control_evidence_file","inventory_evidence_file","parent_principal_sha256"],
@@ -1122,10 +1295,12 @@ function loadFormalSourceSpec(file,sourceRoot){
  const trustPath=path.join(sourceRoot,"scripts","runtime_acceptance","MCFT_CAP09_RETRY_TRUST_V1.json");
  assert(boundedFile(trustPath).equals(boundedFile(spec.trust_file)),
   "OWNER_FORMAL_TRUST_NOT_REPOSITORY_REGISTERED");
+ // Protected CurrentUser capsules are decrypted in memory and the exact
+ // original SHA is used for the existing signed responsibility/CTO contracts.
+ const raw=readProtectedHandoff(i,spec.control_evidence_file,spec.inventory_evidence_file);
  return {envelope:get("binding_envelope_file"),trust:get("trust_file"),
   cto_decision:get("cto_decision_file"),
-  control_bytes:boundedFile(spec.control_evidence_file),
-  inventory_bytes:boundedFile(spec.inventory_evidence_file),
+  control_bytes:raw.control_bytes,inventory_bytes:raw.inventory_bytes,
   parent_principal_sha256:spec.parent_principal_sha256};
 }
 function assertFormalOutputSeparate(i,output){
@@ -1162,7 +1337,7 @@ function parseFormal(argv){
  assert(argv.length===7&&argv[0]==="--produce-raw"&&argv[1]==="--input"&&
   argv[3]==="--sources"&&argv[5]==="--output","OWNER_FORMAL_CLI_EXACT");
  const i=parse(["--diagnostic-only","--input",argv[2]]);
- return {i,sources:loadFormalSourceSpec(argv[4],i.source_root),output:argv[6]};
+ return {i,sources:loadFormalSourceSpec(argv[4],i),output:argv[6]};
 }
 
 function composeFormalReadback(i,source,pg,s3,{observedAt,completedAt,sourceSha}){
@@ -1219,7 +1394,7 @@ function parse(argv){
 // PG/S3 probe, Permit, resource write, or requirement to pretend this HEAD is
 // protected main. It returns only a bounded native provenance/HOLD verdict.
 
-function captureCurrentNativeSourceOnly(i,env=process.env){
+function captureCurrentNativeSourceOnly(i,env=process.env,protectedDir=null){
  // Ephemeral collection: do not write raw MinIO/Docker CLI stdout or any
  // Config.Env secrets to disk, GitHub logs or stdout. The captured bytes are
  // immediately rechecked through the SAME fixed native verifier path.
@@ -1261,10 +1436,55 @@ function captureCurrentNativeSourceOnly(i,env=process.env){
  // Each signed source is still <1 MiB after reversible, bounded encoding.
  // Replayed native observations must match the ORIGINAL decompressed stdout.
  const scope=verifyNativeSourceRaw(i,controlBytes,inventoryBytes,{env});
+ if(protectedDir!==null){
+  assert(scope.status==="NATIVE_REACHABLE_SCOPE_VERIFIED"&&
+   Date.now()-Date.parse(observedAt)<=120000,
+   "HOLD_HANDOFF_NATIVE_EXPIRED_OR_UNQUALIFIED");
+  const sealed=storeProtectedHandoff(i,protectedDir,controlBytes,inventoryBytes,observedAt);
+  controlBytes.fill(0);inventoryBytes.fill(0);
+  return {status:"PROTECTED_NATIVE_SOURCE_NOT_OWNER",...sealed,
+   owner_issued:false,permit_issued:false,execution_authorized:false,
+   six_stages_executed:0};
+ }
  return {status:scope.status,control_sha256:sha(controlBytes),
   inventory_sha256:sha(inventoryBytes),observed_at:observedAt,
   owner_issued:false,permit_issued:false,execution_authorized:false,
   six_stages_executed:0,raw_bytes_persisted:false};
+}
+
+
+function protectedHandoffOnly(argv,env=process.env){
+ assert(argv.length===5&&
+  ["--capture-protected-only","--handoff-timing-only"].includes(argv[0])&&
+  argv[1]==="--input"&&argv[3]==="--protected-dir"&&
+  typeof argv[4]==="string"&&path.isAbsolute(argv[4]),
+  "HOLD_HANDOFF_CLI_ARGS");
+ const i=parse(["--diagnostic-only","--input",argv[2]]);
+ const dir=argv[4];
+ assert(!fs.existsSync(dir),"HOLD_HANDOFF_ALREADY_EXISTS");
+ const start=performance.now();
+ const capture=captureCurrentNativeSourceOnly(i,env,dir);
+ const captured=performance.now();
+ const files=handoffPaths(dir);
+ const read=readProtectedHandoff(i,files.CONTROL,files.INVENTORY);
+ assert(sha(read.control_bytes)===capture.control_sha256&&
+  sha(read.inventory_bytes)===capture.inventory_sha256&&
+  sha(fs.readFileSync(files.MANIFEST))===capture.manifest_sha256,
+  "HOLD_HANDOFF_ROUNDTRIP_DIGEST");
+ read.control_bytes.fill(0);read.inventory_bytes.fill(0);
+ const elapsed=performance.now()-start;
+ const age=Date.now()-Date.parse(capture.observed_at);
+ assert(Number.isFinite(elapsed)&&elapsed>=0&&age>=0,
+  "HOLD_HANDOFF_MONOTONIC_TIMING");
+ return {status:"NONAUTH_SOURCE_HANDOFF_PREFIX_MEASURED_NOT_OWNER",
+  control_sha256:capture.control_sha256,inventory_sha256:capture.inventory_sha256,
+  manifest_sha256:capture.manifest_sha256,source_observed_at:capture.observed_at,
+  capture_and_seal_ms:Math.round((captured-start)*1000)/1000,
+  continuous_roundtrip_ms:Math.round(elapsed*1000)/1000,
+  source_age_ms:age,source_prefix_within_120s:age<=120000,
+  full_owner_signer_permit_timing_verified:false,
+  protected_ciphertext_persisted:true,raw_bytes_persisted:false,
+  owner_issued:false,permit_issued:false,execution_authorized:false,stage_count:0};
 }
 
 function sourceOnly(argv){
@@ -1293,6 +1513,19 @@ if(require.main===module&&process.argv[2]==="--verify-source-only"){
   const reason=/^(OWNER_|HOLD_NATIVE_)/.test(e?.message||"")?
    e.message:"HOLD_NATIVE_SOURCE_UNAVAILABLE";
   process.stdout.write(JSON.stringify({status:"HOLD_NATIVE_SOURCE_NOT_QUALIFIED",
+   reason_code:reason,owner_issued:false,permit_issued:false,
+   execution_authorized:false,stage_count:0})+"\n");
+  process.exitCode=2;
+ });
+}else if(require.main===module&&
+ ["--capture-protected-only","--handoff-timing-only"].includes(process.argv[2])){
+ Promise.resolve().then(()=>protectedHandoffOnly(process.argv.slice(2))).then(x=>{
+  process.stdout.write(JSON.stringify(x)+"\n");
+  if(!x.source_prefix_within_120s)process.exitCode=2;
+ }).catch(e=>{
+  const reason=/^(OWNER_|HOLD_NATIVE_|HOLD_HANDOFF_)/.test(e?.message||"")?
+   e.message:"HOLD_HANDOFF_UNKNOWN_FAILURE";
+  process.stdout.write(JSON.stringify({status:"HOLD_NONAUTH_SOURCE_HANDOFF",
    reason_code:reason,owner_issued:false,permit_issued:false,
    execution_authorized:false,stage_count:0})+"\n");
   process.exitCode=2;
@@ -1334,5 +1567,7 @@ module.exports={RUN,HOST,PROBE,SCHEMA,POS,NEG,BUCKET,keys,validateInput,
  FORMAL_SURFACES,CTO_DECISION_DOMAIN_V1,NATIVE_CONTROL_SCHEMA,NATIVE_INVENTORY_SCHEMA,
  encodeNativeCapsule,sourceJson,nativeStableProjection,nativeBucketAnonymousMatches,parseDisabledIdentity,assertNoIdpContainerEnvOverrides,assessNativeReachability,
  verifyNativeSourceRaw,captureCurrentNativeSourceOnly,sourceOnly,
+ HANDOFF_SCHEMA,CIPHER_SCHEMA,HANDOFF_FILES,handoffPaths,checkHandoffManifest,
+ checkHandoffCipher,readProtectedHandoff,storeProtectedHandoff,protectedHandoffOnly,
  verifyFormalEvidence,composeFormalReadback,
  requireLocalProtectedMain,assertFormalOutputSeparate,loadFormalSourceSpec,produceFormalRaw,parseFormal};

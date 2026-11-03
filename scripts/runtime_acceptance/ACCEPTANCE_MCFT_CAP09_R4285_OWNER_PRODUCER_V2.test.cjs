@@ -749,3 +749,43 @@ test("native policy entities parse strict status/result with omitted empty mappi
  assert.deepEqual(p.normalizeMinioList(wrap({status:"success",
   accessKey:key,expiration:"2026-11-05T05:52:27Z"}),"ACCOUNTS"),[key]);
 });
+
+test("protected native handoff is exact-subject, manifest-bound, closed and non-authorizing",()=>{
+ const i={subject_sha:"a".repeat(40)};
+ const m={schema_version:p.HANDOFF_SCHEMA,run_id:p.RUN,host_id:p.HOST,
+  subject_sha:i.subject_sha,observed_at:"2026-11-02T17:01:19.223Z",
+  control_sha256:"1".repeat(64),inventory_sha256:"2".repeat(64),
+  control_cipher_sha256:"3".repeat(64),inventory_cipher_sha256:"4".repeat(64),
+  owner_issued:false,permit_issued:false,execute_authorized:false};
+ assert.deepEqual(p.checkHandoffManifest(m,i),m);
+ const reject=x=>assert.throws(()=>p.checkHandoffManifest(x,i),/HOLD_HANDOFF_/);
+ reject({...m,subject_sha:"b".repeat(40)});
+ reject({...m,control_sha256:"2".repeat(64)});
+ reject({...m,control_cipher_sha256:"nonsense"});
+ reject({...m,execute_authorized:true});
+ reject({...m,permit_issued:true});
+ reject({...m,owner_issued:true});
+ reject({...m,unknown:"hidden"});
+ reject({...m,observed_at:"not a valid timestamp"});
+ const encrypted=Buffer.from("test-only-ciphertext-not-DPAPI");
+ const c={schema_version:p.CIPHER_SCHEMA,kind:"CONTROL",run_id:m.run_id,
+  host_id:m.host_id,subject_sha:m.subject_sha,observed_at:m.observed_at,
+  raw_sha256:m.control_sha256,raw_length:12,
+  cipher_sha256:crypto.createHash("sha256").update(encrypted).digest("hex"),
+  cipher_base64:encrypted.toString("base64")};
+ const ma={...m,control_cipher_sha256:c.cipher_sha256};
+ assert.deepEqual(p.checkHandoffCipher(c,"CONTROL",ma),encrypted);
+ const bad=x=>assert.throws(()=>p.checkHandoffCipher(x,"CONTROL",ma),/HOLD_HANDOFF_/);
+ bad({...c,subject_sha:"b".repeat(40)});
+ bad({...c,raw_sha256:m.inventory_sha256});
+ bad({...c,cipher_base64:Buffer.from("modified").toString("base64")});
+ bad({...c,raw_length:0});
+ bad({...c,kind:"INVENTORY"});
+ bad({...c,extra:"x"});
+ assert.throws(()=>p.protectedHandoffOnly([
+  "--handoff-timing-only","--input","a","--protected-dir","relative"]),
+  /HOLD_HANDOFF_CLI_ARGS/);
+ assert.throws(()=>p.protectedHandoffOnly([
+  "--capture-protected-only","--input","a","--protected-dir","relative"]),
+  /HOLD_HANDOFF_CLI_ARGS/);
+});
