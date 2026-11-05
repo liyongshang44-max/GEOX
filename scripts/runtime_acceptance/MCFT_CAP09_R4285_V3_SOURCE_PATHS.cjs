@@ -1,6 +1,9 @@
 "use strict";
 // One exact successor unit; this list is itself source/release qualified.
 module.exports=Object.freeze({base:"0aaec504eeda2c3230703d4bbb44e5bafe1668f3",checkId:"CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1",resolverId:"CAP09_R4285_PREPARE_LIVE_V3_EXACT_SUCCESSOR_V1",changedPaths:Object.freeze([
+  ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+  ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+  ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
   ".github/workflows/mcft-cap09-r4285-prepare-live-v3.yml",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-R4285-PREPARE-LIVE-V3.md",

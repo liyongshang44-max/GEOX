@@ -8,6 +8,7 @@ function install(profile,root){
  s.check(path.resolve(root)===profile.root,"V3_LOADING_ROOT");
  const index=new Map(profile.files.map(row=>[row.path,row.sha256]));s.check(index.size===profile.files.length,"V3_LOADING_DUPLICATE_PATH");
  const sources=new Map();
+ const manifestPins=profile.files.filter(row=>row.path==="package.json"||row.path.endsWith("/package.json"));
  const relative=file=>{const rel=path.relative(root,file);s.check(rel!==""&&!rel.startsWith(".."+path.sep)&&rel!==".."&&!path.isAbsolute(rel),"V3_MODULE_OUTSIDE_RELEASE");return rel.split(path.sep).join("/");};
  // Material is already fully verified by Native Adoption. Snapshot only module
  // source formats; an actually reachable native addon fails explicitly below.
@@ -17,7 +18,11 @@ function install(profile,root){
   const rel=relative(file);s.check(index.has(rel)&&s.sha(s.bytes(file,64*1024*1024))===index.get(rel),"V3_PRELOADED_MODULE_UNBOUND");
  }
  const hook=Module.registerHooks({
-  resolve(specifier,context,nextResolve){const out=nextResolve(specifier,context);if(out.url.startsWith("node:"))return out;
+  resolve(specifier,context,nextResolve){
+   // Node's resolver reads package metadata separately from load(). Guard it
+   // before resolution as well as retaining immutable original module bytes.
+   for(const row of manifestPins)s.check(s.sha(s.bytes(path.join(root,...row.path.split("/")),64*1024*1024))===row.sha256,"V3_PACKAGE_ROUTE_METADATA_DRIFT");
+   const out=nextResolve(specifier,context);if(out.url.startsWith("node:"))return out;
    s.check(out.url.startsWith("file:"),"V3_MODULE_SCHEME");const file=fileURLToPath(out.url);const rel=relative(file);
    s.check(index.has(rel)&&sources.has(rel),"V3_REACHABLE_MODULE_FORMAT_OR_PATH_UNQUALIFIED");return out;},
   load(url,context,nextLoad){if(url.startsWith("node:"))return nextLoad(url,context);
@@ -32,6 +37,7 @@ function install(profile,root){
  let closed=false;
  return Object.freeze({
   async preload(){s.check(!closed,"V3_LOADING_CLOSED");
+   for(const rel of require("./MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs").runtimePaths)require(path.join(root,...rel.split("/")));
    require(require.resolve("pg",{paths:[root]}));require(require.resolve("@aws-sdk/client-s3",{paths:[root]}));
    const target=require.resolve("tsx",{paths:[root]});await import(require("node:url").pathToFileURL(target).href);
    return true;},

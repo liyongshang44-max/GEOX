@@ -65,6 +65,13 @@ test("QCP73 consumer rejects historical QCP72 and accepts only exact complete so
  const bad=structuredClone(machine);bad.results[72].status="NOT_APPLICABLE";assert.throws(()=>native.checkQcp73(bad,definitions,head,base));
  const duplicate=structuredClone(machine);duplicate.results[0]=duplicate.results[1];assert.throws(()=>native.checkQcp73(duplicate,definitions,head,base));
 });
+test("Adoption V5 cryptographically binds QCP73 and cannot inherit a V4 signature",()=>{
+ const v=require("../cap09_adoption_v1/MCFT_CAP09_R4285_ADOPTION_V5_V3.cjs"),payload=Object.fromEntries(v.FIELDS.map(k=>[k,H]));
+ Object.assign(payload,{schema_version:"MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V5",issuer_id:issuer.issuer_id,key_id:issuer.key_id,run_id:s.RUN,host_id:s.HOST,subject_sha:SUBJECT,attempt_ordinal:4,scope:"ISOLATED_QUALIFICATION_TEST_ONLY",decision:"APPROVE_R4285_CURRENT_SUBJECT_ADOPTION_NOT_PERMIT",production_authorized:false,permit_authorized:false,issued_at:iso(NOW-1000),expires_at:iso(NOW+18000000)});
+ const context={...payload},envelope=sign(v.DOMAIN,payload);assert(v.verifySignedAdoptionV5({envelope,trust,context,now:NOW}));
+ assert.throws(()=>v.verifySignedAdoptionV5({envelope,trust,context:{...context,native_qcp73_result_sha256:"f".repeat(64)},now:NOW}),/BINDING/);
+ assert.throws(()=>v.verifySignedAdoptionV5({envelope:sign("GEOX_MCFT_CAP09_R4285_CURRENT_SUBJECT_ADOPTION_V4\n",payload),trust,context,now:NOW}),/BAD_SIGNATURE/);
+});
 test("public receiver rejects JSON/serialized capabilities and has no execute entrypoint",async()=>{
  assert.throws(()=>host.parse(["--execute","--input","/unit.json"]),/ONLY_SESSION/);
  assert.throws(()=>factory.requireReceiver({phase:"LIVE",adoption:{status:"PASS"}}),/FACTORY_RECEIVER/);
@@ -77,13 +84,14 @@ test("actual Node CJS and ESM loading uses pinned native module objects; reachab
   const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-pinned-")),profileFile=root+"-profile.json";
   try{
    for(const rel of ["scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs","scripts/cap09_adoption_v1/contract.cjs"]){const out=path.join(root,rel);fs.mkdirSync(path.dirname(out),{recursive:true});fs.copyFileSync(path.join(ROOT,rel),out);}
+   fs.writeFileSync(path.join(root,"scripts/runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs"),"module.exports={runtimePaths:[]};");
    for(const [name,main,body] of [["pg","index.cjs","module.exports={Pool:class Pool{},tag:'original'};"],["@aws-sdk/client-s3","index.cjs","module.exports={S3Client:class S3Client{}};"],["tsx","loader.mjs","export const loader='original';"]]){
     const dir=path.join(root,"node_modules",name);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,"package.json"),JSON.stringify({name,main}));fs.writeFileSync(path.join(dir,main),body);
    }
    const runner=`const fs=require('node:fs');const loader=require('./scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs');const profile=JSON.parse(fs.readFileSync(process.argv[2]));const gate=loader.install(profile,__dirname);${drift?"fs.writeFileSync(__dirname+'/node_modules/pg/index.cjs',\"module.exports={tag:'changed'}\");":""}gate.preload().then(()=>{const pg=require('pg');if(pg.tag!=='original'||typeof pg.Pool!=='function')throw Error('WRONG_MODULE_OBJECT');gate.close();console.log('PINNED_NATIVE_MODULES');}).catch(e=>{gate.close();console.error(e.message);process.exitCode=2;});`;
    fs.writeFileSync(path.join(root,"runner.cjs"),runner);const files=[];
    function walk(dir,prefix=""){for(const item of fs.readdirSync(dir).sort()){const file=path.join(dir,item),rel=prefix+item;if(fs.statSync(file).isDirectory())walk(file,rel+"/");else files.push({path:rel,sha256:s.sha(fs.readFileSync(file))});}}walk(root);
-   fs.writeFileSync(profileFile,JSON.stringify({root,files}));const child=cp.spawnSync(process.execPath,[path.join(root,"runner.cjs"),profileFile],{encoding:"utf8",timeout:15000});
+   fs.writeFileSync(profileFile,JSON.stringify({root,files}));const child=cp.spawnSync(process.execPath,[path.join(root,"runner.cjs"),profileFile],{encoding:"utf8",timeout:15000,env:{PATH:process.env.PATH,SystemRoot:process.env.SystemRoot||""}});
    assert.equal(child.status,drift?2:0,child.stderr);assert.match(drift?child.stderr:child.stdout,drift?/V3_MODULE_DISK_DRIFT/:/PINNED_NATIVE_MODULES/);
   }finally{fs.rmSync(root,{recursive:true,force:true});fs.rmSync(profileFile,{force:true});}
  }
@@ -113,7 +121,7 @@ function mechanismFixture(){const root=fs.mkdtempSync(path.join(os.tmpdir(),"r42
  };
  const localRequire=name=>Object.hasOwn(mocks,name)?mocks[name]:Module.createRequire(__filename)(name);
  const filename=path.join(__dirname,"MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs"),module={exports:{}};
- vm.runInThisContext("(function(exports,require,module,__filename,__dirname,console){"+fs.readFileSync(filename,"utf8")+"\n})",{filename})(module.exports,localRequire,module,filename,__dirname,{log(){},error(){}});
+ vm.runInThisContext("(function(exports,require,module,__filename,__dirname,console,process){"+fs.readFileSync(filename,"utf8")+"\n})",{filename})(module.exports,localRequire,module,filename,__dirname,{log(){},error(){}},{...process,env:{}});
  return {i,events,root,factory:module.exports,get environment(){return environment;},get finalChecks(){return finalChecks;},future,cleanup(){fs.rmSync(root,{recursive:true,force:true});}};
 }
 test("factory orders qualified loading before FD3; concurrent reuse rejects; final transition clears explicit secrets",async()=>{

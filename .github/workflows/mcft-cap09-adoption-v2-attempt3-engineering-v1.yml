@@ -69,8 +69,20 @@ jobs:
           (cd "$HIST_ROOT" && GITHUB_ACTIONS=false GITHUB_EVENT_NAME=historical_source_only node --test scripts/governance_acceptance/MCFT_CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_V1.test.cjs)
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_READONLY.test.cjs
           node --test scripts/governance_acceptance/MCFT_CAP09_ATTEMPT3_RESOURCE_OWNER_V1.test.cjs
-          node --test scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs
-          node --test scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs
+          if [ "${{ github.event.pull_request.number }}" = "3758" ] && [ "${{ github.head_ref }}" = "mcft/r4285-prepare-live-v3" ]; then
+            # The unchanged consumers explicitly require QCP72. Test them only
+            # at the accepted QCP72 source; V3 is independently tested by QCP73.
+            QCP72_SOURCE='0aaec504eeda2c3230703d4bbb44e5bafe1668f3'
+            QCP72_ROOT="$RUNNER_TEMP/r4285_v3_preserved_qcp72_source"
+            for test in scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs; do
+              [ "$(git rev-parse "HEAD:$test")" = "$(git rev-parse "$QCP72_SOURCE:$test")" ] || exit 1
+            done
+            git worktree add --detach "$QCP72_ROOT" "$QCP72_SOURCE"
+            (cd "$QCP72_ROOT" && node --test scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs)
+          else
+            node --test scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.test.cjs
+            node --test scripts/cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_NEW_MAIN_SUCCESSOR_V1.test.cjs
+          fi
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_PERMIT_V2_ATOMIC.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_STAGE_CAPABILITY_V2.test.cjs
           node --test scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_CHILD_STAGE_V2.test.cjs
@@ -78,7 +90,7 @@ jobs:
           # exact-delta Host test is pinned to the accepted #3750 source.
           # The current successor source is separately checked by QCP71;
           # old fixed 3749 delta must be tested at immutable 3749 subject.
-          if [ "${{ github.event.pull_request.number }}" = "3751" ] || [ "${{ github.event.pull_request.number }}" = "3752" ] || [ "${{ github.event.pull_request.number }}" = "3753" ] || [ "${{ github.event.pull_request.number }}" = "3754" ] || [ "${{ github.event.pull_request.number }}" = "3755" ] || [ "${{ github.event.pull_request.number }}" = "3756" ] || [ "${{ github.event.pull_request.number }}" = "3757" ]; then
+          if [ "${{ github.event.pull_request.number }}" = "3751" ] || [ "${{ github.event.pull_request.number }}" = "3752" ] || [ "${{ github.event.pull_request.number }}" = "3753" ] || [ "${{ github.event.pull_request.number }}" = "3754" ] || [ "${{ github.event.pull_request.number }}" = "3755" ] || [ "${{ github.event.pull_request.number }}" = "3756" ] || [ "${{ github.event.pull_request.number }}" = "3757" ] || { [ "${{ github.event.pull_request.number }}" = "3758" ] && [ "${{ github.head_ref }}" = "mcft/r4285-prepare-live-v3" ]; }; then
             HIST_3749='6210cbfe692aa4d0efd06649ab02c45597158fbc'
             HOST_TEST='scripts/runtime_acceptance/MCFT_CAP09_ATTEMPT3_HOST_V2.test.cjs'
             test "$(git rev-parse "HEAD:$HOST_TEST")" = "$(git rev-parse "$HIST_3749:$HOST_TEST")" || { echo 'HOLD_HISTORIC_3749_HOST_TEST_BYTES_CHANGED'; exit 1; }

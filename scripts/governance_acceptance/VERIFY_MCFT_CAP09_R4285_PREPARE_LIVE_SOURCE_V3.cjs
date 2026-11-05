@@ -19,13 +19,13 @@ function verify({ROOT,args,authority,plan,changed,stage}){
   const paths=git("diff","--name-only",args.base,args.head).split(/\r?\n/).filter(Boolean).sort();
   assert.deepEqual(paths,spec.changedPaths);assert.deepEqual(changed.slice().sort(),paths);
   assert.equal(authority.dependency_resolvers[spec.resolverId]?.kind,"EXACT_PATH_SET");assert.deepEqual(authority.dependency_resolvers[spec.resolverId].paths,paths);
-  // Every historical source outside the two explicit governance edit surfaces
+  // Every historical source outside the explicit governance/workflow edit surfaces
   // is immutable. New code cannot hide modifications behind a V3 resolver.
-  const allowed=new Set([QCP,"scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"]);
+  const allowed=new Set([QCP,"scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"]);
   for(const rel of paths)if(!allowed.has(rel))assert.equal(git("ls-tree",args.base,"--",rel),"","V3_EXISTING_SOURCE_MODIFIED");
   assert.equal(process.env.GITHUB_ACTIONS,"true");assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request");
   const ev=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
-  assert.equal(ev.repository?.full_name,"liyongshang44-max/GEOX");assert.equal(ev.pull_request?.base?.sha,args.base);assert.equal(ev.pull_request?.head?.sha,args.head);
+  assert.equal(ev.pull_request?.number,3758);assert.equal(ev.repository?.full_name,"liyongshang44-max/GEOX");assert.equal(ev.pull_request?.base?.sha,args.base);assert.equal(ev.pull_request?.head?.sha,args.head);
   assert.equal(ev.pull_request?.head?.ref,"mcft/r4285-prepare-live-v3");assert.equal(ev.pull_request?.head?.repo?.full_name,"liyongshang44-max/GEOX");
   const comment=JSON.parse(cp.execFileSync("curl",["--fail","--silent","--show-error","--max-time","20","https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/6647496120"],{encoding:"utf8",timeout:25000,maxBuffer:524288}));
   assert.equal(comment.id,6647496120);assert.equal(comment.user?.login,"liyongshang44-max");assert.equal(comment.author_association,"OWNER");
@@ -33,7 +33,7 @@ function verify({ROOT,args,authority,plan,changed,stage}){
   assert(comment.body.includes("R4285_CTO_APPROVE_SINGLE_VERSIONED_PREPARE_LIVE_IMPLEMENTATION_20261105"));assert(comment.body.includes(spec.base));
   cp.execFileSync(process.execPath,["--test","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs"],{cwd:ROOT,timeout:120000,maxBuffer:4*1024*1024,stdio:["ignore","pipe","pipe"]});
   cached={status:"PASS",base_sha:args.base,source_head_sha:args.head,changed_paths:paths.length,historical_qcp72_preserved:true,source_contract_only:true,installed_release_qualified:false,windows_session_run:false,permit_consumed:false,execute_authorized:false,stage_count:0};
- }catch(error){cached={status:"FAIL",reason_code:"HOLD_V3_QCP73_SOURCE_QUALIFICATION",error_code:typeof error.code==="string"?error.code:"ASSERTION",permit_consumed:false,stage_count:0};}
+ }catch(error){cached={status:"FAIL",reason_code:"HOLD_V3_QCP73_SOURCE_QUALIFICATION",error_code:typeof error.code==="string"?error.code:"ASSERTION",detail:String(error.message||error).slice(0,700),permit_consumed:false,stage_count:0};}
  return cached;
 }
 module.exports={verify};
