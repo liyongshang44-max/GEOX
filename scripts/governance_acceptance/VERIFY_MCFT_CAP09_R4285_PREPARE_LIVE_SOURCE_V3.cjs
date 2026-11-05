@@ -6,6 +6,7 @@ const spec=require("../runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs")
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 let cached=null;
 function verify({ROOT,args,authority,plan,changed,stage}){
+ if(arguments[0].args.base===SUCCESSOR_BASE)return verifySuccessor(arguments[0]);
  if(cached)return cached;
  const git=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:8*1024*1024}).trim();
  try{
@@ -36,4 +37,68 @@ function verify({ROOT,args,authority,plan,changed,stage}){
  }catch(error){cached={status:"FAIL",reason_code:"HOLD_V3_QCP73_SOURCE_QUALIFICATION",error_code:typeof error.code==="string"?error.code:"ASSERTION",detail:String(error.message||error).slice(0,700),permit_consumed:false,stage_count:0};}
  return cached;
 }
-module.exports={verify};
+
+const SUCCESSOR_BASE="55de110cbe2ef11edd3320bc1042e8d1098084bb";
+const SUCCESSOR_BRANCH="mcft/r4285-v3-successor-qualification";
+const SUCCESSOR_PATHS=Object.freeze([
+ ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+ ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+ ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+ "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+ "scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs",
+ "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs"
+]);
+let successorCached=null;
+// Inspection is pure and cannot mint an adoption or live-process capability.
+// Production calls this only inside the central GitHub QCP artifact producer.
+function inspectSuccessor({args,authority,before,plan,paths,changed,stage,event}){
+ assert.equal(args.base,SUCCESSOR_BASE,"V3_SUCCESSOR_EXACT_BASE");
+ assert(/^[0-9a-f]{40}$/.test(args.head)&&args.head!==args.base,"V3_SUCCESSOR_HEAD");
+ assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","V3_SUCCESSOR_STAGE");
+ assert.equal(plan.status,"PASS","V3_SUCCESSOR_PLAN");
+ for(const key of ["unknown_changed_paths","authority_errors","resolver_errors"])assert.deepEqual(plan[key],[],"V3_SUCCESSOR_PLAN_UNRESOLVED");
+ assert.equal(before.checks.length,73,"V3_SUCCESSOR_EXISTING_QCP73");
+ assert.deepEqual(authority,before,"V3_SUCCESSOR_QCP_MANIFEST_CHANGED");
+ assert.equal(authority.checks[72].check_id,spec.checkId,"V3_SUCCESSOR_CHECK");
+ assert.deepEqual(authority.checks[72].resolver_ids,[spec.resolverId],"V3_SUCCESSOR_RESOLVER");
+ const resolver=authority.dependency_resolvers[spec.resolverId];
+ assert.equal(resolver.kind,"EXACT_PATH_SET");assert.deepEqual(resolver.paths,spec.changedPaths);
+ assert.deepEqual(paths,SUCCESSOR_PATHS,"V3_SUCCESSOR_EXACT_CHANGED_PATHS");
+ assert.deepEqual(changed.slice().sort(),paths,"V3_SUCCESSOR_PLANNER_DIFF");
+ assert(event&&event.repository?.full_name==="liyongshang44-max/GEOX","V3_SUCCESSOR_REPOSITORY");
+ const pr=event.pull_request;
+ assert(Number.isSafeInteger(pr?.number)&&pr.number>0,"V3_SUCCESSOR_PR");
+ assert.equal(pr.user?.login,"liyongshang44-max","V3_SUCCESSOR_OWNER");
+ assert.equal(pr.base?.ref,"main","V3_SUCCESSOR_MAIN_BASE");
+ assert.equal(pr.base?.sha,args.base,"V3_SUCCESSOR_BASE_BINDING");
+ assert.equal(pr.head?.sha,args.head,"V3_SUCCESSOR_HEAD_BINDING");
+ assert.equal(pr.head?.ref,SUCCESSOR_BRANCH,"V3_SUCCESSOR_BRANCH");
+ assert.equal(pr.head?.repo?.full_name,"liyongshang44-max/GEOX","V3_SUCCESSOR_HEAD_REPOSITORY");
+ return true;
+}
+function verifySuccessor(input){
+ if(successorCached)return successorCached;
+ const {ROOT,args,authority,plan,changed,stage}=input;
+ const git=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:8*1024*1024}).trim();
+ try{
+  assert.equal(process.env.GITHUB_ACTIONS,"true");assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request");
+  assert.equal(git("rev-parse","HEAD"),args.head,"V3_SUCCESSOR_WORKTREE_HEAD");
+  assert.equal(git("merge-base",args.base,args.head),args.base,"V3_SUCCESSOR_ANCESTRY");
+  assert.equal(git("rev-parse",args.base+"^{tree}"),"2df1955a834e1869fece178d233af1c14a1f48cb","V3_SUCCESSOR_BASE_TREE");
+  const paths=git("diff","--name-only",args.base,args.head).split(/\r?\n/).filter(Boolean).sort();
+  const before=JSON.parse(git("show",args.base+":"+QCP));
+  const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+  inspectSuccessor({args,authority,before,plan,paths,changed,stage,event});
+  // Only qualification wiring and tests change. The merged timestamp fix and
+  // all Host/Native/Scope/credential semantics are inherited byte-for-byte.
+  cp.execFileSync(process.execPath,["--test","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs"],{cwd:ROOT,timeout:120000,maxBuffer:4*1024*1024,stdio:["ignore","pipe","pipe"]});
+  successorCached={status:"PASS",base_sha:args.base,source_head_sha:args.head,changed_paths:paths.length,
+   qualification_kind:"BOUNDED_EXISTING_V3_SUCCESSOR_SOURCE_ONLY",historical_qcp72_preserved:true,
+   qcp73_count_unchanged:true,runtime_source_unchanged_from_base:true,source_contract_only:true,
+   installed_release_qualified:false,windows_session_run:false,permit_consumed:false,execute_authorized:false,stage_count:0};
+ }catch(error){successorCached={status:"FAIL",reason_code:"HOLD_V3_QCP73_SUCCESSOR_QUALIFICATION",
+  error_code:typeof error.code==="string"?error.code:"ASSERTION",detail:String(error.message||error).slice(0,700),permit_consumed:false,stage_count:0};}
+ return successorCached;
+}
+module.exports={verify,inspectSuccessor,SUCCESSOR_BASE,SUCCESSOR_BRANCH,SUCCESSOR_PATHS};
+
