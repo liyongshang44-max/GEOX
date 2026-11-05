@@ -19,6 +19,13 @@ function check(ok,code){if(!ok)fail(code);}
 function exact(x,keys,code="V3_EXACT_FIELDS"){check(x&&Object.getPrototypeOf(x)===Object.prototype&&Object.keys(x).sort().join("\0")===keys.slice().sort().join("\0"),code);}
 function hash(v){check(typeof v==="string"&&/^[a-f0-9]{64}$/.test(v),"V3_HASH");return v;}
 function utc(v){check(typeof v==="string"&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString()===v,"V3_UTC");return Date.parse(v);}
+// GitHub metadata uses second precision. Keep signed payload UTC strict and
+// interpret native metadata without rewriting the response or signed bytes.
+function githubUtc(v){
+ check(typeof v==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(v),"V3_GITHUB_UTC");
+ const time=Date.parse(v);check(Number.isFinite(time),"V3_GITHUB_UTC");
+ const iso=new Date(time).toISOString();check(v===iso||v===iso.replace(/\.000Z$/,"Z"),"V3_GITHUB_UTC");return time;
+}
 function sha(v){return crypto.createHash("sha256").update(v).digest("hex");}
 // Byte-canonical wire JSON rejects duplicate keys, invalid UTF-8 and spelling
 // ambiguities. Historical pretty-printed input is handled by readJson below.
@@ -63,7 +70,7 @@ function inspectApproval(comment,raw,scope,{now=Date.now()}={}){
  check(comment.user?.login==="liyongshang44-max"&&comment.author_association==="OWNER"&&comment.created_at===comment.updated_at&&comment.body===raw.toString("utf8"),"V3_APPROVAL_NATIVE_IDENTITY");
  check(p.schema_version==="MCFT_CAP09_R4285_SOURCE_AUTHORITY_APPROVAL_V3"&&p.decision==="AUTHORIZE_EXACT_TEST_ONLY_RESOURCE_SOURCE_AND_DELIVERY"&&p.production_authorized===false,"V3_SOURCE_NOT_AUTHORIZED");
  check(p.scope_id===scope.scope_id&&p.scope_envelope_sha256===scope.envelope_sha256&&p.source_policy_sha256===scope.payload.source.policy_sha256&&p.source_spki_sha256===scope.payload.source.spki_sha256&&p.delivery_source_id===scope.payload.source.delivery_source_id,"V3_APPROVAL_SCOPE_BINDING");
- check(utc(comment.created_at)<=utc(p.valid_from)&&utc(p.valid_from)<=now&&now<utc(p.expires_at)&&utc(p.expires_at)<=utc(scope.payload.expires_at),"V3_APPROVAL_WINDOW");
+ check(githubUtc(comment.created_at)<=utc(p.valid_from)&&utc(p.valid_from)<=now&&now<utc(p.expires_at)&&utc(p.expires_at)<=utc(scope.payload.expires_at),"V3_APPROVAL_WINDOW");
  return Object.freeze({id:comment.id,sha256:sha(raw),expires_at:p.expires_at,scope_id:scope.scope_id});
 }
 function liveApproval(id,raw,scope){check(process.platform==="win32"&&!process.env.CI&&!process.env.GITHUB_ACTIONS,"V3_NATIVE_WINDOWS_REQUIRED");check(Number.isSafeInteger(id)&&id>0,"V3_APPROVAL_ID");
@@ -85,4 +92,4 @@ function verifyObservationSignature(envelope,kind,scope,trust,{now=Date.now(),no
 }
 function verifyObservation(envelope,raw,kind,scope,trust,options){const p=verifyObservationSignature(envelope,kind,scope,trust,options);
  check(Buffer.isBuffer(raw)&&raw.length>0&&raw.length<1048576&&sha(raw)===p.raw_sha256,"V3_OBSERVATION_BYTES");return p;}
-module.exports={RUN,HOST,DOMAIN,OBS_DOMAIN,FRAME_DOMAIN,SCOPE_FIELDS,RESOURCE_FIELDS,SOURCE_FIELDS,POLICY_FIELDS,OBS_FIELDS,APPROVAL_FIELDS,exact,hash,utc,sha,wire,bytes,readJson,identity,verifySigned,scopeId,verifyScope,inspectApproval,liveApproval,requireApproval,verifySourcePolicy,verifyObservationSignature,verifyObservation,check};
+module.exports={RUN,HOST,DOMAIN,OBS_DOMAIN,FRAME_DOMAIN,SCOPE_FIELDS,RESOURCE_FIELDS,SOURCE_FIELDS,POLICY_FIELDS,OBS_FIELDS,APPROVAL_FIELDS,exact,hash,utc,githubUtc,sha,wire,bytes,readJson,identity,verifySigned,scopeId,verifyScope,inspectApproval,liveApproval,requireApproval,verifySourcePolicy,verifyObservationSignature,verifyObservation,check};

@@ -44,7 +44,7 @@ function launch(i,scope){const raw=s.bytes(i.launch_authorization_file,8192),p=s
  const cp=require("node:child_process");const id=i.launch_authorization_comment_id;
  const reply=JSON.parse(cp.execFileSync("curl.exe",["--fail","--silent","--show-error","--max-time","20",`https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/${id}`],{encoding:"utf8",timeout:25000,maxBuffer:524288,windowsHide:true}));
  s.check(reply.id===id&&reply.url===`https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/${id}`&&reply.issue_url==="https://api.github.com/repos/liyongshang44-max/GEOX/issues/3757"&&reply.user?.login==="liyongshang44-max"&&reply.author_association==="OWNER"&&reply.created_at===reply.updated_at&&reply.body===raw.toString("utf8"),"V3_LAUNCH_NATIVE_IDENTITY");
- const now=Date.now();s.check(s.utc(reply.created_at)<=s.utc(p.valid_from)&&s.utc(p.valid_from)<=now&&now<s.utc(p.expires_at)&&s.utc(p.expires_at)<=s.utc(scope.payload.expires_at),"V3_LAUNCH_EXPIRED");return p;
+ const now=Date.now();s.check(s.githubUtc(reply.created_at)<=s.utc(p.valid_from)&&s.utc(p.valid_from)<=now&&now<s.utc(p.expires_at)&&s.utc(p.expires_at)<=s.utc(scope.payload.expires_at),"V3_LAUNCH_EXPIRED");return p;
 }
 async function prepare(i){
  historical.hostOnly(process.env);delivery.parentClean(process.env);checkInput(i);
