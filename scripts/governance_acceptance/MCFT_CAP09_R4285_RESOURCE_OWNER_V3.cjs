@@ -76,6 +76,8 @@ function verifyReadbackFile(file,expectedSha){
  for(;;){const stat=fs.lstatSync(f);assert(!stat.isSymbolicLink(),"R4285_RESOURCE_READBACK_SYMLINK");if(f===path.resolve(file))assert(stat.isFile()&&stat.size>0&&stat.size<1048576,"R4285_RESOURCE_READBACK_REGULAR_FILE");const par=path.dirname(f);if(par===f)break;f=par;}
  const bytes=fs.readFileSync(file);assert.equal(sha(bytes),expectedSha,"R4285_RESOURCE_READBACK_BYTES_CHANGED");
  const r=JSON.parse(bytes.toString("utf8").replace(/^\uFEFF/,""));
+ const canonicalBytes=Buffer.from(a3.canonical(r));
+ assert(bytes.equals(canonicalBytes)||bytes.equals(Buffer.concat([canonicalBytes,Buffer.from("\n")])),"V3_READBACK_JSON_NOT_CANONICAL");
  assert.equal(r.schema_version,"MCFT_CAP09_R4285_RESOURCE_READBACK_V3","R4285_RESOURCE_READBACK_SCHEMA");
  assert.equal(r.run_id,a3.RUN,"R4285_RESOURCE_READBACK_RUN_CHANGED");
  assert.equal(r.status,"PASS","R4285_RESOURCE_READBACK_NOT_PASS");

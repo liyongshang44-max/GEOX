@@ -19,9 +19,11 @@ module.exports=Object.freeze({base:"0aaec504eeda2c3230703d4bbb44e5bafe1668f3",ch
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_ADMISSION_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_PG_ACCOUNT_BINDING_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PG_READONLY_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_S3_READONLY_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs"
@@ -35,9 +37,11 @@ module.exports=Object.freeze({base:"0aaec504eeda2c3230703d4bbb44e5bafe1668f3",ch
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_ADMISSION_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_PG_ACCOUNT_BINDING_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PG_READONLY_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_S3_READONLY_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs"

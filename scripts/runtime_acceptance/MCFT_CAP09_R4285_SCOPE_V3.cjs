@@ -10,6 +10,7 @@ const FRAME_DOMAIN="GEOX_MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3\n";
 const SCOPE_FIELDS=["schema_version","issuer_id","key_id","run_id","subject_sha","host_id","nonce","scope","issued_at","expires_at","resources","source","production_authorized"];
 const RESOURCE_FIELDS=["database_host","database_port","positive_database","negative_database","positive_role","negative_role","pg_owner_id","pg_permission_sha256","positive_expires_at","negative_expires_at","bucket_endpoint","bucket","s3_account_sha256","parent_principal_sha256","policy_sha256","raw_prefix_arn","candidate_prefix_arn","minio_deployment_id","s3_expires_at"];
 const SOURCE_FIELDS=["source_id","issuer_id","key_id","spki_sha256","policy_sha256","delivery_source_id"];
+const POLICY_FIELDS=["schema_version","run_id","subject_sha","host_id","nonce","source_id","issuer_id","key_id","spki_sha256","delivery_source_id","scope","valid_from","expires_at"];
 const OBS_FIELDS=["schema_version","issuer_id","key_id","run_id","subject_sha","host_id","nonce","scope_id","kind","raw_sha256","observed_at","issued_at","expires_at","production_authorized"];
 const APPROVAL_FIELDS=["schema_version","run_id","subject_sha","host_id","nonce","scope_id","scope_envelope_sha256","source_policy_sha256","source_spki_sha256","delivery_source_id","valid_from","expires_at","decision","production_authorized"];
 const liveApprovals=new WeakSet();
@@ -69,6 +70,12 @@ function liveApproval(id,raw,scope){check(process.platform==="win32"&&!process.e
  const reply=cp.execFileSync("curl.exe",["--fail","--silent","--show-error","--max-time","20","-H","Accept: application/vnd.github+json",`https://api.github.com/repos/${REPO}/issues/comments/${id}`],{encoding:"utf8",windowsHide:true,timeout:25000,maxBuffer:524288});
  const proof=inspectApproval(JSON.parse(reply),raw,scope);check(proof.id===id,"V3_APPROVAL_ID_DRIFT");liveApprovals.add(proof);return proof;}
 function requireApproval(proof,scope,{now=Date.now()}={}){check(liveApprovals.has(proof)&&proof.scope_id===scope.scope_id&&now<utc(proof.expires_at),"V3_LIVE_RESOURCE_SOURCE_AUTHORITY_REQUIRED");}
+function verifySourcePolicy(raw,scope,{now=Date.now()}={}){
+ check(sha(raw)===scope.payload.source.policy_sha256,"V3_APPROVED_SOURCE_POLICY_BYTES");const p=wire(raw);exact(p,POLICY_FIELDS,"V3_SOURCE_POLICY_FIELDS");identity(p,scope.payload);
+ check(p.schema_version==="MCFT_CAP09_R4285_SOURCE_POLICY_V3"&&p.scope==="ISOLATED_QUALIFICATION_TEST_ONLY","V3_SOURCE_POLICY_SCHEMA");
+ for(const k of ["source_id","issuer_id","key_id","spki_sha256","delivery_source_id"])check(p[k]===scope.payload.source[k],"V3_SOURCE_POLICY_IDENTITY");
+ check(utc(p.valid_from)<=now&&now<utc(p.expires_at)&&utc(p.valid_from)<=utc(scope.payload.issued_at)&&utc(scope.payload.expires_at)<=utc(p.expires_at),"V3_SOURCE_POLICY_LIFETIME");return p;
+}
 function verifyObservationSignature(envelope,kind,scope,trust,{now=Date.now(),notBefore=0}={}){
  const p=envelope?.payload;exact(p,OBS_FIELDS,"V3_OBSERVATION_FIELDS");identity(p,scope.payload);
  check(p.schema_version==="MCFT_CAP09_R4285_SOURCE_OBSERVATION_V3"&&p.production_authorized===false&&p.kind===kind&&["CONTROL","INVENTORY"].includes(kind)&&p.scope_id===scope.scope_id,"V3_OBSERVATION_SCOPE");
@@ -78,4 +85,4 @@ function verifyObservationSignature(envelope,kind,scope,trust,{now=Date.now(),no
 }
 function verifyObservation(envelope,raw,kind,scope,trust,options){const p=verifyObservationSignature(envelope,kind,scope,trust,options);
  check(Buffer.isBuffer(raw)&&raw.length>0&&raw.length<1048576&&sha(raw)===p.raw_sha256,"V3_OBSERVATION_BYTES");return p;}
-module.exports={RUN,HOST,DOMAIN,OBS_DOMAIN,FRAME_DOMAIN,SCOPE_FIELDS,RESOURCE_FIELDS,SOURCE_FIELDS,OBS_FIELDS,APPROVAL_FIELDS,exact,hash,utc,sha,wire,bytes,readJson,identity,verifySigned,scopeId,verifyScope,inspectApproval,liveApproval,requireApproval,verifyObservationSignature,verifyObservation,check};
+module.exports={RUN,HOST,DOMAIN,OBS_DOMAIN,FRAME_DOMAIN,SCOPE_FIELDS,RESOURCE_FIELDS,SOURCE_FIELDS,POLICY_FIELDS,OBS_FIELDS,APPROVAL_FIELDS,exact,hash,utc,sha,wire,bytes,readJson,identity,verifySigned,scopeId,verifyScope,inspectApproval,liveApproval,requireApproval,verifySourcePolicy,verifyObservationSignature,verifyObservation,check};

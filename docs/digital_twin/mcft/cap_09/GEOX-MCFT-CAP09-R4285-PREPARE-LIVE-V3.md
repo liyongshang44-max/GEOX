@@ -14,6 +14,8 @@ Authority: [CTO #6647496120](https://github.com/liyongshang44-max/GEOX/pull/3757
 
 Scope binds current Subject / Run / Host / nonce, exact positive and negative PG roles and databases, owner/catalog identity, approved PG permission digest, actual account expiries, MinIO deployment, bucket/prefixes, account and Parent digests, resource policy identity, registered source signer, independently approved source policy bytes and delivery source ID. PostgreSQL `rolvaliduntil=null` is represented as actual no-expiry metadata, never as a fabricated finite timestamp; the signed Scope and credential delivery still expire. Unknown metadata is rejected. MinIO metadata aliases are bounded; unsupported native metadata is UNRESOLVED/HOLD rather than inferred from history.
 
+Source Policy V3 uses `ScopeV3.POLICY_FIELDS`, explicitly binding the same session identity, registered source key, delivery ID and a finite policy window covering the Scope. It does not include Scope ID (which would make its digest circular). The native independent approval pins its exact canonical bytes. Historical candidate Policy V1 or a hash alone cannot satisfy the V3 content/lifetime checks.
+
 | Consumer | Schema/domain version | Additional binding |
 |---|---|---|
 | Stable resource Scope | SESSION_RESOURCE_SCOPE_V3 | Session identity, real resources, source/lifetimes |
@@ -53,6 +55,8 @@ Preparation and transition both require these four files to be absent: resource 
 After WAIT, the independent Producer obtains fresh original Control/Inventory, verifies their separate signatures and original native clocks, performs the real read-only PG/S3 checks and publishes one V3 readback. Original MinIO/Docker raw bytes remain protected; public receipts contain only signed observation envelopes and digests, never base64 `Config.Env` or credentials. The external Owner/Permit/Final signers publish the other files independently. The existing requirement that Final exists before dynamic validation remains.
 
 The Host repeats real PG/S3 checks, verifies current account permissions/expiry against Scope, fully rehashes Material/tools, refreshes resource/launch authorization and finally refetches CTO Intent. It requires Owner and both source observations to remain within 120 seconds, the final CTO refetch within 15 seconds at actual acceptance, and remaining Permit time **strictly greater than 10,800,000 + 60,000 ms**, bounded by Adoption/Owner/Scope lifetimes. Source/launch rechecks precede the final CTO refetch so they do not consume the final 15-second interval unnecessarily. Future published files are pinned against replacement. Revocation, expiry or drift fails closed, without consuming a Permit.
+
+V3 passes a session AbortSignal to its actual PG/S3 boundaries. Expiry/revocation clears explicit secret references and cancels in-flight SDK requests or releases active PG clients; no subsequent probe can start. The earliest signed observation deadline can only shorten the live window. Existing synchronous native commands retain bounded timeouts and must revalidate the window on return; an overrun cannot become PASS. Original PG V1 and Host V2 are unchanged.
 
 ## Independent native authorizations
 

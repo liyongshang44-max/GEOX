@@ -9,7 +9,7 @@
 const assert=require("node:assert/strict"),fs=require("node:fs"),crypto=require("node:crypto");
 const v2=require("./MCFT_CAP09_R4285_ADMISSION_V3.cjs");
 const v1=require("./MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs");
-const pg=require("./MCFT_CAP09_R4285_PG_READONLY_V1.cjs");
+const pg=require("./MCFT_CAP09_R4285_PG_READONLY_V3.cjs");
 const owner=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V3.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
@@ -50,12 +50,16 @@ async function verifyDynamicReadOnly(s,{now=Date.now()}={}){
   s.readback,s.observations,{...s.ctx,plan:s.plan},{now:Date.now()});
  await pg.probePreconsumePostgres({
   admission:{resourceEnvelope:s.resourceEnvelope,permitEnvelope:s.permitEnvelope,
-   releaseRoot:s.releaseRoot},releaseRoot:s.releaseRoot,environment:s.environment});
- await require("./MCFT_CAP09_R4285_PG_ACCOUNT_BINDING_V3.cjs").verify(s.releaseRoot,s.environment,s.resourceScope);
- const storage=await v1.probeS3ReadOnly(s.releaseRoot,s.resourceEnvelope.payload,s.environment);
+   releaseRoot:s.releaseRoot},releaseRoot:s.releaseRoot,environment:s.environment,signal:s.preparedState.controller.signal});
+ require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").requireReceiver(s.preparedState);
+ await require("./MCFT_CAP09_R4285_PG_ACCOUNT_BINDING_V3.cjs").verify(s.releaseRoot,s.environment,s.resourceScope,s.preparedState.controller.signal);
+ require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").requireReceiver(s.preparedState);
+ const storage=await require("./MCFT_CAP09_R4285_S3_READONLY_V3.cjs").probe(s.releaseRoot,s.resourceEnvelope.payload,s.environment,s.preparedState.controller.signal);
+ require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").requireReceiver(s.preparedState);
  // Full dynamic material/tool revalidation is charged to the Owner's 120s
  // before final CTO live refetch. This cannot be replaced by a WeakSet cache.
  const liveMaterial=await fullParallel.verify(s.profile,s.releaseRoot,s.environment);
+ require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").requireReceiver(s.preparedState);
  assert.equal(liveMaterial.digest,s.ctx.material_digest,"V3_INSTALLED_MATERIAL_OR_TOOLS_DRIFT");
  // Final Ed25519 approval verifier performs another REAL GitHub native
  // CTO-intent refetch (fail closed if deleted/edited/expired).

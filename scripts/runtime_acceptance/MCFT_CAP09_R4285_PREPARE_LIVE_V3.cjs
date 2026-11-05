@@ -20,17 +20,22 @@ function checkInput(i){s.exact(i,INPUTS,"V3_SESSION_INPUT_FIELDS");
   s.check(typeof v==="string"&&path.isAbsolute(v),"V3_INPUT_PATH");}
  historical.checkInput(Object.fromEntries(historical.INPUTS.map(k=>[k,i[k]])),false);
  const paths=Object.entries(i).filter(([k])=>k.endsWith("_file")).map(([,v])=>path.resolve(v).toLowerCase());
- s.check(new Set(paths).size===paths.length,"V3_INPUT_PATH_ALIAS");s.check(!fs.existsSync(i.session_revocation_file),"V3_SESSION_REVOKED");absent(i);return i;
+ s.check(new Set(paths).size===paths.length,"V3_INPUT_PATH_ALIAS");s.check(!fs.existsSync(i.session_revocation_file),"V3_SESSION_REVOKED");
+ for(const key of [...FUTURE,"session_revocation_file","output_root"])for(const root of [i.source_root,i.release_root]){const rel=path.relative(root,i[key]);s.check(rel===".."||rel.startsWith(".."+path.sep)||path.isAbsolute(rel),"V3_OUTPUT_INSIDE_SOURCE_OR_RELEASE");}
+ s.check(!fs.existsSync(i.output_root),"V3_LEGACY_OUTPUT_ALREADY_EXISTS");absent(i);return i;
 }
 function pin(i,ni){const files={};for(const key of ["native_adoption_input_file","plan_file","observations_file","scope_envelope_file","source_policy_file","source_approval_file","launch_authorization_file","cto_intent_file"])files[key]=i[key];
  for(const key of ["trust_file","material_file","release_binding_file","adoption_envelope_file"])files["native_"+key]=ni[key];
  return Object.freeze(Object.fromEntries(Object.entries(files).map(([k,file])=>[k,Object.freeze({file,sha256:s.sha(s.bytes(file))})])));}
 function checkPinned(pins){for(const {file,sha256} of Object.values(pins))s.check(s.sha(s.bytes(file))===sha256,"V3_PREPARED_INPUT_DRIFT");}
-function assertActive(state){s.check(state&&state.phase!=="CLOSED"&&!state.revoked,"V3_PREPARE_REVOKED_OR_ENDED");
+function assertActive(state){if(state?.failure_code)throw Error(state.failure_code);s.check(state&&state.phase!=="CLOSED"&&!state.revoked,"V3_PREPARE_REVOKED_OR_ENDED");
  const now=Date.now();s.check(now<state.expires,"V3_PREPARE_EXPIRED");s.check(!fs.existsSync(state.i.session_revocation_file),"V3_SESSION_REVOKED");
+ if(state.observation_deadline&&now>=state.observation_deadline){invalidate(state,"V3_OWNER_WINDOW_EXHAUSTED");throw Error("V3_OWNER_WINDOW_EXHAUSTED");}
  delivery.parentClean(process.env);admission.requireStable(state.stable,state.intent,state.ctx,{now});s.requireApproval(state.approval,state.scope,{now});}
 function closeState(state){if(!state||state.phase==="CLOSED")return;state.phase="CLOSED";
+ clearTimeout(state.expiry_timer);clearTimeout(state.observation_timer);clearInterval(state.revoke_timer);state.controller?.abort();
  delivery.clear(state.environment);state.environment=null;state.loading?.close();state.loading=null;state.adoption=null;state.stable=null;state.intent=null;}
+function invalidate(state,code){if(!state||state.phase==="CLOSED")return;state.failure_code=code;state.revoked=true;state.controller?.abort(Error(code));delivery.clear(state.environment);if(state.phase==="PREPARED")closeState(state);}
 // Launch permission is an independent native CTO decision. Architecture and
 // purpose approvals cannot satisfy this exact decision or its signed context.
 function launch(i,scope){const raw=s.bytes(i.launch_authorization_file,8192),p=s.wire(raw);
@@ -50,7 +55,7 @@ async function prepare(i){
  const adoption=native.checkNativeAdoption(ni);s.check(native.isNativeVerified(adoption),"V3_NATIVE_FACTORY_REQUIRED");
  const ctxIdentity={run_id:s.RUN,host_id:s.HOST,subject_sha:adoption.subject_sha,nonce:i.nonce};
  const scope=s.verifyScope(s.readJson(i.scope_envelope_file),trust,ctxIdentity);
- s.check(s.sha(s.bytes(i.source_policy_file))===scope.payload.source.policy_sha256,"V3_APPROVED_SOURCE_POLICY_BYTES");
+ s.verifySourcePolicy(s.bytes(i.source_policy_file),scope);
  const approvalRaw=s.bytes(i.source_approval_file,8192),approval=s.liveApproval(i.source_approval_comment_id,approvalRaw,scope);
  const launchProof=launch(i,scope);
  const plan=legacyJson(i.plan_file),observed=legacyJson(i.observations_file);
@@ -61,6 +66,7 @@ async function prepare(i){
   adoption_expires_at:legacyJson(ni.adoption_envelope_file).payload.expires_at,
   total_stage_budget_ms:plan.stages.reduce((n,row)=>n+row.timeout_ms,0),plan};
  admission.frozenBudget(plan,observed,ctx);lineage.verifyExactMain(i.source_root,ctx.subject_sha);
+ s.check(Date.parse(ctx.adoption_expires_at)>Date.now()+10860000,"V3_ADOPTION_REMAINING_STAGE_BUDGET");
  const intentRaw=s.bytes(i.cto_intent_file,8192),intent=admission.liveIntent(i.cto_intent_comment_id,intentRaw,ctx);
  const stable=admission.stableNative({adoption,nativeInput:ni,intent,ctx});
  s.check(Date.parse(i.first_base)>Date.now()+60000,"V3_FIRST_BASE_TOO_SOON");
@@ -76,30 +82,37 @@ async function prepare(i){
   const expires=Math.min(Date.parse(scope.payload.expires_at),Date.parse(approval.expires_at),Date.parse(secret.expires_at),Date.parse(launchProof.expires_at),Date.parse(ctx.adoption_expires_at),Date.parse(intent.expires_at),Date.parse(stable.minted_at)+3600000);
   // Defensive copy isolates mutable caller objects. Pinned original files are
   // independently checked again at the transition and after dynamic work.
-  state={i:JSON.parse(JSON.stringify(i)),ni,trust,scope,approval,approvalRaw,intentRaw,ctx,intent,stable,adoption,profile,pins,loading,environment,expires,phase:"PREPARED",revoked:false};
+  state={i:JSON.parse(JSON.stringify(i)),ni,trust,scope,approval,approvalRaw,intentRaw,ctx,intent,stable,adoption,profile,pins,loading,environment,expires,phase:"PREPARED",revoked:false,controller:new AbortController()};
+  state.expiry_timer=setTimeout(()=>invalidate(state,"V3_PREPARE_EXPIRED"),Math.max(1,expires-Date.now()));state.expiry_timer.unref?.();
+  state.revoke_timer=setInterval(()=>{if(fs.existsSync(state.i.session_revocation_file))invalidate(state,"V3_SESSION_REVOKED");},100);state.revoke_timer.unref?.();
   assertActive(state);checkPinned(pins);absent(i);
   const cap=Object.freeze(Object.create(null));states.set(cap,state);return cap;
  }catch(error){if(state)closeState(state);else loading?.close();throw error;}
  finally{frame?.fill(0);delivery.clear(secret?.environment);}
 }
-function revoke(cap){const state=states.get(cap);s.check(state,"V3_FACTORY_CAPABILITY_REQUIRED");state.revoked=true;closeState(state);}
+function revoke(cap){const state=states.get(cap);s.check(state,"V3_FACTORY_CAPABILITY_REQUIRED");invalidate(state,"V3_PREPARE_REVOKED");}
 async function consume(cap){const state=states.get(cap);s.check(state,"V3_FACTORY_CAPABILITY_REQUIRED");
  // Synchronous state transition precedes any await, so competing consumers
  // cannot both enter. It reserves preparation, never a Permit/ledger marker.
  s.check(state.phase==="PREPARED","V3_PREPARE_ALREADY_USED");state.phase="LIVE";
  try{assertActive(state);checkPinned(state.pins);absent(state.i);
   c.noLinks(state.trust.ledger_root);
-  c.writeOnce(path.join(state.trust.ledger_root,"r4285-v3-preflight-"+state.scope.scope_id+".json"),{
+  try{c.writeOnce(path.join(state.trust.ledger_root,"r4285-v3-preflight-"+state.scope.scope_id+".json"),{
    schema_version:"MCFT_CAP09_R4285_V3_PREFLIGHT_ATTEMPT_STARTED",scope_id:state.scope.scope_id,
-   nonce:state.ctx.nonce,started_at:new Date().toISOString(),permit_consumed:false,stage_count:0});
+   nonce:state.ctx.nonce,started_at:new Date().toISOString(),permit_consumed:false,stage_count:0});}
+  catch(error){if(error.code==="EEXIST")throw Error("V3_SESSION_SCOPE_ALREADY_ATTEMPTED");throw error;}
   state.owner_not_before=Date.now();receivers.add(state);
   const result=await require("./MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs").acceptPreparedState(state);
   assertActive(state);checkPinned(state.pins);
   for(const pin of state.future_pins||[])s.check(s.sha(s.bytes(pin.file))===pin.sha256,"V3_PUBLISHED_FILE_DRIFT");
   return require("./MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs").finishAtAcceptance(result,state);
- }finally{receivers.delete(state);closeState(state);}
+ }catch(error){if(state.failure_code)throw Error(state.failure_code);throw error;}
+ finally{receivers.delete(state);closeState(state);}
 }
 function requireReceiver(state){s.check(receivers.has(state),"V3_FACTORY_RECEIVER_REQUIRED");assertActive(state);return true;}
 function refreshAuthority(state){requireReceiver(state);const proof=s.liveApproval(state.i.source_approval_comment_id,state.approvalRaw,state.scope);
  s.check(proof.sha256===state.approval.sha256,"V3_RESOURCE_AUTHORITY_CHANGED");launch(state.i,state.scope);requireReceiver(state);}
-module.exports={INPUTS,FUTURE,checkInput,absent,prepare,consume,revoke,launch,requireReceiver,refreshAuthority};
+function setObservationDeadline(state,observedAt){requireReceiver(state);const deadline=s.utc(observedAt)+120000;
+ if(state.observation_deadline&&state.observation_deadline<=deadline)return;
+ state.observation_deadline=deadline;clearTimeout(state.observation_timer);state.observation_timer=setTimeout(()=>invalidate(state,"V3_OWNER_WINDOW_EXHAUSTED"),Math.max(1,deadline-Date.now()));state.observation_timer.unref?.();assertActive(state);}
+module.exports={INPUTS,FUTURE,checkInput,absent,prepare,consume,revoke,launch,requireReceiver,refreshAuthority,setObservationDeadline};

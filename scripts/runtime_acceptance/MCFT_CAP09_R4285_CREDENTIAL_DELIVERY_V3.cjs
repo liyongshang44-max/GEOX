@@ -11,6 +11,7 @@ function parse(raw,scope,trust,approval,{now=Date.now()}={}){
  s.check(p.schema_version==="MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3"&&p.scope_id===scope.scope_id&&p.delivery_source_id===scope.payload.source.delivery_source_id,"V3_DELIVERY_SCOPE");
  s.check(p.issuer_id===scope.payload.source.issuer_id&&p.key_id===scope.payload.source.key_id,"V3_DELIVERY_SOURCE");
  s.verifySigned(frame,trust,s.FRAME_DOMAIN,{now});s.check(s.utc(p.expires_at)<=s.utc(scope.payload.expires_at)&&s.utc(p.expires_at)<=s.utc(approval.expires_at),"V3_DELIVERY_OUTLIVES_AUTHORITY");
+ s.check(s.utc(p.issued_at)>=s.utc(scope.payload.issued_at),"V3_DELIVERY_PREDATES_SCOPE");
  s.check(s.utc(p.expires_at)>now+10860000,"V3_CREDENTIAL_REMAINING_BUDGET");s.exact(p.environment,KEYS,"V3_DELIVERY_ENVIRONMENT");
  const e=p.environment,r=scope.payload.resources;
  for(const k of KEYS)s.check(typeof e[k]==="string"&&e[k].length>0&&e[k].length<4096,"V3_DELIVERY_VALUE");

@@ -17,7 +17,7 @@ function rawOwnerGate(file,state){
 async function wait(state){const i=state.i;let original=null,firstAt=null;
  for(;;){factory.requireReceiver(state);
   if(fs.existsSync(i.resource_readback_file)){
-   const r=rawOwnerGate(i.resource_readback_file,state);if(original===null){original=r.sha256;firstAt=s.utc(r.facts.observed_at);}
+   const r=rawOwnerGate(i.resource_readback_file,state);if(original===null){original=r.sha256;firstAt=s.utc(r.facts.observed_at);factory.setObservationDeadline(state,r.facts.observed_at);}
    s.check(r.sha256===original,"V3_OWNER_RAW_REPLACED");s.check(Date.now()-firstAt<=120000,"V3_OWNER_WINDOW_EXHAUSTED");
    if(factory.FUTURE.every(k=>fs.existsSync(i[k]))){state.future_pins=factory.FUTURE.map(k=>({file:i[k],sha256:s.sha(s.bytes(i[k]))}));return original;}
   }else s.check(original===null,"V3_OWNER_RAW_REMOVED");
@@ -35,6 +35,7 @@ function checkResourceScope(state,built){const p=built.resEnv.payload,r=state.sc
  const facts=built.readback.facts;
  for(const kind of ["CONTROL","INVENTORY"]){const envelope=facts.source_observations?.[kind.toLowerCase()];
   s.verifyObservationSignature(envelope,kind,state.scope,state.trust,{notBefore:state.owner_not_before});
+  factory.setObservationDeadline(state,envelope.payload.observed_at);
   s.check(s.sha(c.canonical(envelope))===p[kind.toLowerCase()+"_observation_sha256"],"V3_OWNER_SIGNED_OBSERVATION_DRIFT");
  }
  return true;
@@ -75,6 +76,7 @@ function finishAtAcceptance(result,state){const bound=accepted.get(result);s.che
  admission.checkActualPermit(built.permitProof,built.permitEnv,built.resEnv,built.readback,built.observed,ctx,{now});accepted.delete(result);return result;}
 function parse(argv){s.check(Array.isArray(argv)&&argv.length===3&&argv[0]==="--session-preflight-only"&&argv[1]==="--input"&&path.isAbsolute(argv[2]),"V3_ONLY_SESSION_PREFLIGHT_ALLOWED");return argv[2];}
 async function run(argv=process.argv.slice(2)){const i=s.readJson(parse(argv));const capability=await factory.prepare(i);return factory.consume(capability);}
-function safeReason(error){return /^(?:V3|R4285|OWNER|HOLD|V2|MATERIAL|INSTALLED|TOOL|NODE|UNDECLARED|SEARCH|EXECUTION|LOADER|PYTHON|CAP09|SYMLINK|INPUT)_[A-Z0-9_]+/.exec(error?.message||"")?.[0]||"V3_UNCLASSIFIED_RUNTIME_FAILURE";}
+function safeReason(error){if(["ENOENT","EEXIST","EACCES","EPERM","ENOTDIR","EISDIR","EMFILE","ENFILE"].includes(error?.code))return "V3_IO_"+error.code;
+ return /^(?:V3|R4285|OWNER|HOLD|V2|MATERIAL|INSTALLED|TOOL|NODE|UNDECLARED|SEARCH|EXECUTION|LOADER|PYTHON|CAP09|SYMLINK|INPUT)_[A-Z0-9_]+/.exec(error?.message||"")?.[0]||"V3_UNCLASSIFIED_RUNTIME_FAILURE";}
 if(require.main===module)run().then(result=>console.log(JSON.stringify(result))).catch(error=>{console.error(JSON.stringify({status:"HOLD_R4285_V3_SESSION",reason_code:safeReason(error),permit_consumed:false,execute_authorized:false,stage_count:0}));process.exitCode=2;});
 module.exports={parse,run,acceptPreparedState,finishAtAcceptance,safeReason};

@@ -1014,7 +1014,7 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
 function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
  const {scope_envelope,trust,control_bytes,inventory_bytes,control_envelope,inventory_envelope,source_approval_raw,source_approval_comment_id,source_policy_bytes,nonce,owner_not_before,launch_input}=inputs||{};
  const scope=scopeV3.verifyScope(scope_envelope,trust,{run_id:RUN,host_id:HOST,subject_sha:i.subject_sha,nonce},{now});
- assert.equal(sha(source_policy_bytes),scope.payload.source.policy_sha256,"V3_PRODUCER_SOURCE_POLICY_BYTES");
+ scopeV3.verifySourcePolicy(source_policy_bytes,scope,{now});
  const approval=scopeV3.liveApproval(source_approval_comment_id,source_approval_raw,scope);
  require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").launch(launch_input,scope);
  assert.equal(sha(Buffer.from(nativeEnvironment().MCFT_CAP09_R4285_PARENT_ACCESS_KEY_ID||"")),scope.payload.resources.parent_principal_sha256,"V3_PARENT_IDENTITY_DRIFT");
@@ -1488,7 +1488,7 @@ if(require.main===module){
   assert(native.isNativeVerified(adoption)&&adoption.subject_sha===i.subject_sha&&ni.source_root===i.source_root&&ni.release_root===i.release_root,"V3_PRODUCER_NATIVE_REQUIRED");
   const trust=JSON.parse(scopeV3.bytes(ni.trust_file).toString("utf8")),scope=scopeV3.verifyScope(scopeV3.readJson(spec.scope_envelope_file),trust,{run_id:RUN,host_id:HOST,subject_sha:i.subject_sha,nonce:spec.nonce});
   const approval=scopeV3.liveApproval(spec.source_approval_comment_id,scopeV3.bytes(spec.source_approval_file),scope);
-  assert.equal(scopeV3.sha(scopeV3.bytes(spec.source_policy_file)),scope.payload.source.policy_sha256,"V3_SOURCE_POLICY_BYTES");
+  scopeV3.verifySourcePolicy(scopeV3.bytes(spec.source_policy_file),scope);
   require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").launch(spec,scope);
   const profile=JSON.parse(scopeV3.bytes(ni.material_file).toString("utf8")),loading=require("./MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs").install(profile,i.release_root);
   let frame,secret;

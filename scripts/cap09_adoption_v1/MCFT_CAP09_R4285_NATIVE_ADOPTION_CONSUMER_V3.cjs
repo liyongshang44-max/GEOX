@@ -357,7 +357,7 @@ function checkNativeAdoption(input,{now=Date.now()}={}){
  const upstream=require('./MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs');
  const qualified=verifyGitHubNativeProof(provenance,fetchLive(provenance),raw,zipped,definitions,upstream.zipRaw);
  assert.equal(qualified.subject_sha,subject);
- const adoptionEnv=readJson(input.adoption_envelope_file);
+ const adoptionEnv=require("../runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs").readJson(input.adoption_envelope_file);
  const adopter=require('./MCFT_CAP09_R4285_ADOPTION_V5_V3.cjs').verifySignedAdoptionV5({envelope:adoptionEnv,trust,now,context:{subject_sha:subject,
   inventory_sha256:input.inventory_sha256,authority_registry_sha256:input.authority_registry_sha256,
   owner_decision_sha256:owner.owner_decision_sha256,lineage_envelope_sha256:lineageSha,
