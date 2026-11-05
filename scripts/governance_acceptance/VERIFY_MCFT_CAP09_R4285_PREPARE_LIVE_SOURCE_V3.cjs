@@ -41,7 +41,9 @@ function verify({ROOT,args,authority,plan,changed,stage}){
 const SUCCESSOR_BASE="55de110cbe2ef11edd3320bc1042e8d1098084bb";
 const SUCCESSOR_BRANCH="mcft/r4285-v3-successor-qualification";
 const SUCCESSOR_PATHS=Object.freeze([
+ ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
  ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+ ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
  "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
  "scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs",
  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs"
