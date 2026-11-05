@@ -1,0 +1,41 @@
+"use strict";
+// One exact successor unit; this list is itself source/release qualified.
+module.exports=Object.freeze({base:"0aaec504eeda2c3230703d4bbb44e5bafe1668f3",checkId:"CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1",resolverId:"CAP09_R4285_PREPARE_LIVE_V3_EXACT_SUCCESSOR_V1",changedPaths:Object.freeze([
+  ".github/workflows/mcft-cap09-r4285-prepare-live-v3.yml",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-R4285-PREPARE-LIVE-V3.md",
+  "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_ADOPTION_V5_V3.cjs",
+  "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs",
+  "scripts/governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V3.cjs",
+  "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+  "scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs",
+  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_ADMISSION_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_BUILD_ADMISSION_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_ADMISSION_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PG_ACCOUNT_BINDING_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs"
+]),runtimePaths:Object.freeze([
+  "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_ADOPTION_V5_V3.cjs",
+  "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs",
+  "scripts/governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_ADMISSION_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_BUILD_ADMISSION_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_ADMISSION_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PG_ACCOUNT_BINDING_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs"
+])});
