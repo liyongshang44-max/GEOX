@@ -256,3 +256,35 @@ test("actual V3 PG/S3 boundaries propagate cancellation and close active clients
  const operation=reader.probePreconsumePostgres({admission:{resourceEnvelope:{payload:{...r,run_id:s.RUN}},permitEnvelope:{payload:{run_id:s.RUN}}},releaseRoot:ROOT,environment:env,signal:pgControl.signal});
  await new Promise(resolve=>setImmediate(resolve));pgControl.abort(Error("V3_OWNER_WINDOW_EXHAUSTED"));await assert.rejects(operation,/V3_OWNER_WINDOW_EXHAUSTED/);assert(released&&ended);assert.equal(queries,1);
 });
+
+test("bounded V3 successor qualification preserves the 73-check manifest and exact current source binding",()=>{
+ const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
+ const authority=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH),"utf8"));
+ const head="d".repeat(40),input={args:{base:q.SUCCESSOR_BASE,head},authority,before:structuredClone(authority),
+  plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]},
+  paths:[...q.SUCCESSOR_PATHS],changed:[...q.SUCCESSOR_PATHS],stage:"SUCCESSOR_SUBJECT_PRE_MERGE",
+  event:{repository:{full_name:"liyongshang44-max/GEOX"},pull_request:{number:9999,user:{login:"liyongshang44-max"},
+   base:{sha:q.SUCCESSOR_BASE,ref:"main"},head:{sha:head,ref:q.SUCCESSOR_BRANCH,repo:{full_name:"liyongshang44-max/GEOX"}}}}};
+ assert.equal(q.inspectSuccessor(input),true);
+ assert.equal(authority.checks.length,73);
+ assert.equal(authority.checks[72].check_id,"CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1");
+ for(const mutate of [
+  x=>x.args.base="a".repeat(40),x=>x.args.head=x.args.base,
+  x=>x.stage="POST_MERGE",x=>x.plan.unknown_changed_paths.push("unknown.cjs"),
+  x=>x.paths.push("scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs"),
+  x=>x.changed.pop(),x=>x.authority.checks[0].check_id="REWRITTEN_HISTORY",
+  x=>x.event.pull_request.base.ref="other",x=>x.event.pull_request.head.sha="e".repeat(40),
+  x=>x.event.pull_request.head.ref="other",x=>x.event.pull_request.user.login="other",
+  x=>x.event.pull_request.head.repo.full_name="other/GEOX"
+ ]){const bad=structuredClone(input);mutate(bad);assert.throws(()=>q.inspectSuccessor(bad));}
+});
+test("qualification workflow and preflight route the exact successor while retaining the original V3 admission",()=>{
+ const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
+ const workflow=fs.readFileSync(path.join(ROOT,".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml"),"utf8");
+ assert(workflow.includes("github.event.pull_request.number == 3758"));
+ assert(workflow.includes("github.head_ref == '"+q.SUCCESSOR_BRANCH+"'"));
+ assert(workflow.includes("github.event.pull_request.base.sha == '"+q.SUCCESSOR_BASE+"'"));
+ for(const p of q.SUCCESSOR_PATHS)assert(workflow.includes("      - '"+p+"'"),p);
+ const preflight=fs.readFileSync(path.join(ROOT,"scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"),"utf8");
+ assert(preflight.includes('["0aaec504eeda2c3230703d4bbb44e5bafe1668f3","'+q.SUCCESSOR_BASE+'"].includes(args.base)'));
+});
