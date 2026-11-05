@@ -10,6 +10,7 @@ const permit=require("./MCFT_CAP09_R4285_PERMIT_V3.cjs");
 const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V3.cjs");
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
 const contract=require("../cap09_adoption_v1/contract.cjs");
+const scope=require("./MCFT_CAP09_R4285_SCOPE_V3.cjs");
 const RUN=permit.RUN,HOST=permit.HOST,REPO="liyongshang44-max/GEOX",AUTHORITY_PR=3757;
 const HEX64=/^[a-f0-9]{64}$/,HEAD=/^[a-f0-9]{40}$/;
 const DOMAIN="GEOX_MCFT_CAP09_R4285_FINAL_EXECUTION_APPROVAL_V3\n";
@@ -55,7 +56,7 @@ function checkIntent(p,ctx,{now=Date.now(),createdAt}={}){
  assert.equal(p.execute_authorized,false);
  const from=utc(p.valid_from),to=utc(p.expires_at);
  assert(from<=now&&now<to&&to-from<=86400000,"V3_INTENT_EXPIRED");
- if(createdAt)assert(from>=utc(createdAt),"V3_INTENT_BEFORE_NATIVE_CREATION");
+ if(createdAt)assert(from>=scope.githubUtc(createdAt),"V3_INTENT_BEFORE_NATIVE_CREATION");
  return p;
 }
 function inspectNativeComment(comment,raw,ctx,{now=Date.now()}={}){

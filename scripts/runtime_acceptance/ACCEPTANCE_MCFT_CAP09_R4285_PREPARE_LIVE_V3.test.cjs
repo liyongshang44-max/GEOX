@@ -48,6 +48,29 @@ test("native-looking source inspection never creates live authority or enables s
  assert.throws(()=>s.inspectApproval({...comment,updated_at:iso(NOW)},raw,scope,{now:NOW}),/NATIVE_IDENTITY/);
  for(const key of delivery.KEYS)assert.throws(()=>delivery.parentClean({[key.toLowerCase()]:"unit"}),/PARENT_SECRET/);
 });
+test("GitHub native UTC seconds parse without relaxing canonical payload timestamps",()=>{
+ const stamp="2026-11-05T12:06:39Z",millis="2026-11-05T12:06:39.000Z";
+ assert.equal(s.githubUtc(stamp),Date.parse(millis));assert.equal(s.githubUtc(millis),Date.parse(millis));
+ assert.equal(s.githubUtc("2026-11-05T12:06:39.123Z"),Date.parse("2026-11-05T12:06:39.123Z"));
+ for(const bad of [null,0,"2026-02-30T12:06:39Z","2026-11-05T12:06:39+00:00","2026-11-05T12:06:39.0Z","2026-11-05 12:06:39Z","2026-11-05T12:06:39Z\n"])
+  assert.throws(()=>s.githubUtc(bad),/V3_GITHUB_UTC/);
+ assert.throws(()=>s.utc(stamp),/V3_UTC/);assert.equal(s.utc(millis),Date.parse(millis));
+});
+test("native source approval accepts unmodified GitHub seconds and preserves identity, bytes and time bounds",()=>{
+ const scope=scoped(),created=iso(NOW-2000).replace(/\.\d{3}Z$/,"Z");
+ const p={schema_version:"MCFT_CAP09_R4285_SOURCE_AUTHORITY_APPROVAL_V3",...id,scope_id:scope.scope_id,scope_envelope_sha256:scope.envelope_sha256,source_policy_sha256:H,source_spki_sha256:issuer.spki_sha256,delivery_source_id:scope.payload.source.delivery_source_id,valid_from:iso(NOW-1000),expires_at:iso(NOW+15000000),decision:"AUTHORIZE_EXACT_TEST_ONLY_RESOURCE_SOURCE_AND_DELIVERY",production_authorized:false};
+ const raw=Buffer.from(c.canonical(p)),comment={id:123,url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/123",issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3757",user:{login:"liyongshang44-max"},author_association:"OWNER",created_at:created,updated_at:created,body:raw.toString()};
+ const original=JSON.stringify(comment),proof=s.inspectApproval(comment,raw,scope,{now:NOW});
+ assert.equal(JSON.stringify(comment),original);assert.throws(()=>s.requireApproval(proof,scope,{now:NOW}),/LIVE_RESOURCE_SOURCE/);
+ for(const changed of [{user:{login:"other"}},{author_association:"MEMBER"},{updated_at:iso(NOW)},{body:raw.toString()+"\n"}])
+  assert.throws(()=>s.inspectApproval({...comment,...changed},raw,scope,{now:NOW}),/NATIVE_IDENTITY/);
+ assert.throws(()=>s.inspectApproval(comment,raw,scope,{now:Date.parse(p.valid_from)-1}),/APPROVAL_WINDOW/);
+ assert.throws(()=>s.inspectApproval(comment,raw,scope,{now:Date.parse(p.expires_at)}),/APPROVAL_WINDOW/);
+ const future=iso(NOW+1000).replace(/\.\d{3}Z$/,"Z");
+ assert.throws(()=>s.inspectApproval({...comment,created_at:future,updated_at:future},raw,scope,{now:NOW}),/APPROVAL_WINDOW/);
+ const noncanonical=Buffer.from(c.canonical({...p,valid_from:p.valid_from.replace(/\.\d{3}Z$/,"Z")}));
+ assert.throws(()=>s.inspectApproval({...comment,body:noncanonical.toString()},noncanonical,scope,{now:NOW}),/V3_UTC/);
+});
 function permitFixture(){const p=Object.fromEntries(permit.FIELDS.map(k=>[k,H]));Object.assign(p,{schema_version:"MCFT_CAP09_R4285_SIGNED_ISOLATED_TEST_PERMIT_V3",issuer_id:issuer.issuer_id,key_id:issuer.key_id,...id,parent_run_id:permit.PARENT,failed_predecessor_run_id:permit.FAILED_PREDECESSOR,attempt_ordinal:4,scope:"ISOLATED_QUALIFICATION_TEST_ONLY",purpose:"ORIGINAL_SIX_STAGE_BUDGET_PREFLIGHT_ONLY",decision:"APPROVE_R4285_TEST_ONLY_PERMIT_NOT_PRODUCTION",issued_at:iso(NOW-1000),expires_at:iso(NOW+15000000),production_authorized:false});
  const ctx={...p,protected_main_sha:SUBJECT,source_clean:true,adoption_expires_at:iso(NOW+20000000),resource_owner_expires_at:iso(NOW+19000000),total_stage_budget_ms:10800000};return {p,ctx};}
 test("Permit V3 binds Scope, observations, source approval, QCP73 and strict unchanged budget",()=>{
@@ -118,7 +141,7 @@ function mechanismFixture({liveDelayMs=5}={}){const root=fs.mkdtempSync(path.joi
   "./MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs":{install(){return {async preload(){events.push("actual loading");},close(){events.push("close");}}; }},
   "./MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs":{parentClean(){},async readFrameFd3(){events.push("FD3");return Buffer.from("unit frame");},parse(){return {environment:{DATABASE_URL:"unit only"},expires_at:iso(NOW+16000000)};},clear:require("./MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs").clear},
   "./MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs":mockHost,
-  "node:child_process":{execFileSync(){const body=fs.readFileSync(i.launch_authorization_file,"utf8");return JSON.stringify({id:3,url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/3",issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3757",user:{login:"liyongshang44-max"},author_association:"OWNER",created_at:iso(NOW-2000),updated_at:iso(NOW-2000),body});}}
+  "node:child_process":{execFileSync(){const body=fs.readFileSync(i.launch_authorization_file,"utf8");return JSON.stringify({id:3,url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/3",issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3757",user:{login:"liyongshang44-max"},author_association:"OWNER",created_at:iso(NOW-2000).replace(/\.\d{3}Z$/,"Z"),updated_at:iso(NOW-2000).replace(/\.\d{3}Z$/,"Z"),body});}}
  };
  const localRequire=name=>Object.hasOwn(mocks,name)?mocks[name]:Module.createRequire(__filename)(name);
  const filename=path.join(__dirname,"MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs"),module={exports:{}};
@@ -170,7 +193,7 @@ function dynamicFixture({materialDelay=0,accountFailure=false}={}){
  const raw=Buffer.from(c.canonical(ip));ctx.intent_raw_bytes=raw;
  const live=isolated(path.join(__dirname,"MCFT_CAP09_R4285_ADMISSION_V3.cjs"),{
   "../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs":{isNativeVerified:x=>nativeBrand.has(x)},
-  "node:child_process":{execFileSync(){events.push("FINAL_CTO_NATIVE");return JSON.stringify({id:42,url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/42",issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3757",user:{login:"liyongshang44-max"},author_association:"OWNER",created_at:iso(NOW-4000),updated_at:iso(NOW-4000),body:raw.toString()});}}
+  "node:child_process":{execFileSync(){events.push("FINAL_CTO_NATIVE");return JSON.stringify({id:42,url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/42",issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3757",user:{login:"liyongshang44-max"},author_association:"OWNER",created_at:iso(NOW-4000).replace(/\.\d{3}Z$/,"Z"),updated_at:iso(NOW-4000).replace(/\.\d{3}Z$/,"Z"),body:raw.toString()});}}
  },Clock,win);
  const ni={source_root:root,release_root:root,release_binding_file:bindingFile,release_binding_sha256:ctx.release_binding_sha256,trust_file:trustFile};
  const intent=live.liveIntent(42,raw,ctx),stable=live.stableNative({adoption,nativeInput:ni,intent,ctx,now:clock});events.length=0;
