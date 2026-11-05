@@ -2275,6 +2275,17 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    // One authorized V3 successor unit. Historical 72 results remain N/A;
+    // neither old definitions nor evidence are recertified by these tests.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base==="0aaec504eeda2c3230703d4bbb44e5bafe1668f3"&&authority.checks.length===73){
+      const proof=require("./VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs").verify({ROOT,args,authority,plan,changed,stage});
+      const ok=proof.status==="PASS",current=decision.check_id==="CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1";
+      result={...common,status:ok?(current?"PASS":"NOT_APPLICABLE"):"FAIL",execution:"R4285_PREPARE_LIVE_V3_SOURCE_ONLY",
+       reason_code:ok?(current?"V3_INTEGRATED_SOURCE_CONTRACT_VERIFIED":"HISTORICAL_QCP72_NOT_REISSUED"):proof.reason_code,
+       current_source:proof,source_only:true,permit_issued:false,permit_consumed:false,execute_authorized:false,production_authorized:false,original_six_stages_executed:0};
+      if(!ok)blockers.push({blocker_class:"R4285_V3_SOURCE_QUALIFICATION_HOLD",check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
     // QCP72 is the independent #3757 V2 source-only successor of QCP71.
     // It must never turn historic 71 checks into false current-head PASS.
     if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===R4285_V2_BASE&&

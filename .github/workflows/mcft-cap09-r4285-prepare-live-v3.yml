@@ -1,0 +1,21 @@
+name: R4285 Prepare Live V3 integrated contracts
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/**/*V3*.cjs'
+      - 'scripts/cap09_adoption_v1/MCFT_CAP09_R4285_ADOPTION_V5_V3.cjs'
+      - '.github/workflows/mcft-cap09-r4285-prepare-live-v3.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-R4285-PREPARE-LIVE-V3.md'
+permissions: {contents: read}
+jobs:
+  integrated-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24.19.0'}
+      - name: Integrated nonlive tests with isolated identities
+        run: node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs

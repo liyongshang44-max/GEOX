@@ -255,6 +255,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Setup bounded V3 source contract runtime
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 3758 && github.head_ref == 'mcft/r4285-prepare-live-v3'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+
       - uses: pnpm/action-setup@v4
         if: github.event_name == 'pull_request' && github.event.pull_request.number == 3757
         with:
