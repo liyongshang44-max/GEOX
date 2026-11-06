@@ -14,6 +14,7 @@ const pgContract=require("./MCFT_CAP09_R4285_PG_READONLY_V1.cjs");
 
 const {AsyncLocalStorage}=require("node:async_hooks");
 const sourceContext=new AsyncLocalStorage(),producerContexts=new WeakMap();
+const attached=new WeakMap();
 function nativeEnvironment(){return sourceContext.getStore()||process.env;}
 function nativeChildEnvironment(){const out={...nativeEnvironment()};for(const k of Object.keys(out))if(/(?:PASSWORD|SECRET|TOKEN|DATABASE_URL|ACCESS_KEY)/i.test(k))delete out[k];return out;}
 const scopeV3=require("./MCFT_CAP09_R4285_SCOPE_V3.cjs");
@@ -1477,6 +1478,66 @@ function sourceOnly(argv){
  const i=parse(["--diagnostic-only","--input",argv[2]]);
  return verifyNativeSourceRaw(i,boundedFile(argv[4]),boundedFile(argv[6]));
 }
+// Same-process successor interface. Only the official factory may attach its
+// already-qualified state; neither JSON nor a caller-supplied verifier suffices.
+function prepareAttached(state,options){
+ const factory=require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs");factory.requireProducerPreparation(state);
+ const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs");
+ assert(native.isNativeVerified(state.adoption),"V3_PRODUCER_NATIVE_PRESECRET_CAPABILITY_REQUIRED");
+ scopeV3.exact(options,["existing_mc_alias","parent_access_key_id","protected_directory","control_envelope_file","inventory_envelope_file"],"V3_PRODUCER_OPTIONS");
+ const config=JSON.parse(lineage.canonical(options));
+ assert(typeof config.existing_mc_alias==="string"&&/^[A-Za-z0-9_.-]{2,128}$/.test(config.existing_mc_alias),"V3_PRODUCER_EXISTING_ALIAS");
+ assert(typeof config.parent_access_key_id==="string"&&sha(Buffer.from(config.parent_access_key_id))===state.scope.payload.resources.parent_principal_sha256,"V3_PARENT_IDENTITY_DRIFT");
+ const i={source_root:state.i.source_root,release_root:state.i.release_root,subject_sha:state.ctx.subject_sha,database_port:state.scope.payload.resources.database_port,bucket_endpoint:state.scope.payload.resources.bucket_endpoint};
+ host();validateInput(i);
+ const outputs=[config.protected_directory,config.control_envelope_file,config.inventory_envelope_file,state.i.resource_readback_file];
+ assert(new Set(outputs.map(f=>path.resolve(f).toLowerCase())).size===outputs.length,"V3_PRODUCER_OUTPUT_ALIAS");
+ for(const file of outputs){assertFormalOutputSeparate(i,file);assert(!fs.existsSync(file),"V3_PRODUCER_OUTPUT_EXISTS");noLinks(path.dirname(file));}
+ for(const file of outputs.slice(1)){const rel=path.relative(config.protected_directory,file);assert(rel===".."||rel.startsWith(".."+path.sep),"V3_PRODUCER_PUBLIC_INSIDE_PROTECTED");}
+ const env=Object.assign(Object.create(null),state.environment,{
+  MCFT_CAP09_R4285_EXISTING_MC_ALIAS:config.existing_mc_alias,MCFT_CAP09_R4285_PARENT_ACCESS_KEY_ID:config.parent_access_key_id});
+ producerContexts.set(env,{adoption:state.adoption,scope_id:state.scope.scope_id,expires:state.expires});
+ const cap=Object.freeze(Object.create(null));attached.set(cap,{state,i,config,env,phase:"PREPARED",capture:null});return cap;
+}
+function requireAttached(cap,state,phase){const p=attached.get(cap);assert(p&&p.state===state&&p.phase===phase,"V3_PRODUCER_ATTACHED_CAPABILITY_REQUIRED");
+ require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").requireReceiver(state);
+ assert(Date.now()<state.expires,"V3_PRODUCER_PREPARATION_EXPIRED");return p;
+}
+function captureAttached(cap,state){const p=requireAttached(cap,state,"PREPARED");p.phase="CAPTURING";
+ try{return sourceContext.run(p.env,()=>{
+  const captured=captureCurrentNativeSourceOnly(p.i,p.env,p.config.protected_directory);
+  assert(Date.parse(captured.observed_at)>=state.owner_not_before,"V3_PRODUCER_BEFORE_HOST_WAIT");
+  require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").setObservationDeadline(state,captured.observed_at);
+  const at=new Date().toISOString(),scope=state.scope,payload=kind=>Object.freeze({schema_version:"MCFT_CAP09_R4285_SOURCE_OBSERVATION_V3",issuer_id:scope.payload.issuer_id,key_id:scope.payload.key_id,
+   run_id:state.ctx.run_id,subject_sha:state.ctx.subject_sha,host_id:state.ctx.host_id,nonce:state.ctx.nonce,scope_id:scope.scope_id,kind,raw_sha256:captured[kind.toLowerCase()+"_sha256"],observed_at:captured.observed_at,issued_at:at,expires_at:scope.payload.expires_at,production_authorized:false});
+  p.capture=captured;p.phase="CAPTURED";
+  return Object.freeze({status:"V3_FRESH_PROTECTED_SOURCES_AWAIT_SIGNED_OBSERVATIONS",control:payload("CONTROL"),inventory:payload("INVENTORY"),raw_bytes_returned:false,permit_consumed:false,stage_count:0});
+ });}catch(error){closeAttached(cap);throw error;}
+}
+async function completeAttached(cap,state,observations){const p=requireAttached(cap,state,"CAPTURED");p.phase="COMPLETING";
+ try{return await sourceContext.run(p.env,async()=>{
+  scopeV3.exact(observations,["control","inventory"],"V3_PRODUCER_SIGNED_OBSERVATIONS");
+  observations=JSON.parse(lineage.canonical(observations));
+  const files=handoffPaths(p.config.protected_directory),raw=readProtectedHandoff(p.i,files.CONTROL,files.INVENTORY);
+  try{
+   for(const kind of ["CONTROL","INVENTORY"]){const lower=kind.toLowerCase(),env=observations[lower];
+    scopeV3.verifyObservation(env,raw[lower+"_bytes"],kind,state.scope,state.trust,{notBefore:state.owner_not_before});
+    assert(env.payload.observed_at===p.capture.observed_at&&env.payload.raw_sha256===p.capture[lower+"_sha256"],"V3_PRODUCER_CAPTURE_CHANGED");
+   }
+   const sources={scope_envelope:scopeV3.readJson(state.i.scope_envelope_file),trust:state.trust,control_bytes:raw.control_bytes,inventory_bytes:raw.inventory_bytes,
+    control_envelope:observations.control,inventory_envelope:observations.inventory,source_approval_raw:state.approvalRaw,source_approval_comment_id:state.i.source_approval_comment_id,
+    source_policy_bytes:boundedFile(state.i.source_policy_file),nonce:state.ctx.nonce,owner_not_before:new Date(state.owner_not_before).toISOString(),launch_input:state.i};
+   // The original native control-plane/PG/S3 verifier still creates the only
+   // formal readback. Signatures cannot replace those physical checks.
+   const result=await produceFormalRaw(p.i,sources,state.i.resource_readback_file,p.env);
+   require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").requireReceiver(state);
+   for(const [file,envelope] of [[p.config.control_envelope_file,observations.control],[p.config.inventory_envelope_file,observations.inventory]])writeOnceHandoff(file,Buffer.from(lineage.canonical(envelope)));
+   return result;
+  }finally{raw.control_bytes.fill(0);raw.inventory_bytes.fill(0);}
+ });}finally{closeAttached(cap);}
+}
+function closeAttached(cap){const p=attached.get(cap);if(!p)return;p.phase="CLOSED";producerContexts.delete(p.env);for(const key of Object.keys(p.env))delete p.env[key];p.capture=null;attached.delete(cap);}
+
 if(require.main===module){
  const argv=process.argv.slice(2);
  Promise.resolve().then(async()=>{
@@ -1499,4 +1560,4 @@ if(require.main===module){
   }finally{frame?.fill(0);delivery.clear(secret?.environment);loading.close();}
  }).then(x=>console.log(JSON.stringify(x))).catch(e=>{console.error(JSON.stringify({status:"HOLD_V3_FORMAL_READBACK",reason_code:require("./MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs").safeReason(e),permit_consumed:false,stage_count:0}));process.exitCode=2;});
 }
-module.exports={serviceAccountMetadata,verifyFormalEvidence,composeFormalReadback,loadFormalSourceSpec,produceFormalRaw};
+module.exports={serviceAccountMetadata,verifyFormalEvidence,composeFormalReadback,loadFormalSourceSpec,produceFormalRaw,prepareAttached,captureAttached,completeAttached,closeAttached};
