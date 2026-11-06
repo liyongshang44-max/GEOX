@@ -103,7 +103,7 @@ test("public receiver rejects JSON/serialized capabilities and has no execute en
  assert.throws(()=>admission.stableNative({adoption:{status:"PASS"},nativeInput:{},intent:{},ctx:{}}),/REAL_NATIVE/);
 });
 test("actual Node CJS and ESM loading uses pinned native module objects; reachable disk drift rejects",()=>{
- for(const drift of [false,true]){
+ for(const drift of [false,true,"empty-drift","empty-hardlink"]){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-pinned-")),profileFile=root+"-profile.json";
   try{
    for(const rel of ["scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs","scripts/cap09_adoption_v1/contract.cjs"]){const out=path.join(root,rel);fs.mkdirSync(path.dirname(out),{recursive:true});fs.copyFileSync(path.join(ROOT,rel),out);}
@@ -111,11 +111,16 @@ test("actual Node CJS and ESM loading uses pinned native module objects; reachab
    for(const [name,main,body] of [["pg","index.cjs","module.exports={Pool:class Pool{},tag:'original'};"],["@aws-sdk/client-s3","index.cjs","module.exports={S3Client:class S3Client{}};"],["tsx","loader.mjs","export const loader='original';"]]){
     const dir=path.join(root,"node_modules",name);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,"package.json"),JSON.stringify({name,main}));fs.writeFileSync(path.join(dir,main),body);
    }
-   const runner=`const fs=require('node:fs');const loader=require('./scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs');const profile=JSON.parse(fs.readFileSync(process.argv[2]));const gate=loader.install(profile,__dirname);${drift?"fs.writeFileSync(__dirname+'/node_modules/pg/index.cjs',\"module.exports={tag:'changed'}\");":""}gate.preload().then(()=>{const pg=require('pg');if(pg.tag!=='original'||typeof pg.Pool!=='function')throw Error('WRONG_MODULE_OBJECT');gate.close();console.log('PINNED_NATIVE_MODULES');}).catch(e=>{gate.close();console.error(e.message);process.exitCode=2;});`;
+   for(const rel of ["node_modules/fast-xml-parser/src/v6/Report.js","node_modules/fast-xml-parser/src/xmlbuilder/prettifyJs2Xml.js","empty.cjs","empty.mjs"]){const f=path.join(root,rel);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,"");}
+   fs.writeFileSync(path.join(root,"node_modules/fast-xml-parser/package.json"),JSON.stringify({name:"fast-xml-parser",type:"commonjs"}));
+   const emptyWire=profileFile+".empty.json";fs.writeFileSync(emptyWire,"");try{assert.throws(()=>s.bytes(emptyWire),/V3_REGULAR_FILE/);}finally{fs.rmSync(emptyWire);}
+   if(drift==="empty-hardlink")fs.linkSync(path.join(root,"empty.cjs"),path.join(root,"empty-alias.cjs"));
+   const mutation=drift===true?"fs.writeFileSync(__dirname+'/node_modules/pg/index.cjs',\"module.exports={tag:'changed'}\");":drift==="empty-drift"?"fs.writeFileSync(__dirname+'/empty.cjs',\"module.exports={changed:true};\");":"";
+   const runner=`const fs=require('node:fs');const loader=require('./scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs');const profile=JSON.parse(fs.readFileSync(process.argv[2]));let gate;(async()=>{try{gate=loader.install(profile,__dirname);${mutation}await gate.preload();const pg=require('pg');if(pg.tag!=='original'||typeof pg.Pool!=='function')throw Error('WRONG_MODULE_OBJECT');if(Object.keys(require('./empty.cjs')).length||Object.keys(require('./node_modules/fast-xml-parser/src/v6/Report.js')).length||Object.keys(await import('./empty.mjs')).length)throw Error('EMPTY_MODULE_SEMANTICS');console.log('PINNED_NATIVE_MODULES');}catch(e){console.error(e.message);process.exitCode=2;}finally{gate?.close();}})();`;
    fs.writeFileSync(path.join(root,"runner.cjs"),runner);const files=[];
    function walk(dir,prefix=""){for(const item of fs.readdirSync(dir).sort()){const file=path.join(dir,item),rel=prefix+item;if(fs.statSync(file).isDirectory())walk(file,rel+"/");else files.push({path:rel,sha256:s.sha(fs.readFileSync(file))});}}walk(root);
    fs.writeFileSync(profileFile,JSON.stringify({root,files}));const child=cp.spawnSync(process.execPath,[path.join(root,"runner.cjs"),profileFile],{encoding:"utf8",timeout:15000,env:{PATH:process.env.PATH,SystemRoot:process.env.SystemRoot||""}});
-   assert.equal(child.status,drift?2:0,child.stderr);assert.match(drift?child.stderr:child.stdout,drift?/V3_MODULE_DISK_DRIFT/:/PINNED_NATIVE_MODULES/);
+   assert.equal(child.status,drift?2:0,child.stderr);assert.match(drift?child.stderr:child.stdout,drift==="empty-hardlink"?/V3_REGULAR_FILE/:drift?/V3_MODULE_DISK_DRIFT/:/PINNED_NATIVE_MODULES/);
   }finally{fs.rmSync(root,{recursive:true,force:true});fs.rmSync(profileFile,{force:true});}
  }
 });
@@ -260,11 +265,12 @@ test("actual V3 PG/S3 boundaries propagate cancellation and close active clients
 test("bounded V3 successor qualification preserves the 73-check manifest and exact current source binding",()=>{
  const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
  const authority=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH),"utf8"));
- const head="d".repeat(40),input={args:{base:q.SUCCESSOR_BASE,head},authority,before:structuredClone(authority),
+ for(const cfg of [{base:q.SUCCESSOR_BASE,branch:q.SUCCESSOR_BRANCH,paths:q.SUCCESSOR_PATHS},{base:q.EMPTY_MODULE_BASE,branch:q.EMPTY_MODULE_BRANCH,paths:q.EMPTY_MODULE_PATHS}]){
+ const head="d".repeat(40),input={args:{base:cfg.base,head},authority,before:structuredClone(authority),
   plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]},
-  paths:[...q.SUCCESSOR_PATHS],changed:[...q.SUCCESSOR_PATHS],stage:"SUCCESSOR_SUBJECT_PRE_MERGE",
+  paths:[...cfg.paths],changed:[...cfg.paths],stage:"SUCCESSOR_SUBJECT_PRE_MERGE",
   event:{repository:{full_name:"liyongshang44-max/GEOX"},pull_request:{number:9999,user:{login:"liyongshang44-max"},
-   base:{sha:q.SUCCESSOR_BASE,ref:"main"},head:{sha:head,ref:q.SUCCESSOR_BRANCH,repo:{full_name:"liyongshang44-max/GEOX"}}}}};
+   base:{sha:cfg.base,ref:"main"},head:{sha:head,ref:cfg.branch,repo:{full_name:"liyongshang44-max/GEOX"}}}}};
  assert.equal(q.inspectSuccessor(input),true);
  assert.equal(authority.checks.length,73);
  assert.equal(authority.checks[72].check_id,"CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1");
@@ -277,6 +283,7 @@ test("bounded V3 successor qualification preserves the 73-check manifest and exa
   x=>x.event.pull_request.head.ref="other",x=>x.event.pull_request.user.login="other",
   x=>x.event.pull_request.head.repo.full_name="other/GEOX"
  ]){const bad=structuredClone(input);mutate(bad);assert.throws(()=>q.inspectSuccessor(bad));}
+ }
 });
 test("qualification workflow and preflight route the exact successor while retaining the original V3 admission",()=>{
  const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
@@ -284,6 +291,8 @@ test("qualification workflow and preflight route the exact successor while retai
  assert(workflow.includes("github.event.pull_request.number == 3758"));
  assert(workflow.includes("github.head_ref == '"+q.SUCCESSOR_BRANCH+"'"));
  assert(workflow.includes("github.event.pull_request.base.sha == '"+q.SUCCESSOR_BASE+"'"));
+ assert(workflow.includes("github.event.pull_request.base.sha == '"+q.EMPTY_MODULE_BASE+"'"));
+ assert(workflow.includes("github.head_ref == '"+q.EMPTY_MODULE_BRANCH+"'"));
  for(const p of q.SUCCESSOR_PATHS)assert(workflow.includes("      - '"+p+"'"),p);
  const preflight=fs.readFileSync(path.join(ROOT,"scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"),"utf8");
  assert(preflight.includes('["0aaec504eeda2c3230703d4bbb44e5bafe1668f3","'+q.SUCCESSOR_BASE+'"].includes(args.base)'));
