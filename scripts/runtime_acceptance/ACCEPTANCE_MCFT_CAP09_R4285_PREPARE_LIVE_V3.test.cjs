@@ -138,7 +138,7 @@ function mechanismFixture({liveDelayMs=5}={}){const root=fs.mkdtempSync(path.joi
  function put(file,obj){fs.writeFileSync(file,c.canonical(obj));}
  put(i.native_adoption_input_file,ni);put(ni.trust_file,{...trust,ledger_root:root});put(ni.material_file,{root:i.release_root,files:[]});put(ni.release_binding_file,{});put(ni.adoption_envelope_file,{payload:{expires_at:iso(NOW+16000000)}});
  put(i.plan_file,{stages:[{timeout_ms:10800000}]});put(i.observations_file,{});put(i.scope_envelope_file,sign(s.DOMAIN,p));fs.writeFileSync(i.source_policy_file,"unit policy");fs.writeFileSync(i.source_approval_file,"unit approval");fs.writeFileSync(i.cto_intent_file,"unit intent");fs.writeFileSync(i.launch_authorization_file,c.canonical({schema_version:"MCFT_CAP09_R4285_SESSION_LAUNCH_V3",...id,scope_id:envScope.scope_id,valid_from:iso(NOW-1000),expires_at:iso(NOW+16000000),decision:"AUTHORIZE_ONE_V3_SESSION_PREFLIGHT_ONLY",production_authorized:false}));
- const cleanScope=structuredClone(envScope);cleanScope.payload.source.policy_sha256=s.sha("unit policy");
+ const cleanScope=structuredClone(envScope);cleanScope.payload.source.policy_sha256=s.sha("unit policy");cleanScope.payload.resources.parent_principal_sha256=s.sha("UNIT_PARENT_ONLY");
  const brand=new WeakSet(),nativeDouble={checkNativeAdoption(){events.push("native");const proof={...id,material_digest:H};brand.add(proof);return proof;},isNativeVerified:x=>brand.has(x)};
  const actualHistorical=require("./MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs"),mockScope={...s,verifyScope(){events.push("scope");return cleanScope;},liveApproval(){events.push("source authority");return {sha256:H,expires_at:iso(NOW+16000000)};},requireApproval(){return true;},verifySourcePolicy(){return true;}};
  let finalChecks=0,environment,receivedState;
@@ -148,12 +148,19 @@ function mechanismFixture({liveDelayMs=5}={}){const root=fs.mkdtempSync(path.joi
   "./MCFT_CAP09_R4285_ADMISSION_V3.cjs":{frozenBudget(){},liveIntent(){events.push("intent");return {expires_at:iso(NOW+16000000)};},stableNative(){return {minted_at:iso(Date.now())};},requireStable(){}},
   "../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs":{verifyExactMain(){}},
   "./MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs":{install(){return {async preload(){events.push("actual loading");},close(){events.push("close");}}; }},
-  "./MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs":{parentClean(){},async readFrameFd3(){events.push("FD3");return Buffer.from("unit frame");},parse(){return {environment:{DATABASE_URL:"unit only"},expires_at:iso(NOW+16000000)};},clear:require("./MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs").clear},
+  "./MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs":{parentClean(){},async readFrameFd3(){events.push("FD3");return Buffer.from("unit frame");},parse(){return {environment:{DATABASE_URL:"unit only",MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID:"UNIT_ACCESS_ONLY"},expires_at:iso(NOW+16000000)};},clear:require("./MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs").clear},
   "./MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs":mockHost,
   "node:child_process":{execFileSync(){const body=fs.readFileSync(i.launch_authorization_file,"utf8");return JSON.stringify({id:3,url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/3",issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3757",user:{login:"liyongshang44-max"},author_association:"OWNER",created_at:iso(NOW-2000).replace(/\.\d{3}Z$/,"Z"),updated_at:iso(NOW-2000).replace(/\.\d{3}Z$/,"Z"),body});}}
  };
- const localRequire=name=>Object.hasOwn(mocks,name)?mocks[name]:Module.createRequire(__filename)(name);
  const filename=path.join(__dirname,"MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs"),module={exports:{}};
+ const producerFile=path.join(__dirname,"MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs");
+ mocks["./MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs"]=isolated(producerFile,{
+  "./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs":new Proxy({},{get:(_,key)=>module.exports[key]}),
+  "../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs":nativeDouble,
+  "node:os":{hostname:()=>s.HOST},
+  "node:child_process":{spawnSync(){events.push("native source capture");return {status:1,stdout:Buffer.alloc(0)};}}
+ },Date,{platform:"win32",env:{}});
+ const localRequire=name=>Object.hasOwn(mocks,name)?mocks[name]:Module.createRequire(__filename)(name);
  vm.runInThisContext("(function(exports,require,module,__filename,__dirname,console,process){"+fs.readFileSync(filename,"utf8")+"\n})",{filename})(module.exports,localRequire,module,filename,__dirname,{log(){},error(){}},{...process,env:{}});
  return {i,events,root,factory:module.exports,get environment(){return environment;},get state(){return receivedState;},get finalChecks(){return finalChecks;},future,cleanup(){fs.rmSync(root,{recursive:true,force:true});}};
 }
@@ -167,6 +174,35 @@ test("factory revocation, drift, preexisting future files and cross-process atte
   if(mode==="revoke")f.factory.revoke(cap);if(mode==="drift")fs.writeFileSync(f.i.source_policy_file,"changed");if(mode==="future")fs.writeFileSync(f.i.resource_readback_file,"old");
   if(mode==="attempt"){await f.factory.consume(cap);const next=await f.factory.prepare(f.i);await assert.rejects(f.factory.consume(next),/V3_SESSION_SCOPE_ALREADY_ATTEMPTED/);}
   else await assert.rejects(f.factory.consume(cap));assert.equal(f.environment?.DATABASE_URL,undefined);
+ }finally{f.cleanup();}}
+});
+function producerOptions(root){return {existing_mc_alias:"UNIT_ADMIN_ONLY",parent_access_key_id:"UNIT_PARENT_ONLY",protected_directory:path.join(root,"protected-new"),control_envelope_file:path.join(root,"control-signed.json"),inventory_envelope_file:path.join(root,"inventory-signed.json")};}
+test("Producer reuses the genuine presecret capability before WAIT without another Native or FD3 read",async()=>{
+ const f=mechanismFixture();try{
+  assert.throws(()=>f.factory.prepareProducer({},producerOptions(f.root)),/FACTORY_CAPABILITY/);
+  const cap=await f.factory.prepare(f.i),before=f.events.slice();
+  await assert.rejects(f.factory.consumeWithProducer(cap),/NOT_PREPARED_BEFORE_WAIT/);assert(!f.events.includes("live"));
+  const ready=f.factory.prepareProducer(cap,producerOptions(f.root));assert.equal(ready.status,"V3_PRODUCER_PREPARED_SAME_PROCESS_NOT_OBSERVED");
+  assert.deepEqual(f.events,before);assert(!fs.existsSync(path.join(f.root,"protected-new")));
+  assert.throws(()=>f.factory.captureProducer(cap),/FACTORY_RECEIVER/);
+  assert.throws(()=>f.factory.prepareProducer(cap,producerOptions(f.root)),/PREPARE_ONCE/);
+  f.factory.revoke(cap);assert.throws(()=>f.factory.captureProducer(cap));
+ }finally{f.cleanup();}
+});
+test("Producer capture runs only after real factory WAIT and its first native failure invalidates the session",async()=>{
+ const f=mechanismFixture({liveDelayMs:10});try{const cap=await f.factory.prepare(f.i);f.factory.prepareProducer(cap,producerOptions(f.root));
+  const pending=f.factory.consumeWithProducer(cap);const rejected=assert.rejects(pending,/V3_PRODUCER_SOURCE_CAPTURE_FAILED/);
+  assert(f.events.includes("live"));assert.throws(()=>f.factory.captureProducer(cap),/HOLD_NATIVE_COMMAND_NOT_AUTHENTICATED/);
+  await rejected;assert.equal(f.events.filter(x=>x==="native").length,1);assert.equal(f.events.filter(x=>x==="FD3").length,1);
+  assert(f.events.indexOf("native source capture")>f.events.indexOf("live"));assert.equal(f.environment.DATABASE_URL,undefined);
+  await assert.rejects(f.factory.completeProducer(cap,{}));assert(!fs.existsSync(f.i.resource_readback_file));
+ }finally{f.cleanup();}
+});
+test("Producer rejects forged prepared state, wrong Parent and output aliases before control-plane I/O",async()=>{
+ const p=require("./MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs");assert.throws(()=>p.prepareAttached({phase:"PREPARED"},{}),/FACTORY_PREPARATION/);
+ for(const mode of ["parent","alias","inside"]){const f=mechanismFixture();try{const cap=await f.factory.prepare(f.i),options=producerOptions(f.root);
+  if(mode==="parent")options.parent_access_key_id="WRONG_PARENT";if(mode==="alias")options.inventory_envelope_file=options.control_envelope_file;if(mode==="inside")options.control_envelope_file=path.join(f.i.release_root,"public.json");
+  assert.throws(()=>f.factory.prepareProducer(cap,options));assert(!f.events.includes("native source capture"));f.factory.revoke(cap);
  }finally{f.cleanup();}}
 });
 function isolated(filename,mocks,clock=Date,processValue=process){const module={exports:{}},local=Module.createRequire(filename);
@@ -269,7 +305,7 @@ test("actual V3 PG/S3 boundaries propagate cancellation and close active clients
 test("bounded V3 successor qualification preserves the 73-check manifest and exact current source binding",()=>{
  const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
  const authority=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH),"utf8"));
- for(const cfg of [{base:q.SUCCESSOR_BASE,branch:q.SUCCESSOR_BRANCH,paths:q.SUCCESSOR_PATHS},{base:q.EMPTY_MODULE_BASE,branch:q.EMPTY_MODULE_BRANCH,paths:q.EMPTY_MODULE_PATHS},{base:q.RELEASE_REVIEW_BASE,branch:q.RELEASE_REVIEW_BRANCH,paths:q.RELEASE_REVIEW_PATHS},{base:q.NATIVE_JS_BASE,branch:q.NATIVE_JS_BRANCH,paths:q.NATIVE_JS_PATHS}]){
+ for(const cfg of [{base:q.SUCCESSOR_BASE,branch:q.SUCCESSOR_BRANCH,paths:q.SUCCESSOR_PATHS},{base:q.EMPTY_MODULE_BASE,branch:q.EMPTY_MODULE_BRANCH,paths:q.EMPTY_MODULE_PATHS},{base:q.RELEASE_REVIEW_BASE,branch:q.RELEASE_REVIEW_BRANCH,paths:q.RELEASE_REVIEW_PATHS},{base:q.NATIVE_JS_BASE,branch:q.NATIVE_JS_BRANCH,paths:q.NATIVE_JS_PATHS},{base:q.PRODUCER_WAIT_BASE,branch:q.PRODUCER_WAIT_BRANCH,paths:q.PRODUCER_WAIT_PATHS}]){
  const head="d".repeat(40),input={args:{base:cfg.base,head},authority,before:structuredClone(authority),
   plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]},
   paths:[...cfg.paths],changed:[...cfg.paths],stage:"SUCCESSOR_SUBJECT_PRE_MERGE",

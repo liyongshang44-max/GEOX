@@ -8,7 +8,9 @@ const admission=require("./MCFT_CAP09_R4285_ADMISSION_V3.cjs");
 const historical=require("./MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
 const loader=require("./MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs"),delivery=require("./MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs");
-const states=new WeakMap(),receivers=new WeakSet();
+// Loaded before FD3, under the same pinned Release graph as the Host.
+const producer=require("./MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs");
+const states=new WeakMap(),receivers=new WeakSet(),producerPreparations=new WeakSet();
 const FUTURE=Object.freeze(["resource_readback_file","resource_envelope_file","permit_envelope_file","final_execution_approval_file"]);
 const EXTRA=["final_execution_approval_file","nonce","scope_envelope_file","source_policy_file","source_approval_file","source_approval_comment_id","launch_authorization_file","launch_authorization_comment_id","session_revocation_file","cto_intent_file","cto_intent_comment_id"];
 const INPUTS=Object.freeze([...historical.INPUTS,...EXTRA]);
@@ -33,9 +35,10 @@ function assertActive(state){if(state?.failure_code)throw Error(state.failure_co
  if(state.observation_deadline&&now>=state.observation_deadline){invalidate(state,"V3_OWNER_WINDOW_EXHAUSTED");throw Error("V3_OWNER_WINDOW_EXHAUSTED");}
  delivery.parentClean(process.env);admission.requireStable(state.stable,state.intent,state.ctx,{now});s.requireApproval(state.approval,state.scope,{now});}
 function closeState(state){if(!state||state.phase==="CLOSED")return;state.phase="CLOSED";
+ producer.closeAttached(state.producer);state.producer=null;
  clearTimeout(state.expiry_timer);clearTimeout(state.observation_timer);clearInterval(state.revoke_timer);state.controller?.abort();
  delivery.clear(state.environment);state.environment=null;state.loading?.close();state.loading=null;state.adoption=null;state.stable=null;state.intent=null;}
-function invalidate(state,code){if(!state||state.phase==="CLOSED")return;state.failure_code=code;state.revoked=true;state.controller?.abort(Error(code));delivery.clear(state.environment);if(state.phase==="PREPARED")closeState(state);}
+function invalidate(state,code){if(!state||state.phase==="CLOSED")return;state.failure_code=code;state.revoked=true;state.controller?.abort(Error(code));delivery.clear(state.environment);producer.closeAttached(state.producer);state.producer=null;if(state.phase==="PREPARED")closeState(state);}
 // Launch permission is an independent native CTO decision. Architecture and
 // purpose approvals cannot satisfy this exact decision or its signed context.
 function launch(i,scope){const raw=s.bytes(i.launch_authorization_file,8192),p=s.wire(raw);
@@ -91,6 +94,24 @@ async function prepare(i){
  finally{frame?.fill(0);delivery.clear(secret?.environment);}
 }
 function revoke(cap){const state=states.get(cap);s.check(state,"V3_FACTORY_CAPABILITY_REQUIRED");invalidate(state,"V3_PREPARE_REVOKED");}
+function requireProducerPreparation(state){s.check(producerPreparations.has(state)&&state.phase==="PREPARED","V3_PRODUCER_FACTORY_PREPARATION_REQUIRED");assertActive(state);return true;}
+function prepareProducer(cap,options){const state=states.get(cap);s.check(state,"V3_FACTORY_CAPABILITY_REQUIRED");assertActive(state);checkPinned(state.pins);
+ s.check(state.phase==="PREPARED"&&!state.producer,"V3_PRODUCER_PREPARE_ONCE");
+ producerPreparations.add(state);
+ try{state.producer=producer.prepareAttached(state,options);return Object.freeze({status:"V3_PRODUCER_PREPARED_SAME_PROCESS_NOT_OBSERVED",scope_id:state.scope.scope_id,credentials_reopened:false,owner_clock_started:false});}
+ finally{producerPreparations.delete(state);}
+}
+function captureProducer(cap){const state=states.get(cap);s.check(state,"V3_FACTORY_CAPABILITY_REQUIRED");requireReceiver(state);checkPinned(state.pins);
+ try{return producer.captureAttached(state.producer,state);}
+ catch(error){invalidate(state,"V3_PRODUCER_SOURCE_CAPTURE_FAILED");throw error;}
+}
+async function completeProducer(cap,observations){const state=states.get(cap);s.check(state,"V3_FACTORY_CAPABILITY_REQUIRED");requireReceiver(state);checkPinned(state.pins);
+ try{return await producer.completeAttached(state.producer,state,observations);}
+ catch(error){invalidate(state,"V3_PRODUCER_FORMAL_READBACK_FAILED");throw error;}
+}
+async function consumeWithProducer(cap){const state=states.get(cap);s.check(state,"V3_FACTORY_CAPABILITY_REQUIRED");assertActive(state);
+ s.check(state.phase==="PREPARED"&&state.producer,"V3_PRODUCER_NOT_PREPARED_BEFORE_WAIT");return consume(cap);
+}
 async function consume(cap){const state=states.get(cap);s.check(state,"V3_FACTORY_CAPABILITY_REQUIRED");
  // Synchronous state transition precedes any await, so competing consumers
  // cannot both enter. It reserves preparation, never a Permit/ledger marker.
@@ -115,4 +136,4 @@ function refreshAuthority(state){requireReceiver(state);const proof=s.liveApprov
 function setObservationDeadline(state,observedAt){requireReceiver(state);const deadline=s.utc(observedAt)+120000;
  if(state.observation_deadline&&state.observation_deadline<=deadline)return;
  state.observation_deadline=deadline;clearTimeout(state.observation_timer);state.observation_timer=setTimeout(()=>invalidate(state,"V3_OWNER_WINDOW_EXHAUSTED"),Math.max(1,deadline-Date.now()));state.observation_timer.unref?.();assertActive(state);}
-module.exports={INPUTS,FUTURE,checkInput,absent,prepare,consume,revoke,launch,requireReceiver,refreshAuthority,setObservationDeadline};
+module.exports={INPUTS,FUTURE,checkInput,absent,prepare,consume,revoke,launch,requireReceiver,refreshAuthority,setObservationDeadline,prepareProducer,consumeWithProducer,captureProducer,completeProducer,requireProducerPreparation};

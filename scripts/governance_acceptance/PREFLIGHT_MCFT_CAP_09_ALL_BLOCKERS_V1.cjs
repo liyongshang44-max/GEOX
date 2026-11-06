@@ -2277,7 +2277,7 @@ function main() {
     };
     // One authorized V3 successor unit. Historical 72 results remain N/A;
     // neither old definitions nor evidence are recertified by these tests.
-    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&(["0aaec504eeda2c3230703d4bbb44e5bafe1668f3","55de110cbe2ef11edd3320bc1042e8d1098084bb"].includes(args.base)||["cf128a214fa8f929ac3c013a3ba6de58bc99be22","0871514a4dd096772506282710b05f2f1ae87d07","722fbcae5a56f625065be63437530f0051c12705"].includes(args.base))&&authority.checks.length===73){
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&(["0aaec504eeda2c3230703d4bbb44e5bafe1668f3","55de110cbe2ef11edd3320bc1042e8d1098084bb"].includes(args.base)||["cf128a214fa8f929ac3c013a3ba6de58bc99be22","0871514a4dd096772506282710b05f2f1ae87d07","722fbcae5a56f625065be63437530f0051c12705","ff8cb64d85728548c1902a3447421e15b5d4d12f"].includes(args.base))&&authority.checks.length===73){
       const proof=require("./VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs").verify({ROOT,args,authority,plan,changed,stage});
       const ok=proof.status==="PASS",current=decision.check_id==="CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1";
       result={...common,status:ok?(current?"PASS":"NOT_APPLICABLE"):"FAIL",execution:"R4285_PREPARE_LIVE_V3_SOURCE_ONLY",
