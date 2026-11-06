@@ -6,7 +6,7 @@ const spec=require("../runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs")
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 let cached=null;
 function verify({ROOT,args,authority,plan,changed,stage}){
- if([SUCCESSOR_BASE,EMPTY_MODULE_BASE].includes(arguments[0].args.base))return verifySuccessor(arguments[0]);
+ if([SUCCESSOR_BASE,EMPTY_MODULE_BASE,RELEASE_REVIEW_BASE].includes(arguments[0].args.base))return verifySuccessor(arguments[0]);
  if(cached)return cached;
  const git=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:8*1024*1024}).trim();
  try{
@@ -52,8 +52,13 @@ const EMPTY_MODULE_BASE="cf128a214fa8f929ac3c013a3ba6de58bc99be22";
 const EMPTY_MODULE_BRANCH="mcft/r4285-v3-empty-module-source-fix";
 const EMPTY_MODULE_RUNTIME="scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs";
 const EMPTY_MODULE_PATHS=Object.freeze([...SUCCESSOR_PATHS,EMPTY_MODULE_RUNTIME].sort());
-function successorScope(base){return base===EMPTY_MODULE_BASE?
- {base:EMPTY_MODULE_BASE,branch:EMPTY_MODULE_BRANCH,paths:EMPTY_MODULE_PATHS,tree:"381becbcc838631f16bde5b109f093324efeb74d",runtimeChanged:true}:
+const RELEASE_REVIEW_BASE="0871514a4dd096772506282710b05f2f1ae87d07";
+const RELEASE_REVIEW_BRANCH="mcft/r4285-v3-release-local-review";
+const RELEASE_REVIEW_RUNTIME="scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs";
+const RELEASE_REVIEW_PATHS=Object.freeze([...SUCCESSOR_PATHS,RELEASE_REVIEW_RUNTIME].sort());
+function successorScope(base){return base===RELEASE_REVIEW_BASE?
+ {base:RELEASE_REVIEW_BASE,branch:RELEASE_REVIEW_BRANCH,paths:RELEASE_REVIEW_PATHS,tree:"8e450d03e5b92674a621ccebb4274929c7b3a551",runtimeChanged:true,runtimePath:RELEASE_REVIEW_RUNTIME,kind:"BOUNDED_V3_RELEASE_LOCAL_HISTORICAL_REVIEW_SOURCE_ONLY"}:base===EMPTY_MODULE_BASE?
+ {base:EMPTY_MODULE_BASE,branch:EMPTY_MODULE_BRANCH,paths:EMPTY_MODULE_PATHS,tree:"381becbcc838631f16bde5b109f093324efeb74d",runtimeChanged:true,runtimePath:EMPTY_MODULE_RUNTIME,kind:"BOUNDED_V3_EMPTY_MODULE_LOADING_FIX_SOURCE_ONLY"}:
  {base:SUCCESSOR_BASE,branch:SUCCESSOR_BRANCH,paths:SUCCESSOR_PATHS,tree:"2df1955a834e1869fece178d233af1c14a1f48cb",runtimeChanged:false};}
 let successorCached=null;
 // Inspection is pure and cannot mint an adoption or live-process capability.
@@ -99,16 +104,16 @@ function verifySuccessor(input){
   const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
   inspectSuccessor({args,authority,before,plan,paths,changed,stage,event});
   // Each successor has its own exact base/tree, branch and changed-path set.
-  // The empty-module repair changes only the loader runtime; Host, Native,
+  // Each repair changes only its declared runtime path; Host, Native,
   // Scope, credential delivery and all historical QCP authority stay frozen.
   cp.execFileSync(process.execPath,["--test","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs"],{cwd:ROOT,timeout:120000,maxBuffer:4*1024*1024,stdio:["ignore","pipe","pipe"]});
   successorCached={status:"PASS",base_sha:args.base,source_head_sha:args.head,changed_paths:paths.length,
-   qualification_kind:scope.runtimeChanged?"BOUNDED_V3_EMPTY_MODULE_LOADING_FIX_SOURCE_ONLY":"BOUNDED_EXISTING_V3_SUCCESSOR_SOURCE_ONLY",historical_qcp72_preserved:true,
-   qcp73_count_unchanged:true,runtime_source_unchanged_from_base:!scope.runtimeChanged,runtime_changed_paths:scope.runtimeChanged?[EMPTY_MODULE_RUNTIME]:[],source_contract_only:true,
+   qualification_kind:scope.kind||"BOUNDED_EXISTING_V3_SUCCESSOR_SOURCE_ONLY",historical_qcp72_preserved:true,
+   qcp73_count_unchanged:true,runtime_source_unchanged_from_base:!scope.runtimeChanged,runtime_changed_paths:scope.runtimeChanged?[scope.runtimePath]:[],source_contract_only:true,
    installed_release_qualified:false,windows_session_run:false,permit_consumed:false,execute_authorized:false,stage_count:0};
  }catch(error){successorCached={status:"FAIL",reason_code:"HOLD_V3_QCP73_SUCCESSOR_QUALIFICATION",
   error_code:typeof error.code==="string"?error.code:"ASSERTION",detail:String(error.message||error).slice(0,700),permit_consumed:false,stage_count:0};}
  return successorCached;
 }
-module.exports={verify,inspectSuccessor,SUCCESSOR_BASE,SUCCESSOR_BRANCH,SUCCESSOR_PATHS,EMPTY_MODULE_BASE,EMPTY_MODULE_BRANCH,EMPTY_MODULE_PATHS};
+module.exports={verify,inspectSuccessor,SUCCESSOR_BASE,SUCCESSOR_BRANCH,SUCCESSOR_PATHS,EMPTY_MODULE_BASE,EMPTY_MODULE_BRANCH,EMPTY_MODULE_PATHS,RELEASE_REVIEW_BASE,RELEASE_REVIEW_BRANCH,RELEASE_REVIEW_PATHS};
 
