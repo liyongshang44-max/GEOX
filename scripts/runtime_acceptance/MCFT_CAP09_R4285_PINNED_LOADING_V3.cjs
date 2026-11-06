@@ -3,6 +3,18 @@
 // No diagnostic filesystem/network proxy can escape this loading boundary.
 const fs=require("node:fs"),path=require("node:path"),Module=require("node:module"),{fileURLToPath}=require("node:url");
 const s=require("./MCFT_CAP09_R4285_SCOPE_V3.cjs");
+// Empty JavaScript is valid source (some installed dependencies ship it).
+// Keep signed/wire JSON on s.bytes(), which must still reject an empty file.
+function moduleBytes(file){
+ if(!/\.(?:cjs|mjs|js)$/.test(file))return s.bytes(file,64*1024*1024);
+ s.check(typeof file==="string"&&path.isAbsolute(file),"V3_ABSOLUTE_FILE");
+ const end=path.resolve(file);
+ for(let cursor=end;;){const st=fs.lstatSync(cursor);s.check(!st.isSymbolicLink(),"UNSAFE_SYMLINK");
+  if(cursor===end)s.check(st.isFile()&&st.nlink===1&&st.size<=64*1024*1024,"V3_REGULAR_FILE");
+  const up=path.dirname(cursor);if(up===cursor)break;cursor=up;
+ }
+ return fs.readFileSync(file);
+}
 function install(profile,root){
  s.check(typeof Module.registerHooks==="function","V3_NODE_SYNC_LOAD_HOOK_REQUIRED");
  s.check(path.resolve(root)===profile.root,"V3_LOADING_ROOT");
@@ -13,9 +25,9 @@ function install(profile,root){
  // Material is already fully verified by Native Adoption. Snapshot only module
  // source formats; an actually reachable native addon fails explicitly below.
  for(const row of profile.files){if(!/\.(?:cjs|mjs|js|json)$/.test(row.path))continue;
-  const raw=s.bytes(path.join(root,...row.path.split("/")),64*1024*1024);s.check(s.sha(raw)===row.sha256,"V3_SOURCE_CHANGED_BEFORE_SECRET");sources.set(row.path,raw);}
+  const raw=moduleBytes(path.join(root,...row.path.split("/")));s.check(s.sha(raw)===row.sha256,"V3_SOURCE_CHANGED_BEFORE_SECRET");sources.set(row.path,raw);}
  for(const file of Object.keys(require.cache)){
-  const rel=relative(file);s.check(index.has(rel)&&s.sha(s.bytes(file,64*1024*1024))===index.get(rel),"V3_PRELOADED_MODULE_UNBOUND");
+  const rel=relative(file);s.check(index.has(rel)&&s.sha(moduleBytes(file))===index.get(rel),"V3_PRELOADED_MODULE_UNBOUND");
  }
  const hook=Module.registerHooks({
   resolve(specifier,context,nextResolve){
@@ -30,7 +42,7 @@ function install(profile,root){
    // Ask Node for the native format. Use the pinned original bytes with that
    // format, preserving real exports, cache, require and import semantics.
    const out=nextLoad(url,context);s.check(["commonjs","module","json"].includes(out.format),"V3_MODULE_FORMAT_UNSUPPORTED");
-   s.check(s.sha(s.bytes(fileURLToPath(url),64*1024*1024))===index.get(rel),"V3_MODULE_DISK_DRIFT");
+   s.check(s.sha(moduleBytes(fileURLToPath(url)))===index.get(rel),"V3_MODULE_DISK_DRIFT");
    return {...out,source:Buffer.from(raw)};
   }
  });
