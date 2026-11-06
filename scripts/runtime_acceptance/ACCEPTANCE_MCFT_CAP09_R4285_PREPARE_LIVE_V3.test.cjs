@@ -103,24 +103,28 @@ test("public receiver rejects JSON/serialized capabilities and has no execute en
  assert.throws(()=>admission.stableNative({adoption:{status:"PASS"},nativeInput:{},intent:{},ctx:{}}),/REAL_NATIVE/);
 });
 test("actual Node CJS and ESM loading uses pinned native module objects; reachable disk drift rejects",()=>{
- for(const drift of [false,true,"empty-drift","empty-hardlink"]){
+ for(const drift of [false,true,"empty-drift","empty-hardlink","unqualified-ts"]){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-pinned-")),profileFile=root+"-profile.json";
   try{
    for(const rel of ["scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs","scripts/cap09_adoption_v1/contract.cjs"]){const out=path.join(root,rel);fs.mkdirSync(path.dirname(out),{recursive:true});fs.copyFileSync(path.join(ROOT,rel),out);}
    fs.writeFileSync(path.join(root,"scripts/runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs"),"module.exports={runtimePaths:[]};");
-   for(const [name,main,body] of [["pg","index.cjs","module.exports={Pool:class Pool{},tag:'original'};"],["@aws-sdk/client-s3","index.cjs","module.exports={S3Client:class S3Client{}};"],["tsx","loader.mjs","export const loader='original';"]]){
+   for(const [name,main,body] of [["pg","index.js","module.exports={Pool:class Pool{},tag:'original'};"],["@aws-sdk/client-s3","index.js","module.exports={S3Client:class S3Client{}};"],["tsx","loader.mjs","export const loader='original';"]]){
     const dir=path.join(root,"node_modules",name);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,"package.json"),JSON.stringify({name,main}));fs.writeFileSync(path.join(dir,main),body);
    }
+   // Native Node leaves format undefined for typeless .js; retain its CJS/ESM detection.
+   fs.writeFileSync(path.join(root,"implicit-esm.js"),"export const marker='native-esm';");
+   fs.writeFileSync(path.join(root,"implicit-empty.js"),"");
+   fs.writeFileSync(path.join(root,"unqualified.ts"),"export const typed: number = 1;");
    for(const rel of ["node_modules/fast-xml-parser/src/v6/Report.js","node_modules/fast-xml-parser/src/xmlbuilder/prettifyJs2Xml.js","empty.cjs","empty.mjs"]){const f=path.join(root,rel);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,"");}
    fs.writeFileSync(path.join(root,"node_modules/fast-xml-parser/package.json"),JSON.stringify({name:"fast-xml-parser",type:"commonjs"}));
    const emptyWire=profileFile+".empty.json";fs.writeFileSync(emptyWire,"");try{assert.throws(()=>s.bytes(emptyWire),/V3_REGULAR_FILE/);}finally{fs.rmSync(emptyWire);}
    if(drift==="empty-hardlink")fs.linkSync(path.join(root,"empty.cjs"),path.join(root,"empty-alias.cjs"));
-   const mutation=drift===true?"fs.writeFileSync(__dirname+'/node_modules/pg/index.cjs',\"module.exports={tag:'changed'}\");":drift==="empty-drift"?"fs.writeFileSync(__dirname+'/empty.cjs',\"module.exports={changed:true};\");":"";
-   const runner=`const fs=require('node:fs');const loader=require('./scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs');const profile=JSON.parse(fs.readFileSync(process.argv[2]));let gate;(async()=>{try{gate=loader.install(profile,__dirname);${mutation}await gate.preload();const pg=require('pg');if(pg.tag!=='original'||typeof pg.Pool!=='function')throw Error('WRONG_MODULE_OBJECT');if(Object.keys(require('./empty.cjs')).length||Object.keys(require('./node_modules/fast-xml-parser/src/v6/Report.js')).length||Object.keys(await import('./empty.mjs')).length)throw Error('EMPTY_MODULE_SEMANTICS');console.log('PINNED_NATIVE_MODULES');}catch(e){console.error(e.message);process.exitCode=2;}finally{gate?.close();}})();`;
+   const mutation=drift===true?"fs.writeFileSync(__dirname+'/node_modules/pg/index.js',\"module.exports={tag:'changed'}\");":drift==="empty-drift"?"fs.writeFileSync(__dirname+'/empty.cjs',\"module.exports={changed:true};\");":"";
+   const runner=`const fs=require('node:fs');const loader=require('./scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs');const profile=JSON.parse(fs.readFileSync(process.argv[2]));let gate;(async()=>{try{gate=loader.install(profile,__dirname);${mutation}await gate.preload();const pg=require('pg');if(pg.tag!=='original'||typeof pg.Pool!=='function')throw Error('WRONG_MODULE_OBJECT');if(Object.keys(require('./implicit-empty.js')).length||(await import('./implicit-esm.js')).marker!=='native-esm')throw Error('IMPLICIT_NATIVE_JS_SEMANTICS');${drift==="unqualified-ts"?"await import('./unqualified.ts');":""}if(Object.keys(require('./empty.cjs')).length||Object.keys(require('./node_modules/fast-xml-parser/src/v6/Report.js')).length||Object.keys(await import('./empty.mjs')).length)throw Error('EMPTY_MODULE_SEMANTICS');console.log('PINNED_NATIVE_MODULES');}catch(e){console.error(e.message);process.exitCode=2;}finally{gate?.close();}})();`;
    fs.writeFileSync(path.join(root,"runner.cjs"),runner);const files=[];
    function walk(dir,prefix=""){for(const item of fs.readdirSync(dir).sort()){const file=path.join(dir,item),rel=prefix+item;if(fs.statSync(file).isDirectory())walk(file,rel+"/");else files.push({path:rel,sha256:s.sha(fs.readFileSync(file))});}}walk(root);
    fs.writeFileSync(profileFile,JSON.stringify({root,files}));const child=cp.spawnSync(process.execPath,[path.join(root,"runner.cjs"),profileFile],{encoding:"utf8",timeout:15000,env:{PATH:process.env.PATH,SystemRoot:process.env.SystemRoot||""}});
-   assert.equal(child.status,drift?2:0,child.stderr);assert.match(drift?child.stderr:child.stdout,drift==="empty-hardlink"?/V3_REGULAR_FILE/:drift?/V3_MODULE_DISK_DRIFT/:/PINNED_NATIVE_MODULES/);
+   assert.equal(child.status,drift?2:0,child.stderr);assert.match(drift?child.stderr:child.stdout,drift==="unqualified-ts"?/V3_REACHABLE_MODULE_FORMAT_OR_PATH_UNQUALIFIED/:drift==="empty-hardlink"?/V3_REGULAR_FILE/:drift?/V3_MODULE_DISK_DRIFT/:/PINNED_NATIVE_MODULES/);
   }finally{fs.rmSync(root,{recursive:true,force:true});fs.rmSync(profileFile,{force:true});}
  }
 });
@@ -265,7 +269,7 @@ test("actual V3 PG/S3 boundaries propagate cancellation and close active clients
 test("bounded V3 successor qualification preserves the 73-check manifest and exact current source binding",()=>{
  const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
  const authority=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH),"utf8"));
- for(const cfg of [{base:q.SUCCESSOR_BASE,branch:q.SUCCESSOR_BRANCH,paths:q.SUCCESSOR_PATHS},{base:q.EMPTY_MODULE_BASE,branch:q.EMPTY_MODULE_BRANCH,paths:q.EMPTY_MODULE_PATHS},{base:q.RELEASE_REVIEW_BASE,branch:q.RELEASE_REVIEW_BRANCH,paths:q.RELEASE_REVIEW_PATHS}]){
+ for(const cfg of [{base:q.SUCCESSOR_BASE,branch:q.SUCCESSOR_BRANCH,paths:q.SUCCESSOR_PATHS},{base:q.EMPTY_MODULE_BASE,branch:q.EMPTY_MODULE_BRANCH,paths:q.EMPTY_MODULE_PATHS},{base:q.RELEASE_REVIEW_BASE,branch:q.RELEASE_REVIEW_BRANCH,paths:q.RELEASE_REVIEW_PATHS},{base:q.NATIVE_JS_BASE,branch:q.NATIVE_JS_BRANCH,paths:q.NATIVE_JS_PATHS}]){
  const head="d".repeat(40),input={args:{base:cfg.base,head},authority,before:structuredClone(authority),
   plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]},
   paths:[...cfg.paths],changed:[...cfg.paths],stage:"SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -295,7 +299,9 @@ test("qualification workflow and preflight route the exact successor while retai
  assert(workflow.includes("github.head_ref == '"+q.EMPTY_MODULE_BRANCH+"'"));
  assert(workflow.includes("github.event.pull_request.base.sha == '"+q.RELEASE_REVIEW_BASE+"'"));
  assert(workflow.includes("github.head_ref == '"+q.RELEASE_REVIEW_BRANCH+"'"));
- for(const p of q.RELEASE_REVIEW_PATHS)assert(workflow.includes("      - '"+p+"'"),p);
+ assert(workflow.includes("github.event.pull_request.base.sha == '"+q.NATIVE_JS_BASE+"'"));
+ assert(workflow.includes("github.head_ref == '"+q.NATIVE_JS_BRANCH+"'"));
+ for(const p of q.NATIVE_JS_PATHS)assert(workflow.includes("      - '"+p+"'"),p);
  const preflight=fs.readFileSync(path.join(ROOT,"scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"),"utf8");
  assert(preflight.includes('["0aaec504eeda2c3230703d4bbb44e5bafe1668f3","'+q.SUCCESSOR_BASE+'"].includes(args.base)'));
 });

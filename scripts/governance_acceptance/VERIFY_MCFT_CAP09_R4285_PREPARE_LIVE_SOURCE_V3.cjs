@@ -6,7 +6,7 @@ const spec=require("../runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs")
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 let cached=null;
 function verify({ROOT,args,authority,plan,changed,stage}){
- if([SUCCESSOR_BASE,EMPTY_MODULE_BASE,RELEASE_REVIEW_BASE].includes(arguments[0].args.base))return verifySuccessor(arguments[0]);
+ if([SUCCESSOR_BASE,EMPTY_MODULE_BASE,RELEASE_REVIEW_BASE,NATIVE_JS_BASE].includes(arguments[0].args.base))return verifySuccessor(arguments[0]);
  if(cached)return cached;
  const git=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:8*1024*1024}).trim();
  try{
@@ -56,7 +56,11 @@ const RELEASE_REVIEW_BASE="0871514a4dd096772506282710b05f2f1ae87d07";
 const RELEASE_REVIEW_BRANCH="mcft/r4285-v3-release-local-review";
 const RELEASE_REVIEW_RUNTIME="scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs";
 const RELEASE_REVIEW_PATHS=Object.freeze([...SUCCESSOR_PATHS,RELEASE_REVIEW_RUNTIME].sort());
-function successorScope(base){return base===RELEASE_REVIEW_BASE?
+const NATIVE_JS_BASE="722fbcae5a56f625065be63437530f0051c12705";
+const NATIVE_JS_BRANCH="mcft/r4285-v3-native-js-format-fix";
+const NATIVE_JS_PATHS=Object.freeze([...SUCCESSOR_PATHS,EMPTY_MODULE_RUNTIME].sort());
+function successorScope(base){return base===NATIVE_JS_BASE?
+ {base:NATIVE_JS_BASE,branch:NATIVE_JS_BRANCH,paths:NATIVE_JS_PATHS,tree:"8bf429cef1b0fad8436b6accd767c4c044040290",runtimeChanged:true,runtimePath:EMPTY_MODULE_RUNTIME,kind:"BOUNDED_V3_NATIVE_UNDETERMINED_JS_FORMAT_SOURCE_ONLY"}:base===RELEASE_REVIEW_BASE?
  {base:RELEASE_REVIEW_BASE,branch:RELEASE_REVIEW_BRANCH,paths:RELEASE_REVIEW_PATHS,tree:"8e450d03e5b92674a621ccebb4274929c7b3a551",runtimeChanged:true,runtimePath:RELEASE_REVIEW_RUNTIME,kind:"BOUNDED_V3_RELEASE_LOCAL_HISTORICAL_REVIEW_SOURCE_ONLY"}:base===EMPTY_MODULE_BASE?
  {base:EMPTY_MODULE_BASE,branch:EMPTY_MODULE_BRANCH,paths:EMPTY_MODULE_PATHS,tree:"381becbcc838631f16bde5b109f093324efeb74d",runtimeChanged:true,runtimePath:EMPTY_MODULE_RUNTIME,kind:"BOUNDED_V3_EMPTY_MODULE_LOADING_FIX_SOURCE_ONLY"}:
  {base:SUCCESSOR_BASE,branch:SUCCESSOR_BRANCH,paths:SUCCESSOR_PATHS,tree:"2df1955a834e1869fece178d233af1c14a1f48cb",runtimeChanged:false};}
@@ -115,5 +119,5 @@ function verifySuccessor(input){
   error_code:typeof error.code==="string"?error.code:"ASSERTION",detail:String(error.message||error).slice(0,700),permit_consumed:false,stage_count:0};}
  return successorCached;
 }
-module.exports={verify,inspectSuccessor,SUCCESSOR_BASE,SUCCESSOR_BRANCH,SUCCESSOR_PATHS,EMPTY_MODULE_BASE,EMPTY_MODULE_BRANCH,EMPTY_MODULE_PATHS,RELEASE_REVIEW_BASE,RELEASE_REVIEW_BRANCH,RELEASE_REVIEW_PATHS};
+module.exports={verify,inspectSuccessor,SUCCESSOR_BASE,SUCCESSOR_BRANCH,SUCCESSOR_PATHS,EMPTY_MODULE_BASE,EMPTY_MODULE_BRANCH,EMPTY_MODULE_PATHS,RELEASE_REVIEW_BASE,RELEASE_REVIEW_BRANCH,RELEASE_REVIEW_PATHS,NATIVE_JS_BASE,NATIVE_JS_BRANCH,NATIVE_JS_PATHS};
 

@@ -41,7 +41,11 @@ function install(profile,root){
    const rel=relative(fileURLToPath(url));const raw=sources.get(rel);s.check(raw,"V3_MODULE_NOT_SNAPSHOTTED");
    // Ask Node for the native format. Use the pinned original bytes with that
    // format, preserving real exports, cache, require and import semantics.
-   const out=nextLoad(url,context);s.check(["commonjs","module","json"].includes(out.format),"V3_MODULE_FORMAT_UNSUPPORTED");
+   const out=nextLoad(url,context);
+   // Native hooks leave format undefined for typeless .js. Pass it through so
+   // Node detects CJS/ESM from the pinned bytes; never force a guessed format.
+   const nativeUndeterminedJs=out.format===undefined&&path.extname(fileURLToPath(url))===".js";
+   s.check(["commonjs","module","json"].includes(out.format)||nativeUndeterminedJs,"V3_MODULE_FORMAT_UNSUPPORTED");
    s.check(s.sha(moduleBytes(fileURLToPath(url)))===index.get(rel),"V3_MODULE_DISK_DRIFT");
    return {...out,source:Buffer.from(raw)};
   }
