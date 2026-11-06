@@ -135,8 +135,9 @@ function verifySignedLineage(envelope,trust,ctx){
 function verifyFullchainCarryforward({sourceRoot,trust,attestationFile,attestationSha}){
  assert(path.isAbsolute(sourceRoot),"R4285_SOURCE_ROOT_ABSOLUTE");
  assert(HEX64.test(attestationSha),"R4285_FULLCHAIN_DIGEST_REQUIRED");
- const native=require(path.join(sourceRoot,"scripts","governance_acceptance",
-  "MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs"));
+ // Execute the verifier beside this admitted module; sourceRoot remains the
+ // independently checked historical 23-file evidence root, never a code loader.
+ const native=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
  assert(typeof native.verify==="function"&&native.SOURCE_PATHS.length===23,
   "R4285_NATIVE_FULLCHAIN_GATE_REQUIRED");
  // Historical signed subject is never relabelled as the new Run or new HEAD.

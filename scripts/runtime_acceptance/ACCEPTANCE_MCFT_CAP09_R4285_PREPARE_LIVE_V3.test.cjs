@@ -265,7 +265,7 @@ test("actual V3 PG/S3 boundaries propagate cancellation and close active clients
 test("bounded V3 successor qualification preserves the 73-check manifest and exact current source binding",()=>{
  const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
  const authority=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH),"utf8"));
- for(const cfg of [{base:q.SUCCESSOR_BASE,branch:q.SUCCESSOR_BRANCH,paths:q.SUCCESSOR_PATHS},{base:q.EMPTY_MODULE_BASE,branch:q.EMPTY_MODULE_BRANCH,paths:q.EMPTY_MODULE_PATHS}]){
+ for(const cfg of [{base:q.SUCCESSOR_BASE,branch:q.SUCCESSOR_BRANCH,paths:q.SUCCESSOR_PATHS},{base:q.EMPTY_MODULE_BASE,branch:q.EMPTY_MODULE_BRANCH,paths:q.EMPTY_MODULE_PATHS},{base:q.RELEASE_REVIEW_BASE,branch:q.RELEASE_REVIEW_BRANCH,paths:q.RELEASE_REVIEW_PATHS}]){
  const head="d".repeat(40),input={args:{base:cfg.base,head},authority,before:structuredClone(authority),
   plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]},
   paths:[...cfg.paths],changed:[...cfg.paths],stage:"SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -293,7 +293,41 @@ test("qualification workflow and preflight route the exact successor while retai
  assert(workflow.includes("github.event.pull_request.base.sha == '"+q.SUCCESSOR_BASE+"'"));
  assert(workflow.includes("github.event.pull_request.base.sha == '"+q.EMPTY_MODULE_BASE+"'"));
  assert(workflow.includes("github.head_ref == '"+q.EMPTY_MODULE_BRANCH+"'"));
- for(const p of q.SUCCESSOR_PATHS)assert(workflow.includes("      - '"+p+"'"),p);
+ assert(workflow.includes("github.event.pull_request.base.sha == '"+q.RELEASE_REVIEW_BASE+"'"));
+ assert(workflow.includes("github.head_ref == '"+q.RELEASE_REVIEW_BRANCH+"'"));
+ for(const p of q.RELEASE_REVIEW_PATHS)assert(workflow.includes("      - '"+p+"'"),p);
  const preflight=fs.readFileSync(path.join(ROOT,"scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"),"utf8");
  assert(preflight.includes('["0aaec504eeda2c3230703d4bbb44e5bafe1668f3","'+q.SUCCESSOR_BASE+'"].includes(args.base)'));
+});
+
+test("historical review from a separate source checkout stays inside the pinned Release module boundary",()=>{
+ const physicalGate=require("../governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
+ for(const mode of ["valid","source-drift","expired-review","bad-signature","outside-preloaded"]){
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-review-release-")),release=path.join(tmp,"release"),source=path.join(tmp,"source");
+  try{
+   const put=(root,rel,raw)=>{const f=path.join(root,...rel.split("/"));fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,raw);return f;};
+   for(const rel of ["scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs","scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs","scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs","scripts/cap09_adoption_v1/contract.cjs"])
+    put(release,rel,fs.readFileSync(path.join(ROOT,rel)));
+   const sourceHashes={};for(const rel of physicalGate.SOURCE_PATHS){const raw=fs.readFileSync(path.join(ROOT,rel));put(source,rel,raw);sourceHashes[rel]=s.sha(raw);}
+   const receipt={schema_version:"geox_mcft_cap09_isolated_non_authorized_full_chain_contract_v1",status:"PASS",subject_sha:"5d69b8a3f254600726bc10f0404f1330de1e4562",test_run_id:"802dca8d4f9c",authorization:"NON_AUTHORIZED_ISOLATED_ENGINEERING_TEST_ONLY",isolated_s3_bucket:"mcft-cap09-requal-802dca8d4f9c",pg_database:"mcft_cap09_requal_802dca8d4f9c_positive",source_files_sha256:sourceHashes,
+    real_postgres_formal_fact_present_count:3,capture_raw_object_count:2,candidate_semantic_record_count:3,promotion_provider_refetch_count:0,stage_count:0};
+   for(const k of ["actual_isolated_composer_exercised","real_postgres_fenced_promotion","candidate_manifest_private_readback","exact_three_facts_single_fenced_transaction","post_commit_physical_readback_verified","controller_attestation_after_promotion","cursor_advanced_only_after_attestation","private_raw_retention_real_s3_verified","evidence_login_restricted","evidence_fenced_writer_execute_allowed"])receipt[k]=true;
+   for(const k of ["permit_signed","permit_consumed","production_authorized","production_owner_activation","formal_v5_armed","o00_started","evidence_direct_fact_insert_allowed"])receipt[k]=false;
+   const receiptFile=put(tmp,"receipt.json",JSON.stringify(receipt)),payload={schema_version:"geox_mcft_cap09_non_authorized_full_chain_attestation_v1",issuer_id:issuer.issuer_id,key_id:issuer.key_id,subject_sha:receipt.subject_sha,test_run_id:receipt.test_run_id,receipt_file:receiptFile,receipt_sha256:s.sha(fs.readFileSync(receiptFile)),signed_at:iso(Date.now()-(mode==="expired-review"?8*86400000:1000)),non_authorized:true,production_authorized:false};
+   const envelope=sign(physicalGate.DOMAIN,payload);if(mode==="bad-signature")envelope.signature_base64=Buffer.alloc(64).toString("base64");
+   const attestationFile=put(tmp,"review.json",JSON.stringify(envelope)),attestationSha=s.sha(fs.readFileSync(attestationFile));
+   if(mode==="source-drift")fs.appendFileSync(path.join(source,physicalGate.SOURCE_PATHS[0]),"\n// changed after signed review\n");
+   put(release,"scripts/runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs","module.exports={runtimePaths:[]};");
+   for(const [name,main,raw] of [["pg","index.cjs","module.exports={};"],["@aws-sdk/client-s3","index.cjs","module.exports={};"],["tsx","loader.mjs","export const unit=true;"]]){
+    put(release,"node_modules/"+name+"/package.json",JSON.stringify({name,main}));put(release,"node_modules/"+name+"/"+main,raw);
+   }
+   const files=[];function walk(dir,prefix=""){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const rel=prefix+e.name,f=path.join(dir,e.name);if(e.isDirectory())walk(f,rel+"/");else files.push({path:rel,sha256:s.sha(fs.readFileSync(f))});}}walk(release);
+   put(tmp,"profile.json",JSON.stringify({root:release,files}));put(tmp,"trust.json",JSON.stringify(trust));put(tmp,"outside.cjs","module.exports={unitOnly:true};");
+   const runner=`const fs=require('node:fs'),path=require('node:path');const root=process.argv[1],tmp=process.argv[2],mode=process.argv[3];const lineage=require(path.join(root,'scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs'));const loader=require(path.join(root,'scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs'));let loading;(async()=>{try{const proof=lineage.verifyFullchainCarryforward({sourceRoot:path.join(tmp,'source'),trust:JSON.parse(fs.readFileSync(path.join(tmp,'trust.json'))),attestationFile:${JSON.stringify(attestationFile)},attestationSha:${JSON.stringify(attestationSha)}});if(proof.actual_checked_source_files!==23)throw Error('REVIEW_SOURCE_COUNT');if(mode==='outside-preloaded')require(path.join(tmp,'outside.cjs'));loading=loader.install(JSON.parse(fs.readFileSync(path.join(tmp,'profile.json'))),root);await loading.preload();if(Object.keys(require.cache).some(f=>!f.startsWith(root+path.sep)))throw Error('OUTSIDE_CACHE');console.log('HISTORICAL_REVIEW_THEN_PINNED_PRELOAD');}catch(e){console.error(e.message);process.exitCode=2;}finally{loading?.close();}})();`;
+   const child=cp.spawnSync(process.execPath,["-e",runner,release,tmp,mode],{encoding:"utf8",timeout:15000,env:{PATH:process.env.PATH,SystemRoot:process.env.SystemRoot||""}});
+   assert.equal(child.status,mode==="valid"?0:2,child.stderr);
+   if(mode==="valid")assert.match(child.stdout,/HISTORICAL_REVIEW_THEN_PINNED_PRELOAD/);
+   else assert.match(child.stderr,{"source-drift":/FULL_CHAIN_TESTED_SOURCE_CHANGED/,"expired-review":/FULL_CHAIN_ATTESTATION_OUTSIDE_REVIEW_WINDOW/,"bad-signature":/FULL_CHAIN_OPERATOR_SIGNATURE_INVALID/,"outside-preloaded":/V3_MODULE_OUTSIDE_RELEASE/}[mode]);
+  }finally{fs.rmSync(tmp,{recursive:true,force:true});}
+ }
 });
