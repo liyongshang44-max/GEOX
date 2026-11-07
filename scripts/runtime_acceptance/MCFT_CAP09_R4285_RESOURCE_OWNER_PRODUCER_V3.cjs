@@ -618,7 +618,7 @@ function registeredMcExecutable(){
  const file=String.raw`D:\gptdown\MCFT-CAP09-TOOLS\mc.exe`;
  const expected="c8db13ebeda31497f354c0e950809db0ae9b2a2a69b8afee68c128c37300c157";
  const reject=code=>{throw Object.assign(Error(code),{native_tool_failure:code});};
- try{noLinks(file);}catch(error){if(error.code)throw error;reject("MC_FILE_IDENTITY_REJECTED");}
+ try{noLinks(file);}catch(error){if(error.code&&error.code!=="ERR_ASSERTION")throw error;reject("MC_FILE_IDENTITY_REJECTED");}
  const before=fs.lstatSync(file);
  if(!before.isFile()||before.isSymbolicLink()||before.nlink!==1||before.size<=0||before.size>128*1024*1024)
   reject("MC_FILE_IDENTITY_REJECTED");
