@@ -304,7 +304,7 @@ test("actual V3 PG/S3 boundaries propagate cancellation and close active clients
 
 test("bounded V3 successor qualification preserves the 73-check manifest and exact current source binding",()=>{
  const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
- const authority=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH),"utf8"));
+ const authority=JSON.parse(cp.execFileSync("git",["show","8890bf950773a43a1f9238672eeb335b1526edca:"+native.QCP_PATH],{cwd:ROOT,encoding:"utf8"}));
  for(const cfg of [{base:q.SUCCESSOR_BASE,branch:q.SUCCESSOR_BRANCH,paths:q.SUCCESSOR_PATHS},{base:q.EMPTY_MODULE_BASE,branch:q.EMPTY_MODULE_BRANCH,paths:q.EMPTY_MODULE_PATHS},{base:q.RELEASE_REVIEW_BASE,branch:q.RELEASE_REVIEW_BRANCH,paths:q.RELEASE_REVIEW_PATHS},{base:q.NATIVE_JS_BASE,branch:q.NATIVE_JS_BRANCH,paths:q.NATIVE_JS_PATHS},{base:q.PRODUCER_WAIT_BASE,branch:q.PRODUCER_WAIT_BRANCH,paths:q.PRODUCER_WAIT_PATHS}]){
  const head="d".repeat(40),input={args:{base:cfg.base,head},authority,before:structuredClone(authority),
   plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]},
