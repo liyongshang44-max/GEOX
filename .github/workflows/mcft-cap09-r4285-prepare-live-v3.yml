@@ -15,7 +15,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with: {node-version: '24.19.0'}
       - name: Integrated nonlive tests with isolated identities
         run: node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs
+
+      - name: Independent physical execution contracts (fixtures only)
+        run: node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_EXECUTION_V3.test.cjs
