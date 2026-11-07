@@ -326,6 +326,29 @@ test("bounded V3 successor qualification preserves the 73-check manifest and exa
  ]){const bad=structuredClone(input);mutate(bad);assert.throws(()=>q.inspectSuccessor(bad));}
  }
 });
+test("native tool successor binds exact base/tree/branch/head/path and preserves all historical qualification",()=>{
+ const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
+ const before=JSON.parse(cp.execFileSync("git",["show",q.NATIVE_TOOL_BASE+":"+native.QCP_PATH],{cwd:ROOT,encoding:"utf8"}));
+ const authority=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH),"utf8")),head="d".repeat(40);
+ const input={args:{base:q.NATIVE_TOOL_BASE,head},baseTree:q.NATIVE_TOOL_TREE,before,authority,
+  plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]},paths:[...q.NATIVE_TOOL_PATHS],changed:[...q.NATIVE_TOOL_PATHS],stage:"SUCCESSOR_SUBJECT_PRE_MERGE",
+  event:{repository:{full_name:"liyongshang44-max/GEOX"},pull_request:{number:3766,user:{login:"liyongshang44-max"},base:{sha:q.NATIVE_TOOL_BASE,ref:"main"},head:{sha:head,ref:q.NATIVE_TOOL_BRANCH,repo:{full_name:"liyongshang44-max/GEOX"}}}}};
+ assert.equal(q.inspectSuccessor(input),true);assert.equal(authority.checks.length,73);
+ assert.deepEqual(authority.checks.slice(0,72),before.checks.slice(0,72));
+ for(const mutate of [x=>x.args.base="a".repeat(40),x=>x.baseTree="a".repeat(40),x=>x.event.pull_request.head.ref="forged",x=>x.event.pull_request.number=3765,
+  x=>x.event.pull_request.head.sha="e".repeat(40),x=>x.paths.push("outside.cjs"),x=>x.changed.pop(),x=>x.paths.pop(),
+  x=>x.authority.checks[0].owner="HISTORY_REPLACED",x=>x.authority.dependency_resolvers[q.EXECUTION_RESOLVER].paths.pop(),
+  x=>x.authority.checks[72].resolver_ids.pop(),x=>x.authority.dependency_resolvers[q.NATIVE_TOOL_RESOLVER].paths.push("unregistered.cjs"),
+  x=>x.plan.unknown_changed_paths.push("unregistered.cjs"),x=>x.authority.checks.push({check_id:"EXTRA"})]){
+   const bad=structuredClone(input);mutate(bad);assert.throws(()=>q.inspectSuccessor(bad));
+ }
+ const actual=cp.execFileSync("git",["diff","--name-only",q.NATIVE_TOOL_BASE],{cwd:ROOT,encoding:"utf8"}).trim().split(/\r?\n/).filter(Boolean).sort();
+ // CI has a committed exact HEAD; local implementation includes the same tracked worktree diff.
+ assert.deepEqual(actual,[...q.NATIVE_TOOL_PATHS]);
+ for(const name of ["mcft-cap-09-qualification-control-plane-v1.yml","mcft-cap-09-frozen-v13-isolated-requalification-v1.yml","mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"]){
+  const text=fs.readFileSync(path.join(ROOT,".github/workflows",name),"utf8");assert(text.includes(q.NATIVE_TOOL_BASE)&&text.includes(q.NATIVE_TOOL_BRANCH));
+ }
+});
 test("qualification workflow and preflight route the exact successor while retaining the original V3 admission",()=>{
  const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
  const workflow=fs.readFileSync(path.join(ROOT,".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml"),"utf8");

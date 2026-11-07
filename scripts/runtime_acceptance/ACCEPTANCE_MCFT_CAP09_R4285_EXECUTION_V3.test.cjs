@@ -259,7 +259,7 @@ test('cross-mode Launch cannot open FD3 or turn preflight permission into execut
 test('execution QCP ownership is exact and preserves all prior checks and resolver definitions',()=>{
  const q=require('../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs');
  const before=JSON.parse(cp.execFileSync('git',['show',q.EXECUTION_BASE+':'+native.QCP_PATH],{cwd:ROOT,encoding:'utf8'}));
- const authority=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH))),head='d'.repeat(40);
+ const authority=JSON.parse(cp.execFileSync('git',['show',q.NATIVE_TOOL_BASE+':'+native.QCP_PATH],{cwd:ROOT,encoding:'utf8'})),head='d'.repeat(40);
  const input={args:{base:q.EXECUTION_BASE,head},before,authority,plan:{status:'PASS',unknown_changed_paths:[],authority_errors:[],resolver_errors:[]},
   paths:[...q.EXECUTION_PATHS],changed:[...q.EXECUTION_PATHS],stage:'SUCCESSOR_SUBJECT_PRE_MERGE',
   event:{repository:{full_name:'liyongshang44-max/GEOX'},pull_request:{number:9999,user:{login:'liyongshang44-max'},

@@ -6,7 +6,7 @@ const spec=require("../runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs")
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 let cached=null;
 function verify({ROOT,args,authority,plan,changed,stage}){
- if([SUCCESSOR_BASE,EMPTY_MODULE_BASE,RELEASE_REVIEW_BASE,NATIVE_JS_BASE,PRODUCER_WAIT_BASE,EXECUTION_BASE].includes(arguments[0].args.base))return verifySuccessor(arguments[0]);
+ if([SUCCESSOR_BASE,EMPTY_MODULE_BASE,RELEASE_REVIEW_BASE,NATIVE_JS_BASE,PRODUCER_WAIT_BASE,EXECUTION_BASE,NATIVE_TOOL_BASE].includes(arguments[0].args.base))return verifySuccessor(arguments[0]);
  if(cached)return cached;
  const git=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:8*1024*1024}).trim();
  try{
@@ -87,7 +87,14 @@ const EXECUTION_PATHS=Object.freeze([
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_CAPABILITY_EXEC_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs"
 ]);
-function successorScope(base){return base===EXECUTION_BASE?
+const NATIVE_TOOL_BASE="e828c3de6a5a5cb323330bbf86a14a014163e38c";
+const NATIVE_TOOL_TREE="39d9796c358bb07191ebf5f938bb4607d8f69b35";
+const NATIVE_TOOL_BRANCH="mcft/r4285-v3-exact-native-tool-resolution";
+const NATIVE_TOOL_RESOLVER="CAP09_R4285_NATIVE_TOOL_RESOLUTION_EXACT_SUCCESSOR_V1";
+const NATIVE_TOOL_RUNTIME="scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs";
+const NATIVE_TOOL_PATHS=Object.freeze([...SUCCESSOR_PATHS,NATIVE_TOOL_RUNTIME,QCP,"scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_EXECUTION_V3.test.cjs"].sort());
+function successorScope(base){return base===NATIVE_TOOL_BASE?
+ {base:NATIVE_TOOL_BASE,branch:NATIVE_TOOL_BRANCH,paths:NATIVE_TOOL_PATHS,tree:NATIVE_TOOL_TREE,runtimeChanged:true,runtimePaths:[NATIVE_TOOL_RUNTIME],kind:"BOUNDED_V3_EXACT_NATIVE_TOOL_RESOLUTION_SOURCE_ONLY"}:base===EXECUTION_BASE?
  {base:EXECUTION_BASE,branch:EXECUTION_BRANCH,paths:EXECUTION_PATHS,tree:"1ff7141dc3eb8798fc3a3bba22e09ed243e1e1f5",runtimeChanged:true,runtimePaths:["scripts/runtime_acceptance/MCFT_CAP09_R4285_ADMISSION_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_BUILD_ADMISSION_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_ADMISSION_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_CAPABILITY_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs"],kind:"BOUNDED_V3_PHYSICAL_EXECUTION_SOURCE_ONLY_NOT_LIVE_ADMISSION"}:base===PRODUCER_WAIT_BASE?
  {base:PRODUCER_WAIT_BASE,branch:PRODUCER_WAIT_BRANCH,paths:PRODUCER_WAIT_PATHS,tree:"8bf77bb9c059fd4f4c58dc5025770e741ad4e9fc",runtimeChanged:true,runtimePaths:PRODUCER_WAIT_RUNTIME,kind:"BOUNDED_V3_PRODUCER_PREPARE_WAIT_SIGNED_HANDOFF_SOURCE_ONLY"}:base===NATIVE_JS_BASE?
  {base:NATIVE_JS_BASE,branch:NATIVE_JS_BRANCH,paths:NATIVE_JS_PATHS,tree:"8bf429cef1b0fad8436b6accd767c4c044040290",runtimeChanged:true,runtimePath:EMPTY_MODULE_RUNTIME,kind:"BOUNDED_V3_NATIVE_UNDETERMINED_JS_FORMAT_SOURCE_ONLY"}:base===RELEASE_REVIEW_BASE?
@@ -97,7 +104,7 @@ function successorScope(base){return base===EXECUTION_BASE?
 let successorCached=null;
 // Inspection is pure and cannot mint an adoption or live-process capability.
 // Production calls this only inside the central GitHub QCP artifact producer.
-function inspectSuccessor({args,authority,before,plan,paths,changed,stage,event}){
+function inspectSuccessor({args,authority,before,plan,paths,changed,stage,event,baseTree}){
  const scope=successorScope(args.base);
  assert.equal(args.base,scope.base,"V3_SUCCESSOR_EXACT_BASE");
  assert(/^[0-9a-f]{40}$/.test(args.head)&&args.head!==args.base,"V3_SUCCESSOR_HEAD");
@@ -105,7 +112,14 @@ function inspectSuccessor({args,authority,before,plan,paths,changed,stage,event}
  assert.equal(plan.status,"PASS","V3_SUCCESSOR_PLAN");
  for(const key of ["unknown_changed_paths","authority_errors","resolver_errors"])assert.deepEqual(plan[key],[],"V3_SUCCESSOR_PLAN_UNRESOLVED");
  assert.equal(before.checks.length,73,"V3_SUCCESSOR_EXISTING_QCP73");
- if(args.base===EXECUTION_BASE){
+ if(args.base===NATIVE_TOOL_BASE){
+  assert.equal(baseTree,NATIVE_TOOL_TREE,"V3_NATIVE_TOOL_EXACT_BASE_TREE");
+  const expected=structuredClone(before);
+  expected.dependency_resolvers[NATIVE_TOOL_RESOLVER]={kind:"EXACT_PATH_SET",paths:[...NATIVE_TOOL_PATHS]};
+  expected.checks[72].resolver_ids.push(NATIVE_TOOL_RESOLVER);
+  expected.checks[72].requalification_triggers.push(NATIVE_TOOL_RESOLVER);
+  assert.deepEqual(authority,expected,"V3_NATIVE_TOOL_EXACT_OWNERSHIP_EXTENSION");
+ }else if(args.base===EXECUTION_BASE){
   const expected=structuredClone(before);
   expected.dependency_resolvers[EXECUTION_RESOLVER]={kind:"EXACT_PATH_SET",paths:[...EXECUTION_PATHS]};
   expected.checks[72].resolver_ids.push(EXECUTION_RESOLVER);
@@ -113,7 +127,7 @@ function inspectSuccessor({args,authority,before,plan,paths,changed,stage,event}
   assert.deepEqual(authority,expected,"V3_EXECUTION_EXACT_OWNERSHIP_EXTENSION");
  }else assert.deepEqual(authority,before,"V3_SUCCESSOR_QCP_MANIFEST_CHANGED");
  assert.equal(authority.checks[72].check_id,spec.checkId,"V3_SUCCESSOR_CHECK");
- assert.deepEqual(authority.checks[72].resolver_ids,args.base===EXECUTION_BASE?[spec.resolverId,EXECUTION_RESOLVER]:[spec.resolverId],"V3_SUCCESSOR_RESOLVER");
+ assert.deepEqual(authority.checks[72].resolver_ids,args.base===NATIVE_TOOL_BASE?[spec.resolverId,EXECUTION_RESOLVER,NATIVE_TOOL_RESOLVER]:args.base===EXECUTION_BASE?[spec.resolverId,EXECUTION_RESOLVER]:[spec.resolverId],"V3_SUCCESSOR_RESOLVER");
  const resolver=authority.dependency_resolvers[spec.resolverId];
  assert.equal(resolver.kind,"EXACT_PATH_SET");assert.deepEqual(resolver.paths,spec.changedPaths);
  assert.deepEqual(paths,scope.paths,"V3_SUCCESSOR_EXACT_CHANGED_PATHS");
@@ -121,6 +135,7 @@ function inspectSuccessor({args,authority,before,plan,paths,changed,stage,event}
  assert(event&&event.repository?.full_name==="liyongshang44-max/GEOX","V3_SUCCESSOR_REPOSITORY");
  const pr=event.pull_request;
  assert(Number.isSafeInteger(pr?.number)&&pr.number>0,"V3_SUCCESSOR_PR");
+ if(args.base===NATIVE_TOOL_BASE)assert.equal(pr.number,3766,"V3_NATIVE_TOOL_EXACT_PR");
  assert.equal(pr.user?.login,"liyongshang44-max","V3_SUCCESSOR_OWNER");
  assert.equal(pr.base?.ref,"main","V3_SUCCESSOR_MAIN_BASE");
  assert.equal(pr.base?.sha,args.base,"V3_SUCCESSOR_BASE_BINDING");
@@ -142,7 +157,7 @@ function verifySuccessor(input){
   const paths=git("diff","--name-only",args.base,args.head).split(/\r?\n/).filter(Boolean).sort();
   const before=JSON.parse(git("show",args.base+":"+QCP));
   const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
-  inspectSuccessor({args,authority,before,plan,paths,changed,stage,event});
+  inspectSuccessor({args,authority,before,plan,paths,changed,stage,event,baseTree:git("rev-parse",args.base+"^{tree}")});
   // Each successor has its own exact base/tree, branch and changed-path set.
   // Each repair changes only its declared runtime paths; Host receiver, Native,
   // Scope, credential delivery and all historical QCP authority stay frozen.
@@ -156,5 +171,5 @@ function verifySuccessor(input){
   error_code:typeof error.code==="string"?error.code:"ASSERTION",detail:String(error.message||error).slice(0,700),permit_consumed:false,stage_count:0};}
  return successorCached;
 }
-module.exports={EXECUTION_BASE,EXECUTION_BRANCH,EXECUTION_PATHS,EXECUTION_RESOLVER,verify,inspectSuccessor,SUCCESSOR_BASE,SUCCESSOR_BRANCH,SUCCESSOR_PATHS,EMPTY_MODULE_BASE,EMPTY_MODULE_BRANCH,EMPTY_MODULE_PATHS,RELEASE_REVIEW_BASE,RELEASE_REVIEW_BRANCH,RELEASE_REVIEW_PATHS,NATIVE_JS_BASE,NATIVE_JS_BRANCH,NATIVE_JS_PATHS,PRODUCER_WAIT_BASE,PRODUCER_WAIT_BRANCH,PRODUCER_WAIT_PATHS};
+module.exports={NATIVE_TOOL_BASE,NATIVE_TOOL_TREE,NATIVE_TOOL_BRANCH,NATIVE_TOOL_RESOLVER,NATIVE_TOOL_PATHS,EXECUTION_BASE,EXECUTION_BRANCH,EXECUTION_PATHS,EXECUTION_RESOLVER,verify,inspectSuccessor,SUCCESSOR_BASE,SUCCESSOR_BRANCH,SUCCESSOR_PATHS,EMPTY_MODULE_BASE,EMPTY_MODULE_BRANCH,EMPTY_MODULE_PATHS,RELEASE_REVIEW_BASE,RELEASE_REVIEW_BRANCH,RELEASE_REVIEW_PATHS,NATIVE_JS_BASE,NATIVE_JS_BRANCH,NATIVE_JS_PATHS,PRODUCER_WAIT_BASE,PRODUCER_WAIT_BRANCH,PRODUCER_WAIT_PATHS};
 
