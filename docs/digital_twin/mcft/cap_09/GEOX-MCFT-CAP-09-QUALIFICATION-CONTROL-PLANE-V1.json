@@ -1838,6 +1838,20 @@
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_CAPABILITY_EXEC_V3.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs"
       ]
+    },
+    "CAP09_R4285_NATIVE_TOOL_RESOLUTION_EXACT_SUCCESSOR_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+        ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_EXECUTION_V3.test.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs"
+      ]
     }
   },
   "checks": [
@@ -3971,7 +3985,8 @@
       ],
       "resolver_ids": [
         "CAP09_R4285_PREPARE_LIVE_V3_EXACT_SUCCESSOR_V1",
-        "CAP09_R4285_PHYSICAL_EXECUTION_V3_EXACT_SUCCESSOR_V1"
+        "CAP09_R4285_PHYSICAL_EXECUTION_V3_EXACT_SUCCESSOR_V1",
+        "CAP09_R4285_NATIVE_TOOL_RESOLUTION_EXACT_SUCCESSOR_V1"
       ],
       "historical_evidence_policy": "PRIOR_QCP72_DEFINITIONS_AND_FROZEN_V1_V2_SOURCES_UNCHANGED_NOT_REISSUED",
       "execution_workflow": ".github/workflows/mcft-cap09-r4285-prepare-live-v3.yml",
@@ -3980,7 +3995,8 @@
       "carry_forward_policy": "NONE_PRIOR_72_NOT_REISSUED",
       "requalification_triggers": [
         "CAP09_R4285_PREPARE_LIVE_V3_EXACT_SUCCESSOR_V1",
-        "CAP09_R4285_PHYSICAL_EXECUTION_V3_EXACT_SUCCESSOR_V1"
+        "CAP09_R4285_PHYSICAL_EXECUTION_V3_EXACT_SUCCESSOR_V1",
+        "CAP09_R4285_NATIVE_TOOL_RESOLUTION_EXACT_SUCCESSOR_V1"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",

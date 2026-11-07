@@ -589,12 +589,87 @@ function deepHas(x,value,depth=0){
  if(typeof x==="object")return Object.values(x).some(v=>deepHas(v,value,depth+1));
  return false;
 }
+function nativeCommandLabel(tool,args){
+ // Return constants only. Never serialize argv, aliases, account IDs or scripts.
+ const starts=prefix=>prefix.every((v,k)=>args[k]===v);
+ if(tool==="mc"){
+  for(const [prefix,label] of [
+   [["--json","admin","info"],"MC_ADMIN_INFO"],
+   [["--json","admin","accesskey","info"],"MC_ACCESSKEY_INFO"],
+   [["--json","admin","user","svcacct","info"],"MC_SERVICE_ACCOUNT_INFO"],
+   [["--json","stat"],"MC_BUCKET_STAT"],
+   [["--json","anonymous","get"],"MC_BUCKET_ANONYMOUS"],
+   [["admin","config","get"],"MC_IDENTITY_PROVIDER_CONFIG"],
+   [["--json","admin","user","list"],"MC_USERS_LIST"],
+   [["--json","admin","user","svcacct","ls"],"MC_SERVICE_ACCOUNTS_LIST"],
+   [["--json","admin","policy","entities"],"MC_POLICY_ENTITIES"]
+  ])if(starts(prefix))return label;
+ }
+ if(tool==="docker"){
+  if(starts(["ps","--all","--no-trunc"]))return "DOCKER_CONTAINERS_ALL";
+  if(starts(["inspect","--type","container"]))return "DOCKER_CONTAINERS_INSPECT";
+  if(starts(["volume","inspect"]))return "DOCKER_VOLUME_INSPECT";
+ }
+ if(tool==="powershell.exe"&&starts(["-NoProfile","-NonInteractive","-EncodedCommand"]))return "WINDOWS_HOST_CENSUS";
+ return "UNCLASSIFIED_NATIVE_COMMAND";
+}
+function registeredMcExecutable(){
+ // This Windows host registration is code-bound, never taken from argv/env/PATH.
+ const file=String.raw`D:\gptdown\MCFT-CAP09-TOOLS\mc.exe`;
+ const expected="c8db13ebeda31497f354c0e950809db0ae9b2a2a69b8afee68c128c37300c157";
+ const reject=code=>{throw Object.assign(Error(code),{native_tool_failure:code});};
+ try{noLinks(file);}catch(error){if(error.code&&error.code!=="ERR_ASSERTION")throw error;reject("MC_FILE_IDENTITY_REJECTED");}
+ const before=fs.lstatSync(file);
+ if(!before.isFile()||before.isSymbolicLink()||before.nlink!==1||before.size<=0||before.size>128*1024*1024)
+  reject("MC_FILE_IDENTITY_REJECTED");
+ if(fs.realpathSync(file).toLowerCase()!==file.toLowerCase())reject("MC_PATH_DRIFT");
+ const fd=fs.openSync(file,"r"),chunk=Buffer.alloc(65536),hash=crypto.createHash("sha256");
+ const same=(a,b)=>["dev","ino","size","mtimeMs","ctimeMs"].every(k=>a[k]===b[k]);
+ try{
+  if(!same(before,fs.fstatSync(fd)))reject("MC_FILE_IDENTITY_DRIFT");
+  let n;while((n=fs.readSync(fd,chunk,0,chunk.length,null)))hash.update(chunk.subarray(0,n));
+  if(!same(before,fs.fstatSync(fd))||!same(before,fs.lstatSync(file)))reject("MC_FILE_IDENTITY_DRIFT");
+  if(hash.digest("hex")!==expected)reject("MC_SHA256_MISMATCH");
+ }finally{chunk.fill(0);fs.closeSync(fd);}
+ return file;
+}
+function nativeFailureClass(child){
+ if(["MC_FILE_IDENTITY_REJECTED","MC_PATH_DRIFT","MC_FILE_IDENTITY_DRIFT","MC_SHA256_MISMATCH"].includes(child.error?.native_tool_failure))return child.error.native_tool_failure;
+ if(child.error?.code==="ENOENT")return "EXECUTABLE_NOT_FOUND";
+ if(child.error?.code==="ETIMEDOUT")return "COMMAND_TIMEOUT";
+ if(["ENOBUFS","ERR_CHILD_PROCESS_STDIO_MAXBUFFER"].includes(child.error?.code))return "OUTPUT_LIMIT_EXCEEDED";
+ if(child.error)return "NATIVE_SYSTEM_ERROR";
+ if(child.status!==0)return "NONZERO_EXIT";
+ return "INVALID_NATIVE_STDOUT";
+}
 function nativeRead(tool,args){
  // Nonmutating fixed command families, no shell interpolation, no secrets or
  // raw stderr returned to operator. SDK/PG/S3 existing probes are untouched.
- const child=require("node:child_process").spawnSync(tool,args,{
+ const started=performance.now();
+ let child;
+ try{const executable=tool==="mc"?registeredMcExecutable():tool;
+  child=require("node:child_process").spawnSync(executable,args,{
   env:nativeChildEnvironment(),encoding:null,windowsHide:true,shell:false,timeout:15000,maxBuffer:1024*1024,
   stdio:["ignore","pipe","pipe"]});
+ }catch(error){child={error,status:null,stdout:null,stderr:null};}
+ if(child.error||child.status!==0||!Buffer.isBuffer(child.stdout)){
+  const allowed=new Set(["ENOENT","EACCES","EPERM","ETIMEDOUT","ENOBUFS",
+   "ENOMEM","EMFILE","ENFILE","EAGAIN","EINVAL","ERR_CHILD_PROCESS_STDIO_MAXBUFFER"]);
+  const diagnostic={schema_version:"R4285_NATIVE_COMMAND_FAILURE_DIAGNOSTIC_V1",
+   status:"NATIVE_COMMAND_FAILED_NO_RETRY",command_label:nativeCommandLabel(tool,args),
+   failure_class:nativeFailureClass(child),
+   exit_code:Number.isSafeInteger(child.status)?child.status:null,
+   system_code:allowed.has(child.error?.code)?child.error.code:null,
+   elapsed_ms:Math.max(0,Math.round(performance.now()-started)),
+   stdout_bytes:Buffer.isBuffer(child.stdout)?child.stdout.length:0,
+   stderr_bytes:Buffer.isBuffer(child.stderr)?child.stderr.length:0,
+   retry_automatically:false};
+  // The execution broker discards stderr; this bounded public JSON line uses
+  // its existing stdout forwarding path. Raw output is never forwarded.
+  console.log(JSON.stringify(diagnostic));
+  if(Buffer.isBuffer(child.stdout))child.stdout.fill(0);
+  if(Buffer.isBuffer(child.stderr))child.stderr.fill(0);
+ }
  assert(!child.error&&child.status===0&&Buffer.isBuffer(child.stdout),
   "HOLD_NATIVE_COMMAND_NOT_AUTHENTICATED");
  return child.stdout;

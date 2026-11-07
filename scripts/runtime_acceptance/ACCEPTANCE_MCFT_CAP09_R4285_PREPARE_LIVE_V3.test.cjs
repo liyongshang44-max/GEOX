@@ -158,6 +158,7 @@ function mechanismFixture({liveDelayMs=5}={}){const root=fs.mkdtempSync(path.joi
   "./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs":new Proxy({},{get:(_,key)=>module.exports[key]}),
   "../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs":nativeDouble,
   "node:os":{hostname:()=>s.HOST},
+  "node:fs":{...fs,lstatSync(file,...args){if(String(file).endsWith(String.raw`D:\gptdown\MCFT-CAP09-TOOLS\mc.exe`))throw Object.assign(Error("fixture missing registered mc"),{code:"ENOENT"});return fs.lstatSync(file,...args);}},
   "node:child_process":{spawnSync(){events.push("native source capture");return {status:1,stdout:Buffer.alloc(0)};}}
  },Date,{platform:"win32",env:{}});
  const localRequire=name=>Object.hasOwn(mocks,name)?mocks[name]:Module.createRequire(__filename)(name);
@@ -189,12 +190,12 @@ test("Producer reuses the genuine presecret capability before WAIT without anoth
   f.factory.revoke(cap);assert.throws(()=>f.factory.captureProducer(cap));
  }finally{f.cleanup();}
 });
-test("Producer capture runs only after real factory WAIT and its first native failure invalidates the session",async()=>{
+test("Producer capture runs only after real factory WAIT and missing registered mc invalidates the session",async()=>{
  const f=mechanismFixture({liveDelayMs:10});try{const cap=await f.factory.prepare(f.i);f.factory.prepareProducer(cap,producerOptions(f.root));
   const pending=f.factory.consumeWithProducer(cap);const rejected=assert.rejects(pending,/V3_PRODUCER_SOURCE_CAPTURE_FAILED/);
   assert(f.events.includes("live"));assert.throws(()=>f.factory.captureProducer(cap),/HOLD_NATIVE_COMMAND_NOT_AUTHENTICATED/);
   await rejected;assert.equal(f.events.filter(x=>x==="native").length,1);assert.equal(f.events.filter(x=>x==="FD3").length,1);
-  assert(f.events.indexOf("native source capture")>f.events.indexOf("live"));assert.equal(f.environment.DATABASE_URL,undefined);
+  assert(!f.events.includes("native source capture"));assert.equal(f.environment.DATABASE_URL,undefined);
   await assert.rejects(f.factory.completeProducer(cap,{}));assert(!fs.existsSync(f.i.resource_readback_file));
  }finally{f.cleanup();}
 });
@@ -325,6 +326,29 @@ test("bounded V3 successor qualification preserves the 73-check manifest and exa
  ]){const bad=structuredClone(input);mutate(bad);assert.throws(()=>q.inspectSuccessor(bad));}
  }
 });
+test("native tool successor binds exact base/tree/branch/head/path and preserves all historical qualification",()=>{
+ const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
+ const before=JSON.parse(cp.execFileSync("git",["show",q.NATIVE_TOOL_BASE+":"+native.QCP_PATH],{cwd:ROOT,encoding:"utf8"}));
+ const authority=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH),"utf8")),head="d".repeat(40);
+ const input={args:{base:q.NATIVE_TOOL_BASE,head},baseTree:q.NATIVE_TOOL_TREE,before,authority,
+  plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]},paths:[...q.NATIVE_TOOL_PATHS],changed:[...q.NATIVE_TOOL_PATHS],stage:"SUCCESSOR_SUBJECT_PRE_MERGE",
+  event:{repository:{full_name:"liyongshang44-max/GEOX"},pull_request:{number:3766,user:{login:"liyongshang44-max"},base:{sha:q.NATIVE_TOOL_BASE,ref:"main"},head:{sha:head,ref:q.NATIVE_TOOL_BRANCH,repo:{full_name:"liyongshang44-max/GEOX"}}}}};
+ assert.equal(q.inspectSuccessor(input),true);assert.equal(authority.checks.length,73);
+ assert.deepEqual(authority.checks.slice(0,72),before.checks.slice(0,72));
+ for(const mutate of [x=>x.args.base="a".repeat(40),x=>x.baseTree="a".repeat(40),x=>x.event.pull_request.head.ref="forged",x=>x.event.pull_request.number=3765,
+  x=>x.event.pull_request.head.sha="e".repeat(40),x=>x.paths.push("outside.cjs"),x=>x.changed.pop(),x=>x.paths.pop(),
+  x=>x.authority.checks[0].owner="HISTORY_REPLACED",x=>x.authority.dependency_resolvers[q.EXECUTION_RESOLVER].paths.pop(),
+  x=>x.authority.checks[72].resolver_ids.pop(),x=>x.authority.dependency_resolvers[q.NATIVE_TOOL_RESOLVER].paths.push("unregistered.cjs"),
+  x=>x.plan.unknown_changed_paths.push("unregistered.cjs"),x=>x.authority.checks.push({check_id:"EXTRA"})]){
+   const bad=structuredClone(input);mutate(bad);assert.throws(()=>q.inspectSuccessor(bad));
+ }
+ const actual=cp.execFileSync("git",["diff","--name-only",q.NATIVE_TOOL_BASE],{cwd:ROOT,encoding:"utf8"}).trim().split(/\r?\n/).filter(Boolean).sort();
+ // CI has a committed exact HEAD; local implementation includes the same tracked worktree diff.
+ assert.deepEqual(actual,[...q.NATIVE_TOOL_PATHS]);
+ for(const name of ["mcft-cap-09-qualification-control-plane-v1.yml","mcft-cap-09-frozen-v13-isolated-requalification-v1.yml","mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"]){
+  const text=fs.readFileSync(path.join(ROOT,".github/workflows",name),"utf8");assert(text.includes(q.NATIVE_TOOL_BASE)&&text.includes(q.NATIVE_TOOL_BRANCH));
+ }
+});
 test("qualification workflow and preflight route the exact successor while retaining the original V3 admission",()=>{
  const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
  const workflow=fs.readFileSync(path.join(ROOT,".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml"),"utf8");
@@ -373,3 +397,57 @@ test("historical review from a separate source checkout stays inside the pinned 
   }finally{fs.rmSync(tmp,{recursive:true,force:true});}
  }
 });
+
+// Exact native tool boundary: isolated fake filesystem/process, no real accounts.
+{
+"use strict";
+// Exercise the actual native wrapper with a fake child process, never accounts or Host.
+const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
+const source=fs.readFileSync(path.join(__dirname,"MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs"),"utf8");
+const fragment=source.slice(source.indexOf("function nativeCommandLabel("),source.indexOf("// Windows mc RELEASE.",source.indexOf("function nativeCommandLabel(")));
+function harness(child,mode){const reports=[],calls=[];let clock=100;
+ const registered=String.raw`D:\gptdown\MCFT-CAP09-TOOLS\mc.exe`,stat={dev:1,ino:2,size:3,mtimeMs:4,ctimeMs:5,nlink:1,isFile:()=>true,isSymbolicLink:()=>false};let reads=0,closed=false;
+ const fileSystem={lstatSync(){if(mode==="missing")throw Object.assign(Error("PRIVATE_PATH"),{code:"ENOENT"});return {...stat,nlink:mode==="hardlink"?2:1};},realpathSync:()=>mode==="path"?"PRIVATE_OTHER_PATH":registered,openSync:()=>9,fstatSync:()=>({...stat,ino:mode==="drift"?99:2}),readSync(fd,b){if(reads++)return 0;b.set([1,2,3]);return 3;},closeSync(){closed=true;}};
+ const box={Buffer,assert,fs:fileSystem,noLinks(){if(mode==="link")assert(false,"OWNER_PRODUCER_REPARSE_FORBIDDEN");},crypto:{createHash(name){assert.equal(name,"sha256");return {update(){},digest:()=>mode==="hash"?"0".repeat(64):"c8db13ebeda31497f354c0e950809db0ae9b2a2a69b8afee68c128c37300c157"};}},performance:{now:()=>clock+=17},nativeChildEnvironment:()=>({PUBLIC:"fixture"}),console:{log:x=>reports.push(JSON.parse(x))},require:name=>{assert.equal(name,"node:child_process");return {spawnSync:(...args)=>{calls.push(args);return child;}};}};
+ vm.runInNewContext(fragment+"\nthis.read=nativeRead;this.label=nativeCommandLabel;this.classify=nativeFailureClass;",box);return {...box,reports,calls,registered,get closed(){return closed;}};}
+test("each native command family has a fixed label without dynamic arguments",()=>{
+ const h=harness({});for(const [tool,args,label] of [
+ ["mc",["--json","admin","info","PRIVATE_ALIAS"],"MC_ADMIN_INFO"],
+ ["mc",["--json","admin","accesskey","info","PRIVATE_ALIAS","PRIVATE_ACCOUNT"],"MC_ACCESSKEY_INFO"],
+ ["mc",["--json","admin","user","svcacct","info"],"MC_SERVICE_ACCOUNT_INFO"],
+ ["mc",["--json","stat"],"MC_BUCKET_STAT"],["mc",["--json","anonymous","get"],"MC_BUCKET_ANONYMOUS"],
+ ["mc",["admin","config","get"],"MC_IDENTITY_PROVIDER_CONFIG"],
+ ["mc",["--json","admin","user","list"],"MC_USERS_LIST"],
+ ["mc",["--json","admin","user","svcacct","ls"],"MC_SERVICE_ACCOUNTS_LIST"],
+ ["mc",["--json","admin","policy","entities"],"MC_POLICY_ENTITIES"],
+ ["docker",["ps","--all","--no-trunc"],"DOCKER_CONTAINERS_ALL"],
+ ["docker",["inspect","--type","container"],"DOCKER_CONTAINERS_INSPECT"],
+ ["docker",["volume","inspect"],"DOCKER_VOLUME_INSPECT"],
+ ["powershell.exe",["-NoProfile","-NonInteractive","-EncodedCommand","PRIVATE_SCRIPT"],"WINDOWS_HOST_CENSUS"],
+ ["PRIVATE_TOOL",["PRIVATE_ARGUMENT"],"UNCLASSIFIED_NATIVE_COMMAND"]])assert.equal(h.label(tool,args),label);
+});
+test("failure emits only audited metadata and keeps original fail-closed reason",()=>{
+ for(const code of ["ENOENT","EACCES","ETIMEDOUT","ENOBUFS","SECRET_CODE",undefined]){
+  const child={status:code?null:7,error:code?{code,message:"PRIVATE_ERROR",path:"PRIVATE_PATH",spawnargs:["PRIVATE_ARG"]}:undefined,stdout:Buffer.from("PRIVATE_STDOUT"),stderr:Buffer.from("PRIVATE_STDERR")};
+  const h=harness(child);assert.throws(()=>h.read("mc",["--json","admin","info","PRIVATE_ALIAS"]),/HOLD_NATIVE_COMMAND_NOT_AUTHENTICATED/);
+  assert.equal(h.calls.length,1);assert.equal(h.reports.length,1);const r=h.reports[0];
+  assert.deepEqual(Object.keys(r),["schema_version","status","command_label","failure_class","exit_code","system_code","elapsed_ms","stdout_bytes","stderr_bytes","retry_automatically"]);
+  assert.equal(r.system_code,code&&code!=="SECRET_CODE"?code:null);assert.equal(r.exit_code,code?null:7);
+  assert.equal(r.command_label,"MC_ADMIN_INFO");assert.equal(r.elapsed_ms,17);assert.equal(r.stdout_bytes,14);assert.equal(r.stderr_bytes,14);assert.equal(r.retry_automatically,false);
+  assert.ok(!JSON.stringify(r).includes("PRIVATE"));assert.ok(!JSON.stringify(r).includes("SECRET"));assert.ok(child.stdout.every(x=>x===0));assert.ok(child.stderr.every(x=>x===0));
+ }
+});
+test("successful native bytes and frozen subprocess limits remain unchanged",()=>{
+ const raw=Buffer.from("original native output"),h=harness({status:0,stdout:raw,stderr:Buffer.alloc(0)});
+ assert.equal(h.read("docker",["ps","--all","--no-trunc"]),raw);assert.equal(raw.toString(),"original native output");assert.equal(h.reports.length,0);assert.equal(h.calls.length,1);
+ const options=h.calls[0][2];assert.equal(options.timeout,15000);assert.equal(options.maxBuffer,1048576);assert.equal(options.shell,false);assert.equal(options.encoding,null);assert.equal(options.stdio.join(","),"ignore,pipe,pipe");
+});
+test("missing native stdout fails closed without inventing output bytes",()=>{
+ const h=harness({status:0,stdout:null,stderr:null});assert.throws(()=>h.read("docker",["volume","inspect"]),/HOLD_NATIVE_COMMAND_NOT_AUTHENTICATED/);assert.equal(h.reports[0].stdout_bytes,0);assert.equal(h.reports[0].stderr_bytes,0);
+});
+
+test("registered mc is hashed before every spawn and has no PATH or CWD fallback",()=>{const h=harness({status:0,stdout:Buffer.from("native"),stderr:Buffer.alloc(0)});h.read("mc",["--json","admin","info","PRIVATE_ALIAS"]);assert.equal(h.calls[0][0],h.registered);assert.equal(h.closed,true);assert.equal(h.calls[0][1][3],"PRIVATE_ALIAS");});
+test("missing, wrong digest, links, path drift and file identity drift prohibit spawning",()=>{for(const [mode,classification]of [["missing","EXECUTABLE_NOT_FOUND"],["hash","MC_SHA256_MISMATCH"],["link","MC_FILE_IDENTITY_REJECTED"],["hardlink","MC_FILE_IDENTITY_REJECTED"],["path","MC_PATH_DRIFT"],["drift","MC_FILE_IDENTITY_DRIFT"]]){const h=harness({},mode);assert.throws(()=>h.read("mc",["--json","admin","info","PRIVATE_ALIAS"]),/HOLD_NATIVE_COMMAND_NOT_AUTHENTICATED/);assert.equal(h.calls.length,0);assert.equal(h.reports.length,1);assert.equal(h.reports[0].failure_class,classification);assert.ok(!JSON.stringify(h.reports).includes("PRIVATE"));if(mode==='hash'||mode==='drift')assert.equal(h.closed,true);}});
+test("native failure classes are exact and hostile error attributes cannot enter public reports",()=>{const h=harness({});for(const [error,status,label]of [[{code:'ENOENT'},null,'EXECUTABLE_NOT_FOUND'],[{code:'ETIMEDOUT'},null,'COMMAND_TIMEOUT'],[{code:'ENOBUFS'},null,'OUTPUT_LIMIT_EXCEEDED'],[undefined,7,'NONZERO_EXIT'],[{native_tool_failure:'PRIVATE_SECRET'},null,'NATIVE_SYSTEM_ERROR']])assert.equal(h.classify({error,status}),label);});
+
+}
