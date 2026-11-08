@@ -1,0 +1,251 @@
+{
+  "schema_version": "geox_mcft_field_state_successor_preclosure_audit_v1",
+  "audit_id": "GEOX-MCFT-FIELD-STATE-SUCCESSOR-PRECLOSURE-AUDIT-V1",
+  "status": "PRELIMINARY_DESIGN_INPUT_ONLY",
+  "s0_completion_claim": false,
+  "design_base_protected_main": "0e4cd036fdbebfe8118d6b7c1978572859d5a652",
+  "cap09_effective_closure_required_before_s0": true,
+  "findings": {
+    "mcft_existing_authoritative_substrate": {
+      "result": "SUFFICIENT_FOR_READ_ONLY_SUCCESSOR_ADAPTER_DESIGN",
+      "no_new_state_store_required": true,
+      "observed_surfaces": [
+        {
+          "path": "public.facts",
+          "role": "CANONICAL_OBJECT_PERSISTENCE",
+          "successor_use": "resolve exact state/runtime-config/source objects by immutable object identity"
+        },
+        {
+          "path": "public.twin_active_lineage_index_v1",
+          "role": "ACTIVE_SCOPE_LINEAGE_POINTER",
+          "successor_use": "current-scope discovery only; not historical authority by itself"
+        },
+        {
+          "path": "public.twin_state_history_projection_v1",
+          "role": "STATE_HISTORY_EXACT_OBJECT_PROJECTION",
+          "fields": [
+            "state_object_id",
+            "tenant_id",
+            "project_id",
+            "group_id",
+            "field_id",
+            "season_id",
+            "zone_id",
+            "lineage_id",
+            "revision_id",
+            "logical_time",
+            "determinism_hash",
+            "canonical_payload",
+            "source_fact_id"
+          ],
+          "successor_use": "primary existing substrate for exact historical state resolution"
+        },
+        {
+          "path": "public.twin_state_latest_index_v1",
+          "role": "CURRENT_STATE_POINTER",
+          "successor_use": "current lookup convenience only; must not replace historical as-of selection"
+        },
+        {
+          "path": "twin_state_estimate_v1.runtime_config_ref/runtime_config_hash",
+          "role": "STATE_TO_EXACT_RUNTIME_CONFIGURATION_BINDING",
+          "successor_use": "preserve exact configuration/context basis in Field-State Authority"
+        },
+        {
+          "path": "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
+          "role": "CANONICAL_PERSISTENCE_AND_CAS",
+          "successor_use": "reference implementation evidence; successor read adapter must not add writes here"
+        }
+      ],
+      "invariant": "FIELD_STATE_SUCCESSOR_SHOULD_WRAP_EXISTING_QUALIFIED_OBJECTS_NOT_COPY_OR_RECALCULATE_THEM"
+    },
+    "adr_current_boundary": {
+      "result": "CONSUMPTION_SEAM_EXISTS_BUT_FIELD_STATE_CONTEXT_IS_NOT_FULLY_RUNTIME_BOUND",
+      "observed_surfaces": [
+        "apps/server/src/contracts/canonical_decision_v1.ts",
+        "apps/server/src/contracts/decision_episode_v1.ts",
+        "apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts",
+        "apps/server/src/domain/decision/decision_episode_assembler_v1.ts"
+      ],
+      "governance_evidence": "docs/architecture/semantic_convergence/GEOX-B09K-DECISION-ELIGIBILITY-RUNTIME-READINESS-INVENTORY-V1.md",
+      "observed_gap": [
+        "ContextSnapshot candidate binding NOT BOUND",
+        "STATE criterion runtime readiness NOT READY",
+        "B-07e runtime invocation NOT READY",
+        "consumer migration NOT PERFORMED"
+      ],
+      "successor_implication": "S3 must bind exact Field-State Authority refs into decision-time basis; it must not connect by reading mutable current state opportunistically"
+    },
+    "bline_current_boundary": {
+      "result": "TASK_RECEIPT_AND_PROVENANCE_SURFACES_EXIST_BUT_CALLER_AUTHORITY_DEBT_MUST_REMAIN_VISIBLE",
+      "observed_surfaces": [
+        "scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_BLINE_B5F3_SUCCESSOR_RECEIPT_RUNTIME_V1.cjs",
+        "apps/server/src/domain/controlplane/task_service.ts",
+        "apps/server/src/routes/control_ao_act.ts"
+      ],
+      "governance_evidence": "docs/architecture/semantic_convergence/GEOX-BLINE-PRODUCTION-CALLER-AUTHORITY-CLOSURE-V1.md",
+      "existing_debt_must_not_be_hidden": [
+        "caller/scope authorization gaps remain inventoried",
+        "some production-reachable surfaces historically mutate on read or broad compatibility scopes",
+        "receipt provenance does not by itself establish field-state truth"
+      ],
+      "successor_implication": "S4/S5 must preserve B-Line caller/approval/receipt authority and must never use Field-State integration as a shortcut around caller-security closure"
+    },
+    "product_current_boundary": {
+      "result": "CURRENT_PRODUCT_BUILDER_ALREADY_DEMONSTRATES_USEFUL_EXACT_REF_FAIL_CLOSED_PATTERNS",
+      "observed_surface": "apps/server/src/product_projection/customer/customer_product_projection_builder_v1.ts",
+      "useful_patterns": [
+        "field-level scope ambiguity fails closed",
+        "exact posterior state object ref/hash is checked",
+        "state history row is selected by exact state_object_id and scope",
+        "determinism_hash and source_fact_id are cross-checked",
+        "missing current MCFT state remains unavailable/limited",
+        "historical basis is not silently fabricated"
+      ],
+      "limitation": "Product Projection is presentation-only and cannot be promoted into Field-State Authority",
+      "successor_implication": "S6 should consume the Field-State Authority read surface or exact underlying authority refs, not become a source for S2/S3"
+    }
+  },
+  "preliminary_architecture_decisions": [
+    {
+      "id": "D1",
+      "decision": "NO_NEW_MCFT_FIELD_STATE_TRUTH_STORE",
+      "rationale": "existing canonical facts + state history + exact hashes already provide the persistence substrate"
+    },
+    {
+      "id": "D2",
+      "decision": "FIELD_STATE_AUTHORITY_IS_AN_ENVELOPE_AND_SELECTOR_LAYER_FIRST",
+      "rationale": "the missing contract is authoritative scope/time/basis packaging and deterministic historical selection, not new state math"
+    },
+    {
+      "id": "D3",
+      "decision": "S2_READ_ADAPTER_MUST_BE_READ_ONLY",
+      "rationale": "CAP-09 state-producing semantics stay frozen"
+    },
+    {
+      "id": "D4",
+      "decision": "ADR_IS_FIRST_AUTHORITY_BEARING_DOWNSTREAM_CONSUMER",
+      "rationale": "decision-time target/context binding is the first place exact Field-State refs must become part of a new domain authority"
+    },
+    {
+      "id": "D5",
+      "decision": "BLINE_RECEIPT_RETURNS_AS_EVIDENCE_CANDIDATE_NOT_STATE",
+      "rationale": "execution provenance and field-state truth have different owners"
+    },
+    {
+      "id": "D6",
+      "decision": "PRODUCT_REMAINS_LAST_READ_ONLY_PROJECTION",
+      "rationale": "UI requirements must not drive upstream authority semantics"
+    }
+  ],
+  "open_pr_preliminary_disposition": [
+    {
+      "pr": 3658,
+      "topic": "Product API dual-read / Formal-v5 reads",
+      "preliminary": "HOLD_DURING_CAP09; REEVALUATE_UNDER_S6_AFTER_CLOSURE"
+    },
+    {
+      "pr": 3647,
+      "topic": "Oct-04 current-crop refresh carrier",
+      "preliminary": "HISTORICAL_QUALIFICATION_ONLY; EXPECT_CLOSE_WITHOUT_MERGE"
+    },
+    {
+      "pr": 3638,
+      "topic": "DA09 registry binding closure control",
+      "preliminary": "HISTORICAL_CLOSURE_INPUT; EXPECT_SUPERSEDED_BY_MAIN"
+    },
+    {
+      "pr": 3637,
+      "topic": "DA09 exact-run binding",
+      "preliminary": "HISTORICAL_CLOSURE_INPUT; EXPECT_SUPERSEDED_BY_MAIN"
+    },
+    {
+      "pr": 3635,
+      "topic": "frozen Runtime integration probe",
+      "preliminary": "HISTORICAL_EVIDENCE_ONLY"
+    },
+    {
+      "pr": 3634,
+      "topic": "immutable MinIO mirror preflight",
+      "preliminary": "HISTORICAL_INFRA_QUALIFICATION_ONLY"
+    },
+    {
+      "pr": 3632,
+      "topic": "Runtime Hardening / FDG closure",
+      "preliminary": "HISTORICAL_EVIDENCE_ONLY; RUNTIME_REOPEN_FORBIDDEN"
+    },
+    {
+      "pr": 3631,
+      "topic": "Failure Discovery Gate",
+      "preliminary": "HISTORICAL_EVIDENCE_ONLY; RUNTIME_REOPEN_FORBIDDEN"
+    },
+    {
+      "pr": 3616,
+      "topic": "real-clock rehearsal crop fixture",
+      "preliminary": "HISTORICAL_REHEARSAL_ONLY"
+    },
+    {
+      "pr": 3608,
+      "topic": "Formal-v5 owner membership cleanup",
+      "preliminary": "REVERIFY_MAIN_CONTAINS_EFFECTIVE_SUCCESSOR; DO_NOT_MERGE_STALE_BRANCH"
+    },
+    {
+      "pr": 3600,
+      "topic": "Formal-v5 local actual-arm successor",
+      "preliminary": "SUPERSEDED_BY_ACTUAL_ARM_PATH"
+    },
+    {
+      "pr": 3586,
+      "topic": "Formal-v5 arm readiness live owner",
+      "preliminary": "SUPERSEDED_BY_ACTUAL_ARM_AND_POST_ARM_REVALIDATION"
+    },
+    {
+      "pr": 3552,
+      "topic": "Sep-11 current-crop refresh",
+      "preliminary": "HISTORICAL_REFRESH_ONLY"
+    },
+    {
+      "pr": 3551,
+      "topic": "QCP blocker failure routing",
+      "preliminary": "HISTORICAL_QCP_ONLY; QCP_REOPEN_FORBIDDEN_DURING_ARM"
+    },
+    {
+      "pr": 3546,
+      "topic": "rolling crop governance routing",
+      "preliminary": "REVERIFY_MAIN_SUCCESSOR; DO_NOT_MERGE_STALE_BRANCH"
+    },
+    {
+      "pr": 3545,
+      "topic": "Sep-10 crop materialization",
+      "preliminary": "HISTORICAL_REFRESH_ONLY"
+    },
+    {
+      "pr": 3544,
+      "topic": "Sep-10 fresh crop source lock",
+      "preliminary": "HISTORICAL_QUALIFICATION_ONLY"
+    },
+    {
+      "pr": 3528,
+      "topic": "real target subject/geometry contract Phase A",
+      "preliminary": "HISTORICAL_PREDECESSOR_EVIDENCE; CONCEPTS_CARRIED_FORWARD_IN_3659; DO_NOT_USE_OLD_BASE"
+    }
+  ],
+  "next_after_cap09_closure": [
+    "rebase successor design on exact closure main",
+    "bind exact CAP09 closure authority/evidence",
+    "run formal S0 repository audit",
+    "finalize per-PR retirement classifications",
+    "freeze S1 TypeScript/schema contract without database change",
+    "implement S2 read-only adapter over existing qualified state/history substrate"
+  ],
+  "non_effects": {
+    "protected_main_changed": false,
+    "cap09_authority_changed": false,
+    "runtime_changed": false,
+    "database_changed": false,
+    "workflow_changed": false,
+    "adr_runtime_changed": false,
+    "bline_runtime_changed": false,
+    "product_runtime_changed": false
+  }
+}

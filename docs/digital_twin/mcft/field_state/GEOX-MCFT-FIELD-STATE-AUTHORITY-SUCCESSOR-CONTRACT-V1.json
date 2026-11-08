@@ -1,0 +1,318 @@
+{
+  "schema_version": "geox_mcft_field_state_authority_successor_contract_v1",
+  "contract_id": "GEOX-MCFT-FIELD-STATE-AUTHORITY-SUCCESSOR-CONTRACT-V1",
+  "status": "DESIGN_CANDIDATE_ONLY",
+  "effective": false,
+  "design_base_protected_main": "0e4cd036fdbebfe8118d6b7c1978572859d5a652",
+  "entry_gate": {
+    "mcft_cap09_effective_closure_required": true,
+    "preclosure_merge_forbidden": true,
+    "runtime_implementation_authorized": false,
+    "database_change_authorized": false,
+    "workflow_change_authorized": false
+  },
+  "authority_chain": [
+    "MCFT_FIELD_EVIDENCE",
+    "MCFT_FIELD_STATE_AUTHORITY",
+    "ADR_TARGET_SCOPE_CONTEXT_BINDING",
+    "ADR_DECISION_TIME_RESULT",
+    "BLINE_APPROVAL_EXECUTION_AUTHORIZATION",
+    "BLINE_TASK_DISPATCH_RECEIPT_ACCEPTANCE",
+    "MCFT_EVIDENCE_CANDIDATE",
+    "MCFT_GOVERNED_STATE_REEVALUATION"
+  ],
+  "ownership": {
+    "mcft": {
+      "owns": [
+        "field_evidence_qualification",
+        "field_state_authority_publication",
+        "historical_as_of_selection"
+      ],
+      "does_not_own": [
+        "decision_authority",
+        "principal_approval",
+        "execution_authorization",
+        "product_presentation_authority"
+      ]
+    },
+    "adr": {
+      "owns": [
+        "decision_target_scope",
+        "decision_context_binding",
+        "decision_applicability",
+        "decision_time_result"
+      ],
+      "must_consume": "EXACT_MCFT_FIELD_STATE_AUTHORITY_REF",
+      "current_state_substitution_for_historical_decision_forbidden": true
+    },
+    "bline": {
+      "owns": [
+        "principal_caller_authority",
+        "approval",
+        "operation_plan",
+        "task",
+        "dispatch",
+        "execution_authorization",
+        "receipt",
+        "acceptance"
+      ],
+      "must_preserve": [
+        "adr_decision_ref",
+        "adr_basis_refs",
+        "caller_principal_provenance",
+        "execution_provenance"
+      ],
+      "field_state_rederivation_forbidden": true
+    },
+    "product_projection": {
+      "authority_ceiling": "NON_AUTHORITATIVE_PRODUCT_PROJECTION_ONLY",
+      "domain_write_authorized": false,
+      "may_not_be_source_for": [
+        "MCFT",
+        "ADR",
+        "BLINE"
+      ]
+    }
+  },
+  "minimum_field_state_authority_envelope": {
+    "identity_fields": [
+      "authority_id",
+      "authority_revision_id",
+      "authority_type"
+    ],
+    "scope_fields": [
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "zone_id",
+      "season_id"
+    ],
+    "temporal_fields": [
+      "logical_time_or_interval",
+      "effective_from",
+      "effective_until",
+      "available_at"
+    ],
+    "state_fields": [
+      "state_ref",
+      "state_content_digest",
+      "state_type",
+      "epistemic_class",
+      "quality_status",
+      "limitations"
+    ],
+    "basis_fields": [
+      "evidence_refs",
+      "context_refs",
+      "configuration_refs",
+      "derivation_or_model_identity"
+    ],
+    "governance_fields": [
+      "supersession_semantics",
+      "source_authority_refs",
+      "replay_identity"
+    ]
+  },
+  "selector_semantics": {
+    "policy": "EXACTLY_ONE_APPLICABLE_AUTHORITY_AS_OF_LOGICAL_TIME_OR_FAIL_CLOSED",
+    "requirements": [
+      "scope_exact_match",
+      "effective_interval_contains_logical_time",
+      "available_at_not_after_logical_time",
+      "supersession_rules_satisfied"
+    ],
+    "zero_match": "FAIL_CLOSED",
+    "multiple_match": "FAIL_CLOSED",
+    "mutable_latest_lookup_as_authority_forbidden": true,
+    "later_revision_rewrites_earlier_knowability_forbidden": true
+  },
+  "feedback_semantics": {
+    "allowed_path": [
+      "BLINE_RECEIPT",
+      "MCFT_EVIDENCE_CANDIDATE",
+      "MCFT_EVIDENCE_QUALIFICATION",
+      "MCFT_STATE_REEVALUATION"
+    ],
+    "direct_receipt_to_field_state_mutation_forbidden": true,
+    "receipt_truth_scope": "EXECUTION_OR_REPORTING_FACT_ONLY_UNLESS_SEPARATELY_QUALIFIED"
+  },
+  "predecessor_inputs": {
+    "field_state_inventory_ref": "docs/digital_twin/mcft/field_state/GEOX-MCFT-FIELDSTATE-TARGET-PARAM-AUTH-01-INVENTORY-V1.json",
+    "historical_real_target_pr": 3528,
+    "carry_forward_invariants": [
+      "synthetic_target_relabel_forbidden",
+      "subject_identity_distinct_from_geometry",
+      "field_geometry_distinct_from_management_zone_geometry",
+      "temporal_availability_explicit",
+      "temporal_validity_explicit",
+      "immutable_authority_refs_required",
+      "target_specific_facts_must_not_be_invented"
+    ],
+    "historical_pr_is_successor_implementation_base": false
+  },
+  "slices": [
+    {
+      "id": "S0",
+      "name": "POST_CAP09_AUTHORITY_AUDIT_AND_DESIGN_REBASE",
+      "implementation_authorized_after_entry_gate": true,
+      "runtime_change": false,
+      "exit_claim": "FIELD_STATE_SUCCESSOR_S0_AUDIT_FROZEN"
+    },
+    {
+      "id": "S1",
+      "name": "FIELD_STATE_AUTHORITY_CONTRACT_AND_VALIDATOR",
+      "database_schema_change": false,
+      "production_writer": false,
+      "exit_claim": "FIELD_STATE_AUTHORITY_CONTRACT_QUALIFIED"
+    },
+    {
+      "id": "S2",
+      "name": "EXISTING_MCFT_READ_ADAPTER",
+      "mode": "READ_ONLY",
+      "runtime_kernel_change": false,
+      "scheduler_semantics_change": false,
+      "second_truth_store_forbidden": true,
+      "exit_claim": "FIELD_STATE_AUTHORITY_READ_PATH_QUALIFIED"
+    },
+    {
+      "id": "S3",
+      "name": "ADR_EXACT_CONSUMPTION_BINDING",
+      "requires": [
+        "S2"
+      ],
+      "exact_authority_ref_required": true,
+      "decision_time_basis_replay_required": true,
+      "exit_claim": "ADR_FIELD_STATE_EXACT_BINDING_QUALIFIED"
+    },
+    {
+      "id": "S4",
+      "name": "BLINE_PROVENANCE_PROPAGATION",
+      "requires": [
+        "S3"
+      ],
+      "bline_field_state_rederivation_forbidden": true,
+      "exit_claim": "BLINE_DECISION_TO_RECEIPT_PROVENANCE_QUALIFIED"
+    },
+    {
+      "id": "S5",
+      "name": "RECEIPT_TO_EVIDENCE_FEEDBACK_SEAM",
+      "requires": [
+        "S4"
+      ],
+      "separately_gated": true,
+      "direct_state_mutation_forbidden": true,
+      "exit_claim": "FIELD_EXECUTION_FEEDBACK_SEAM_QUALIFIED"
+    },
+    {
+      "id": "S6",
+      "name": "PRODUCT_READ_PROJECTION",
+      "requires": [
+        "S2"
+      ],
+      "read_only": true,
+      "current_projection_distinct_from_decision_time_snapshot": true,
+      "exit_claim": "FIELD_STATE_PRODUCT_PROJECTION_QUALIFIED"
+    }
+  ],
+  "hard_acceptance": [
+    {
+      "id": "FS-01",
+      "requirement": "exact_scope",
+      "fail_on": "scope_ambiguity_or_widening"
+    },
+    {
+      "id": "FS-02",
+      "requirement": "exact_temporal_selection",
+      "fail_on": "no_unique_applicable_authority"
+    },
+    {
+      "id": "FS-03",
+      "requirement": "available_at_preserved",
+      "fail_on": "revision_unavailable_at_requested_time"
+    },
+    {
+      "id": "FS-04",
+      "requirement": "immutable_state_ref_and_digest",
+      "fail_on": "mutable_or_unhashed_basis"
+    },
+    {
+      "id": "FS-05",
+      "requirement": "exact_evidence_refs",
+      "fail_on": "basis_incomplete_or_nonreplayable"
+    },
+    {
+      "id": "FS-06",
+      "requirement": "exact_context_and_configuration_refs",
+      "fail_on": "hidden_current_configuration_dependency"
+    },
+    {
+      "id": "FS-07",
+      "requirement": "epistemic_class_quality_limitations_preserved",
+      "fail_on": "derived_or_limited_promoted"
+    },
+    {
+      "id": "FS-08",
+      "requirement": "historical_replay_determinism",
+      "fail_on": "current_state_substituted_for_historical_state"
+    },
+    {
+      "id": "ADR-01",
+      "requirement": "exact_field_state_authority_consumption",
+      "fail_on": "latest_or_presentation_lookup"
+    },
+    {
+      "id": "ADR-02",
+      "requirement": "decision_time_basis_reconstructable",
+      "fail_on": "basis_missing_or_changed"
+    },
+    {
+      "id": "BL-01",
+      "requirement": "approval_chain_preserves_adr_refs",
+      "fail_on": "decision_provenance_dropped"
+    },
+    {
+      "id": "BL-02",
+      "requirement": "receipt_preserves_execution_provenance",
+      "fail_on": "caller_device_task_or_authorization_chain_incomplete"
+    },
+    {
+      "id": "FB-01",
+      "requirement": "receipt_is_evidence_candidate_only",
+      "fail_on": "direct_field_state_mutation"
+    },
+    {
+      "id": "PP-01",
+      "requirement": "product_projection_only",
+      "fail_on": "product_value_used_as_domain_authority"
+    },
+    {
+      "id": "SEC-01",
+      "requirement": "caller_scope_cannot_broaden",
+      "fail_on": "untrusted_scope_exceeds_authorized_scope"
+    }
+  ],
+  "non_goals": [
+    "new_weather_provider",
+    "new_crop_model",
+    "new_et0_semantics",
+    "new_scheduler_semantics",
+    "runtime_kernel_redesign",
+    "new_generalized_land_authority",
+    "product_owned_field_truth",
+    "adr_owned_field_truth",
+    "bline_owned_field_truth",
+    "automatic_principal_approval",
+    "autonomous_execution",
+    "target_specific_fact_invention"
+  ],
+  "current_state": {
+    "as_of": "2026-10-07",
+    "cap09": "FORMAL_V5_ARMED_FINAL_REAL_CLOCK_WINDOW_PENDING",
+    "successor_design": "PREPARED_OFF_MAIN",
+    "field_state_runtime_implementation": "NOT_AUTHORIZED",
+    "adr_integration": "NOT_AUTHORIZED",
+    "bline_integration": "NOT_AUTHORIZED",
+    "product_successor_merge_deploy": "NOT_AUTHORIZED"
+  }
+}
