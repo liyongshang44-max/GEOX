@@ -6,7 +6,7 @@ const spec=require("../runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs")
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 let cached=null;
 function verify({ROOT,args,authority,plan,changed,stage}){
- if([SUCCESSOR_BASE,EMPTY_MODULE_BASE,RELEASE_REVIEW_BASE,NATIVE_JS_BASE,PRODUCER_WAIT_BASE,EXECUTION_BASE,NATIVE_TOOL_BASE,IDENTITY_BASE].includes(arguments[0].args.base))return verifySuccessor(arguments[0]);
+ if([SUCCESSOR_BASE,EMPTY_MODULE_BASE,RELEASE_REVIEW_BASE,NATIVE_JS_BASE,PRODUCER_WAIT_BASE,EXECUTION_BASE,NATIVE_TOOL_BASE,IDENTITY_BASE,RESTRICTED_PARENT_BASE].includes(arguments[0].args.base))return verifySuccessor(arguments[0]);
  if(cached)return cached;
  const git=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:8*1024*1024}).trim();
  try{
@@ -138,7 +138,24 @@ const IDENTITY_RUNTIME=Object.freeze([
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs"
 ]);
-function successorScope(base){return base===IDENTITY_BASE?
+const RESTRICTED_PARENT_BASE="ec0d608077c4a506eb8ece0af8cabff727ee51c8";
+const RESTRICTED_PARENT_TREE="23977054f0186640877bf52073c36d29efa47052";
+const RESTRICTED_PARENT_BRANCH="mcft/r4285-restricted-parent-policy";
+const RESTRICTED_PARENT_RESOLVER="CAP09_R4285_RESTRICTED_PARENT_POLICY_EXACT_SUCCESSOR_V1";
+const RESTRICTED_PARENT_PATHS=Object.freeze([
+  ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+  ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+  ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
+  ".github/workflows/mcft-cap09-r4285-prepare-live-v3.yml",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+  "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+  "scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs",
+  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs",
+  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RESTRICTED_PARENT_V3.test.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs"
+]);
+function successorScope(base){return base===RESTRICTED_PARENT_BASE?
+ {base:RESTRICTED_PARENT_BASE,branch:RESTRICTED_PARENT_BRANCH,paths:RESTRICTED_PARENT_PATHS,tree:RESTRICTED_PARENT_TREE,runtimeChanged:true,runtimePaths:[NATIVE_TOOL_RUNTIME],kind:"BOUNDED_V3_EXACT_RESTRICTED_PARENT_POLICY_MAPPING_SOURCE_ONLY"}:base===IDENTITY_BASE?
  {base:IDENTITY_BASE,branch:IDENTITY_BRANCH,paths:IDENTITY_PATHS,tree:IDENTITY_TREE,runtimeChanged:true,runtimePaths:IDENTITY_RUNTIME,kind:"BOUNDED_V3_INDEPENDENT_EXECUTION_IDENTITY_SOURCE_ONLY_NOT_LIVE_ADMISSION"}:base===NATIVE_TOOL_BASE?
  {base:NATIVE_TOOL_BASE,branch:NATIVE_TOOL_BRANCH,paths:NATIVE_TOOL_PATHS,tree:NATIVE_TOOL_TREE,runtimeChanged:true,runtimePaths:[NATIVE_TOOL_RUNTIME],kind:"BOUNDED_V3_EXACT_NATIVE_TOOL_RESOLUTION_SOURCE_ONLY"}:base===EXECUTION_BASE?
  {base:EXECUTION_BASE,branch:EXECUTION_BRANCH,paths:EXECUTION_PATHS,tree:"1ff7141dc3eb8798fc3a3bba22e09ed243e1e1f5",runtimeChanged:true,runtimePaths:["scripts/runtime_acceptance/MCFT_CAP09_R4285_ADMISSION_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_BUILD_ADMISSION_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_ADMISSION_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_STAGE_CAPABILITY_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs", "scripts/runtime_acceptance/MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs"],kind:"BOUNDED_V3_PHYSICAL_EXECUTION_SOURCE_ONLY_NOT_LIVE_ADMISSION"}:base===PRODUCER_WAIT_BASE?
@@ -158,7 +175,14 @@ function inspectSuccessor({args,authority,before,plan,paths,changed,stage,event,
  assert.equal(plan.status,"PASS","V3_SUCCESSOR_PLAN");
  for(const key of ["unknown_changed_paths","authority_errors","resolver_errors"])assert.deepEqual(plan[key],[],"V3_SUCCESSOR_PLAN_UNRESOLVED");
  assert.equal(before.checks.length,73,"V3_SUCCESSOR_EXISTING_QCP73");
- if(args.base===IDENTITY_BASE){
+ if(args.base===RESTRICTED_PARENT_BASE){
+  assert.equal(baseTree,RESTRICTED_PARENT_TREE,"V3_RESTRICTED_PARENT_EXACT_BASE_TREE");
+  const expected=structuredClone(before);
+  expected.dependency_resolvers[RESTRICTED_PARENT_RESOLVER]={kind:"EXACT_PATH_SET",paths:[...RESTRICTED_PARENT_PATHS]};
+  expected.checks[72].resolver_ids.push(RESTRICTED_PARENT_RESOLVER);
+  expected.checks[72].requalification_triggers.push(RESTRICTED_PARENT_RESOLVER);
+  assert.deepEqual(authority,expected,"V3_RESTRICTED_PARENT_EXACT_OWNERSHIP_EXTENSION");
+ }else if(args.base===IDENTITY_BASE){
   assert.equal(baseTree,IDENTITY_TREE,"V3_IDENTITY_EXACT_BASE_TREE");
   const expected=structuredClone(before);
   expected.dependency_resolvers[IDENTITY_RESOLVER]={kind:"EXACT_PATH_SET",paths:[...IDENTITY_PATHS]};
@@ -180,7 +204,7 @@ function inspectSuccessor({args,authority,before,plan,paths,changed,stage,event,
   assert.deepEqual(authority,expected,"V3_EXECUTION_EXACT_OWNERSHIP_EXTENSION");
  }else assert.deepEqual(authority,before,"V3_SUCCESSOR_QCP_MANIFEST_CHANGED");
  assert.equal(authority.checks[72].check_id,spec.checkId,"V3_SUCCESSOR_CHECK");
- assert.deepEqual(authority.checks[72].resolver_ids,args.base===IDENTITY_BASE?[...before.checks[72].resolver_ids,IDENTITY_RESOLVER]:args.base===NATIVE_TOOL_BASE?[spec.resolverId,EXECUTION_RESOLVER,NATIVE_TOOL_RESOLVER]:args.base===EXECUTION_BASE?[spec.resolverId,EXECUTION_RESOLVER]:[spec.resolverId],"V3_SUCCESSOR_RESOLVER");
+ assert.deepEqual(authority.checks[72].resolver_ids,args.base===RESTRICTED_PARENT_BASE?[...before.checks[72].resolver_ids,RESTRICTED_PARENT_RESOLVER]:args.base===IDENTITY_BASE?[...before.checks[72].resolver_ids,IDENTITY_RESOLVER]:args.base===NATIVE_TOOL_BASE?[spec.resolverId,EXECUTION_RESOLVER,NATIVE_TOOL_RESOLVER]:args.base===EXECUTION_BASE?[spec.resolverId,EXECUTION_RESOLVER]:[spec.resolverId],"V3_SUCCESSOR_RESOLVER");
  const resolver=authority.dependency_resolvers[spec.resolverId];
  assert.equal(resolver.kind,"EXACT_PATH_SET");assert.deepEqual(resolver.paths,spec.changedPaths);
  assert.deepEqual(paths,scope.paths,"V3_SUCCESSOR_EXACT_CHANGED_PATHS");
@@ -215,6 +239,7 @@ function verifySuccessor(input){
   // Each repair changes only its declared runtime paths; Host receiver, Native,
   // Scope, credential delivery and all historical QCP authority stay frozen.
   cp.execFileSync(process.execPath,["--test","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs"],{cwd:ROOT,timeout:120000,maxBuffer:4*1024*1024,stdio:["ignore","pipe","pipe"]});
+  if(args.base===RESTRICTED_PARENT_BASE)cp.execFileSync(process.execPath,["--test","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RESTRICTED_PARENT_V3.test.cjs"],{cwd:ROOT,timeout:120000,maxBuffer:4*1024*1024,stdio:["ignore","pipe","pipe"]});
   if([EXECUTION_BASE,IDENTITY_BASE].includes(args.base))cp.execFileSync(process.execPath,["--test","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_EXECUTION_V3.test.cjs"],{cwd:ROOT,timeout:120000,maxBuffer:4*1024*1024,stdio:["ignore","pipe","pipe"]});
   successorCached={status:"PASS",base_sha:args.base,source_head_sha:args.head,changed_paths:paths.length,
    qualification_kind:scope.kind||"BOUNDED_EXISTING_V3_SUCCESSOR_SOURCE_ONLY",historical_qcp72_preserved:true,
@@ -224,5 +249,6 @@ function verifySuccessor(input){
   error_code:typeof error.code==="string"?error.code:"ASSERTION",detail:String(error.message||error).slice(0,700),permit_consumed:false,stage_count:0};}
  return successorCached;
 }
-module.exports={IDENTITY_BASE,IDENTITY_TREE,IDENTITY_BRANCH,IDENTITY_RESOLVER,IDENTITY_PATHS,IDENTITY_RUNTIME,NATIVE_TOOL_BASE,NATIVE_TOOL_TREE,NATIVE_TOOL_BRANCH,NATIVE_TOOL_RESOLVER,NATIVE_TOOL_PATHS,EXECUTION_BASE,EXECUTION_BRANCH,EXECUTION_PATHS,EXECUTION_RESOLVER,verify,inspectSuccessor,SUCCESSOR_BASE,SUCCESSOR_BRANCH,SUCCESSOR_PATHS,EMPTY_MODULE_BASE,EMPTY_MODULE_BRANCH,EMPTY_MODULE_PATHS,RELEASE_REVIEW_BASE,RELEASE_REVIEW_BRANCH,RELEASE_REVIEW_PATHS,NATIVE_JS_BASE,NATIVE_JS_BRANCH,NATIVE_JS_PATHS,PRODUCER_WAIT_BASE,PRODUCER_WAIT_BRANCH,PRODUCER_WAIT_PATHS};
+module.exports={RESTRICTED_PARENT_BASE,RESTRICTED_PARENT_TREE,RESTRICTED_PARENT_BRANCH,RESTRICTED_PARENT_RESOLVER,RESTRICTED_PARENT_PATHS,IDENTITY_BASE,IDENTITY_TREE,IDENTITY_BRANCH,IDENTITY_RESOLVER,IDENTITY_PATHS,IDENTITY_RUNTIME,NATIVE_TOOL_BASE,NATIVE_TOOL_TREE,NATIVE_TOOL_BRANCH,NATIVE_TOOL_RESOLVER,NATIVE_TOOL_PATHS,EXECUTION_BASE,EXECUTION_BRANCH,EXECUTION_PATHS,EXECUTION_RESOLVER,verify,inspectSuccessor,SUCCESSOR_BASE,SUCCESSOR_BRANCH,SUCCESSOR_PATHS,EMPTY_MODULE_BASE,EMPTY_MODULE_BRANCH,EMPTY_MODULE_PATHS,RELEASE_REVIEW_BASE,RELEASE_REVIEW_BRANCH,RELEASE_REVIEW_PATHS,NATIVE_JS_BASE,NATIVE_JS_BRANCH,NATIVE_JS_PATHS,PRODUCER_WAIT_BASE,PRODUCER_WAIT_BRANCH,PRODUCER_WAIT_PATHS};
+
 

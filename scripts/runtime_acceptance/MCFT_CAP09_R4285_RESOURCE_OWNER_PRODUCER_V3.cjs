@@ -605,7 +605,8 @@ function nativeCommandLabel(tool,args){
    [["admin","config","get"],"MC_IDENTITY_PROVIDER_CONFIG"],
    [["--json","admin","user","list"],"MC_USERS_LIST"],
    [["--json","admin","user","svcacct","ls"],"MC_SERVICE_ACCOUNTS_LIST"],
-   [["--json","admin","policy","entities"],"MC_POLICY_ENTITIES"]
+   [["--json","admin","policy","entities"],"MC_POLICY_ENTITIES"],
+   [["--json","admin","policy","info"],"MC_RESTRICTED_PARENT_POLICY_INFO"]
   ])if(starts(prefix))return label;
  }
  if(tool==="docker"){
@@ -861,6 +862,49 @@ function assertNoIdpContainerEnvOverrides(target){
    "HOLD_NATIVE_IDP_ENV_OVERRIDE");
  }
 }
+// This sole named-policy binding is the accepted R4285 restricted-parent
+// replacement. It is not a generic named-policy exemption or new authority.
+const RESTRICTED_PARENT_POLICY=Object.freeze({
+ name:"r4285-d0b9-evidence-v1",
+ parent_sha256:"1e49825062790b8c3c3d977e00b1162643bdd7ba352e422ab999a3f3a372a309",
+ account_sha256:"e298727697788b6392fc0ddc312b60f90b82d317037c6e0f1691fa9b63f1806e"
+});
+function restrictedParentPolicyMappings(result){
+ const code="HOLD_NATIVE_OTHER_POLICY_PRINCIPAL_REACHABLE",p=RESTRICTED_PARENT_POLICY;
+ const user=result.userMappings||[],policy=result.policyMappings||[],groups=result.groupMappings||[];
+ assert(groups.length===0,code);
+ if(user.length===0&&policy.length===0)return [];
+ assert(user.length<=1&&policy.length<=1,code);
+ let parent=null;
+ if(user.length){const u=user[0];
+  exact(u,["user","policies"],code);
+  assert(typeof u.user==="string"&&sha(Buffer.from(u.user))===p.parent_sha256&&
+   Array.isArray(u.policies)&&u.policies.length===1&&u.policies[0]===p.name,code);
+  parent=u.user;
+ }
+ if(policy.length){const m=policy[0];
+  assert(m&&typeof m==="object"&&!Array.isArray(m)&&
+   Object.keys(m).every(k=>["policy","users","groups"].includes(k)),code);
+  assert(m.policy===p.name&&Array.isArray(m.users)&&m.users.length===1&&
+   typeof m.users[0]==="string"&&sha(Buffer.from(m.users[0]))===p.parent_sha256&&
+   (!Object.hasOwn(m,"groups")||(Array.isArray(m.groups)&&m.groups.length===0)),code);
+  assert(parent===null||parent===m.users[0],code);parent=m.users[0];
+ }
+ return [{policy:p.name,parent_sha256:sha(Buffer.from(parent))}];
+}
+function verifyRestrictedParentPolicyDefinition(raw){
+ let x;try{x=JSON.parse(raw.toString("utf8"));}catch{throw Error("HOLD_NATIVE_PARENT_POLICY_JSON");}
+ assert(x&&x.status==="success"&&x.policy===RESTRICTED_PARENT_POLICY.name&&
+  x.isGroup===false&&x.policyInfo&&typeof x.policyInfo==="object"&&
+  !Array.isArray(x.policyInfo),"HOLD_NATIVE_PARENT_POLICY_IDENTITY");
+ // madmin.PolicyInfo intentionally serializes these exported fields in PascalCase.
+ assert(x.policyInfo.PolicyName===RESTRICTED_PARENT_POLICY.name,
+  "HOLD_NATIVE_PARENT_POLICY_IDENTITY");
+ let doc=x.policyInfo.Policy;
+ if(typeof doc==="string"){try{doc=JSON.parse(doc);}catch{throw Error("HOLD_NATIVE_PARENT_POLICY_DOCUMENT");}}
+ verifyReplacementPolicyV2(doc);
+ return true;
+}
 function normalizeMinioList(raw,kind){
  assert(Buffer.isBuffer(raw)&&["USERS","ACCOUNTS","POLICY"].includes(kind),
   "HOLD_NATIVE_IAM_LIST_KIND");
@@ -877,7 +921,7 @@ function normalizeMinioList(raw,kind){
   if(kind==="POLICY"){
    // Native mc emits {status:"success",result:{timestamp,...Mappings}},
    // not top-level policyMappings. Missing omitempty arrays mean zero,
-   // but ANY mapping, malformed result, or extra field is a HOLD.
+   // with only the accepted exact restricted-parent binding as an exception.
    assert(a.length===1&&
     Object.keys(x).sort().join("|")==="result|status"&&
     x.result&&typeof x.result==="object"&&!Array.isArray(x.result),
@@ -892,9 +936,10 @@ function normalizeMinioList(raw,kind){
     if(Object.prototype.hasOwnProperty.call(result,key)){
      assert(Array.isArray(result[key]),
       "HOLD_NATIVE_POLICY_ENTITIES_NOT_ENUMERATED");
-     assert(result[key].length===0,"HOLD_NATIVE_OTHER_POLICY_PRINCIPAL_REACHABLE");
+
     }
    }
+   out.push(...restrictedParentPolicyMappings(result));
    continue;
   }
   const key=kind==="USERS"?"users":"accounts";
@@ -913,8 +958,14 @@ function assessNativeReachability(f){
   "HOLD_NATIVE_OTHER_MINIO_USER");
  assert(Array.isArray(f.accounts)&&f.accounts.length===1&&f.accounts[0]===f.account,
   "HOLD_NATIVE_OTHER_MINIO_SERVICE_ACCOUNT");
- assert(Array.isArray(f.policy)&&f.policy.length===0,
-  "HOLD_NATIVE_OTHER_POLICY_BINDING");
+ assert(Array.isArray(f.policy),"HOLD_NATIVE_OTHER_POLICY_BINDING");
+ if(f.policy.length){const p=RESTRICTED_PARENT_POLICY;
+  assert(f.policy.length===1&&f.policy[0].policy===p.name&&
+   f.policy[0].parent_sha256===p.parent_sha256&&
+   sha(Buffer.from(f.parent))===p.parent_sha256&&
+   sha(Buffer.from(f.account))===p.account_sha256&&
+   f.named_policy_verified===true,"HOLD_NATIVE_OTHER_POLICY_BINDING");
+ }
  assert(Array.isArray(f.idps)&&f.idps.length===4&&
   f.idps.every((x,i)=>x.name===REACH_IDPS[i]&&x.disabled===true),
   "HOLD_NATIVE_EXTERNAL_AUTH_PLUGIN");
@@ -964,6 +1015,14 @@ function liveReachability(i,env,alias,account,details,target,now){
   ["--json","admin","user","svcacct","ls",alias,parent]),"ACCOUNTS");
  const policy=normalizeMinioList(mc(
   ["--json","admin","policy","entities",alias]),"POLICY");
+ let named_policy_verified=false;
+ if(policy.length){
+  assert(sha(Buffer.from(parent))===RESTRICTED_PARENT_POLICY.parent_sha256&&
+   sha(Buffer.from(account))===RESTRICTED_PARENT_POLICY.account_sha256,
+   "HOLD_NATIVE_RESTRICTED_PARENT_ACCOUNT_BINDING");
+  named_policy_verified=verifyRestrictedParentPolicyDefinition(mc(
+   ["--json","admin","policy","info",alias,RESTRICTED_PARENT_POLICY.name]));
+ }
  const s3Port=Number(new URL(i.bucket_endpoint).port),pgPort=i.database_port;
  const tokens=[BUCKET,POS,NEG,String(s3Port),String(pgPort)];
  const ps="$ErrorActionPreference='Stop'\n$ports=__PORTS__\n$tokens=__TOKENS__\n$p=@(Get-CimInstance Win32_Process -ErrorAction Stop)\n$s=@(Get-CimInstance Win32_Service -ErrorAction Stop | Where-Object {$_.State -eq 'Running'})\n$ph=New-Object System.Collections.ArrayList\n$sh=New-Object System.Collections.ArrayList\n$unknown=New-Object System.Collections.ArrayList\n$cfg=New-Object System.Collections.ArrayList\nforeach($q in $p){\n if([int]$q.ProcessId -eq [int]$PID){continue}\n $cmd=[string]$q.CommandLine\n $name=[string]$q.Name\n if([string]::IsNullOrWhiteSpace($cmd)){\n  if($name -match '(?i)^(node|python|java|postgres|minio|mc|docker|geox)'){[void]$unknown.Add([int]$q.ProcessId)}\n  continue\n }\n foreach($v in $tokens){if($cmd.Contains($v)){[void]$ph.Add([int]$q.ProcessId);break}}\n if($name -match '(?i)^(node|python|java|postgres|minio|geox)'){\n  $flags=[regex]::Matches($cmd,'(?i)(?:--config|--env-file)(?:=|\\s+)(?:\"([^\"]+)\"|(\\S+))')\n  if($cmd -match '(?i)(--config|--env-file)' -and $flags.Count -eq 0){\n   [void]$cfg.Add([int]$q.ProcessId)\n  }\n  foreach($m in $flags){\n   try{\n    $f=$m.Groups[1].Value\n    if(!$f){$f=$m.Groups[2].Value}\n    if(!(Test-Path -LiteralPath $f -PathType Leaf)){throw 'NOFILE'}\n    $c=[IO.File]::ReadAllText($f)\n    foreach($v in $tokens){if($c.Contains($v)){[void]$ph.Add([int]$q.ProcessId);break}}\n   }catch{[void]$cfg.Add([int]$q.ProcessId)}\n  }\n }\n}\nforeach($q in $s){\n $cmd=[string]$q.PathName\n if([string]::IsNullOrWhiteSpace($cmd)){\n  if([string]$q.Name -match '(?i)(minio|postgres|geox|docker)'){[void]$unknown.Add([string]$q.Name)}\n  continue\n }\n foreach($v in $tokens){if($cmd.Contains($v)){[void]$sh.Add([string]$q.Name);break}}\n $serviceFlags=[regex]::Matches($cmd,'(?i)(?:--config|--env-file)(?:=|\\s+)(?:\"([^\"]+)\"|(\\S+))')\n if($cmd -match '(?i)(--config|--env-file)' -and $serviceFlags.Count -eq 0){\n  [void]$cfg.Add([string]$q.Name)\n }\n foreach($m in $serviceFlags){\n  $f=$m.Groups[1].Value\n  if(!$f){$f=$m.Groups[2].Value}\n  try{\n   if(!(Test-Path -LiteralPath $f -PathType Leaf)){throw 'NOFILE'}\n   $c=[IO.File]::ReadAllText($f)\n   foreach($v in $tokens){if($c.Contains($v)){[void]$sh.Add([string]$q.Name);break}}\n  }catch{[void]$cfg.Add([string]$q.Name)}\n }\n}\n$l=@(Get-NetTCPConnection -State Listen -ErrorAction Stop |\n Where-Object {$ports -contains [int]$_.LocalPort} |\n ForEach-Object {@{port=[int]$_.LocalPort;address=[string]$_.LocalAddress}})\n@{schema='R4285_HOST_REACHABILITY_V1';observed_at=[DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')\n process_count=$p.Count;service_count=$s.Count;process_refs=@($ph|Select-Object -Unique)\n service_refs=@($sh|Select-Object -Unique);inaccessible_apps=@($unknown|Select-Object -Unique)\n config_unreadable=@($cfg|Select-Object -Unique);listeners=$l} | ConvertTo-Json -Compress -Depth 5";
@@ -976,7 +1035,7 @@ function liveReachability(i,env,alias,account,details,target,now){
  let host;
  try{host=JSON.parse(native.toString("utf8").replace(/^\uFEFF/,""));}
  catch{throw Error("HOLD_NATIVE_HOST_CENSUS_JSON_UNREADABLE");}
- return assessNativeReachability({users,accounts,policy,idps,host,
+ return assessNativeReachability({users,accounts,policy,named_policy_verified,idps,host,
   details,target,parent,account,s3Port,pgPort,now:Date.now()});
 }
 
@@ -1639,3 +1698,4 @@ if(require.main===module){
  }).then(x=>console.log(JSON.stringify(x))).catch(e=>{console.error(JSON.stringify({status:"HOLD_V3_FORMAL_READBACK",reason_code:require("./MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs").safeReason(e),permit_consumed:false,stage_count:0}));process.exitCode=2;});
 }
 module.exports={serviceAccountMetadata,verifyFormalEvidence,composeFormalReadback,loadFormalSourceSpec,produceFormalRaw,prepareAttached,captureAttached,completeAttached,closeAttached};
+
