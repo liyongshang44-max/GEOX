@@ -1,4 +1,5 @@
 "use strict";
+const executionIdentity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
 // Session-stable authority. Fresh observations are deliberately NOT Scope fields.
 // Verification only: no private key, signing, account creation or authority issuance.
 const assert=require("node:assert/strict"),crypto=require("node:crypto"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process");
@@ -33,7 +34,7 @@ function wire(raw){check(Buffer.isBuffer(raw)&&raw.length>0&&raw.length<=16*1024
  let value;try{const text=new TextDecoder("utf-8",{fatal:true}).decode(raw);value=JSON.parse(text);check(c.canonical(value)===text,"V3_JSON_NOT_CANONICAL");}catch{fail("V3_JSON_NOT_CANONICAL");}return value;}
 function bytes(file,max=16*1024*1024){check(typeof file==="string"&&path.isAbsolute(file),"V3_ABSOLUTE_FILE");c.noLinks(file);const st=fs.statSync(file);check(st.isFile()&&st.nlink===1&&st.size>0&&st.size<=max,"V3_REGULAR_FILE");return fs.readFileSync(file);}
 function readJson(file){return wire(bytes(file));}
-function identity(p,ctx){check(p.run_id===RUN&&p.host_id===HOST&&/^[a-f0-9]{40}$/.test(p.subject_sha),"V3_IDENTITY");hash(p.nonce);
+function identity(p,ctx){check(executionIdentity.get(p.run_id)&&p.host_id===HOST&&/^[a-f0-9]{40}$/.test(p.subject_sha),"V3_IDENTITY");hash(p.nonce);executionIdentity.checkNonce(p.run_id,p.nonce);
  for(const key of ["run_id","subject_sha","host_id","nonce"])if(ctx)check(p[key]===ctx[key],"V3_IDENTITY_DRIFT_"+key);}
 function verifySigned(envelope,trust,domain,{now=Date.now()}={}){
  exact(envelope,["payload","signature_base64"],"V3_ENVELOPE");const p=envelope.payload;

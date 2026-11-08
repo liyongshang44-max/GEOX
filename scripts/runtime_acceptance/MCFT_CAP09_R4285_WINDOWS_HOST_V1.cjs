@@ -1,4 +1,6 @@
 "use strict";
+const executionIdentity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
+
 /*
  * R4285 standalone Windows Host for exact-main TEST_ONLY six-stage execution.
  * No signer, Permit issuer, provisioner or automatic retry.
@@ -92,8 +94,8 @@ function hostOnly(env=process.env,platform=process.platform){
   "MCFT_R4285_CHILD","MCFT_ATTEMPT3_V2_CHILD","MCFT_GOVERNED_RETRY_TICKET"])
   assert(!env[k],"R4285_HOST_INJECTED_OR_CHILD_ENV:"+k);
 }
-function checkResourceEnv(p,env){
- assert.equal(p.run_id,RUN);
+function checkResourceEnv(p,env,executionRun=RUN){
+ assert.equal(p.run_id,executionIdentity.get(executionRun).run_id);
  const positive=new URL(env.DATABASE_URL||""),negative=new URL(env.BLOCKED_DATABASE_URL||"");
  for(const [u,db] of [[positive,p.positive_database],[negative,p.negative_database]]){
   assert(["postgres:","postgresql:"].includes(u.protocol),"R4285_HOST_POSTGRES_URL_SCHEME");
@@ -145,9 +147,9 @@ function verifyBoundHostSources(input,profile,binding){
  }
  return true;
 }
-function resolveStages({input,profile,permitPayload,trust,plan,observed,env}){
+function resolveStages({input,profile,permitPayload,trust,plan,observed,env,executionRun=RUN}){
  scheduler.validateStagePlan(plan);
- assert.equal(permitPayload.run_id,RUN);
+ assert.equal(permitPayload.run_id,executionIdentity.get(executionRun).run_id);
  assert.equal(c.digest(plan),permitPayload.plan_sha256,"R4285_HOST_UNSIGNED_PLAN");
  assert.equal(c.digest(observed),permitPayload.observations_sha256,"R4285_HOST_UNSIGNED_OBSERVATIONS");
  assert.equal(path.resolve(__dirname),path.join(input.release_root,"scripts","runtime_acceptance"),
@@ -157,7 +159,7 @@ function resolveStages({input,profile,permitPayload,trust,plan,observed,env}){
  assert(path.relative(input.release_root,input.output_root).startsWith(".."+path.sep),
   "R4285_HOST_OUTPUT_INSIDE_RELEASE");
  assert.equal(env.MCFT_QUALIFICATION_FIRST_BASE,input.first_base);
- const expected=current.isolatedTargets({isolated_run_id:RUN,
+ const expected=current.isolatedTargets({isolated_run_id:executionRun,
   qualification_first_base:input.first_base},{...env,
   MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR:input.output_root,MCFT_QUALIFICATION_FIRST_BASE:input.first_base});
  assert.equal(expected.out,path.resolve(input.output_root));
@@ -168,7 +170,7 @@ function resolveStages({input,profile,permitPayload,trust,plan,observed,env}){
  assert.equal(index.size,profile.files.length,"R4285_HOST_DUPLICATE_MATERIAL");
  const code=path.join(input.release_root,"scripts","runtime_acceptance");
  const baseEnv={...env,MCFT_R4285_CHILD:"1",MCFT_SUBJECT_SHA:permitPayload.subject_sha,
-  MCFT_GOVERNED_RETRY_RUN_ID:RUN,MCFT_R4285_LEDGER_ROOT:trust.ledger_root,
+  MCFT_GOVERNED_RETRY_RUN_ID:executionRun,MCFT_R4285_LEDGER_ROOT:trust.ledger_root,
   MCFT_R4285_NONCE:permitPayload.nonce,MCFT_R4285_PERMIT_ENVELOPE_SHA256:"",
   MCFT_R4285_OBSERVED_FILE:path.join(input.output_root,"SIGNED_OBSERVED_R4285.json"),
   MCFT_R4285_OBSERVATIONS_SHA256:permitPayload.observations_sha256,
@@ -176,7 +178,7 @@ function resolveStages({input,profile,permitPayload,trust,plan,observed,env}){
   MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR:input.output_root,
   MCFT_CAP09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION:"1",
   MCFT_CAP09_V13_EXACT_HEAD_TIMING_SAMPLE:"1",
-  MCFT_TIMING_SAMPLE_DIR:input.output_root,MCFT_TIMING_RUN_ID:String(parseInt(RUN,16)),
+  MCFT_TIMING_SAMPLE_DIR:input.output_root,MCFT_TIMING_RUN_ID:String(parseInt(executionRun,16)),
   MCFT_TIMING_RUN_ATTEMPT:"1",MCFT_TIMING_WAKE_DELAY_MS:"0",
   MCFT_TIMING_JOB_START_SETUP_MS:"0",MCFT_TIMING_LOCAL_LAUNCH_AT_MS:String(Date.now()),
   MCFT_GOVERNED_RETRY_DELAY_TIMEOUT_MS:String(plan.stages[4].timeout_ms)};

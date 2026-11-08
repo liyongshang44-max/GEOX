@@ -17,20 +17,22 @@ function scopePayload(){const bucket="mcft-cap09-requal-"+s.RUN,arn="arn:aws:s3:
 }
 function scoped(){return s.verifyScope(sign(s.DOMAIN,scopePayload()),trust,id,{now:NOW});}
 function observation(scope,kind,raw,at=NOW-2000){return sign(s.OBS_DOMAIN,{schema_version:"MCFT_CAP09_R4285_SOURCE_OBSERVATION_V3",issuer_id:issuer.issuer_id,key_id:issuer.key_id,...id,scope_id:scope.scope_id,kind,raw_sha256:s.sha(raw),observed_at:iso(at),issued_at:iso(NOW-1000),expires_at:iso(NOW+1000000),production_authorized:false});}
-function permitFixture(){const p=Object.fromEntries(permit.FIELDS.map(k=>[k,H]));Object.assign(p,{schema_version:"MCFT_CAP09_R4285_SIGNED_EXECUTION_PERMIT_V3",issuer_id:issuer.issuer_id,key_id:issuer.key_id,...id,parent_run_id:permit.PARENT,failed_predecessor_run_id:permit.FAILED_PREDECESSOR,attempt_ordinal:4,scope:"ISOLATED_QUALIFICATION_TEST_ONLY",purpose:"ORIGINAL_SIX_STAGE_PHYSICAL_EXECUTION_TEST_ONLY",decision:"APPROVE_R4285_V3_ONE_PHYSICAL_TEST_ONLY_PERMIT",issued_at:iso(NOW-1000),expires_at:iso(NOW+15000000),production_authorized:false});
+function permitFixture(executionRun=s.RUN){const eid=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs").get(executionRun);const p=Object.fromEntries(permit.FIELDS.map(k=>[k,H]));Object.assign(p,{schema_version:"MCFT_CAP09_R4285_SIGNED_EXECUTION_PERMIT_V3",issuer_id:issuer.issuer_id,key_id:issuer.key_id,...id,run_id:executionRun,parent_run_id:eid.parent_run_id,failed_predecessor_run_id:eid.failed_predecessor_run_id,attempt_ordinal:eid.attempt_ordinal,scope:"ISOLATED_QUALIFICATION_TEST_ONLY",purpose:"ORIGINAL_SIX_STAGE_PHYSICAL_EXECUTION_TEST_ONLY",decision:"APPROVE_R4285_V3_ONE_PHYSICAL_TEST_ONLY_PERMIT",issued_at:iso(NOW-1000),expires_at:iso(NOW+15000000),production_authorized:false});
  const ctx={...p,protected_main_sha:SUBJECT,source_clean:true,adoption_expires_at:iso(NOW+20000000),resource_owner_expires_at:iso(NOW+19000000),total_stage_budget_ms:10800000};return {p,ctx};}
 function isolated(filename,mocks,clock=Date,processValue=process){const module={exports:{}},local=Module.createRequire(filename);
  const request=name=>Object.hasOwn(mocks,name)?mocks[name]:local(name);request.resolve=mocks.__resolve||local.resolve;
  vm.runInThisContext("(function(exports,require,module,__filename,__dirname,process,Date){"+fs.readFileSync(filename,"utf8")+"\n})",{filename})(module.exports,request,module,filename,path.dirname(filename),processValue,clock);return module.exports;}
 const testTrust=trust;
-function dynamicFixture({materialDelay=0,accountFailure=false}={}){
+function dynamicFixture({materialDelay=0,accountFailure=false,executionRun=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs").SUCCESSOR}={}){
+ const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs"),eid=identity.get(executionRun),id={run_id:executionRun,host_id:s.HOST,subject_sha:SUBJECT,nonce:NONCE};
  const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-execution-")),events=[];let clock=NOW;
  const trust={...testTrust,ledger_root:root};
+ if(executionRun!==s.RUN)fs.writeFileSync(path.join(root,"r4285-v3-preflight-"+identity.OLD_SCOPE+".json"),JSON.stringify({schema_version:"MCFT_CAP09_R4285_V3_EXECUTION_ATTEMPT_STARTED",scope_id:identity.OLD_SCOPE,nonce:identity.OLD_NONCE,permit_consumed:false,stage_count:0}));
  class Clock extends Date{static now(){return clock;}}
  const win={...process,platform:"win32",env:{}};
  const bindingFile=path.join(root,"binding"),trustFile=path.join(root,"trust"),readbackFile=path.join(root,"readback");
  fs.writeFileSync(bindingFile,"{}");fs.writeFileSync(trustFile,JSON.stringify(trust));
- const nativeBrand=new WeakSet(),adoption={...id,material_digest:H,adoption_digest:H};nativeBrand.add(adoption);
+ const nativeBrand=new WeakSet(),adoption={...id,run_id:s.RUN,material_digest:H,adoption_digest:H};nativeBrand.add(adoption);
  const first_base="2027-01-01T00:00:00.000Z",plan={schema_version:"geox_mcft_cap09_retry_stage_plan_v2",stages:require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs").STAGES.map((id,n)=>({id,timeout_ms:admission.FROZEN_TIMEOUTS[n]}))};
  const observed={real_provider_response_delay_plan:{response_delay_ms:1000,first_base},real_pipeline_delay_plan:{promotion_queue_delay_ms:1000,post_commit_readback_delay_ms:1000,first_base}};
  const ctx={...id,authority_pr_number:3757,first_base,plan,plan_sha256:c.digest(plan),observations_sha256:c.digest(observed),material_digest:H,release_binding_sha256:s.sha("{}"),resource_scope_sha256:H,scope_id:H,source_approval_sha256:H,control_observation_sha256:H,inventory_observation_sha256:H,adoption_expires_at:iso(NOW+20000000),total_stage_budget_ms:10800000};
@@ -38,7 +40,7 @@ function dynamicFixture({materialDelay=0,accountFailure=false}={}){
  schema_version:"MCFT_CAP09_R4285_SOURCE_OBSERVATION_V3",issuer_id:issuer.issuer_id,key_id:issuer.key_id,...id,
  scope_id:H,kind,raw_sha256:H,observed_at:iso(NOW-5000),issued_at:iso(NOW-4000),expires_at:iso(NOW+18000000),production_authorized:false})]));
  ctx.control_observation_sha256=c.digest(sourceObservations.control);ctx.inventory_observation_sha256=c.digest(sourceObservations.inventory);
- const ip={schema_version:"MCFT_CAP09_R4285_PHYSICAL_EXECUTION_INTENT_V3",...id,parent_run_id:permit.PARENT,failed_predecessor_run_id:permit.FAILED_PREDECESSOR,attempt_ordinal:4,authority_pr_number:3757,first_base,plan_sha256:ctx.plan_sha256,observations_sha256:ctx.observations_sha256,material_digest:H,release_binding_sha256:ctx.release_binding_sha256,resource_scope_sha256:H,valid_from:iso(NOW-3000),expires_at:iso(NOW+3600000),scope:"ISOLATED_QUALIFICATION_TEST_ONLY",decision:"AUTHORIZE_V3_ONE_PHYSICAL_TEST_ONLY_EXECUTION_INTENT",production_authorized:false,permit_authorized:true,execute_authorized:true};
+ const ip={schema_version:"MCFT_CAP09_R4285_PHYSICAL_EXECUTION_INTENT_V3",...id,parent_run_id:eid.parent_run_id,failed_predecessor_run_id:eid.failed_predecessor_run_id,attempt_ordinal:eid.attempt_ordinal,authority_pr_number:3757,first_base,plan_sha256:ctx.plan_sha256,observations_sha256:ctx.observations_sha256,material_digest:H,release_binding_sha256:ctx.release_binding_sha256,resource_scope_sha256:H,valid_from:iso(NOW-3000),expires_at:iso(NOW+3600000),scope:"ISOLATED_QUALIFICATION_TEST_ONLY",decision:"AUTHORIZE_V3_ONE_PHYSICAL_TEST_ONLY_EXECUTION_INTENT",production_authorized:false,permit_authorized:true,execute_authorized:true};
  const raw=Buffer.from(c.canonical(ip));ctx.intent_raw_bytes=raw;
  const live=isolated(path.join(__dirname,"MCFT_CAP09_R4285_ADMISSION_EXEC_V3.cjs"),{
   "../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs":{isNativeVerified:x=>nativeBrand.has(x)},
@@ -50,9 +52,9 @@ function dynamicFixture({materialDelay=0,accountFailure=false}={}){
  Object.assign(facts,{...id,scope_id:H,control_observation_sha256:H,inventory_observation_sha256:H,source_approval_sha256:H,observed_at:iso(NOW-5000),database_host:"127.0.0.1",database_port:55492,positive_database:`mcft_cap09_requal_${s.RUN}_positive`,negative_database:`mcft_cap09_requal_${s.RUN}_negative`,audit_user:`cap09_${s.RUN}_p_evidence`,bucket_endpoint:"http://127.0.0.1:59292/",bucket:"mcft-cap09-requal-"+s.RUN,pg_owner_id:"pgdb:101:102:unit_owner",s3_owner_id:"r4285scope:"+H.slice(0,40),production_bindings_present:false});
  facts.control_observation_sha256=ctx.control_observation_sha256;facts.inventory_observation_sha256=ctx.inventory_observation_sha256;facts.source_observations=sourceObservations;
  const rb={...facts,schema_version:"MCFT_CAP09_R4285_RESOURCE_READBACK_V3",status:"PASS",probe_type:"WINDOWS_READ_ONLY_PG_S3_INDEPENDENT_HOST",probe_source_sha256:H,production_authorized:false};fs.writeFileSync(readbackFile,c.canonical(rb));
- const readback=owner.verifyReadbackFile(readbackFile,s.sha(c.canonical(rb))),ownerPayload=Object.fromEntries(owner.FIELDS.map(k=>[k,facts[k]]));
+ const readback=owner.verifyReadbackFile(readbackFile,s.sha(c.canonical(rb)),{run_id:executionRun}),ownerPayload=Object.fromEntries(owner.FIELDS.map(k=>[k,facts[k]]));
  Object.assign(ownerPayload,{schema_version:"MCFT_CAP09_R4285_RESOURCE_OWNER_V3",issuer_id:issuer.issuer_id,key_id:issuer.key_id,scope:"TEST_ONLY",production_authorized:false,issued_at:iso(NOW-1000),expires_at:iso(NOW+19000000),readback_sha256:readback.sha256});
- const ownerEnv=sign(owner.DOMAIN,ownerPayload),{p,ctx:pctx}=permitFixture();
+ const ownerEnv=sign(owner.DOMAIN,ownerPayload),{p,ctx:pctx}=permitFixture(executionRun);
  Object.assign(p,{scope_id:H,source_approval_sha256:H,control_observation_sha256:ctx.control_observation_sha256,inventory_observation_sha256:ctx.inventory_observation_sha256,plan_sha256:ctx.plan_sha256,observations_sha256:ctx.observations_sha256,installed_material_digest:H,release_binding_sha256:ctx.release_binding_sha256,resource_owner_envelope_sha256:s.sha(c.canonical(ownerEnv)),resource_readback_sha256:readback.sha256});
  Object.assign(pctx,p);const permitEnv=sign(permit.DOMAIN,p),permitProof=permit.verifyReadOnly(permitEnv,trust,pctx,{now:clock});
  const finalPayload=Object.fromEntries(live.FINAL_FIELDS.map(k=>[k,ctx[k]]));
@@ -148,7 +150,7 @@ test('genuine V3 admission consumes twin ledger once; copied capabilities and re
 test('partial reservation burns in-process proof and nonce permanently without rollback',async()=>{
  const f=dynamicFixture();try{
   const report=await f.module.verifyDynamicReadOnly(f.input,{now:NOW}),final=f.module.requireVerifiedFinal(report);
-  const stub=Object.create(fs);stub.mkdirSync=(file,options)=>{if(path.basename(file)==='run-'+s.RUN)throw Object.assign(Error('UNIT_DISK_FAILURE'),{code:'EIO'});return fs.mkdirSync(file,options);};
+  const stub=Object.create(fs);stub.mkdirSync=(file,options)=>{if(path.basename(file)==='run-'+f.input.ctx.run_id)throw Object.assign(Error('UNIT_DISK_FAILURE'),{code:'EIO'});return fs.mkdirSync(file,options);};
   const a=isolated(atomicFile,{'node:fs':stub,'./MCFT_CAP09_R4285_ADMISSION_EXEC_V3.cjs':f.live,
    '../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs':{isNativeVerified:x=>f.nativeBrand.has(x)},
    '../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs':{verifyExactMain(){}}});
@@ -170,8 +172,8 @@ test('no scheduling or child contract fork; only six original stages and origina
  assert.match(code,/scheduler\.executeSixStages/);assert.match(code,/historical\.resolveStages/);
  assert.equal((code.match(/atomic\.consumeForQualifiedHost\(/g)||[]).length,1);
 });
-for(const failedStage of [null,'TIMING_2'])test('original scheduler with actual child claims '+(failedStage?'stops at '+failedStage:'seals all six fixture stages'),async()=>{
- const f=dynamicFixture();try{
+for(const executionRun of [require('./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs').SUCCESSOR])for(const failedStage of [null,'TIMING_2'])test('original scheduler with actual child claims '+executionRun+' '+(failedStage?'stops at '+failedStage:'seals all six fixture stages'),async()=>{
+ const f=dynamicFixture({executionRun});try{
   const report=await f.module.verifyDynamicReadOnly(f.input,{now:NOW}),a=atomicFixture(f);
   const consumed=a.consumeForQualifiedHost(a.prepare(atomicArgs(f)),f.module.requireVerifiedFinal(report));
   const stage=isolated(path.join(__dirname,'MCFT_CAP09_R4285_STAGE_CAPABILITY_EXEC_V3.cjs'),{'./MCFT_CAP09_R4285_PERMIT_ATOMIC_EXEC_V3.cjs':a});
@@ -203,10 +205,11 @@ for(const failedStage of [null,'TIMING_2'])test('original scheduler with actual 
  }finally{f.cleanup();}
 });
 
-function executionFactoryFixture({liveDelayMs=5,execution=true}={}){const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-factory-")),events=[],future=["resource_readback_file","resource_envelope_file","permit_envelope_file","final_execution_approval_file"];
- const p=scopePayload(),envScope=s.verifyScope(sign(s.DOMAIN,p),trust,id),i=Object.fromEntries(factory.INPUTS.map(k=>[k,path.join(root,k+".json")]));
+function executionFactoryFixture({liveDelayMs=5,execution=true,executionRun=execution?require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs").SUCCESSOR:s.RUN}={}){const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs"),id={run_id:executionRun,host_id:s.HOST,subject_sha:SUBJECT,nonce:NONCE};const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-factory-")),events=[],future=["resource_readback_file","resource_envelope_file","permit_envelope_file","final_execution_approval_file"];
+ const p={...scopePayload(),run_id:executionRun},envScope=s.verifyScope(sign(s.DOMAIN,p),trust,id),i=Object.fromEntries(factory.INPUTS.map(k=>[k,path.join(root,k+".json")]));
  Object.assign(i,{source_root:path.join(root,"source"),release_root:path.join(root,"release"),nonce:NONCE,first_base:"2027-01-01T00:00:00.000Z",cto_intent_comment_id:1,source_approval_comment_id:2,launch_authorization_comment_id:3});
  fs.mkdirSync(i.source_root);fs.mkdirSync(i.release_root);
+ if(executionRun!==s.RUN)fs.writeFileSync(path.join(root,"r4285-v3-preflight-"+identity.OLD_SCOPE+".json"),JSON.stringify({schema_version:"MCFT_CAP09_R4285_V3_EXECUTION_ATTEMPT_STARTED",scope_id:identity.OLD_SCOPE,nonce:identity.OLD_NONCE,permit_consumed:false,stage_count:0}));
  const ni={source_root:i.source_root,release_root:i.release_root,trust_file:path.join(root,"trust"),material_file:path.join(root,"material"),release_binding_file:path.join(root,"release-binding"),adoption_envelope_file:path.join(root,"adoption")};
  function put(file,obj){fs.writeFileSync(file,c.canonical(obj));}
  put(i.native_adoption_input_file,ni);put(ni.trust_file,{...trust,ledger_root:root});put(ni.material_file,{root:i.release_root,files:[]});put(ni.release_binding_file,{});put(ni.adoption_envelope_file,{payload:{expires_at:iso(NOW+16000000)}});
@@ -251,8 +254,8 @@ test('shared factory selects only the fixed authorized receiver and consumes a s
  }finally{f.cleanup();}
 });
 test('cross-mode Launch cannot open FD3 or turn preflight permission into execution',async()=>{
- for(const execution of [true,false]){const f=executionFactoryFixture({execution});try{
-  await assert.rejects(execution?f.factory.prepare(f.i):f.factory.prepareExecution(f.i),/LIVE_SESSION_NOT_AUTHORIZED/);
+ for(const execution of [true,false]){const f=executionFactoryFixture({execution,executionRun:require('./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs').SUCCESSOR});try{
+  await assert.rejects(execution?f.factory.prepare(f.i):f.factory.prepareExecution(f.i),execution?/SUCCESSOR_EXECUTION_ONLY/:/LIVE_SESSION_NOT_AUTHORIZED/);
   assert(!f.events.includes('FD3'));
  }finally{f.cleanup();}}
 });
@@ -291,7 +294,7 @@ test('actual execution receiver crosses genuine admission and atomic burn before
   for(const [file,value] of [[i.resource_envelope_file,x.resourceEnvelope],[i.permit_envelope_file,x.permitEnvelope],[i.final_execution_approval_file,x.finalEnvelope]])fs.writeFileSync(file,c.canonical(value));
   const resources={...x.resourceEnvelope.payload,positive_role:x.resourceEnvelope.payload.audit_user};
   Object.assign(state,{i,ctx:x.ctx,ni:x.nativeInput,trust:x.trust,adoption:f.adoption,environment:x.environment,profile:x.profile,
-   intent:x.intent,intentRaw:x.ctx.intent_raw_bytes,stable:x.stable,scope:{scope_id:H,payload:{...id,issuer_id:issuer.issuer_id,key_id:issuer.key_id,
+   intent:x.intent,intentRaw:x.ctx.intent_raw_bytes,stable:x.stable,scope:{scope_id:H,payload:{...id,run_id:x.ctx.run_id,issuer_id:issuer.issuer_id,key_id:issuer.key_id,
     expires_at:iso(NOW+20000000),resources}},approval:{sha256:H},owner_not_before:NOW-6000});
   const stepEnv={DATABASE_URL:'UNIT_SECRET_ONLY'},steps=[{env:stepEnv}];
   const receiver=isolated(path.join(__dirname,'MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs'),{
@@ -319,4 +322,88 @@ test('a closed preflight Scope cannot acquire execution credentials or start a n
   const marker=path.join(f.root,'r4285-v3-preflight-'+s.scopeId(payload)+'.json');fs.writeFileSync(marker,'UNIT_CLOSED_PREFLIGHT');
   await assert.rejects(f.factory.prepareExecution(f.i),/SCOPE_ALREADY_ATTEMPTED/);assert(!f.events.includes('FD3'));
  }finally{f.cleanup();}
+});
+
+
+test("independent successor uses real signed Run bindings, reuses resource identity, and consumes new twin slots exactly once",async()=>{
+ const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs"),f=dynamicFixture({executionRun:identity.SUCCESSOR});
+ try{const oldMarker=path.join(f.root,"r4285-v3-preflight-"+identity.OLD_SCOPE+".json"),before=fs.readFileSync(oldMarker);
+ const report=await f.module.verifyDynamicReadOnly(f.input,{now:NOW});assert.equal(report.run_id,identity.SUCCESSOR);
+ const a=atomicFixture(f),prepared=a.prepare(atomicArgs(f)),consumed=a.consumeForQualifiedHost(prepared,f.module.requireVerifiedFinal(report));
+ assert.equal(consumed.run_id,identity.SUCCESSOR);assert.equal(path.basename(consumed.run_directory),"run-"+identity.SUCCESSOR);a.assertConsumed(consumed);
+ const receipt=JSON.parse(fs.readFileSync(path.join(consumed.run_directory,"CONSUMED.json")));assert.equal(receipt.attempt_ordinal,5);assert.equal(receipt.failed_predecessor_run_id,identity.LEGACY);
+ assert(fs.readFileSync(oldMarker).equals(before));assert(!fs.existsSync(path.join(f.root,"run-"+identity.LEGACY)));
+ assert.throws(()=>a.consumeForQualifiedHost(prepared,f.module.requireVerifiedFinal(report)));assert.throws(()=>a.prepare(atomicArgs(f)),/ALREADY_RESERVED/);
+ }finally{f.cleanup();}
+});
+
+test("successor missing or changed predecessor history cannot reserve or burn",async()=>{
+ const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs"),f=dynamicFixture({executionRun:identity.SUCCESSOR});
+ try{const file=path.join(f.root,"r4285-v3-preflight-"+identity.OLD_SCOPE+".json"),original=fs.readFileSync(file),report=await f.module.verifyDynamicReadOnly(f.input,{now:NOW}),a=atomicFixture(f);
+ fs.unlinkSync(file);assert.throws(()=>a.prepare(atomicArgs(f)),/ENOENT/);fs.writeFileSync(file,original);
+ const prepared=a.prepare(atomicArgs(f));fs.writeFileSync(file,"{}");assert.throws(()=>a.consumeForQualifiedHost(prepared,f.module.requireVerifiedFinal(report)),/HISTORY_CHANGED/);
+ assert(!fs.existsSync(path.join(f.root,"run-"+identity.SUCCESSOR)));assert(!fs.existsSync(path.join(f.root,"nonce-"+NONCE)));
+ }finally{f.cleanup();}
+});
+
+test("successor rejects failed nonce, unregistered Run, and legacy Permit substitution",()=>{
+ const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");assert.throws(()=>identity.checkNonce(identity.SUCCESSOR,identity.OLD_NONCE),/NONCE_REUSE/);assert.throws(()=>identity.get("e".repeat(12)),/UNREGISTERED/);
+ const {p,ctx}=permitFixture(identity.SUCCESSOR);assert(permit.isVerified(permit.verifyReadOnly(sign(permit.DOMAIN,p),trust,ctx,{now:NOW})));
+ assert.throws(()=>permit.verifyReadOnly(sign(permit.DOMAIN,{...p,run_id:identity.LEGACY}),trust,ctx,{now:NOW}));
+ assert.throws(()=>permit.verifyReadOnly(sign(permit.DOMAIN,{...p,attempt_ordinal:4}),trust,ctx,{now:NOW}));
+ assert.throws(()=>permit.verifyReadOnly(sign(permit.DOMAIN,p),trust,{...ctx,run_id:identity.LEGACY},{now:NOW}));
+});
+
+
+test("successor resource mapping retains existing PG and bucket without using the execution Run as a resource name",()=>{
+ const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs"),current=require("./MCFT_CAP09_R4285_CURRENT_BASELINE_EXECUTION_V1.cjs");
+ const output=path.join(os.tmpdir(),"UNIT_ONLY_SUCCESSOR_OUTPUT"),base="2027-01-01T00:00:00.000Z",env={DATABASE_URL:`postgres://unit:unit@127.0.0.1:55492/mcft_cap09_requal_${identity.LEGACY}_positive`,BLOCKED_DATABASE_URL:`postgres://unit:unit@127.0.0.1:55492/mcft_cap09_requal_${identity.LEGACY}_negative`,MCFT_CAP09_FORMAL_RAW_ENDPOINT:"http://127.0.0.1:59292/",MCFT_CAP09_FORMAL_RAW_BUCKET:"mcft-cap09-requal-"+identity.LEGACY,MCFT_QUALIFICATION_FIRST_BASE:base,MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR:output};
+ const targets=current.isolatedTargets({isolated_run_id:identity.SUCCESSOR,qualification_first_base:base},env);
+ assert.equal(targets.positive,`mcft_cap09_requal_${identity.LEGACY}_positive`);assert.equal(targets.bucket,"mcft-cap09-requal-"+identity.LEGACY);
+ assert.throws(()=>current.isolatedTargets({isolated_run_id:identity.SUCCESSOR,qualification_first_base:base},{...env,MCFT_CAP09_FORMAL_RAW_BUCKET:"mcft-cap09-requal-"+identity.SUCCESSOR}));
+ const p={...scopePayload(),run_id:identity.SUCCESSOR},ctx={...id,run_id:identity.SUCCESSOR};assert.equal(s.verifyScope(sign(s.DOMAIN,p),trust,ctx,{now:NOW}).payload.run_id,identity.SUCCESSOR);
+ assert.throws(()=>s.verifyScope(sign(s.DOMAIN,p),trust,id,{now:NOW}));assert.throws(()=>s.verifyScope(sign(s.DOMAIN,{...p,resources:{...p.resources,bucket:"mcft-cap09-requal-"+identity.SUCCESSOR}}),trust,ctx,{now:NOW}));
+});
+
+test("successor partial reservation preserves fatal-burn behavior and never removes historical records",async()=>{
+ const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs"),f=dynamicFixture({executionRun:identity.SUCCESSOR});
+ try{const report=await f.module.verifyDynamicReadOnly(f.input,{now:NOW}),a=atomicFixture(f),prepared=a.prepare(atomicArgs(f)),original=fs.mkdirSync;
+ fs.mkdirSync=(dir,...args)=>{if(path.basename(dir)==="run-"+identity.SUCCESSOR)throw Error("UNIT_SUCCESSOR_RUN_RESERVATION_FAILURE");return original(dir,...args);};
+ try{assert.throws(()=>a.consumeForQualifiedHost(prepared,f.module.requireVerifiedFinal(report)),/RESERVATION_FAILURE/);}finally{fs.mkdirSync=original;}
+ assert(fs.existsSync(path.join(f.root,"nonce-"+NONCE)));assert(!fs.existsSync(path.join(f.root,"run-"+identity.SUCCESSOR)));
+ assert.throws(()=>a.consumeForQualifiedHost(prepared,f.module.requireVerifiedFinal(report)),/PREPARED_CAPABILITY_REQUIRED/);assert.throws(()=>a.prepare(atomicArgs(f)),/ALREADY_RESERVED/);
+ assert(fs.existsSync(path.join(f.root,"r4285-v3-preflight-"+identity.OLD_SCOPE+".json")));
+ }finally{f.cleanup();}
+});
+
+test("successor history does not silently bypass any predecessor Run or nonce reservation",()=>{
+ const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs"),f=dynamicFixture({executionRun:identity.SUCCESSOR});
+ try{for(const name of ["run-"+identity.LEGACY,"nonce-"+identity.OLD_NONCE]){const dir=path.join(f.root,name);fs.mkdirSync(dir);assert.throws(()=>identity.checkHistory(f.root,identity.SUCCESSOR),/PREDECESSOR_CONSUMPTION_REQUIRES_REVIEW/);fs.rmdirSync(dir);}}
+ finally{f.cleanup();}
+});
+
+
+test("actual shared factory carries successor Run from signed Scope into receiver and rejects successor preflight mode before FD3",async()=>{
+ const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs"),f=executionFactoryFixture({executionRun:identity.SUCCESSOR});
+ try{const cap=await f.factory.prepareExecution(f.i);await f.factory.consume(cap);assert.equal(f.state.ctx.run_id,identity.SUCCESSOR);assert(f.events.includes("FD3"));}
+ finally{f.cleanup();}
+ const g=executionFactoryFixture({executionRun:identity.SUCCESSOR,execution:false});
+ try{await assert.rejects(g.factory.prepare(g.i),/SUCCESSOR_EXECUTION_ONLY/);assert(!g.events.includes("FD3"));}finally{g.cleanup();}
+});
+
+
+test("valid-looking edits to the predecessor marker after preparation are rejected at burn",async()=>{
+ const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs"),f=dynamicFixture({executionRun:identity.SUCCESSOR});
+ try{const report=await f.module.verifyDynamicReadOnly(f.input,{now:NOW}),a=atomicFixture(f),prepared=a.prepare(atomicArgs(f)),file=path.join(f.root,"r4285-v3-preflight-"+identity.OLD_SCOPE+".json"),p=JSON.parse(fs.readFileSync(file));p.started_at="2000-01-01T00:00:00.000Z";fs.writeFileSync(file,JSON.stringify(p));
+ assert.throws(()=>a.consumeForQualifiedHost(prepared,f.module.requireVerifiedFinal(report)),/MARKER_BYTES_CHANGED/);assert(!fs.existsSync(path.join(f.root,"run-"+identity.SUCCESSOR)));assert(!fs.existsSync(path.join(f.root,"nonce-"+NONCE)));
+ }finally{f.cleanup();}
+});
+
+
+test("physical factory rejects legacy Run before loader, FD3, receiver or ledger writes; legacy read-only Scope still verifies",async()=>{
+ const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs"),f=executionFactoryFixture({executionRun:identity.LEGACY});
+ try{await assert.rejects(f.factory.prepareExecution(f.i),/PHYSICAL_SUCCESSOR_RUN_REQUIRED/);assert(!f.events.includes("FD3"));assert(!f.events.includes("actual loading"));assert(!f.events.includes("live"));assert(!fs.existsSync(path.join(f.root,"run-"+identity.LEGACY)));assert(!fs.existsSync(path.join(f.root,"nonce-"+NONCE)));}
+ finally{f.cleanup();}
+ assert.equal(scoped().payload.run_id,identity.LEGACY);
+ const old=dynamicFixture({executionRun:identity.LEGACY});try{const a=atomicFixture(old);assert.throws(()=>a.prepare(atomicArgs(old)),/PHYSICAL_SUCCESSOR_RUN_REQUIRED/);assert(!fs.existsSync(path.join(old.root,"run-"+identity.LEGACY)));}finally{old.cleanup();}
 });

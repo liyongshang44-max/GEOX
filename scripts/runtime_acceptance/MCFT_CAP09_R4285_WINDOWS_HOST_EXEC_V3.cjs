@@ -17,7 +17,7 @@ const historical=require("./MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs");
 const {freshStageLaunch}=require("./MCFT_CAP09_STAGE_START_CLOCK_V1.cjs");
 let outcome={permit_consumed:false,consumption_attempted:false,stage_count:0,production_authorized:false};
 function rawOwnerGate(file,state){
- factory.requireReceiver(state);const raw=s.bytes(file,1048575),readback=resource.verifyReadbackFile(file,s.sha(raw)),p=readback.facts;
+ factory.requireReceiver(state);const raw=s.bytes(file,1048575),readback=resource.verifyReadbackFile(file,s.sha(raw),{run_id:state.ctx.run_id}),p=readback.facts;
  s.identity(p,state.ctx);s.check(p.scope_id===state.scope.scope_id&&p.source_approval_sha256===state.approval.sha256,"V3_OWNER_SCOPE_OR_SOURCE_DRIFT");
  const at=s.utc(p.observed_at),now=Date.now();s.check(at>=state.owner_not_before&&at<=now&&now-at<=120000,"V3_OWNER_NOT_FRESH_AFTER_WAIT");return readback;
 }
@@ -53,7 +53,7 @@ async function acceptPreparedState(state){factory.requireReceiver(state);s.check
   required_signed_files:factory.FUTURE.slice(1).map(k=>i[k]),permit_consumed:false,execute_authorized:false,stage_count:0}));
  const original=await wait(state);factory.requireReceiver(state);
  const base=Object.fromEntries(require("./MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs").INPUTS.map(k=>[k,i[k]]));
- const built=build.buildAdmissionV3(base,state.environment,{verifiedNativeAdoption:state.adoption});
+ const built=build.buildAdmissionV3(base,state.environment,{verifiedNativeAdoption:state.adoption,executionRun:state.ctx.run_id});
  s.check(built.readback.sha256===original,"V3_OWNER_BYTES_CHANGED_DURING_BINDING");checkResourceScope(state,built);
  s.check(s.utc(built.readback.facts.observed_at)>=state.owner_not_before,"V3_OWNER_PREPARED_EPOCH");
  const ctx={...state.ctx,intent_raw_bytes:state.intentRaw,
@@ -86,7 +86,7 @@ async function finishAtAcceptance(result,state){
  try{
  // Resolve only the frozen original six scripts, from this installed release.
  steps=historical.resolveStages({input:i,profile:state.profile,permitPayload:built.permitEnv.payload,
-  trust:state.trust,plan:built.plan,observed:built.observed,env:state.environment});
+  trust:state.trust,plan:built.plan,observed:built.observed,env:state.environment,executionRun:ctx.run_id});
  const prepared=atomic.prepare({nativeAdoption:state.adoption,permitProof:built.permitProof,
   trust:state.trust,sourceRoot:i.source_root,stable:state.stable,intent:state.intent,ctx,
   resourceEnvelope:built.resEnv,readback:built.readback,plan:built.plan,observed:built.observed,

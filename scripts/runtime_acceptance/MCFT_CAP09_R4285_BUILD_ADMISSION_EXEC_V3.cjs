@@ -1,5 +1,7 @@
 // Independently versioned physical TEST_ONLY successor; preflight authority is rejected.
 "use strict";
+const executionIdentity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
+
 /* V2 exact successor of historical buildAdmission, no V1 Native/Permit call,
  * no signed-material substitution, no signer, no consumption.
  * V1 buildAdmission stays byte-for-byte intact. */
@@ -13,8 +15,9 @@ const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
 const permit=require("./MCFT_CAP09_R4285_PERMIT_EXEC_V3.cjs");
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
-const RUN="4285c3ce342c";
+const RUN=executionIdentity.LEGACY;
 const EXECUTION_SOURCES=Object.freeze([
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_ADMISSION_EXEC_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_BUILD_ADMISSION_EXEC_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_HOST_ADMISSION_EXEC_V3.cjs",
@@ -44,7 +47,7 @@ function fileBytes(p,max=16*1024*1024){
  return fs.readFileSync(p);
 }
 function json(p){return JSON.parse(fileBytes(p).toString("utf8").replace(/^\uFEFF/,""))}
-function buildAdmissionV3(input,env=process.env,{verifiedNativeAdoption}={}){
+function buildAdmissionV3(input,env=process.env,{verifiedNativeAdoption,executionRun=RUN}={}){
  v1.hostOnly(env);
  const nativeInput=json(input.native_adoption_input_file);
  // A genuine in-process Native WeakSet capability may be carried forward from
@@ -59,13 +62,13 @@ function buildAdmissionV3(input,env=process.env,{verifiedNativeAdoption}={}){
  lineage.verifyExactMain(input.source_root,adoption.subject_sha);
  const trust=json(nativeInput.trust_file),resEnv=require("./MCFT_CAP09_R4285_SCOPE_V3.cjs").readJson(input.resource_envelope_file);
  const resourceBytes=fileBytes(input.resource_readback_file);
- const resourceSha=sha(resourceBytes),readback=resource.verifyReadbackFile(input.resource_readback_file,resourceSha);
- const owner=resource.verify(resEnv,trust,{subject_sha:adoption.subject_sha,
+ const resourceSha=sha(resourceBytes),readback=resource.verifyReadbackFile(input.resource_readback_file,resourceSha,{run_id:executionRun});
+ const owner=resource.verify(resEnv,trust,{subject_sha:adoption.subject_sha,run_id:executionRun,
   host_id:lineage.HOST,readback_sha256:resourceSha,now:Date.now()});
  resource.bindSignedToReadback(resEnv.payload,readback);
  resource.assertDynamicFreshness(resEnv.payload,readback);
- assert.equal(owner.run_id,RUN);
- v1.checkResourceEnv(resEnv.payload,env);
+ assert.equal(owner.run_id,executionRun);
+ v1.checkResourceEnv(resEnv.payload,env,executionRun);
  const plan=json(input.plan_file),observed=json(input.observations_file);
  scheduler.validateStagePlan(plan);
  const signedInput=json(nativeInput.signed_evidence_input_file).signed_evidence;
@@ -75,7 +78,7 @@ function buildAdmissionV3(input,env=process.env,{verifiedNativeAdoption}={}){
  const adoptionEnv=json(nativeInput.adoption_envelope_file);
  const histSha=signedInput.fullchain_attestation_sha256;
  const context={
-  ...Object.fromEntries(["scope_id","control_observation_sha256","inventory_observation_sha256","source_approval_sha256"].map(k=>[k,resEnv.payload[k]])),subject_sha:adoption.subject_sha,protected_main_sha:adoption.subject_sha,
+  run_id:executionRun,...Object.fromEntries(["scope_id","control_observation_sha256","inventory_observation_sha256","source_approval_sha256"].map(k=>[k,resEnv.payload[k]])),subject_sha:adoption.subject_sha,protected_main_sha:adoption.subject_sha,
   source_clean:true,host_id:lineage.HOST,nonce:resEnv.payload.nonce,
   inventory_sha256:sha(fileBytes(nativeInput.inventory_file)),
   authority_registry_sha256:sha(fileBytes(nativeInput.authority_registry_file)),
