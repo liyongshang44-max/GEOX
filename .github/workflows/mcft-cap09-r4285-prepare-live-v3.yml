@@ -23,3 +23,7 @@ jobs:
 
       - name: Independent physical execution contracts (fixtures only)
         run: node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_EXECUTION_V3.test.cjs
+
+
+      - name: Exact restricted parent mapping contracts (fixtures only)
+        run: node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RESTRICTED_PARENT_V3.test.cjs
