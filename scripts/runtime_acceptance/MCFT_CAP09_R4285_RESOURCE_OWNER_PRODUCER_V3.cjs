@@ -1,4 +1,6 @@
 "use strict";
+const executionIdentity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
+
 /*
  * R4285 independent, Windows-only Resource Owner physical probe.
  * No provisioning, signer, Permit issuer or six-stage dispatcher. The default
@@ -18,6 +20,7 @@ const attached=new WeakMap();
 function nativeEnvironment(){return sourceContext.getStore()||process.env;}
 function nativeChildEnvironment(){const out={...nativeEnvironment()};for(const k of Object.keys(out))if(/(?:PASSWORD|SECRET|TOKEN|DATABASE_URL|ACCESS_KEY)/i.test(k))delete out[k];return out;}
 const scopeV3=require("./MCFT_CAP09_R4285_SCOPE_V3.cjs");
+function executionRun(){return executionIdentity.get(producerContexts.get(sourceContext.getStore())?.execution_run_id||executionIdentity.LEGACY).run_id;}
 const RUN="4285c3ce342c",HOST="LAPTOP-STN2A2P1";
 const SCHEMA="MCFT_CAP09_R4285_RESOURCE_READBACK_V3";
 const PROBE="WINDOWS_READ_ONLY_PG_S3_INDEPENDENT_HOST";
@@ -321,7 +324,7 @@ function verifyOwnerAuthorityBindingV2(envelope,trust,ctx){
  const p=envelope.payload;
  exact(p,ASSIGNMENT_FIELDS_V2,"OWNER_BINDING_PAYLOAD_EXACT");
  assert.equal(p.schema_version,"MCFT_CAP09_R4285_OWNER_AUTHORITY_BINDING_V2");
- assert.equal(p.run_id,RUN);
+ assert.equal(p.run_id,executionRun());
  assert.equal(p.subject_sha,ctx?.subject_sha,"OWNER_BINDING_SUBJECT");
  assert(H.test(p.subject_sha),"OWNER_BINDING_SUBJECT_FORMAT");
  assert.equal(p.host_id,HOST,"OWNER_BINDING_HOST");
@@ -387,7 +390,7 @@ function verifyOwnerAuthorityBindingV2(envelope,trust,ctx){
  return Object.freeze({
   status:"R4285_SIGNED_RESPONSIBILITY_AND_RAW_DIGESTS_BOUND_NOT_PHYSICAL_OWNER",
   responsibility_record_id:responsibilityRecordId,
-  run_id:RUN,subject_sha:p.subject_sha,policy_sha256:p.policy_sha256,
+  run_id:executionRun(),subject_sha:p.subject_sha,policy_sha256:p.policy_sha256,
   signer_operator_id:trust.operator_id,control_readback_provenance_verified:false,
   owner_exclusive_verified:false,production_bindings_absent_verified:false,
   formal_readback_issued:false,permit_issued:false,execute_authorized:false
@@ -494,7 +497,7 @@ async function diagnostic(i,env=nativeEnvironment(),{s3Only=false}={}){
  const s3=await timed("S3_BUCKET_PRIVATE_VERSIONS_MULTIPART_READONLY",()=>probeS3(i,env));
  const blockers=unresolved(pg,s3);
  return {schema_version:"MCFT_CAP09_R4285_OWNER_PRODUCER_NONAUTH_DIAGNOSTIC_V1",
-  status:"HOLD_NONAUTH_DIAGNOSTIC_NOT_SIGNED_OWNER",run_id:RUN,host_id:HOST,
+  status:"HOLD_NONAUTH_DIAGNOSTIC_NOT_SIGNED_OWNER",run_id:executionRun(),host_id:HOST,
   subject_sha:i.subject_sha,probe_type:PROBE,probe_source_sha256:source_sha,
   observed_at:new Date(start).toISOString(),completed_at:new Date().toISOString(),
   pg,s3,blockers,diagnostic_mode:s3Only?"S3_ONLY":"PG_AND_S3",
@@ -566,7 +569,7 @@ function sourceJson(b,kind){
  assert.equal(x.schema_version,
   kind==="CONTROL"?NATIVE_CONTROL_SCHEMA:NATIVE_INVENTORY_SCHEMA,
   "HOLD_NATIVE_"+kind+"_CAPTURE_SCHEMA");
- assert.equal(x.run_id,RUN,"HOLD_NATIVE_"+kind+"_RUN");
+ assert.equal(x.run_id,executionRun(),"HOLD_NATIVE_"+kind+"_RUN");
  assert.equal(x.host_id,HOST,"HOLD_NATIVE_"+kind+"_HOST");
  assert(H.test(x.subject_sha),"HOLD_NATIVE_"+kind+"_SUBJECT");
  assert(typeof x.observed_at==="string"&&Number.isFinite(Date.parse(x.observed_at))&&
@@ -1089,10 +1092,10 @@ function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
 
 function verifyFormalEvidence(i,inputs,{now=Date.now()}={}){
  const {scope_envelope,trust,control_bytes,inventory_bytes,control_envelope,inventory_envelope,source_approval_raw,source_approval_comment_id,source_policy_bytes,nonce,owner_not_before,launch_input}=inputs||{};
- const scope=scopeV3.verifyScope(scope_envelope,trust,{run_id:RUN,host_id:HOST,subject_sha:i.subject_sha,nonce},{now});
+ const scope=scopeV3.verifyScope(scope_envelope,trust,{run_id:executionRun(),host_id:HOST,subject_sha:i.subject_sha,nonce},{now});
  scopeV3.verifySourcePolicy(source_policy_bytes,scope,{now});
  const approval=scopeV3.liveApproval(source_approval_comment_id,source_approval_raw,scope);
- require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").launch(launch_input,scope);
+ require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").launch(launch_input,scope,producerContexts.get(nativeEnvironment())?.execution===true);
  assert.equal(sha(Buffer.from(nativeEnvironment().MCFT_CAP09_R4285_PARENT_ACCESS_KEY_ID||"")),scope.payload.resources.parent_principal_sha256,"V3_PARENT_IDENTITY_DRIFT");
  assert.equal(sha(Buffer.from(nativeEnvironment().MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID||"")),scope.payload.resources.s3_account_sha256,"V3_ACCOUNT_IDENTITY_DRIFT");
  assert.equal(sha(replacementPolicyBytesV2()),scope.payload.resources.policy_sha256,"V3_ACCOUNT_POLICY_IDENTITY_DRIFT");
@@ -1214,7 +1217,7 @@ function handoffDpapi(op,raw,kind,i){
   ["CONTROL","INVENTORY"].includes(kind)&&Buffer.isBuffer(raw)&&
   raw.length>0&&raw.length<2*1048576,"HOLD_HANDOFF_DPAPI_ARGS");
  const entropy=Buffer.from("GEOX_R4285_NATIVE_HANDOFF_DPAPI_V1\n"+
-  lineage.canonical({kind,run_id:RUN,subject_sha:i.subject_sha,host_id:HOST}));
+  lineage.canonical({kind,run_id:executionRun(),subject_sha:i.subject_sha,host_id:HOST}));
  const lines=[
   "$ErrorActionPreference='Stop'",
   "Add-Type -AssemblyName System.Security",
@@ -1238,7 +1241,7 @@ function checkHandoffManifest(m,i){
  exact(m,["schema_version","run_id","host_id","subject_sha","observed_at",
   "control_sha256","inventory_sha256","control_cipher_sha256","inventory_cipher_sha256",
   "owner_issued","permit_issued","execute_authorized"],"HOLD_HANDOFF_MANIFEST_FIELDS");
- assert(m.schema_version===HANDOFF_SCHEMA&&m.run_id===RUN&&m.host_id===HOST&&
+ assert(m.schema_version===HANDOFF_SCHEMA&&m.run_id===executionRun()&&m.host_id===HOST&&
   m.subject_sha===i.subject_sha&&H.test(m.subject_sha)&&
   typeof m.observed_at==="string"&&Number.isFinite(Date.parse(m.observed_at))&&
   new Date(m.observed_at).toISOString()===m.observed_at,
@@ -1270,7 +1273,7 @@ function storeProtectedHandoff(i,dir,control,inventory,observed_at){
  host();validateInput(i);
  const paths=handoffDir(i,dir,true);
  handoffAcl(dir,true);
- const m={schema_version:HANDOFF_SCHEMA,run_id:RUN,host_id:HOST,
+ const m={schema_version:HANDOFF_SCHEMA,run_id:executionRun(),host_id:HOST,
   subject_sha:i.subject_sha,observed_at,
   control_sha256:sha(control),inventory_sha256:sha(inventory),
   control_cipher_sha256:"0".repeat(64),inventory_cipher_sha256:"0".repeat(64),
@@ -1283,7 +1286,7 @@ function storeProtectedHandoff(i,dir,control,inventory,observed_at){
   const cipher=handoffDpapi("Protect",raw,kind,i);
   const lower=kind.toLowerCase();
   m[lower+"_cipher_sha256"]=sha(cipher);
-  const e={schema_version:CIPHER_SCHEMA,kind,run_id:RUN,host_id:HOST,
+  const e={schema_version:CIPHER_SCHEMA,kind,run_id:executionRun(),host_id:HOST,
    subject_sha:i.subject_sha,observed_at,raw_sha256:sha(raw),raw_length:raw.length,
    cipher_sha256:sha(cipher),cipher_base64:cipher.toString("base64")};
   writeOnceHandoff(paths[kind],Buffer.from(JSON.stringify(e)+"\n"));
@@ -1361,7 +1364,7 @@ async function produceFormalRaw(i,sources,output,env=nativeEnvironment()){
  const bytes=Buffer.from(lineage.canonical(raw)+"\n","utf8");
  const fd=fs.openSync(output,"wx",0o600);
  try{fs.writeFileSync(fd,bytes);}finally{fs.closeSync(fd);}
- return {status:"FORMAL_RAW_ONLY_UNSIGNED_NO_PERMIT",run_id:RUN,
+ return {status:"FORMAL_RAW_ONLY_UNSIGNED_NO_PERMIT",run_id:executionRun(),
   sha256:sha(bytes),observed_at:raw.observed_at,formal_signed:false,
   permit_issued:false,execution_authorized:false,physical_stages:0};
 }
@@ -1388,7 +1391,7 @@ function composeFormalReadback(i,source,pg,s3,{observedAt,completedAt,sourceSha}
   "OWNER_FORMAL_READBACK_STALE");
  assert(X.test(sourceSha),"OWNER_FORMAL_SOURCE_SHA");
  return Object.freeze({
-  schema_version:SCHEMA,status:"PASS",run_id:RUN,host_id:HOST,
+  schema_version:SCHEMA,status:"PASS",run_id:executionRun(),host_id:HOST,
   nonce:source.nonce,scope_id:source.scope_id,source_approval_sha256:source.source_approval_sha256,
   control_observation_sha256:source.control_observation_sha256,inventory_observation_sha256:source.inventory_observation_sha256,
   source_observations:source.source_observations,
@@ -1462,7 +1465,7 @@ function captureCurrentNativeSourceOnly(i,env=nativeEnvironment(),protectedDir=n
   VOLUME_INSPECT:record("docker",["volume","inspect",
    "mcftcap09-r4285c3ce342c-s3data"])
  };
- const base={run_id:RUN,subject_sha:i.subject_sha,host_id:HOST,
+ const base={run_id:executionRun(),subject_sha:i.subject_sha,host_id:HOST,
   observed_at:observedAt};
  const controlBytes=encodeNativeCapsule({
   schema_version:NATIVE_CONTROL_SCHEMA,...base,commands:mc},"CONTROL");
@@ -1571,7 +1574,7 @@ function prepareAttached(state,options){
  for(const file of outputs.slice(1)){const rel=path.relative(config.protected_directory,file);assert(rel===".."||rel.startsWith(".."+path.sep),"V3_PRODUCER_PUBLIC_INSIDE_PROTECTED");}
  const env=Object.assign(Object.create(null),state.environment,{
   MCFT_CAP09_R4285_EXISTING_MC_ALIAS:config.existing_mc_alias,MCFT_CAP09_R4285_PARENT_ACCESS_KEY_ID:config.parent_access_key_id});
- producerContexts.set(env,{adoption:state.adoption,scope_id:state.scope.scope_id,expires:state.expires});
+ producerContexts.set(env,{adoption:state.adoption,scope_id:state.scope.scope_id,expires:state.expires,execution_run_id:state.ctx.run_id,execution:state.execution});
  const cap=Object.freeze(Object.create(null));attached.set(cap,{state,i,config,env,phase:"PREPARED",capture:null});return cap;
 }
 function requireAttached(cap,state,phase){const p=attached.get(cap);assert(p&&p.state===state&&p.phase===phase,"V3_PRODUCER_ATTACHED_CAPABILITY_REQUIRED");
@@ -1622,14 +1625,14 @@ if(require.main===module){
   const ni=JSON.parse(scopeV3.bytes(spec.native_adoption_input_file).toString("utf8").replace(/^\uFEFF/,""));
   const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs"),adoption=native.checkNativeAdoption(ni);
   assert(native.isNativeVerified(adoption)&&adoption.subject_sha===i.subject_sha&&ni.source_root===i.source_root&&ni.release_root===i.release_root,"V3_PRODUCER_NATIVE_REQUIRED");
-  const trust=JSON.parse(scopeV3.bytes(ni.trust_file).toString("utf8")),scope=scopeV3.verifyScope(scopeV3.readJson(spec.scope_envelope_file),trust,{run_id:RUN,host_id:HOST,subject_sha:i.subject_sha,nonce:spec.nonce});
+  const trust=JSON.parse(scopeV3.bytes(ni.trust_file).toString("utf8")),scope=scopeV3.verifyScope(scopeV3.readJson(spec.scope_envelope_file),trust,{run_id:executionRun(),host_id:HOST,subject_sha:i.subject_sha,nonce:spec.nonce});
   const approval=scopeV3.liveApproval(spec.source_approval_comment_id,scopeV3.bytes(spec.source_approval_file),scope);
   scopeV3.verifySourcePolicy(scopeV3.bytes(spec.source_policy_file),scope);
   require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").launch(spec,scope);
   const profile=JSON.parse(scopeV3.bytes(ni.material_file).toString("utf8")),loading=require("./MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs").install(profile,i.release_root);
   let frame,secret;
   try{await loading.preload();frame=await delivery.readFrameFd3();secret=delivery.parse(frame,scope,trust,approval);
-   const env={...process.env,...secret.environment};producerContexts.set(env,{adoption,scope_id:scope.scope_id,expires:Date.parse(secret.expires_at)});
+   const env={...process.env,...secret.environment};producerContexts.set(env,{adoption,scope_id:scope.scope_id,execution_run_id:scope.payload.run_id,expires:Date.parse(secret.expires_at)});
    return await sourceContext.run(env,async()=>{const sources=loadFormalSourceSpec(argv[4],i);
     try{return await produceFormalRaw(i,sources,argv[6],env);}finally{sources.control_bytes.fill(0);sources.inventory_bytes.fill(0);delivery.clear(env);producerContexts.delete(env);}});
   }finally{frame?.fill(0);delivery.clear(secret?.environment);loading.close();}

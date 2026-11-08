@@ -1,5 +1,7 @@
 // Independently versioned physical TEST_ONLY successor; preflight authority is rejected.
 "use strict";
+const executionIdentity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
+
 /* Versioned R4285 Host Admission V3 boundary. Verification only.
  * Does not issue/sign/consume a Permit, mutate PG/S3, or dispatch stages.
  * V1 remains unchanged. Untrusted inspection never mints authorization.
@@ -34,7 +36,7 @@ function exact(x,fields,err){assert(x&&typeof x==="object"&&!Array.isArray(x),er
 function utc(x){assert(typeof x==="string"&&Number.isFinite(Date.parse(x))&&
  new Date(x).toISOString()===x,"V3_INVALID_UTC");return Date.parse(x);}
 function context(ctx){
- assert(ctx&&ctx.run_id===RUN&&ctx.host_id===HOST&&HEAD.test(ctx.subject_sha),"V3_IDENTITY");
+ assert(ctx&&executionIdentity.get(ctx.run_id)&&ctx.host_id===HOST&&HEAD.test(ctx.subject_sha),"V3_IDENTITY");
  for(const k of ["nonce","plan_sha256","observations_sha256","material_digest",
   "release_binding_sha256","resource_scope_sha256"])assert(HEX64.test(ctx[k]),"V3_DIGEST:"+k);
  assert.equal(ctx.authority_pr_number,AUTHORITY_PR,"V3_EXACT_SUCCESSOR_PR");
@@ -45,9 +47,10 @@ function context(ctx){
 function checkIntent(p,ctx,{now=Date.now(),createdAt}={}){
  context(ctx);exact(p,INTENT_FIELDS,"V3_INTENT_SCHEMA");
  assert.equal(p.schema_version,"MCFT_CAP09_R4285_PHYSICAL_EXECUTION_INTENT_V3");
- assert.equal(p.run_id,RUN);assert.equal(p.parent_run_id,permit.PARENT);
- assert.equal(p.failed_predecessor_run_id,permit.FAILED_PREDECESSOR);
- assert.equal(p.attempt_ordinal,4);assert.equal(p.authority_pr_number,ctx.authority_pr_number);
+ const id=executionIdentity.get(ctx.run_id);
+ assert.equal(p.run_id,ctx.run_id);assert.equal(p.parent_run_id,id.parent_run_id);
+ assert.equal(p.failed_predecessor_run_id,id.failed_predecessor_run_id);
+ assert.equal(p.attempt_ordinal,id.attempt_ordinal);assert.equal(p.authority_pr_number,ctx.authority_pr_number);
  for(const k of ["subject_sha","host_id","nonce","plan_sha256","observations_sha256",
   "first_base","material_digest","release_binding_sha256","resource_scope_sha256"])
   assert.equal(p[k],ctx[k],"V3_INTENT_BINDING:"+k);
@@ -95,7 +98,7 @@ function requireLiveIntent(proof,ctx,{now=Date.now()}={}){
 function stableNative({adoption,nativeInput,intent,ctx,now=Date.now()}){
  assert(native.isNativeVerified(adoption),"V3_REAL_NATIVE_ADOPTION_REQUIRED");
  requireLiveIntent(intent,ctx,{now});
- assert.equal(adoption.run_id,RUN);assert.equal(adoption.subject_sha,ctx.subject_sha);
+ assert.equal(adoption.run_id,executionIdentity.get(ctx.run_id).qualification_run_id);assert.equal(adoption.subject_sha,ctx.subject_sha);
  assert.equal(adoption.material_digest,ctx.material_digest,"V3_MATERIAL_DRIFT");
  assert.equal(nativeInput.release_binding_sha256,ctx.release_binding_sha256,"V3_RELEASE_BINDING");
  assert.equal(sha(fs.readFileSync(nativeInput.release_binding_file)),ctx.release_binding_sha256,
@@ -138,7 +141,7 @@ function frozenBudget(plan,observed,ctx){
 function checkActualPermit(proof,permitEnv,ownerEnv,readback,observed,ctx,{now=Date.now()}={}){
  assert(permit.isVerified(proof),"V3_REAL_PERMIT_REQUIRED");
  for(const field of ["scope_id","control_observation_sha256","inventory_observation_sha256","source_approval_sha256"]){assert(HEX64.test(ctx[field]),"V3_BINDING:"+field);assert.equal(permitEnv.payload[field],ctx[field]);assert.equal(ownerEnv.payload[field],ctx[field]);}
- assert.equal(proof.run_id,RUN);assert.equal(proof.subject_sha,ctx.subject_sha);
+ assert.equal(proof.run_id,ctx.run_id);assert.equal(proof.subject_sha,ctx.subject_sha);
  assert.equal(proof.nonce,ctx.nonce);
  assert.equal(proof.envelope_sha256,sha(Buffer.from(canonical(permitEnv))),"V3_PERMIT_ENVELOPE_DRIFT");
  assert.equal(proof.resource_owner_envelope_sha256,sha(Buffer.from(canonical(ownerEnv))),"V3_OWNER_ENVELOPE_DRIFT");
@@ -165,7 +168,7 @@ function inspectFinal(env,trust,ctx,{now=Date.now()}={}){
  exact(env,["payload","signature_base64"],"V3_FINAL_ENVELOPE");
  const p=env.payload;exact(p,FINAL_FIELDS,"V3_FINAL_SCHEMA");
  assert.equal(p.schema_version,"MCFT_CAP09_R4285_PHYSICAL_FINAL_EXECUTION_APPROVAL_V3");
- assert.equal(p.run_id,RUN);assert.equal(p.host_id,HOST);
+ assert.equal(p.run_id,ctx.run_id);assert.equal(p.host_id,HOST);
  for(const k of ["subject_sha","nonce","permit_envelope_sha256","resource_owner_envelope_sha256",
  "resource_readback_sha256","intent_sha256","plan_sha256","observations_sha256",
  "material_digest","release_binding_sha256","scope_id","control_observation_sha256","inventory_observation_sha256","source_approval_sha256"])

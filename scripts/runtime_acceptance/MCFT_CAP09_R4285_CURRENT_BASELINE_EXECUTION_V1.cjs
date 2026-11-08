@@ -104,8 +104,10 @@ function authorize(mode) {
 }
 function isolatedTargets(a, env) {
   assert.match(a.isolated_run_id, /^[a-f0-9]{12}$/);
-  const positive = "mcft_cap09_requal_" + a.isolated_run_id + "_positive";
-  const negative = "mcft_cap09_requal_" + a.isolated_run_id + "_negative";
+  const identity = require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
+  const resourceRun = a.isolated_run_id === identity.SUCCESSOR ? identity.get(a.isolated_run_id).resource_run_id : a.isolated_run_id;
+  const positive = "mcft_cap09_requal_" + resourceRun + "_positive";
+  const negative = "mcft_cap09_requal_" + resourceRun + "_negative";
   function localDb(value, name) {
     const u = new URL(value);
     assert(["postgres:", "postgresql:"].includes(u.protocol));
@@ -118,7 +120,7 @@ function isolatedTargets(a, env) {
   assert(["127.0.0.1", "localhost", "[::1]"].includes(s.hostname), "CURRENT_QUALIFICATION_LOCAL_STORAGE_REQUIRED");
   assert(["http:", "https:"].includes(s.protocol));
   assert(!s.username && !s.password && !s.search && !s.hash, "CURRENT_QUALIFICATION_STORAGE_ENDPOINT_INVALID");
-  const bucket = "mcft-cap09-requal-" + a.isolated_run_id;
+  const bucket = "mcft-cap09-requal-" + resourceRun;
   assert.equal(env.MCFT_CAP09_FORMAL_RAW_BUCKET, bucket, "CURRENT_QUALIFICATION_DISTINCT_BUCKET_REQUIRED");
   assert.equal(env.MCFT_QUALIFICATION_FIRST_BASE, a.qualification_first_base);
   const out = path.resolve(String(env.MCFT_CURRENT_QUALIFICATION_OUTPUT_DIR || ""));

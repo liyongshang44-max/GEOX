@@ -42,12 +42,12 @@ async function verifyDynamicReadOnly(s,{now=Date.now()}={}){
   "V3_RELEASE_BYTES_CHANGED");
  lineage.verifyExactMain(s.sourceRoot,s.ctx.subject_sha);
  v1.verifyBoundHostSources({release_root:s.releaseRoot},s.profile,s.releaseBinding);
- const readbackFile=owner.verifyReadbackFile(s.resourceReadbackFile,s.permitEnvelope.payload.resource_readback_sha256);
+ const readbackFile=owner.verifyReadbackFile(s.resourceReadbackFile,s.permitEnvelope.payload.resource_readback_sha256,{run_id:s.ctx.run_id});
  assert.equal(readbackFile.sha256,s.readback.sha256,"V3_READBACK_FILE_SUBSTITUTION");
- owner.verify(s.resourceEnvelope,s.trust,{subject_sha:s.ctx.subject_sha,
+ owner.verify(s.resourceEnvelope,s.trust,{subject_sha:s.ctx.subject_sha,run_id:s.ctx.run_id,
   host_id:s.ctx.host_id,readback_sha256:s.readback.sha256,now:Date.now()});
  owner.bindSignedToReadback(s.resourceEnvelope.payload,s.readback);
- v1.checkResourceEnv(s.resourceEnvelope.payload,s.environment);
+ v1.checkResourceEnv(s.resourceEnvelope.payload,s.environment,s.ctx.run_id);
  v2.checkActualPermit(s.permitProof,s.permitEnvelope,s.resourceEnvelope,
   s.readback,s.observations,{...s.ctx,plan:s.plan},{now:Date.now()});
  await pg.probePreconsumePostgres({
@@ -78,7 +78,7 @@ async function verifyDynamicReadOnly(s,{now=Date.now()}={}){
   resource_readback_sha256:s.readback.sha256,intent_sha256:s.intent.sha256},{now:usedAt});
  owner.assertDynamicFreshness(s.resourceEnvelope.payload,s.readback,{now:usedAt});
  const report=Object.freeze({status:"R4285_V3_FINAL_READONLY_BINDING_VERIFIED_NOT_PREFLIGHT_OR_EXECUTION",
-  run_id:v2.RUN,subject_sha:s.ctx.subject_sha,s3:storage.status,
+  run_id:s.ctx.run_id,subject_sha:s.ctx.subject_sha,s3:storage.status,
   owner_age_ms:usedAt-Date.parse(s.readback.facts.observed_at),
   permit_consumed:false,execute_authorized:false,production_authorized:false,stage_count:0});
  verifiedFinal.set(report,final);

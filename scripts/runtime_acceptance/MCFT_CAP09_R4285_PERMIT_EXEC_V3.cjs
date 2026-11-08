@@ -1,5 +1,7 @@
 // Independently versioned physical TEST_ONLY successor; preflight authority is rejected.
 "use strict";
+const executionIdentity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
+
 /*
  * R4285 independent TEST_ONLY Permit signature consumer.
  * Cryptography is a necessary condition, never an execution authorization.
@@ -40,10 +42,11 @@ function verifyReadOnly(envelope,trust,ctx,{now=Date.now()}={}){
  const p=envelope.payload;
  exact(p,FIELDS,"R4285_PERMIT_PAYLOAD_FIELDS");
  assert.equal(p.schema_version,"MCFT_CAP09_R4285_SIGNED_EXECUTION_PERMIT_V3");
- assert.equal(p.run_id,RUN,"R4285_PERMIT_RUN_MISMATCH");
- assert.equal(p.parent_run_id,PARENT,"R4285_PERMIT_PARENT_MISMATCH");
- assert.equal(p.failed_predecessor_run_id,FAILED_PREDECESSOR,"R4285_PERMIT_FAILED_PREDECESSOR_MISMATCH");
- assert.equal(p.attempt_ordinal,4,"R4285_PERMIT_ATTEMPT_ORDINAL");
+ const id=executionIdentity.get(p.run_id);executionIdentity.checkNonce(p.run_id,p.nonce);
+ assert.equal(p.run_id,ctx.run_id??RUN,"R4285_PERMIT_RUN_MISMATCH");
+ assert.equal(p.parent_run_id,id.parent_run_id,"R4285_PERMIT_PARENT_MISMATCH");
+ assert.equal(p.failed_predecessor_run_id,id.failed_predecessor_run_id,"R4285_PERMIT_FAILED_PREDECESSOR_MISMATCH");
+ assert.equal(p.attempt_ordinal,id.attempt_ordinal,"R4285_PERMIT_ATTEMPT_ORDINAL");
  assert.equal(p.host_id,HOST,"R4285_PERMIT_HOST_MISMATCH");
  assert.equal(p.scope,"ISOLATED_QUALIFICATION_TEST_ONLY","R4285_PERMIT_SCOPE");
  assert.equal(p.purpose,"ORIGINAL_SIX_STAGE_PHYSICAL_EXECUTION_TEST_ONLY","R4285_PERMIT_PURPOSE");
@@ -96,7 +99,7 @@ function verifyReadOnly(envelope,trust,ctx,{now=Date.now()}={}){
  assert(crypto.verify(null,Buffer.from(DOMAIN+lineage.canonical(p)),pub,sig),
   "R4285_PERMIT_SIGNATURE_INVALID");
  const proof=Object.freeze({status:"R4285_TEST_ONLY_PERMIT_VERIFIED_NOT_CONSUMED_NOT_EXECUTED",
-  run_id:RUN,subject_sha:p.subject_sha,nonce:p.nonce,expires_at:p.expires_at,
+  run_id:p.run_id,subject_sha:p.subject_sha,nonce:p.nonce,expires_at:p.expires_at,
   envelope_sha256:sha(Buffer.from(lineage.canonical(envelope))),
   adoption_envelope_sha256:p.adoption_envelope_sha256,
   lineage_envelope_sha256:p.lineage_envelope_sha256,

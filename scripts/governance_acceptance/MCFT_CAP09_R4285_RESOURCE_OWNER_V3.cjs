@@ -1,4 +1,5 @@
 "use strict";
+const executionIdentity=require("../runtime_acceptance/MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
 /**
  * R4285 isolated Windows PG/S3 owner evidence, verification only.
  * This is a signed attestation OF actual host probe facts, not a provisioner.
@@ -25,7 +26,7 @@ function validateFacts(p,ctx){
  exact(p,FIELDS);
  for(const field of ["scope_id","control_observation_sha256","inventory_observation_sha256","source_approval_sha256","nonce"])assert(HASH.test(p[field]),"V3_OWNER_BINDING:"+field);
  assert.equal(p.schema_version,"MCFT_CAP09_R4285_RESOURCE_OWNER_V3");
- assert.equal(p.run_id,a3.RUN);assert(HEAD.test(p.subject_sha)&&p.subject_sha===ctx.subject_sha,"R4285_RESOURCE_SUBJECT_CHANGED");
+ assert.equal(p.run_id,executionIdentity.get(ctx.run_id??a3.RUN).run_id);assert(HEAD.test(p.subject_sha)&&p.subject_sha===ctx.subject_sha,"R4285_RESOURCE_SUBJECT_CHANGED");
  assert.equal(p.host_id,ctx.host_id);assert.equal(p.scope,"TEST_ONLY");assert.equal(p.production_authorized,false);
  assert(HASH.test(p.readback_sha256)&&p.readback_sha256===ctx.readback_sha256,"R4285_RESOURCE_READBACK_UNBOUND");
  assert.equal(p.database_host,"127.0.0.1","R4285_RESOURCE_PG_LOOPBACK_REQUIRED");
@@ -60,7 +61,7 @@ function verify(envelope,trust,ctx){
  assert.equal(signature.length,64);assert.equal(signature.toString("base64"),envelope.signature_base64);
  assert(crypto.verify(null,Buffer.from(DOMAIN+a3.canonical(p)),key,signature),"R4285_RESOURCE_SIGNATURE_INVALID");
  return Object.freeze({status:"HOST_RESOURCE_OWNER_SIGNED_ATTESTATION_VERIFIED_NOT_INDEPENDENT_PHYSICAL_READBACK",
-  run_id:a3.RUN,subject_sha:p.subject_sha,resources_sha256:sha(a3.canonical(p)),
+  run_id:p.run_id,subject_sha:p.subject_sha,resources_sha256:sha(a3.canonical(p)),
   database_host:p.database_host,database_port:p.database_port,positive_database:p.positive_database,
   negative_database:p.negative_database,bucket_endpoint:p.bucket_endpoint,bucket:p.bucket,
   adopted:false,permit_authorized:false,production_authorized:false});
@@ -70,7 +71,7 @@ function verify(envelope,trust,ctx){
  * It must be outside the release and signed separately by operator key.
  * Not a live probe; only the readback producer on Windows can establish facts.
  */
-function verifyReadbackFile(file,expectedSha){
+function verifyReadbackFile(file,expectedSha,{run_id=a3.RUN}={}){
  assert(path.isAbsolute(file)&&HASH.test(expectedSha),"R4285_RESOURCE_READBACK_FILE_REQUIRED");
  let f=path.resolve(file);
  for(;;){const stat=fs.lstatSync(f);assert(!stat.isSymbolicLink(),"R4285_RESOURCE_READBACK_SYMLINK");if(f===path.resolve(file))assert(stat.isFile()&&stat.size>0&&stat.size<1048576,"R4285_RESOURCE_READBACK_REGULAR_FILE");const par=path.dirname(f);if(par===f)break;f=par;}
@@ -79,7 +80,7 @@ function verifyReadbackFile(file,expectedSha){
  const canonicalBytes=Buffer.from(a3.canonical(r));
  assert(bytes.equals(canonicalBytes)||bytes.equals(Buffer.concat([canonicalBytes,Buffer.from("\n")])),"V3_READBACK_JSON_NOT_CANONICAL");
  assert.equal(r.schema_version,"MCFT_CAP09_R4285_RESOURCE_READBACK_V3","R4285_RESOURCE_READBACK_SCHEMA");
- assert.equal(r.run_id,a3.RUN,"R4285_RESOURCE_READBACK_RUN_CHANGED");
+ assert.equal(r.run_id,executionIdentity.get(run_id).run_id,"R4285_RESOURCE_READBACK_RUN_CHANGED");
  assert.equal(r.status,"PASS","R4285_RESOURCE_READBACK_NOT_PASS");
  assert.equal(r.probe_type,"WINDOWS_READ_ONLY_PG_S3_INDEPENDENT_HOST","R4285_RESOURCE_READBACK_PROBE_TYPE");
  assert(HASH.test(r.probe_source_sha256),"R4285_RESOURCE_READBACK_SOURCE_DIGEST_REQUIRED");

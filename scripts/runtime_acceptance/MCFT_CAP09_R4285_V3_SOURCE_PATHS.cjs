@@ -28,6 +28,7 @@ module.exports=Object.freeze({base:"0aaec504eeda2c3230703d4bbb44e5bafe1668f3",ch
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs"
 ]),runtimePaths:Object.freeze([
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs",
   "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_ADOPTION_V5_V3.cjs",
   "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs",
   "scripts/governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V3.cjs",

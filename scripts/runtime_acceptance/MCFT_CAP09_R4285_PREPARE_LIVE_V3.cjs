@@ -1,4 +1,6 @@
 "use strict";
+const executionIdentity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
+
 // The only factory for a V3 preparation capability. No callback, user supplied
 // verifier, JSON certificate or alternate authority=PASS path is accepted.
 const fs=require("node:fs"),path=require("node:path");
@@ -61,8 +63,13 @@ async function prepareInternal(i,execution){
  // Native verifies registered repository trust, source QCP73, exact merge,
  // signed adoption, full installed Material/Release and actual tool bytes.
  const adoption=native.checkNativeAdoption(ni);s.check(native.isNativeVerified(adoption),"V3_NATIVE_FACTORY_REQUIRED");
- const ctxIdentity={run_id:s.RUN,host_id:s.HOST,subject_sha:adoption.subject_sha,nonce:i.nonce};
- const scope=s.verifyScope(s.readJson(i.scope_envelope_file),trust,ctxIdentity);
+ const scopeEnvelope=s.readJson(i.scope_envelope_file);
+ const executionRun=executionIdentity.get(scopeEnvelope.payload.run_id).run_id;
+ s.check(execution||executionRun===s.RUN,"V3_SUCCESSOR_EXECUTION_ONLY");
+ if(execution)s.check(executionRun===executionIdentity.SUCCESSOR,"V3_PHYSICAL_SUCCESSOR_RUN_REQUIRED");
+ const ctxIdentity={run_id:executionRun,host_id:s.HOST,subject_sha:adoption.subject_sha,nonce:i.nonce};
+ const scope=s.verifyScope(scopeEnvelope,trust,ctxIdentity);
+ if(execution)executionIdentity.checkHistory(trust.ledger_root,executionRun);
  if(execution)s.check(!fs.existsSync(path.join(trust.ledger_root,"r4285-v3-preflight-"+scope.scope_id+".json")),"V3_SESSION_SCOPE_ALREADY_ATTEMPTED");
  s.verifySourcePolicy(s.bytes(i.source_policy_file),scope);
  const approvalRaw=s.bytes(i.source_approval_file,8192),approval=s.liveApproval(i.source_approval_comment_id,approvalRaw,scope);

@@ -106,7 +106,7 @@ test("actual Node CJS and ESM loading uses pinned native module objects; reachab
  for(const drift of [false,true,"empty-drift","empty-hardlink","unqualified-ts"]){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-pinned-")),profileFile=root+"-profile.json";
   try{
-   for(const rel of ["scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs","scripts/cap09_adoption_v1/contract.cjs"]){const out=path.join(root,rel);fs.mkdirSync(path.dirname(out),{recursive:true});fs.copyFileSync(path.join(ROOT,rel),out);}
+   for(const rel of ["scripts/runtime_acceptance/MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs","scripts/cap09_adoption_v1/contract.cjs"]){const out=path.join(root,rel);fs.mkdirSync(path.dirname(out),{recursive:true});fs.copyFileSync(path.join(ROOT,rel),out);}
    fs.writeFileSync(path.join(root,"scripts/runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs"),"module.exports={runtimePaths:[]};");
    for(const [name,main,body] of [["pg","index.js","module.exports={Pool:class Pool{},tag:'original'};"],["@aws-sdk/client-s3","index.js","module.exports={S3Client:class S3Client{}};"],["tsx","loader.mjs","export const loader='original';"]]){
     const dir=path.join(root,"node_modules",name);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,"package.json"),JSON.stringify({name,main}));fs.writeFileSync(path.join(dir,main),body);
@@ -329,7 +329,7 @@ test("bounded V3 successor qualification preserves the 73-check manifest and exa
 test("native tool successor binds exact base/tree/branch/head/path and preserves all historical qualification",()=>{
  const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs");
  const before=JSON.parse(cp.execFileSync("git",["show",q.NATIVE_TOOL_BASE+":"+native.QCP_PATH],{cwd:ROOT,encoding:"utf8"}));
- const authority=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH),"utf8")),head="d".repeat(40);
+ const authority=JSON.parse(cp.execFileSync("git",["show","8be2552270049419974d415b1462333d698e4367:"+native.QCP_PATH],{cwd:ROOT,encoding:"utf8"})),head="d".repeat(40);
  const input={args:{base:q.NATIVE_TOOL_BASE,head},baseTree:q.NATIVE_TOOL_TREE,before,authority,
   plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]},paths:[...q.NATIVE_TOOL_PATHS],changed:[...q.NATIVE_TOOL_PATHS],stage:"SUCCESSOR_SUBJECT_PRE_MERGE",
   event:{repository:{full_name:"liyongshang44-max/GEOX"},pull_request:{number:3766,user:{login:"liyongshang44-max"},base:{sha:q.NATIVE_TOOL_BASE,ref:"main"},head:{sha:head,ref:q.NATIVE_TOOL_BRANCH,repo:{full_name:"liyongshang44-max/GEOX"}}}}};
@@ -342,7 +342,7 @@ test("native tool successor binds exact base/tree/branch/head/path and preserves
   x=>x.plan.unknown_changed_paths.push("unregistered.cjs"),x=>x.authority.checks.push({check_id:"EXTRA"})]){
    const bad=structuredClone(input);mutate(bad);assert.throws(()=>q.inspectSuccessor(bad));
  }
- const actual=cp.execFileSync("git",["diff","--name-only",q.NATIVE_TOOL_BASE],{cwd:ROOT,encoding:"utf8"}).trim().split(/\r?\n/).filter(Boolean).sort();
+ const actual=cp.execFileSync("git",["diff","--name-only",q.NATIVE_TOOL_BASE,"8be2552270049419974d415b1462333d698e4367"],{cwd:ROOT,encoding:"utf8"}).trim().split(/\r?\n/).filter(Boolean).sort();
  // CI has a committed exact HEAD; local implementation includes the same tracked worktree diff.
  assert.deepEqual(actual,[...q.NATIVE_TOOL_PATHS]);
  for(const name of ["mcft-cap-09-qualification-control-plane-v1.yml","mcft-cap-09-frozen-v13-isolated-requalification-v1.yml","mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"]){
@@ -372,7 +372,7 @@ test("historical review from a separate source checkout stays inside the pinned 
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-review-release-")),release=path.join(tmp,"release"),source=path.join(tmp,"source");
   try{
    const put=(root,rel,raw)=>{const f=path.join(root,...rel.split("/"));fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,raw);return f;};
-   for(const rel of ["scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs","scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs","scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs","scripts/cap09_adoption_v1/contract.cjs"])
+   for(const rel of ["scripts/runtime_acceptance/MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs","scripts/governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs","scripts/governance_acceptance/MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs","scripts/runtime_acceptance/MCFT_CAP09_RETRY_PERMIT_V1.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs","scripts/cap09_adoption_v1/contract.cjs"])
     put(release,rel,fs.readFileSync(path.join(ROOT,rel)));
    const sourceHashes={};for(const rel of physicalGate.SOURCE_PATHS){const raw=fs.readFileSync(path.join(ROOT,rel));put(source,rel,raw);sourceHashes[rel]=s.sha(raw);}
    const receipt={schema_version:"geox_mcft_cap09_isolated_non_authorized_full_chain_contract_v1",status:"PASS",subject_sha:"5d69b8a3f254600726bc10f0404f1330de1e4562",test_run_id:"802dca8d4f9c",authorization:"NON_AUTHORIZED_ISOLATED_ENGINEERING_TEST_ONLY",isolated_s3_bucket:"mcft-cap09-requal-802dca8d4f9c",pg_database:"mcft_cap09_requal_802dca8d4f9c_positive",source_files_sha256:sourceHashes,
@@ -451,3 +451,13 @@ test("missing, wrong digest, links, path drift and file identity drift prohibit 
 test("native failure classes are exact and hostile error attributes cannot enter public reports",()=>{const h=harness({});for(const [error,status,label]of [[{code:'ENOENT'},null,'EXECUTABLE_NOT_FOUND'],[{code:'ETIMEDOUT'},null,'COMMAND_TIMEOUT'],[{code:'ENOBUFS'},null,'OUTPUT_LIMIT_EXCEEDED'],[undefined,7,'NONZERO_EXIT'],[{native_tool_failure:'PRIVATE_SECRET'},null,'NATIVE_SYSTEM_ERROR']])assert.equal(h.classify({error,status}),label);});
 
 }
+
+test("independent execution identity successor binds exact base/tree/branch/head and complete 23-path diff without replacing history",()=>{
+ const q=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs"),head="d".repeat(40);
+ const before=JSON.parse(cp.execFileSync("git",["show",q.IDENTITY_BASE+":"+native.QCP_PATH],{cwd:ROOT,encoding:"utf8"})),authority=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH),"utf8"));
+ const input={args:{base:q.IDENTITY_BASE,head},baseTree:q.IDENTITY_TREE,before,authority,plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]},paths:[...q.IDENTITY_PATHS],changed:[...q.IDENTITY_PATHS],stage:"SUCCESSOR_SUBJECT_PRE_MERGE",event:{repository:{full_name:"liyongshang44-max/GEOX"},pull_request:{number:9999,user:{login:"liyongshang44-max"},base:{sha:q.IDENTITY_BASE,ref:"main"},head:{sha:head,ref:q.IDENTITY_BRANCH,repo:{full_name:"liyongshang44-max/GEOX"}}}}};
+ assert(q.inspectSuccessor(input));assert.equal(authority.checks.length,73);assert.deepEqual(authority.checks.slice(0,72),before.checks.slice(0,72));
+ for(const mutate of [x=>x.args.base=q.NATIVE_TOOL_BASE,x=>x.baseTree="f".repeat(40),x=>x.event.pull_request.head.sha="f".repeat(40),x=>x.event.pull_request.head.ref="forged",x=>x.event.pull_request.head.repo.full_name="other/GEOX",x=>x.paths.push("outside.cjs"),x=>x.paths.pop(),x=>x.changed.pop(),x=>x.authority.checks[0].owner="HISTORY_REPLACED",x=>x.authority.dependency_resolvers[q.NATIVE_TOOL_RESOLVER].paths.pop(),x=>x.authority.dependency_resolvers[q.IDENTITY_RESOLVER].paths.push("unknown.cjs"),x=>x.plan.unknown_changed_paths.push("unknown.cjs"),x=>x.authority.checks[72].resolver_ids.pop()]){const bad=structuredClone(input);mutate(bad);assert.throws(()=>q.inspectSuccessor(bad));}
+ const actual=cp.execFileSync("git",["diff","--name-only",q.IDENTITY_BASE],{cwd:ROOT,encoding:"utf8"}).trim().split(/\r?\n/).filter(Boolean).sort();assert.deepEqual(actual,[...q.IDENTITY_PATHS]);
+ for(const name of ["mcft-cap-09-qualification-control-plane-v1.yml","mcft-cap-09-frozen-v13-isolated-requalification-v1.yml","mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"]){const text=fs.readFileSync(path.join(ROOT,".github/workflows",name),"utf8");assert(text.includes(q.IDENTITY_BASE)&&text.includes(q.IDENTITY_BRANCH));}
+});
