@@ -19,6 +19,8 @@ const AMENDMENT_BLOB="b79e52620865a36d83cdbb0d95e6cccf1fed1ad3";
 const FORMAL_V5_MANIFEST="scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts";
 const R6_MANIFEST_PREDECESSOR_BLOB="6a017cdfb9f2f896484d805a93f8df7c708068fc";
 const R6_MANIFEST_SUCCESSOR_BLOB="f9203efee8f8fb238cbf8f01cc39c53ed628f0f8";
+// Exact adopted R6 successor, not a moving main or a PR merge-base.
+const R6_MANIFEST_ADOPTED_SUBJECT="dd7529ffd08bead343e312c73b72d7039a7c12e7";
 const R6_ACCEPTANCE="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_R6_ADMISSION_V1.cjs";
 const R6_WORKFLOW=".github/workflows/mcft-cap-09-formal-v5-r6-admission.yml";
 const H6="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json";
@@ -95,6 +97,72 @@ function read(rel){return fs.readFileSync(path.join(ROOT,rel),"utf8");}
 function marker(text,value,code){assert.ok(text.includes(value),code+":"+value);}
 function notMarker(text,value,code){assert.equal(text.includes(value),false,code+":"+value);}
 
+// Distinct historical audit for a current-main candidate. The original
+// history code executes unchanged at its exact ADOPTED subject in an isolated
+// clone, NOT against a PR head, and the caller's refs are never rewritten.
+function replayInheritedCandidateGate(mode){
+  const allow={
+    "--replay-inherited-r6":["scripts/governance_acceptance/VERIFY_MCFT_CAP_09_20261010_CROP_ADOPTION_SUCCESSOR_V1.cjs","--historic-r6"],
+    "--replay-inherited-qcp":["scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"],
+  };
+  assert.ok(Object.hasOwn(allow,mode),"AM21_UNKNOWN_INHERITED_GATE");
+  const main="5945e459edb212da39b9fe107f87cc07782dd93c";
+  const historic="0d62e7fa4f0905151b38c25964b48d672187e6d3";
+  const current=git("rev-parse","HEAD"),originMain=git("rev-parse","origin/main");
+  assert.equal(originMain,main,"AM21_CURRENT_MAIN_MOVED_REQUALIFICATION_REQUIRED");
+  assert.notEqual(current,main,"AM21_CANDIDATE_SUBJECT_REQUIRED");
+  assert.equal(git("merge-base",main,current),main,"AM21_CANDIDATE_EXACT_MAIN_ANCESTRY_REQUIRED");
+  assert.equal(git("merge-base",historic,main),historic,"AM21_ADOPTED_HISTORY_NOT_ANCESTOR");
+  assert.equal(git("rev-parse",current+":"+FORMAL_V5_MANIFEST),R6_MANIFEST_SUCCESSOR_BLOB,
+    "AM21_CANDIDATE_ADOPTED_R6_MANIFEST_MUST_BE_UNCHANGED");
+  assert.equal(git("rev-parse",main+":"+QCP),git("rev-parse",current+":"+QCP),
+    "AM21_HISTORICAL_QCP_REWRITE_FORBIDDEN");
+  assert.equal(git("rev-parse",main+":"+R6_ACCEPTANCE),git("rev-parse",current+":"+R6_ACCEPTANCE),
+    "AM21_HISTORICAL_R6_ACCEPTANCE_REWRITE_FORBIDDEN");
+  const allowed=[
+    ".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml",
+    ".github/workflows/mcft-cap-09-formal-v5-r6-admission.yml",
+    SELF,
+  ].sort();
+  assert.deepEqual(git("diff","--name-only",main,current).split(/\r?\n/).filter(Boolean).sort(),
+    allowed,"AM21_NEW_SUCCESSOR_EXACT_SCOPE_REQUIRED");
+  const tmp=fs.mkdtempSync(path.join(require("node:os").tmpdir(),"mcft-am21-inherited-"));
+  const checkout=path.join(tmp,"historic");const runGit=(...args)=>cp.execFileSync("git",args,{cwd:checkout,encoding:"utf8",timeout:120000}).trim();
+  try{
+    cp.execFileSync("git",["clone","--shared","--no-checkout",ROOT,checkout],{stdio:"pipe",timeout:120000});
+    runGit("checkout","--detach",historic);
+    runGit("update-ref","refs/remotes/origin/main",historic);
+    assert.equal(runGit("rev-parse","origin/main"),historic,"AM21_CLONE_MAIN_NOT_HISTORIC");
+    const env={...process.env,MCFT_CAP09_ALL_BLOCKERS_CHILD:"1"};
+    for(const k of ["MCFT_BASE_SHA","AM21_SUCCESSOR_BASE_SHA","MCFT_CAP09_PR_STAGE","MCFT_CAP09_ADMITTED_PR_BASE_SHA",
+      "MCFT_CAP09_SUCCESSOR_CHAIN_BASE_ADMITTED","GITHUB_EVENT_PATH","MCFT_SUBJECT_SHA","SUBJECT_SHA"])delete env[k];
+    const command=allow[mode];
+    const out=cp.spawnSync(process.execPath,[path.join(checkout,command[0]),...command.slice(1)],{
+      cwd:checkout,env,encoding:"utf8",timeout:360000,maxBuffer:16*1024*1024,
+    });
+    assert.equal(out.error,undefined,"AM21_HISTORICAL_SUBPROCESS_ERROR:"+String(out.error));
+    assert.equal(out.signal,null,"AM21_HISTORICAL_GATE_SIGNAL");
+    assert.equal(out.status,0,"AM21_HISTORICAL_GATE_FAILED:"+mode+":"+String(out.stderr||"").slice(-1800));
+    const proof={schema_version:"geox_mcft_cap09_am21_inherited_candidate_gate_v1",status:"PASS",
+      gate:mode,accepted_historical_subject_sha:historic,exact_candidate_base_sha:main,
+      candidate_subject_sha:current,changed_path_count:allowed.length,
+      historical_subprocess_exit_code:out.status,
+      original_history_assertions_executed:true,governance_adopted:false,
+      formal_arm:false,provider_execution:false,qualification_claim:false};
+    fs.mkdirSync(path.join(ROOT,"acceptance-output"),{recursive:true});
+    fs.writeFileSync(path.join(ROOT,"acceptance-output/MCFT_CAP_09_AM21_INHERITED_"+mode.slice(19).toUpperCase().replaceAll("-","_")+"_V1.json"),
+      JSON.stringify(proof,null,2)+"\n",{flag:"wx"});
+    console.log(JSON.stringify(proof));
+  }finally{
+    fs.rmSync(tmp,{recursive:true,force:true});
+    assert.equal(git("rev-parse","origin/main"),main,"AM21_CALLER_MAIN_REF_CHANGED");
+  }
+}
+if(process.argv[2]==="--replay-inherited-r6"||process.argv[2]==="--replay-inherited-qcp"){
+  replayInheritedCandidateGate(process.argv[2]);
+  process.exit(0);
+}
+
 const head=git("rev-parse","HEAD");
 let baseEnv=String(process.env.MCFT_BASE_SHA||"").trim();
 const subjectEnv=String(process.env.MCFT_SUBJECT_SHA||process.env.SUBJECT_SHA||"").trim();
@@ -166,11 +234,16 @@ const frozenBase=baseEnv||INITIAL_BASE;
 const manifestBaseBlob=git("rev-parse",frozenBase+":"+FORMAL_V5_MANIFEST);
 const manifestHeadBlob=git("rev-parse","HEAD:"+FORMAL_V5_MANIFEST);
 const currentSuccessorBase=currentMainSuccessorBase()||baseEnv||null;
-const r6ManifestSuccessorMode=
+const r6PRExactSuccessorMode=
   baseEnv!=="" &&
   baseEnv===currentSuccessorBase &&
   manifestBaseBlob===R6_MANIFEST_PREDECESSOR_BLOB &&
   manifestHeadBlob===R6_MANIFEST_SUCCESSOR_BLOB;
+const r6MainAdoptedSuccessorMode=
+  baseEnv==="" &&
+  manifestBaseBlob===R6_MANIFEST_PREDECESSOR_BLOB &&
+  manifestHeadBlob===R6_MANIFEST_SUCCESSOR_BLOB;
+const r6ManifestSuccessorMode=r6PRExactSuccessorMode||r6MainAdoptedSuccessorMode;
 
 const ADOPTED_R6_SUBJECT="ba9a14bc08610beda54d4c482c2cf919bd6ced82";
 const ADOPTED_R6_PARENT="53a28bc4f77499687d6a3e1988845bba6384c790";
@@ -183,8 +256,26 @@ if (adoptedR6PostMergeMode) {
   assert.equal(git("rev-parse",ADOPTED_R6_SUBJECT+":"+FORMAL_V5_MANIFEST),R6_MANIFEST_SUCCESSOR_BLOB,"AM21_R6_SUCCESSOR_CHANGED");
 }
 if(r6ManifestSuccessorMode){
-  const changed=git("diff","--name-only",baseEnv+"..."+head).split(/\r?\n/).filter(Boolean).sort();
-  assert.deepEqual(changed,R6_SUCCESSOR_EXACT_FILES,"AM21_R6_SUCCESSOR_EXACT_BOUNDARY_REQUIRED");
+  if(r6MainAdoptedSuccessorMode){
+    // Push/main has no PR base. The historical predecessor was superseded
+    // by an exact R6 adoption, so compare two immutable subjects, not
+    // current HEAD against the pre-R6 predecessor.
+    assert.equal(git("merge-base",INITIAL_BASE,R6_MANIFEST_ADOPTED_SUBJECT),
+      INITIAL_BASE,"AM21_R6_MAIN_ADOPTION_ANCESTRY_REQUIRED");
+    assert.equal(git("merge-base",R6_MANIFEST_ADOPTED_SUBJECT,head),
+      R6_MANIFEST_ADOPTED_SUBJECT,"AM21_R6_MAIN_SUCCESSOR_ANCESTRY_REQUIRED");
+    assert.equal(git("rev-parse",INITIAL_BASE+":"+FORMAL_V5_MANIFEST),
+      R6_MANIFEST_PREDECESSOR_BLOB,"AM21_R6_FROZEN_PREDECESSOR_BLOB_DRIFT");
+    assert.equal(git("rev-parse",R6_MANIFEST_ADOPTED_SUBJECT+":"+FORMAL_V5_MANIFEST),
+      R6_MANIFEST_SUCCESSOR_BLOB,"AM21_R6_ADOPTED_SUCCESSOR_BLOB_DRIFT");
+    const adoptedChanged=git("diff","--name-only",R6_MANIFEST_ADOPTED_SUBJECT+"^",R6_MANIFEST_ADOPTED_SUBJECT)
+      .split(/\r?\n/).filter(Boolean).sort();
+    assert.deepEqual(adoptedChanged,R6_SUCCESSOR_EXACT_FILES,
+      "AM21_R6_HISTORICAL_ADOPTION_EXACT_BOUNDARY_CHANGED");
+  }else{
+    const changed=git("diff","--name-only",baseEnv+"..."+head).split(/\r?\n/).filter(Boolean).sort();
+    assert.deepEqual(changed,R6_SUCCESSOR_EXACT_FILES,"AM21_R6_SUCCESSOR_EXACT_BOUNDARY_REQUIRED");
+  }
   assert.equal(git("rev-parse","HEAD:"+R6_ACCEPTANCE).length,40,"AM21_R6_ACCEPTANCE_BLOB_REQUIRED");
   assert.equal(git("rev-parse","HEAD:"+R6_WORKFLOW).length,40,"AM21_R6_WORKFLOW_BLOB_REQUIRED");
 }else if(!adoptedR6PostMergeMode){
@@ -343,6 +434,8 @@ const proof={
   exact_boundary_enforced:baseEnv!==""&&baseEnv!==SUCCESSOR_COMPATIBILITY_BASE,
   successor_compatibility_mode:baseEnv===SUCCESSOR_COMPATIBILITY_BASE,
   r6_manifest_successor_mode:r6ManifestSuccessorMode,
+  r6_main_adopted_subject:r6MainAdoptedSuccessorMode?R6_MANIFEST_ADOPTED_SUBJECT:null,
+  r6_main_historical_exact_boundary_replayed:r6MainAdoptedSuccessorMode,
   r6_manifest_predecessor_blob:manifestBaseBlob,
   r6_manifest_subject_blob:manifestHeadBlob,
   historical_manifest_freeze_relaxed:false,
