@@ -180,3 +180,59 @@ Run on the local Windows machine with an authentic already signed Adoption and t
 `node scripts/cap09_adoption_v1/da9-retry-bundle.cjs audit-host-adoption ABSOLUTE_RUNTIME_ROOT ABSOLUTE_SIGNED_ADOPTION_JSON`
 
 This command checks the pinned Host and verifier, resolves the actual installed verifier, verifies the Adoption and material profile with the candidate and (for historical 91835fa0) the old installed verifier, and compares both digests. It explicitly checks subject, TEST_ONLY scope and no production authority. It does **not** use private keys, generate nonce, issue Permit, change trust, connect to MinIO or authorize execution. Failure is an execution HOLD; a PASS only establishes pre-sign compatibility, not Retry Adjudication, Provider, budget or resource Admission. Do not run with synthetic credentials, synthetic Adoption or against production.
+
+## DA9 WORM remote status — evidence checkpoint, 2026-10-17
+
+**Current operator-verified remote result:** `WORM_REMOTE_READONLY_RECHECK=PASS`.
+The original historical upload receipt is missing; this independent readback is
+a separate, newly generated receipt and must not be backdated.
+
+- DA9 isolated MinIO endpoint: `http://127.0.0.1:59005`.
+- Archived object: bucket `mcft-cap09-da9-evidence-worm-v1`,
+  **actual key** `MCFT-CAP09-DA9-PROBE-EVIDENCE-20261016T170707Z.zip`
+  (no `custody/` prefix), exact VersionId
+  `f7dda227-652e-4dc7-ab97-c9d70874731d`.
+- Independently retrieved Object Lock mode: `COMPLIANCE`;
+  expiry `2027-10-16T17:29:54.041Z`.
+  Version-specific download SHA-256 matched the original 1456-byte ZIP:
+  `6dbb1ffe417174dfc45450e695d0fd28cd2eacce0b85523a7a6c71d5f44ee62e`.
+- New Windows read-only receipt:
+  `D:\gptdown\MCFT-CAP09-DA9-WORM-READONLY-RECHECK-47e648ddd8be4ad688aacfe9f73307d1\independent-readonly-recheck.json`.
+  Windows host reported receipt-file SHA-256
+  `6a26a91fe10d0a67bcbdf0509261101dfeae3c7bbef22292f6d3f43b85694d81`.
+  The **receipt bytes are not committed** and cannot yet be rehashed from GitHub.
+- Historical AWS CLI WORM script requires explicitly provided Bucket/Region/Profile
+  and defaults to an unrelated KeyPrefix. It is effectful and must not be rerun.
+  Historical custody-prefix locator was wrong. The new verified locator above
+  is authoritative for this particular object version.
+
+Actual source bucket `mcft-cap09-requal-da9db7129607` currently contains
+two 27-byte IAM qualification probes, one positive and one negative, each
+reported VersionId string `null`; versions=2, delete markers=0,
+multipart=0. Positive and negative PostgreSQL each had 29 public tables,
+zero rows under a read-only `qual_admin` audit. These are historical snapshots,
+not a future Admission readback.
+
+**No source deletion authorized.** The exact two-probe
+`MCFT-CAP09-DA9-EXACT-PROBE-DISPOSITION-UNSIGNED-DRAFT-20261017.json`
+is an unsigned review input, not an approval. It still lacks per-object
+independently validated SHA-256, current pre-disposition inventory, approver
+identity and verifiable approval. Both probes remain untouched.
+
+**Retry/Host implementation belongs ONLY to PR #3713.** This PR #3714 is
+WORM evidence and disposition documentation, no runnable admission gates or
+CI changes. Never substitute a boolean `signature_verified=true` for
+cryptographic verification; do not migrate signatures from old Subject
+`91835fa0...` to new Subject `61ceb797...`.
+
+Previous Adoption expiry timestamp was `2026-10-17T08:42:09.570Z`
+(**Beijing time 2026-10-17 16:42:09.570**). As of the local
+2026-10-17 ~14:18 Beijing checkpoint it was **not yet expired**;
+all execution windows must assess expiry relative to actual current time,
+and re-sign only if the approved proof is no longer valid.
+
+No WORM operation, source deletion, Retry sign, Permit or six-stage execution
+was performed by this documentation-only change.
+
+---
+
