@@ -887,7 +887,8 @@ function restrictedParentPolicyMappings(result){
    Object.keys(m).every(k=>["policy","users","groups"].includes(k)),code);
   assert(m.policy===p.name&&Array.isArray(m.users)&&m.users.length===1&&
    typeof m.users[0]==="string"&&sha(Buffer.from(m.users[0]))===p.parent_sha256&&
-   (!Object.hasOwn(m,"groups")||(Array.isArray(m.groups)&&m.groups.length===0)),code);
+   (!Object.hasOwn(m,"groups")||m.groups===null||
+    (Array.isArray(m.groups)&&m.groups.length===0)),code);
   assert(parent===null||parent===m.users[0],code);parent=m.users[0];
  }
  return [{policy:p.name,parent_sha256:sha(Buffer.from(parent))}];
