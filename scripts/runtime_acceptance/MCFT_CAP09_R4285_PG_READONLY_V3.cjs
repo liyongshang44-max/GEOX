@@ -6,6 +6,7 @@
  */
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
 const scopedEvidence=require("./MCFT_CAP09_QUALIFICATION_EVIDENCE_IDENTITY_V1.cjs");
+const executionIdentity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
 const FENCED_WRITER="public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)";
 const REQUIRED_PUBLIC_TABLES=Object.freeze([
  "facts",
@@ -47,8 +48,9 @@ function scopedDbConnectionBindings(admission,environment){
  assert(owner&&owner.run_id===run,"V2_PG_SIGNED_RESOURCE_RUN_MISMATCH");
  assert.equal(owner.database_host,"127.0.0.1","V2_PG_SIGNED_HOST_REQUIRED");
  assert(Number.isInteger(owner.database_port),"V2_PG_SIGNED_PORT_REQUIRED");
- const positive="mcft_cap09_requal_"+run+"_positive";
- const negative="mcft_cap09_requal_"+run+"_negative";
+ const resourceRun=executionIdentity.get(run).resource_run_id;
+ const positive="mcft_cap09_requal_"+resourceRun+"_positive";
+ const negative="mcft_cap09_requal_"+resourceRun+"_negative";
  assert.equal(owner.positive_database,positive,"V2_PG_SIGNED_POSITIVE_DATABASE");
  assert.equal(owner.negative_database,negative,"V2_PG_SIGNED_NEGATIVE_DATABASE");
  return [
