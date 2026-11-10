@@ -180,6 +180,7 @@ const PG_IDENTITY_PATHS=Object.freeze([
   "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
   "scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs",
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PG_EXECUTION_RESOURCE_V3.test.cjs",
+  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RESTRICTED_PARENT_V3.test.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_PG_READONLY_V3.cjs"
 ]);
 function successorScope(base){return base===PG_IDENTITY_BASE?
