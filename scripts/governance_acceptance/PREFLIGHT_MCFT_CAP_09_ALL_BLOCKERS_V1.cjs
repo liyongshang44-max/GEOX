@@ -2288,6 +2288,7 @@ function main() {
       const git=(...v)=>cp.execFileSync("git",v,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:4194304}).trim();
       const codePaths=[
         ".github/workflows/ci.yml",
+        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RESTRICTED_PARENT_V3.test.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs"
@@ -2315,9 +2316,10 @@ function main() {
       }
       gate(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&process.env.GITHUB_ACTIONS==="true"&&process.env.GITHUB_EVENT_NAME==="pull_request","NON_NATIVE_SCOPE");
       strictIdentity(identity);
-      gate(same(clean(changed),actual)&&status.length===4&&status.every(x=>x.startsWith("M\t")),"DELTA_OR_FILE_STATUS_DRIFT");
+      gate(same(clean(changed),actual)&&status.length===5&&status.every(x=>x.startsWith("M\t")),"DELTA_OR_FILE_STATUS_DRIFT");
       const pinned={
         ".github/workflows/ci.yml":"e3b9855d89e54e801910e8a00586e6a62c2c6787",
+        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml":"ed6576381edad3aed0f265e8296b7d88b66ccc7b",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RESTRICTED_PARENT_V3.test.cjs":"2cf8c0fbe16a13be3d70dcdf05a6f68afc585b3a",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs":"39e3a6aa64a2ce8c92061bccb32b01388e4bcefc"
       };
