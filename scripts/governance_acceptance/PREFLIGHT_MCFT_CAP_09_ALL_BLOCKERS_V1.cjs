@@ -2549,6 +2549,11 @@ function main() {
         const run=api("/actions/runs/"+config.id);
         assert.equal(run.head_sha,config.sha,"RUN_SUBJECT");
         assert.equal(run.path,config.path,"RUN_WORKFLOW");
+        if(config.workflowId){
+          assert.equal(run.workflow_id,config.workflowId,"RUN_SUCCESSOR_WORKFLOW_ID");
+          assert(run.pull_requests?.some(p=>p.number===config.prNumber&&
+            p.head?.sha===config.sha),"RUN_SUCCESSOR_PR_IDENTITY");
+        }
         assert.equal(run.event,"pull_request","RUN_EVENT");
         assert.equal(run.conclusion,"success","RUN_NOT_SUCCESS");
         if(config.job){
@@ -2575,9 +2580,18 @@ function main() {
         const source="da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9";
         for(const p of paths)assert.equal(blob(source,p),blob(args.head,p),"EA5C1_SOURCE_DRIFT:"+p);
         const digest="sha256:08361c4ee5a17a95c2834bcd48d5b67a1a8a68d3c1875132785d60db496c0e14";
-        const d=lib.dependencyDigestForPaths(ROOT,args.head,paths,false);
-        assert.deepEqual(d.missing,[]);
-        assert.equal(d.digest,digest,"EA5C1_CURRENT_DIGEST");
+        // The registry stores the check-level aggregate digest, not the
+        // raw resolver path-catalog digest. Preserve both digest algorithms
+        // and verify qualified-source and current-head equivalence exactly.
+        const historicCatalog=lib.dependencyDigestForPaths(ROOT,source,paths,false);
+        const currentCatalog=lib.dependencyDigestForPaths(ROOT,args.head,paths,false);
+        assert.deepEqual(historicCatalog.missing,[],"EA5C1_HISTORIC_PATHS_MISSING");
+        assert.deepEqual(currentCatalog.missing,[],"EA5C1_CURRENT_PATHS_MISSING");
+        assert.equal(currentCatalog.digest,historicCatalog.digest,"EA5C1_SOURCE_CATALOG_DRIFT");
+        const checkDigest=lib.aggregateCheckDependencyDigest(
+          [resolver],{[resolver]:{current:currentCatalog}},"current");
+        assert.deepEqual(checkDigest.missing,[],"EA5C1_AGGREGATE_MISSING");
+        assert.equal(checkDigest.digest,digest,"EA5C1_CHECK_LEVEL_DIGEST");
         const reg=JSON.parse(fs.readFileSync(path.join(ROOT,
           "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"),"utf8"));
         const entry=reg.requalification_evidence.entries.find(x=>
@@ -2653,8 +2667,27 @@ function main() {
           for(const [k,v] of before)assert.equal(after.get(k),v,"PHASE3_EXISTING_RESOLUTION_DRIFT:"+k);
           assert.equal([...after.keys()].filter(k=>!before.has(k)).length,86,"PHASE3_ONLY_AWS_PACKAGES_ADDED");
         }
+        // #3743 is an independent *current-source* Phase3 qualifier. It
+        // does not claim to be the older persistence workflow. Bind its
+        // exact workflow Git blob, non-authorizing disposition, PR, native
+        // job and artifact before using it for source-only non-effect proof.
+        const successorPath=".github/workflows/mcft-cap09-phase3-current-source-requalification-v1.yml";
+        assert.equal(blob(source,successorPath),"7b37687ffd69ddde9d06c5e4d99085e739fbf6d2",
+          "PHASE3_SUCCESSOR_WORKFLOW_BLOB");
+        const dispositionPath="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-PHASE3-CURRENT-SOURCE-DIGEST-DISPOSITION-V1.json";
+        assert.equal(blob(source,dispositionPath),"27831f657fe5d53a38049eeb2f4d9ac9146c3d8d",
+          "PHASE3_SUCCESSOR_DISPOSITION_BLOB");
+        const disposition=JSON.parse(show(source,dispositionPath));
+        assert.equal(disposition.contract_id,"MCFT_CAP09_PHASE3_CURRENT_SOURCE_EXACT_BLOB_DIGEST_DIFFERENCE_V1");
+        assert.equal(disposition.scope,"NEW_EXACT_SUBJECT_TEST_ONLY_NOT_HISTORIC_CARRY_FORWARD");
+        assert.equal(disposition.base_sha,"63dc3382f879781c604a852c7d1b28af9b0dd9f4");
+        assert.equal(disposition.current_scope_files,94);
+        for(const key of ["source_signed","formal_governance_approval","permit",
+          "windows_physical_admission","production_authorized","old_run_reuse"]){
+          assert.equal(disposition[key],false,"PHASE3_SUCCESSOR_NO_AUTHORITY:"+key);
+        }
         nativeSource=verifiedRun({id:40517266887,sha:source,
-          path:".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+          path:successorPath,workflowId:398318404,prNumber:3743,
           job:"phase3-current-source-real-postgres",artifact:12738863652,
           digest:"sha256:0a05c94f21df6f8164b4cc3e37f09fbddf6663dfabee605443ec833e58177502"});
         qualifier={qualified_source_paths_identical:92,only_aws_sdk_manifest_and_lockfile_added:true,
