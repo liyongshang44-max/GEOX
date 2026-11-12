@@ -2492,13 +2492,16 @@ function main() {
       // validity, or non-CASEB check scope.
       const protect=(o)=>Boolean(o&&o.pr===3771&&o.base===CASEB_BASE&&
         o.head===args.head&&o.native_artifact_valid===true&&
+        o.qualified_blobs_exact===true&&o.no_extra_protected_paths===true&&
         CASEB_QUALIFIED_NATIVE_SOURCE_SCOPES.has(o.check));
       const good={pr:3771,base:CASEB_BASE,head:args.head,
-        native_artifact_valid:true,check:"PHASE3_EVIDENCE_RUNTIME_FOUNDATION"};
+        native_artifact_valid:true,qualified_blobs_exact:true,no_extra_protected_paths:true,
+        check:"PHASE3_EVIDENCE_RUNTIME_FOUNDATION"};
       assert(protect(good));
       const negative=[
         {...good,pr:3734},{...good,base:"0".repeat(40)},
         {...good,head:"0".repeat(40)},{...good,native_artifact_valid:false},
+        {...good,qualified_blobs_exact:false},{...good,no_extra_protected_paths:false},
         {...good,check:"PHASE2_EVIDENCE_PROVIDER_MODULES"},
         {...good,check:"EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"}
       ];
@@ -2523,12 +2526,13 @@ function main() {
     // THIS exact source-only PR only if native qualified source blobs agree.
     if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===CASEB_BASE&&
       CASEB_QUALIFIED_NATIVE_SOURCE_SCOPES.has(decision.check_id)){
-      const p=verifyCaseBQualifiedNativeSourceScope(),valid=p.status==="PASS"&&
-        decision.status==="REQUALIFY"&&
-        decision.resolver_ids?.every(id=>
-          p.status==="PASS"&&
-          !verifyCaseBExactCurrentSuccessor().complete_base_head_dependency_equivalence
-            .find(b=>b.id===id&&b.base_head_match!==true));
+      const p=verifyCaseBQualifiedNativeSourceScope();
+      const bindings=verifyCaseBExactCurrentSuccessor().complete_base_head_dependency_equivalence||[];
+      const valid=p.status==="PASS"&&decision.status==="REQUALIFY"&&
+        Array.isArray(decision.resolver_ids)&&decision.resolver_ids.length===1&&
+        decision.resolver_ids.every(id=>bindings.some(b=>
+          b.id===id&&b.base_head_match===true&&
+          b.base_dependency_digest===b.head_dependency_digest));
       result={check_id:decision.check_id,applicability:decision.status,
         status:valid?"NOT_APPLICABLE":"FAIL",
         execution:"EXACT_3771_NATIVE_QUALIFIED_SOURCE_ONLY_NONPROMOTION",
