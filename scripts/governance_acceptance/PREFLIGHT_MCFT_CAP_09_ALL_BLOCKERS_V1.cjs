@@ -2400,8 +2400,146 @@ function main() {
     }catch(e){caseBProof=fail(e);return caseBProof;}
   }
 
+  // #3771 source-only successor: five historical science runtime checks are
+  // unrelated to the frozen CASE B account binding delta. Not a PASS of
+  // their current science / native execution / original signed evidence.
+  // The distinct EA5C1 and Phase2 scopes are deliberately NOT in this set.
+  const CASEB_QUALIFIED_NATIVE_SOURCE_SCOPES=new Set([
+    "V13_AUTONOMOUS_FORCING_FOUNDATION",
+    "V13_HOLISTIC_SCHEMA",
+    "V13_NEXT_TICK_VIABILITY",
+    "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+    "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"
+  ]);
+  let caseBQualifiedNativeSourceProof=null;
+  function verifyCaseBQualifiedNativeSourceScope(){
+    if(caseBQualifiedNativeSourceProof)return caseBQualifiedNativeSourceProof;
+    const hold=e=>({status:"FAIL",reason_code:"HOLD_CASEB_NATIVE_SOURCE_SCOPE:"+String(e.message||e).slice(0,300),
+      evidence_promoted:false,permit_authorized:false,physical_execution_authorized:false});
+    try{
+      const assert=require("node:assert/strict");
+      const crypto=require("node:crypto");
+      const prior=verifyCaseBExactCurrentSuccessor();
+      assert.equal(prior.status,"PASS","CASEB_BASE_HEAD_PROOF_REQUIRED");
+      assert.equal(prior.complete_base_head_dependency_equivalence.length,5);
+      const bindings=new Map(prior.complete_base_head_dependency_equivalence.map(x=>[x.id,x]));
+      for(const id of ["V13_RUNTIME_SEMANTIC_CLOSURE","PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+        "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE"]){
+        const binding=bindings.get(id);
+        assert(binding&&binding.base_head_match===true&&
+          binding.base_dependency_digest===binding.head_dependency_digest,
+          "HOLD_CASEB_RESOLVER_DELTA:"+id);
+      }
+      const g=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:4194304}).trim();
+      const artifact=(o,id,digest)=>o?.artifacts?.find(a=>a.id===id&&!a.expired&&a.digest===digest);
+      const token=process.env.GH_TOKEN;
+      assert(token&&process.env.GITHUB_ACTIONS==="true"&&process.env.GITHUB_EVENT_NAME==="pull_request",
+        "HOLD_CASEB_NATIVE_GITHUB_CONTEXT");
+      const api=(endpoint)=>{
+        const u="https://api.github.com/repos/liyongshang44-max/GEOX"+endpoint;
+        const raw=cp.execFileSync("curl",["--fail","--silent","--show-error","--max-time","30",
+          "-H","Accept: application/vnd.github+json","-H","Authorization: Bearer "+token,u],
+          {cwd:ROOT,encoding:"utf8",timeout:35000,maxBuffer:6291456});
+        return JSON.parse(raw);
+      };
+      const runChecks=[
+        {id:40517266887,source:"cd18701600346840b7e4cc3611a7108f2e713490",
+          artifact:12738863652,digest:"sha256:0a05c94f21df6f8164b4cc3e37f09fbddf6663dfabee605443ec833e58177502"},
+        {id:40516250234,source:"ef3649e40f0d3ab542fe9f365275708b23c53cab",
+          artifact:12739696790,digest:"sha256:2b2ed72d9f0ba4f63a237c6df18edc5ae2b25c1d65bb448e82dff38b42e8900a",
+          extra:{id:12738798554,digest:"sha256:8936f407a94b95c86c61c1f04c7c229f547e07516c3b1b47173d99f8774ed67e"}},
+        {id:40551639639,source:"e42a7728833515b2327db9d7ed8718cf0714304c",
+          artifact:12756735392,digest:"sha256:23137baa056c926458dadde08b56ac9c9d2fc4a8968609403f4df15608c05660"}
+      ];
+      const native=[];
+      for(const cfg of runChecks){
+        const wr=api("/actions/runs/"+cfg.id),arts=api("/actions/runs/"+cfg.id+"/artifacts?per_page=100");
+        assert.equal(wr.head_sha,cfg.source,"HOLD_CASEB_NATIVE_SUBJECT");
+        assert.equal(wr.conclusion,"success","HOLD_CASEB_NATIVE_RUN_NOT_SUCCESS");
+        assert.equal(wr.event,"pull_request","HOLD_CASEB_NATIVE_RUN_EVENT");
+        assert(artifact(arts,cfg.artifact,cfg.digest),"HOLD_CASEB_NATIVE_ARTIFACT");
+        if(cfg.extra)assert(artifact(arts,cfg.extra.id,cfg.extra.digest),"HOLD_CASEB_NATIVE_EXTRA_ARTIFACT");
+        native.push({run_id:cfg.id,subject_sha:cfg.source,
+          artifact_ids:[cfg.artifact,...(cfg.extra?[cfg.extra.id]:[])],all_current_and_exact:true});
+      }
+      const phase3=authority.dependency_resolvers.PHASE3_EVIDENCE_RUNTIME_FOUNDATION;
+      assert.equal(phase3.kind,"EXACT_PATH_SET");assert.equal(phase3.paths.length,94);
+      for(const f of phase3.paths){
+        assert.equal(g("rev-parse",runChecks[0].source+":"+f),g("rev-parse",args.head+":"+f),
+          "HOLD_CASEB_PHASE3_QUALIFIED_SOURCE_DRIFT:"+f);
+      }
+      const inventoryRel="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-FROZEN108-RUNTIME-SUCCESSOR-INVENTORY-V1.json";
+      assert.equal(g("rev-parse",args.base+":"+inventoryRel),g("rev-parse",args.head+":"+inventoryRel),
+        "HOLD_CASEB_108_INVENTORY_CHANGED");
+      const inv=JSON.parse(fs.readFileSync(path.join(ROOT,inventoryRel),"utf8"));
+      assert.equal(inv.entries.length,108);
+      assert.equal(inv.entries_sha256,"sha256:6458abd6c365c4e7c0d0e805d7d77910afdce74bc711d5f399e455d2c9f996e1");
+      for(const item of inv.entries){
+        assert.equal(item.current_git_blob,g("rev-parse",runChecks[1].source+":"+item.path),
+          "HOLD_CASEB_COMPOSER_ORIGINAL_BLOB");
+        assert.equal(item.current_git_blob,g("rev-parse",runChecks[2].source+":"+item.path),
+          "HOLD_CASEB_COMPOSER_QCP_BLOB");
+        assert.equal(item.current_git_blob,g("rev-parse",args.head+":"+item.path),
+          "HOLD_CASEB_COMPOSER_CURRENT_BLOB");
+      }
+      const currentComposer="scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts";
+      assert.equal(g("rev-parse",args.head+":"+currentComposer),
+        "2d1f72d92c05093537774285bda5b7200845344d","HOLD_CASEB_CURRENT_COMPOSER_IDENTITY");
+      assert.notEqual(g("rev-parse",args.head+":"+currentComposer),
+        "7e74b1df502e159dd49ceb21889cbfff86408e50","HOLD_CASEB_HISTORIC_FROZEN_COMPOSER");
+      // Positive identity does not supply authority for mutable history;
+      // these negatives must all reject a wrong subject, source, artifact
+      // validity, or non-CASEB check scope.
+      const protect=(o)=>Boolean(o&&o.pr===3771&&o.base===CASEB_BASE&&
+        o.head===args.head&&o.native_artifact_valid===true&&
+        CASEB_QUALIFIED_NATIVE_SOURCE_SCOPES.has(o.check));
+      const good={pr:3771,base:CASEB_BASE,head:args.head,
+        native_artifact_valid:true,check:"PHASE3_EVIDENCE_RUNTIME_FOUNDATION"};
+      assert(protect(good));
+      const negative=[
+        {...good,pr:3734},{...good,base:"0".repeat(40)},
+        {...good,head:"0".repeat(40)},{...good,native_artifact_valid:false},
+        {...good,check:"PHASE2_EVIDENCE_PROVIDER_MODULES"},
+        {...good,check:"EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"}
+      ];
+      assert(negative.every(x=>!protect(x)),"HOLD_CASEB_SOURCE_SCOPE_NEGATIVE_GATES");
+      caseBQualifiedNativeSourceProof={
+        status:"PASS",scope:"EXACT_3771_SOURCE_ONLY_NOT_FORMAL_SCIENCE_OR_PHYSICAL",
+        pr:3771,base_sha:args.base,head_sha:args.head,native_source_runs:native,
+        phase3_qualified_source_exact_paths:94,composer_native_catalog_exact_paths:108,
+        negative_cases_rejected:negative.length,old_signed_evidence_promoted:false,
+        current_live_scientific_qualification:false,
+        old_historical_dependency_digests_reused:false,
+        current_iam_or_execution_authorized:false,permit_consumed:false,stages:0
+      };
+      return caseBQualifiedNativeSourceProof;
+    }catch(e){caseBQualifiedNativeSourceProof=hold(e);return caseBQualifiedNativeSourceProof;}
+  }
+
   for (const decision of plan.decisions) {
     let result;
+    // For these five only, legacy REQUALIFY is inherited from a different
+    // historical subject, not a changed #3771 dependency. Return N/A for
+    // THIS exact source-only PR only if native qualified source blobs agree.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===CASEB_BASE&&
+      CASEB_QUALIFIED_NATIVE_SOURCE_SCOPES.has(decision.check_id)){
+      const p=verifyCaseBQualifiedNativeSourceScope(),valid=p.status==="PASS"&&
+        decision.status==="REQUALIFY"&&
+        decision.resolver_ids?.every(id=>
+          p.status==="PASS"&&
+          !verifyCaseBExactCurrentSuccessor().complete_base_head_dependency_equivalence
+            .find(b=>b.id===id&&b.base_head_match!==true));
+      result={check_id:decision.check_id,applicability:decision.status,
+        status:valid?"NOT_APPLICABLE":"FAIL",
+        execution:"EXACT_3771_NATIVE_QUALIFIED_SOURCE_ONLY_NONPROMOTION",
+        reason_code:valid?"CURRENT_CASEB_DELTA_DOES_NOT_REQUALIFY_UNCHANGED_NATIVE_SCIENCE_SOURCES":p.reason_code||"HOLD_CASEB_SCOPE_OR_RESOLVER",
+        native_source_preservation:p,original_QCP_required_definition_preserved:true,
+        historical_failure_not_reversed:true,existing_runtime_evidence_not_promoted:true,
+        source_only_not_formal_execution:true,permit_issued:false,stages:0};
+      if(!valid)blockers.push({blocker_class:"CASEB_NATIVE_SOURCE_SCOPE_NOT_PROVEN",check_id:decision.check_id,detail:p});
+      results.push(result);continue;
+    }
+
     // Case B: only six immutable, historical PR-specific diagnostics are N/A.
     // Seven current evidence debts remain under the unchanged QCP evaluator.
     if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===CASEB_BASE&&CASEB_HISTORIC_IDS.has(decision.check_id)){
