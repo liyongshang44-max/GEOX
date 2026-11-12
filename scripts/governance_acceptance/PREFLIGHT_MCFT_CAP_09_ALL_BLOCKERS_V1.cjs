@@ -2510,14 +2510,206 @@ function main() {
     }catch(e){caseBComposerProof=fail(e);return caseBComposerProof;}
   }
 
+  // CTO #3771: source-only applicability of three untouched science lanes.
+  // Does NOT declare new Phase2/3/EA5C1 runtime qualification, replace old
+  // signature/digest, or authorize physical execution. Exact failed evidence
+  // remains in the immutable registry; the original REQUIRED policy is intact.
+  const CASEB_OTHER_SCOPES=new Map([
+    ["EA5C1_DURABLE_RAW_RESTRICTED_INGRESS","EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"],
+    ["PHASE2_EVIDENCE_PROVIDER_MODULES","PHASE2_EVIDENCE_PROVIDER_MODULES"],
+    ["PHASE3_EVIDENCE_RUNTIME_FOUNDATION","PHASE3_EVIDENCE_RUNTIME_FOUNDATION"]
+  ]);
+  const caseBOtherProofs=new Map();
+  function verifyCaseBOtherSourceNoEffect(id){
+    if(caseBOtherProofs.has(id))return caseBOtherProofs.get(id);
+    const failed=e=>({status:"FAIL",reason_code:"HOLD_3771_OTHER_SCOPE:"+String(e.message||e).slice(0,280),
+      evidence_promoted:false,permit_issued:false,stages:0});
+    let proof;
+    try{
+      const assert=require("node:assert/strict");
+      const caseB=verifyCaseBExactCurrentSuccessor();
+      assert.equal(caseB.status,"PASS","CASEB_EXACT_SOURCE_PROOF");
+      const resolver=CASEB_OTHER_SCOPES.get(id);
+      assert(resolver,"UNREGISTERED_CASEB_SCOPE");
+      const bound=caseB.complete_base_head_dependency_equivalence.find(x=>x.id===resolver);
+      assert(bound&&bound.base_head_match===true&&
+        bound.base_dependency_digest===bound.head_dependency_digest,"BASE_HEAD_NOT_EQUAL");
+      const git=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:4194304}).trim();
+      const show=(sha,f)=>git("show",sha+":"+f);
+      const blob=(sha,f)=>git("rev-parse",sha+":"+f);
+      const token=process.env.GH_TOKEN;
+      assert(process.env.GITHUB_ACTIONS==="true"&&process.env.GITHUB_EVENT_NAME==="pull_request"&&token,"NATIVE_QCP_ONLY");
+      const api=(ep)=>JSON.parse(cp.execFileSync("curl",[
+        "--fail","--silent","--show-error","--max-time","30",
+        "-H","Accept: application/vnd.github+json",
+        "-H","Authorization: Bearer "+token,
+        "https://api.github.com/repos/liyongshang44-max/GEOX"+ep
+      ],{cwd:ROOT,encoding:"utf8",timeout:35000,maxBuffer:6291456}));
+      const verifiedRun=(config)=>{
+        const run=api("/actions/runs/"+config.id);
+        assert.equal(run.head_sha,config.sha,"RUN_SUBJECT");
+        assert.equal(run.path,config.path,"RUN_WORKFLOW");
+        assert.equal(run.event,"pull_request","RUN_EVENT");
+        assert.equal(run.conclusion,"success","RUN_NOT_SUCCESS");
+        if(config.job){
+          const j=api("/actions/runs/"+config.id+"/jobs?per_page=100");
+          assert(j.jobs.some(x=>x.name===config.job&&x.conclusion==="success"),"RUN_JOB_FAILED");
+        }
+        if(config.artifact){
+          const a=api("/actions/runs/"+config.id+"/artifacts?per_page=100");
+          assert(a.artifacts.some(x=>x.id===config.artifact&&x.digest===config.digest&&
+            x.expired===false&&x.workflow_run?.id===config.id&&
+            x.workflow_run?.head_sha===config.sha),"RUN_ARTIFACT_INVALID");
+        }
+        return {run_id:config.id,source_sha:config.sha,qualified_native:true};
+      };
+      let nativeSource,qualifier;
+      if(id==="EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"){
+        const spec=authority.dependency_resolvers[resolver];
+        assert.equal(spec.kind,"IMPORT_CLOSURE");
+        const lib=require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs");
+        const closed=lib.buildImportClosure(ROOT,spec.roots||[]);
+        assert.deepEqual(closed.missing,[],"EA5C1_CLOSURE_MISSING");
+        const paths=[...new Set([...closed.paths,...(spec.additional_exact_paths||[])])].sort();
+        assert(paths.length>=10,"EA5C1_BOUNDED_PATHS_MISSING");
+        const source="da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9";
+        for(const p of paths)assert.equal(blob(source,p),blob(args.head,p),"EA5C1_SOURCE_DRIFT:"+p);
+        const digest="sha256:08361c4ee5a17a95c2834bcd48d5b67a1a8a68d3c1875132785d60db496c0e14";
+        const d=lib.dependencyDigestForPaths(ROOT,args.head,paths,false);
+        assert.deepEqual(d.missing,[]);
+        assert.equal(d.digest,digest,"EA5C1_CURRENT_DIGEST");
+        const reg=JSON.parse(fs.readFileSync(path.join(ROOT,
+          "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"),"utf8"));
+        const entry=reg.requalification_evidence.entries.find(x=>
+          x.evidence_id==="EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_REQUAL_DA09A68F_CLOSURE_V1");
+        assert(entry&&entry.immutable===true&&entry.subject_sha===source&&
+          entry.dependency_digest===digest&&entry.run_id===36665644104&&
+          entry.artifact_id===null&&entry.run_conclusion==="success","EA5C1_ORIGINAL_REGISTRY");
+        nativeSource=verifiedRun({id:36665644104,sha:source,
+          path:".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml",
+          job:"ea5c1-durable-raw-restricted-ingress"});
+        qualifier={fully_identical_paths:paths.length,registered_digest_exact:true};
+      } else if(id==="PHASE2_EVIDENCE_PROVIDER_MODULES"){
+        const spec=authority.dependency_resolvers[resolver];
+        assert.equal(spec.kind,"EXACT_PATH_SET");
+        assert.equal(spec.paths.length,23);
+        const source="9e4e8132628f2581cbac025f81f7342027660631";
+        const marker="scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs";
+        for(const p of spec.paths.filter(x=>x!==marker))
+          assert.equal(blob(source,p),blob(args.head,p),"PHASE2_SOURCE_DRIFT:"+p);
+        const older=show(source,marker),newer=show(args.head,marker);
+        const rx=/\/\/ EA5E2_ROLLING_RUNTIME_DEPENDENCY_GRAPH_SHA256=sha256:[0-9a-f]{64}/g;
+        assert.equal((older.match(rx)||[]).length,1);
+        assert.equal((newer.match(rx)||[]).length,1);
+        assert.equal(older.replace(rx,"// GRAPH_SHA"),newer.replace(rx,"// GRAPH_SHA"),"PHASE2_BINDING_SEMANTIC_CHANGE");
+        assert(newer.includes("authority_effect: false")&&
+          newer.includes('final_activation_orchestration: "ROLLING_PREBOUNDARY_BATCH_INTERSECTION"'));
+        nativeSource=verifiedRun({id:38281449457,sha:source,
+          path:".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+          job:"ea5c2b1-live-kbs-soil-ingress-executor"});
+        qualifier={exact_identical_paths:22,sha_comment_only_changed:true,authority_effect:false};
+      } else if(id==="PHASE3_EVIDENCE_RUNTIME_FOUNDATION"){
+        const spec=authority.dependency_resolvers[resolver];
+        assert.equal(spec.kind,"EXACT_PATH_SET");assert.equal(spec.paths.length,94);
+        const source="cd18701600346840b7e4cc3611a7108f2e713490";
+        const other=spec.paths.filter(x=>x!=="package.json"&&x!=="pnpm-lock.yaml");
+        assert.equal(other.length,92);
+        for(const p of other){
+          assert.equal(blob(source,p),blob(args.head,p),"PHASE3_SOURCE_DRIFT:"+p);
+          const body=show(args.head,p);
+          assert(!/(?:require\s*\(|from\s+|import\s*\()[^;\n]{0,120}['"]@aws-sdk\/client-s3/.test(body),
+            "PHASE3_UNEXPECTED_AWS_IMPORT:"+p);
+        }
+        const pkgOld=JSON.parse(show(source,"package.json")),pkgNow=JSON.parse(show(args.head,"package.json"));
+        assert.equal(pkgNow.dependencies?.["@aws-sdk/client-s3"],"3.922.0");
+        const {["@aws-sdk/client-s3"]:oneAddition,...rest}=pkgNow.dependencies;
+        assert.deepEqual({...pkgNow,dependencies:rest},pkgOld,"PHASE3_PACKAGE_DRIFT_NOT_ADDITIVE");
+        function lockBlocks(txt,section){
+          const lines=txt.split(/\r?\n/),start=lines.indexOf(section+":");
+          assert(start>=0,"MISSING_LOCK_SECTION:"+section);
+          let end=lines.findIndex((v,i)=>i>start&&/^(?:importers|packages|snapshots):$/.test(v));
+          if(end<0)end=lines.length;
+          const out=new Map();let key=null,block=[];
+          for(const line of lines.slice(start+1,end)){
+            if(/^  \S/.test(line)){
+              if(key)out.set(key,block.join("\n").trim());
+              key=line.trim().split(":")[0];assert(!out.has(key),"DUPLICATE_LOCK_KEY");
+              block=[line];
+            }else if(key)block.push(line);
+          }
+          if(key)out.set(key,block.join("\n").trim());
+          return out;
+        }
+        const ol=show(source,"pnpm-lock.yaml"),nl=show(args.head,"pnpm-lock.yaml");
+        assert(ol.startsWith("lockfileVersion: '9.0'")&&nl.startsWith("lockfileVersion: '9.0'"));
+        const oi=lockBlocks(ol,"importers"),ni=lockBlocks(nl,"importers");
+        assert.equal(oi.size,16);assert.equal(ni.size,16);
+        const sdk="      '@aws-sdk/client-s3':\n        specifier: 3.922.0\n        version: 3.922.0\n";
+        assert.equal(ni.get(".").replace(sdk,""),oi.get("."),"PHASE3_ROOT_IMPORTER_NONADDITIVE");
+        for(const [k,v] of oi)if(k!==".")assert.equal(ni.get(k),v,"PHASE3_OTHER_IMPORTER_CHANGED:"+k);
+        for(const section of ["packages","snapshots"]){
+          const before=lockBlocks(ol,section),after=lockBlocks(nl,section);
+          assert.equal(before.size,464);assert.equal(after.size,550);
+          for(const [k,v] of before)assert.equal(after.get(k),v,"PHASE3_EXISTING_RESOLUTION_DRIFT:"+k);
+          assert.equal([...after.keys()].filter(k=>!before.has(k)).length,86,"PHASE3_ONLY_AWS_PACKAGES_ADDED");
+        }
+        nativeSource=verifiedRun({id:40517266887,sha:source,
+          path:".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+          job:"phase3-current-source-real-postgres",artifact:12738863652,
+          digest:"sha256:0a05c94f21df6f8164b4cc3e37f09fbddf6663dfabee605443ec833e58177502"});
+        qualifier={qualified_source_paths_identical:92,only_aws_sdk_manifest_and_lockfile_added:true,
+          existing_package_and_snapshot_resolutions_unchanged:true,
+          old_phase3_runtime_artifact_not_promoted:true};
+      }else throw Error("UNEXPECTED_SCOPE");
+      proof={status:"PASS",scope:"EXACT_3771_SOURCE_ONLY_NO_EFFECT_NOT_FORMAL_EXECUTION",
+        check_id:id,pr:3771,base_sha:args.base,head_sha:args.head,
+        original_native_source:nativeSource,differential_proof:qualifier,
+        original_QCP_required_preserved:true,current_science_run_reissued:false,
+        historical_evidence_promoted:false,signature_transferred:false,
+        iam_mutation_authorized:false,permit_authorized:false,stages:0};
+    }catch(e){proof=failed(e);}
+    caseBOtherProofs.set(id,proof);return proof;
+  }
+
   for (const decision of plan.decisions) {
     let result;
+    // One exact successor only: preserve original REQUIRED/REQUALIFY
+    // diagnostics while recording source-only N/A, not a scientific PASS.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===CASEB_BASE&&
+      CASEB_OTHER_SCOPES.has(decision.check_id)){
+      const proof=verifyCaseBOtherSourceNoEffect(decision.check_id);
+      const rId=CASEB_OTHER_SCOPES.get(decision.check_id);
+      const m=verifyCaseBExactCurrentSuccessor().complete_base_head_dependency_equivalence||[];
+      const valid=proof.status==="PASS"&&
+        (decision.status==="REQUALIFY"||
+          (decision.status==="REQUIRED"&&decision.reason_code==="APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE"))&&
+        Array.isArray(decision.resolver_ids)&&decision.resolver_ids.length===1&&
+        decision.resolver_ids[0]===rId&&m.some(b=>b.id===rId&&b.base_head_match===true&&
+          b.base_dependency_digest===b.head_dependency_digest);
+      result={check_id:decision.check_id,applicability:decision.status,
+        status:valid?"NOT_APPLICABLE":"FAIL",
+        execution:"EXACT_3771_NATIVE_SCIENCE_NO_EFFECT_SCOPE_ONLY",
+        reason_code:valid?"CASEB_DELTA_DOES_NOT_CHANGE_QUALIFIED_SOURCE_SCOPE":
+          proof.reason_code||"HOLD_3771_RESOLVER_APPLICABILITY",
+        native_source_nonpromotion_proof:proof,
+        original_required_evidence_not_requalified:true,
+        old_failed_digest_preserved:true,original_signatures_not_transferred:true,
+        physical_execution_authorized:false,permit_authorized:false,stages:0};
+      if(!valid)blockers.push({blocker_class:"CASEB_SCIENCE_NON_EFFECT_NOT_PROVEN",
+        check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
+
     if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===CASEB_BASE&&
       CASEB_COMPOSER_CHECKS.has(decision.check_id)){
       const proof=verifyCaseBComposerSourceNonpromotion();
       const proofBindings=verifyCaseBExactCurrentSuccessor()
         .complete_base_head_dependency_equivalence||[];
-      const valid=proof.status==="PASS"&&decision.status==="REQUALIFY"&&
+      const applicability=decision.status==="REQUALIFY"||
+        (decision.check_id==="PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"&&
+         decision.status==="REQUIRED"&&
+         decision.reason_code==="APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE");
+      const valid=proof.status==="PASS"&&applicability&&
         Array.isArray(decision.resolver_ids)&&decision.resolver_ids.length===1&&
         decision.resolver_ids.every(id=>proofBindings.some(b=>
           b.id===id&&b.base_head_match===true&&
