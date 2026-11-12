@@ -866,8 +866,7 @@ function assertNoIdpContainerEnvOverrides(target){
 // replacement. It is not a generic named-policy exemption or new authority.
 const RESTRICTED_PARENT_POLICY=Object.freeze({
  name:"r4285-d0b9-evidence-v1",
- parent_sha256:"1e49825062790b8c3c3d977e00b1162643bdd7ba352e422ab999a3f3a372a309",
- account_sha256:"e298727697788b6392fc0ddc312b60f90b82d317037c6e0f1691fa9b63f1806e"
+ parent_sha256:"1e49825062790b8c3c3d977e00b1162643bdd7ba352e422ab999a3f3a372a309"
 });
 function restrictedParentPolicyMappings(result){
  const code="HOLD_NATIVE_OTHER_POLICY_PRINCIPAL_REACHABLE",p=RESTRICTED_PARENT_POLICY;
@@ -964,7 +963,8 @@ function assessNativeReachability(f){
   assert(f.policy.length===1&&f.policy[0].policy===p.name&&
    f.policy[0].parent_sha256===p.parent_sha256&&
    sha(Buffer.from(f.parent))===p.parent_sha256&&
-   sha(Buffer.from(f.account))===p.account_sha256&&
+   X.test(f.trusted_account_sha256)&&
+   sha(Buffer.from(f.account))===f.trusted_account_sha256&&
    f.named_policy_verified===true,"HOLD_NATIVE_OTHER_POLICY_BINDING");
  }
  assert(Array.isArray(f.idps)&&f.idps.length===4&&
@@ -1004,6 +1004,23 @@ function assessNativeReachability(f){
   owner_exclusive:true,production_bindings_present:false,
   covered_surfaces:FORMAL_SURFACES});
 }
+// The only successor exception for an existing named policy is the exact
+// account in a verified signed Scope held by the SAME live Prepare receiver.
+// Source-only and legacy direct CLI paths cannot supply this capability.
+function trustedPolicyAccountSha(env,parent,account){
+ const context=producerContexts.get(env),state=context?.receiver_state;
+ assert(state&&context.scope_id===state.scope?.scope_id&&
+  context.execution_run_id===state.ctx?.run_id,
+  "HOLD_NATIVE_RESTRICTED_PARENT_PREPARE_SCOPE_REQUIRED");
+ require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").requireReceiver(state);
+ const resources=state.scope.payload.resources;
+ assert(X.test(resources.s3_account_sha256)&&
+  X.test(resources.parent_principal_sha256)&&
+  sha(Buffer.from(account))===resources.s3_account_sha256&&
+  sha(Buffer.from(parent))===resources.parent_principal_sha256,
+  "HOLD_NATIVE_RESTRICTED_PARENT_ACCOUNT_BINDING");
+ return resources.s3_account_sha256;
+}
 function liveReachability(i,env,alias,account,details,target,now){
  const parent=env.MCFT_CAP09_R4285_PARENT_ACCESS_KEY_ID;
  assert(typeof parent==="string"&&/^[A-Za-z0-9_.-]{2,128}$/.test(parent),
@@ -1016,10 +1033,10 @@ function liveReachability(i,env,alias,account,details,target,now){
   ["--json","admin","user","svcacct","ls",alias,parent]),"ACCOUNTS");
  const policy=normalizeMinioList(mc(
   ["--json","admin","policy","entities",alias]),"POLICY");
- let named_policy_verified=false;
+ let named_policy_verified=false,trusted_account_sha256=null;
  if(policy.length){
-  assert(sha(Buffer.from(parent))===RESTRICTED_PARENT_POLICY.parent_sha256&&
-   sha(Buffer.from(account))===RESTRICTED_PARENT_POLICY.account_sha256,
+  trusted_account_sha256=trustedPolicyAccountSha(env,parent,account);
+  assert(sha(Buffer.from(parent))===RESTRICTED_PARENT_POLICY.parent_sha256,
    "HOLD_NATIVE_RESTRICTED_PARENT_ACCOUNT_BINDING");
   named_policy_verified=verifyRestrictedParentPolicyDefinition(mc(
    ["--json","admin","policy","info",alias,RESTRICTED_PARENT_POLICY.name]));
@@ -1036,8 +1053,9 @@ function liveReachability(i,env,alias,account,details,target,now){
  let host;
  try{host=JSON.parse(native.toString("utf8").replace(/^\uFEFF/,""));}
  catch{throw Error("HOLD_NATIVE_HOST_CENSUS_JSON_UNREADABLE");}
- return assessNativeReachability({users,accounts,policy,named_policy_verified,idps,host,
-  details,target,parent,account,s3Port,pgPort,now:Date.now()});
+ return assessNativeReachability({users,accounts,policy,named_policy_verified,
+  trusted_account_sha256,idps,host,details,target,parent,account,
+  s3Port,pgPort,now:Date.now()});
 }
 
 function verifyNativeSourceRaw(i,controlBytes,inventoryBytes,
@@ -1634,7 +1652,9 @@ function prepareAttached(state,options){
  for(const file of outputs.slice(1)){const rel=path.relative(config.protected_directory,file);assert(rel===".."||rel.startsWith(".."+path.sep),"V3_PRODUCER_PUBLIC_INSIDE_PROTECTED");}
  const env=Object.assign(Object.create(null),state.environment,{
   MCFT_CAP09_R4285_EXISTING_MC_ALIAS:config.existing_mc_alias,MCFT_CAP09_R4285_PARENT_ACCESS_KEY_ID:config.parent_access_key_id});
- producerContexts.set(env,{adoption:state.adoption,scope_id:state.scope.scope_id,expires:state.expires,execution_run_id:state.ctx.run_id,execution:state.execution});
+ producerContexts.set(env,{adoption:state.adoption,scope_id:state.scope.scope_id,
+  receiver_state:state,expires:state.expires,
+  execution_run_id:state.ctx.run_id,execution:state.execution});
  const cap=Object.freeze(Object.create(null));attached.set(cap,{state,i,config,env,phase:"PREPARED",capture:null});return cap;
 }
 function requireAttached(cap,state,phase){const p=attached.get(cap);assert(p&&p.state===state&&p.phase===phase,"V3_PRODUCER_ATTACHED_CAPABILITY_REQUIRED");

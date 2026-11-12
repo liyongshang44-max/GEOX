@@ -254,7 +254,7 @@ jobs:
         run: pnpm --filter @geox/server test:p1:selfcheck
 
   acceptance:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build-test
     steps:
       - name: Checkout

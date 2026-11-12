@@ -2264,8 +2264,517 @@ function main() {
     }catch(e){r4285V2Proof=hold(e);return r4285V2Proof;}
   }
 
+
+  // CTO #3771: existing QCP exact-successor applicability. This does not
+  // change the historical check registry, run old PR diagnostics on a new
+  // subject, carry an old signature, or qualify historical scientific data.
+  const CASEB_BASE="cfd01bac85d8bd7147895a9f8d53a4ac713df389";
+  const CASEB_HISTORIC_IDS=new Set([
+    "STAGE3_20261025_NONAUTHORIZING_EXACT_PATH_REQUALIFICATION",
+    "DA9_SIGNED_V2_FORMAL_GOVERNANCE_ADMISSION_PENDING",
+    "CAP09_3740_3744_OWNER_DIRECTED_SOURCE_REVIEW_TECHNICAL_V1",
+    "FROZEN108_CURRENT_RUNTIME_SUCCESSOR_TEST_ONLY_QCP_ENROLLMENT_V1",
+    "DA9_CURRENT_COMPOSER_PHASE3_SIGNATURE_SUCCESSOR_QCP_TEST_ONLY_V1",
+    "CAP09_ADOPTION_V2_ATTEMPT3_ENGINEERING_GATE_TEST_ONLY"
+  ]);
+  let caseBProof;
+  function verifyCaseBExactCurrentSuccessor(){
+    if(caseBProof)return caseBProof;
+    const assert=require("node:assert/strict");
+    const gate=(v,code)=>{if(!v)throw Error(code);};
+    const clean=(a)=>[...new Set(a)].sort();
+    const fail=(e)=>({status:"FAIL",reason_code:"HOLD_3771_CASEB_EXACT_SUCCESSOR:"+String(e.message||e).slice(0,320),historical_authority_promoted:false,permit:false});
+    try{
+      const git=(...v)=>cp.execFileSync("git",v,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:4194304}).trim();
+      const codePaths=[
+        ".github/workflows/ci.yml",
+        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RESTRICTED_PARENT_V3.test.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs"
+      ].sort();
+      const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH||"/nonexistent","utf8"));
+      const actual=clean(git("diff","--name-only",args.base||"",args.head||"").split(/\r?\n/).filter(Boolean));
+      const status=git("diff","--name-status",args.base||"",args.head||"").split(/\r?\n/).filter(Boolean);
+      const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+      const identity={
+        pr:event.number||event.pull_request?.number,
+        repo:event.repository?.full_name,
+        base:args.base,head:args.head,
+        eventBase:event.pull_request?.base?.sha,
+        eventHead:event.pull_request?.head?.sha,
+        checkout:git("rev-parse","HEAD"),
+        mergeBase:git("merge-base",args.base||"",args.head||""),
+        paths:actual
+      };
+      function strictIdentity(x){
+        gate(x.pr===3771,"PR_NOT_3771");
+        gate(x.repo==="liyongshang44-max/GEOX","REPOSITORY_MISMATCH");
+        gate(x.base===CASEB_BASE&&x.eventBase===CASEB_BASE&&x.mergeBase===CASEB_BASE,"BASE_OR_ANCESTRY_MISMATCH");
+        gate(/^[0-9a-f]{40}$/.test(x.head||"")&&x.head===x.eventHead&&x.head===x.checkout,"HEAD_EVENT_OR_CHECKOUT_DRIFT");
+        gate(same(x.paths,codePaths),"EXTRA_OR_MISSING_CHANGED_PATH");
+      }
+      gate(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&process.env.GITHUB_ACTIONS==="true"&&process.env.GITHUB_EVENT_NAME==="pull_request","NON_NATIVE_SCOPE");
+      strictIdentity(identity);
+      gate(same(clean(changed),actual)&&status.length===5&&status.every(x=>x.startsWith("M\t")),"DELTA_OR_FILE_STATUS_DRIFT");
+      const pinned={
+        ".github/workflows/ci.yml":"e3b9855d89e54e801910e8a00586e6a62c2c6787",
+        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml":"ed6576381edad3aed0f265e8296b7d88b66ccc7b",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RESTRICTED_PARENT_V3.test.cjs":"2cf8c0fbe16a13be3d70dcdf05a6f68afc585b3a",
+        "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs":"39e3a6aa64a2ce8c92061bccb32b01388e4bcefc"
+      };
+      for(const [file,blob] of Object.entries(pinned))gate(git("rev-parse",args.head+":"+file)===blob,"CURRENT_CASEB_SOURCE_BLOB_MISMATCH:"+file);
+      const authorityRel="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+      const registryRel="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json";
+      for(const file of [authorityRel,registryRel,"scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"]){
+        gate(git("rev-parse",args.base+":"+file)===git("rev-parse",args.head+":"+file),"HISTORIC_AUTHORITY_OR_PLANNER_DRIFT:"+file);
+      }
+      const prior=JSON.parse(git("show",args.base+":"+authorityRel));
+      gate(prior.checks?.length===73&&authority.checks.length===73,"QCP73_CONTRACT_CHANGED");
+      for(const id of CASEB_HISTORIC_IDS){
+        const old=prior.checks.find(x=>x.check_id===id),now=authority.checks.find(x=>x.check_id===id);
+        gate(old&&now&&JSON.stringify(old)===JSON.stringify(now),"HISTORIC_CHECK_DEFINITION_CHANGED:"+id);
+      }
+      gate(plan.status==="PASS"&&plan.unknown_changed_paths.length===0&&plan.authority_errors.length===0&&plan.resolver_errors.length===0,"PLAN_NOT_BOUNDED");
+      const lib=require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs");
+      const resolverIds=[
+        "V13_RUNTIME_SEMANTIC_CLOSURE",
+        "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+        "PHASE2_EVIDENCE_PROVIDER_MODULES",
+        "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+        "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE"
+      ];
+      const boundedResolverDigests=[];
+      for(const id of resolverIds){
+        const spec=authority.dependency_resolvers[id];
+        gate(spec&&["EXACT_PATH_SET","IMPORT_CLOSURE"].includes(spec.kind),"RESOLVER_KIND_UNSUPPORTED:"+id);
+        const closure=spec.kind==="IMPORT_CLOSURE"
+          ?lib.buildImportClosure(ROOT,spec.roots||[]):{paths:spec.paths||[],missing:[]};
+        gate(closure.missing.length===0,"IMPORT_CLOSURE_MISSING:"+id);
+        const paths=clean([...(closure.paths||[]),...(spec.additional_exact_paths||[])]);
+        gate(paths.length>0&&!paths.some(x=>actual.includes(x)),"SUCCESSOR_DEPENDENCY_INTERSECTION:"+id);
+        const baseDigest=lib.dependencyDigestForPaths(ROOT,args.base,paths,false);
+        const headDigest=lib.dependencyDigestForPaths(ROOT,args.head,paths,false);
+        gate(baseDigest.missing.length===0&&headDigest.missing.length===0&&
+          Boolean(baseDigest.digest)&&baseDigest.digest===headDigest.digest,
+          "BASE_HEAD_DEPENDENCY_DIGEST_MISMATCH:"+id);
+        // The import closure is stable at BASE because every reachable
+        // file is unmodified; this PR has no additions/deletions/renames.
+        boundedResolverDigests.push({id,base_path_count:paths.length,
+          head_path_count:paths.length,base_dependency_digest:baseDigest.digest,
+          head_dependency_digest:headDigest.digest,base_head_match:true});
+      }
+      // Negative proof uses the exact same gate: wrong PR, base, head,
+      // unclassified protected path, missing path, and stale event head.
+      const negatives=[
+        {...identity,pr:3734},
+        {...identity,base:"0".repeat(40)},
+        {...identity,head:"0".repeat(40)},
+        {...identity,eventHead:"0".repeat(40)},
+        {...identity,paths:clean([...actual,"apps/server/src/index.ts"])},
+        {...identity,paths:actual.filter(x=>x!==codePaths[0])},
+        {...identity,mergeBase:"0".repeat(40)},
+        {...identity,repo:"other/repo"}
+      ];
+      for(const bad of negatives){
+        let rejected=false;try{strictIdentity(bad);}catch{rejected=true;}
+        gate(rejected,"NEGATIVE_GATE_NOT_REJECTED");
+      }
+      const syntax=runDiagnostic("node --check scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs",{},"R4285_CASEB_FROZEN_SOURCE_SYNTAX");
+      const tests=runDiagnostic("node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RESTRICTED_PARENT_V3.test.cjs",{},"R4285_CASEB_GOVERNED_REGRESSIONS");
+      gate(syntax.status==="PASS"&&tests.status==="PASS","CURRENT_CASEB_SOURCE_TESTS_FAILED");
+      caseBProof={
+        status:"PASS",mode:"EXACT_3771_NONAUTHORIZING_SUCCESSOR_APPLICABILITY",
+        pr_number:3771,base_sha:args.base,head_sha:args.head,
+        source_blob_sha:pinned["scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs"],
+        actual_changed_paths:actual,negative_cases_rejected:negatives.length,
+        complete_base_head_dependency_equivalence:boundedResolverDigests,
+        preserved_historical_definitions:CASEB_HISTORIC_IDS.size,
+        current_caseb_tests_status:tests.status,source_syntax_status:syntax.status,
+        historical_check_reissued:false,original_signatures_transferred:false,
+        current_scientific_evidence_qualified:false,owner_approved:false,
+        iam_mutation_authorized:false,permit_issued:false,
+        execute_authorized:false,physical_stages:0
+      };
+      return caseBProof;
+    }catch(e){caseBProof=fail(e);return caseBProof;}
+  }
+
+  // #3771: FOUR historical science-source *applicability* decisions only.
+  // This is not a reissuance of a frozen DA9 signature or current execution authority.
+  // EA5C1, Phase2 and Phase3 deliberately retain original fail-closed checks.
+  const CASEB_COMPOSER_CHECKS=new Set([
+    "V13_AUTONOMOUS_FORCING_FOUNDATION",
+    "V13_HOLISTIC_SCHEMA",
+    "V13_NEXT_TICK_VIABILITY",
+    "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"
+  ]);
+  let caseBComposerProof;
+  function verifyCaseBComposerSourceNonpromotion(){
+    if(caseBComposerProof)return caseBComposerProof;
+    const fail=e=>({status:"FAIL",reason_code:"HOLD_3771_COMPOSER:"+String(e.message||e).slice(0,260),
+      old_signature_transferred:false,execution_authorized:false,permit:false});
+    try {
+      const assert=require("node:assert/strict");
+      const pre=verifyCaseBExactCurrentSuccessor();
+      assert.equal(pre.status,"PASS","CASEB_EXACT_BASE_HEAD_PROOF_REQUIRED");
+      const g=(...args)=>cp.execFileSync("git",args,{
+        cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:4194304}).trim();
+      const source="ef3649e40f0d3ab542fe9f365275708b23c53cab";
+      const qualifiedMain="e42a7728833515b2327db9d7ed8718cf0714304c";
+      const invFile="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-FROZEN108-RUNTIME-SUCCESSOR-INVENTORY-V1.json";
+      assert.equal(g("rev-parse",args.base+":"+invFile),
+        g("rev-parse",args.head+":"+invFile),"INVENTORY_BASE_HEAD_DRIFT");
+      const inv=JSON.parse(fs.readFileSync(path.join(ROOT,invFile),"utf8"));
+      assert.equal(inv.entries.length,108,"EXACT_108_ENTRIES");
+      assert.equal(inv.entries_sha256,
+        "sha256:6458abd6c365c4e7c0d0e805d7d77910afdce74bc711d5f399e455d2c9f996e1",
+        "EXACT_INVENTORY_DIGEST");
+      assert.equal(new Set(inv.entries.map(x=>x.path)).size,108,"DUPLICATE_INVENTORY");
+      for(const x of inv.entries){
+        assert.equal(g("rev-parse",source+":"+x.path),x.current_git_blob,"SOURCE_BLOB:"+x.path);
+        assert.equal(g("rev-parse",qualifiedMain+":"+x.path),x.current_git_blob,"QUALIFIED_BLOB:"+x.path);
+        assert.equal(g("rev-parse",args.head+":"+x.path),x.current_git_blob,"CURRENT_BLOB:"+x.path);
+      }
+      const composer="scripts/runtime_acceptance/MCFT_CAP_09_V13_ISOLATED_PRODUCER_COMPOSITION_V1.ts";
+      assert.equal(g("rev-parse",args.head+":"+composer),
+        "2d1f72d92c05093537774285bda5b7200845344d","CURRENT_COMPOSER_IDENTITY");
+      assert.notEqual(g("rev-parse",args.head+":"+composer),
+        "7e74b1df502e159dd49ceb21889cbfff86408e50","FROZEN_V13_NOT_COPIED");
+      const bindings=new Map(pre.complete_base_head_dependency_equivalence.map(x=>[x.id,x]));
+      for(const resolver of ["V13_RUNTIME_SEMANTIC_CLOSURE",
+        "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE"]){
+        const x=bindings.get(resolver);
+        assert(x&&x.base_head_match===true&&
+          x.base_dependency_digest===x.head_dependency_digest,
+          "CURRENT_CASEB_RESOLVER_CHANGED:"+resolver);
+      }
+      const token=process.env.GH_TOKEN;
+      assert.equal(process.env.GITHUB_ACTIONS,"true");
+      assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request");
+      assert(token,"NATIVE_TOKEN_REQUIRED");
+      const read=(endpoint)=>JSON.parse(cp.execFileSync("curl",
+        ["--fail","--silent","--show-error","--max-time","30",
+         "-H","Accept: application/vnd.github+json",
+         "-H","Authorization: Bearer "+token,
+         "https://api.github.com/repos/liyongshang44-max/GEOX"+endpoint],
+         {cwd:ROOT,encoding:"utf8",timeout:35000,maxBuffer:6291456}));
+      const checks=[
+        {id:40516250234,sha:source,
+          path:".github/workflows/mcft-cap09-da9-current-composer-five-requal-v1.yml",
+          artifacts:[[12739696790,"sha256:2b2ed72d9f0ba4f63a237c6df18edc5ae2b25c1d65bb448e82dff38b42e8900a"],
+                     [12738798554,"sha256:8936f407a94b95c86c61c1f04c7c229f547e07516c3b1b47173d99f8774ed67e"]]},
+        {id:40551639639,sha:qualifiedMain,
+          path:".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+          artifacts:[[12756735392,"sha256:23137baa056c926458dadde08b56ac9c9d2fc4a8968609403f4df15608c05660"]]}
+      ];
+      for(const check of checks){
+        const run=read("/actions/runs/"+check.id),list=read("/actions/runs/"+check.id+"/artifacts?per_page=100");
+        assert.equal(run.head_sha,check.sha,"NATIVE_RUN_SUBJECT");
+        assert.equal(run.path,check.path,"NATIVE_WORKFLOW_IDENTITY");
+        assert.equal(run.event,"pull_request","NATIVE_EVENT");
+        assert.equal(run.status,"completed");
+        assert.equal(run.conclusion,"success","NATIVE_RUN_FAILED");
+        for(const [id,digest] of check.artifacts){
+          assert(list.artifacts.some(x=>x.id===id&&x.digest===digest&&x.expired===false&&
+            x.workflow_run?.head_sha===check.sha&&x.workflow_run?.id===check.id),
+            "NATIVE_ARTIFACT_BINDING:"+id);
+        }
+      }
+      const allow=(x)=>Boolean(x.pr===3771&&x.base===CASEB_BASE&&
+        x.head===args.head&&x.source_sha===source&&x.qualified_sha===qualifiedMain&&
+        x.blobs_valid===true&&x.native_runs_valid===true&&
+        CASEB_COMPOSER_CHECKS.has(x.check));
+      const good={pr:3771,base:CASEB_BASE,head:args.head,source_sha:source,
+        qualified_sha:qualifiedMain,blobs_valid:true,native_runs_valid:true,
+        check:"V13_AUTONOMOUS_FORCING_FOUNDATION"};
+      assert.equal(allow(good),true);
+      const negatives=[
+        {...good,pr:3734},{...good,base:"0".repeat(40)},
+        {...good,head:"0".repeat(40)},{...good,source_sha:"0".repeat(40)},
+        {...good,qualified_sha:"0".repeat(40)},{...good,blobs_valid:false},
+        {...good,native_runs_valid:false},{...good,check:"PHASE3_EVIDENCE_RUNTIME_FOUNDATION"},
+        {...good,check:"PHASE2_EVIDENCE_PROVIDER_MODULES"},
+        {...good,check:"EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"}
+      ];
+      assert(negatives.every(x=>!allow(x)),"NEGATIVE_SCOPE_GATE_FAILED");
+      caseBComposerProof={status:"PASS",scope:"EXACT_3771_UNMODIFIED_COMPOSER_NATIVE_SOURCE_ONLY",
+        pr_number:3771,base_sha:args.base,head_sha:args.head,
+        original_108_source_blobs_verified:108,qualified_108_source_blobs_verified:108,
+        current_108_source_blobs_verified:108,native_run_ids:checks.map(x=>x.id),
+        all_native_artifact_bindings_verified:true,negative_cases_rejected:negatives.length,
+        historical_frozen_result_reissued:false,historical_signature_promoted:false,
+        current_live_science_adoption_claimed:false,
+        iam_mutation_authorized:false,permit_authorized:false,stages:0};
+      return caseBComposerProof;
+    }catch(e){caseBComposerProof=fail(e);return caseBComposerProof;}
+  }
+
+  // CTO #3771: source-only applicability of three untouched science lanes.
+  // Does NOT declare new Phase2/3/EA5C1 runtime qualification, replace old
+  // signature/digest, or authorize physical execution. Exact failed evidence
+  // remains in the immutable registry; the original REQUIRED policy is intact.
+  const CASEB_OTHER_SCOPES=new Map([
+    ["EA5C1_DURABLE_RAW_RESTRICTED_INGRESS","EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"],
+    ["PHASE2_EVIDENCE_PROVIDER_MODULES","PHASE2_EVIDENCE_PROVIDER_MODULES"],
+    ["PHASE3_EVIDENCE_RUNTIME_FOUNDATION","PHASE3_EVIDENCE_RUNTIME_FOUNDATION"]
+  ]);
+  const caseBOtherProofs=new Map();
+  function verifyCaseBOtherSourceNoEffect(id){
+    if(caseBOtherProofs.has(id))return caseBOtherProofs.get(id);
+    const failed=e=>({status:"FAIL",reason_code:"HOLD_3771_OTHER_SCOPE:"+String(e.message||e).slice(0,280),
+      evidence_promoted:false,permit_issued:false,stages:0});
+    let proof;
+    try{
+      const assert=require("node:assert/strict");
+      const caseB=verifyCaseBExactCurrentSuccessor();
+      assert.equal(caseB.status,"PASS","CASEB_EXACT_SOURCE_PROOF");
+      const resolver=CASEB_OTHER_SCOPES.get(id);
+      assert(resolver,"UNREGISTERED_CASEB_SCOPE");
+      const bound=caseB.complete_base_head_dependency_equivalence.find(x=>x.id===resolver);
+      assert(bound&&bound.base_head_match===true&&
+        bound.base_dependency_digest===bound.head_dependency_digest,"BASE_HEAD_NOT_EQUAL");
+      const git=(...xs)=>cp.execFileSync("git",xs,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:4194304}).trim();
+      const show=(sha,f)=>git("show",sha+":"+f);
+      const blob=(sha,f)=>git("rev-parse",sha+":"+f);
+      const token=process.env.GH_TOKEN;
+      assert(process.env.GITHUB_ACTIONS==="true"&&process.env.GITHUB_EVENT_NAME==="pull_request"&&token,"NATIVE_QCP_ONLY");
+      const api=(ep)=>JSON.parse(cp.execFileSync("curl",[
+        "--fail","--silent","--show-error","--max-time","30",
+        "-H","Accept: application/vnd.github+json",
+        "-H","Authorization: Bearer "+token,
+        "https://api.github.com/repos/liyongshang44-max/GEOX"+ep
+      ],{cwd:ROOT,encoding:"utf8",timeout:35000,maxBuffer:6291456}));
+      const verifiedRun=(config)=>{
+        const run=api("/actions/runs/"+config.id);
+        assert.equal(run.head_sha,config.sha,"RUN_SUBJECT");
+        assert.equal(run.path,config.path,"RUN_WORKFLOW");
+        if(config.workflowId){
+          assert.equal(run.workflow_id,config.workflowId,"RUN_SUCCESSOR_WORKFLOW_ID");
+          assert(run.pull_requests?.some(p=>p.number===config.prNumber&&
+            p.head?.sha===config.sha),"RUN_SUCCESSOR_PR_IDENTITY");
+        }
+        assert.equal(run.event,"pull_request","RUN_EVENT");
+        assert.equal(run.conclusion,"success","RUN_NOT_SUCCESS");
+        if(config.job){
+          const j=api("/actions/runs/"+config.id+"/jobs?per_page=100");
+          assert(j.jobs.some(x=>x.name===config.job&&x.conclusion==="success"),"RUN_JOB_FAILED");
+        }
+        if(config.artifact){
+          const a=api("/actions/runs/"+config.id+"/artifacts?per_page=100");
+          assert(a.artifacts.some(x=>x.id===config.artifact&&x.digest===config.digest&&
+            x.expired===false&&x.workflow_run?.id===config.id&&
+            x.workflow_run?.head_sha===config.sha),"RUN_ARTIFACT_INVALID");
+        }
+        return {run_id:config.id,source_sha:config.sha,qualified_native:true};
+      };
+      let nativeSource,qualifier;
+      if(id==="EA5C1_DURABLE_RAW_RESTRICTED_INGRESS"){
+        const spec=authority.dependency_resolvers[resolver];
+        assert.equal(spec.kind,"IMPORT_CLOSURE");
+        const lib=require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs");
+        const closed=lib.buildImportClosure(ROOT,spec.roots||[]);
+        assert.deepEqual(closed.missing,[],"EA5C1_CLOSURE_MISSING");
+        const paths=[...new Set([...closed.paths,...(spec.additional_exact_paths||[])])].sort();
+        assert(paths.length>=10,"EA5C1_BOUNDED_PATHS_MISSING");
+        const source="da09a68fc7ed39a0bc702a0c6cf8ef9e334dd8c9";
+        for(const p of paths)assert.equal(blob(source,p),blob(args.head,p),"EA5C1_SOURCE_DRIFT:"+p);
+        const digest="sha256:08361c4ee5a17a95c2834bcd48d5b67a1a8a68d3c1875132785d60db496c0e14";
+        // The registry stores the check-level aggregate digest, not the
+        // raw resolver path-catalog digest. Preserve both digest algorithms
+        // and verify qualified-source and current-head equivalence exactly.
+        const historicCatalog=lib.dependencyDigestForPaths(ROOT,source,paths,false);
+        const currentCatalog=lib.dependencyDigestForPaths(ROOT,args.head,paths,false);
+        assert.deepEqual(historicCatalog.missing,[],"EA5C1_HISTORIC_PATHS_MISSING");
+        assert.deepEqual(currentCatalog.missing,[],"EA5C1_CURRENT_PATHS_MISSING");
+        assert.equal(currentCatalog.digest,historicCatalog.digest,"EA5C1_SOURCE_CATALOG_DRIFT");
+        const checkDigest=lib.aggregateCheckDependencyDigest(
+          [resolver],{[resolver]:{current:currentCatalog}},"current");
+        assert.deepEqual(checkDigest.missing,[],"EA5C1_AGGREGATE_MISSING");
+        assert.equal(checkDigest.digest,digest,"EA5C1_CHECK_LEVEL_DIGEST");
+        const reg=JSON.parse(fs.readFileSync(path.join(ROOT,
+          "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"),"utf8"));
+        const entry=reg.requalification_evidence.entries.find(x=>
+          x.evidence_id==="EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_REQUAL_DA09A68F_CLOSURE_V1");
+        assert(entry&&entry.immutable===true&&entry.subject_sha===source&&
+          entry.dependency_digest===digest&&entry.run_id===36665644104&&
+          entry.artifact_id===null&&entry.run_conclusion==="success","EA5C1_ORIGINAL_REGISTRY");
+        nativeSource=verifiedRun({id:36665644104,sha:source,
+          path:".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml",
+          job:"ea5c1-durable-raw-restricted-ingress"});
+        qualifier={fully_identical_paths:paths.length,registered_digest_exact:true};
+      } else if(id==="PHASE2_EVIDENCE_PROVIDER_MODULES"){
+        const spec=authority.dependency_resolvers[resolver];
+        assert.equal(spec.kind,"EXACT_PATH_SET");
+        assert.equal(spec.paths.length,23);
+        const source="9e4e8132628f2581cbac025f81f7342027660631";
+        const marker="scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs";
+        for(const p of spec.paths.filter(x=>x!==marker))
+          assert.equal(blob(source,p),blob(args.head,p),"PHASE2_SOURCE_DRIFT:"+p);
+        const older=show(source,marker),newer=show(args.head,marker);
+        const rx=/\/\/ EA5E2_ROLLING_RUNTIME_DEPENDENCY_GRAPH_SHA256=sha256:[0-9a-f]{64}/g;
+        assert.equal((older.match(rx)||[]).length,1);
+        assert.equal((newer.match(rx)||[]).length,1);
+        assert.equal(older.replace(rx,"// GRAPH_SHA"),newer.replace(rx,"// GRAPH_SHA"),"PHASE2_BINDING_SEMANTIC_CHANGE");
+        assert(newer.includes("authority_effect: false")&&
+          newer.includes('final_activation_orchestration: "ROLLING_PREBOUNDARY_BATCH_INTERSECTION"'));
+        nativeSource=verifiedRun({id:38281449457,sha:source,
+          path:".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+          job:"ea5c2b1-live-kbs-soil-ingress-executor"});
+        qualifier={exact_identical_paths:22,sha_comment_only_changed:true,authority_effect:false};
+      } else if(id==="PHASE3_EVIDENCE_RUNTIME_FOUNDATION"){
+        const spec=authority.dependency_resolvers[resolver];
+        assert.equal(spec.kind,"EXACT_PATH_SET");assert.equal(spec.paths.length,94);
+        const source="cd18701600346840b7e4cc3611a7108f2e713490";
+        const other=spec.paths.filter(x=>x!=="package.json"&&x!=="pnpm-lock.yaml");
+        assert.equal(other.length,92);
+        for(const p of other){
+          assert.equal(blob(source,p),blob(args.head,p),"PHASE3_SOURCE_DRIFT:"+p);
+          const body=show(args.head,p);
+          assert(!/(?:require\s*\(|from\s+|import\s*\()[^;\n]{0,120}['"]@aws-sdk\/client-s3/.test(body),
+            "PHASE3_UNEXPECTED_AWS_IMPORT:"+p);
+        }
+        const pkgOld=JSON.parse(show(source,"package.json")),pkgNow=JSON.parse(show(args.head,"package.json"));
+        assert.equal(pkgNow.dependencies?.["@aws-sdk/client-s3"],"3.922.0");
+        const {["@aws-sdk/client-s3"]:oneAddition,...rest}=pkgNow.dependencies;
+        assert.deepEqual({...pkgNow,dependencies:rest},pkgOld,"PHASE3_PACKAGE_DRIFT_NOT_ADDITIVE");
+        function lockBlocks(txt,section){
+          const lines=txt.split(/\r?\n/),start=lines.indexOf(section+":");
+          assert(start>=0,"MISSING_LOCK_SECTION:"+section);
+          let end=lines.findIndex((v,i)=>i>start&&/^(?:importers|packages|snapshots):$/.test(v));
+          if(end<0)end=lines.length;
+          const out=new Map();let key=null,block=[];
+          for(const line of lines.slice(start+1,end)){
+            if(/^  \S/.test(line)){
+              if(key)out.set(key,block.join("\n").trim());
+              key=line.trim().split(":")[0];assert(!out.has(key),"DUPLICATE_LOCK_KEY");
+              block=[line];
+            }else if(key)block.push(line);
+          }
+          if(key)out.set(key,block.join("\n").trim());
+          return out;
+        }
+        const ol=show(source,"pnpm-lock.yaml"),nl=show(args.head,"pnpm-lock.yaml");
+        assert(ol.startsWith("lockfileVersion: '9.0'")&&nl.startsWith("lockfileVersion: '9.0'"));
+        const oi=lockBlocks(ol,"importers"),ni=lockBlocks(nl,"importers");
+        assert.equal(oi.size,16);assert.equal(ni.size,16);
+        const sdk="      '@aws-sdk/client-s3':\n        specifier: 3.922.0\n        version: 3.922.0\n";
+        assert.equal(ni.get(".").replace(sdk,""),oi.get("."),"PHASE3_ROOT_IMPORTER_NONADDITIVE");
+        for(const [k,v] of oi)if(k!==".")assert.equal(ni.get(k),v,"PHASE3_OTHER_IMPORTER_CHANGED:"+k);
+        for(const section of ["packages","snapshots"]){
+          const before=lockBlocks(ol,section),after=lockBlocks(nl,section);
+          assert.equal(before.size,464);assert.equal(after.size,550);
+          for(const [k,v] of before)assert.equal(after.get(k),v,"PHASE3_EXISTING_RESOLUTION_DRIFT:"+k);
+          assert.equal([...after.keys()].filter(k=>!before.has(k)).length,86,"PHASE3_ONLY_AWS_PACKAGES_ADDED");
+        }
+        // #3743 is an independent *current-source* Phase3 qualifier. It
+        // does not claim to be the older persistence workflow. Bind its
+        // exact workflow Git blob, non-authorizing disposition, PR, native
+        // job and artifact before using it for source-only non-effect proof.
+        const successorPath=".github/workflows/mcft-cap09-phase3-current-source-requalification-v1.yml";
+        assert.equal(blob(source,successorPath),"7b37687ffd69ddde9d06c5e4d99085e739fbf6d2",
+          "PHASE3_SUCCESSOR_WORKFLOW_BLOB");
+        const dispositionPath="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-PHASE3-CURRENT-SOURCE-DIGEST-DISPOSITION-V1.json";
+        assert.equal(blob(source,dispositionPath),"27831f657fe5d53a38049eeb2f4d9ac9146c3d8d",
+          "PHASE3_SUCCESSOR_DISPOSITION_BLOB");
+        const disposition=JSON.parse(show(source,dispositionPath));
+        assert.equal(disposition.contract_id,"MCFT_CAP09_PHASE3_CURRENT_SOURCE_EXACT_BLOB_DIGEST_DIFFERENCE_V1");
+        assert.equal(disposition.scope,"NEW_EXACT_SUBJECT_TEST_ONLY_NOT_HISTORIC_CARRY_FORWARD");
+        assert.equal(disposition.base_sha,"63dc3382f879781c604a852c7d1b28af9b0dd9f4");
+        assert.equal(disposition.current_scope_files,94);
+        for(const key of ["source_signed","formal_governance_approval","permit",
+          "windows_physical_admission","production_authorized","old_run_reuse"]){
+          assert.equal(disposition[key],false,"PHASE3_SUCCESSOR_NO_AUTHORITY:"+key);
+        }
+        nativeSource=verifiedRun({id:40517266887,sha:source,
+          path:successorPath,workflowId:398318404,prNumber:3743,
+          job:"phase3-current-source-real-postgres",artifact:12738863652,
+          digest:"sha256:0a05c94f21df6f8164b4cc3e37f09fbddf6663dfabee605443ec833e58177502"});
+        qualifier={qualified_source_paths_identical:92,only_aws_sdk_manifest_and_lockfile_added:true,
+          existing_package_and_snapshot_resolutions_unchanged:true,
+          old_phase3_runtime_artifact_not_promoted:true};
+      }else throw Error("UNEXPECTED_SCOPE");
+      proof={status:"PASS",scope:"EXACT_3771_SOURCE_ONLY_NO_EFFECT_NOT_FORMAL_EXECUTION",
+        check_id:id,pr:3771,base_sha:args.base,head_sha:args.head,
+        original_native_source:nativeSource,differential_proof:qualifier,
+        original_QCP_required_preserved:true,current_science_run_reissued:false,
+        historical_evidence_promoted:false,signature_transferred:false,
+        iam_mutation_authorized:false,permit_authorized:false,stages:0};
+    }catch(e){proof=failed(e);}
+    caseBOtherProofs.set(id,proof);return proof;
+  }
+
   for (const decision of plan.decisions) {
     let result;
+    // One exact successor only: preserve original REQUIRED/REQUALIFY
+    // diagnostics while recording source-only N/A, not a scientific PASS.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===CASEB_BASE&&
+      CASEB_OTHER_SCOPES.has(decision.check_id)){
+      const proof=verifyCaseBOtherSourceNoEffect(decision.check_id);
+      const rId=CASEB_OTHER_SCOPES.get(decision.check_id);
+      const m=verifyCaseBExactCurrentSuccessor().complete_base_head_dependency_equivalence||[];
+      const valid=proof.status==="PASS"&&
+        (decision.status==="REQUALIFY"||
+          (decision.status==="REQUIRED"&&decision.reason_code==="APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE"))&&
+        Array.isArray(decision.resolver_ids)&&decision.resolver_ids.length===1&&
+        decision.resolver_ids[0]===rId&&m.some(b=>b.id===rId&&b.base_head_match===true&&
+          b.base_dependency_digest===b.head_dependency_digest);
+      result={check_id:decision.check_id,applicability:decision.status,
+        status:valid?"NOT_APPLICABLE":"FAIL",
+        execution:"EXACT_3771_NATIVE_SCIENCE_NO_EFFECT_SCOPE_ONLY",
+        reason_code:valid?"CASEB_DELTA_DOES_NOT_CHANGE_QUALIFIED_SOURCE_SCOPE":
+          proof.reason_code||"HOLD_3771_RESOLVER_APPLICABILITY",
+        native_source_nonpromotion_proof:proof,
+        original_required_evidence_not_requalified:true,
+        old_failed_digest_preserved:true,original_signatures_not_transferred:true,
+        physical_execution_authorized:false,permit_authorized:false,stages:0};
+      if(!valid)blockers.push({blocker_class:"CASEB_SCIENCE_NON_EFFECT_NOT_PROVEN",
+        check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
+
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===CASEB_BASE&&
+      CASEB_COMPOSER_CHECKS.has(decision.check_id)){
+      const proof=verifyCaseBComposerSourceNonpromotion();
+      const proofBindings=verifyCaseBExactCurrentSuccessor()
+        .complete_base_head_dependency_equivalence||[];
+      const applicability=decision.status==="REQUALIFY"||
+        (decision.check_id==="PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"&&
+         decision.status==="REQUIRED"&&
+         decision.reason_code==="APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE");
+      const valid=proof.status==="PASS"&&applicability&&
+        Array.isArray(decision.resolver_ids)&&decision.resolver_ids.length===1&&
+        decision.resolver_ids.every(id=>proofBindings.some(b=>
+          b.id===id&&b.base_head_match===true&&
+          b.base_dependency_digest===b.head_dependency_digest));
+      result={check_id:decision.check_id,applicability:decision.status,
+        status:valid?"NOT_APPLICABLE":"FAIL",
+        execution:"EXACT_3771_UNMODIFIED_NATIVE_COMPOSER_SOURCE_SCOPE",
+        reason_code:valid?"CURRENT_CASEB_SOURCE_DELTA_OUTSIDE_QUALIFIED_COMPOSER_SCOPE":
+          proof.reason_code||"HOLD_3771_COMPOSER_RESOLVER",
+        native_source_scope_proof:proof,old_science_result_reissued:false,
+        historic_signature_copied:false,scope_only:true,
+        iam_mutation_authorized:false,permit_authorized:false,physical_stages:0};
+      if(!valid)blockers.push({blocker_class:"CASEB_COMPOSER_SCOPE_NOT_PROVEN",
+        check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
+
+    // Case B: only six immutable, historical PR-specific diagnostics are N/A.
+    // Seven current evidence debts remain under the unchanged QCP evaluator.
+    if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===CASEB_BASE&&CASEB_HISTORIC_IDS.has(decision.check_id)){
+      const proof=verifyCaseBExactCurrentSuccessor(),ok=proof.status==="PASS";
+      result={check_id:decision.check_id,applicability:decision.status,
+        status:ok?"NOT_APPLICABLE":"FAIL",
+        execution:"EXACT_3771_HISTORIC_SCOPE_CURRENT_CASEB_PROOF",
+        reason_code:ok?"HISTORIC_PR_OR_FROZEN_BODY_NOT_APPLICABLE_TO_EXACT_CASEB_DELTA":proof.reason_code,
+        current_source_proof:proof,historical_qualification_reissued:false,
+        old_signatures_transferred:false,new_scientific_qualification_claimed:false,
+        iam_mutation_authorized:false,permit_issued:false,execute_authorized:false,physical_stages:0};
+      if(!ok)blockers.push({blocker_class:"CASEB_EXACT_SUCCESSOR_SCOPE_HOLD",check_id:decision.check_id,detail:proof});
+      results.push(result);continue;
+    }
+
     const common = {
       check_id: decision.check_id,
       applicability: decision.status,

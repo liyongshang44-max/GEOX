@@ -5,10 +5,10 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const ROOT=path.resolve(__dirname,'../..');
 const source=fs.readFileSync(path.join(__dirname,'MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs'),'utf8');
 const PARENT='r4285-d0b9-parent-v1',ACCOUNT='UNIT_SERVICE_NOT_A_REAL_KEY',POLICY='r4285-d0b9-evidence-v1';
-const accountHash='e298727697788b6392fc0ddc312b60f90b82d317037c6e0f1691fa9b63f1806e';
+const accountHash=crypto.createHash('sha256').update(Buffer.from(ACCOUNT)).digest('hex');
 const canonical=x=>JSON.stringify(x&&typeof x==='object'?(Array.isArray(x)?x.map(v=>JSON.parse(canonical(v))):Object.fromEntries(Object.keys(x).sort().map(k=>[k,JSON.parse(canonical(x[k]))]))):x);
 function harness(){
- const box={assert,Buffer,FORMAL_SURFACES:['fixture surface only'],REACH_IDPS:['identity_ldap','identity_openid','identity_plugin','policy_plugin'],lineage:{canonical},sha:b=>b.toString()===ACCOUNT?accountHash:crypto.createHash('sha256').update(b).digest('hex'),BUCKET_ARN:'arn:aws:s3:::mcft-cap09-requal-4285c3ce342c',RAW_ARN:'arn:aws:s3:::mcft-cap09-requal-4285c3ce342c/mcft-cap09-formal-raw-v1/sha256/*',CANDIDATE_ARN:'arn:aws:s3:::mcft-cap09-requal-4285c3ce342c/mcft-cap09-formal-candidate-v1/sha256/*'};
+ const box={assert,Buffer,X:/^[a-f0-9]{64}$/,FORMAL_SURFACES:['fixture surface only'],REACH_IDPS:['identity_ldap','identity_openid','identity_plugin','policy_plugin'],lineage:{canonical},sha:b=>b.toString()===ACCOUNT?accountHash:crypto.createHash('sha256').update(b).digest('hex'),BUCKET_ARN:'arn:aws:s3:::mcft-cap09-requal-4285c3ce342c',RAW_ARN:'arn:aws:s3:::mcft-cap09-requal-4285c3ce342c/mcft-cap09-formal-raw-v1/sha256/*',CANDIDATE_ARN:'arn:aws:s3:::mcft-cap09-requal-4285c3ce342c/mcft-cap09-formal-candidate-v1/sha256/*'};
  box.exact=(o,keys,label)=>assert(o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).sort().join('|')===[...keys].sort().join('|'),label);
  const policy=source.slice(source.indexOf('function replacementPolicyV2('),source.indexOf('function verifyOwnerAuthorityBindingV2('));
  const json=source.slice(source.indexOf('function nativeJsonLines('),source.indexOf('function deepHas('));
@@ -19,7 +19,7 @@ function harness(){
 const raw=x=>Buffer.from(JSON.stringify(x)),entity=(result={})=>raw({status:'success',result:{timestamp:'2026-11-08T00:00:00Z',...result}});
 const mapping=()=>({policyMappings:[{policy:POLICY,users:[PARENT],groups:[]}]});
 const doc=api=>raw({status:'success',policy:POLICY,isGroup:false,policyInfo:{PolicyName:POLICY,Policy:api.replacementPolicyV2()}});
-function facts(policy=[]){const target={Id:'target',HostConfig:{PortBindings:{'9000/tcp':[{HostIp:'127.0.0.1',HostPort:'59292'}]}},NetworkSettings:{Networks:{isolated:{}}}};return {users:[PARENT],accounts:[ACCOUNT],policy,named_policy_verified:true,parent:PARENT,account:ACCOUNT,idps:['identity_ldap','identity_openid','identity_plugin','policy_plugin'].map(name=>({name,disabled:true})),details:[target],target,s3Port:59292,pgPort:55492,now:Date.parse('2026-11-08T00:00:00Z'),host:{schema:'R4285_HOST_REACHABILITY_V1',observed_at:'2026-11-08T00:00:00Z',process_count:1,service_count:1,process_refs:[],service_refs:[],inaccessible_apps:[],config_unreadable:[],listeners:[{port:59292,address:'127.0.0.1'},{port:55492,address:'127.0.0.1'}]}};}
+function facts(policy=[]){const target={Id:'target',HostConfig:{PortBindings:{'9000/tcp':[{HostIp:'127.0.0.1',HostPort:'59292'}]}},NetworkSettings:{Networks:{isolated:{}}}};return {users:[PARENT],accounts:[ACCOUNT],policy,named_policy_verified:true,parent:PARENT,account:ACCOUNT,trusted_account_sha256:accountHash,idps:['identity_ldap','identity_openid','identity_plugin','policy_plugin'].map(name=>({name,disabled:true})),details:[target],target,s3Port:59292,pgPort:55492,now:Date.parse('2026-11-08T00:00:00Z'),host:{schema:'R4285_HOST_REACHABILITY_V1',observed_at:'2026-11-08T00:00:00Z',process_count:1,service_count:1,process_refs:[],service_refs:[],inaccessible_apps:[],config_unreadable:[],listeners:[{port:59292,address:'127.0.0.1'},{port:55492,address:'127.0.0.1'}]}};}
 test('historical empty policy mappings remain accepted with no named-policy document',()=>{const api=harness();assert.equal(api.normalizeMinioList(entity(),'POLICY').length,0);const f=facts();delete f.named_policy_verified;assert.equal(api.assessNativeReachability(f).status,'NATIVE_REACHABLE_SCOPE_VERIFIED');});
 test('only exact approved policy-to-parent mapping normalizes and passes with definition proof',()=>{const api=harness(),p=api.normalizeMinioList(entity(mapping()),'POLICY');assert.equal(p.length,1);assert.equal(api.verifyRestrictedParentPolicyDefinition(doc(api)),true);assert.equal(api.assessNativeReachability(facts(p)).status,'NATIVE_REACHABLE_SCOPE_VERIFIED');});
 test('native null groups, empty groups and omitted groups represent the same empty membership',()=>{const api=harness();for(const form of ['null','empty','omitted']){const x=mapping();if(form==='null')x.policyMappings[0].groups=null;if(form==='omitted')delete x.policyMappings[0].groups;const normalized=api.normalizeMinioList(entity(x),'POLICY');assert.equal(normalized.length,1);assert.equal(api.assessNativeReachability(facts(normalized)).status,'NATIVE_REACHABLE_SCOPE_VERIFIED');}});
@@ -27,11 +27,11 @@ test('null groups cannot admit malformed membership or a different principal',()
 test('user-to-policy representation and matching dual representation agree',()=>{const api=harness(),u={userMappings:[{user:PARENT,policies:[POLICY]}]};assert.equal(api.normalizeMinioList(entity(u),'POLICY').length,1);assert.equal(api.normalizeMinioList(entity({...u,...mapping()}),'POLICY').length,1);});
 test('extra users, policies, groups, mappings or unknown fields reject',()=>{const api=harness();for(const mutate of [x=>x.policyMappings[0].users.push('other'),x=>x.policyMappings[0].policy='readwrite',x=>x.policyMappings[0].groups.push('admins'),x=>x.policyMappings.push(x.policyMappings[0]),x=>x.policyMappings[0].unknown=true,x=>x.userMappings=[{user:'other',policies:[POLICY]}],x=>x.groupMappings=[{group:'admins',policies:[POLICY]}]]){const x=mapping();mutate(x);assert.throws(()=>api.normalizeMinioList(entity(x),'POLICY'));}});
 test('unknown wrapper fields, malformed timestamps and non-array maps remain closed',()=>{const api=harness();for(const r of [{...mapping(),extra:true},{...mapping(),timestamp:'bad'},{policyMappings:null},{userMappings:{}},{policyMappings:'bad'}])assert.throws(()=>api.normalizeMinioList(entity(r),'POLICY'));});
-test('wrong parent, wrong service account, missing definition proof and extra normalized mapping reject',()=>{const api=harness(),p=api.normalizeMinioList(entity(mapping()),'POLICY');for(const mutate of [f=>f.parent='wrong',f=>f.account='wrong',f=>f.named_policy_verified=false,f=>delete f.named_policy_verified,f=>f.policy.push(f.policy[0])]){const f=facts(JSON.parse(JSON.stringify(p)));mutate(f);assert.throws(()=>api.assessNativeReachability(f));}});
+test('wrong parent, wrong service account, missing definition proof and extra normalized mapping reject',()=>{const api=harness(),p=api.normalizeMinioList(entity(mapping()),'POLICY');for(const mutate of [f=>f.parent='wrong',f=>f.account='wrong',f=>f.trusted_account_sha256='f'.repeat(64),f=>f.named_policy_verified=false,f=>delete f.named_policy_verified,f=>f.policy.push(f.policy[0])]){const f=facts(JSON.parse(JSON.stringify(p)));mutate(f);assert.throws(()=>api.assessNativeReachability(f));}});
 test('named policy definition must match identity and all seven action-resource pairs',()=>{const api=harness();for(const mutate of [x=>x.policy='other',x=>x.policyInfo.PolicyName='other',x=>x.isGroup=true,x=>x.policyInfo.Policy.Statement[0].Action.push('s3:*'),x=>x.policyInfo.Policy.Statement[1].Resource=['arn:aws:s3:::*'],x=>x.policyInfo.Policy.Statement[0].Condition={}]){const x=JSON.parse(doc(api));mutate(x);assert.throws(()=>api.verifyRestrictedParentPolicyDefinition(raw(x)));}});
 test('equivalent serialized policy array order remains accepted',()=>{const api=harness(),x=JSON.parse(doc(api));for(const st of x.policyInfo.Policy.Statement){st.Action.reverse();st.Resource.reverse();}x.policyInfo.Policy.Statement.reverse();x.policyInfo.Policy=JSON.stringify(x.policyInfo.Policy);assert.equal(api.verifyRestrictedParentPolicyDefinition(raw(x)),true);});
 test('all independent reachability guards remain in effect for the new mapping',()=>{const api=harness(),p=api.normalizeMinioList(entity(mapping()),'POLICY');for(const mutate of [f=>f.users.push('other'),f=>f.accounts.push('other'),f=>f.idps[0].disabled=false,f=>f.target.HostConfig.PortBindings['9000/tcp'][0].HostIp='0.0.0.0',f=>f.host.process_refs.push(123),f=>f.host.observed_at='2026-11-07T00:00:00Z']){const f=facts(p);mutate(f);assert.throws(()=>api.assessNativeReachability(f));}});
-test('live producer reads named definition before accepting nonempty mappings and keeps native limits',()=>{const live=source.slice(source.indexOf('function liveReachability('),source.indexOf('function verifyNativeSourceRaw('));assert(live.includes('named_policy_verified=verifyRestrictedParentPolicyDefinition(mc('));assert(live.includes('["--json","admin","policy","info",alias,RESTRICTED_PARENT_POLICY.name]'));assert(live.includes('sha(Buffer.from(account))===RESTRICTED_PARENT_POLICY.account_sha256'));assert(live.includes('named_policy_verified,idps,host'));assert(source.includes('shell:false,timeout:15000,maxBuffer:1024*1024'));});
+test('live producer reads named definition before accepting nonempty mappings and keeps native limits',()=>{const live=source.slice(source.indexOf('function liveReachability('),source.indexOf('function verifyNativeSourceRaw('));assert(live.includes('named_policy_verified=verifyRestrictedParentPolicyDefinition(mc('));assert(live.includes('["--json","admin","policy","info",alias,RESTRICTED_PARENT_POLICY.name]'));assert(live.includes('trusted_account_sha256=trustedPolicyAccountSha(env,parent,account)'));assert(live.includes('trusted_account_sha256,idps,host'));assert(source.includes('shell:false,timeout:15000,maxBuffer:1024*1024'));});
 test('successor QCP binds exact base/tree/branch/head/paths and preserves historical definitions',()=>{
  const q=require('../governance_acceptance/VERIFY_MCFT_CAP09_R4285_PREPARE_LIVE_SOURCE_V3.cjs'),authority=JSON.parse(fs.readFileSync(path.join(ROOT,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'))),before=structuredClone(authority);
  for(const snapshot of [authority,before]){delete snapshot.dependency_resolvers[q.PG_IDENTITY_RESOLVER];snapshot.checks[72].resolver_ids=snapshot.checks[72].resolver_ids.filter(x=>x!==q.PG_IDENTITY_RESOLVER);snapshot.checks[72].requalification_triggers=snapshot.checks[72].requalification_triggers.filter(x=>x!==q.PG_IDENTITY_RESOLVER);}
@@ -50,3 +50,86 @@ test('null-groups source successor binds exact current base/tree/PR/branch/head 
  assert.equal(q.inspectSuccessor(input),true);assert.equal(authority.checks.length,73);assert.deepEqual(authority.checks.slice(0,72),before.checks.slice(0,72));assert.equal(q.NULL_GROUPS_PATHS.length,8);
  for(const mutate of [i=>i.args.base=q.RESTRICTED_PARENT_BASE,i=>i.baseTree='f'.repeat(40),i=>i.event.pull_request.number=3768,i=>i.event.pull_request.head.ref='other',i=>i.event.pull_request.head.sha='f'.repeat(40),i=>i.paths.push('outside.cjs'),i=>i.changed.pop(),i=>i.authority.checks[0].owner='changed',i=>i.authority.dependency_resolvers[q.NULL_GROUPS_RESOLVER].paths.pop(),i=>i.plan.unknown_changed_paths.push('unknown')]){const bad=structuredClone(input);mutate(bad);assert.throws(()=>q.inspectSuccessor(bad));}
 });
+
+// CASE B successor-only trust-boundary regression: preserve same-process
+// receiver and signed-Scope negative cases in accepted Restricted Parent suite.
+(function caseBTrustedScopeTests(){
+"use strict";
+// CASE B successor-only, offline trust-boundary regression.
+// No live IAM, Docker, GitHub, account creation, Permit, Host or M4 stages.
+const test=require("node:test");
+const assert=require("node:assert/strict");
+const crypto=require("node:crypto");
+const fs=require("node:fs");
+const path=require("node:path");
+const vm=require("node:vm");
+const hash=s=>crypto.createHash("sha256").update(Buffer.from(s)).digest("hex");
+const src=path.resolve(__dirname,"MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs");
+const contents=fs.readFileSync(src,"utf8");
+const begin=contents.indexOf("function trustedPolicyAccountSha(");
+const end=contents.indexOf("function liveReachability(",begin);
+assert(begin>=0&&end>begin,"EXPECTED_PATCHED_PRODUCER_FUNCTION");
+const helper=contents.slice(begin,end);
+const PARENT="UNIT_PARENT",ACCOUNT="UNIT_REPLACEMENT_ACCESS_ID",RUN="UNIT_RUN",SCOPE="d".repeat(64);
+function fixture(){
+ const env={MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID:ACCOUNT,MCFT_CAP09_R4285_PARENT_ACCESS_KEY_ID:PARENT};
+ const state={scope:{scope_id:SCOPE,payload:{resources:{s3_account_sha256:hash(ACCOUNT),parent_principal_sha256:hash(PARENT)}}},ctx:{run_id:RUN},active:true};
+ const producerContexts=new WeakMap();
+ producerContexts.set(env,{receiver_state:state,scope_id:SCOPE,execution_run_id:RUN});
+ const receiver={called:0,requireReceiver(x){this.called++;if(x!==state||!state.active)throw Error("V3_FACTORY_RECEIVER_REQUIRED");return true;}};
+ const box={Buffer,producerContexts,assert,X:/^[a-f0-9]{64}$/,sha:x=>crypto.createHash("sha256").update(x).digest("hex"),require:x=>{
+  assert.equal(x,"./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs");return {requireReceiver:x=>receiver.requireReceiver(x)};
+ }};
+ vm.runInNewContext(helper+"\nthis.verify=trustedPolicyAccountSha;",box,{timeout:1000});
+ return {env,state,producerContexts,receiver,verify:(p=PARENT,a=ACCOUNT)=>box.verify(env,p,a)};
+}
+test("same-live-receiver plus matching verified Scope account and Parent: compatible",()=>{
+ const f=fixture();assert.equal(f.verify(),hash(ACCOUNT));assert.equal(f.receiver.called,1);
+});
+test("source-only caller environment without private receiver map: HOLD",()=>{
+ const f=fixture();f.producerContexts.delete(f.env);assert.throws(()=>f.verify(),/PREPARE_SCOPE_REQUIRED/);
+});
+test("caller environment claiming signed account SHA cannot manufacture live capability",()=>{
+ const f=fixture();f.producerContexts.delete(f.env);
+ f.env.s3_account_sha256=hash(ACCOUNT);f.env.scope_id=SCOPE;f.env.receiver_state=f.state;
+ assert.throws(()=>f.verify(),/PREPARE_SCOPE_REQUIRED/);
+});
+test("private context without receiver state: HOLD",()=>{
+ const f=fixture();f.producerContexts.set(f.env,{scope_id:SCOPE,execution_run_id:RUN});
+ assert.throws(()=>f.verify(),/PREPARE_SCOPE_REQUIRED/);
+});
+test("scope digest mismatch: HOLD before receiver",()=>{
+ const f=fixture();f.producerContexts.set(f.env,{receiver_state:f.state,scope_id:"e".repeat(64),execution_run_id:RUN});
+ assert.throws(()=>f.verify(),/PREPARE_SCOPE_REQUIRED/);assert.equal(f.receiver.called,0);
+});
+test("run identity mismatch: HOLD before receiver",()=>{
+ const f=fixture();f.producerContexts.set(f.env,{receiver_state:f.state,scope_id:SCOPE,execution_run_id:"OTHER"});
+ assert.throws(()=>f.verify(),/PREPARE_SCOPE_REQUIRED/);assert.equal(f.receiver.called,0);
+});
+test("revoked/nonlive receiver: HOLD",()=>{
+ const f=fixture();f.state.active=false;assert.throws(()=>f.verify(),/V3_FACTORY_RECEIVER_REQUIRED/);
+});
+test("replacement account differs from trusted signed Scope: HOLD",()=>{
+ const f=fixture();assert.throws(()=>f.verify(PARENT,"DIFFERENT_ACCOUNT"),/ACCOUNT_BINDING/);
+});
+test("Parent differs from trusted signed Scope: HOLD",()=>{
+ const f=fixture();assert.throws(()=>f.verify("DIFFERENT_PARENT",ACCOUNT),/ACCOUNT_BINDING/);
+});
+test("invalid signed resource SHA: HOLD",()=>{
+ const f=fixture();f.state.scope.payload.resources.s3_account_sha256="not-a-sha";
+ assert.throws(()=>f.verify());
+});
+test("non-empty Mapping still requires exact named policy, seven-pair check and singleton",()=>{
+ assert.match(contents,/restrictedParentPolicyMappings\(result\)/);
+ assert.match(contents,/verifyRestrictedParentPolicyDefinition\(mc\(/);
+ assert.match(contents,/f\.accounts\.length===1&&f\.accounts\[0\]===f\.account/);
+ assert.match(contents,/verifyReplacementPolicyV2\(doc\)/);
+});
+test("untrusted direct CLI path does not become a receiver",()=>{
+ assert.match(contents,/producerContexts\.set\(env,\{adoption,scope_id:scope\.scope_id,execution_run_id/);
+ assert.match(contents,/receiver_state:state/);
+ const f=fixture();f.producerContexts.set(f.env,{scope_id:SCOPE,execution_run_id:RUN});
+ assert.throws(()=>f.verify(),/PREPARE_SCOPE_REQUIRED/);
+});
+
+})();
