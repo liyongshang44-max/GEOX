@@ -1,0 +1,22 @@
+{
+  "contract_id": "MCFT_CAP09_PHASE3_CURRENT_SOURCE_EXACT_BLOB_DIGEST_DIFFERENCE_V1",
+  "scope": "NEW_EXACT_SUBJECT_TEST_ONLY_NOT_HISTORIC_CARRY_FORWARD",
+  "base_sha": "63dc3382f879781c604a852c7d1b28af9b0dd9f4",
+  "previous_historical_subject": "24cd4b592d671974f5b3a1449a6194bfca0806cb",
+  "previous_historical_digest": "sha256:d5d1cf09c4cde3b0fe82e658d9af2b25fe5beccee1a582d40ba00349fab8534b",
+  "current_digest": "sha256:8af6025cd4be03227ed06a39f8f5f7fc51cdc862f3e12319fcb318e00864f145",
+  "current_blob_graph_sha256": "sha256:eb54bf64d15a01659d8ab5df4c23efc76b0a4aeb898e415536ef98581a10caaf",
+  "current_scope_files": 94,
+  "approved_new_paths": [
+    ".github/workflows/mcft-cap09-phase3-current-source-requalification-v1.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-PHASE3-CURRENT-SOURCE-DIGEST-DISPOSITION-V1.json",
+    "scripts/governance_acceptance/VERIFY_MCFT_CAP09_PHASE3_CURRENT_SOURCE_DIGEST_V1.cjs"
+  ],
+  "original_old_digest_may_be_rewritten": false,
+  "source_signed": false,
+  "formal_governance_approval": false,
+  "permit": false,
+  "windows_physical_admission": false,
+  "production_authorized": false,
+  "old_run_reuse": false
+}
