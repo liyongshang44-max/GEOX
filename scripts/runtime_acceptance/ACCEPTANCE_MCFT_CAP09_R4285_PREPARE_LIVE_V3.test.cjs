@@ -80,7 +80,9 @@ test("Permit V3 binds Scope, observations, source approval, QCP73 and strict unc
  assert.throws(()=>permit.verifyReadOnly(sign("GEOX_MCFT_CAP09_R4285_ISOLATED_TEST_PERMIT_V2\n",p),trust,ctx,{now:NOW}),/SIGNATURE_INVALID/);
 });
 test("QCP73 consumer rejects historical QCP72 and accepts only exact complete source result set",()=>{
- const definitions=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH))),head="d".repeat(40),base="e".repeat(40);
+ const complete=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH)));
+ const definitions={...complete,checks:complete.checks.slice(0,73)},head="d".repeat(40),base="e".repeat(40);
+ assert.equal(complete.checks.length,74,"CURRENT_QCP74_NOT_REISSUED_AS_QCP73");
  const results=definitions.checks.map((row,index)=>({check_id:row.check_id,status:index===72?"PASS":"NOT_APPLICABLE",reason_code:"HISTORICAL_SOURCE_NOT_REISSUED"}));
  const machine={status:"PASS",head_sha:head,base_sha:base,stage:"SUCCESSOR_SUBJECT_PRE_MERGE",blockers:[],counts:{total_checks:73,pass:1,not_applicable:72,fail:0,unknown:0,forbidden:0,authority_errors:0,unknown_changed_paths:0,blocker_count:0},results};
  assert(native.checkQcp73(machine,definitions,head,base));
