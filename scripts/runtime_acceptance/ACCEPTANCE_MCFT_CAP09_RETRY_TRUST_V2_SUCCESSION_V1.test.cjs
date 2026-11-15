@@ -24,3 +24,19 @@ test("no synthetic self-approval can activate",()=>{
  j.succession.owner_registration_approval={approved:true};
  assert.equal(gate.candidate(old,Buffer.from(JSON.stringify(j))).authorized,false);
 });
+
+test("synthetic successor public key still requires independent Owner approval",()=>{
+ const crypto=require("node:crypto");
+ const pair=crypto.generateKeyPairSync("ed25519");
+ const digest=crypto.createHash("sha256").update(pair.publicKey.export({format:"der",type:"spki"})).digest("hex");
+ const j=JSON.parse(v2),now=Date.now();
+ const future=d=>new Date(now+d).toISOString();
+ const key={issuer_id:"mcft_cap09_operator_mylr1",key_id:"mcft_cap09_operator_v2_"+digest.slice(0,16),
+  role:"ACCOUNTABLE_SINGLE_OPERATOR",revoked:false,not_before:future(-1000),
+  not_after:future(86400000),public_key_pem:pair.publicKey.export({format:"pem",type:"spki"}),spki_sha256:digest};
+ j.issuers.push(key);j.succession.operator_successor_key_id=key.key_id;
+ j.succession.registration_state="PENDING_INDEPENDENT_OWNER_AUTHORITY";
+ assert.equal(gate.candidate(old,Buffer.from(JSON.stringify(j))).authorized,false);
+ j.succession.owner_registration_approval={approved:true};
+ assert.throws(()=>gate.candidate(old,Buffer.from(JSON.stringify(j))),/SELF_APPROVAL_FORBIDDEN/);
+});

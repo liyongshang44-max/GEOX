@@ -393,4 +393,4 @@ function run(argv){
 if(require.main===module){try{console.log(JSON.stringify(run(process.argv.slice(2)),null,2));}
  catch(e){console.error(JSON.stringify({status:'HOLD_R4285_NATIVE_ADOPTION',first_blocker:String(e.message||e).slice(0,260),
   permit_issued:false,permit_consumed:false,execution_authorized:false,stage_count:0,production_authorized:false}));process.exitCode=1}}
-module.exports={RUN,CHECK,CURRENT_CHECK,QCP_PATH,INPUT_FIELDS,checkQcp73,verifyGitHubNativeProof,checkInput,gitExactMain,checkNativeAdoption,isNativeVerified,run};
+module.exports={RUN,CHECK,CURRENT_CHECK,QCP_PATH,INPUT_FIELDS,checkQcp74,verifyGitHubNativeProof,checkInput,gitExactMain,checkNativeAdoption,isNativeVerified,run};
