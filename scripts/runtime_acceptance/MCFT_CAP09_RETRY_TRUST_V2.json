@@ -1,0 +1,47 @@
+{
+  "schema_version": "geox_mcft_cap09_retry_trust_v1",
+  "adopted": false,
+  "execution_enabled": false,
+  "host_id": "LAPTOP-STN2A2P1",
+  "operator_id": "mcft_cap09_operator_mylr1",
+  "ledger_root": "D:\\gptdown\\MCFT-CAP09-AUTHORITY-LEDGER",
+  "issuers": [
+    {
+      "issuer_id": "mcft_cap09_operator_mylr1",
+      "key_id": "mcft_cap09_ed25519_223c806e",
+      "role": "ACCOUNTABLE_SINGLE_OPERATOR",
+      "revoked": false,
+      "not_before": "2026-10-13T00:00:00.000Z",
+      "not_after": "2026-11-13T00:00:00.000Z",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAbvpUDWBt+TOQqEwiHrxG/eA5eM+h/epg7+TecimHkis=\n-----END PUBLIC KEY-----\n",
+      "spki_sha256": "223c806e89c4e6df5e91a089e0b22e5cef05934d42ee7df817faaeaa67553365"
+    },
+    {
+      "issuer_id": "mcft_cap09_independent_retry_governance",
+      "key_id": "cap09_retry_ed25519_20261015",
+      "role": "INDEPENDENT_RETRY_GOVERNANCE",
+      "revoked": false,
+      "not_before": "2026-10-15T04:17:21.950Z",
+      "not_after": "2026-11-14T04:22:22.010Z",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAfp6ss+UEFeuabXsx1M9Wx6xlE7stIFBMa6O3LnP8MQs=\n-----END PUBLIC KEY-----\n",
+      "spki_sha256": "ef7459a5918e35c90913532a7c8af545fbca4fec0b7dc95916797db3303fa870"
+    }
+  ],
+  "real_delay_controller_adopted": false,
+  "stage_capability_adopted": false,
+  "real_provider_transport_delay_adopted": false,
+  "real_pipeline_delay_adopted": false,
+  "succession": {
+    "schema_version": "MCFT_CAP09_TRUST_V2_REGISTRATION_CANDIDATE_V1",
+    "prior_trust_raw_sha256": "dce2a16f6a82779873dfe25b30194f0445f23b894f5eb41c41a7274b1eb19cf7",
+    "registration_scope": "CAP09_ISOLATED_TEST_ONLY",
+    "resource_run_id": "4285c3ce342c",
+    "attempt_ordinal": 4,
+    "operator_successor_key_id": null,
+    "owner_registration_approval": null,
+    "registration_state": "PENDING_NEW_OPERATOR_PUBLIC_KEY_AND_INDEPENDENT_OWNER_AUTHORITY",
+    "production_authorized": false,
+    "permit_authorized": false,
+    "trust_successor_activated": false
+  }
+}
