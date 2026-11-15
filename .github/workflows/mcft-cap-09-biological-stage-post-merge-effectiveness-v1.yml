@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   qualification:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
       MCFT_CAP09_POSTMERGE_BIO_STAGE_EFFECT_BASE_SHA: ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23
