@@ -15,7 +15,7 @@ const REPO="liyongshang44-max/GEOX",PR=3772,BASE="9ed82b7c92c7e0ecaaa53a452568e7
 const REGISTRATION_DECISION="APPROVE_R4285_TRUST_V2_EXACT_REGISTRATION_NOT_PERMIT";
 const TRUST_V2_PATH="scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V2.json";
 function json(bytes){assert(Buffer.isBuffer(bytes));return JSON.parse(bytes.toString("utf8"))}
-function candidate(v1Raw,v2Raw,{now=Date.now()}={}){
+function candidate(v1Raw,v2Raw,{now=Date.now(),allowFuture=false}={}){
  assert(Buffer.isBuffer(v1Raw)&&Buffer.isBuffer(v2Raw),"TRUST_V2_RAW_BYTES_REQUIRED");
  assert.equal(sha(v1Raw),OLD_SHA,"TRUST_V2_HISTORIC_V1_DRIFT");
  const old=json(v1Raw),next=json(v2Raw);
@@ -54,7 +54,7 @@ function candidate(v1Raw,v2Raw,{now=Date.now()}={}){
   "TRUST_V2_DUPLICATE_KEY_ID");
  assert(utc(k.not_before)&&utc(k.not_after),"TRUST_V2_NEW_KEY_TIME");
  const start=Date.parse(k.not_before),end=Date.parse(k.not_after);
- assert(start<=now&&now<end&&end>start&&end-start<=90*86400000,"TRUST_V2_WINDOW_NOT_ELIGIBLE");
+ assert((allowFuture||start<=now)&&now<end&&end>start&&end-start<=90*86400000,"TRUST_V2_WINDOW_NOT_ELIGIBLE");
  assert.equal(s.operator_successor_key_id,k.key_id,"TRUST_V2_KEY_ID_UNBOUND");
  assert(SHA.test(k.spki_sha256),"TRUST_V2_SPKI_SHA");
  const key=crypto.createPublicKey(k.public_key_pem);
