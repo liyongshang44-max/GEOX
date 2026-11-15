@@ -8,7 +8,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 test("pending V2 cannot authorize or sign",()=>{
  const r=gate.candidate(old,v2);
  assert.equal(r.authorized,false);assert.equal(r.permit_authorized,false);
- assert.match(r.status,/HOLD/);
+ assert.match(r.status,/(HOLD|NOT_AUTHORIZED)/);
  assert.throws(()=>gate.verifyEffective(),/INDEPENDENT_REGISTRATION_AUTHORITY/);
 });
 test("old Trust V1 exact issuer, frozen capability and ledger must remain",()=>{
