@@ -11,7 +11,13 @@ function verify({ROOT,args,authority,plan,changed,stage}){
   assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE");
   assert.equal(args.base,BASE);assert.equal(git("rev-parse","HEAD"),args.head);
   assert.equal(git("merge-base",args.base,args.head),args.base);
-  assert.equal(git("status","--porcelain","--untracked-files=all"),"","TRUST_V2_SOURCE_WORKTREE_DIRTY");
+  // Central QCP writes these eight machine results before invoking the source gate.
+  // Permit only their untracked output paths; reject any tracked/staged change and
+  // every unrecognized untracked file, including new source under any directory.
+  const qcpOutputs=new Set(["acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json","acceptance-output/MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json","acceptance-output/MCFT_CAP_09_CP2_CURRENT_PLAN_DEBUG.json","acceptance-output/MCFT_CAP_09_CP2_FUTURE_PLAN_DEBUG.json","acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json","acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json","acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json","acceptance-output/MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json"]);
+  const dirty=git("status","--porcelain=v1","--untracked-files=all").split(/\r?\n/).filter(Boolean);
+  const unexpected=dirty.filter(line=>!line.startsWith("?? ")||!qcpOutputs.has(line.slice(3)));
+  assert.deepEqual(unexpected,[],"TRUST_V2_SOURCE_WORKTREE_DIRTY");
   assert.equal(plan.status,"PASS");
   assert.deepEqual(plan.unknown_changed_paths,[]);assert.deepEqual(plan.authority_errors,[]);
   const old=JSON.parse(git("show",BASE+":"+QCP));
