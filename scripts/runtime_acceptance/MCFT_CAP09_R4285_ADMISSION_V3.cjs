@@ -5,7 +5,7 @@
  */
 const assert=require("node:assert/strict"),crypto=require("node:crypto"),cp=require("node:child_process"),fs=require("node:fs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
-const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs");
+const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs");
 const permit=require("./MCFT_CAP09_R4285_PERMIT_V3.cjs");
 const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V3.cjs");
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");

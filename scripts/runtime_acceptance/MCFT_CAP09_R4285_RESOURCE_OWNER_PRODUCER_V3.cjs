@@ -1215,7 +1215,7 @@ function requireLocalProtectedMain(i){
  // Reuse the CURRENT registered native consumer's remote-main + clean
  // worktree contract instead of a stale local origin/main tracking ref.
  try{
-  require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs")
+  require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs")
    .gitExactMain(i.source_root,i.subject_sha);
  }catch{
   throw Error("OWNER_FORMAL_PROTECTED_MAIN_NATIVE_VERIFY_HOLD");
@@ -1403,7 +1403,7 @@ function readProtectedHandoff(i,controlFile,inventoryFile){
 function loadFormalSourceSpec(file,i){
  const spec=scopeV3.readJson(file);
  scopeV3.exact(spec,["scope_envelope_file","trust_file","control_envelope_file","inventory_envelope_file","control_evidence_file","inventory_evidence_file","source_approval_file","source_approval_comment_id","source_policy_file","nonce","owner_not_before","launch_authorization_file","launch_authorization_comment_id","native_adoption_input_file"],"V3_SOURCE_SPEC_FIELDS");
- const trustPath=path.join(i.source_root,"scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V1.json");
+ const trustPath=path.join(i.source_root,"scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V2.json");
  assert(boundedFile(trustPath).equals(boundedFile(spec.trust_file)),"V3_REGISTERED_SOURCE_TRUST_REQUIRED");
  const raw=readProtectedHandoff(i,spec.control_evidence_file,spec.inventory_evidence_file);
  return {scope_envelope:scopeV3.readJson(spec.scope_envelope_file),trust:JSON.parse(boundedFile(spec.trust_file)),
@@ -1423,7 +1423,7 @@ function assertFormalOutputSeparate(i,output){
 }
 async function produceFormalRaw(i,sources,output,env=nativeEnvironment()){
  const preparation=producerContexts.get(env);
- assert(preparation&&require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs").isNativeVerified(preparation.adoption)&&Date.now()<preparation.expires,"V3_PRODUCER_NATIVE_PRESECRET_CAPABILITY_REQUIRED");
+ assert(preparation&&require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs").isNativeVerified(preparation.adoption)&&Date.now()<preparation.expires,"V3_PRODUCER_NATIVE_PRESECRET_CAPABILITY_REQUIRED");
  host();validateInput(i);requireLocalProtectedMain(i);
  assertFormalOutputSeparate(i,output);
  assert(!fs.existsSync(output),"OWNER_FORMAL_OUTPUT_EXISTS");
@@ -1638,7 +1638,7 @@ function sourceOnly(argv){
 // already-qualified state; neither JSON nor a caller-supplied verifier suffices.
 function prepareAttached(state,options){
  const factory=require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs");factory.requireProducerPreparation(state);
- const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs");
+ const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs");
  assert(native.isNativeVerified(state.adoption),"V3_PRODUCER_NATIVE_PRESECRET_CAPABILITY_REQUIRED");
  scopeV3.exact(options,["existing_mc_alias","parent_access_key_id","protected_directory","control_envelope_file","inventory_envelope_file"],"V3_PRODUCER_OPTIONS");
  const config=JSON.parse(lineage.canonical(options));
@@ -1703,7 +1703,7 @@ if(require.main===module){
   const delivery=require("./MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs");delivery.parentClean(process.env);
   const i=parse(["--diagnostic-only","--input",argv[2]]),spec=scopeV3.readJson(argv[4]);
   const ni=JSON.parse(scopeV3.bytes(spec.native_adoption_input_file).toString("utf8").replace(/^\uFEFF/,""));
-  const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs"),adoption=native.checkNativeAdoption(ni);
+  const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs"),adoption=native.checkNativeAdoption(ni);
   assert(native.isNativeVerified(adoption)&&adoption.subject_sha===i.subject_sha&&ni.source_root===i.source_root&&ni.release_root===i.release_root,"V3_PRODUCER_NATIVE_REQUIRED");
   const trust=JSON.parse(scopeV3.bytes(ni.trust_file).toString("utf8")),scope=scopeV3.verifyScope(scopeV3.readJson(spec.scope_envelope_file),trust,{run_id:executionRun(),host_id:HOST,subject_sha:i.subject_sha,nonce:spec.nonce});
   const approval=scopeV3.liveApproval(spec.source_approval_comment_id,scopeV3.bytes(spec.source_approval_file),scope);

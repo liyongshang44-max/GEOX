@@ -3,7 +3,7 @@
 const test=require("node:test"),assert=require("node:assert/strict"),crypto=require("node:crypto"),fs=require("node:fs"),os=require("node:os"),path=require("node:path"),cp=require("node:child_process"),vm=require("node:vm"),Module=require("node:module");
 const s=require("./MCFT_CAP09_R4285_SCOPE_V3.cjs"),c=require("../cap09_adoption_v1/contract.cjs");
 const permit=require("./MCFT_CAP09_R4285_PERMIT_V3.cjs"),admission=require("./MCFT_CAP09_R4285_ADMISSION_V3.cjs");
-const host=require("./MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs"),native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs");
+const host=require("./MCFT_CAP09_R4285_WINDOWS_HOST_V3.cjs"),native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs");
 const factory=require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs");
 const ROOT=path.resolve(__dirname,"../.."),NOW=Date.now(),iso=n=>new Date(n).toISOString(),H="a".repeat(64),SUBJECT="b".repeat(40),NONCE="c".repeat(64);
 const key=crypto.generateKeyPairSync("ed25519"),issuer={issuer_id:"UNIT_ONLY",key_id:"UNIT_ONLY",role:"ACCOUNTABLE_SINGLE_OPERATOR",revoked:false,not_before:iso(NOW-86400000),not_after:iso(NOW+86400000),public_key_pem:key.publicKey.export({type:"spki",format:"pem"}),spki_sha256:s.sha(key.publicKey.export({type:"spki",format:"der"}))};
@@ -80,7 +80,9 @@ test("Permit V3 binds Scope, observations, source approval, QCP73 and strict unc
  assert.throws(()=>permit.verifyReadOnly(sign("GEOX_MCFT_CAP09_R4285_ISOLATED_TEST_PERMIT_V2\n",p),trust,ctx,{now:NOW}),/SIGNATURE_INVALID/);
 });
 test("QCP73 consumer rejects historical QCP72 and accepts only exact complete source result set",()=>{
- const definitions=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH))),head="d".repeat(40),base="e".repeat(40);
+ const complete=JSON.parse(fs.readFileSync(path.join(ROOT,native.QCP_PATH)));
+ const definitions={...complete,checks:complete.checks.slice(0,73)},head="d".repeat(40),base="e".repeat(40);
+ assert.equal(complete.checks.length,74,"CURRENT_QCP74_NOT_REISSUED_AS_QCP73");
  const results=definitions.checks.map((row,index)=>({check_id:row.check_id,status:index===72?"PASS":"NOT_APPLICABLE",reason_code:"HISTORICAL_SOURCE_NOT_REISSUED"}));
  const machine={status:"PASS",head_sha:head,base_sha:base,stage:"SUCCESSOR_SUBJECT_PRE_MERGE",blockers:[],counts:{total_checks:73,pass:1,not_applicable:72,fail:0,unknown:0,forbidden:0,authority_errors:0,unknown_changed_paths:0,blocker_count:0},results};
  assert(native.checkQcp73(machine,definitions,head,base));
@@ -143,7 +145,7 @@ function mechanismFixture({liveDelayMs=5}={}){const root=fs.mkdtempSync(path.joi
  const actualHistorical=require("./MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs"),mockScope={...s,verifyScope(){events.push("scope");return cleanScope;},liveApproval(){events.push("source authority");return {sha256:H,expires_at:iso(NOW+16000000)};},requireApproval(){return true;},verifySourcePolicy(){return true;}};
  let finalChecks=0,environment,receivedState;
  const mockHost={async acceptPreparedState(state){events.push("live");receivedState=state;environment=state.environment;await new Promise(resolve=>setTimeout(resolve,liveDelayMs));return {permit_consumed:false,stage_count:0};},finishAtAcceptance(result){finalChecks++;return result;}};
- const mocks={"./MCFT_CAP09_R4285_SCOPE_V3.cjs":mockScope,"../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs":nativeDouble,
+ const mocks={"./MCFT_CAP09_R4285_SCOPE_V3.cjs":mockScope,"../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs":nativeDouble,
   "./MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs":{...actualHistorical,hostOnly(){},checkInput(){}},
   "./MCFT_CAP09_R4285_ADMISSION_V3.cjs":{frozenBudget(){},liveIntent(){events.push("intent");return {expires_at:iso(NOW+16000000)};},stableNative(){return {minted_at:iso(Date.now())};},requireStable(){}},
   "../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs":{verifyExactMain(){}},
@@ -156,7 +158,7 @@ function mechanismFixture({liveDelayMs=5}={}){const root=fs.mkdtempSync(path.joi
  const producerFile=path.join(__dirname,"MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs");
  mocks["./MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs"]=isolated(producerFile,{
   "./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs":new Proxy({},{get:(_,key)=>module.exports[key]}),
-  "../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs":nativeDouble,
+  "../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs":nativeDouble,
   "node:os":{hostname:()=>s.HOST},
   "node:fs":{...fs,lstatSync(file,...args){if(String(file).endsWith(String.raw`D:\gptdown\MCFT-CAP09-TOOLS\mc.exe`))throw Object.assign(Error("fixture missing registered mc"),{code:"ENOENT"});return fs.lstatSync(file,...args);}},
   "node:child_process":{spawnSync(){events.push("native source capture");return {status:1,stdout:Buffer.alloc(0)};}}
@@ -238,7 +240,7 @@ function dynamicFixture({materialDelay=0,accountFailure=false}={}){
  const ip={schema_version:"MCFT_CAP09_R4285_CTO_PREAUTH_INTENT_V3",...id,parent_run_id:permit.PARENT,failed_predecessor_run_id:permit.FAILED_PREDECESSOR,attempt_ordinal:4,authority_pr_number:3757,first_base,plan_sha256:ctx.plan_sha256,observations_sha256:ctx.observations_sha256,material_digest:H,release_binding_sha256:ctx.release_binding_sha256,resource_scope_sha256:H,valid_from:iso(NOW-3000),expires_at:iso(NOW+3600000),scope:"ISOLATED_QUALIFICATION_TEST_ONLY",decision:"APPROVE_V3_TEST_INTENT_NOT_PERMIT_OR_EXECUTION",production_authorized:false,permit_authorized:false,execute_authorized:false};
  const raw=Buffer.from(c.canonical(ip));ctx.intent_raw_bytes=raw;
  const live=isolated(path.join(__dirname,"MCFT_CAP09_R4285_ADMISSION_V3.cjs"),{
-  "../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs":{isNativeVerified:x=>nativeBrand.has(x)},
+  "../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs":{isNativeVerified:x=>nativeBrand.has(x)},
   "node:child_process":{execFileSync(){events.push("FINAL_CTO_NATIVE");return JSON.stringify({id:42,url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/42",issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3757",user:{login:"liyongshang44-max"},author_association:"OWNER",created_at:iso(NOW-4000).replace(/\.\d{3}Z$/,"Z"),updated_at:iso(NOW-4000).replace(/\.\d{3}Z$/,"Z"),body:raw.toString()});}}
  },Clock,win);
  const ni={source_root:root,release_root:root,release_binding_file:bindingFile,release_binding_sha256:ctx.release_binding_sha256,trust_file:trustFile};

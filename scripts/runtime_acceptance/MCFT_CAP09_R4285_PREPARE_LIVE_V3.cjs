@@ -5,7 +5,7 @@ const executionIdentity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
 // verifier, JSON certificate or alternate authority=PASS path is accepted.
 const fs=require("node:fs"),path=require("node:path");
 const s=require("./MCFT_CAP09_R4285_SCOPE_V3.cjs"),c=require("../cap09_adoption_v1/contract.cjs");
-const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs");
+const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs");
 const admission=require("./MCFT_CAP09_R4285_ADMISSION_V3.cjs");
 const executionAdmission=require("./MCFT_CAP09_R4285_ADMISSION_EXEC_V3.cjs");
 const moduleAdmission=admission;
