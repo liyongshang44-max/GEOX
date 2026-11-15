@@ -6,7 +6,7 @@ const old=fs.readFileSync(path.join(__dirname,"MCFT_CAP09_RETRY_TRUST_V1.json"))
 const v2=fs.readFileSync(path.join(__dirname,"MCFT_CAP09_RETRY_TRUST_V2.json"));
 const clone=x=>JSON.parse(JSON.stringify(x));
 test("pending V2 cannot authorize or sign",()=>{
- const r=gate.candidate(old,v2);
+ const r=gate.candidate(old,v2,{allowFuture:true});
  assert.equal(r.authorized,false);assert.equal(r.permit_authorized,false);
  assert.match(r.status,/(HOLD|NOT_AUTHORIZED)/);
  if(process.platform!=="win32"||process.env.CI||process.env.GITHUB_ACTIONS)
@@ -42,27 +42,44 @@ test("synthetic successor public key still requires independent Owner approval",
  assert.throws(()=>gate.candidate(old,Buffer.from(JSON.stringify(j))),/SELF_APPROVAL_FORBIDDEN/);
 });
 
-// Exact public candidate is source-bound, but neither a registered key nor a Permit.
-test("local public key is exact and remains without registration time or signature authority",()=>{
+// Bound future-window registration candidate is source-qualified only, never authorized.
+test("exact public key and 88-day future window stay not authorized",()=>{
  const crypto=require("node:crypto");
- const j=JSON.parse(v2),k=j.issuers[2],r=gate.candidate(old,v2);
+ const j=JSON.parse(v2),k=j.issuers[2];
+ const r=gate.candidate(old,v2,{allowFuture:true});
  assert.equal(j.issuers.length,3);
  assert.equal(k.key_id,"mcft_cap09_operator_v2_0b4811f1f4bf09ec");
  assert.equal(k.spki_sha256,"0b4811f1f4bf09ec3f633c0900b405d56a8f28e55b8d6d7819d0f2295d86e6af");
  assert.equal(crypto.createHash("sha256").update(crypto.createPublicKey(k.public_key_pem).export({type:"spki",format:"der"})).digest("hex"),k.spki_sha256);
- assert.equal(k.not_before,null);assert.equal(k.not_after,null);
- assert.equal(r.status,"TRUST_V2_PUBLIC_CANDIDATE_UNREGISTERED_NOT_AUTHORIZED");
+ assert.equal(k.not_before,"2026-11-20T00:00:00.000Z");
+ assert.equal(k.not_after,"2027-02-16T00:00:00.000Z");
+ assert.equal((Date.parse(k.not_after)-Date.parse(k.not_before))/86400000,88);
+ assert(Date.parse(k.not_before)>Date.parse("2026-11-15T05:03:42.000Z"));
+ assert.equal(j.succession.registration_state,"PENDING_INDEPENDENT_OWNER_AUTHORITY");
+ assert.equal(r.status,"TRUST_V2_PUBLIC_KEY_CANDIDATE_ONLY_NOT_AUTHORIZED");
  assert.equal(r.registered,false);assert.equal(r.authorized,false);
  assert.equal(r.permit_authorized,false);assert.equal(j.succession.owner_registration_approval,null);
  assert.equal(j.succession.trust_successor_activated,false);
+ assert.equal(j.execution_enabled,false);assert.equal(j.adopted,false);
 });
-test("partial validity, premature approval and forged public candidate fail closed",()=>{
+test("future window never qualifies before activation or at expiry",()=>{
+ const j=JSON.parse(v2),k=j.issuers[2],begin=Date.parse(k.not_before),end=Date.parse(k.not_after);
+ assert.throws(()=>gate.candidate(old,v2,{now:begin-1}),/TRUST_V2_WINDOW_NOT_ELIGIBLE/);
+ const during=gate.candidate(old,v2,{now:begin});
+ assert.equal(during.authorized,false);assert.equal(during.registered,false);
+ assert.throws(()=>gate.candidate(old,v2,{now:end}),/TRUST_V2_WINDOW_NOT_ELIGIBLE/);
+});
+test("partial window, invalid time, excessive duration and forged registration fail closed",()=>{
  const base=JSON.parse(v2),mutate=(fn,reason)=>{
   const j=JSON.parse(JSON.stringify(base));fn(j);
-  assert.throws(()=>gate.candidate(old,Buffer.from(JSON.stringify(j))),reason);
+  assert.throws(()=>gate.candidate(old,Buffer.from(JSON.stringify(j)),{allowFuture:true}),reason);
  };
- mutate(j=>{j.issuers[2].not_before="2026-11-15T00:00:00.000Z"},/TRUST_V2_NEW_KEY_TIME/);
- mutate(j=>{j.succession.registration_state="PENDING_INDEPENDENT_OWNER_AUTHORITY"},/TRUST_V2_PUBLIC_CANDIDATE_MUST_REMAIN_PENDING/);
+ mutate(j=>{j.issuers[2].not_before=null},/TRUST_V2_NEW_KEY_TIME/);
+ mutate(j=>{j.issuers[2].not_after=null},/TRUST_V2_NEW_KEY_TIME/);
+ mutate(j=>{j.issuers[2].not_before="2026-11-20T00:00:00Z"},/TRUST_V2_NEW_KEY_TIME/);
+ mutate(j=>{j.issuers[2].not_after="2027-03-31T00:00:00.000Z"},/TRUST_V2_WINDOW_NOT_ELIGIBLE/);
+ mutate(j=>{j.issuers[2].not_after=j.issuers[2].not_before},/TRUST_V2_WINDOW_NOT_ELIGIBLE/);
+ mutate(j=>{j.succession.registration_state="PENDING_INDEPENDENT_OWNER_AUTHORITY_AND_EFFECTIVE_WINDOW"},/PENDING_INDEPENDENT_OWNER_AUTHORITY/);
  mutate(j=>{j.issuers[2].spki_sha256="a".repeat(64)},/TRUST_V2_SPKI_DRIFT/);
  mutate(j=>{j.issuers[2].revoked=true},/TRUST_V2_NEW_KEY_REVOKED/);
  mutate(j=>{j.issuers[2].key_id="other"},/TRUST_V2_KEY_ID_UNBOUND/);

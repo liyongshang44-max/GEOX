@@ -31,8 +31,8 @@
       "key_id": "mcft_cap09_operator_v2_0b4811f1f4bf09ec",
       "role": "ACCOUNTABLE_SINGLE_OPERATOR",
       "revoked": false,
-      "not_before": null,
-      "not_after": null,
+      "not_before": "2026-11-20T00:00:00.000Z",
+      "not_after": "2027-02-16T00:00:00.000Z",
       "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAEwdb242GvMg+LdP8ng6gubW5vWWPH3rNH+Jklk2Z5j4=\n-----END PUBLIC KEY-----\n",
       "spki_sha256": "0b4811f1f4bf09ec3f633c0900b405d56a8f28e55b8d6d7819d0f2295d86e6af"
     }
@@ -49,7 +49,7 @@
     "attempt_ordinal": 4,
     "operator_successor_key_id": "mcft_cap09_operator_v2_0b4811f1f4bf09ec",
     "owner_registration_approval": null,
-    "registration_state": "PENDING_INDEPENDENT_OWNER_AUTHORITY_AND_EFFECTIVE_WINDOW",
+    "registration_state": "PENDING_INDEPENDENT_OWNER_AUTHORITY",
     "production_authorized": false,
     "permit_authorized": false,
     "trust_successor_activated": false
