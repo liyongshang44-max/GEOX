@@ -52,14 +52,21 @@ function candidate(v1Raw,v2Raw,{now=Date.now(),allowFuture=false}={}){
  assert.equal(k.revoked,false,"TRUST_V2_NEW_KEY_REVOKED");
  assert(/^[A-Za-z0-9_-]{1,128}$/.test(k.key_id)&&!old.issuers.some(x=>x.key_id===k.key_id),
   "TRUST_V2_DUPLICATE_KEY_ID");
- assert(utc(k.not_before)&&utc(k.not_after),"TRUST_V2_NEW_KEY_TIME");
- const start=Date.parse(k.not_before),end=Date.parse(k.not_after);
- assert((allowFuture||start<=now)&&now<end&&end>start&&end-start<=90*86400000,"TRUST_V2_WINDOW_NOT_ELIGIBLE");
  assert.equal(s.operator_successor_key_id,k.key_id,"TRUST_V2_KEY_ID_UNBOUND");
  assert(SHA.test(k.spki_sha256),"TRUST_V2_SPKI_SHA");
  const key=crypto.createPublicKey(k.public_key_pem);
  assert.equal(key.asymmetricKeyType,"ed25519","TRUST_V2_ED25519");
  assert.equal(sha(key.export({format:"der",type:"spki"})),k.spki_sha256,"TRUST_V2_SPKI_DRIFT");
+ if(k.not_before===null&&k.not_after===null){
+  assert.equal(s.registration_state,"PENDING_INDEPENDENT_OWNER_AUTHORITY_AND_EFFECTIVE_WINDOW",
+   "TRUST_V2_PUBLIC_CANDIDATE_MUST_REMAIN_PENDING");
+  return Object.freeze({status:"TRUST_V2_PUBLIC_CANDIDATE_UNREGISTERED_NOT_AUTHORIZED",
+   registered:false,authorized:false,key_id:k.key_id,spki_sha256:k.spki_sha256,
+   not_before:null,not_after:null,production_authorized:false,permit_authorized:false});
+ }
+ assert(utc(k.not_before)&&utc(k.not_after),"TRUST_V2_NEW_KEY_TIME");
+ const start=Date.parse(k.not_before),end=Date.parse(k.not_after);
+ assert((allowFuture||start<=now)&&now<end&&end>start&&end-start<=90*86400000,"TRUST_V2_WINDOW_NOT_ELIGIBLE");
  assert.equal(s.registration_state,"PENDING_INDEPENDENT_OWNER_AUTHORITY");
  return Object.freeze({status:"TRUST_V2_PUBLIC_KEY_CANDIDATE_ONLY_NOT_AUTHORIZED",
   registered:false,authorized:false,key_id:k.key_id,spki_sha256:k.spki_sha256,
