@@ -6,7 +6,7 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("n
 const crypto=require("node:crypto");
 const v1=require("./MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs");
 const c=require("../cap09_adoption_v1/contract.cjs");
-const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V3.cjs");
+const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs");
 const lineage=require("../governance_acceptance/MCFT_CAP09_R4285_SIGNED_EVIDENCE_GATE_V1.cjs");
 const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V3.cjs");
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
