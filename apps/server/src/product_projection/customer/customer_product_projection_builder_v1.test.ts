@@ -72,7 +72,7 @@ class FakeReadApi implements McftFieldTwinReadApiV1 {
   async readHealth(_request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> { throw new Error("UNUSED"); }
 }
 
-function fakePool(options?: { runtimeScopeCount?: number; includeField?: boolean }): Pool {
+function fakePool(options?: { runtimeScopeCount?: number; includeField?: boolean; metadata?: {area_ha: unknown; updated_ts_ms: unknown} }): Pool {
   const runtimeScopeCount = options?.runtimeScopeCount ?? 1;
   const includeField = options?.includeField ?? true;
   return {
@@ -91,6 +91,7 @@ function fakePool(options?: { runtimeScopeCount?: number; includeField?: boolean
             field_name: "North Field 07",
             area_ha: 82,
             updated_ts_ms: 1789948800000,
+            ...options?.metadata,
           }],
           rowCount: 1,
         };
@@ -278,3 +279,32 @@ test("validator rejects CURRENT reporting when current condition is unavailable"
     /FIELD_CURRENT_REPORTING_REQUIRES_AVAILABLE_CONDITION/,
   );
 });
+
+for (const [label, raw, expected] of [
+  ["NULL", null, null], ["undefined", undefined, null], ["zero", 0, 0],
+  ["numeric string zero", "0", 0], ["positive", 12.75, 12.75],
+  ["numeric string", "1789948800000", 1789948800000],
+  ["empty string", "", null], ["whitespace", "  ", null],
+  ["not numeric", "bad", null], ["NaN", NaN, null],
+  ["infinity", Infinity, null], ["string infinity", "Infinity", null],
+  ["boolean", false, null], ["array", [], null],
+] as const) {
+  test(`field metadata ${label}: list and detail preserve nullable numbers`, async () => {
+    const builder = new PostgresCustomerProductProjectionBuilderV1(
+      fakePool({runtimeScopeCount:0,metadata:{area_ha:raw,updated_ts_ms:raw}}),
+      {readApi:new FakeReadApi(),now:()=>"2026-09-23T00:05:00.000Z"},
+    );
+    const list=await builder.buildFieldSummariesV1(scope);
+    const detail=await builder.buildFieldWorkspaceV1(scope,"field-a");
+    for(const projection of [list[0],detail]) {
+      assert.equal(projection.identity.area,expected);
+      assert.equal(projection.identity.area_unit,expected===null?null:"ha");
+      assert.ok(projection.envelope.source_non_authority_refs[0].exact_ref.endsWith(
+        `:updated:${expected===null?"UNVERSIONED":expected}`,
+      ));
+      assert.equal(projection.current_condition.status,"UNAVAILABLE");
+    }
+    assert.deepEqual(list[0].identity,detail.identity);
+    assert.deepEqual(list[0].envelope.source_content_digests,detail.envelope.source_content_digests);
+  });
+}
