@@ -72,9 +72,18 @@ class FakeReadApi implements McftFieldTwinReadApiV1 {
   async readHealth(_request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> { throw new Error("UNUSED"); }
 }
 
-function fakePool(options?: { runtimeScopeCount?: number; includeField?: boolean }): Pool {
+function fakePool(options?: {
+  runtimeScopeCount?: number;
+  includeField?: boolean;
+  includeGeometry?: boolean;
+  invalidGeometry?: boolean;
+  duplicateGeometry?: boolean;
+}): Pool {
   const runtimeScopeCount = options?.runtimeScopeCount ?? 1;
   const includeField = options?.includeField ?? true;
+  const includeGeometry = options?.includeGeometry ?? true;
+  const invalidGeometry = options?.invalidGeometry ?? false;
+  const duplicateGeometry = options?.duplicateGeometry ?? false;
   return {
     query: async (sql: string, params: unknown[]) => {
       if (sql.includes("FROM public.field_index_v1")) {
@@ -94,6 +103,19 @@ function fakePool(options?: { runtimeScopeCount?: number; includeField?: boolean
           }],
           rowCount: 1,
         };
+      }
+      if (sql.includes("FROM public.field_polygon_v1")) {
+        assert.equal(params[0], "tenant-a");
+        assert.equal(params[1], "field-a");
+        if (!includeGeometry) return { rows: [], rowCount: 0 };
+        const row = {
+          geojson: invalidGeometry
+            ? { type: "UnsupportedGeometry", coordinates: [] }
+            : { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] },
+          updated_ts_ms: 1789948801000,
+        };
+        const rows = duplicateGeometry ? [row, { ...row, updated_ts_ms: 1789948800000 }] : [row];
+        return { rows, rowCount: rows.length };
       }
       if (sql.includes("FROM public.twin_active_lineage_index_v1")) {
         const rows = Array.from({ length: runtimeScopeCount }, (_, index) => ({
@@ -135,6 +157,12 @@ test("real field summary preserves exact MCFT state and does not infer risk/reco
   assert.equal(projection.current_condition.root_zone_water?.water_stress_state.status, "NOT_ESTABLISHED");
   assert.equal(projection.attention.status, "UNAVAILABLE");
   assert.equal(projection.attention.has_attention, null);
+  assert.equal(projection.geometry_availability, "AVAILABLE");
+  assert.equal(projection.limitation_reason_codes.includes("FIELD_GEOMETRY_NOT_PROJECTED_WAVE02"), false);
+  assert.equal(
+    projection.envelope.source_non_authority_refs.some((ref) => ref.object_kind === "field_polygon_v1"),
+    true,
+  );
   assert.equal(projection.envelope.source_authority_refs.some((ref) => ref.exact_ref === "state-a"), true);
   assert.equal(projection.envelope.source_authority_refs.some((ref) => ref.exact_ref === "lineage-a"), true);
   assert.equal("risk_level" in (projection as any), false);
@@ -172,6 +200,32 @@ test("field without an established MCFT runtime remains visible but condition is
     limitation?.detail,
     "No exact active MCFT Runtime scope exists for this field in the caller tenant/project/group scope; Product API cannot select a current field state.",
   );
+});
+
+test("missing field geometry remains explicitly unavailable without fabricating geometry", async () => {
+  const builder = new PostgresCustomerProductProjectionBuilderV1(fakePool({ includeGeometry: false }), {
+    readApi: new FakeReadApi(),
+    now: () => "2026-09-23T00:05:00.000Z",
+  });
+  const projection = await builder.buildFieldSummaryV1(scope, "field-a");
+  assertFieldSummaryProjectionV1(projection);
+  assert.equal(projection.geometry_availability, "UNAVAILABLE");
+  assert.ok(projection.limitation_reason_codes.includes("FIELD_GEOMETRY_SOURCE_UNAVAILABLE"));
+  assert.equal(
+    projection.envelope.source_non_authority_refs.some((ref) => ref.object_kind === "field_polygon_v1"),
+    false,
+  );
+});
+
+test("ambiguous field geometry fails closed instead of selecting a polygon row", async () => {
+  const builder = new PostgresCustomerProductProjectionBuilderV1(fakePool({ duplicateGeometry: true }), {
+    readApi: new FakeReadApi(),
+    now: () => "2026-09-23T00:05:00.000Z",
+  });
+  const projection = await builder.buildFieldSummaryV1(scope, "field-a");
+  assertFieldSummaryProjectionV1(projection);
+  assert.equal(projection.geometry_availability, "PARTIAL");
+  assert.ok(projection.limitation_reason_codes.includes("FIELD_GEOMETRY_SOURCE_AMBIGUOUS"));
 });
 
 test("workspace keeps not-yet-productized domains explicitly unavailable", async () => {
