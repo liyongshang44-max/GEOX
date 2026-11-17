@@ -34,3 +34,11 @@ test('real HTTP Product route enforces authentication and resource scope; GET on
   r=await fetch(base+'/api/product/v1/fields/field-a/observations',{headers,method:'POST'});assert.equal(r.status,404);
  }finally{await app.close();if(before.tokens===undefined)delete process.env.GEOX_TOKENS_JSON;else process.env.GEOX_TOKENS_JSON=before.tokens;if(before.env===undefined)delete process.env.GEOX_RUNTIME_ENV;else process.env.GEOX_RUNTIME_ENV=before.env;}
 });
+
+test('deployment preflight: authorization revocation/expiry and missing signing key fail closed between pages',async()=>{
+ const db=pool([fact('a'),fact('b')]);let clock='2026-11-17T00:00:00.000Z';const grants=[{...grant,expires_at:'2026-11-17T00:01:00.000Z'}];
+ const b=new PostgresFieldObservationHistoryBuilderV1(db as never,{...options,grants,now:()=>clock});
+ const first=await b.build(scope,'field-a',{limit:1});assert.ok(first.next_cursor);const before=db.calls.length;
+ clock='2026-11-17T00:01:00.000Z';const expired=await b.build(scope,'field-a',{cursor:first.next_cursor});assert.equal(expired.status,'UNAVAILABLE');assert.equal(db.calls.length,before+1);assert.equal(expired.items.length,0);
+ const noKey=await new PostgresFieldObservationHistoryBuilderV1(db as never,{grants:[grant],now}).build(scope,'field-a');assert.equal(noKey.status,'UNAVAILABLE');assert.ok(noKey.limitation_reason_codes.includes('OBSERVATION_CURSOR_SIGNING_NOT_CONFIGURED'));
+});
