@@ -4,6 +4,8 @@ name: mcft-cap-09-qualification-control-plane-v1
 on:
   pull_request:
     paths:
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP09_R4285_TIMING_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts'
       - '.github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml'
       - '.github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml'
       - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
