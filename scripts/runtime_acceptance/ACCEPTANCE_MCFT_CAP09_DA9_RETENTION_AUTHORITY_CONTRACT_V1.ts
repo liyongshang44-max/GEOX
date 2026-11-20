@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import vm from "node:vm";
+import path from "node:path";
 import ts from "typescript";
 import assert from "node:assert/strict";
 import {
@@ -90,7 +91,7 @@ console.log(JSON.stringify({
 {
 // Inspect the actual Timing constructor argument without importing its executable
 // wrapper: importing the wrapper would start business work and require authority.
-const source = fs.readFileSync(new URL("./RUN_MCFT_CAP09_R4285_TIMING_V1.ts", import.meta.url), "utf8");
+const source = fs.readFileSync(path.join(__dirname, "RUN_MCFT_CAP09_R4285_TIMING_V1.ts"), "utf8");
 const file = ts.createSourceFile("timing.ts", source, ts.ScriptTarget.Latest, true);
 const constructors: ts.NewExpression[] = [];
 function visit(node: ts.Node): void {
