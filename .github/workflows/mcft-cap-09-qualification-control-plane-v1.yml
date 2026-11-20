@@ -4,6 +4,8 @@ name: mcft-cap-09-qualification-control-plane-v1
 on:
   pull_request:
     paths:
+      - 'scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.test.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP09_R4285_TIMING_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts'
       - '.github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml'
@@ -267,7 +269,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup exact Timing successor source runtime
-        if: github.event_name == 'pull_request' && github.event.pull_request.base.sha == '27dd160877d81446faaa857b0c80428eb80735c0' && github.head_ref == 'fix/r4285-qcp-timing-path-triggers'
+        if: github.event_name == 'pull_request' && ((github.event.pull_request.base.sha == '27dd160877d81446faaa857b0c80428eb80735c0' && github.head_ref == 'fix/r4285-qcp-timing-path-triggers') || (github.event.pull_request.number == 3777 && github.event.pull_request.base.sha == '37dfa24ee6e60891995836f7a142a898c445d9df' && github.head_ref == 'fix/r4285-trust-v2-successor-subject'))
         uses: actions/setup-node@v4
         with:
           node-version: '20.20.2'

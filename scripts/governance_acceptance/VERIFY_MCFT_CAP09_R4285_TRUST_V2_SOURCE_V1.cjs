@@ -185,3 +185,69 @@ function verifyTimingSuccessor({ROOT,args,authority,plan,changed,stage}){
 }
 module.exports.validateTimingDeltaProof=validateTimingDeltaProof;
 module.exports.verifyTimingSuccessor=verifyTimingSuccessor;
+
+// PR #3777: qualify only the Trust registration/current Subject separation.
+// Prior physical/scientific evidence stays historical, never an execution PASS.
+const TRUST_SUBJECT_BASE="37dfa24ee6e60891995836f7a142a898c445d9df";
+const TRUST_SUBJECT_HASHES=Object.freeze({"scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.cjs": "49cc6c6649f5195363630b228ac8df59e3985e6f1af2e23f9e36861f3121d61f", "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.test.cjs": "7df7d9f62d5a59e76c91294421dc9255a5cbb5c12ebf582da4d4c9f4e0762a1c", ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml": "8955a3af3ceffabcd7c6817dc0b42fbf669d1d5e1573bcd897dab4cbf62b87e6", "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs": "a835dc2c924611136a3e938edec1af5b6b7b9320eaa53a0b5e4dd7ae07aaeccf", ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml": "97c5bbdbec3218a0b04ed9f15fdb91c10a8e9caddd03b10c869f7c2612457d2d", ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml": "86aa62a08d73903eea1d6ba1084af3f49b5a7119437c1dcd21aa562c7d06722b"});
+function verifyTrustSubjectSuccessor({ROOT,args,authority,plan,changed,stage}){
+ const git=(...a)=>cp.execFileSync("git",a,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:16*1024*1024}).trim();
+ const bytes=(ref,f)=>cp.execFileSync("git",["show",ref+":"+f],{cwd:ROOT,timeout:30000,maxBuffer:16*1024*1024});
+ const hash=b=>crypto.createHash("sha256").update(b).digest("hex");
+ const api=(p)=>JSON.parse(cp.execFileSync("gh",["api","repos/liyongshang44-max/GEOX/"+p],{cwd:ROOT,timeout:60000,maxBuffer:8*1024*1024}));
+ try{
+  assert.equal(process.env.GITHUB_ACTIONS,"true","TRUST_SUBJECT_NATIVE_CI_REQUIRED");
+  assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request","TRUST_SUBJECT_PR_REQUIRED");
+  assert.equal(process.version,"v20.20.2","TRUST_SUBJECT_NODE20_REQUIRED");
+  const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+  assert.equal(event.repository?.full_name,"liyongshang44-max/GEOX");
+  assert.equal(event.pull_request?.number,3777);assert.equal(event.pull_request?.base?.sha,TRUST_SUBJECT_BASE);
+  assert.equal(event.pull_request?.head?.ref,"fix/r4285-trust-v2-successor-subject");
+  assert.equal(event.pull_request?.head?.repo?.full_name,event.repository.full_name);
+  assert.equal(event.pull_request?.head?.sha,args.head);assert.equal(args.base,TRUST_SUBJECT_BASE);
+  assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE");
+  assert.equal(git("rev-parse","HEAD"),args.head);assert.equal(git("merge-base",args.base,args.head),args.base);
+  assert.equal(plan.status,"PASS");assert.deepEqual(plan.unknown_changed_paths,[]);assert.deepEqual(plan.authority_errors,[]);
+  const paths=git("diff","--name-only",args.base,args.head).split(/\r?\n/).filter(Boolean).sort();
+  const expected=[...Object.keys(TRUST_SUBJECT_HASHES),"scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs"].sort();
+  assert.deepEqual(paths,expected,"TRUST_SUBJECT_EXACT_DELTA_PATHS");assert.deepEqual(changed.slice().sort(),paths);
+  for(const [f,digest] of Object.entries(TRUST_SUBJECT_HASHES))assert.equal(hash(bytes(args.head,f)),digest,"TRUST_SUBJECT_UNREVIEWED_DELTA:"+f);
+  const self="scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs";
+  const prior=bytes(args.base,self);assert(bytes(args.head,self).subarray(0,prior.length).equals(prior),"TRUST_SUBJECT_HISTORICAL_SOURCE_GATE_CHANGED");
+  const tests="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.test.cjs",oldTests=bytes(args.base,tests);
+  assert(bytes(args.head,tests).subarray(0,oldTests.length).equals(oldTests),"TRUST_SUBJECT_OLD_ASSERTIONS_CHANGED");
+  const outputs=new Set(["MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json","MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json","MCFT_CAP_09_CP2_CURRENT_PLAN_DEBUG.json","MCFT_CAP_09_CP2_FUTURE_PLAN_DEBUG.json","MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json","MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json","MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json","MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json","MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json"].map(f=>"acceptance-output/"+f));
+  assert(git("status","--porcelain=v1","--untracked-files=all").split(/\r?\n/).filter(Boolean).every(l=>l.startsWith("?? ")&&outputs.has(l.slice(3))),"TRUST_SUBJECT_WORKTREE_DIRTY");
+  assert(bytes(args.base,QCP).equals(bytes(args.head,QCP)),"TRUST_SUBJECT_QCP_MANIFEST_CHANGED");assert.equal(authority.checks.length,74);
+  const fullchain=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");
+  assert.equal(fullchain.SOURCE_PATHS.length,23);
+  for(const f of fullchain.SOURCE_PATHS)assert(bytes(args.base,f).equals(bytes(args.head,f)),"TRUST_SUBJECT_HISTORICAL_23_CHANGED:"+f);
+  for(const f of [TRUST,"scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V2.json",
+   "scripts/runtime_acceptance/RUN_MCFT_CAP09_R4285_TIMING_V1.ts",
+   "scripts/cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs",
+   "scripts/cap09_adoption_v1/SIGN_R4285_OWNER_LINEAGE_ADOPTION_V5_TRUST_V2_LOCAL.cjs"])
+   assert(bytes(args.base,f).equals(bytes(args.head,f)),"TRUST_SUBJECT_OTHER_RUNTIME_CHANGED:"+f);
+  // Independently read the accepted predecessor QCP/CI and actual artifact bytes.
+  const meta={repository:"liyongshang44-max/GEOX",pr_number:3776,base_sha:"27dd160877d81446faaa857b0c80428eb80735c0",
+   source_head_sha:"845d18fcec58130f1fa80f055a5049ba2bd66155",subject_sha:TRUST_SUBJECT_BASE,
+   qcp_run_id:44691239747,qcp_run_attempt:1,qcp_job_id:136137300825,qcp_artifact_id:14608358189,
+   qcp_zip_sha256:"23be964b3a6d98920284fcb53a8e5236491c73d76a66ff1aecfb79a05139a52e",
+   qcp_raw_sha256:"05d44dbd040d3783c76ec83a77afd6cd80bc3b3f016f0a047ac2ea216e370761",ci_run_id:44691239755,ci_run_attempt:1};
+  const zip=cp.execFileSync("gh",["api","repos/liyongshang44-max/GEOX/actions/artifacts/14608358189/zip"],{cwd:ROOT,timeout:60000,maxBuffer:32*1024*1024});
+  const zipRaw=require("../cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs").zipRaw,raw=zipRaw(zip);
+  const baseline=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs").verifyGitHubNativeProof(meta,{
+   pr:api("pulls/3776"),baseCommit:api("git/commits/"+meta.base_sha),sourceCommit:api("git/commits/"+meta.source_head_sha),
+   mergeCommit:api("git/commits/"+meta.subject_sha),main:api("git/ref/heads/main"),qcpRun:api("actions/runs/44691239747"),
+   qcpJobs:api("actions/runs/44691239747/attempts/1/jobs?per_page=100"),qcpArtifacts:api("actions/runs/44691239747/artifacts?per_page=100"),ciRun:api("actions/runs/44691239755")
+  },raw,zip,authority,zipRaw);
+  for(const f of [tests,"scripts/cap09_adoption_v1/ACCEPTANCE_SIGN_R4285_OWNER_LINEAGE_ADOPTION_V5_TRUST_V2.test.cjs",
+   "scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.test.cjs"])
+   cp.execFileSync(process.execPath,["--test",f],{cwd:ROOT,timeout:120000,maxBuffer:4*1024*1024});
+  return {status:"PASS",base_sha:args.base,head_sha:args.head,changed_paths:paths.length,
+   source_delta_only:true,baseline_qcp_run_id:meta.qcp_run_id,baseline_native_proof:baseline.status,
+   trust_v1_v2_bytes_preserved:true,historical_23_preserved:true,old_assertions_preserved:true,
+   regression_suites:3,historical_scientific_results_reissued:false,signatures_transferred:false,
+   trust_activated:false,permit_issued:false,permit_consumed:false,execute_authorized:false,stages:0};
+ }catch(e){return {status:"FAIL",reason_code:"HOLD_TRUST_SUBJECT_SUCCESSOR_SOURCE",failure:String(e.message||e).slice(0,600),permit_issued:false,stages:0};}
+}
+module.exports.verifyTrustSubjectSuccessor=verifyTrustSubjectSuccessor;
