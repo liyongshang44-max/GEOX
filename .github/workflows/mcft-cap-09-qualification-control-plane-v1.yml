@@ -269,7 +269,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup exact Timing successor source runtime
-        if: github.event_name == 'pull_request' && ((github.event.pull_request.base.sha == '27dd160877d81446faaa857b0c80428eb80735c0' && github.head_ref == 'fix/r4285-qcp-timing-path-triggers') || (github.event.pull_request.number == 3777 && github.event.pull_request.base.sha == '37dfa24ee6e60891995836f7a142a898c445d9df' && github.head_ref == 'fix/r4285-trust-v2-successor-subject'))
+        if: github.event_name == 'pull_request' && ((github.event.pull_request.base.sha == '27dd160877d81446faaa857b0c80428eb80735c0' && github.head_ref == 'fix/r4285-qcp-timing-path-triggers') || (github.event.pull_request.number == 3777 && github.event.pull_request.base.sha == '37dfa24ee6e60891995836f7a142a898c445d9df' && github.head_ref == 'fix/r4285-trust-v2-successor-subject') || (github.event.pull_request.number == 3778 && github.event.pull_request.base.sha == 'f74a5677b6ecd784e283c25d71e7253897df15a1' && github.head_ref == 'fix/r4285-node20-pinned-loading-candidate'))
         uses: actions/setup-node@v4
         with:
           node-version: '20.20.2'

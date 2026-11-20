@@ -130,6 +130,31 @@ test("actual Node CJS and ESM loading uses pinned native module objects; reachab
   }finally{fs.rmSync(root,{recursive:true,force:true});fs.rmSync(profileFile,{force:true});}
  }
 });
+test("Node20 compatibility guards cached CJS, JSON, package routes and ESM; close restores native loaders",{skip:process.version!=="v20.20.2"},()=>{
+ for(const mode of ["native-apis","cached-cjs-drift","json-drift","package-drift","outside-require","outside-import","close"]){
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-node20-")),outside=root+"-outside.cjs",profileFile=root+"-profile.json";
+  try{
+   for(const rel of ["scripts/runtime_acceptance/MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_SCOPE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs","scripts/cap09_adoption_v1/contract.cjs"]){const out=path.join(root,rel);fs.mkdirSync(path.dirname(out),{recursive:true});fs.copyFileSync(path.join(ROOT,rel),out);}
+   fs.writeFileSync(path.join(root,"scripts/runtime_acceptance/MCFT_CAP09_R4285_V3_SOURCE_PATHS.cjs"),"module.exports={runtimePaths:[]};");
+   for(const [name,main,body] of [["pg","index.js","module.exports={tag:'original'};"],["@aws-sdk/client-s3","index.js","module.exports={};"],["tsx","loader.mjs","export const marker='original';"]]){const dir=path.join(root,"node_modules",name);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,"package.json"),JSON.stringify({name,main}));fs.writeFileSync(path.join(dir,main),body);}
+   fs.writeFileSync(path.join(root,"native.cjs"),"exports.cache=require.cache;exports.paths=require.resolve.paths('pg');exports.pg=require('pg');exports.nativeModule=module;exports.sameThis=this===exports;");
+   fs.writeFileSync(path.join(root,"values.json"),"\uFEFF{\"value\":1}");fs.writeFileSync(outside,"module.exports={outside:true};");
+   const action={
+    "native-apis":"const n=require('./native.cjs');if(n.cache!==require.cache||!Array.isArray(n.paths)||n.pg!==require('pg')||n.nativeModule!==require.cache[require.resolve('./native.cjs')]||!n.sameThis)throw Error('CJS_NATIVE_API_LOST');if(require('./values.json').value!==1)throw Error('JSON_BOM');",
+    "cached-cjs-drift":"require('pg');fs.writeFileSync(__dirname+'/node_modules/pg/index.js',\"module.exports={tag:'changed'};\");require('pg');",
+    "json-drift":"fs.writeFileSync(__dirname+'/values.json','{}');require('./values.json');",
+    "package-drift":"fs.writeFileSync(__dirname+'/node_modules/pg/package.json','{}');require('pg');",
+    "outside-require":"require(process.argv[3]);",
+    "outside-import":"await import(require('node:url').pathToFileURL(process.argv[3]).href);",
+    "close":"gate.close();gate=null;if(M._load!==original.load||M._resolveFilename!==original.resolve||M.prototype._compile!==original.compile||M._extensions['.json']!==original.json)throw Error('CJS_RESTORE_FAILED');if(!require(process.argv[3]).outside)throw Error('CLOSE_CJS');if(!(await import(require('node:url').pathToFileURL(process.argv[3]).href)).default.outside)throw Error('CLOSE_ESM');"
+   }[mode];
+   fs.writeFileSync(path.join(root,"runner.cjs"),`const fs=require('node:fs'),M=require('node:module'),original={load:M._load,resolve:M._resolveFilename,compile:M.prototype._compile,json:M._extensions['.json']},loader=require('./scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs');let gate;(async()=>{try{gate=loader.install(JSON.parse(fs.readFileSync(process.argv[2])),__dirname);await gate.preload();${action}console.log('COMPATIBILITY_CHECKED');}catch(e){console.error(e.message);process.exitCode=2;}finally{gate?.close();}})();`);
+   const files=[];function walk(dir,prefix=""){for(const item of fs.readdirSync(dir).sort()){const file=path.join(dir,item),rel=prefix+item;if(fs.statSync(file).isDirectory())walk(file,rel+"/");else files.push({path:rel,sha256:s.sha(fs.readFileSync(file))});}}walk(root);fs.writeFileSync(profileFile,JSON.stringify({root,files}));
+   const child=cp.spawnSync(process.execPath,[path.join(root,"runner.cjs"),profileFile,outside],{encoding:"utf8",timeout:15000,env:{PATH:process.env.PATH,SystemRoot:process.env.SystemRoot||""}}),positive=["native-apis","close"].includes(mode);
+   assert.equal(child.status,positive?0:2,child.stderr);assert.match(positive?child.stdout:child.stderr,positive?/COMPATIBILITY_CHECKED/:mode==="package-drift"?/V3_PACKAGE_ROUTE_METADATA_DRIFT/:mode.startsWith("outside")?/V3_MODULE_OUTSIDE_RELEASE/:/V3_MODULE_DISK_DRIFT/);
+  }finally{fs.rmSync(root,{recursive:true,force:true});fs.rmSync(profileFile,{force:true});fs.rmSync(outside,{force:true});}
+ }
+});
 // The mechanism is exercised with isolated authority/I/O doubles. Those
 // doubles are loader-local to this test; production exposes no injection hook.
 function mechanismFixture({liveDelayMs=5}={}){const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-factory-")),events=[],future=["resource_readback_file","resource_envelope_file","permit_envelope_file","final_execution_approval_file"];
