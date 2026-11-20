@@ -4,6 +4,8 @@ name: mcft-cap-09-qualification-control-plane-v1
 on:
   pull_request:
     paths:
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP09_R4285_TIMING_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTION_AUTHORITY_CONTRACT_V1.ts'
       - '.github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml'
       - '.github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml'
       - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
@@ -264,6 +266,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Setup exact Timing successor source runtime
+        if: github.event_name == 'pull_request' && github.event.pull_request.base.sha == '27dd160877d81446faaa857b0c80428eb80735c0' && github.head_ref == 'fix/r4285-qcp-timing-path-triggers'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.20.2'
+
       - name: Setup bounded V3 source contract runtime
         if: github.event_name == 'pull_request' && ((github.event.pull_request.number == 3758 && github.head_ref == 'mcft/r4285-prepare-live-v3') || ((github.event.pull_request.base.sha == '55de110cbe2ef11edd3320bc1042e8d1098084bb' && github.head_ref == 'mcft/r4285-v3-successor-qualification' || github.event.pull_request.base.sha == 'cf128a214fa8f929ac3c013a3ba6de58bc99be22' && github.head_ref == 'mcft/r4285-v3-empty-module-source-fix' || github.event.pull_request.base.sha == '0871514a4dd096772506282710b05f2f1ae87d07' && github.head_ref == 'mcft/r4285-v3-release-local-review' || github.event.pull_request.base.sha == '722fbcae5a56f625065be63437530f0051c12705' && github.head_ref == 'mcft/r4285-v3-native-js-format-fix' || github.event.pull_request.base.sha == 'ff8cb64d85728548c1902a3447421e15b5d4d12f' && github.head_ref == 'mcft/r4285-v3-producer-wait-handoff' || github.event.pull_request.base.sha == '8890bf950773a43a1f9238672eeb335b1526edca' && github.head_ref == 'mcft/r4285-v3-six-stage-execution' || github.event.pull_request.base.sha == 'e828c3de6a5a5cb323330bbf86a14a014163e38c' && github.head_ref == 'mcft/r4285-v3-exact-native-tool-resolution' || github.event.pull_request.base.sha == '8be2552270049419974d415b1462333d698e4367' && github.head_ref == 'mcft/r4285-v3-independent-execution-identity' || github.event.pull_request.base.sha == 'ec0d608077c4a506eb8ece0af8cabff727ee51c8' && github.head_ref == 'mcft/r4285-restricted-parent-policy' || github.event.pull_request.base.sha == 'c49237a98365cbacd49fa17fc51c5df20299515d' && github.head_ref == 'codex/r4285-null-groups-20261110' || github.event.pull_request.base.sha == 'd4e58327862ced7b4d59e0cd9c5ce094970509ff' && github.head_ref == 'codex/r4285-pg-resource-identity-20261110')))
         uses: actions/setup-node@v4
@@ -271,11 +279,11 @@ jobs:
           node-version: '24.19.0'
 
       - uses: pnpm/action-setup@v4
-        if: github.event_name == 'pull_request' && (github.event.pull_request.number == 3757 || github.event.pull_request.number == 3771)
+        if: github.event_name == 'pull_request' && (github.event.pull_request.number == 3757 || github.event.pull_request.number == 3771 || github.event.pull_request.number == 3776)
         with:
           version: 9.15.4
       - name: Install QCP72 candidate runtime dependencies
-        if: github.event_name == 'pull_request' && (github.event.pull_request.number == 3757 || github.event.pull_request.number == 3771)
+        if: github.event_name == 'pull_request' && (github.event.pull_request.number == 3757 || github.event.pull_request.number == 3771 || github.event.pull_request.number == 3776)
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Require governed successor predecessor and zero production bindings
