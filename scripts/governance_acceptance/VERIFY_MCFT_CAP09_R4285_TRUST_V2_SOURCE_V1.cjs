@@ -76,13 +76,16 @@ const TIMING_TEST="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_DA9_RETENTIO
 const TIMING_WORKFLOW=".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml";
 const TIMING_GATE="scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs";
 const TIMING_PREFLIGHT="scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs";
+const TIMING_AUX=[".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml", ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"];
+const TIMING_AUX_HASHES={".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml": "79f16bcafdfe7c37e0a7368d7535e4c4f1eaf829fa405808123cc5eeba36ef86", ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml": "e7844909532835f69bc55af851025e4314d11d1d6c5deea56e82e862fb08837a"};
 const TIMING_NEGATIVES="scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.test.cjs";
 function validateTimingDeltaProof(p){
  assert.equal(p.base,TIMING_BASE,"TIMING_BASE");
  assert.equal(p.stage,"SUCCESSOR_SUBJECT_PRE_MERGE","TIMING_STAGE");
  assert.equal(p.pr,3776,"TIMING_PR");
  assert.equal(p.branch,"fix/r4285-qcp-timing-path-triggers","TIMING_BRANCH");
- assert.deepEqual(p.paths.slice().sort(),[TIMING_WORKFLOW,TIMING_GATE,TIMING_PREFLIGHT,TIMING_NEGATIVES].sort(),"TIMING_EXACT_PATHS");
+ assert.deepEqual(p.paths.slice().sort(),[TIMING_WORKFLOW,TIMING_GATE,TIMING_PREFLIGHT,TIMING_NEGATIVES,...TIMING_AUX].sort(),"TIMING_EXACT_PATHS");
+ assert.deepEqual(p.aux_sha256,TIMING_AUX_HASHES,"TIMING_HISTORICAL_WORKFLOW_DRIFT");
  assert.equal(p.workflow_sha256,"66831e46e7a1e9c50f96bc041b54fee5245119abaee6d263e951b5e4b7b0cb46","TIMING_WORKFLOW_DELTA");
  assert.equal(p.preflight_sha256,"0d5fdcc82e6398c69f90fd93529e62d8f2d7758aa7f3ca9c315b7606a90ad3a7","TIMING_PREFLIGHT_DELTA");
  assert.equal(p.timing_blob,"46868f9d0684934094a45ce431e272fbf00657fd","TIMING_BODY_DRIFT");
@@ -163,6 +166,7 @@ function verifyTimingSuccessor({ROOT,args,authority,plan,changed,stage}){
   const oldConfig=require("node:vm").runInNewContext("("+nodes[0].arguments[2].getText(file)+")",{MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1:"test",epoch:"test",subject:"b".repeat(40)});
   assert.equal(oldConfig.retention_authority,undefined,"TIMING_ORIGINAL_DEFECT_NOT_PRESENT");
   validateTimingDeltaProof({base:args.base,stage,pr:event.pull_request.number,branch:event.pull_request.head.ref,paths,
+   aux_sha256:Object.fromEntries(TIMING_AUX.map(f=>[f,hash(bytes(args.head,f))])),
    workflow_sha256:hash(bytes(args.head,TIMING_WORKFLOW)),preflight_sha256:hash(bytes(args.head,TIMING_PREFLIGHT)),
    timing_blob:blob(args.head,TIMING_FILE),test_blob:blob(args.head,TIMING_TEST),
    manifest_unchanged:true,gate_prefix_preserved:bytes(args.head,TIMING_GATE).subarray(0,originalGate.length).equals(originalGate),

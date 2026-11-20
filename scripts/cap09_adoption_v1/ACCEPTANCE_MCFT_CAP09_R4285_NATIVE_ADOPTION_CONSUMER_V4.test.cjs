@@ -35,7 +35,8 @@ function timingFixture(){return {
  paths:[".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
   "scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs",
   "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
-  "scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.test.cjs"],
+  "scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.test.cjs",".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"],
+ aux_sha256:{".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml": "79f16bcafdfe7c37e0a7368d7535e4c4f1eaf829fa405808123cc5eeba36ef86", ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml": "e7844909532835f69bc55af851025e4314d11d1d6c5deea56e82e862fb08837a"},
  workflow_sha256:"66831e46e7a1e9c50f96bc041b54fee5245119abaee6d263e951b5e4b7b0cb46",
  preflight_sha256:"0d5fdcc82e6398c69f90fd93529e62d8f2d7758aa7f3ca9c315b7606a90ad3a7",
  timing_blob:"46868f9d0684934094a45ce431e272fbf00657fd",test_blob:"279fa791d6ded0415f0b5831f5fdb95cbff70f2e",
@@ -67,4 +68,9 @@ test("Timing scope preserves manifest, old tests, clean tree and real regression
 test("Timing native source gate cannot accept synthetic context as GitHub proof",()=>{
  const r=timingScope.verifyTimingSuccessor({ROOT:"/does-not-exist",args:{},authority:{},plan:{},changed:[],stage:"test"});
  assert.equal(r.status,"FAIL");assert.equal(r.permit_issued,false);assert.equal(r.stages,0);
+});
+
+test("Timing scope rejects altered historical workflow routing",()=>{
+ const p=timingFixture();p.aux_sha256[Object.keys(p.aux_sha256)[0]]="0".repeat(64);
+ assert.throws(()=>timingScope.validateTimingDeltaProof(p),/TIMING_HISTORICAL_WORKFLOW_DRIFT/);
 });
