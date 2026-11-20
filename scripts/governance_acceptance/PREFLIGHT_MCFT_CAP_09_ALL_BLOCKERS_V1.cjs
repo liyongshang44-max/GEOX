@@ -2704,8 +2704,28 @@ function main() {
     caseBOtherProofs.set(id,proof);return proof;
   }
 
+  // Exact Timing successor: qualify this source delta, never reissue old science.
+  const timingSuccessor = stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+    args.base === "27dd160877d81446faaa857b0c80428eb80735c0" && authority.checks.length === 74
+    ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs")
+      .verifyTimingSuccessor({ROOT,args,authority,plan,changed,stage}) : null;
   for (const decision of plan.decisions) {
     let result;
+    if (timingSuccessor) {
+      const current = decision.check_id === "CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_SOURCE_V1";
+      const ok = timingSuccessor.status === "PASS";
+      result = {check_id:decision.check_id,applicability:decision.status,
+        status:ok?(current?"PASS":"NOT_APPLICABLE"):"FAIL",
+        execution:"EXACT_TIMING_SUCCESSOR_SOURCE_DELTA_ONLY",
+        reason_code:ok?(current?"TIMING_BINDING_AND_EXACT_SOURCE_NEGATIVES_PASS":
+          "HISTORICAL_QUALIFICATION_NOT_REISSUED_FOR_PROVEN_TIMING_DELTA"):timingSuccessor.reason_code,
+        current_source:timingSuccessor,historical_qualification_reissued:false,
+        signatures_transferred:false,permit_issued:false,permit_consumed:false,
+        execute_authorized:false,production_authorized:false,original_six_stages_executed:0};
+      if (!ok) blockers.push({blocker_class:"TIMING_SUCCESSOR_SOURCE_HOLD",check_id:decision.check_id,detail:timingSuccessor});
+      results.push(result);continue;
+    }
+
     // One exact successor only: preserve original REQUIRED/REQUALIFY
     // diagnostics while recording source-only N/A, not a scientific PASS.
     if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===CASEB_BASE&&
