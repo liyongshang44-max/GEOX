@@ -262,13 +262,15 @@ const LOADER_WIRING=Object.freeze([
  ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
  "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
  "scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs",
- "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.test.cjs"
+ "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.test.cjs",
+ ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+ ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"
 ]);
 const LOADER_CHECKS=Object.freeze(["CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1",CHECK]);
 function inspectLoaderDelta({base,stage,paths,hashes,plan}){
  assert.equal(base,LOADER_BASE,"LOADER_EXACT_BASE");assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","LOADER_EXACT_STAGE");
  assert.equal(plan.status,"PASS");for(const k of ["unknown_changed_paths","authority_errors","resolver_errors"])assert.deepEqual(plan[k],[],"LOADER_PLAN_UNRESOLVED");
- assert.deepEqual(paths.slice().sort(),[...Object.keys(LOADER_HASHES),...LOADER_WIRING].sort(),"LOADER_EXACT_SIX_SOURCE_PATHS");
+ assert.deepEqual(paths.slice().sort(),[...Object.keys(LOADER_HASHES),...LOADER_WIRING].sort(),"LOADER_EXACT_EIGHT_SOURCE_PATHS");
  for(const [f,h] of Object.entries(LOADER_HASHES))assert.equal(hashes[f],h,"LOADER_CANDIDATE_BYTES_CHANGED:"+f);
  return Object.freeze({status:"INSPECTED_EXACT_DELTA_NOT_NATIVE_QUALIFICATION",runtime_paths:Object.keys(LOADER_HASHES),qualification_wiring_paths:[...LOADER_WIRING]});
 }
@@ -298,13 +300,15 @@ function verifyLoaderSuccessor({ROOT,args,authority,plan,changed,stage}){
   assert.equal(git("diff","--name-only"),"","LOADER_TRACKED_WORKTREE_DRIFT");assert.equal(git("diff","--cached","--name-only"),"","LOADER_STAGED_WORKTREE_DRIFT");
   assert(bytes(args.base,QCP).equals(bytes(args.head,QCP)),"LOADER_QCP74_DEFINITIONS_CHANGED");assert.equal(authority.checks.length,74);
   // Retain all previous verifier and Trust test bytes; only append this gate.
-  for(const f of LOADER_WIRING.slice(2)){const before=bytes(args.base,f);assert(bytes(args.head,f).subarray(0,before.length).equals(before),"LOADER_OLD_QUALIFICATION_ASSERTIONS_CHANGED:"+f);}
+  for(const f of LOADER_WIRING.slice(2,4)){const before=bytes(args.base,f);assert(bytes(args.head,f).subarray(0,before.length).equals(before),"LOADER_OLD_QUALIFICATION_ASSERTIONS_CHANGED:"+f);}
   const pre=LOADER_WIRING[1],current=bytes(args.head,pre).toString();
   const stripped=current.replace(/    \/\/ BEGIN PR3778 EXACT LOADER ROUTE[\s\S]*?    \/\/ END PR3778 EXACT LOADER ROUTE\n/g,"").replace(/  \/\/ BEGIN PR3778 EXACT LOADER PROOF[\s\S]*?  \/\/ END PR3778 EXACT LOADER PROOF\n/g,"");
   assert.equal(stripped,bytes(args.base,pre).toString(),"LOADER_PRIOR_PREFLIGHT_CHANGED");
   const workflow=LOADER_WIRING[0],oldWorkflow=bytes(args.base,workflow).toString();
   const addition=" || (github.event.pull_request.number == 3778 && github.event.pull_request.base.sha == '"+LOADER_BASE+"' && github.head_ref == '"+LOADER_BRANCH+"')";
   assert.equal(bytes(args.head,workflow).toString().replace(addition,""),oldWorkflow,"LOADER_OTHER_WORKFLOW_CHANGED");
+  const shellAddition=" || { [ \"${{ github.event.pull_request.number }}\" = \"3778\" ] && [ \"${{ github.event.pull_request.base.sha }}\" = \"f74a5677b6ecd784e283c25d71e7253897df15a1\" ] && [ \"${{ github.head_ref }}\" = \"fix/r4285-node20-pinned-loading-candidate\" ]; }";
+  for(const f of LOADER_WIRING.slice(4)){const routed=bytes(args.head,f).toString();assert.equal(routed.split(shellAddition).join("").split(addition).join(""),bytes(args.base,f).toString(),"LOADER_HISTORICAL_WORKFLOW_CHANGED:"+f);}
   const historical=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");for(const f of historical.SOURCE_PATHS)assert(bytes(args.base,f).equals(bytes(args.head,f)),"LOADER_HISTORICAL_23_CHANGED:"+f);
   for(const f of [TRUST,"scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V2.json","scripts/runtime_acceptance/MCFT_CAP09_R4285_MATERIAL_FULL_PARALLEL_V2.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_EXEC_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs"])
    assert(bytes(args.base,f).equals(bytes(args.head,f)),"LOADER_UNAUTHORIZED_RUNTIME_CHANGED:"+f);

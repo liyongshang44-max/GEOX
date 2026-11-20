@@ -202,8 +202,8 @@ test('actual Git inheritance rejects unrelated, dirty and changed-Trust descenda
 // PR3778 exact loader source qualification. Inspection never grants native PASS.
 const loaderQualification=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs");
 function loaderSourceFixture(){return {base:"f74a5677b6ecd784e283c25d71e7253897df15a1",stage:"SUCCESSOR_SUBJECT_PRE_MERGE",paths:[...Object.keys(loaderQualification.LOADER_HASHES),...loaderQualification.LOADER_WIRING],hashes:{...loaderQualification.LOADER_HASHES},plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]}};}
-test("loader exact inspection binds six paths and pinned original candidate bytes without granting native qualification",()=>{
- const p=loaderSourceFixture(),result=loaderQualification.inspectLoaderDelta(p);assert.equal(result.status,"INSPECTED_EXACT_DELTA_NOT_NATIVE_QUALIFICATION");assert.equal(result.runtime_paths.length,2);assert.equal(result.qualification_wiring_paths.length,4);
+test("loader exact inspection binds eight paths and pinned original candidate bytes without granting native qualification",()=>{
+ const p=loaderSourceFixture(),result=loaderQualification.inspectLoaderDelta(p);assert.equal(result.status,"INSPECTED_EXACT_DELTA_NOT_NATIVE_QUALIFICATION");assert.equal(result.runtime_paths.length,2);assert.equal(result.qualification_wiring_paths.length,6);
 });
 test("loader successor rejects old base, unknown path, changed runtime and unresolved plan",()=>{
  for(const change of [p=>p.base="37dfa24ee6e60891995836f7a142a898c445d9df",p=>p.paths.push("scripts/runtime_acceptance/UNREVIEWED.cjs"),p=>p.hashes[Object.keys(p.hashes)[0]]="a".repeat(64),p=>p.plan.unknown_changed_paths.push("UNKNOWN")]){const p=loaderSourceFixture();change(p);assert.throws(()=>loaderQualification.inspectLoaderDelta(p));}
