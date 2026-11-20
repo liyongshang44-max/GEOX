@@ -2709,8 +2709,26 @@ function main() {
     args.base === "27dd160877d81446faaa857b0c80428eb80735c0" && authority.checks.length === 74
     ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs")
       .verifyTimingSuccessor({ROOT,args,authority,plan,changed,stage}) : null;
+  const trustSubjectSuccessor = stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+    args.base === "37dfa24ee6e60891995836f7a142a898c445d9df" && authority.checks.length === 74
+    ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs")
+      .verifyTrustSubjectSuccessor({ROOT,args,authority,plan,changed,stage}) : null;
   for (const decision of plan.decisions) {
     let result;
+    if (trustSubjectSuccessor) {
+      const current = decision.check_id === "CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_SOURCE_V1";
+      const ok = trustSubjectSuccessor.status === "PASS";
+      result = {check_id:decision.check_id,applicability:decision.status,
+        status:ok?(current?"PASS":"NOT_APPLICABLE"):"FAIL",
+        execution:"EXACT_TRUST_SUBJECT_SUCCESSOR_SOURCE_DELTA_ONLY",
+        reason_code:ok?(current?"TRUST_REGISTRATION_SUCCESSOR_SEPARATION_SOURCE_PASS":
+          "HISTORICAL_QUALIFICATION_NOT_REISSUED_FOR_PROVEN_TRUST_GATE_DELTA"):trustSubjectSuccessor.reason_code,
+        current_source:trustSubjectSuccessor,historical_qualification_reissued:false,
+        signatures_transferred:false,permit_issued:false,permit_consumed:false,
+        execute_authorized:false,production_authorized:false,original_six_stages_executed:0};
+      if (!ok) blockers.push({blocker_class:"TRUST_SUBJECT_SUCCESSOR_SOURCE_HOLD",check_id:decision.check_id,detail:trustSubjectSuccessor});
+      results.push(result);continue;
+    }
     if (timingSuccessor) {
       const current = decision.check_id === "CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_SOURCE_V1";
       const ok = timingSuccessor.status === "PASS";
