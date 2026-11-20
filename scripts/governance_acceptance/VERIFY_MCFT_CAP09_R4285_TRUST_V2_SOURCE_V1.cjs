@@ -251,3 +251,87 @@ function verifyTrustSubjectSuccessor({ROOT,args,authority,plan,changed,stage}){
  }catch(e){return {status:"FAIL",reason_code:"HOLD_TRUST_SUBJECT_SUCCESSOR_SOURCE",failure:String(e.message||e).slice(0,600),permit_issued:false,stages:0};}
 }
 module.exports.verifyTrustSubjectSuccessor=verifyTrustSubjectSuccessor;
+
+// PR3778: exact Node20 loader source qualification; no live admission authority.
+const LOADER_BASE="f74a5677b6ecd784e283c25d71e7253897df15a1",LOADER_BRANCH="fix/r4285-node20-pinned-loading-candidate";
+const LOADER_HASHES=Object.freeze({
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs":"c436cae9f793904fef17cc890070518b095dd439d038234fdb40331feb402f07",
+ "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs":"bdcecee8f458682ee0d06574a3e0b1eedb53d406988bbd08cddec8364debf11d"
+});
+const LOADER_WIRING=Object.freeze([
+ ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+ "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+ "scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs",
+ "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.test.cjs"
+]);
+const LOADER_CHECKS=Object.freeze(["CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1",CHECK]);
+function inspectLoaderDelta({base,stage,paths,hashes,plan}){
+ assert.equal(base,LOADER_BASE,"LOADER_EXACT_BASE");assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","LOADER_EXACT_STAGE");
+ assert.equal(plan.status,"PASS");for(const k of ["unknown_changed_paths","authority_errors","resolver_errors"])assert.deepEqual(plan[k],[],"LOADER_PLAN_UNRESOLVED");
+ assert.deepEqual(paths.slice().sort(),[...Object.keys(LOADER_HASHES),...LOADER_WIRING].sort(),"LOADER_EXACT_SIX_SOURCE_PATHS");
+ for(const [f,h] of Object.entries(LOADER_HASHES))assert.equal(hashes[f],h,"LOADER_CANDIDATE_BYTES_CHANGED:"+f);
+ return Object.freeze({status:"INSPECTED_EXACT_DELTA_NOT_NATIVE_QUALIFICATION",runtime_paths:Object.keys(LOADER_HASHES),qualification_wiring_paths:[...LOADER_WIRING]});
+}
+function loaderDependencyProjection(paths,baseBlobs,headBlobs){
+ const rows=[];for(const f of [...new Set(paths)].sort()){
+  if(LOADER_WIRING.includes(f))continue;
+  assert(baseBlobs.has(f)&&headBlobs.has(f),"LOADER_DEPENDENCY_MISSING:"+f);
+  assert.equal(headBlobs.get(f),baseBlobs.get(f),"LOADER_UNDECLARED_RUNTIME_QUALIFICATION_IMPACT:"+f);rows.push([f,headBlobs.get(f)]);
+ }
+ return {path_count:rows.length,git_blob_catalog_sha256:crypto.createHash("sha256").update(JSON.stringify(rows)).digest("hex")};
+}
+function verifyLoaderSuccessor({ROOT,args,authority,plan,changed,stage}){
+ const git=(...a)=>cp.execFileSync("git",a,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:32*1024*1024}).trim();
+ const bytes=(sha,f)=>cp.execFileSync("git",["show",sha+":"+f],{cwd:ROOT,timeout:30000,maxBuffer:8*1024*1024});
+ const hash=b=>crypto.createHash("sha256").update(b).digest("hex");
+ const api=p=>JSON.parse(cp.execFileSync("gh",["api","repos/liyongshang44-max/GEOX/"+p],{cwd:ROOT,encoding:"utf8",timeout:60000,maxBuffer:8*1024*1024}));
+ try{
+  assert.equal(process.version,"v20.20.2","LOADER_EXACT_NODE20_SOURCE_RUNTIME");
+  assert.equal(process.env.GITHUB_ACTIONS,"true","LOADER_NATIVE_GITHUB_ONLY");assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request");
+  const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+  assert.equal(event.pull_request?.number,3778);assert.equal(event.repository?.full_name,"liyongshang44-max/GEOX");assert.equal(event.pull_request?.head?.repo?.full_name,event.repository.full_name);
+  assert.equal(event.pull_request?.base?.sha,args.base);assert.equal(event.pull_request?.head?.sha,args.head);assert.equal(event.pull_request?.head?.ref,LOADER_BRANCH);
+  assert.equal(git("rev-parse","HEAD"),args.head);assert.equal(git("merge-base",args.base,args.head),args.base);
+  assert.equal(git("rev-parse",args.base+"^{tree}"),"f57a859fe75f16691f50330af15d52e77d7bc61a");
+  const paths=git("diff","--name-only",args.base,args.head).split(/\r?\n/).filter(Boolean).sort();assert.deepEqual(changed.slice().sort(),paths);
+  inspectLoaderDelta({base:args.base,stage,paths,hashes:Object.fromEntries(Object.keys(LOADER_HASHES).map(f=>[f,hash(bytes(args.head,f))])),plan});
+  assert.equal(git("diff","--name-only"),"","LOADER_TRACKED_WORKTREE_DRIFT");assert.equal(git("diff","--cached","--name-only"),"","LOADER_STAGED_WORKTREE_DRIFT");
+  assert(bytes(args.base,QCP).equals(bytes(args.head,QCP)),"LOADER_QCP74_DEFINITIONS_CHANGED");assert.equal(authority.checks.length,74);
+  // Retain all previous verifier and Trust test bytes; only append this gate.
+  for(const f of LOADER_WIRING.slice(2)){const before=bytes(args.base,f);assert(bytes(args.head,f).subarray(0,before.length).equals(before),"LOADER_OLD_QUALIFICATION_ASSERTIONS_CHANGED:"+f);}
+  const pre=LOADER_WIRING[1],current=bytes(args.head,pre).toString();
+  const stripped=current.replace(/    \/\/ BEGIN PR3778 EXACT LOADER ROUTE[\s\S]*?    \/\/ END PR3778 EXACT LOADER ROUTE\n/g,"").replace(/  \/\/ BEGIN PR3778 EXACT LOADER PROOF[\s\S]*?  \/\/ END PR3778 EXACT LOADER PROOF\n/g,"");
+  assert.equal(stripped,bytes(args.base,pre).toString(),"LOADER_PRIOR_PREFLIGHT_CHANGED");
+  const workflow=LOADER_WIRING[0],oldWorkflow=bytes(args.base,workflow).toString();
+  const addition=" || (github.event.pull_request.number == 3778 && github.event.pull_request.base.sha == '"+LOADER_BASE+"' && github.head_ref == '"+LOADER_BRANCH+"')";
+  assert.equal(bytes(args.head,workflow).toString().replace(addition,""),oldWorkflow,"LOADER_OTHER_WORKFLOW_CHANGED");
+  const historical=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");for(const f of historical.SOURCE_PATHS)assert(bytes(args.base,f).equals(bytes(args.head,f)),"LOADER_HISTORICAL_23_CHANGED:"+f);
+  for(const f of [TRUST,"scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V2.json","scripts/runtime_acceptance/MCFT_CAP09_R4285_MATERIAL_FULL_PARALLEL_V2.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_EXEC_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs"])
+   assert(bytes(args.base,f).equals(bytes(args.head,f)),"LOADER_UNAUTHORIZED_RUNTIME_CHANGED:"+f);
+  // Real native predecessor: QCP artifact bytes plus exact merge/QCP/CI metadata.
+  const meta={repository:"liyongshang44-max/GEOX",pr_number:3777,base_sha:"37dfa24ee6e60891995836f7a142a898c445d9df",source_head_sha:"5862de274e83ebfb33e3be8da53692bd72832e0d",subject_sha:LOADER_BASE,qcp_run_id:44729553238,qcp_run_attempt:1,qcp_job_id:136265535989,qcp_artifact_id:14626430343,qcp_zip_sha256:"43ecc24a780cd13e8adf7960a31dcdbcbb9feffd36b5e7cf29a9464c39f8b454",qcp_raw_sha256:"5e4c0c37ecb3502f0583ae3b7c3ba42b25e8c6087b0c0be5a15a7f8fab9e0245",ci_run_id:44729553114,ci_run_attempt:1};
+  const zip=cp.execFileSync("gh",["api","repos/liyongshang44-max/GEOX/actions/artifacts/14626430343/zip"],{cwd:ROOT,timeout:60000,maxBuffer:32*1024*1024});
+  const zipRaw=require("../cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs").zipRaw,raw=zipRaw(zip);
+  const baseline=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs").verifyGitHubNativeProof(meta,{pr:api("pulls/3777"),baseCommit:api("git/commits/"+meta.base_sha),sourceCommit:api("git/commits/"+meta.source_head_sha),mergeCommit:api("git/commits/"+LOADER_BASE),main:api("git/ref/heads/main"),qcpRun:api("actions/runs/44729553238"),qcpJobs:api("actions/runs/44729553238/attempts/1/jobs?per_page=100"),qcpArtifacts:api("actions/runs/44729553238/artifacts?per_page=100"),ciRun:api("actions/runs/44729553114")},raw,zip,authority,zipRaw);
+  const currentPR=api("pulls/3778");assert.equal(currentPR.head.sha,args.head);assert.equal(currentPR.base.sha,args.base);assert.equal(currentPR.head.ref,LOADER_BRANCH);
+  const nativeJobs=api("actions/runs/"+process.env.GITHUB_RUN_ID+"/jobs?per_page=100"),nativeJob=nativeJobs.jobs.find(j=>j.name==="applicability-and-blocker-inventory");
+  for(const name of ["Prove central applicability semantics","Prove generation, durable-anchor, and dependency-digest semantics","Resolve immutable qualification evidence references","Attest exact QCP source identity after historical diagnostics"])
+   assert(nativeJob?.steps.some(s=>s.name===name&&s.conclusion==="success"),"LOADER_CURRENT_NATIVE_CONTROL_STEP_REQUIRED:"+name);
+  const suites=["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_EXECUTION_V3.test.cjs","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.test.cjs","scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.test.cjs","scripts/cap09_adoption_v1/ACCEPTANCE_SIGN_R4285_OWNER_LINEAGE_ADOPTION_V5_TRUST_V2.test.cjs"];
+  const tests=[];for(const f of suites){const r=cp.spawnSync(process.execPath,["--test",f],{cwd:ROOT,encoding:"utf8",timeout:120000,maxBuffer:4*1024*1024});assert.equal(r.status,0,"LOADER_EXACT_REGRESSION_FAILED:"+f);tests.push({file:f,source_sha256:hash(bytes(args.head,f)),exit_code:r.status,stdout_sha256:hash(Buffer.from(r.stdout))});}
+  const planner=require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"),registry=JSON.parse(bytes(args.head,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"));
+  const context=planner.prepareApplicabilityContext({root:ROOT,authority,registry,generation:"v13",headSha:args.head});assert.deepEqual(context.definitionErrors,[]);assert.deepEqual(context.resolverResult.errors,[]);
+  const catalog=sha=>new Map(git("ls-tree","-r",sha).split(/\r?\n/).map(l=>{const at=l.indexOf("\t");return [l.slice(at+1),l.slice(0,at).split(" ")[2]];}));const baseBlobs=catalog(args.base),headBlobs=catalog(args.head),baselineRows=new Map(JSON.parse(raw).results.map(r=>[r.check_id,r]));
+  const rows={};for(const definition of authority.checks){const id=definition.check_id,decision=plan.decisions.find(d=>d.check_id===id);assert(decision,"LOADER_CURRENT_CHECK_MISSING");assert(baselineRows.has(id),"LOADER_BASELINE_CHECK_MISSING");
+   if(LOADER_CHECKS.includes(id)){rows[id]={check_id:id,applicability:decision.status,status:"PASS",execution:"EXACT_PR3778_NODE20_NATIVE_SOURCE_QUALIFICATION",reason_code:"NODE20_EXACT_SOURCE_AND_REGISTERED_TRUST_NEGATIVES_PASS",current_source:{base_sha:args.base,head_sha:args.head,candidate_runtime_sha256:LOADER_HASHES,baseline_qcp_run_id:meta.qcp_run_id,native_baseline_status:baseline.status,tests},whole_120s_admission:"UNPROVEN"};continue;}
+   const owned=[...new Set(definition.resolver_ids.flatMap(r=>{assert(context.resolverResult.resolved[r],"LOADER_CHECK_RESOLVER_MISSING");return context.resolverResult.resolved[r].paths;}))];const projection=loaderDependencyProjection(owned,baseBlobs,headBlobs);
+   rows[id]={check_id:id,applicability:decision.status,status:id==="CONTROL_PLANE_INTEGRITY"?"PASS":"NOT_APPLICABLE",execution:id==="CONTROL_PLANE_INTEGRITY"?"CURRENT_NATIVE_CONTROL_PLANE_STEPS_EXACT_SOURCE":"PER_CHECK_UNCHANGED_OPERATIONAL_SOURCE_PROJECTION",reason_code:id==="CONTROL_PLANE_INTEGRITY"?"CURRENT_NATIVE_PLANNER_AND_EXACT_ROUTING_PROVEN":"EXACT_CHECK_DEPENDENCIES_UNCHANGED_NO_HISTORICAL_REISSUE",current_source:{base_sha:args.base,head_sha:args.head,resolver_ids:definition.resolver_ids,operational_projection:projection,changed_qualification_wiring:paths.filter(f=>owned.includes(f)&&LOADER_WIRING.includes(f)),baseline_qcp_run_id:meta.qcp_run_id,baseline_check_status:baselineRows.get(id).status},historical_qualification_reissued:false};
+  }
+  assert.equal(Object.keys(rows).length,74);return {status:"PASS",rows,permit_issued:false,permit_consumed:false,stages:0};
+ }catch(e){return {status:"FAIL",reason_code:"HOLD_EXACT_NODE20_LOADER_SOURCE_QUALIFICATION",failure:String(e.message||e).slice(0,700),permit_consumed:false,stages:0};}
+}
+module.exports.inspectLoaderDelta=inspectLoaderDelta;
+module.exports.loaderDependencyProjection=loaderDependencyProjection;
+module.exports.verifyLoaderSuccessor=verifyLoaderSuccessor;
+module.exports.LOADER_HASHES=LOADER_HASHES;
+module.exports.LOADER_WIRING=LOADER_WIRING;

@@ -2713,8 +2713,21 @@ function main() {
     args.base === "37dfa24ee6e60891995836f7a142a898c445d9df" && authority.checks.length === 74
     ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs")
       .verifyTrustSubjectSuccessor({ROOT,args,authority,plan,changed,stage}) : null;
+  // BEGIN PR3778 EXACT LOADER PROOF
+  const loaderSuccessor = stage === "SUCCESSOR_SUBJECT_PRE_MERGE" && args.base === "f74a5677b6ecd784e283c25d71e7253897df15a1"
+    ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs").verifyLoaderSuccessor({ROOT,args,authority,plan,changed,stage}) : null;
+  // END PR3778 EXACT LOADER PROOF
   for (const decision of plan.decisions) {
     let result;
+    // BEGIN PR3778 EXACT LOADER ROUTE
+    if (loaderSuccessor) {
+      const row = loaderSuccessor.rows?.[decision.check_id];
+      const ok = loaderSuccessor.status === "PASS" && !!row;
+      result = ok ? row : {check_id:decision.check_id,applicability:decision.status,status:"FAIL",reason_code:loaderSuccessor.reason_code,current_source:loaderSuccessor};
+      if (!ok) blockers.push({blocker_class:"EXACT_NODE20_LOADER_SOURCE_HOLD",check_id:decision.check_id,detail:loaderSuccessor});
+      results.push(result);continue;
+    }
+    // END PR3778 EXACT LOADER ROUTE
     if (trustSubjectSuccessor) {
       const current = decision.check_id === "CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_SOURCE_V1";
       const ok = trustSubjectSuccessor.status === "PASS";
