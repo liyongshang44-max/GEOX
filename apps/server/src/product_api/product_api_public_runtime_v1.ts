@@ -8,7 +8,9 @@ import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
 import { Pool } from "pg";
 
+import {registerProductObservationHistoryRoutesV1} from '../routes/product_observation_history_v1.js';
 import { registerProductV1Routes } from "../routes/product_v1.js";
+import type {ObservationHistoryOptionsV1} from '../product_projection/customer/field_observation_history_v1.js';
 
 export const PRODUCT_API_PUBLIC_RUNTIME_SCHEMA_V1 =
   "geox.product-api.public-runtime.v1" as const;
@@ -150,6 +152,7 @@ export type ProductApiPublicRuntimeConfigV1 = {
   databaseUrl: string;
   allowedOrigins: string[];
   tokenSourceJson: string;
+  observationHistory?:ObservationHistoryOptionsV1;
 };
 
 export function resolveProductApiPublicRuntimeConfigV1(): ProductApiPublicRuntimeConfigV1 {
@@ -181,7 +184,17 @@ export function resolveProductApiPublicRuntimeConfigV1(): ProductApiPublicRuntim
     databaseUrl,
     allowedOrigins,
     tokenSourceJson,
+    observationHistory: process.env.GEOX_PRODUCT_OBSERVATION_DISPLAY_GRANTS_JSON ? {
+      grants: parseObservationDisplayGrantsV1(process.env.GEOX_PRODUCT_OBSERVATION_DISPLAY_GRANTS_JSON),
+      cursorSecret: nonEmptyEnvV1('GEOX_PRODUCT_OBSERVATION_CURSOR_SECRET'),
+    }:undefined,
   };
+}
+
+function parseObservationDisplayGrantsV1(raw:string):NonNullable<ObservationHistoryOptionsV1['grants']>{
+  const grants=JSON.parse(raw);
+  if(!Array.isArray(grants)||grants.length>100||grants.some(g=>!g||typeof g!=='object'||g.customer_visible!==true||g.permission!=='CANONICAL_OBSERVATION_DISPLAY'||['tenant_id','project_id','group_id','field_id','dataset_id','source_use_policy_ref','approval_ref','expires_at'].some(k=>typeof g[k]!=='string'||!g[k].trim())))throw new Error('PRODUCT_OBSERVATION_DISPLAY_GRANTS_INVALID');
+  return grants;
 }
 
 export function createProductApiPublicAppV1(
@@ -244,6 +257,7 @@ export function createProductApiPublicAppV1(
   });
 
   registerProductV1Routes(app, pool);
+  registerProductObservationHistoryRoutesV1(app,pool,config.observationHistory);
 
   app.setNotFoundHandler((_request, reply) => {
     reply.code(404).send({

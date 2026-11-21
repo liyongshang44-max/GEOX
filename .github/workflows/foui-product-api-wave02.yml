@@ -36,5 +36,7 @@ jobs:
         run: node --import tsx --test apps/server/src/product_projection/customer/customer_product_projection_builder_v1.test.ts
       - name: Product API route tests
         run: node --import tsx --test apps/server/src/routes/product_v1.test.ts
+      - name: Historical observation Product projection and HTTP isolation
+        run: node --import tsx --test apps/server/src/product_projection/customer/field_observation_history_v1.test.ts
       - name: Wave-02 governance acceptance
         run: node scripts/governance_acceptance/ACCEPTANCE_FOUI_PRODUCT_API_WAVE_02_V1.cjs
