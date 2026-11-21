@@ -339,3 +339,94 @@ module.exports.loaderDependencyProjection=loaderDependencyProjection;
 module.exports.verifyLoaderSuccessor=verifyLoaderSuccessor;
 module.exports.LOADER_HASHES=LOADER_HASHES;
 module.exports.LOADER_WIRING=LOADER_WIRING;
+
+// PR3779: exact Node20 physical source qualification; no live admission authority.
+const PHYSICAL_BASE="d97f4b6dadcfa894025fd1634bd69c1c01a8761c",PHYSICAL_BRANCH="fix/r4285-physical-cli-producer-candidate";
+const PHYSICAL_HASHES=Object.freeze({
+ "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs": "98c51499947a380f7370e2896c8551b70de18fa37dd52f0d2dd09e4a4bfa5024",
+ "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_EXECUTION_V3.test.cjs": "5e02277e69cd7e9d0b4ae1e4c2eb9d1256af917d9bb3b83c59a584a10d42f5ad"
+});
+const PHYSICAL_WIRING=Object.freeze([
+ ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+ "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+ "scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs",
+ "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.test.cjs",
+ ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+ ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"
+]);
+const PHYSICAL_CHECKS=Object.freeze(["CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1",CHECK]);
+function inspectPhysicalDelta({base,stage,paths,hashes,plan}){
+ assert.equal(base,PHYSICAL_BASE,"PHYSICAL_EXACT_BASE");assert.equal(stage,"SUCCESSOR_SUBJECT_PRE_MERGE","PHYSICAL_EXACT_STAGE");
+ assert.equal(plan.status,"PASS");for(const k of ["unknown_changed_paths","authority_errors","resolver_errors"])assert.deepEqual(plan[k],[],"PHYSICAL_PLAN_UNRESOLVED");
+ assert.deepEqual(paths.slice().sort(),[...Object.keys(PHYSICAL_HASHES),...PHYSICAL_WIRING].sort(),"PHYSICAL_EXACT_EIGHT_SOURCE_PATHS");
+ for(const [f,h] of Object.entries(PHYSICAL_HASHES))assert.equal(hashes[f],h,"PHYSICAL_CANDIDATE_BYTES_CHANGED:"+f);
+ return Object.freeze({status:"INSPECTED_EXACT_DELTA_NOT_NATIVE_QUALIFICATION",runtime_paths:Object.keys(PHYSICAL_HASHES),qualification_wiring_paths:[...PHYSICAL_WIRING]});
+}
+function physicalDependencyProjection(paths,baseBlobs,headBlobs){
+ const rows=[];for(const f of [...new Set(paths)].sort()){
+  if(PHYSICAL_WIRING.includes(f))continue;
+  assert(baseBlobs.has(f)&&headBlobs.has(f),"PHYSICAL_DEPENDENCY_MISSING:"+f);
+  assert.equal(headBlobs.get(f),baseBlobs.get(f),"PHYSICAL_UNDECLARED_RUNTIME_QUALIFICATION_IMPACT:"+f);rows.push([f,headBlobs.get(f)]);
+ }
+ return {path_count:rows.length,git_blob_catalog_sha256:crypto.createHash("sha256").update(JSON.stringify(rows)).digest("hex")};
+}
+function verifyPhysicalSuccessor({ROOT,args,authority,plan,changed,stage}){
+ const git=(...a)=>cp.execFileSync("git",a,{cwd:ROOT,encoding:"utf8",timeout:30000,maxBuffer:32*1024*1024}).trim();
+ const bytes=(sha,f)=>cp.execFileSync("git",["show",sha+":"+f],{cwd:ROOT,timeout:30000,maxBuffer:8*1024*1024});
+ const hash=b=>crypto.createHash("sha256").update(b).digest("hex");
+ const api=p=>JSON.parse(cp.execFileSync("gh",["api","repos/liyongshang44-max/GEOX/"+p],{cwd:ROOT,encoding:"utf8",timeout:60000,maxBuffer:8*1024*1024}));
+ try{
+  assert.equal(process.version,"v20.20.2","PHYSICAL_EXACT_NODE20_SOURCE_RUNTIME");
+  assert.equal(process.env.GITHUB_ACTIONS,"true","PHYSICAL_NATIVE_GITHUB_ONLY");assert.equal(process.env.GITHUB_EVENT_NAME,"pull_request");
+  const event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));
+  assert.equal(event.pull_request?.number,3779);assert.equal(event.repository?.full_name,"liyongshang44-max/GEOX");assert.equal(event.pull_request?.head?.repo?.full_name,event.repository.full_name);
+  assert.equal(event.pull_request?.base?.sha,args.base);assert.equal(event.pull_request?.head?.sha,args.head);assert.equal(event.pull_request?.head?.ref,PHYSICAL_BRANCH);
+  assert.equal(git("rev-parse","HEAD"),args.head);assert.equal(git("merge-base",args.base,args.head),args.base);
+  assert.equal(git("rev-parse",args.base+"^{tree}"),"5ae4f6c731a0ddd005f8ac4db35d627360b4ab6b");
+  const paths=git("diff","--name-only",args.base,args.head).split(/\r?\n/).filter(Boolean).sort();assert.deepEqual(changed.slice().sort(),paths);
+  inspectPhysicalDelta({base:args.base,stage,paths,hashes:Object.fromEntries(Object.keys(PHYSICAL_HASHES).map(f=>[f,hash(bytes(args.head,f))])),plan});
+  assert.equal(git("diff","--name-only"),"","PHYSICAL_TRACKED_WORKTREE_DRIFT");assert.equal(git("diff","--cached","--name-only"),"","PHYSICAL_STAGED_WORKTREE_DRIFT");
+  assert(bytes(args.base,QCP).equals(bytes(args.head,QCP)),"PHYSICAL_QCP74_DEFINITIONS_CHANGED");assert.equal(authority.checks.length,74);
+  // Retain all previous verifier and Trust test bytes; only append this gate.
+  for(const f of PHYSICAL_WIRING.slice(2,4)){const before=bytes(args.base,f);assert(bytes(args.head,f).subarray(0,before.length).equals(before),"PHYSICAL_OLD_QUALIFICATION_ASSERTIONS_CHANGED:"+f);}
+  const pre=PHYSICAL_WIRING[1],current=bytes(args.head,pre).toString();
+  const stripped=current.replace(/    \/\/ BEGIN PR3779 EXACT PHYSICAL ROUTE[\s\S]*?    \/\/ END PR3779 EXACT PHYSICAL ROUTE\n/g,"").replace(/  \/\/ BEGIN PR3779 EXACT PHYSICAL PROOF[\s\S]*?  \/\/ END PR3779 EXACT PHYSICAL PROOF\n/g,"");
+  assert.equal(stripped,bytes(args.base,pre).toString(),"PHYSICAL_PRIOR_PREFLIGHT_CHANGED");
+  const workflow=PHYSICAL_WIRING[0],oldWorkflow=bytes(args.base,workflow).toString();
+  const addition=" || (github.event.pull_request.number == 3779 && github.event.pull_request.base.sha == '"+PHYSICAL_BASE+"' && github.head_ref == '"+PHYSICAL_BRANCH+"')";
+  assert.equal(bytes(args.head,workflow).toString().replace(addition,""),oldWorkflow,"PHYSICAL_OTHER_WORKFLOW_CHANGED");
+  const shellAddition=" || { [ \"${{ github.event.pull_request.number }}\" = \"3779\" ] && [ \"${{ github.event.pull_request.base.sha }}\" = \"d97f4b6dadcfa894025fd1634bd69c1c01a8761c\" ] && [ \"${{ github.head_ref }}\" = \"fix/r4285-physical-cli-producer-candidate\" ]; }";
+  for(const f of PHYSICAL_WIRING.slice(4)){const routed=bytes(args.head,f).toString();assert.equal(routed.split(shellAddition).join("").split(addition).join(""),bytes(args.base,f).toString(),"PHYSICAL_HISTORICAL_WORKFLOW_CHANGED:"+f);}
+  const historical=require("./MCFT_CAP09_NONAUTHORIZED_FULL_CHAIN_PROOF_GATE_V1.cjs");for(const f of historical.SOURCE_PATHS)assert(bytes(args.base,f).equals(bytes(args.head,f)),"PHYSICAL_HISTORICAL_23_CHANGED:"+f);
+  for(const f of [TRUST,"scripts/runtime_acceptance/MCFT_CAP09_RETRY_TRUST_V2.json","scripts/runtime_acceptance/MCFT_CAP09_R4285_MATERIAL_FULL_PARALLEL_V2.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PERMIT_ATOMIC_EXEC_V3.cjs","scripts/runtime_acceptance/MCFT_CAP09_R4285_PINNED_LOADING_V3.cjs"])
+   assert(bytes(args.base,f).equals(bytes(args.head,f)),"PHYSICAL_UNAUTHORIZED_RUNTIME_CHANGED:"+f);
+  const cli="scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs",test="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_EXECUTION_V3.test.cjs";
+  assert.equal(bytes(args.head,cli).toString().split("function parse(argv)")[0],bytes(args.base,cli).toString().split("function parse(argv)")[0],"PHYSICAL_RECEIVER_OR_ATOMIC_BYTES_CHANGED");
+  const oldTests=bytes(args.base,test);assert(bytes(args.head,test).subarray(0,oldTests.length).equals(oldTests),"PHYSICAL_PRIOR_EXECUTION_ASSERTIONS_CHANGED");
+  // Real native predecessor: QCP artifact bytes plus exact merge/QCP/CI metadata.
+  const meta={"base_sha":"f74a5677b6ecd784e283c25d71e7253897df15a1","ci_run_attempt":1,"ci_run_id":44829050098,"pr_number":3778,"qcp_artifact_id":14674679784,"qcp_job_id":136608983127,"qcp_raw_sha256":"30e5cc15814cc5c8363090bc0060631c3e908f9bc362bb45d962248f700419f7","qcp_run_attempt":1,"qcp_run_id":44829050174,"qcp_zip_sha256":"e065bbf73e6b40c01aa0635f54929a1eb33fc97b35be1ef0fe6c0c512fee975a","repository":"liyongshang44-max/GEOX","source_head_sha":"324070511f4b74e67dad904a97c1a8744c811c2e","subject_sha":"d97f4b6dadcfa894025fd1634bd69c1c01a8761c"};
+  const zip=cp.execFileSync("gh",["api","repos/liyongshang44-max/GEOX/actions/artifacts/14674679784/zip"],{cwd:ROOT,timeout:60000,maxBuffer:32*1024*1024});
+  const zipRaw=require("../cap09_adoption_v1/MCFT_CAP09_ADOPTION_V2_EVIDENCE_CONSUMER.cjs").zipRaw,raw=zipRaw(zip);
+  const baseline=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs").verifyGitHubNativeProof(meta,{pr:api("pulls/3778"),baseCommit:api("git/commits/"+meta.base_sha),sourceCommit:api("git/commits/"+meta.source_head_sha),mergeCommit:api("git/commits/"+PHYSICAL_BASE),main:api("git/ref/heads/main"),qcpRun:api("actions/runs/"+meta.qcp_run_id),qcpJobs:api("actions/runs/"+meta.qcp_run_id+"/attempts/1/jobs?per_page=100"),qcpArtifacts:api("actions/runs/"+meta.qcp_run_id+"/artifacts?per_page=100"),ciRun:api("actions/runs/"+meta.ci_run_id)},raw,zip,authority,zipRaw);
+  const currentPR=api("pulls/3779");assert.equal(currentPR.head.sha,args.head);assert.equal(currentPR.base.sha,args.base);assert.equal(currentPR.head.ref,PHYSICAL_BRANCH);
+  const nativeJobs=api("actions/runs/"+process.env.GITHUB_RUN_ID+"/jobs?per_page=100"),nativeJob=nativeJobs.jobs.find(j=>j.name==="applicability-and-blocker-inventory");
+  for(const name of ["Prove central applicability semantics","Prove generation, durable-anchor, and dependency-digest semantics","Resolve immutable qualification evidence references","Attest exact QCP source identity after historical diagnostics"])
+   assert(nativeJob?.steps.some(s=>s.name===name&&s.conclusion==="success"),"PHYSICAL_CURRENT_NATIVE_CONTROL_STEP_REQUIRED:"+name);
+  const suites=["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_PREPARE_LIVE_V3.test.cjs","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_EXECUTION_V3.test.cjs","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.test.cjs","scripts/cap09_adoption_v1/ACCEPTANCE_MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.test.cjs","scripts/cap09_adoption_v1/ACCEPTANCE_SIGN_R4285_OWNER_LINEAGE_ADOPTION_V5_TRUST_V2.test.cjs"];
+  const tests=[];for(const f of suites){const r=cp.spawnSync(process.execPath,["--test",f],{cwd:ROOT,encoding:"utf8",timeout:120000,maxBuffer:4*1024*1024});assert.equal(r.status,0,"PHYSICAL_EXACT_REGRESSION_FAILED:"+f);tests.push({file:f,source_sha256:hash(bytes(args.head,f)),exit_code:r.status,stdout_sha256:hash(Buffer.from(r.stdout))});}
+  const planner=require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"),registry=JSON.parse(bytes(args.head,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"));
+  const context=planner.prepareApplicabilityContext({root:ROOT,authority,registry,generation:"v13",headSha:args.head});assert.deepEqual(context.definitionErrors,[]);assert.deepEqual(context.resolverResult.errors,[]);
+  const catalog=sha=>new Map(git("ls-tree","-r",sha).split(/\r?\n/).map(l=>{const at=l.indexOf("\t");return [l.slice(at+1),l.slice(0,at).split(" ")[2]];}));const baseBlobs=catalog(args.base),headBlobs=catalog(args.head),baselineRows=new Map(JSON.parse(raw).results.map(r=>[r.check_id,r]));
+  const rows={};for(const definition of authority.checks){const id=definition.check_id,decision=plan.decisions.find(d=>d.check_id===id);assert(decision,"PHYSICAL_CURRENT_CHECK_MISSING");assert(baselineRows.has(id),"PHYSICAL_BASELINE_CHECK_MISSING");
+   if(PHYSICAL_CHECKS.includes(id)){rows[id]={check_id:id,applicability:decision.status,status:"PASS",execution:"EXACT_PR3779_PHYSICAL_CLI_NATIVE_SOURCE_QUALIFICATION",reason_code:"NODE20_EXACT_SOURCE_AND_REGISTERED_TRUST_NEGATIVES_PASS",current_source:{base_sha:args.base,head_sha:args.head,candidate_runtime_sha256:PHYSICAL_HASHES,baseline_qcp_run_id:meta.qcp_run_id,native_baseline_status:baseline.status,tests},whole_120s_admission:"UNPROVEN"};continue;}
+   const owned=[...new Set(definition.resolver_ids.flatMap(r=>{assert(context.resolverResult.resolved[r],"PHYSICAL_CHECK_RESOLVER_MISSING");return context.resolverResult.resolved[r].paths;}))];const projection=physicalDependencyProjection(owned,baseBlobs,headBlobs);
+   rows[id]={check_id:id,applicability:decision.status,status:id==="CONTROL_PLANE_INTEGRITY"?"PASS":"NOT_APPLICABLE",execution:id==="CONTROL_PLANE_INTEGRITY"?"CURRENT_NATIVE_CONTROL_PLANE_STEPS_EXACT_SOURCE":"PER_CHECK_UNCHANGED_OPERATIONAL_SOURCE_PROJECTION",reason_code:id==="CONTROL_PLANE_INTEGRITY"?"CURRENT_NATIVE_PLANNER_AND_EXACT_ROUTING_PROVEN":"EXACT_CHECK_DEPENDENCIES_UNCHANGED_NO_HISTORICAL_REISSUE",current_source:{base_sha:args.base,head_sha:args.head,resolver_ids:definition.resolver_ids,operational_projection:projection,changed_qualification_wiring:paths.filter(f=>owned.includes(f)&&PHYSICAL_WIRING.includes(f)),baseline_qcp_run_id:meta.qcp_run_id,baseline_check_status:baselineRows.get(id).status},historical_qualification_reissued:false};
+  }
+  assert.equal(Object.keys(rows).length,74);return {status:"PASS",rows,permit_issued:false,permit_consumed:false,stages:0};
+ }catch(e){return {status:"FAIL",reason_code:"HOLD_EXACT_NODE20_PHYSICAL_SOURCE_QUALIFICATION",failure:String(e.message||e).slice(0,700),permit_consumed:false,stages:0};}
+}
+module.exports.inspectPhysicalDelta=inspectPhysicalDelta;
+module.exports.physicalDependencyProjection=physicalDependencyProjection;
+module.exports.verifyPhysicalSuccessor=verifyPhysicalSuccessor;
+module.exports.PHYSICAL_HASHES=PHYSICAL_HASHES;
+module.exports.PHYSICAL_WIRING=PHYSICAL_WIRING;
