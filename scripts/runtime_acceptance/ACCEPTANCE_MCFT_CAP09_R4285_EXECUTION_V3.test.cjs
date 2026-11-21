@@ -407,3 +407,69 @@ test("physical factory rejects legacy Run before loader, FD3, receiver or ledger
  assert.equal(scoped().payload.run_id,identity.LEGACY);
  const old=dynamicFixture({executionRun:identity.LEGACY});try{const a=atomicFixture(old);assert.throws(()=>a.prepare(atomicArgs(old)),/PHYSICAL_SUCCESSOR_RUN_REQUIRED/);assert(!fs.existsSync(path.join(old.root,"run-"+identity.LEGACY)));}finally{old.cleanup();}
 });
+
+function isolatedCli(filename,mocks,clock,sourceText){
+ if(sourceText===null)return isolated(filename,mocks,clock);
+ const module={exports:{}},local=Module.createRequire(filename),request=name=>Object.hasOwn(mocks,name)?mocks[name]:local(name);
+ vm.runInThisContext("(function(exports,require,module,__filename,__dirname,process,Date){"+sourceText+"\n})",{filename})(module.exports,request,module,filename,path.dirname(filename),process,clock);return module.exports;
+}
+
+// Physical CLI wiring only. Native factory authority, source capture and burn
+// remain covered by the existing tests above; these doubles grant no authority.
+function producerCliFixture(mode='success',sourceText=null){
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'r4285-cli-producer-')),events=[];
+ const source=path.join(root,'source'),release=path.join(root,'release');fs.mkdirSync(source);fs.mkdirSync(release);
+ const inputFile=path.join(root,'session.json'),optionsFile=path.join(root,'producer.json'),cap=Object.freeze({}),result={status:'UNIT_WIRING_ONLY_NOT_NATIVE_ADMISSION'};
+ const options={existing_mc_alias:'unit-admin',parent_access_key_id:'UNIT_PARENT_ID',protected_directory:path.join(root,'protected'),control_envelope_file:path.join(root,'control.json'),inventory_envelope_file:path.join(root,'inventory.json')};
+ const input={source_root:source,release_root:release,output_root:path.join(root,'execution-output'),resource_readback_file:path.join(root,'readback.json'),permit_envelope_file:path.join(root,'permit.json')};
+ const scope=scoped(),captured=Object.fromEntries(['CONTROL','INVENTORY'].map(kind=>[kind.toLowerCase(),observation(scope,kind,Buffer.from('synthetic source only')).payload]));
+ for(const p of Object.values(captured)){p.observed_at=iso(mode==='expired'?NOW-120001:NOW);p.issued_at=p.observed_at;}
+ const save=(f,x)=>fs.writeFileSync(f,c.canonical(x));save(inputFile,input);save(optionsFile,options);
+ let resolve,reject;const pending=new Promise((a,b)=>{resolve=a;reject=b;});let entered=false;
+ function same(value){assert.equal(value,cap,'same opaque factory capability required');}
+ const f={consume(value){same(value);events.push('unattached-consume');return Promise.resolve({status:'UNIT_LEGACY_UNATTACHED_NOT_PRODUCER_CHAIN'});},async prepareExecution(i){events.push('prepare');assert.deepEqual(i,input);if(mode==='prepare-error')throw Error('UNIT_PREPARE_FAILURE');if(mode==='config-drift')save(optionsFile,{...options,existing_mc_alias:'changed'});return cap;},
+  prepareProducer(value,p){same(value);events.push('attach');assert.deepEqual(p,options);if(mode==='attach-error')throw Error('UNIT_ATTACH_FAILURE');},
+  consumeWithProducer(value){same(value);events.push('WAIT');entered=true;if(mode==='receiver-error')queueMicrotask(()=>reject(Error('UNIT_RECEIVER_FAILURE')));return pending;},
+  captureProducer(value){same(value);assert(entered);events.push('capture');if(mode==='capture-error')throw Error('UNIT_CAPTURE_FAILURE');
+   if(!['expired','receiver-error'].includes(mode))setImmediate(()=>{
+    events.push('external-observation-signing');for(const kind of ['CONTROL','INVENTORY']){const lower=kind.toLowerCase(),env=sign(s.OBS_DOMAIN,captured[lower]);if(mode==='bad-signature'&&lower==='control')env.signature_base64=Buffer.alloc(64).toString('base64');save(options[lower+'_envelope_file']+'.incoming.json',env);}
+   });return captured;},
+  async completeProducer(value,observations){same(value);events.push('complete');assert(!fs.existsSync(input.resource_readback_file),'CLI must not fabricate readback');
+   for(const kind of ['CONTROL','INVENTORY']){const lower=kind.toLowerCase();s.verifyObservationSignature(observations[lower],kind,scope,trust,{now:NOW,notBefore:NOW-1});assert.deepEqual(observations[lower].payload,captured[lower]);}
+   if(mode==='complete-error')throw Error('UNIT_COMPLETE_FAILURE');resolve(result);return {status:'UNIT_ONLY'};},
+  revoke(value){same(value);events.push('revoke');if(entered)reject(Error('UNIT_REVOKED'));}};
+ class Clock extends Date{static now(){return NOW;}}
+ const module=isolatedCli(path.join(__dirname,'MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs'),{'./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs':f},Clock,sourceText);
+ return {root,events,input,inputFile,options,optionsFile,result,module,captured,save,argv:['--session-execute-test-only','--input',inputFile,'--producer-options',optionsFile],cleanup(){fs.rmSync(root,{recursive:true,force:true});}};
+}
+test('physical CLI wires attach -> genuine receiver WAIT -> capture -> signed completion with one capability',async()=>{
+ const f=producerCliFixture();try{assert.equal(await f.module.run(f.argv),f.result);assert.deepEqual(f.events,['prepare','attach','WAIT','capture','external-observation-signing','complete']);
+  for(const kind of ['control','inventory'])assert.deepEqual(JSON.parse(fs.readFileSync(f.options[kind+'_envelope_file']+'.payload.json')),f.captured[kind]);
+  assert(!fs.existsSync(f.input.permit_envelope_file));assert(!fs.existsSync(f.input.resource_readback_file));assert(!fs.existsSync(f.input.output_root));
+ }finally{f.cleanup();}
+});
+test('physical CLI rejects absent producer configuration and wrong invocation before preparing factory',async()=>{
+ const f=producerCliFixture();try{for(const argv of [f.argv.slice(0,3),[...f.argv,'--skip-owner'],f.argv.map(x=>x==='--producer-options'?'--verifier':x)])await assert.rejects(f.module.run(argv),/V3_PHYSICAL_PRODUCER_OPTIONS_REQUIRED/);assert.deepEqual(f.events,[]);}finally{f.cleanup();}
+});
+test('physical CLI rejects unknown options, path aliases, links and outputs inside frozen roots before preparation',async()=>{
+ for(const mode of ['unknown','alias','inside','existing','link']){const f=producerCliFixture();try{
+  let options={...f.options};if(mode==='unknown')options.verifier='PASS';if(mode==='alias')options.inventory_envelope_file=options.control_envelope_file;if(mode==='inside')options.control_envelope_file=path.join(f.input.release_root,'inside.json');
+  if(mode==='existing')fs.writeFileSync(options.control_envelope_file,'preserve');
+  if(mode==='link'){const link=path.join(f.root,'linked');fs.symlinkSync(f.input.source_root,link,process.platform==='win32'?'junction':'dir');options.control_envelope_file=path.join(link,'control.json');}
+  f.save(f.optionsFile,options);await assert.rejects(f.module.run(f.argv),/V3_PRODUCER_OPTIONS|V3_PRODUCER_CLI_PATH_ALIAS|V3_PRODUCER_CLI_OUTPUT_INSIDE_RUNTIME|V3_PRODUCER_CLI_OUTPUT_EXISTS|SYMLINK_FORBIDDEN/);assert.deepEqual(f.events,[]);
+ }finally{f.cleanup();}}
+});
+test('physical CLI fails closed on configuration drift or attach failure before WAIT',async()=>{
+ for(const mode of ['config-drift','attach-error']){const f=producerCliFixture(mode);try{await assert.rejects(f.module.run(f.argv),/V3_PRODUCER_CLI_OPTIONS_DRIFT|UNIT_ATTACH_FAILURE/);assert(!f.events.includes('WAIT'));assert.equal(f.events.at(-1),'revoke');}finally{f.cleanup();}}
+});
+test('physical CLI preserves first capture/receiver/completion failure and never retries or publishes authority',async()=>{
+ for(const mode of ['capture-error','receiver-error','complete-error']){const f=producerCliFixture(mode);try{await assert.rejects(f.module.run(f.argv),new RegExp('UNIT_'+mode.split('-')[0].toUpperCase()+'_FAILURE'));assert.equal(f.events.filter(x=>x==='capture').length,1);assert.equal(f.events.at(-1),'revoke');assert(!fs.existsSync(f.input.permit_envelope_file));assert(!fs.existsSync(f.input.resource_readback_file));}finally{f.cleanup();}}
+});
+test('physical CLI accepts only valid signed observations and preserves the original 120-second limit',async()=>{
+ for(const mode of ['bad-signature','expired']){const f=producerCliFixture(mode);try{await assert.rejects(f.module.run(f.argv),mode==='expired'?/V3_OWNER_WINDOW_EXHAUSTED/:/V3_SIGNATURE/);assert.equal(f.events.at(-1),'revoke');assert(!fs.existsSync(f.input.permit_envelope_file));assert(!fs.existsSync(f.input.output_root));}finally{f.cleanup();}}
+});
+
+test('unchanged D97 CLI demonstrably omits Producer attachment while candidate regression requires it',async()=>{
+ const old=cp.execFileSync('git',['show','d97f4b6dadcfa894025fd1634bd69c1c01a8761c:scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs'],{cwd:ROOT,encoding:'utf8',timeout:10000,maxBuffer:1048576});
+ const f=producerCliFixture('success',old);try{const result=await f.module.run(f.argv.slice(0,3));assert.equal(result.status,'UNIT_LEGACY_UNATTACHED_NOT_PRODUCER_CHAIN');assert.deepEqual(f.events,['prepare','unattached-consume']);assert(!f.events.includes('capture'));await assert.rejects(f.module.run(f.argv),/V3_ONLY_PHYSICAL_TEST_ONLY_SESSION_ALLOWED/);}finally{f.cleanup();}
+});

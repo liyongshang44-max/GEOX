@@ -214,3 +214,19 @@ test("per-check source projection cannot hide changed operational dependency or 
  head.set("runtime.cjs","changed");assert.throws(()=>loaderQualification.loaderDependencyProjection([...base.keys()],base,head),/LOADER_UNDECLARED_RUNTIME_QUALIFICATION_IMPACT/);
  assert.throws(()=>loaderQualification.loaderDependencyProjection(["unregistered.cjs"],base,head),/LOADER_DEPENDENCY_MISSING/);
 });
+
+// PR3779 exact physical source qualification. Inspection never grants native PASS.
+const physicalQualification=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs");
+function physicalSourceFixture(){return {base:"d97f4b6dadcfa894025fd1634bd69c1c01a8761c",stage:"SUCCESSOR_SUBJECT_PRE_MERGE",paths:[...Object.keys(physicalQualification.PHYSICAL_HASHES),...physicalQualification.PHYSICAL_WIRING],hashes:{...physicalQualification.PHYSICAL_HASHES},plan:{status:"PASS",unknown_changed_paths:[],authority_errors:[],resolver_errors:[]}};}
+test("physical exact inspection binds eight paths and pinned original candidate bytes without granting native qualification",()=>{
+ const p=physicalSourceFixture(),result=physicalQualification.inspectPhysicalDelta(p);assert.equal(result.status,"INSPECTED_EXACT_DELTA_NOT_NATIVE_QUALIFICATION");assert.equal(result.runtime_paths.length,2);assert.equal(result.qualification_wiring_paths.length,6);
+});
+test("physical successor rejects old base, unknown path, changed runtime and unresolved plan",()=>{
+ for(const change of [p=>p.base="37dfa24ee6e60891995836f7a142a898c445d9df",p=>p.paths.push("scripts/runtime_acceptance/UNREVIEWED.cjs"),p=>p.hashes[Object.keys(p.hashes)[0]]="a".repeat(64),p=>p.plan.unknown_changed_paths.push("UNKNOWN")]){const p=physicalSourceFixture();change(p);assert.throws(()=>physicalQualification.inspectPhysicalDelta(p));}
+});
+test("per-check source projection cannot hide changed operational dependency or missing base source",()=>{
+ const base=new Map([["runtime.cjs","old"],[physicalQualification.PHYSICAL_WIRING[0],"before"]]),head=new Map([["runtime.cjs","old"],[physicalQualification.PHYSICAL_WIRING[0],"after"]]);
+ const result=physicalQualification.physicalDependencyProjection([...base.keys()],base,head);assert.equal(result.path_count,1);assert.match(result.git_blob_catalog_sha256,/^[a-f0-9]{64}$/);
+ head.set("runtime.cjs","changed");assert.throws(()=>physicalQualification.physicalDependencyProjection([...base.keys()],base,head),/PHYSICAL_UNDECLARED_RUNTIME_QUALIFICATION_IMPACT/);
+ assert.throws(()=>physicalQualification.physicalDependencyProjection(["unregistered.cjs"],base,head),/PHYSICAL_DEPENDENCY_MISSING/);
+});
