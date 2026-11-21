@@ -142,6 +142,15 @@ function finiteV1(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+// PostgreSQL numeric columns may be numbers or numeric strings. Absence and
+// malformed values must not be coerced into a fabricated numeric zero.
+function nullableNumberV1(value: unknown): number | null {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function nullableTextV1(value: unknown): string | null {
   const text = String(value ?? "").trim();
   return text || null;
@@ -471,8 +480,8 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     return result.rows.map((row: Record<string, unknown>) => ({
       field_id: String(row.field_id ?? "").trim(),
       field_name: nullableTextV1(row.field_name),
-      area_ha: Number.isFinite(Number(row.area_ha)) ? Number(row.area_ha) : null,
-      updated_ts_ms: Number.isFinite(Number(row.updated_ts_ms)) ? Number(row.updated_ts_ms) : null,
+      area_ha: nullableNumberV1(row.area_ha),
+      updated_ts_ms: nullableNumberV1(row.updated_ts_ms),
     })).filter((row: FieldIdentityRowV1) => Boolean(row.field_id));
   }
 
@@ -502,8 +511,8 @@ export class PostgresCustomerProductProjectionBuilderV1 {
     return {
       field_id: String(row.field_id ?? "").trim(),
       field_name: nullableTextV1(row.field_name),
-      area_ha: Number.isFinite(Number(row.area_ha)) ? Number(row.area_ha) : null,
-      updated_ts_ms: Number.isFinite(Number(row.updated_ts_ms)) ? Number(row.updated_ts_ms) : null,
+      area_ha: nullableNumberV1(row.area_ha),
+      updated_ts_ms: nullableNumberV1(row.updated_ts_ms),
     };
   }
 
