@@ -637,6 +637,52 @@ function registeredMcExecutable(){
  }finally{chunk.fill(0);fs.closeSync(fd);}
  return file;
 }
+function nativeFailureClass(child){
+ if(["MC_FILE_IDENTITY_REJECTED","MC_PATH_DRIFT","MC_FILE_IDENTITY_DRIFT","MC_SHA256_MISMATCH"].includes(child.error?.native_tool_failure))return child.error.native_tool_failure;
+ if(child.error?.code==="ENOENT")return "EXECUTABLE_NOT_FOUND";
+ if(child.error?.code==="ETIMEDOUT")return "COMMAND_TIMEOUT";
+ if(["ENOBUFS","ERR_CHILD_PROCESS_STDIO_MAXBUFFER"].includes(child.error?.code))return "OUTPUT_LIMIT_EXCEEDED";
+ if(child.error)return "NATIVE_SYSTEM_ERROR";
+ if(child.status!==0)return "NONZERO_EXIT";
+ return "INVALID_NATIVE_STDOUT";
+}
+function nativeRead(tool,args){
+ // Nonmutating fixed command families, no shell interpolation, no secrets or
+ // raw stderr returned to operator. SDK/PG/S3 existing probes are untouched.
+ const started=performance.now();
+ let child;
+ try{const executable=tool==="mc"?registeredMcExecutable():tool;
+  child=require("node:child_process").spawnSync(executable,args,{
+  env:tool==="mc"&&typeof physicalMcAdminContext!=="undefined"&&physicalMcAdminContext.getStore()?physicalMcMinimalEnvironment(physicalMcAdminContext.getStore()):nativeChildEnvironment(),encoding:null,windowsHide:true,shell:false,timeout:15000,maxBuffer:1024*1024,
+  stdio:["ignore","pipe","pipe"]});
+ }catch(error){child={error,status:null,stdout:null,stderr:null};}
+ if(child.error||child.status!==0||!Buffer.isBuffer(child.stdout)){
+  const allowed=new Set(["ENOENT","EACCES","EPERM","ETIMEDOUT","ENOBUFS",
+   "ENOMEM","EMFILE","ENFILE","EAGAIN","EINVAL","ERR_CHILD_PROCESS_STDIO_MAXBUFFER"]);
+  const diagnostic={schema_version:"R4285_NATIVE_COMMAND_FAILURE_DIAGNOSTIC_V1",
+   status:"NATIVE_COMMAND_FAILED_NO_RETRY",command_label:nativeCommandLabel(tool,args),
+   failure_class:nativeFailureClass(child),
+   exit_code:Number.isSafeInteger(child.status)?child.status:null,
+   system_code:allowed.has(child.error?.code)?child.error.code:null,
+   elapsed_ms:Math.max(0,Math.round(performance.now()-started)),
+   stdout_bytes:Buffer.isBuffer(child.stdout)?child.stdout.length:0,
+   stderr_bytes:Buffer.isBuffer(child.stderr)?child.stderr.length:0,
+   retry_automatically:false};
+  // The execution broker discards stderr; this bounded public JSON line uses
+  // its existing stdout forwarding path. Raw output is never forwarded.
+  console.log(JSON.stringify(diagnostic));
+  if(Buffer.isBuffer(child.stdout))child.stdout.fill(0);
+  if(Buffer.isBuffer(child.stderr))child.stderr.fill(0);
+ }
+ assert(!child.error&&child.status===0&&Buffer.isBuffer(child.stdout),
+  "HOLD_NATIVE_COMMAND_NOT_AUTHENTICATED");
+ return child.stdout;
+}
+
+// Windows mc RELEASE.2025-08-13 may return exact bucket stat as
+// {status:"success",name:"bucket/", ...} without a "type" field.
+// Require native command's exact bucket path and exact bucket identity;
+// explicit non-folder types, other buckets and object paths remain rejected.
 // A128 physical Producer: a scoped, ephemeral MC admin connection. Only the
 // pre-existing ACL-restricted private source is read. No MC config, secret
 // argv, process.env mutation or general diagnostic credential promotion.
@@ -746,52 +792,7 @@ function withPhysicalMcAdmin(fn){
 }
 // End A128 physical-only MC child authentication boundary.
 
-function nativeFailureClass(child){
- if(["MC_FILE_IDENTITY_REJECTED","MC_PATH_DRIFT","MC_FILE_IDENTITY_DRIFT","MC_SHA256_MISMATCH"].includes(child.error?.native_tool_failure))return child.error.native_tool_failure;
- if(child.error?.code==="ENOENT")return "EXECUTABLE_NOT_FOUND";
- if(child.error?.code==="ETIMEDOUT")return "COMMAND_TIMEOUT";
- if(["ENOBUFS","ERR_CHILD_PROCESS_STDIO_MAXBUFFER"].includes(child.error?.code))return "OUTPUT_LIMIT_EXCEEDED";
- if(child.error)return "NATIVE_SYSTEM_ERROR";
- if(child.status!==0)return "NONZERO_EXIT";
- return "INVALID_NATIVE_STDOUT";
-}
-function nativeRead(tool,args){
- // Nonmutating fixed command families, no shell interpolation, no secrets or
- // raw stderr returned to operator. SDK/PG/S3 existing probes are untouched.
- const started=performance.now();
- let child;
- try{const executable=tool==="mc"?registeredMcExecutable():tool;
-  child=require("node:child_process").spawnSync(executable,args,{
-  env:tool==="mc"&&physicalMcAdminContext.getStore()?physicalMcMinimalEnvironment(physicalMcAdminContext.getStore()):nativeChildEnvironment(),encoding:null,windowsHide:true,shell:false,timeout:15000,maxBuffer:1024*1024,
-  stdio:["ignore","pipe","pipe"]});
- }catch(error){child={error,status:null,stdout:null,stderr:null};}
- if(child.error||child.status!==0||!Buffer.isBuffer(child.stdout)){
-  const allowed=new Set(["ENOENT","EACCES","EPERM","ETIMEDOUT","ENOBUFS",
-   "ENOMEM","EMFILE","ENFILE","EAGAIN","EINVAL","ERR_CHILD_PROCESS_STDIO_MAXBUFFER"]);
-  const diagnostic={schema_version:"R4285_NATIVE_COMMAND_FAILURE_DIAGNOSTIC_V1",
-   status:"NATIVE_COMMAND_FAILED_NO_RETRY",command_label:nativeCommandLabel(tool,args),
-   failure_class:nativeFailureClass(child),
-   exit_code:Number.isSafeInteger(child.status)?child.status:null,
-   system_code:allowed.has(child.error?.code)?child.error.code:null,
-   elapsed_ms:Math.max(0,Math.round(performance.now()-started)),
-   stdout_bytes:Buffer.isBuffer(child.stdout)?child.stdout.length:0,
-   stderr_bytes:Buffer.isBuffer(child.stderr)?child.stderr.length:0,
-   retry_automatically:false};
-  // The execution broker discards stderr; this bounded public JSON line uses
-  // its existing stdout forwarding path. Raw output is never forwarded.
-  console.log(JSON.stringify(diagnostic));
-  if(Buffer.isBuffer(child.stdout))child.stdout.fill(0);
-  if(Buffer.isBuffer(child.stderr))child.stderr.fill(0);
- }
- assert(!child.error&&child.status===0&&Buffer.isBuffer(child.stdout),
-  "HOLD_NATIVE_COMMAND_NOT_AUTHENTICATED");
- return child.stdout;
-}
 
-// Windows mc RELEASE.2025-08-13 may return exact bucket stat as
-// {status:"success",name:"bucket/", ...} without a "type" field.
-// Require native command's exact bucket path and exact bucket identity;
-// explicit non-folder types, other buckets and object paths remain rejected.
 function nativeBucketStatMatches(x){
  if(!x||typeof x!=="object"||Array.isArray(x)||
   x.status!=="success"||
@@ -1774,7 +1775,8 @@ function requireAttached(cap,state,phase){const p=attached.get(cap);assert(p&&p.
 }
 function captureAttached(cap,state){const p=requireAttached(cap,state,"PREPARED");p.phase="CAPTURING";
  try{return sourceContext.run(p.env,()=>{
-  const captured=withPhysicalMcAdmin(()=>captureCurrentNativeSourceOnly(p.i,p.env,p.config.protected_directory));
+  const captured=p.state.execution===true?withPhysicalMcAdmin(()=>captureCurrentNativeSourceOnly(p.i,p.env,p.config.protected_directory)):
+   captureCurrentNativeSourceOnly(p.i,p.env,p.config.protected_directory);
   assert(Date.parse(captured.observed_at)>=state.owner_not_before,"V3_PRODUCER_BEFORE_HOST_WAIT");
   require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").setObservationDeadline(state,captured.observed_at);
   const at=new Date().toISOString(),scope=state.scope,payload=kind=>Object.freeze({schema_version:"MCFT_CAP09_R4285_SOURCE_OBSERVATION_V3",issuer_id:scope.payload.issuer_id,key_id:scope.payload.key_id,
