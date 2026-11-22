@@ -53,32 +53,33 @@ function fixture(overrides={}){
       return {requireReceiver:()=>{if(overrides.revoked)throw Error("REVOKED");}};
     throw Error("UNEXPECTED_MODULE");
    }};
- vm.runInNewContext(body+"\nglobalThis.mcTest={withPhysicalMcAdmin,physicalMcMinimalEnvironment};",context);
+ vm.runInNewContext(body+"\nglobalThis.mcTest={withPhysicalMcAdmin,physicalMcMinimalEnvironment,scoped:()=>physicalMcAdminContext.getStore()};",context);
  return {h:context.mcTest,calls,env,envParent};
 }
 test("A128 bound admin only appears in exact MC child environment",()=>{
  const f=fixture(),initial=JSON.stringify(f.envParent);
- const child=f.h.withPhysicalMcAdmin(()=>f.h.physicalMcMinimalEnvironment(
-   // Retrieve the binding via the original helper's context only.
-   // This test captures it through nested function instrumentation below.
-   null));
- assert.equal(child.MC_HOST_r4285,undefined);
+ const child=f.h.withPhysicalMcAdmin(()=>f.h.physicalMcMinimalEnvironment(f.h.scoped()));
+ assert.equal(child.MC_HOST_r4285,
+  "http://synthetic-admin:synthetic-secret@127.0.0.1:59292");
+ assert(!Object.keys(child).some(x=>/AWS|TOKEN|DATABASE_URL|SECRET|MC_HOST_intruder/i.test(x)));
  assert.equal(JSON.stringify(f.envParent),initial);
- // Verify scope guards, private source, ACL gate and cleared references.
+ assert.equal(f.h.scoped(),undefined);
  assert.deepEqual(f.calls,["ACL_CHECK","READ_PRIVATE"]);
 });
-test("A128 scoped MC child URL uses synthetic admin and excludes inherited secrets",()=>{
- const f=fixture();
- // Capture a scoped binding by instrumenting the child-env function's caller
- // with a read-only closure executed inside withPhysicalMcAdmin.
- const entry=f.h.withPhysicalMcAdmin(()=>{
-  // The production minimal-env helper only takes an explicit binding.
-  // Pull it from AsyncLocalStorage through a VM local closure.
-  return null;
- });
- assert.equal(entry,null);
- assert(!Object.hasOwn(f.envParent,"MC_HOST_r4285"));
+test("A128 negative business account cannot be used as admin principal",()=>{
+ const f=fixture({rootUser:"synthetic-service-account"});
+ assert.throws(()=>f.h.withPhysicalMcAdmin(()=>true),
+  /HOLD_NATIVE_MC_ADMIN_ACCOUNT_NOT_ROOT/);
  assert.deepEqual(f.calls,["ACL_CHECK","READ_PRIVATE"]);
+});
+test("A128 temporary binding cleared even after callback failure",()=>{
+ const f=fixture();
+ assert.throws(()=>f.h.withPhysicalMcAdmin(()=>{
+  assert.equal(f.h.physicalMcMinimalEnvironment(f.h.scoped()).MC_HOST_r4285,
+   "http://synthetic-admin:synthetic-secret@127.0.0.1:59292");
+  throw Error("SYNTHETIC_CALLBACK_FAILED");
+ }),/SYNTHETIC_CALLBACK_FAILED/);
+ assert.equal(f.h.scoped(),undefined);
 });
 test("A128 fail closes missing physical capability and wrong bound identities",()=>{
  const cases=[
