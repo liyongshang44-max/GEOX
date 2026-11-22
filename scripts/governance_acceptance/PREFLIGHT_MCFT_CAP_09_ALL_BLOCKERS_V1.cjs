@@ -2724,16 +2724,16 @@ function main() {
   // BEGIN PR3780 EXACT MCADMIN SUCCESSOR PROOF
   const mcAdminSuccessor=stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&
     args.base==="a12831a457b9bb47941a8873b7faa0ba880d6f81"
-    ? require("./VERIFY_MCFT_CAP09_R4285_MC_ADMIN_SUCCESSOR_V1.cjs")
+    ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs")
       .verifyProducerAdminSuccessor({ROOT,args,authority,plan,changed,stage}):null;
   // END PR3780 EXACT MCADMIN SUCCESSOR PROOF
   for (const decision of plan.decisions) {
     let result;
     // BEGIN PR3780 EXACT MCADMIN SUCCESSOR ROUTE
     if(mcAdminSuccessor&&
-      (decision.check_id==="CAP09_R4285_MC_ADMIN_PRODUCER_EXACT_SUCCESSOR_V1"||
-       require("./VERIFY_MCFT_CAP09_R4285_MC_ADMIN_SUCCESSOR_V1.cjs")
-         .SCOPED_IDS.includes(decision.check_id))){
+      (decision.check_id==="CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_SOURCE_V1"||
+       require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs")
+         .MC_ADMIN_SCOPED_IDS.includes(decision.check_id))){
       const row=mcAdminSuccessor.rows?.[decision.check_id];
       const ok=mcAdminSuccessor.status==="PASS"&&!!row;
       result=ok?row:{
