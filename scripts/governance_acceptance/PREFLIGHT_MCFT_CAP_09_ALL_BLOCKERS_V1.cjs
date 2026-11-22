@@ -2721,8 +2721,31 @@ function main() {
   const physicalSuccessor = stage === "SUCCESSOR_SUBJECT_PRE_MERGE" && args.base === "d97f4b6dadcfa894025fd1634bd69c1c01a8761c"
     ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs").verifyPhysicalSuccessor({ROOT,args,authority,plan,changed,stage}) : null;
   // END PR3779 EXACT PHYSICAL PROOF
+  // BEGIN PR3780 EXACT MCADMIN SUCCESSOR PROOF
+  const mcAdminSuccessor=stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&
+    args.base==="a12831a457b9bb47941a8873b7faa0ba880d6f81"
+    ? require("./VERIFY_MCFT_CAP09_R4285_MC_ADMIN_SUCCESSOR_V1.cjs")
+      .verifyProducerAdminSuccessor({ROOT,args,authority,plan,changed,stage}):null;
+  // END PR3780 EXACT MCADMIN SUCCESSOR PROOF
   for (const decision of plan.decisions) {
     let result;
+    // BEGIN PR3780 EXACT MCADMIN SUCCESSOR ROUTE
+    if(mcAdminSuccessor&&
+      (decision.check_id==="CAP09_R4285_MC_ADMIN_PRODUCER_EXACT_SUCCESSOR_V1"||
+       require("./VERIFY_MCFT_CAP09_R4285_MC_ADMIN_SUCCESSOR_V1.cjs")
+         .SCOPED_IDS.includes(decision.check_id))){
+      const row=mcAdminSuccessor.rows?.[decision.check_id];
+      const ok=mcAdminSuccessor.status==="PASS"&&!!row;
+      result=ok?row:{
+        check_id:decision.check_id,applicability:decision.status,status:"FAIL",
+        reason_code:mcAdminSuccessor.reason_code||"HOLD_MCADMIN_SUCCESSOR_SOURCE_INVALID",
+        current_source:mcAdminSuccessor,prior_historical_evidence_promoted:false,
+        permit_consumed:false,host_started:false,stages:0};
+      if(!ok)blockers.push({blocker_class:"MCADMIN_EXACT_SOURCE_SUCCESSOR_HOLD",
+        check_id:decision.check_id,detail:mcAdminSuccessor});
+      results.push(result);continue;
+    }
+    // END PR3780 EXACT MCADMIN SUCCESSOR ROUTE
     // BEGIN PR3778 EXACT LOADER ROUTE
     if (loaderSuccessor) {
       const row = loaderSuccessor.rows?.[decision.check_id];
