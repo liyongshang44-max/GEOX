@@ -465,6 +465,7 @@ const CONTROL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONT
 const PREFLIGHT="scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs";
 const WORKFLOW=".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml";
 const FROZEN_WORKFLOW=".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml";
+const ADOPTION_WORKFLOW=".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml";
 const VERIFIER="scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs";
 const NEGATIVE="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_RETRY_TRUST_V2_SUCCESSION_V1.test.cjs";
 const CURRENT="CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_SOURCE_V1";
@@ -498,7 +499,7 @@ const SCOPED_IDS=Object.freeze([
 ]);
 const SCIENCE=new Set(SCOPED_IDS.slice(0,7));
 const HISTORIC_SCOPE=new Set(SCOPED_IDS.slice(8));
-const WIRING=new Set([PREFLIGHT,WORKFLOW,FROZEN_WORKFLOW,VERIFIER,NEGATIVE]);
+const WIRING=new Set([PREFLIGHT,WORKFLOW,FROZEN_WORKFLOW,ADOPTION_WORKFLOW,VERIFIER,NEGATIVE]);
 const EXPECTED_PATHS=[SOURCE,TEST,...WIRING].sort();
 function sha(b){return crypto.createHash("sha256").update(b).digest("hex");}
 function git(root,...a){return cp.execFileSync("git",a,{cwd:root,encoding:"utf8",timeout:60000,maxBuffer:32*1024*1024}).trim();}
@@ -584,6 +585,16 @@ function preservedAuthority(root,head,current){
    .replace(oldMatrix,oldMatrix+" || "+addMatrix);
  assert.equal(newFrozen,expectedFrozen,
    "MCADMIN_FROZEN_V13_SCOPE_CHANGED_BEYOND_EXACT_PR3780_HISTORIC_REPLAY");
+ const oldAdoption=bytes(root,BASE,ADOPTION_WORKFLOW).toString("utf8");
+ const currentAdoption=bytes(root,head,ADOPTION_WORKFLOW).toString("utf8");
+ const adOld='{ [ "${{ github.event.pull_request.number }}" = "3779" ] && [ "${{ github.event.pull_request.base.sha }}" = "d97f4b6dadcfa894025fd1634bd69c1c01a8761c" ] && [ "${{ github.head_ref }}" = "fix/r4285-physical-cli-producer-candidate" ]; }';
+ const adNew='{ [ "${{ github.event.pull_request.number }}" = "3780" ] && [ "${{ github.event.pull_request.base.sha }}" = "a12831a457b9bb47941a8873b7faa0ba880d6f81" ] && [ "${{ github.head_ref }}" = "fix/r4285-a128-native-mc-admin-child-only-20261122" ]; }';
+ assert.equal(oldAdoption.split(adOld).length,3,
+   "MCADMIN_ADOPTION_ORIGINAL_TWO_HISTORICAL_ROUTES_REQUIRED");
+ const expectedAdoption=oldAdoption.split(adOld).join(adOld+" || "+adNew);
+ assert.equal(currentAdoption,expectedAdoption,
+   "MCADMIN_ADOPTION_OLD_QCP72_AND_3749_SCOPE_CHANGED_BEYOND_EXACT_PR3780");
+
 
  return {prior_check_count:baseline.checks.length,prior_definitions_identical:true,
   prior_resolvers_identical:true,original_preflight_semantics_preserved:true,
