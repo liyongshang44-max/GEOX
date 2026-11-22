@@ -637,6 +637,115 @@ function registeredMcExecutable(){
  }finally{chunk.fill(0);fs.closeSync(fd);}
  return file;
 }
+// A128 physical Producer: a scoped, ephemeral MC admin connection. Only the
+// pre-existing ACL-restricted private source is read. No MC config, secret
+// argv, process.env mutation or general diagnostic credential promotion.
+const physicalMcAdminContext=new AsyncLocalStorage();
+const PHYSICAL_MC_ADMIN_SOURCE="D:\\gptdown\\CAP09-NEW-4285c3ce342c-PRIVATE-DO-NOT-UPLOAD\\S3-ROOT-DO-NOT-UPLOAD.env";
+const PHYSICAL_MC_ADMIN_ALIAS="r4285";
+const PHYSICAL_MC_ADMIN_ENDPOINT="http://127.0.0.1:59292/";
+const PHYSICAL_MC_ADMIN_DEPLOYMENT="ddbc6bb9-eb52-4b95-8324-b556697f8c0e";
+function physicalMcMinimalEnvironment(binding){
+ const permitted=["SYSTEMROOT","WINDIR","PATH","PATHEXT","USERPROFILE",
+  "HOMEDRIVE","HOMEPATH","TEMP","TMP","APPDATA","LOCALAPPDATA"];
+ const child=Object.create(null);
+ for(const key of permitted)if(process.env[key])child[key]=process.env[key];
+ if(binding){
+  assert(binding.key==="MC_HOST_"+PHYSICAL_MC_ADMIN_ALIAS&&
+   typeof binding.url==="string"&&binding.url.startsWith("http://")&&
+   binding.url.endsWith("@127.0.0.1:59292"),"HOLD_NATIVE_MC_CHILD_IDENTITY");
+  child[binding.key]=binding.url;
+ }
+ return child;
+}
+function physicalMcPrivateCredential(){
+ host();noLinks(PHYSICAL_MC_ADMIN_SOURCE);
+ const before=fs.lstatSync(PHYSICAL_MC_ADMIN_SOURCE);
+ assert(before.isFile()&&before.nlink===1&&before.size>0&&before.size<65536,
+  "HOLD_NATIVE_MC_ADMIN_SOURCE_IDENTITY");
+ // Check the Windows ACL before opening the existing private root credential.
+ // Inherited file ACEs are accepted only from the protected parent directory,
+ // and only for CurrentUser/SYSTEM/Administrators.
+ const quote=s=>"'"+s.replace(/'/g,"''")+"'";
+ const ps=[
+  "$ErrorActionPreference='Stop'",
+  "$u=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value",
+  "$allow=@($u,'S-1-5-18','S-1-5-32-544')",
+  "$d=Get-Acl -LiteralPath "+quote(path.dirname(PHYSICAL_MC_ADMIN_SOURCE)),
+  "$f=Get-Acl -LiteralPath "+quote(PHYSICAL_MC_ADMIN_SOURCE),
+  "if(-not $d.AreAccessRulesProtected){throw 'HOLD_PARENT_DACL'}",
+  "foreach($p in @(@{Kind='DIR';Acl=$d},@{Kind='FILE';Acl=$f})){",
+  " foreach($r in $p.Acl.Access){",
+  "  if($p.Kind -eq 'DIR' -and $r.IsInherited){throw 'HOLD_DIR_INHERITED'}",
+  "  if($r.AccessControlType -ne 'Allow'){continue}",
+  "  $sid=$r.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value",
+  "  if($allow -cnotcontains $sid){throw 'HOLD_ACL_UNTRUSTED'}",
+  " }",
+  "}",
+  "if(-not $f.AreAccessRulesProtected){",
+  " $inherited=@($f.Access|Where-Object {$_.IsInherited})",
+  " if($inherited.Count -lt 1){throw 'HOLD_FILE_INHERITANCE'}",
+  "}",
+  "[Console]::Out.Write('ACL_PASS')"
+ ].join("\n");
+ const probe=require("node:child_process").spawnSync("powershell.exe",
+  ["-NoProfile","-NonInteractive","-EncodedCommand",Buffer.from(ps,"utf16le").toString("base64")],
+  {env:physicalMcMinimalEnvironment(null),encoding:"utf8",windowsHide:true,shell:false,
+   stdio:["ignore","pipe","pipe"],timeout:12000,maxBuffer:4096});
+ assert(!probe.error&&probe.status===0&&probe.stdout==="ACL_PASS",
+  "HOLD_NATIVE_MC_ADMIN_PRIVATE_ACL");
+ let bytes;
+ try{
+  bytes=fs.readFileSync(PHYSICAL_MC_ADMIN_SOURCE);
+  const after=fs.lstatSync(PHYSICAL_MC_ADMIN_SOURCE);
+  assert(["dev","ino","size","mtimeMs","ctimeMs"].every(k=>before[k]===after[k]),
+   "HOLD_NATIVE_MC_ADMIN_PRIVATE_DRIFT");
+  const values=Object.create(null);
+  for(const line of bytes.toString("utf8").replace(/^\uFEFF/,"").split(/\r?\n/)){
+   const m=line.match(/^\s*(?:export\s+)?(MINIO_ROOT_USER|MINIO_ROOT_PASSWORD)\s*=\s*(.*)$/);
+   if(!m)continue;
+   assert(!Object.hasOwn(values,m[1]),"HOLD_NATIVE_MC_ADMIN_SOURCE_DUPLICATE");
+   let value=m[2].trim();
+   if(value.length>=2&&((value[0]==='"'&&value.at(-1)==='"')||
+     (value[0]==="'"&&value.at(-1)==="'")))value=value.slice(1,-1);
+   values[m[1]]=value;
+  }
+  assert(typeof values.MINIO_ROOT_USER==="string"&&values.MINIO_ROOT_USER.length>=2&&
+   typeof values.MINIO_ROOT_PASSWORD==="string"&&values.MINIO_ROOT_PASSWORD.length>=8,
+   "HOLD_NATIVE_MC_ADMIN_SOURCE_FIELDS");
+  return values;
+ }finally{bytes?.fill(0);}
+}
+function withPhysicalMcAdmin(fn){
+ const env=nativeEnvironment(),context=producerContexts.get(env),state=context?.receiver_state;
+ assert(context?.execution===true&&state&&context.scope_id===state.scope?.scope_id&&
+  context.execution_run_id===state.ctx?.run_id,
+  "HOLD_NATIVE_MC_ADMIN_PHYSICAL_RECEIVER_REQUIRED");
+ require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").requireReceiver(state);
+ const resources=state.scope.payload.resources;
+ assert(resources.minio_deployment_id===PHYSICAL_MC_ADMIN_DEPLOYMENT&&
+  resources.bucket_endpoint===PHYSICAL_MC_ADMIN_ENDPOINT&&
+  env.MCFT_CAP09_R4285_EXISTING_MC_ALIAS===PHYSICAL_MC_ADMIN_ALIAS,
+  "HOLD_NATIVE_MC_ADMIN_SCOPE_ENDPOINT");
+ assert(sha(Buffer.from(env.MCFT_CAP09_R4285_PARENT_ACCESS_KEY_ID||""))===
+   resources.parent_principal_sha256,"HOLD_NATIVE_MC_ADMIN_PARENT_DRIFT");
+ assert(sha(Buffer.from(env.MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID||""))===
+   resources.s3_account_sha256,"HOLD_NATIVE_MC_ADMIN_ACCOUNT_DRIFT");
+ const secret=physicalMcPrivateCredential();
+ assert(sha(Buffer.from(secret.MINIO_ROOT_USER))!==resources.s3_account_sha256&&
+  sha(Buffer.from(secret.MINIO_ROOT_USER))!==resources.parent_principal_sha256,
+  "HOLD_NATIVE_MC_ADMIN_ACCOUNT_NOT_ROOT");
+ const binding={key:"MC_HOST_"+PHYSICAL_MC_ADMIN_ALIAS,
+  url:"http://"+encodeURIComponent(secret.MINIO_ROOT_USER)+":"+
+   encodeURIComponent(secret.MINIO_ROOT_PASSWORD)+"@127.0.0.1:59292"};
+ delete secret.MINIO_ROOT_USER;delete secret.MINIO_ROOT_PASSWORD;
+ // Both callers are synchronous. Never retain this binding across the
+ // Operator signing wait, PG/S3 probes, Permit consumption or stages.
+ try{return physicalMcAdminContext.run(binding,fn);}
+ finally{binding.url=null;}
+}
+// End A128 physical-only MC child authentication boundary.
+
 function nativeFailureClass(child){
  if(["MC_FILE_IDENTITY_REJECTED","MC_PATH_DRIFT","MC_FILE_IDENTITY_DRIFT","MC_SHA256_MISMATCH"].includes(child.error?.native_tool_failure))return child.error.native_tool_failure;
  if(child.error?.code==="ENOENT")return "EXECUTABLE_NOT_FOUND";
@@ -653,7 +762,7 @@ function nativeRead(tool,args){
  let child;
  try{const executable=tool==="mc"?registeredMcExecutable():tool;
   child=require("node:child_process").spawnSync(executable,args,{
-  env:nativeChildEnvironment(),encoding:null,windowsHide:true,shell:false,timeout:15000,maxBuffer:1024*1024,
+  env:tool==="mc"?physicalMcMinimalEnvironment(physicalMcAdminContext.getStore()):nativeChildEnvironment(),encoding:null,windowsHide:true,shell:false,timeout:15000,maxBuffer:1024*1024,
   stdio:["ignore","pipe","pipe"]});
  }catch(error){child={error,status:null,stdout:null,stderr:null};}
  if(child.error||child.status!==0||!Buffer.isBuffer(child.stdout)){
@@ -1430,7 +1539,9 @@ async function produceFormalRaw(i,sources,output,env=nativeEnvironment()){
  noLinks(path.dirname(output));
  // If the accountable CTO has not signed the exact scoped source decision,
  // neither live PG/S3 nor any formal raw file may be produced.
- const verified=verifyFormalEvidence(i,sources);
+ const verified=preparation.execution===true?
+  withPhysicalMcAdmin(()=>verifyFormalEvidence(i,sources)):
+  verifyFormalEvidence(i,sources);
  assert.equal(verified.scope_id,preparation.scope_id,"V3_PRODUCER_PREPARED_SCOPE_DRIFT");
  const observedAt=new Date().toISOString();
  const pg=await probePg(i,env),s3=await probeS3(i,env);
@@ -1663,7 +1774,7 @@ function requireAttached(cap,state,phase){const p=attached.get(cap);assert(p&&p.
 }
 function captureAttached(cap,state){const p=requireAttached(cap,state,"PREPARED");p.phase="CAPTURING";
  try{return sourceContext.run(p.env,()=>{
-  const captured=captureCurrentNativeSourceOnly(p.i,p.env,p.config.protected_directory);
+  const captured=withPhysicalMcAdmin(()=>captureCurrentNativeSourceOnly(p.i,p.env,p.config.protected_directory));
   assert(Date.parse(captured.observed_at)>=state.owner_not_before,"V3_PRODUCER_BEFORE_HOST_WAIT");
   require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs").setObservationDeadline(state,captured.observed_at);
   const at=new Date().toISOString(),scope=state.scope,payload=kind=>Object.freeze({schema_version:"MCFT_CAP09_R4285_SOURCE_OBSERVATION_V3",issuer_id:scope.payload.issuer_id,key_id:scope.payload.key_id,
