@@ -106,9 +106,9 @@ test("A128 revoked receiver and missing private source fail closed",()=>{
  }
 });
 test("A128 signed and physical gates preserve scoped exact native invocation",()=>{
- assert.match(text,/const captured=withPhysicalMcAdmin\(\(\)=>captureCurrentNativeSourceOnly/);
+ assert.match(text,/p\.state\.execution===true\?withPhysicalMcAdmin\(\(\)=>captureCurrentNativeSourceOnly/);
  assert.match(text,/preparation\.execution===true\?\s*withPhysicalMcAdmin\(\(\)=>verifyFormalEvidence/);
- assert.match(text,/env:tool==="mc"&&physicalMcAdminContext\.getStore\(\)\?physicalMcMinimalEnvironment\(physicalMcAdminContext\.getStore\(\)\):nativeChildEnvironment\(\)/);
+ assert.match(text,/env:tool==="mc"&&typeof physicalMcAdminContext!=="undefined"&&physicalMcAdminContext\.getStore\(\)\?physicalMcMinimalEnvironment\(physicalMcAdminContext\.getStore\(\)\):nativeChildEnvironment\(\)/);
  assert.match(text,/function registeredMcExecutable\(\)/);
  assert.match(text,/c8db13ebeda31497f354c0e950809db0ae9b2a2a69b8afee68c128c37300c157/);
  assert.doesNotMatch(body,/writeFileSync|mkdirSync|createWriteStream|execSync|shell:true|Set-Acl|icacls/);
