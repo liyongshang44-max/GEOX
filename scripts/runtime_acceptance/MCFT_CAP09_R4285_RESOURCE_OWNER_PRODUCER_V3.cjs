@@ -762,7 +762,7 @@ function nativeRead(tool,args){
  let child;
  try{const executable=tool==="mc"?registeredMcExecutable():tool;
   child=require("node:child_process").spawnSync(executable,args,{
-  env:tool==="mc"?physicalMcMinimalEnvironment(physicalMcAdminContext.getStore()):nativeChildEnvironment(),encoding:null,windowsHide:true,shell:false,timeout:15000,maxBuffer:1024*1024,
+  env:tool==="mc"&&physicalMcAdminContext.getStore()?physicalMcMinimalEnvironment(physicalMcAdminContext.getStore()):nativeChildEnvironment(),encoding:null,windowsHide:true,shell:false,timeout:15000,maxBuffer:1024*1024,
   stdio:["ignore","pipe","pipe"]});
  }catch(error){child={error,status:null,stdout:null,stderr:null};}
  if(child.error||child.status!==0||!Buffer.isBuffer(child.stdout)){
