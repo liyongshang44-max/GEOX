@@ -238,8 +238,8 @@ test("per-check source projection cannot hide changed operational dependency or 
 // It never opens any credential, connects mc/PG/S3, signs, runs Host or Permit.
 const test=require("node:test"),assert=require("node:assert/strict");
 const v=require("../governance_acceptance/VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs").MC_ADMIN_EXACT_PUBLIC;
-test("exact 6-file successor scope accepted; added or missing files rejected",()=>{
- assert.equal(v.EXPECTED_PATHS.length,6);
+test("exact 7-file successor scope accepted; added or missing files rejected",()=>{
+ assert.equal(v.EXPECTED_PATHS.length,7);
  assert(v.exactPathBoundary(v.EXPECTED_PATHS));
  for(const changed of [
   [...v.EXPECTED_PATHS,"scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs"],
@@ -296,6 +296,7 @@ test("historical-only PR event and product source are immutable in same candidat
  assert.equal(v.BRANCH,"fix/r4285-a128-native-mc-admin-child-only-20261122");
  assert(!v.EXPECTED_PATHS.some(x=>/TRUST_V2\.json|WINDOWS_HOST_EXEC|PERMIT_ATOMIC|FINAL/i.test(x)));
  assert(!v.EXPECTED_PATHS.includes(v.CONTROL));
+ assert(v.EXPECTED_PATHS.includes(".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml"));
  assert(v.EXPECTED_PATHS.includes(v.PREFLIGHT));
  assert(v.EXPECTED_PATHS.includes(v.WORKFLOW));
  assert(v.EXPECTED_PATHS.includes(v.VERIFIER));
