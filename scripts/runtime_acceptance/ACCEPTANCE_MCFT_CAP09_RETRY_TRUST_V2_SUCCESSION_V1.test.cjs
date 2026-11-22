@@ -295,7 +295,7 @@ test("source qualification cannot be invoked from unregistered authority, wrong 
 test("historical-only PR event and product source are immutable in same candidate",()=>{
  assert.equal(v.BRANCH,"fix/r4285-a128-native-mc-admin-child-only-20261122");
  assert(!v.EXPECTED_PATHS.some(x=>/TRUST_V2\.json|WINDOWS_HOST_EXEC|PERMIT_ATOMIC|FINAL/i.test(x)));
- assert(v.EXPECTED_PATHS.includes(v.CONTROL));
+ assert(!v.EXPECTED_PATHS.includes(v.CONTROL));
  assert(v.EXPECTED_PATHS.includes(v.PREFLIGHT));
  assert(v.EXPECTED_PATHS.includes(v.WORKFLOW));
  assert(v.EXPECTED_PATHS.includes(v.VERIFIER));
