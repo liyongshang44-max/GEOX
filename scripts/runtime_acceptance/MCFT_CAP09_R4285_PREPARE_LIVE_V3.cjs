@@ -104,7 +104,7 @@ async function prepareInternal(i,execution){
   const expires=Math.min(Date.parse(scope.payload.expires_at),Date.parse(approval.expires_at),Date.parse(secret.expires_at),Date.parse(launchProof.expires_at),Date.parse(ctx.adoption_expires_at),Date.parse(intent.expires_at),Date.parse(stable.minted_at)+3600000);
   // Defensive copy isolates mutable caller objects. Pinned original files are
   // independently checked again at the transition and after dynamic work.
-  state={execution,i:JSON.parse(JSON.stringify(i)),ni,trust,scope,approval,approvalRaw,intentRaw,ctx,intent,stable,adoption,profile,pins,loading,environment,expires,phase:"PREPARED",revoked:false,controller:new AbortController()};
+  state={execution,budgetVersion,credential_expires_at:secret.expires_at,i:JSON.parse(JSON.stringify(i)),ni,trust,scope,approval,approvalRaw,intentRaw,ctx,intent,stable,adoption,profile,pins,loading,environment,expires,phase:"PREPARED",revoked:false,controller:new AbortController()};
   state.expiry_timer=setTimeout(()=>invalidate(state,"V3_PREPARE_EXPIRED"),Math.max(1,expires-Date.now()));state.expiry_timer.unref?.();
   state.revoke_timer=setInterval(()=>{if(fs.existsSync(state.i.session_revocation_file))invalidate(state,"V3_SESSION_REVOKED");},100);state.revoke_timer.unref?.();
   assertActive(state);checkPinned(pins);absent(i);

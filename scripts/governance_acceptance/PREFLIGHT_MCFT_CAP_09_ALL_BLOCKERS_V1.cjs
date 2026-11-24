@@ -2727,8 +2727,17 @@ function main() {
     ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs")
       .verifyProducerAdminSuccessor({ROOT,args,authority,plan,changed,stage}):null;
   // END PR3780 EXACT MCADMIN SUCCESSOR PROOF
+  // Exact budget successor only; prior PR source qualification is unchanged.
+  const budgetSuccessor=stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base==="16fe4dbd03e75acf0209ca3daa906d8c2956b01f"
+    ? require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").verify({ROOT,args,authority,plan,changed,stage}):null;
   for (const decision of plan.decisions) {
     let result;
+    if(budgetSuccessor&&require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").SCOPED.includes(decision.check_id)){
+      const row=budgetSuccessor.rows?.[decision.check_id];const ok=budgetSuccessor.status==="PASS"&&!!row;
+      result=ok?row:{check_id:decision.check_id,applicability:decision.status,status:"FAIL",reason_code:budgetSuccessor.reason_code,current_source:budgetSuccessor,permit_consumed:false,stages:0};
+      if(!ok)blockers.push({blocker_class:"FORMAL_BUDGET_EXACT_SOURCE_HOLD",check_id:decision.check_id,detail:budgetSuccessor});
+      results.push(result);continue;
+    }
     // BEGIN PR3780 EXACT MCADMIN SUCCESSOR ROUTE
     if(mcAdminSuccessor&&
       (decision.check_id==="CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_SOURCE_V1"||

@@ -36,3 +36,35 @@ test("new entry and new budget source explicitly included in exact execution sou
  const builder=require("./MCFT_CAP09_R4285_BUILD_ADMISSION_EXEC_V3.cjs");
  for(const f of ["MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs","MCFT_CAP09_R4285_CONTROLLED_DELAY_V2.cjs","MCFT_CAP09_R4285_CHILD_STAGE_V1.cjs","MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs","MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs","MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs"])assert(builder.EXECUTION_SOURCES.includes("scripts/runtime_acceptance/"+f));
 });
+
+test("actual Host selects signed exact path and Child Stage rejects cross-revision paths",()=>{
+ const vm=require("node:vm"),Module=require("node:module"),crypto=require("node:crypto"),c=require("../cap09_adoption_v1/contract.cjs");
+ const child=require("./MCFT_CAP09_R4285_CHILD_STAGE_V1.cjs");
+ const file=path.join(__dirname,"MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs"),mod={exports:{}},local=Module.createRequire(file);
+ const request=name=>local(name);request.resolve=(name,options)=>name==="tsx"?"fixture-only-resolution":local.resolve(name,options);
+ vm.runInThisContext("(function(exports,require,module,__filename,__dirname){"+fs.readFileSync(file,"utf8")+"\n})",{filename:file})(mod.exports,request,mod,file,__dirname);
+ const host=mod.exports,releaseRoot=path.resolve(__dirname,"../.."),parent=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-route-")),out=path.join(parent,"output");
+ const sha=p=>crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+ const names=[...new Set([...Object.values(child.SCRIPT),b.SUCCESSOR.delayScript])];
+ const profile={tools:{node:{path:fs.realpathSync(process.execPath)}},files:names.map(n=>({path:"scripts/runtime_acceptance/"+n,sha256:sha(path.join(__dirname,n))}))};
+ const first_base=new Date(Math.ceil((Date.now()+7200000)/3600000)*3600000).toISOString(),observed={};
+ const env={DATABASE_URL:"postgres://unit:unit@127.0.0.1:55492/mcft_cap09_requal_"+id.LEGACY+"_positive",BLOCKED_DATABASE_URL:"postgres://unit:unit@127.0.0.1:55492/mcft_cap09_requal_"+id.LEGACY+"_negative",MCFT_CAP09_FORMAL_RAW_ENDPOINT:"http://127.0.0.1:59292/",MCFT_CAP09_FORMAL_RAW_BUCKET:"mcft-cap09-requal-"+id.LEGACY,MCFT_QUALIFICATION_FIRST_BASE:first_base};
+ const run=(version,executionRun=id.SUCCESSOR,p=profile)=>{
+  const plan=b.makePlan(version),permitPayload={run_id:executionRun,subject_sha:"a".repeat(40),nonce:"b".repeat(64),plan_sha256:c.digest(plan),observations_sha256:c.digest(observed)};
+  return host.resolveStages({input:{release_root:releaseRoot,first_base,output_root:out},profile:p,permitPayload,trust:{ledger_root:parent},plan,observed,env,executionRun});
+ };
+ try{
+  const legacy=run(b.LEGACY.id),successor=run(b.SUCCESSOR.id);
+  assert.equal(path.basename(legacy[4].script),b.LEGACY.delayScript);
+  assert.equal(path.basename(successor[4].script),b.SUCCESSOR.delayScript);
+  assert.equal(successor[4].env.MCFT_GOVERNED_RETRY_DELAY_TIMEOUT_MS,"2700000");
+  assert.deepEqual(legacy.filter((_,i)=>i!==4).map(x=>x.script),successor.filter((_,i)=>i!==4).map(x=>x.script));
+  assert.throws(()=>run(b.SUCCESSOR.id,id.LEGACY),/LEGACY_FORBIDDEN/);
+  assert.throws(()=>run(b.SUCCESSOR.id,id.SUCCESSOR,{...profile,files:profile.files.filter(x=>!x.path.endsWith(b.SUCCESSOR.delayScript))}),/UNSIGNED_STAGE_SOURCE/);
+  const contract=step=>({...step.env,MCFT_R4285_PERMIT_ENVELOPE_SHA256:"c".repeat(64),MCFT_GOVERNED_RETRY_PREVIOUS_RECEIPT_SHA256:"d".repeat(64),MCFT_GOVERNED_RETRY_TICKET:path.join(parent,"run-"+id.SUCCESSOR,"STAGE_TICKET_R4285_CONTROLLED_DELAY.json")});
+  assert.equal(child.assertChildContract(contract(successor[4]),successor[4].script).stage,"CONTROLLED_DELAY");
+  assert.equal(child.assertChildContract(contract(legacy[4]),legacy[4].script).stage,"CONTROLLED_DELAY");
+  assert.throws(()=>child.assertChildContract(contract(successor[4]),legacy[4].script),/WRONG_SCRIPT/);
+  assert.throws(()=>child.assertChildContract(contract(legacy[4]),successor[4].script),/WRONG_SCRIPT/);
+ }finally{fs.rmSync(parent,{recursive:true,force:true});}
+});

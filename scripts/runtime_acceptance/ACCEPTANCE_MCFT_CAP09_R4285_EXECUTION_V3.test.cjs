@@ -213,7 +213,7 @@ function executionFactoryFixture({liveDelayMs=5,execution=true,executionRun=exec
  const ni={source_root:i.source_root,release_root:i.release_root,trust_file:path.join(root,"trust"),material_file:path.join(root,"material"),release_binding_file:path.join(root,"release-binding"),adoption_envelope_file:path.join(root,"adoption")};
  function put(file,obj){fs.writeFileSync(file,c.canonical(obj));}
  put(i.native_adoption_input_file,ni);put(ni.trust_file,{...trust,ledger_root:root});put(ni.material_file,{root:i.release_root,files:[]});put(ni.release_binding_file,{});put(ni.adoption_envelope_file,{payload:{expires_at:iso(NOW+16000000)}});
- put(i.plan_file,{stages:[{timeout_ms:10800000}]});put(i.observations_file,{});put(i.scope_envelope_file,sign(s.DOMAIN,p));fs.writeFileSync(i.source_policy_file,"unit policy");fs.writeFileSync(i.source_approval_file,"unit approval");fs.writeFileSync(i.cto_intent_file,"unit intent");fs.writeFileSync(i.launch_authorization_file,c.canonical({schema_version:"MCFT_CAP09_R4285_SESSION_LAUNCH_V3",...id,scope_id:envScope.scope_id,valid_from:iso(NOW-1000),expires_at:iso(NOW+16000000),decision:"AUTHORIZE_ONE_V3_SESSION_PREFLIGHT_ONLY",production_authorized:false}));
+ put(i.plan_file,require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs").makePlan("V3_180"));put(i.observations_file,{});put(i.scope_envelope_file,sign(s.DOMAIN,p));fs.writeFileSync(i.source_policy_file,"unit policy");fs.writeFileSync(i.source_approval_file,"unit approval");fs.writeFileSync(i.cto_intent_file,"unit intent");fs.writeFileSync(i.launch_authorization_file,c.canonical({schema_version:"MCFT_CAP09_R4285_SESSION_LAUNCH_V3",...id,scope_id:envScope.scope_id,valid_from:iso(NOW-1000),expires_at:iso(NOW+16000000),decision:"AUTHORIZE_ONE_V3_SESSION_PREFLIGHT_ONLY",production_authorized:false}));
  if(execution){const launch=JSON.parse(fs.readFileSync(i.launch_authorization_file));launch.schema_version="MCFT_CAP09_R4285_PHYSICAL_SESSION_LAUNCH_V3";launch.decision="AUTHORIZE_ONE_V3_PHYSICAL_TEST_ONLY_SESSION";put(i.launch_authorization_file,launch);}
  const cleanScope=structuredClone(envScope);cleanScope.payload.source.policy_sha256=s.sha("unit policy");cleanScope.payload.resources.parent_principal_sha256=s.sha("UNIT_PARENT_ONLY");
  const brand=new WeakSet(),nativeDouble={checkNativeAdoption(){events.push("native");const proof={...id,material_digest:H};brand.add(proof);return proof;},isNativeVerified:x=>brand.has(x)};
@@ -472,4 +472,21 @@ test('physical CLI accepts only valid signed observations and preserves the orig
 test('unchanged D97 CLI demonstrably omits Producer attachment while candidate regression requires it',async()=>{
  const old=cp.execFileSync('git',['show','d97f4b6dadcfa894025fd1634bd69c1c01a8761c:scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs'],{cwd:ROOT,encoding:'utf8',timeout:10000,maxBuffer:1048576});
  const f=producerCliFixture('success',old);try{const result=await f.module.run(f.argv.slice(0,3));assert.equal(result.status,'UNIT_LEGACY_UNATTACHED_NOT_PRODUCER_CHAIN');assert.deepEqual(f.events,['prepare','unattached-consume']);assert(!f.events.includes('capture'));await assert.rejects(f.module.run(f.argv),/V3_ONLY_PHYSICAL_TEST_ONLY_SESSION_ALLOWED/);}finally{f.cleanup();}
+});
+
+test("budget successor: exact signed plan, legacy rejection, strict Permit remainder",()=>{
+ const b=require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs"),identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
+ const plan=b.makePlan(b.SUCCESSOR.id),first_base="2027-01-01T00:00:00.000Z";
+ const observed={real_provider_response_delay_plan:{response_delay_ms:1000,first_base},real_pipeline_delay_plan:{promotion_queue_delay_ms:1000,post_commit_readback_delay_ms:1000,first_base}};
+ const ctx={run_id:identity.SUCCESSOR,first_base,plan_sha256:c.digest(plan),observations_sha256:c.digest(observed),total_stage_budget_ms:12300000};
+ assert.equal(admission.frozenBudget(plan,observed,ctx),12300000);
+ assert.throws(()=>oldAdmission.frozenBudget(plan,observed,ctx),/V3_PLAN_APPROVED_STAGE_TIMEOUTS_CHANGED/);
+ assert.throws(()=>admission.frozenBudget(plan,observed,{...ctx,total_stage_budget_ms:10800000}),/CALLER_STAGE_BUDGET/);
+ assert.throws(()=>admission.frozenBudget(plan,observed,{...ctx,plan_sha256:H}),/SIGNED_PLAN_DIGEST/);
+ const {p,ctx:pc}=permitFixture(identity.SUCCESSOR);
+ Object.assign(pc,{total_stage_budget_ms:12300000});
+ const short={...p,expires_at:iso(NOW+12360000)};
+ assert.throws(()=>permit.verifyReadOnly(sign(permit.DOMAIN,short),trust,pc,{now:NOW}),/INSUFFICIENT_REMAINING_BUDGET/);
+ const valid={...p,expires_at:iso(NOW+12360001)};
+ assert(permit.isVerified(permit.verifyReadOnly(sign(permit.DOMAIN,valid),trust,pc,{now:NOW})));
 });
