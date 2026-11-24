@@ -8,6 +8,7 @@ const s=require("./MCFT_CAP09_R4285_SCOPE_V3.cjs"),c=require("../cap09_adoption_
 const native=require("../cap09_adoption_v1/MCFT_CAP09_R4285_NATIVE_ADOPTION_CONSUMER_V4.cjs");
 const admission=require("./MCFT_CAP09_R4285_ADMISSION_V3.cjs");
 const executionAdmission=require("./MCFT_CAP09_R4285_ADMISSION_EXEC_V3.cjs");
+const budget=require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs");
 const moduleAdmission=admission;
 const admissionFor=state=>state.execution?executionAdmission:admission;
 const historical=require("./MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs");
@@ -82,7 +83,8 @@ async function prepareInternal(i,execution){
   adoption_expires_at:legacyJson(ni.adoption_envelope_file).payload.expires_at,
   total_stage_budget_ms:plan.stages.reduce((n,row)=>n+row.timeout_ms,0),plan};
  admission.frozenBudget(plan,observed,ctx);lineage.verifyExactMain(i.source_root,ctx.subject_sha);
- s.check(Date.parse(ctx.adoption_expires_at)>Date.now()+10860000,"V3_ADOPTION_REMAINING_STAGE_BUDGET");
+ const budgetVersion=execution?budget.select(plan,executionRun).id:budget.LEGACY.id;
+ s.check(Date.parse(ctx.adoption_expires_at)>Date.now()+budget.minimumRemaining(budgetVersion),"V3_ADOPTION_REMAINING_STAGE_BUDGET");
  const intentRaw=s.bytes(i.cto_intent_file,8192),intent=admission.liveIntent(i.cto_intent_comment_id,intentRaw,ctx);
  const stable=admission.stableNative({adoption,nativeInput:ni,intent,ctx});
  s.check(Date.parse(i.first_base)>Date.now()+60000,"V3_FIRST_BASE_TOO_SOON");
@@ -96,7 +98,7 @@ async function prepareInternal(i,execution){
   // This is the concrete presecret release gate: no caller-provided boolean.
   s.requireApproval(approval,scope);admission.requireStable(stable,intent,ctx);
   console.log(JSON.stringify({schema_version:"MCFT_CAP09_R4285_PRESECRET_READY_V3",status:"QUALIFIED_LOADING_READY_FOR_FD3",scope_id:scope.scope_id,credentials_read:false,permit_consumed:false,stage_count:0}));
-  frame=await delivery.readFrameFd3();secret=delivery.parse(frame,scope,trust,approval);
+  frame=await delivery.readFrameFd3();secret=execution?delivery.parse(frame,scope,trust,approval,{budgetVersion}):delivery.parse(frame,scope,trust,approval);
   const environment=Object.assign(Object.create(null),process.env,secret.environment);
   environment.MCFT_QUALIFICATION_FIRST_BASE=i.first_base;
   const expires=Math.min(Date.parse(scope.payload.expires_at),Date.parse(approval.expires_at),Date.parse(secret.expires_at),Date.parse(launchProof.expires_at),Date.parse(ctx.adoption_expires_at),Date.parse(intent.expires_at),Date.parse(stable.minted_at)+3600000);

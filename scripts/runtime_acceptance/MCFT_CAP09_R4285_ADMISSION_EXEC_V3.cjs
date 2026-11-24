@@ -119,13 +119,15 @@ function requireStable(proof,intent,ctx,{now=Date.now()}={}){
  return true;
 }
 function scopeDigest(facts){assert(HEX64.test(facts.scope_id),"V3_SCOPE_ID_REQUIRED");return facts.scope_id;}
-const FROZEN_TIMEOUTS=Object.freeze([3600000,1800000,1800000,1800000,1200000,600000]);
+const budget=require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs");
+const FROZEN_TIMEOUTS=budget.LEGACY.timeouts;
 function frozenBudget(plan,observed,ctx){
  scheduler.validateStagePlan(plan);
- assert.deepEqual(plan.stages.map(x=>x.timeout_ms),FROZEN_TIMEOUTS,
+ const revision=budget.select(plan,ctx.run_id);
+ assert.deepEqual(plan.stages.map(x=>x.timeout_ms),revision.timeouts,
    "V3_PLAN_APPROVED_STAGE_TIMEOUTS_CHANGED");
  const total=plan.stages.reduce((sum,row)=>sum+row.timeout_ms,0);
- assert.equal(total,10800000,"V3_PLAN_APPROVED_TOTAL_CHANGED");
+ assert.equal(total,revision.total,"V3_PLAN_APPROVED_TOTAL_CHANGED");
  assert.equal(contract.digest(plan),ctx.plan_sha256,"V3_SIGNED_PLAN_DIGEST_CHANGED");
  assert.equal(contract.digest(observed),ctx.observations_sha256,"V3_SIGNED_OBSERVATIONS_DIGEST_CHANGED");
  const provider=observed?.real_provider_response_delay_plan;
