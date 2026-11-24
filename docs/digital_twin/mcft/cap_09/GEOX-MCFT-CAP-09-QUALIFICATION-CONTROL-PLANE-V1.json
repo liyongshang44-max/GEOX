@@ -1956,7 +1956,9 @@
     "CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4_EXACT_PATHS_V1": {
       "kind": "EXACT_PATH_SET",
       "paths": [
+        ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
         ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+        ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
         ".github/workflows/mcft-cap09-r4285-prepare-live-v3.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-R4285-FORMAL-BUDGET-SUCCESSOR-V4.md",

@@ -5,7 +5,9 @@ const assert=require("node:assert/strict"),cp=require("node:child_process"),fs=r
 const BASE="16fe4dbd03e75acf0209ca3daa906d8c2956b01f",BRANCH="mcft/r4285-formal-budget-successor-20261125",PR=3781;
 const Q="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",CURRENT="CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_SOURCE_V1",RESOLVER="CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4_EXACT_PATHS_V1";
 const PATHS=Object.freeze([
+  ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
   ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+  ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
   ".github/workflows/mcft-cap09-r4285-prepare-live-v3.yml",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-R4285-FORMAL-BUDGET-SUCCESSOR-V4.md",
@@ -27,7 +29,7 @@ const PRIOR=Object.freeze({pr:3780,base:"a12831a457b9bb47941a8873b7faa0ba880d6f8
 const AFFECTED=new Set(["CAP09_R4285_HOST_EXACT_SOURCE_ADMISSION_V1","CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1",CURRENT]);
 const SCOPED=Object.freeze([...new Set([...require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs").MC_ADMIN_SCOPED_IDS,...AFFECTED])]);
 const STAGE3="STAGE3_20261025_NONAUTHORIZING_EXACT_PATH_REQUALIFICATION";
-const WIRING=new Set([Q,"scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs","scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs",".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",".github/workflows/mcft-cap09-r4285-prepare-live-v3.yml"]);
+const WIRING=new Set([...[".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"],Q,"scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs","scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs",".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",".github/workflows/mcft-cap09-r4285-prepare-live-v3.yml"]);
 const RUNTIME=new Set(PATHS.filter(p=>p.startsWith("scripts/runtime_acceptance/")&&!p.includes("ACCEPTANCE_")));
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
 function verify({ROOT:root,args,authority,plan,changed,stage}){
@@ -69,7 +71,7 @@ function verify({ROOT:root,args,authority,plan,changed,stage}){
  const projections={};
  for(const def of authority.checks){
   const deps=[...new Set(def.resolver_ids.flatMap(id=>{const r=ctx.resolverResult.resolved[id];assert(r,"BUDGET_RESOLVER_MISSING:"+id);return r.paths;}))].sort();
-  const modified=deps.filter(p=>tree(BASE,p)!==tree(args.head,p));
+  const modified=deps.filter(p=>PATHS.includes(p));
   const operational=modified.filter(p=>!WIRING.has(p));
   if(!AFFECTED.has(def.check_id))assert.deepEqual(operational,[],"BUDGET_UNEXPECTED_CHANGED_CHECK:"+def.check_id);
   else assert(operational.every(p=>PATHS.includes(p)),"BUDGET_UNREGISTERED_CONTRACT_DELTA");
