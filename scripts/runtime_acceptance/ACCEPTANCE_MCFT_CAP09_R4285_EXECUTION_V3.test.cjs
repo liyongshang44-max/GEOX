@@ -23,7 +23,7 @@ function isolated(filename,mocks,clock=Date,processValue=process){const module={
  const request=name=>Object.hasOwn(mocks,name)?mocks[name]:local(name);request.resolve=mocks.__resolve||local.resolve;
  vm.runInThisContext("(function(exports,require,module,__filename,__dirname,process,Date){"+fs.readFileSync(filename,"utf8")+"\n})",{filename})(module.exports,request,module,filename,path.dirname(filename),processValue,clock);return module.exports;}
 const testTrust=trust;
-function dynamicFixture({materialDelay=0,accountFailure=false,executionRun=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs").SUCCESSOR}={}){
+function dynamicFixture({materialDelay=0,accountFailure=false,budgetVersion="V3_180",executionRun=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs").SUCCESSOR}={}){
  const identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs"),eid=identity.get(executionRun),id={run_id:executionRun,host_id:s.HOST,subject_sha:SUBJECT,nonce:NONCE};
  const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-execution-")),events=[];let clock=NOW;
  const trust={...testTrust,ledger_root:root};
@@ -33,9 +33,9 @@ function dynamicFixture({materialDelay=0,accountFailure=false,executionRun=requi
  const bindingFile=path.join(root,"binding"),trustFile=path.join(root,"trust"),readbackFile=path.join(root,"readback");
  fs.writeFileSync(bindingFile,"{}");fs.writeFileSync(trustFile,JSON.stringify(trust));
  const nativeBrand=new WeakSet(),adoption={...id,run_id:s.RUN,material_digest:H,adoption_digest:H};nativeBrand.add(adoption);
- const first_base="2027-01-01T00:00:00.000Z",plan={schema_version:"geox_mcft_cap09_retry_stage_plan_v2",stages:require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs").STAGES.map((id,n)=>({id,timeout_ms:admission.FROZEN_TIMEOUTS[n]}))};
+ const first_base="2027-01-01T00:00:00.000Z",budget=require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs"),plan=budget.makePlan(budgetVersion);
  const observed={real_provider_response_delay_plan:{response_delay_ms:1000,first_base},real_pipeline_delay_plan:{promotion_queue_delay_ms:1000,post_commit_readback_delay_ms:1000,first_base}};
- const ctx={...id,authority_pr_number:3757,first_base,plan,plan_sha256:c.digest(plan),observations_sha256:c.digest(observed),material_digest:H,release_binding_sha256:s.sha("{}"),resource_scope_sha256:H,scope_id:H,source_approval_sha256:H,control_observation_sha256:H,inventory_observation_sha256:H,adoption_expires_at:iso(NOW+20000000),total_stage_budget_ms:10800000};
+ const ctx={...id,authority_pr_number:3757,first_base,plan,plan_sha256:c.digest(plan),observations_sha256:c.digest(observed),material_digest:H,release_binding_sha256:s.sha("{}"),resource_scope_sha256:H,scope_id:H,source_approval_sha256:H,control_observation_sha256:H,inventory_observation_sha256:H,adoption_expires_at:iso(NOW+20000000),total_stage_budget_ms:budget.byId(budgetVersion).total};
  const sourceObservations=Object.fromEntries(["CONTROL","INVENTORY"].map(kind=>[kind.toLowerCase(),sign(s.OBS_DOMAIN,{
  schema_version:"MCFT_CAP09_R4285_SOURCE_OBSERVATION_V3",issuer_id:issuer.issuer_id,key_id:issuer.key_id,...id,
  scope_id:H,kind,raw_sha256:H,observed_at:iso(NOW-5000),issued_at:iso(NOW-4000),expires_at:iso(NOW+18000000),production_authorized:false})]));
@@ -56,7 +56,7 @@ function dynamicFixture({materialDelay=0,accountFailure=false,executionRun=requi
  Object.assign(ownerPayload,{schema_version:"MCFT_CAP09_R4285_RESOURCE_OWNER_V3",issuer_id:issuer.issuer_id,key_id:issuer.key_id,scope:"TEST_ONLY",production_authorized:false,issued_at:iso(NOW-1000),expires_at:iso(NOW+19000000),readback_sha256:readback.sha256});
  const ownerEnv=sign(owner.DOMAIN,ownerPayload),{p,ctx:pctx}=permitFixture(executionRun);
  Object.assign(p,{scope_id:H,source_approval_sha256:H,control_observation_sha256:ctx.control_observation_sha256,inventory_observation_sha256:ctx.inventory_observation_sha256,plan_sha256:ctx.plan_sha256,observations_sha256:ctx.observations_sha256,installed_material_digest:H,release_binding_sha256:ctx.release_binding_sha256,resource_owner_envelope_sha256:s.sha(c.canonical(ownerEnv)),resource_readback_sha256:readback.sha256});
- Object.assign(pctx,p);const permitEnv=sign(permit.DOMAIN,p),permitProof=permit.verifyReadOnly(permitEnv,trust,pctx,{now:clock});
+ Object.assign(pctx,p,{total_stage_budget_ms:ctx.total_stage_budget_ms});const permitEnv=sign(permit.DOMAIN,p),permitProof=permit.verifyReadOnly(permitEnv,trust,pctx,{now:clock});
  const finalPayload=Object.fromEntries(live.FINAL_FIELDS.map(k=>[k,ctx[k]]));
  Object.assign(finalPayload,{schema_version:"MCFT_CAP09_R4285_PHYSICAL_FINAL_EXECUTION_APPROVAL_V3",issuer_id:issuer.issuer_id,key_id:issuer.key_id,permit_envelope_sha256:permitProof.envelope_sha256,resource_owner_envelope_sha256:s.sha(c.canonical(ownerEnv)),resource_readback_sha256:readback.sha256,intent_sha256:intent.sha256,issued_at:iso(NOW-1000),expires_at:iso(NOW+1800000),scope:"ISOLATED_QUALIFICATION_TEST_ONLY",decision:"APPROVE_R4285_V3_FINAL_SINGLE_PHYSICAL_TEST_ONLY_EXECUTION",production_authorized:false});
  const prepared={execution:true,controller:new AbortController()},receiverBrand=new WeakSet([prepared]);
@@ -213,7 +213,7 @@ function executionFactoryFixture({liveDelayMs=5,execution=true,executionRun=exec
  const ni={source_root:i.source_root,release_root:i.release_root,trust_file:path.join(root,"trust"),material_file:path.join(root,"material"),release_binding_file:path.join(root,"release-binding"),adoption_envelope_file:path.join(root,"adoption")};
  function put(file,obj){fs.writeFileSync(file,c.canonical(obj));}
  put(i.native_adoption_input_file,ni);put(ni.trust_file,{...trust,ledger_root:root});put(ni.material_file,{root:i.release_root,files:[]});put(ni.release_binding_file,{});put(ni.adoption_envelope_file,{payload:{expires_at:iso(NOW+16000000)}});
- put(i.plan_file,{stages:[{timeout_ms:10800000}]});put(i.observations_file,{});put(i.scope_envelope_file,sign(s.DOMAIN,p));fs.writeFileSync(i.source_policy_file,"unit policy");fs.writeFileSync(i.source_approval_file,"unit approval");fs.writeFileSync(i.cto_intent_file,"unit intent");fs.writeFileSync(i.launch_authorization_file,c.canonical({schema_version:"MCFT_CAP09_R4285_SESSION_LAUNCH_V3",...id,scope_id:envScope.scope_id,valid_from:iso(NOW-1000),expires_at:iso(NOW+16000000),decision:"AUTHORIZE_ONE_V3_SESSION_PREFLIGHT_ONLY",production_authorized:false}));
+ put(i.plan_file,require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs").makePlan("V3_180"));put(i.observations_file,{});put(i.scope_envelope_file,sign(s.DOMAIN,p));fs.writeFileSync(i.source_policy_file,"unit policy");fs.writeFileSync(i.source_approval_file,"unit approval");fs.writeFileSync(i.cto_intent_file,"unit intent");fs.writeFileSync(i.launch_authorization_file,c.canonical({schema_version:"MCFT_CAP09_R4285_SESSION_LAUNCH_V3",...id,scope_id:envScope.scope_id,valid_from:iso(NOW-1000),expires_at:iso(NOW+16000000),decision:"AUTHORIZE_ONE_V3_SESSION_PREFLIGHT_ONLY",production_authorized:false}));
  if(execution){const launch=JSON.parse(fs.readFileSync(i.launch_authorization_file));launch.schema_version="MCFT_CAP09_R4285_PHYSICAL_SESSION_LAUNCH_V3";launch.decision="AUTHORIZE_ONE_V3_PHYSICAL_TEST_ONLY_SESSION";put(i.launch_authorization_file,launch);}
  const cleanScope=structuredClone(envScope);cleanScope.payload.source.policy_sha256=s.sha("unit policy");cleanScope.payload.resources.parent_principal_sha256=s.sha("UNIT_PARENT_ONLY");
  const brand=new WeakSet(),nativeDouble={checkNativeAdoption(){events.push("native");const proof={...id,material_digest:H};brand.add(proof);return proof;},isNativeVerified:x=>brand.has(x)};
@@ -472,4 +472,64 @@ test('physical CLI accepts only valid signed observations and preserves the orig
 test('unchanged D97 CLI demonstrably omits Producer attachment while candidate regression requires it',async()=>{
  const old=cp.execFileSync('git',['show','d97f4b6dadcfa894025fd1634bd69c1c01a8761c:scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs'],{cwd:ROOT,encoding:'utf8',timeout:10000,maxBuffer:1048576});
  const f=producerCliFixture('success',old);try{const result=await f.module.run(f.argv.slice(0,3));assert.equal(result.status,'UNIT_LEGACY_UNATTACHED_NOT_PRODUCER_CHAIN');assert.deepEqual(f.events,['prepare','unattached-consume']);assert(!f.events.includes('capture'));await assert.rejects(f.module.run(f.argv),/V3_ONLY_PHYSICAL_TEST_ONLY_SESSION_ALLOWED/);}finally{f.cleanup();}
+});
+
+test("budget successor: exact signed plan, legacy rejection, strict Permit remainder",()=>{
+ const b=require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs"),identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
+ const plan=b.makePlan(b.SUCCESSOR.id),first_base="2027-01-01T00:00:00.000Z";
+ const observed={real_provider_response_delay_plan:{response_delay_ms:1000,first_base},real_pipeline_delay_plan:{promotion_queue_delay_ms:1000,post_commit_readback_delay_ms:1000,first_base}};
+ const ctx={run_id:identity.SUCCESSOR,first_base,plan_sha256:c.digest(plan),observations_sha256:c.digest(observed),total_stage_budget_ms:12300000};
+ assert.equal(admission.frozenBudget(plan,observed,ctx),12300000);
+ assert.throws(()=>oldAdmission.frozenBudget(plan,observed,ctx),/V3_PLAN_APPROVED_STAGE_TIMEOUTS_CHANGED/);
+ assert.throws(()=>admission.frozenBudget(plan,observed,{...ctx,total_stage_budget_ms:10800000}),/CALLER_STAGE_BUDGET/);
+ assert.throws(()=>admission.frozenBudget(plan,observed,{...ctx,plan_sha256:H}),/SIGNED_PLAN_DIGEST/);
+ const {p,ctx:pc}=permitFixture(identity.SUCCESSOR);
+ Object.assign(pc,{total_stage_budget_ms:12300000});
+ const short={...p,expires_at:iso(NOW+12360000)};
+ assert.throws(()=>permit.verifyReadOnly(sign(permit.DOMAIN,short),trust,pc,{now:NOW}),/INSUFFICIENT_REMAINING_BUDGET/);
+ const valid={...p,expires_at:iso(NOW+12360001)};
+ assert(permit.isVerified(permit.verifyReadOnly(sign(permit.DOMAIN,valid),trust,pc,{now:NOW})));
+});
+
+test("V4_205 actual signed FD3 parser: exact remaining time, signer and successor identity",()=>{
+ const b=require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs"),identity=require("./MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs");
+ for(const run of [identity.LEGACY,identity.SUCCESSOR]){
+  const sid={...id,run_id:run},p={...scopePayload(),...sid};
+  const scope=s.verifyScope(sign(s.DOMAIN,p),trust,sid,{now:NOW});
+  const approvalPayload={schema_version:"MCFT_CAP09_R4285_SOURCE_AUTHORITY_APPROVAL_V3",...sid,scope_id:scope.scope_id,scope_envelope_sha256:scope.envelope_sha256,source_policy_sha256:p.source.policy_sha256,source_spki_sha256:issuer.spki_sha256,delivery_source_id:p.source.delivery_source_id,valid_from:iso(NOW-1000),expires_at:iso(NOW+16000000),decision:"AUTHORIZE_EXACT_TEST_ONLY_RESOURCE_SOURCE_AND_DELIVERY",production_authorized:false};
+  const raw=Buffer.from(c.canonical(approvalPayload));
+  // Stub only GitHub transport; real liveApproval and frame signature verifier run.
+  const source=isolated(path.join(__dirname,"MCFT_CAP09_R4285_SCOPE_V3.cjs"),{"node:child_process":{execFileSync(){return JSON.stringify({id:72,url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/comments/72",issue_url:"https://api.github.com/repos/liyongshang44-max/GEOX/issues/3757",user:{login:"liyongshang44-max"},author_association:"OWNER",created_at:iso(NOW-2000).replace(/\.\d{3}Z$/,"Z"),updated_at:iso(NOW-2000).replace(/\.\d{3}Z$/,"Z"),body:raw.toString()});}}},Date,{platform:"win32",env:{}});
+  const proof=source.liveApproval(72,raw,scope),parser=isolated(path.join(__dirname,"MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs"),{"./MCFT_CAP09_R4285_SCOPE_V3.cjs":source});
+  const environment={DATABASE_URL:`postgres://${p.resources.positive_role}:UNIT_ONLY@127.0.0.1:55492/${p.resources.positive_database}`,BLOCKED_DATABASE_URL:`postgres://${p.resources.negative_role}:UNIT_ONLY@127.0.0.1:55492/${p.resources.negative_database}`,MCFT_CAP09_FORMAL_RAW_BUCKET:p.resources.bucket,MCFT_CAP09_FORMAL_RAW_ENDPOINT:p.resources.bucket_endpoint,MCFT_CAP09_FORMAL_RAW_REGION:"us-east-1",MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID:"UNIT_ACCESS_ONLY",MCFT_CAP09_FORMAL_RAW_SECRET_ACCESS_KEY:"UNIT_ONLY"};
+  const frame={schema_version:"MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3",issuer_id:issuer.issuer_id,key_id:issuer.key_id,...sid,scope_id:scope.scope_id,delivery_source_id:p.source.delivery_source_id,issued_at:iso(NOW-500),expires_at:iso(NOW+12360001),environment};
+  const parse=(envelope,version=b.SUCCESSOR.id)=>parser.parse(Buffer.from(c.canonical(envelope)),scope,trust,proof,{now:NOW,budgetVersion:version});
+  if(run===identity.LEGACY){assert.throws(()=>parse(sign(s.FRAME_DOMAIN,frame)),/V4_CREDENTIAL_BUDGET_RUN_MISMATCH/);const old=parse(sign(s.FRAME_DOMAIN,{...frame,expires_at:iso(NOW+10860001)}),b.LEGACY.id);parser.clear(old.environment);continue;}
+  for(const delta of [12359999,12360000])assert.throws(()=>parse(sign(s.FRAME_DOMAIN,{...frame,expires_at:iso(NOW+delta)})),/V3_CREDENTIAL_REMAINING_BUDGET/);
+  assert.throws(()=>parse(sign("WRONG_DOMAIN\n",frame)),/V3_SIGNATURE/);
+  assert.throws(()=>parse(sign(s.FRAME_DOMAIN,{...frame,nonce:"e".repeat(64)})),/V3_IDENTITY_DRIFT/);
+  const delivered=parse(sign(s.FRAME_DOMAIN,frame));assert.equal(delivered.expires_at,frame.expires_at);assert.equal(delivered.environment.DATABASE_URL,environment.DATABASE_URL);parser.clear(delivered.environment);
+ }
+});
+
+test("V4_205 actual physical receiver rejects signed Permit outliving FD3 before dynamic admission, accepts equal or longer FD3 without burn",async()=>{
+ for(const expiryOffset of [-1,0,1]){
+  const f=dynamicFixture({budgetVersion:"V4_205"});try{
+   const x=f.input,state=x.preparedState,events=[];
+   const i={source_root:f.root,release_root:f.root,output_root:path.join(f.root,"outputs"),resource_readback_file:x.resourceReadbackFile,resource_envelope_file:path.join(f.root,"owner.json"),permit_envelope_file:path.join(f.root,"permit.json"),final_execution_approval_file:path.join(f.root,"final.json")};
+   for(const [file,value] of [[i.resource_envelope_file,x.resourceEnvelope],[i.permit_envelope_file,x.permitEnvelope],[i.final_execution_approval_file,x.finalEnvelope]])fs.writeFileSync(file,c.canonical(value));
+   const resources={...x.resourceEnvelope.payload,positive_role:x.resourceEnvelope.payload.audit_user};
+   Object.assign(state,{i,ctx:x.ctx,ni:x.nativeInput,trust:x.trust,adoption:f.adoption,environment:x.environment,profile:x.profile,intent:x.intent,intentRaw:x.ctx.intent_raw_bytes,stable:x.stable,scope:{scope_id:H,payload:{...id,run_id:x.ctx.run_id,issuer_id:issuer.issuer_id,key_id:issuer.key_id,expires_at:iso(NOW+20000000),resources}},approval:{sha256:H},owner_not_before:NOW-6000,budgetVersion:"V4_205",credential_expires_at:iso(Date.parse(x.permitEnvelope.payload.expires_at)+expiryOffset)});
+   const receiver=isolated(path.join(__dirname,"MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs"),{
+    "./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs":{FUTURE:factory.FUTURE,requireReceiver(st){assert.equal(st,state);},setObservationDeadline(){}},
+    "./MCFT_CAP09_R4285_BUILD_ADMISSION_EXEC_V3.cjs":{buildAdmissionV3(){return {resEnv:x.resourceEnvelope,readback:x.readback,permitProof:x.permitProof,permitEnv:x.permitEnvelope,observed:x.observations,plan:x.plan};}},
+    "./MCFT_CAP09_R4285_ADMISSION_EXEC_V3.cjs":f.live,
+    "./MCFT_CAP09_R4285_HOST_ADMISSION_EXEC_V3.cjs":{...f.module,async verifyDynamicReadOnly(input){events.push("dynamic");return f.module.verifyDynamicReadOnly(input);}},
+    "./MCFT_CAP09_R4285_PERMIT_ATOMIC_EXEC_V3.cjs":{prepare(){throw Error("UNIT_ATOMIC_MUST_NOT_BE_REACHED");},consumeForQualifiedHost(){throw Error("UNIT_BURN_MUST_NOT_BE_REACHED");}}
+   });
+   if(expiryOffset<0){await assert.rejects(receiver.acceptPreparedState(state),/V4_PERMIT_OUTLIVES_FD3/);assert.deepEqual(events,[]);}
+   else{const report=await receiver.acceptPreparedState(state);assert.equal(report.status,"V3_PHYSICAL_ADMISSION_READY_NOT_YET_CONSUMED");assert.equal(report.permit_consumed,false);assert.deepEqual(events,["dynamic"]);}
+   assert(!fs.existsSync(path.join(f.root,"run-"+x.ctx.run_id)));assert(!fs.existsSync(i.output_root));
+  }finally{f.cleanup();}
+ }
 });

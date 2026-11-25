@@ -7,6 +7,7 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("n
 const cap=require("./MCFT_CAP09_R4285_STAGE_CAPABILITY_V1.cjs");
 const c=require("../cap09_adoption_v1/contract.cjs");
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
+const budget=require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs");
 const SCRIPT=Object.freeze({
  PRODUCER:"RUN_MCFT_CAP09_R4285_PRODUCER_V1.ts",
  TIMING_1:"RUN_MCFT_CAP09_R4285_TIMING_V1.ts",
@@ -20,7 +21,9 @@ function assertChildContract(env,script){
  assert.equal(must(env,"MCFT_R4285_CHILD"),"1","CAP09_R4285_CHILD_EXPLICIT_MODE_REQUIRED");
  const stage=must(env,"MCFT_GOVERNED_RETRY_STAGE");
  assert(Object.hasOwn(SCRIPT,stage),"CAP09_R4285_CHILD_STAGE_UNKNOWN");
- assert.equal(path.resolve(script),path.resolve(__dirname,SCRIPT[stage]),"CAP09_R4285_CHILD_WRONG_SCRIPT");
+ const successor=stage==="CONTROLLED_DELAY"&&env.MCFT_GOVERNED_RETRY_DELAY_TIMEOUT_MS===String(budget.SUCCESSOR.timeouts[4]);
+ const expectedScript=successor?budget.requireSuccessorDelay(env.MCFT_GOVERNED_RETRY_RUN_ID,env.MCFT_GOVERNED_RETRY_DELAY_TIMEOUT_MS).delayScript:SCRIPT[stage];
+ assert.equal(path.resolve(script),path.resolve(__dirname,expectedScript),"CAP09_R4285_CHILD_WRONG_SCRIPT");
  const run_id=must(env,"MCFT_GOVERNED_RETRY_RUN_ID"),nonce=must(env,"MCFT_R4285_NONCE");
  const subject_sha=must(env,"MCFT_SUBJECT_SHA");
  const envelope_sha256=must(env,"MCFT_R4285_PERMIT_ENVELOPE_SHA256");

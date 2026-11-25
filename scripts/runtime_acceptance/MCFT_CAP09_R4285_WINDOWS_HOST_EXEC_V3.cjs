@@ -3,6 +3,7 @@
 // execution-purpose signatures may reach atomic consumption and the original scheduler.
 const fs=require("node:fs"),path=require("node:path");
 const {setTimeout:delay}=require("node:timers/promises");
+const budget=require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs");
 const s=require("./MCFT_CAP09_R4285_SCOPE_V3.cjs"),c=require("../cap09_adoption_v1/contract.cjs");
 const factory=require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs");
 const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V3.cjs");
@@ -61,6 +62,8 @@ async function acceptPreparedState(state){factory.requireReceiver(state);s.check
   inventory_observation_sha256:built.resEnv.payload.inventory_observation_sha256};
  for(const k of ["plan_sha256","observations_sha256","installed_material_digest","release_binding_sha256","scope_id","source_approval_sha256"]){
   const expected=k==="installed_material_digest"?ctx.material_digest:ctx[k];s.check(built.permitEnv.payload[k]===expected,"V3_PREPARED_PERMIT_CONTEXT_DRIFT");}
+ const revision=budget.select(built.plan,ctx.run_id);
+ if(revision===budget.SUCCESSOR){s.check(state.budgetVersion===revision.id,"V4_PREPARE_BUDGET_DRIFT");s.check(s.utc(built.permitEnv.payload.expires_at)<=s.utc(state.credential_expires_at),"V4_PERMIT_OUTLIVES_FD3");}
  admission.checkActualPermit(built.permitProof,built.permitEnv,built.resEnv,built.readback,built.observed,ctx);
  const report=await host.verifyDynamicReadOnly({preparedState:state,stable:state.stable,intent:state.intent,ctx,nativeInput:state.ni,
   sourceRoot:i.source_root,releaseRoot:i.release_root,environment:state.environment,
@@ -84,7 +87,7 @@ async function finishAtAcceptance(result,state){
  const {final,built,ctx}=bound,i=state.i;
  let steps=[],consumed;
  try{
- // Resolve only the frozen original six scripts, from this installed release.
+ // Resolve the signed budget revision's six exact scripts, from this installed release.
  steps=historical.resolveStages({input:i,profile:state.profile,permitPayload:built.permitEnv.payload,
   trust:state.trust,plan:built.plan,observed:built.observed,env:state.environment,executionRun:ctx.run_id});
  const prepared=atomic.prepare({nativeAdoption:state.adoption,permitProof:built.permitProof,
