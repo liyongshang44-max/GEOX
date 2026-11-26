@@ -1,0 +1,44 @@
+name: P6-B/C1 manager soil fixture
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/auth/manager_authority_v1.ts'
+      - 'apps/server/src/domain/field/manager_polygon_v1.ts'
+      - 'apps/server/src/domain/field/soil_csv_p2_v1.ts'
+      - 'apps/server/src/routes/manager_soil_documents_v1.ts'
+      - 'apps/server/test/manager_soil_documents_v1.fixture.ts'
+      - '.github/workflows/p6-b-c1-manager-soil.yml'
+permissions:
+  contents: read
+jobs:
+  manager-soil-fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: p6_fixture_admin_only
+          POSTGRES_DB: geox_p6_soil_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_p6_soil_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      P6_TEST_ONLY: '1'
+      P6_TEST_DATABASE_URL: postgres://postgres:p6_fixture_admin_only@127.0.0.1:5432/geox_p6_soil_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsx apps/server/test/manager_soil_documents_v1.fixture.ts
