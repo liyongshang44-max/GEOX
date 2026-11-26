@@ -27,11 +27,11 @@ function Workspace({language,transport}:Props){
  };
  const run=async(fn:()=>Promise<void>)=>{
   if(locked.current)return;locked.current=true;setBusy(true);setError('');setDetail('');setNotice('');
-  try{await fn();}catch(e){if(!alive.current)return;const x=e instanceof ManagerApiError?e:null;setError(x?.unknownWrite?tr('提交结果不确定。请重新读取服务端记录，勿重复提交。','Write outcome unknown. Read server records before any resubmission.'):x?.status===401?tr('正式登录已失效，请重新登录。','Formal session expired; sign in again.'):x?.status===403?tr('当前身份缺少该操作的独立授权。','This operation requires an independent grant.'):x?.status===409?tr('资料或版本冲突，请重新读取后核对。','Evidence or version conflict; reload and verify.'):tr('操作未完成，请检查服务端状态。','Operation incomplete; inspect server state.'));setDetail(x?.code??(e instanceof Error?e.message:'UNKNOWN'));}
+  try{await fn();}catch(e){if(!alive.current)return;const x=e instanceof ManagerApiError?e:null;if(x?.status===401){setLands(null);clearField();setField('');}setError(x?.unknownWrite?tr('提交结果不确定。请重新读取服务端记录，勿重复提交。','Write outcome unknown. Read server records before any resubmission.'):x?.status===401?tr('正式登录已失效，请重新登录。','Formal session expired; sign in again.'):x?.status===403?tr('当前身份缺少该操作的独立授权。','This operation requires an independent grant.'):x?.status===409?tr('资料或版本冲突，请重新读取后核对。','Evidence or version conflict; reload and verify.'):tr('操作未完成，请检查服务端状态。','Operation incomplete; inspect server state.'));setDetail(x?.code??(e instanceof Error?e.message:'UNKNOWN'));}
   finally{locked.current=false;if(alive.current)setBusy(false);}
  };
  const clearField=()=>{setBoundary(null);setPolygon('');setDocs([]);setReviews([]);setMore(false);setSelected([]);setReview('');setAssessment(null);setFollowups([]);setDocId('');setSource('');setFile(null);setReviewId('');setFollowupId('');setSuccessor('');};
- const loadLands=async()=>{setLands(null);const result=await api.lands();if(!alive.current)return;setLands(result.fields);if(field&&!result.fields.some(x=>x.field_id===field)){clearField();setField('');}};
+ const loadLands=async()=>{setLands(null);try{const result=await api.lands();if(!alive.current)return;setLands(result.fields);if(field&&!result.fields.some(x=>x.field_id===field)){clearField();setField('');}}catch(e){if(alive.current){clearField();setField('');}throw e;}};
  const openLand=async(id:string)=>{clearField();setField('');const b=await api.boundary(id);if(alive.current){setField(b.field_id);setFieldInput(b.field_id);setBoundary(b);setPolygon(b.geometry?JSON.stringify(b.geometry,null,2):'');}};
  React.useEffect(()=>{void run(loadLands);},[]); // fresh server read for each sessionKey mount
  const loadBoundary=async(id:string)=>{const b=await api.boundary(id);if(!alive.current)return;setBoundary(b);setPolygon(b.geometry?JSON.stringify(b.geometry,null,2):'');};
@@ -56,7 +56,7 @@ function Workspace({language,transport}:Props){
    {lands!==null&&lands.length===0&&<p>{tr('当前没有已授权田块。登记后须由目录权威授予访问。','No currently authorized fields. Registration requires a separate directory grant.')}</p>}
    {lands?.map(l=><article key={l.field_id}><h3>{l.name}</h3><p>{l.field_id}{l.area_ha!==null?' · '+l.area_ha+' ha':''}</p>{button('打开土地档案','Open land record',()=>openLand(l.field_id))}</article>)}
    <fieldset disabled={busy}><form onSubmit={e=>guard(e,async()=>{
-    const x=await api.create({field_id:fieldInput,name,...(area?{area_ha:Number(area)}:{})});if(alive.current){clearField();setField('');setLands(null);setNotice(tr('登记已获服务端回执，等待独立田块授权。','Registration acknowledged; independent land access grant required.'));}
+    await api.create({field_id:fieldInput,name,...(area?{area_ha:Number(area)}:{})});if(alive.current){clearField();setField('');setLands(null);setNotice(tr('登记已获服务端回执，等待独立田块授权。','Registration acknowledged; independent land access grant required.'));}
    })}><label>{tr('田块标识','Field ID')} <input required value={fieldInput} onChange={e=>setFieldInput(e.target.value)}/></label><label>{tr('名称','Name')} <input required value={name} onChange={e=>setName(e.target.value)}/></label><label>{tr('面积（公顷，可选）','Area (ha, optional)')} <input type="number" min="0.000001" max="1000000" step="any" value={area} onChange={e=>setArea(e.target.value)}/></label><button type="submit" className="customerButton">{tr('登记土地','Register land')}</button></form>
    {button('打开已授权田块','Open authorized field',()=>openLand(fieldInput),!fieldInput)}
    </fieldset>
