@@ -6,6 +6,9 @@ on:
       - 'apps/server/src/domain/field/manager_polygon_v1.ts'
       - 'apps/server/src/domain/field/soil_csv_p2_v1.ts'
       - 'apps/server/src/routes/manager_soil_documents_v1.ts'
+      - 'apps/server/src/routes/manager_field_commands_v1.ts'
+      - 'apps/server/test/manager_native_commands_v1.fixture.ts'
+      - 'scripts/acceptance/p6-bc-native-commands.sh'
       - 'apps/server/test/manager_soil_documents_v1.fixture.ts'
       - '.github/workflows/p6-b-c1-manager-soil.yml'
 permissions:
@@ -42,3 +45,18 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec tsx apps/server/test/manager_soil_documents_v1.fixture.ts
+  native-manager-commands:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
+      - run: bash scripts/acceptance/p6-bc-native-commands.sh
