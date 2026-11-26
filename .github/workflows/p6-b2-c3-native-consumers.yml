@@ -11,6 +11,7 @@ on:
       - 'apps/server/src/domain/agronomy/adr_native_review_workflow_v1.test.ts'
       - 'apps/server/src/domain/agronomy/adr_review_consumer_v1.ts'
       - 'apps/server/src/domain/agronomy/adr_review_consumer_v1.test.ts'
+      - 'apps/server/test/manager_native_adr_host_v1.fixture.mjs'
       - '.github/workflows/p6-b2-c3-native-consumers.yml'
 permissions:
   contents: read
@@ -30,3 +31,25 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @geox/server typecheck
       - run: pnpm exec tsx --test apps/server/src/domain/agronomy/adr_review_consumer_v1.test.ts apps/server/src/domain/agronomy/adr_native_review_workflow_v1.test.ts
+  native-adr-host-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/checkout@v4
+        with:
+          repository: liyongshang44-max/agronomy-deployment-runtime
+          ref: d63c3058d6b95873e811445920f7302ded980ef3
+          path: adr-native-source
+          persist-credentials: false
+      - run: |
+          test "$(git -C adr-native-source rev-parse HEAD)" = "d63c3058d6b95873e811445920f7302ded980ef3"
+          P6_TEST_ONLY=1 ADR_NATIVE_SOURCE="$PWD/adr-native-source" pnpm exec tsx apps/server/test/manager_native_adr_host_v1.fixture.mjs
