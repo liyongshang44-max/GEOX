@@ -1,0 +1,9 @@
+# P6-E Manager workspace candidate
+
+Stacked on P6-C4 #3786, pending its qualification. Reuses existing React product design system and native P1/P2/P3/P3P/P4 HTTP routes. Explicit trusted session composition only; no route mount, legacy token read, browser credential storage, new listener or default production activation. Manager transport must be supplied by formal OIDC session composition and sessionKey must change on principal/tenant/logout. UI uses only native acknowledgments; no fabricated fields, soil values, reviews, scientific content or grants. Native API requests are not automatically retried.
+
+P1 first boundary: independently authorized READ_FIELD_GEOMETRY now returns null geometry and actual field version for an uninitialized field, not an admin SQL lookup. Existing invalid/unsupported nonempty geometry still fails. Native fixture uses HTTP version for first update and asserts no read without grant. No auto-grant. 
+
+Three bilingual business entries: land registration/open by ID, polygon import/confirm; original CSV upload/exact revision read/preview and confirmation; corn/soybean question with target interval and explicit evidence revisions, native assessment status/refs and followup linkage. Uses actual native records, no local persistence of business state. UI action status is not scientific qualification; licensed assessment contents stay closed. 
+
+Open: formal login/session and trusted transport integration, authorized land list and creation-to-grant lifecycle, real ADR plan/authorization and rights-approved scientific result projection, responsive design/browser E2E with real nonadmin account, historical MCFT product data, release. GeoJSON text import (not map drawing) and CSV-only are bounded first implementation choices. No assertion that unmounted component is delivered to customer. 
