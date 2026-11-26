@@ -1,0 +1,29 @@
+name: P6-B2 C3 native consumer
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/app.ts'
+      - 'apps/server/src/auth/manager_authority_v1.ts'
+      - 'apps/server/src/modules/domain/registerDomainModules.ts'
+      - 'apps/server/src/modules/product/**'
+      - 'apps/server/src/domain/agronomy/adr_review_consumer_v1.ts'
+      - 'apps/server/src/domain/agronomy/adr_review_consumer_v1.test.ts'
+      - '.github/workflows/p6-b2-c3-native-consumers.yml'
+permissions:
+  contents: read
+jobs:
+  native-consumer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @geox/server typecheck
+      - run: pnpm exec tsx --test apps/server/src/domain/agronomy/adr_review_consumer_v1.test.ts

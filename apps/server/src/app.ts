@@ -8,6 +8,7 @@ import type { RuntimePaths } from "./infra/runtimePaths.js";
 import { registerCoreModule } from "./modules/core/registerCoreModule.js";
 import { registerStaticModule } from "./modules/static/registerStaticModule.js";
 import { registerOpenApiModule } from "./modules/openapi/registerOpenApiModule.js";
+import type { ManagerProductCompositionV1 } from "./modules/product/registerProductModule.js";
 import { registerDomainModules } from "./modules/domain/registerDomainModules.js";
 import { registerCompatibilityModules } from "./modules/compat/registerCompatibilityModules.js";
 import { registerAdminModule } from "./modules/admin/registerAdminModule.js";
@@ -18,6 +19,7 @@ import { registerW5LegacyRuntimeContainmentV1 } from "./runtime/legacy_runtime_c
 type CreateAppOptions = {
   config: ServerConfig;
   paths: RuntimePaths;
+  managerProduct?: ManagerProductCompositionV1;
 };
 
 function registerRuntimeErrorBoundaryV1(app: FastifyInstance): void {
@@ -74,7 +76,7 @@ export function createApp(options: CreateAppOptions): { app: FastifyInstance; po
     tenantHeaders: config.tenantHeaders,
     apiContractHeaders: config.apiContractHeaders,
   });
-  registerDomainModules(app, pool, { mediaDir: paths.mediaDir });
+  registerDomainModules(app, pool, { mediaDir: paths.mediaDir, managerProduct: options.managerProduct });
   registerCompatibilityModules(app, pool, { mediaDir: paths.mediaDir });
   registerOpenApiModule(app);
   registerAdminModule(app, pool);
