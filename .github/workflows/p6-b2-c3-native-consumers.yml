@@ -2,10 +2,9 @@ name: P6-B2 C3 native consumer
 on:
   pull_request:
     paths:
-      - 'apps/server/src/app.ts'
       - 'apps/server/src/auth/manager_authority_v1.ts'
-      - 'apps/server/src/modules/domain/registerDomainModules.ts'
       - 'apps/server/src/modules/product/**'
+      - 'apps/server/src/routes/manager_crop_reviews_v1.ts'
       - 'apps/server/src/domain/agronomy/adr_review_consumer_v1.ts'
       - 'apps/server/src/domain/agronomy/adr_review_consumer_v1.test.ts'
       - '.github/workflows/p6-b2-c3-native-consumers.yml'

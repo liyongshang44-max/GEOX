@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import type {Pool} from 'pg';
-import {registerProductModule,registerManagerProductModuleV1} from '../../modules/product/registerProductModule.js';
+import {registerProductModule} from '../../modules/product/registerProductModule.js';
+import {registerManagerPilotModuleV1} from '../../modules/product/registerManagerPilotModuleV1.js';
 import {createManagerAuthorizerV1,type ManagerAuthorityV1} from '../../auth/manager_authority_v1.js';
 import {createAdrReviewConsumerV1,type AdrReviewBindingV1} from './adr_review_consumer_v1.js';
 const tenant={issuer:'directory',id:'tenant-ref',version:'1'},membership={issuer:'directory',id:'member',version:'1'};
@@ -24,7 +25,7 @@ const input={logical_id:'problem-1',version:'1',resource:{contract_version:'adr.
 test('default Product module does not expose manager writes; explicit composition requires original authorization',async()=>{
  const {cfg}=setup();const app=Fastify(),opt=Fastify(),pool={} as Pool;
  try{
-  registerProductModule(app,pool);registerManagerProductModuleV1(opt,pool,cfg);await app.ready();await opt.ready();
+  registerProductModule(app,pool);registerManagerPilotModuleV1(opt,pool,cfg);await app.ready();await opt.ready();
   assert.equal(app.hasRoute({method:'POST',url:'/api/v1/manager/fields'}),false);
   assert.equal(opt.hasRoute({method:'POST',url:'/api/v1/manager/fields'}),true);
   assert.equal((await opt.inject({method:'POST',url:'/api/v1/manager/fields',payload:{}})).statusCode,401);

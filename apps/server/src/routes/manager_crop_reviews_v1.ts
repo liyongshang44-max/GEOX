@@ -72,7 +72,7 @@ export function registerManagerCropReviewsV1(app:FastifyInstance,pool:Pool,autho
   const g=(await c.query('SELECT polygon_geojson_json,updated_ts_ms FROM public.field_polygon_v1 WHERE tenant_id=$1 AND field_id=$2 FOR SHARE',[s[0],s[3]])).rows[0];
   if(!g||!validManagerPolygonV1(g.polygon_geojson_json)||!/^\d+$/.test(String(g.updated_ts_ms)))throw new Hold(409,'CROP_REVIEW_CONFIRMED_BOUNDARY_REQUIRED');
   const boundary={geometry:g.polygon_geojson_json,updated_ts_ms:String(g.updated_ts_ms)},boundary_sha256=digest(boundary);
-  const cutoff=new Date().toISOString(),documents=[];
+  const cutoff=new Date().toISOString(),documents:Record<string,unknown>[]=[];
   for(const d of intent.documents){
    const r=(await c.query('SELECT document_id,revision,original_name,source_label,original_bytes,original_sha256,candidate_sha256,boundary_sha256,candidates,upload_fact_id,uploaded_at FROM '+revisions+' WHERE '+where+' AND document_id=$5 ORDER BY revision DESC LIMIT 1',[...s,d.document_id])).rows[0];
    if(!r||r.revision!==d.revision||r.candidate_sha256!==d.candidate_sha256||r.boundary_sha256!==boundary_sha256||sha256(r.original_bytes)!==r.original_sha256||digest(r.candidates)!==r.candidate_sha256)throw new Hold(409,'CROP_REVIEW_DOCUMENT_BASIS_CHANGED');

@@ -3,9 +3,7 @@ import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import {Pool} from 'pg';
 import {createManagerAuthorizerV1,type FormalIdentityPortV1,type ManagerActionV1,type GeoxLandGrantV1} from '../src/auth/manager_authority_v1.js';
-import {registerManagerSoilDocumentsV1} from '../src/routes/manager_soil_documents_v1.js';
-import {registerManagerCropReviewsV1} from '../src/routes/manager_crop_reviews_v1.js';
-import {registerManagerFieldCommandsV1} from '../src/routes/manager_field_commands_v1.js';
+import {registerManagerPilotModuleV1} from '../src/modules/product/registerManagerPilotModuleV1.js';
 assert.equal(process.env.P6_TEST_ONLY,'1');
 assert.equal(process.env.GITHUB_ACTIONS,'true');
 assert.equal(process.env.RUNNER_ENVIRONMENT,'github-hosted');
@@ -27,10 +25,10 @@ const identity:FormalIdentityPortV1={kind:'FORMAL_PROVIDER_NEUTRAL_IDENTITY',
  authorizeResource(ctx){assert.ok(issued.has(ctx as object)&&allowCreate);return {};},
  invalidate(ctx){issued.delete(ctx as object);}
 };
-const authority=createManagerAuthorizerV1({identity,issuer,canonicalTenantRef:tenant,async resolveLandGrant({field_id,action}){
+const authorityConfig:Parameters<typeof createManagerAuthorizerV1>[0]={identity,issuer,canonicalTenantRef:tenant,async resolveLandGrant({field_id,action}){
  if(action==='CREATE_FIELD'?!allowCreate:field_id!==f||!grants.has(action))return null;
  const now=Date.now();return {status:'ACTIVE',issuer,subject:'human-native',canonical_tenant_ref:tenant,membership_ref:member,mapping_version:'1',source_ref:{...tenant,id:'grant'},actor_id:'p6_native_actor',tenant_id:t,project_id:p,group_id:wrongGroup?'other':g,field_id,action,checked_at:new Date(now).toISOString(),valid_until:new Date(now+30000).toISOString()} as GeoxLandGrantV1;
-}});
+}};
 const base='/api/v1/manager/fields',soil='/api/v1/fields/'+f+'/soil-documents';
 const req=(method:'GET'|'POST'|'PUT',url:string,body?:unknown,token='fixture-native')=>app.inject({method,url,headers:token?{authorization:'Bearer '+token}:{},...(body===undefined?{}:{payload:body as any})});
 const proof=(x:string)=>console.log('PASS '+x);
@@ -40,7 +38,7 @@ try{
  const u=(await runtime.query("SELECT current_user::text AS u,current_database() AS d")).rows[0];assert.deepEqual(u,{u:'geox_runtime_v1',d:'geox_p6_bc_native_test'});
  const coverage=(await admin.query("SELECT to_regclass('public.twin_fact_visibility_index_v1') IS NOT NULL AS cap07,to_regclass('geox_manager_v1.migration_ledger_v1') IS NOT NULL AS product")).rows[0];assert.deepEqual(coverage,{cap07:true,product:true});
  const before=await nativeDigest();assert.deepEqual(await cnt(),{fields:0,facts:0,revisions:0,confirmations:0});
- registerManagerFieldCommandsV1(app,runtime,authority);registerManagerSoilDocumentsV1(app,runtime,authority);registerManagerCropReviewsV1(app,runtime,authority);await app.ready();
+ registerManagerPilotModuleV1(app,runtime,authorityConfig);await app.ready();
  const create={field_id:f,name:'native fixture land',area_ha:2};
  assert.equal((await req('POST',base,create,'')).statusCode,401);
  assert.equal((await req('POST',base,create)).statusCode,403);
