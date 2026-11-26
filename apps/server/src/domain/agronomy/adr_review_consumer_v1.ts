@@ -12,14 +12,15 @@ const operations = {
 } as const;
 export type AdrReviewOperationV1=keyof typeof operations;
 export type AdrRefV1={kind:string;logical_id:string;version:string;semantic_hash:string};
-type Principal={principal_id:string;type:'USER'|'SERVICE_ACCOUNT';organization_id:string;tenant_id:string;program_ids:string[]};
+export type AdrPrincipalV1={principal_id:string;type:'USER'|'SERVICE_ACCOUNT';organization_id:string;tenant_id:string;program_ids:string[]};
 type Resource=Record<string,unknown>&{contract_version:string};
 export type AdrReviewBindingV1={
  authority_scope:{actor_id:string;tenant_id:string;project_id:string;group_id:string;field_id:string;mapping_version:string;credential_ref:string};
- request_sha256:string;principal:Principal;authorization_ref:AdrRefV1;credential_ref:string;valid_until_ms:number;
+ request_sha256:string;principal:AdrPrincipalV1;authorization_ref:AdrRefV1;credential_ref:string;valid_until_ms:number;
 };
 export type AdrWriteInputV1={logical_id:string;version:string;resource:Resource;idempotency_key:string};
-export type AdrWriteReceiptV1={ref:AdrRefV1;resource:Resource;request_sha256:string;wire_body_sha256:string;response_sha256:string;idempotency_key:string};
+export type AdrWriteReceiptV1={ref:AdrRefV1;resource:Resource;request_sha256:string;wire_body_sha256:string;response_sha256:string;idempotency_key:string;principal:AdrPrincipalV1;authorization_ref:AdrRefV1};
+export type AdrWriteRequirementsV1={target:{organization_id:string;tenant_id:string};same_runtime_authority?:{principal:AdrPrincipalV1;authorization_ref:AdrRefV1}};
 export class AdrReviewConsumerErrorV1 extends Error{
  constructor(public readonly code:string,public readonly httpStatus:number|null=null){super(code);}
 }
@@ -37,12 +38,12 @@ function jsonValue(x:unknown,depth=0):boolean{
 function ref(x:unknown,kind:string):x is AdrRefV1{
  return exact(x,['kind','logical_id','version','semantic_hash'])&&record(x)&&x.kind===kind&&str(x.logical_id)&&str(x.version)&&typeof x.semantic_hash==='string'&&/^sha256:[a-f0-9]{64}$/.test(x.semantic_hash);
 }
-function validPrincipal(x:unknown):x is Principal{
+function validPrincipal(x:unknown):x is AdrPrincipalV1{
  return exact(x,['principal_id','type','organization_id','tenant_id','program_ids'])&&record(x)&&str(x.principal_id)&&str(x.organization_id)&&str(x.tenant_id)&&(x.type==='USER'||x.type==='SERVICE_ACCOUNT')&&Array.isArray(x.program_ids)&&x.program_ids.length>0&&x.program_ids.length<=64&&x.program_ids.every(str)&&new Set(x.program_ids).size===x.program_ids.length;
 }
 export function createAdrReviewConsumerV1(config:{
  baseUrl:string;authority:ManagerAuthorizerV1;
- resolveBinding(input:{manager:ManagerAuthorityV1;operation:AdrReviewOperationV1;request_sha256:string}):Promise<AdrReviewBindingV1|null>;
+ resolveBinding(input:{manager:ManagerAuthorityV1;operation:AdrReviewOperationV1;request_sha256:string;request:AdrWriteInputV1}):Promise<AdrReviewBindingV1|null>;
  getCredential(ref:string):Promise<string>;timeoutMs?:number;transport?:typeof fetch;
 }){
  const origin=new URL(config.baseUrl);
@@ -51,7 +52,7 @@ export function createAdrReviewConsumerV1(config:{
  if(!Number.isSafeInteger(timeout)||timeout<1||timeout>30000||typeof config.resolveBinding!=='function'||typeof config.getCredential!=='function')fail('ADR_CONSUMER_CONFIG_INVALID');
  const transport=config.transport??fetch;
  return Object.freeze({
-  async write(manager:ManagerAuthorityV1,operation:AdrReviewOperationV1,input:AdrWriteInputV1):Promise<AdrWriteReceiptV1>{
+  async write(manager:ManagerAuthorityV1,operation:AdrReviewOperationV1,input:AdrWriteInputV1,requirements?:AdrWriteRequirementsV1):Promise<AdrWriteReceiptV1>{
    const field=manager.field_id;
    if(!field)fail('ADR_FIELD_REQUIRED');
    config.authority.assertCurrent(manager,field,'REQUEST_CROP_REVIEW');
@@ -62,13 +63,14 @@ export function createAdrReviewConsumerV1(config:{
    const serialized=JSON.stringify(input);
    if(Buffer.byteLength(serialized,'utf8')>1_000_000)fail('ADR_REQUEST_TOO_LARGE');
    const request=JSON.parse(serialized) as AdrWriteInputV1,request_sha256=digest({operation,request});
-   const found=await config.resolveBinding({manager,operation,request_sha256});
+   const found=await config.resolveBinding({manager,operation,request_sha256,request:structuredClone(request)});
    if(!found)fail('ADR_AUTHORITY_BINDING_REQUIRED');
    const binding=structuredClone(found);
    const scope={actor_id:manager.actor_id,tenant_id:manager.tenant_id,project_id:manager.project_id,group_id:manager.group_id,field_id:field,mapping_version:manager.mapping_version,credential_ref:manager.credential_ref};
    const current=()=>{
     config.authority.assertCurrent(manager,field,'REQUEST_CROP_REVIEW');
     if(!Number.isFinite(binding.valid_until_ms)||binding.valid_until_ms<=Date.now()||binding.valid_until_ms>manager.valid_until_ms||
+     (requirements&&(binding.principal?.organization_id!==requirements.target.organization_id||binding.principal?.tenant_id!==requirements.target.tenant_id||requirements.same_runtime_authority&&(digest(binding.principal)!==digest(requirements.same_runtime_authority.principal)||digest(binding.authorization_ref)!==digest(requirements.same_runtime_authority.authorization_ref))))||
      binding.request_sha256!==request_sha256||digest(binding.authority_scope)!==digest(scope)||!validPrincipal(binding.principal)||!ref(binding.authorization_ref,'AuthorizationDecisionAudit')||!str(binding.credential_ref))fail('ADR_AUTHORITY_BINDING_DENIED');
    };
    current();
@@ -92,7 +94,7 @@ export function createAdrReviewConsumerV1(config:{
     const value:unknown=JSON.parse(raw);
     if(!record(value)||!ref(value.ref,kind)||value.ref.logical_id!==request.logical_id||value.ref.version!==request.version||!record(value.resource)||value.resource.contract_version!==contract)fail('ADR_RESPONSE_CONTRACT_INVALID');
     current();
-    return {ref:value.ref,resource:value.resource as Resource,request_sha256,wire_body_sha256,response_sha256:sha256(raw),idempotency_key:request.idempotency_key};
+    return {ref:value.ref,resource:value.resource as Resource,request_sha256,wire_body_sha256,response_sha256:sha256(raw),idempotency_key:request.idempotency_key,principal:binding.principal,authorization_ref:binding.authorization_ref};
    }catch{fail('ADR_WRITE_OUTCOME_UNKNOWN',201);}
   }
  });
