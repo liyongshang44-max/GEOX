@@ -12,6 +12,8 @@ try {
 } catch(e) {
   // Do not print connection details or SQL payloads.
   const msg=e instanceof Error?e.message:"";
+  const code=String((e as {code?:unknown})?.code??"UNKNOWN");
   console.error(/^P6_PRODUCT_MIGRATION_[A-Z_]+$/.test(msg)?msg:"P6_PRODUCT_MIGRATION_FAILED");
+  console.error("P6_PRODUCT_MIGRATION_ERROR_CODE="+(/^[A-Z0-9_]{1,32}$/.test(code)?code:"UNKNOWN"));
   process.exitCode=1;
 }

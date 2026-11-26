@@ -26,13 +26,16 @@ wait_ready() {
   return 1
 }
 wait_ready
-port="$(docker port "$cid" 5432/tcp | sed -n 's/^127\.0\.0\.1://p')"
-[[ "$port" =~ ^[0-9]+$ ]]
-base="127.0.0.1:$port/$db"
-admin_url="postgres://landos:$admin_pw@$base"
-mcft_url="postgres://geox_mcft_migrator_v1:$mcft_pw@$base"
-runtime_url="postgres://geox_runtime_v1:$runtime_pw@$base"
-product_url="postgres://geox_product_migrator_v1:$product_pw@$base"
+resolve_binding() {
+  port="$(docker port "$cid" 5432/tcp | sed -n 's/^127\.0\.0\.1://p')"
+  [[ "$port" =~ ^[0-9]+$ ]]
+  base="127.0.0.1:$port/$db"
+  admin_url="postgres://landos:$admin_pw@$base"
+  mcft_url="postgres://geox_mcft_migrator_v1:$mcft_pw@$base"
+  runtime_url="postgres://geox_runtime_v1:$runtime_pw@$base"
+  product_url="postgres://geox_product_migrator_v1:$product_pw@$base"
+}
+resolve_binding
 sql() {
   local who="$1" pw="$2"; shift 2
   docker exec -i -e PGPASSWORD="$pw" "$cid" psql -h 127.0.0.1 -U "$who" -d "$db" -X -qAt -v ON_ERROR_STOP=1 "$@"
@@ -99,8 +102,39 @@ for table in field_soil_document_revision_p2_v1 field_soil_document_confirmation
 done
 echo PASS RUNTIME_APPEND_ONLY_AFTER_ACTUAL_BOOTSTRAP
 # Actual PostgreSQL container process restart, retaining the same data volume.
+old_port="$port"
 docker restart "$cid" >/dev/null
 wait_ready
+resolve_binding
+echo "P6_RESTART_PORT_BEFORE=$old_port AFTER=$port"
+# Read-only real host TCP login before attempting the one-shot exactly once.
+# The container-internal pg_isready does not prove host port forwarding is restored.
+(
+  cd apps/server
+  P6_PROBE_URL="$product_url" node --input-type=module <<'JS'
+import { Pool } from 'pg';
+const p=new Pool({connectionString:process.env.P6_PROBE_URL,max:1,connectionTimeoutMillis:2000});
+try {
+  let ok=false;
+  for(let i=0;i<15;i++) {
+    try {
+      const r=await p.query("SELECT current_user::text AS u,current_database() AS d");
+      if(r.rows[0]?.u!=="geox_product_migrator_v1"||r.rows[0]?.d!=="geox_p6_native_test") {
+        console.error("P6_RESTART_IDENTITY_MISMATCH");process.exitCode=1;break;
+      }
+      ok=true;break;
+    } catch(e) {
+      const code=String(e?.code??"UNKNOWN");
+      console.log("P6_RESTART_READONLY_PROBE_CODE="+(/^[A-Z0-9_]{1,32}$/.test(code)?code:"UNKNOWN"));
+      if(!["ECONNREFUSED","ECONNRESET","57P03","ETIMEDOUT","08006"].includes(code))break;
+      await new Promise(r=>setTimeout(r,1000));
+    }
+  }
+  if(!ok)process.exitCode=1;
+  else console.log("PASS POST_RESTART_HOST_LOGIN");
+} finally {await p.end();}
+JS
+)
 test "$(snapshot)" = "$before"
 test "$(runtime -c "SELECT count(*) FROM geox_manager_v1.field_crop_review_p3_v1 WHERE review_id='p6_fixture_review' AND result->>'qualification'='TEST_ONLY'")" = 1
 last="$(product)"
