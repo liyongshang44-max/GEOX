@@ -45,7 +45,10 @@ export function createManagerAuthorizerV1(config:{
     ctx=await config.identity.verify(credential,structuredClone(config.canonicalTenantRef));
     a=config.identity.authorize(ctx);
     if(action==="CREATE_FIELD")config.identity.authorizeResource(ctx,{action:"CREATE_FIELD"});
-   } catch {throw denied();}
+   } catch {
+    if(ctx!==undefined)config.identity.invalidate(ctx);
+    throw denied();
+   }
    try {
     if(a.issuer!==config.issuer||!a.subject||a.principal_kind!=="HUMAN"||a.membership_status!=="ACTIVE"||
        !same(a.canonical_tenant_ref,config.canonicalTenantRef)||!ref(a.membership_ref)||!a.mapping_version||
@@ -60,7 +63,8 @@ export function createManagerAuthorizerV1(config:{
       !Number.isFinite(checked)||!Number.isFinite(until)||checked>now||now-checked>60000||until>checked+60000||
       Math.min(until,Date.parse(a.valid_until))<=now)throw denied();
     // Revalidate the original opaque context after the directory round trip.
-    const current=config.identity.authorize(ctx);
+    let current:VerifiedAssertion;
+    try {current=config.identity.authorize(ctx);}catch{throw denied();}
     if(current.credential_ref!==a.credential_ref||current.mapping_version!==a.mapping_version||!same(current.membership_ref,a.membership_ref))throw denied();
     const output=Object.freeze({actor_id:g.actor_id,tenant_id:g.tenant_id,project_id:g.project_id,group_id:g.group_id,
       field_id:field,action,credential_ref:a.credential_ref,grant_source_ref:Object.freeze({...g.source_ref}),
