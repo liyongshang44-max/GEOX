@@ -7,6 +7,7 @@ on:
       - 'apps/server/src/product_manager_migration_v1.ts'
       - 'apps/server/test/product_manager_migration_v1.fixture.ts'
       - '.github/workflows/p6-a2-manager-persistence.yml'
+      - 'scripts/acceptance/p6-a2-native-bootstrap-reentry.sh'
 permissions:
   contents: read
 jobs:
@@ -41,3 +42,18 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec tsx apps/server/test/product_manager_migration_v1.fixture.ts
+  native-bootstrap-reentry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
+      - run: bash scripts/acceptance/p6-a2-native-bootstrap-reentry.sh
