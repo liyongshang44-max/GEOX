@@ -2,6 +2,7 @@
 // composition. Never reads legacy Commercial token or stores credentials.
 export type ManagerTransport=(path:string,init:RequestInit)=>Promise<Response>;
 export type Geometry={type:'Polygon';coordinates:number[][][]};
+export type ManagedField={field_id:string;name:string;area_ha:number|null;field_updated_ts_ms:number};
 export type Boundary={field_id:string;geometry:Geometry|null;geometry_updated_ts_ms:number|null;field_updated_ts_ms:number};
 export type SoilRow={row_number:number;sample_id:string;sampled_on:string;latitude_deg:number;longitude_deg:number;depth_top_cm:number;depth_bottom_cm:number;analyte:string;value:number;unit:string;method:string};
 export type SoilDoc={document_id:string;revision:number;original_name:string;source_label:string;original_sha256:string;candidate_sha256:string;candidates:SoilRow[];latest_revision:boolean;current_context_eligible:boolean;status:string};
@@ -26,6 +27,7 @@ export function managerApi(transport:ManagerTransport){
  const reviews=(id:string)=>field(id)+'/crop-reviews';
  const review=(id:string,r:string)=>reviews(id)+'/'+ident(r);
  return {
+  lands:()=>call<{fields:ManagedField[]}>('GET','/api/v1/manager/fields'),
   create:(body:{field_id:string;name:string;area_ha?:number})=>call<{field_id:string;field_access_grant_issued:false}>('POST','/api/v1/manager/fields',body),
   boundary:(id:string)=>call<Boundary>('GET',field(id)+'/geometry'),
   updateBoundary:(id:string,geometry:Geometry,expected_updated_ts_ms:number)=>call<{updated_ts_ms:number}>('PUT',field(id),{polygon_geojson:geometry,expected_updated_ts_ms}),

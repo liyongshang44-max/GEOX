@@ -20,6 +20,7 @@ const member={...tenant,id:'member'}, issuer='https://idp.fixture.invalid';
 const t='p6_native_t',p='p6_native_p',g='p6_native_g',f='p6_native_f';
 const issued=new WeakSet<object>();let active=true,allowCreate=false,wrongGroup=false;
 const grants=new Set<ManagerActionV1>();
+let inventoryMode:'normal'|'unavailable'|'stale'|'other-subject'|'duplicate'|'wrong-action'='normal';
 const identity:FormalIdentityPortV1={kind:'FORMAL_PROVIDER_NEUTRAL_IDENTITY',
  async verify(token,requested){assert.deepEqual(requested,tenant);if(token!=='fixture-native'||!active)throw Error('deny');const ctx={};issued.add(ctx);return ctx;},
  authorize(ctx){assert.ok(issued.has(ctx as object));return {issuer,subject:'human-native',principal_kind:'HUMAN',canonical_tenant_ref:tenant,membership_ref:member,membership_status:'ACTIVE',mapping_version:'1',credential_ref:'3'.repeat(64),valid_until:new Date(Date.now()+30000).toISOString()};},
@@ -30,6 +31,13 @@ const authorityConfig:ManagerPilotCompositionV1={identity,issuer,canonicalTenant
  if(action==='CREATE_FIELD'?!allowCreate:field_id!==f||!grants.has(action))return null;
  const now=Date.now();return {status:'ACTIVE',issuer,subject:'human-native',canonical_tenant_ref:tenant,membership_ref:member,mapping_version:'1',source_ref:{...tenant,id:'grant'},actor_id:'p6_native_actor',tenant_id:t,project_id:p,group_id:wrongGroup?'other':g,field_id,action,checked_at:new Date(now).toISOString(),valid_until:new Date(now+30000).toISOString()} as GeoxLandGrantV1;
 }};
+authorityConfig.resolveLandInventory=async({assertion})=>{
+ if(inventoryMode==='unavailable')throw Error('directory unavailable');
+ const now=Date.now(),checked=inventoryMode==='stale'?now-70000:now;
+ const grant=await authorityConfig.resolveLandGrant({assertion,field_id:f,action:'READ_FIELD_GEOMETRY'});
+ const items=grant?[{...grant,action:inventoryMode==='wrong-action'?'UPDATE_FIELD' as const:grant.action}]:[];
+ return {purpose:'LIST_MANAGED_FIELDS',status:'ACTIVE',issuer,subject:inventoryMode==='other-subject'?'other':'human-native',canonical_tenant_ref:tenant,membership_ref:member,mapping_version:'1',source_ref:{...tenant,id:'inventory'},checked_at:new Date(checked).toISOString(),valid_until:new Date(checked+30000).toISOString(),grants:inventoryMode==='duplicate'?[...items,...items]:items};
+};
 const base='/api/v1/manager/fields',soil='/api/v1/fields/'+f+'/soil-documents';
  // Explicit TEST_ONLY native wire transport fixture, not scientific qualification.
  // Real PostgreSQL and manager HTTP routes persist the orchestration journal.
@@ -83,6 +91,20 @@ try{
  wrongGroup=true;assert.equal((await req('POST',base,create)).statusCode,404);wrongGroup=false;
  assert.deepEqual(await cnt(),{fields:1,facts:1,revisions:0,confirmations:0});
  proof('CREATE_NEW_FIELD_WITH_INDEPENDENT_GRANT_AND_EXACT_REPLAY');
+ assert.equal((await req('GET',base,undefined,'')).statusCode,401);
+ assert.equal((await req('GET',base+'?tenant_id=other')).statusCode,400);
+ assert.deepEqual((await req('GET',base)).json(),{ok:true,fields:[]}); // create does not grant enumeration
+ grants.add('READ_FIELD_GEOMETRY');
+ const listed=await req('GET',base);assert.equal(listed.statusCode,200,listed.body);
+ assert.deepEqual(listed.json().fields.map((x:any)=>[x.field_id,x.name,x.area_ha]),[[f,'native fixture land',2]]);
+ assert.deepEqual(Object.keys(listed.json().fields[0]).sort(),['area_ha','field_id','field_updated_ts_ms','name']);
+ wrongGroup=true;assert.equal((await req('GET',base)).statusCode,503);wrongGroup=false;
+ for(const mode of ['stale','other-subject','duplicate','wrong-action'] as const){inventoryMode=mode;assert.equal((await req('GET',base)).statusCode,403);}
+ inventoryMode='unavailable';assert.equal((await req('GET',base)).statusCode,503);inventoryMode='normal';
+ active=false;assert.equal((await req('GET',base)).statusCode,403);active=true;
+ grants.delete('READ_FIELD_GEOMETRY');assert.deepEqual((await req('GET',base)).json(),{ok:true,fields:[]});
+ assert.deepEqual(await cnt(),{fields:1,facts:1,revisions:0,confirmations:0});
+ proof('MANAGER_LAND_INVENTORY_EXACT_DIRECTORY_GRANTS_NO_IMPLICIT_ACCESS');
  const field=(await admin.query('SELECT tenant_id,project_id,group_id,updated_ts_ms FROM public.field_index_v1 WHERE tenant_id=$1 AND field_id=$2',[t,f])).rows[0];assert.equal(field.project_id,p);assert.equal(field.group_id,g);
  const geo={type:'Polygon',coordinates:[[[0,0],[2,0],[2,2],[0,2],[0,0]]]};
  assert.equal((await req('GET',base+'/'+f+'/geometry')).statusCode,403);

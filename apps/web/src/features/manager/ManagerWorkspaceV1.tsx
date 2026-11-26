@@ -1,6 +1,6 @@
 import React from 'react';
 import {ProductPageShell,ProductPageHeader,ProductSectionCard} from '../../design-system/product';
-import {managerApi,ManagerApiError,parsePolygon,csvBase64,documentRef,type ManagerTransport,type Boundary,type SoilDoc,type Review,type Assessment,type Followup} from '../../api/managerWorkspaceV1';
+import {managerApi,ManagerApiError,parsePolygon,csvBase64,documentRef,type ManagerTransport,type ManagedField,type Boundary,type SoilDoc,type Review,type Assessment,type Followup} from '../../api/managerWorkspaceV1';
 type Language='zh'|'en';
 type Props={language:Language;sessionKey:string;transport:ManagerTransport};
 // Explicit composition only. sessionKey MUST change at logout, principal or tenant
@@ -9,6 +9,7 @@ export default function ManagerWorkspaceV1(props:Props){return <Workspace key={p
 function Workspace({language,transport}:Props){
  const tr=(zh:string,en:string)=>language==='zh'?zh:en;
  const api=React.useMemo(()=>managerApi(transport),[transport]);
+ const [lands,setLands]=React.useState<ManagedField[]|null>(null);
  const [tab,setTab]=React.useState<'land'|'soil'|'questions'>('land');
  const [fieldInput,setFieldInput]=React.useState(''),[name,setName]=React.useState(''),[area,setArea]=React.useState('');
  const [field,setField]=React.useState(''),[boundary,setBoundary]=React.useState<Boundary|null>(null),[polygon,setPolygon]=React.useState('');
@@ -30,6 +31,9 @@ function Workspace({language,transport}:Props){
   finally{locked.current=false;if(alive.current)setBusy(false);}
  };
  const clearField=()=>{setBoundary(null);setPolygon('');setDocs([]);setReviews([]);setMore(false);setSelected([]);setReview('');setAssessment(null);setFollowups([]);setDocId('');setSource('');setFile(null);setReviewId('');setFollowupId('');setSuccessor('');};
+ const loadLands=async()=>{setLands(null);const result=await api.lands();if(!alive.current)return;setLands(result.fields);if(field&&!result.fields.some(x=>x.field_id===field)){clearField();setField('');}};
+ const openLand=async(id:string)=>{clearField();setField('');const b=await api.boundary(id);if(alive.current){setField(b.field_id);setFieldInput(b.field_id);setBoundary(b);setPolygon(b.geometry?JSON.stringify(b.geometry,null,2):'');}};
+ React.useEffect(()=>{void run(loadLands);},[]); // fresh server read for each sessionKey mount
  const loadBoundary=async(id:string)=>{const b=await api.boundary(id);if(!alive.current)return;setBoundary(b);setPolygon(b.geometry?JSON.stringify(b.geometry,null,2):'');};
  const loadDocs=async(id:string)=>{const d=await api.documents(id);if(!alive.current)return;setDocs(d.documents);setSelected([]);};
  const loadReviews=async(id:string)=>{const r=await api.reviews(id);if(!alive.current)return;setReviews(r.reviews);setMore(r.more_history_available);};
@@ -48,10 +52,13 @@ function Workspace({language,transport}:Props){
   {notice&&<p role="status">{notice}</p>}{error&&<div role="alert"><p>{error}</p><details><summary>{tr('技术诊断','Technical diagnostic')}</summary><code>{detail}</code></details></div>}
   <p>{tr('当前田块','Current field')}: {field||tr('未选择','None')}</p>
   {tab==='land'&&<ProductSectionCard title={tr('登记或打开田块','Register or open land')} subtitle={tr('登记后须取得独立田块访问授权。','Registration does not issue subsequent land access grants.')}>
+   {button('刷新我的土地','Refresh my land',loadLands)}
+   {lands!==null&&lands.length===0&&<p>{tr('当前没有已授权田块。登记后须由目录权威授予访问。','No currently authorized fields. Registration requires a separate directory grant.')}</p>}
+   {lands?.map(l=><article key={l.field_id}><h3>{l.name}</h3><p>{l.field_id}{l.area_ha!==null?' · '+l.area_ha+' ha':''}</p>{button('打开土地档案','Open land record',()=>openLand(l.field_id))}</article>)}
    <fieldset disabled={busy}><form onSubmit={e=>guard(e,async()=>{
-    const x=await api.create({field_id:fieldInput,name,...(area?{area_ha:Number(area)}:{})});if(alive.current){clearField();setField(x.field_id);setNotice(tr('登记已获服务端回执，等待独立田块授权。','Registration acknowledged; independent land access grant required.'));}
+    const x=await api.create({field_id:fieldInput,name,...(area?{area_ha:Number(area)}:{})});if(alive.current){clearField();setField('');setLands(null);setNotice(tr('登记已获服务端回执，等待独立田块授权。','Registration acknowledged; independent land access grant required.'));}
    })}><label>{tr('田块标识','Field ID')} <input required value={fieldInput} onChange={e=>setFieldInput(e.target.value)}/></label><label>{tr('名称','Name')} <input required value={name} onChange={e=>setName(e.target.value)}/></label><label>{tr('面积（公顷，可选）','Area (ha, optional)')} <input type="number" min="0.000001" max="1000000" step="any" value={area} onChange={e=>setArea(e.target.value)}/></label><button type="submit" className="customerButton">{tr('登记土地','Register land')}</button></form>
-   {button('打开已授权田块','Open authorized field',async()=>{clearField();setField('');const b=await api.boundary(fieldInput);if(alive.current){setField(b.field_id);setBoundary(b);setPolygon(b.geometry?JSON.stringify(b.geometry,null,2):'');}},!fieldInput)}
+   {button('打开已授权田块','Open authorized field',()=>openLand(fieldInput),!fieldInput)}
    </fieldset>
    {field&&boundary&&<form onSubmit={e=>guard(e,async()=>{const shape=parsePolygon(polygon);await api.updateBoundary(field,shape,boundary.field_updated_ts_ms);if(!alive.current)return;setNotice(tr('边界更新已获服务端回执。','Boundary update acknowledged.'));setDocs([]);setSelected([]);await loadBoundary(field);})}><fieldset disabled={busy}><p>{boundary.geometry?tr('已有确认边界','Confirmed boundary exists'):tr('尚无边界','No boundary yet')}</p><label>{tr('导入 WGS84 Polygon GeoJSON（经度、纬度）','Import WGS84 Polygon GeoJSON (longitude, latitude)')} <textarea rows={8} required value={polygon} onChange={e=>setPolygon(e.target.value)}/></label><button type="submit" className="customerButton">{tr('确认边界','Confirm boundary')}</button></fieldset></form>}
   </ProductSectionCard>}

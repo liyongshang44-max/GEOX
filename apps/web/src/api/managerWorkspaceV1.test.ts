@@ -26,3 +26,8 @@ test('polygon and exact selected document ref',()=>{
  const doc={document_id:'d',revision:1,candidate_sha256:'a',original_name:'x',source_label:'s',original_sha256:'b',candidates:[],latest_revision:true,current_context_eligible:true,status:'MANAGER_CONFIRMED_ASSERTION'};
  assert.deepEqual(documentRef(doc),{document_id:'d',revision:1,candidate_sha256:'a'});
 });
+
+test('my land is a scope-free read of server-authorized inventory',async()=>{
+ const seen:string[]=[];const api=managerApi(async(path,init)=>{seen.push(path);assert.equal(init.method,'GET');assert.equal(init.body,undefined);return new Response(JSON.stringify({ok:true,fields:[]}));});
+ assert.deepEqual(await api.lands(),{ok:true,fields:[]});assert.deepEqual(seen,['/api/v1/manager/fields']);
+});

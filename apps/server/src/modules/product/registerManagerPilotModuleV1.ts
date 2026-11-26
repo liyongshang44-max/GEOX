@@ -11,12 +11,15 @@ import { registerManagerNativeReviewV1, type ManagerNativeReviewConfigV1 } from 
 
 import { registerManagerContextFollowupV1 } from '../../routes/manager_context_followup_v1.js';
 
+import { registerManagerLandInventoryV1 } from '../../routes/manager_land_inventory_v1.js';
+
 export type ManagerPilotCompositionV1 = Parameters<typeof createManagerAuthorizerV1>[0] & { adrNativeReview?: ManagerNativeReviewConfigV1 };
 
 // Trusted composition only. No environment switch or legacy credential fallback.
 export function registerManagerPilotModuleV1(app: FastifyInstance, pool: Pool, config: ManagerPilotCompositionV1) {
   const authority = createManagerAuthorizerV1(config);
   registerManagerFieldCommandsV1(app, pool, authority);
+  registerManagerLandInventoryV1(app, pool, authority);
   registerManagerSoilDocumentsV1(app, pool, authority);
   registerManagerCropReviewsV1(app, pool, authority);
   registerManagerNativeReviewV1(app, pool, authority, config.adrNativeReview);
