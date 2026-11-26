@@ -52,16 +52,16 @@ try{
  authorityConfig.adrNativeReview={
   async resolvePlan(x){
    if(!planEnabled)return null;
-   const d=x.basis.documents[0],row=d.candidates[0];
-   return {basis_sha256:x.basis_sha256,target_binding_ref:'fixture-target',decision_mapping_ref:'fixture-decision',target_ref:target,deployment_ref:deployment,knowledge_release_ref:release,decision_type:'FIXTURE_REVIEW',objective_code:'FIXTURE',use_purpose:'FIXTURE',use_class:'FIXTURE',decision_authority_mode:'EXTERNAL_POLICY',decision_horizon:{duration:'P1Y'},decision_deadline:new Date(Date.now()+86400000).toISOString(),crop_action_bindings:x.basis.intent.crop_codes.map((crop_code:string)=>({crop_code,action_code:crop_code})),datum_bindings:[{document_id:d.document_id,revision:d.revision,row_number:row.row_number,mapping_ref:'fixture-mapping',semantic_id:'fixture.soil.ph',geometry_ref:'fixture-point',sample_day_start:row.sampled_on+'T00:00:00Z',sample_day_end:row.sampled_on+'T23:59:59.999Z'}]};
+   return {basis_sha256:x.basis_sha256,target_binding_ref:'fixture-target',decision_mapping_ref:'fixture-decision',target_ref:target,deployment_ref:deployment,knowledge_release_ref:release,decision_type:'FIXTURE_REVIEW',objective_code:'FIXTURE',use_purpose:'FIXTURE',use_class:'FIXTURE',decision_authority_mode:'EXTERNAL_POLICY',decision_horizon:{duration:'P1Y'},decision_deadline:new Date(Date.now()+86400000).toISOString(),crop_action_bindings:x.basis.intent.crop_codes.map((crop_code:string)=>({crop_code,action_code:crop_code})),datum_bindings:x.basis.documents.flatMap((d:any)=>d.candidates.map((row:any)=>({document_id:d.document_id,revision:d.revision,row_number:row.row_number,mapping_ref:'fixture-mapping',semantic_id:'fixture.soil.ph',geometry_ref:'fixture-point',sample_day_start:row.sampled_on+'T00:00:00Z',sample_day_end:row.sampled_on+'T23:59:59.999Z'})))};
   },
   consumer:{baseUrl:'https://adr.fixture.invalid/',async resolveBinding(x){
    const a=x.manager;
    return {request_sha256:x.request_sha256,authority_scope:{actor_id:a.actor_id,tenant_id:a.tenant_id,project_id:a.project_id,group_id:a.group_id,field_id:a.field_id!,mapping_version:a.mapping_version,credential_ref:a.credential_ref},principal:{principal_id:'fixture-adr-principal',type:'SERVICE_ACCOUNT',organization_id:target.organization_id,tenant_id:target.tenant_id,program_ids:['fixture-program']},authorization_ref:authorityRef('AuthorizationDecisionAudit','fixture-auth'),credential_ref:'fixture-credential',valid_until_ms:a.valid_until_ms};
   },async getCredential(){return 'fixture-only-adr-secret';},async transport(url,init){
    nativeCalls++;const b=JSON.parse(String(init?.body)),res=b.resource,path=new URL(String(url)).pathname;
-   const journal=(await admin.query("SELECT count(*)::int AS n FROM geox_manager_v1.field_native_assessment_p3p_v1 WHERE tenant_id=$1",[t])).rows[0].n;
-   assert.equal(journal,nativeCalls*2); // STARTED + prior receipts + current intent are committed.
+   const attempt=b.logical_id.split(':')[0];
+   const journal=(await admin.query("SELECT result FROM geox_manager_v1.field_native_assessment_p3p_v1 WHERE tenant_id=$1 AND left(analysis_id,$2)=$3 ORDER BY analysis_id",[t,attempt.length+1,attempt+':'])).rows;
+   assert.equal(journal[0].result.event,'STARTED');assert.equal(journal.at(-1)?.result.event,'WRITE_INTENT');assert.equal(journal.at(-1)?.result.details.request.logical_id,b.logical_id);assert.equal(journal.length%2,0); // current intent committed before native call.
    let kind:string;
    if(path==='/v1/decision-problems'){kind='DecisionProblem';problemRef=authorityRef(kind,b.logical_id);}
    else if(path==='/v1/context-data')kind='ContextDatum';
@@ -164,6 +164,13 @@ try{
  assert.equal(nativeCalls,5); // Linking itself must not invoke ADR.
  assert.equal(await reviewCount(),3);
  proof('P4_EXACT_BASELINE_SUPPLEMENTAL_CONTEXT_LINK_NO_IMPLICIT_ADR_WRITE');
+ const successorNative=reviewPath+'/review-2/native-assessment';
+ const successorEvaluation=await req('POST',successorNative,{});assert.equal(successorEvaluation.statusCode,200,successorEvaluation.body);
+ assert.equal(successorEvaluation.json().status,'NATIVE_ASSESSMENTS_RECORDED');assert.equal(successorEvaluation.json().receipts.length,6);
+ assert.equal(nativeCalls,11);assert.notEqual(successorEvaluation.json().attempt_id,executed.json().attempt_id);
+ assert.deepEqual((await req('GET',nativePath)).json(),executed.json());
+ assert.deepEqual((await req('POST',successorNative,{})).json(),successorEvaluation.json());assert.equal(nativeCalls,11);
+ proof('P4_SUCCESSOR_REASSESSMENT_REUSES_NATIVE_CHAIN_AND_PRESERVES_BASELINE_TEST_ONLY');
 
 
 
@@ -174,7 +181,7 @@ try{
  const oldReview=await req('GET',reviewPath+'/review-1');assert.equal(oldReview.statusCode,200,oldReview.body);assert.deepEqual(oldReview.json().basis,saved.basis);
  assert.equal(await reviewCount(),3);
  proof('P3_CHANGED_BOUNDARY_REJECTS_NEW_BASIS_PRESERVES_HISTORY');
- const oldNative=await req('GET',nativePath);assert.equal(oldNative.statusCode,200,oldNative.body);assert.deepEqual(oldNative.json(),executed.json());assert.equal(nativeCalls,5);
+ const oldNative=await req('GET',nativePath);assert.equal(oldNative.statusCode,200,oldNative.body);assert.deepEqual(oldNative.json(),executed.json());assert.equal(nativeCalls,11);
  const historicalFollow=await req('GET',followPath);assert.deepEqual(historicalFollow.json(),followRead.json());
  active=false;assert.equal((await req('GET',soil)).statusCode,403);assert.equal((await req('GET',followPath)).statusCode,403);
  assert.deepEqual(await cnt(),{fields:1,facts:7,revisions:2,confirmations:2});

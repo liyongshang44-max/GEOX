@@ -74,7 +74,10 @@ export function registerManagerContextFollowupV1(app:FastifyInstance,pool:Pool,a
   need(terminal&&terminal.result_sha256===j.prev,'FOLLOWUP_BASELINE_RECEIPT_INTEGRITY');
   const successor=await loadManagerNativeReviewBasisV1(c,a,b.successor_review_id,true);
   need(successor.actor_id===a.actor_id,'FOLLOWUP_SUCCESSOR_OWNER_REQUIRED',403);
-  need(Date.parse(successor.created_at)>Date.parse(terminal.created_at),'FOLLOWUP_SUCCESSOR_MUST_POSTDATE_BASELINE');
+  // PostgreSQL compares exact timestamptz values, without JS Date string
+  // conversion (which discards milliseconds) or cross-process clock guesses.
+  const chronology=(await c.query('SELECT p.created_at > j.created_at AS later FROM geox_manager_v1.field_crop_review_p3_v1 p JOIN '+journal+' j USING(tenant_id,project_id,group_id,field_id) WHERE p.tenant_id=$1 AND p.project_id=$2 AND p.group_id=$3 AND p.field_id=$4 AND p.review_id=$5 AND j.analysis_id=$6 AND j.review_id=$7',[...s,b.successor_review_id,baseline_id,baseline])).rows[0];
+  need(chronology?.later===true,'FOLLOWUP_SUCCESSOR_MUST_POSTDATE_BASELINE');
   const i=old.basis.intent,n=successor.basis.intent;
   need(same(i.crop_codes,n.crop_codes)&&i.question_type===n.question_type&&i.target_start_date===n.target_start_date&&i.target_end_date===n.target_end_date,'FOLLOWUP_QUESTION_CHANGED');
   // A changed land boundary is a different review basis, not a context-only followup.
