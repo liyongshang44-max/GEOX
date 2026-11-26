@@ -85,7 +85,13 @@ try{
  proof('CREATE_NEW_FIELD_WITH_INDEPENDENT_GRANT_AND_EXACT_REPLAY');
  const field=(await admin.query('SELECT tenant_id,project_id,group_id,updated_ts_ms FROM public.field_index_v1 WHERE tenant_id=$1 AND field_id=$2',[t,f])).rows[0];assert.equal(field.project_id,p);assert.equal(field.group_id,g);
  const geo={type:'Polygon',coordinates:[[[0,0],[2,0],[2,2],[0,2],[0,0]]]};
- const update={name:'updated native fixture',area_ha:3,polygon_geojson:geo,expected_updated_ts_ms:Number(field.updated_ts_ms)};
+ assert.equal((await req('GET',base+'/'+f+'/geometry')).statusCode,403);
+ grants.add('READ_FIELD_GEOMETRY');
+ const emptyBoundary=await req('GET',base+'/'+f+'/geometry');assert.equal(emptyBoundary.statusCode,200,emptyBoundary.body);
+ assert.equal(emptyBoundary.json().geometry,null);assert.equal(emptyBoundary.json().geometry_updated_ts_ms,null);
+ assert.equal(emptyBoundary.json().field_updated_ts_ms,Number(field.updated_ts_ms));
+ grants.delete('READ_FIELD_GEOMETRY');
+ const update={name:'updated native fixture',area_ha:3,polygon_geojson:geo,expected_updated_ts_ms:emptyBoundary.json().field_updated_ts_ms};
  assert.equal((await req('PUT',base+'/'+f,update)).statusCode,403);
  grants.add('UPDATE_FIELD');wrongGroup=true;assert.equal((await req('PUT',base+'/'+f,update)).statusCode,404);wrongGroup=false;
  const updated=await req('PUT',base+'/'+f,update);assert.equal(updated.statusCode,200,updated.body);
