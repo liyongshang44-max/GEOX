@@ -41,9 +41,14 @@ jobs:
           version: 9.15.4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # GEOX pinned native dependencies install under its supported Node 20.
+      # ADR fixture executes on its own required Node 24; no SQLite is loaded.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - uses: actions/checkout@v4
         with:
           repository: liyongshang44-max/agronomy-deployment-runtime
