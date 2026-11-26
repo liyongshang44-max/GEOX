@@ -1,7 +1,7 @@
 // P6-C3 transport only, ADR @ d63c3058d6b95873e811445920f7302ded980ef3.
 // P02 SDK and pilot-host wire contract. No local scientific authority.
 import type {ManagerAuthorizerV1,ManagerAuthorityV1} from '../../auth/manager_authority_v1.js';
-import {digest} from '../field/soil_csv_p2_v1.js';
+import {digest,sha256} from '../field/soil_csv_p2_v1.js';
 
 const operations = {
  createDecisionProblem:['/v1/decision-problems','adr.decision-problem.v1','DecisionProblem'],
@@ -19,14 +19,21 @@ export type AdrReviewBindingV1={
  request_sha256:string;principal:Principal;authorization_ref:AdrRefV1;credential_ref:string;valid_until_ms:number;
 };
 export type AdrWriteInputV1={logical_id:string;version:string;resource:Resource;idempotency_key:string};
-export type AdrWriteReceiptV1={ref:AdrRefV1;resource:Resource;request_sha256:string;response_sha256:string};
+export type AdrWriteReceiptV1={ref:AdrRefV1;resource:Resource;request_sha256:string;wire_body_sha256:string;response_sha256:string;idempotency_key:string};
 export class AdrReviewConsumerErrorV1 extends Error{
  constructor(public readonly code:string,public readonly httpStatus:number|null=null){super(code);}
 }
 function fail(code:string,status:number|null=null):never{throw new AdrReviewConsumerErrorV1(code,status);}
 const record=(x:unknown):x is Record<string,unknown>=>!!x&&typeof x==='object'&&!Array.isArray(x);
-const exact=(x:unknown,keys:string[])=>record(x)&&Object.keys(x).sort().join('|')===keys.sort().join('|');
+const exact=(x:unknown,keys:string[])=>record(x)&&Object.keys(x).length===keys.length&&keys.every(k=>Object.hasOwn(x,k));
 const str=(x:unknown):x is string=>typeof x==='string'&&x.length>0&&x.length<=512&&x.trim()===x&&!/[\x00-\x1f\x7f]/.test(x);
+function jsonValue(x:unknown,depth=0):boolean{
+ if(depth>32)return false;
+ if(x===null||typeof x==='string'||typeof x==='boolean')return true;
+ if(typeof x==='number')return Number.isFinite(x);
+ if(Array.isArray(x))return x.length<=10000&&x.every(v=>jsonValue(v,depth+1));
+ return record(x)&&(Object.getPrototypeOf(x)===Object.prototype||Object.getPrototypeOf(x)===null)&&Object.keys(x).length<=1000&&Object.values(x).every(v=>jsonValue(v,depth+1));
+}
 function ref(x:unknown,kind:string):x is AdrRefV1{
  return exact(x,['kind','logical_id','version','semantic_hash'])&&record(x)&&x.kind===kind&&str(x.logical_id)&&str(x.version)&&typeof x.semantic_hash==='string'&&/^sha256:[a-f0-9]{64}$/.test(x.semantic_hash);
 }
@@ -51,7 +58,10 @@ export function createAdrReviewConsumerV1(config:{
    if(!Object.hasOwn(operations,operation))fail('ADR_OPERATION_DENIED');
    const [path,contract,kind]=operations[operation];
    if(!exact(input,['logical_id','version','resource','idempotency_key'])||!str(input.logical_id)||!str(input.version)||!str(input.idempotency_key)||!record(input.resource)||input.resource.contract_version!==contract)fail('ADR_REQUEST_CONTRACT_INVALID');
-   const request=structuredClone(input),request_sha256=digest({operation,request});
+   if(!jsonValue(input))fail('ADR_REQUEST_JSON_INVALID');
+   const serialized=JSON.stringify(input);
+   if(Buffer.byteLength(serialized,'utf8')>1_000_000)fail('ADR_REQUEST_TOO_LARGE');
+   const request=JSON.parse(serialized) as AdrWriteInputV1,request_sha256=digest({operation,request});
    const found=await config.resolveBinding({manager,operation,request_sha256});
    if(!found)fail('ADR_AUTHORITY_BINDING_REQUIRED');
    const binding=structuredClone(found);
@@ -66,10 +76,10 @@ export function createAdrReviewConsumerV1(config:{
    if(typeof token!=='string'||!token||token.length>32768||/\s/.test(token))fail('ADR_CREDENTIAL_REQUIRED');
    current();
    const body={logical_id:request.logical_id,version:request.version,principal:binding.principal,authorization_decision_ref:binding.authorization_ref,resource:request.resource};
-   const wireDigest=digest(body);
+   const wireBody=JSON.stringify(body),wire_body_sha256=sha256(wireBody);
    let response:Response;
    try{
-    response=await transport(new URL(path,origin),{method:'POST',redirect:'error',signal:AbortSignal.timeout(timeout),headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','Idempotency-Key':request.idempotency_key},body:JSON.stringify(body)});
+    response=await transport(new URL(path,origin),{method:'POST',redirect:'error',signal:AbortSignal.timeout(timeout),headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','Idempotency-Key':request.idempotency_key},body:wireBody});
    }catch{fail('ADR_WRITE_OUTCOME_UNKNOWN');}
    // A failed response does not necessarily mean the remote write did not commit.
    if(response.status!==201){
@@ -82,7 +92,7 @@ export function createAdrReviewConsumerV1(config:{
     const value:unknown=JSON.parse(raw);
     if(!record(value)||!ref(value.ref,kind)||value.ref.logical_id!==request.logical_id||value.ref.version!==request.version||!record(value.resource)||value.resource.contract_version!==contract)fail('ADR_RESPONSE_CONTRACT_INVALID');
     current();
-    return {ref:value.ref,resource:value.resource as Resource,request_sha256:wireDigest,response_sha256:digest(value)};
+    return {ref:value.ref,resource:value.resource as Resource,request_sha256,wire_body_sha256,response_sha256:sha256(raw),idempotency_key:request.idempotency_key};
    }catch{fail('ADR_WRITE_OUTCOME_UNKNOWN',201);}
   }
  });

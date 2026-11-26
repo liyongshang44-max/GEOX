@@ -40,9 +40,10 @@ test('fixed native wire route, exact binding and receipt',async()=>{
   const body=JSON.parse(String(init?.body));assert.equal(body.principal.principal_id,'adr-service');assert.equal(body.authorization_decision_ref.logical_id,'auth-1');
   return new Response(JSON.stringify({ref:{kind:'DecisionProblem',logical_id:'problem-1',version:'1',semantic_hash:'sha256:'+'c'.repeat(64)},resource:input.resource}),{status:201});
  }});
- const result=await c.write(manager,'createDecisionProblem',input);assert.equal(result.ref.logical_id,'problem-1');assert.match(result.request_sha256,/^[a-f0-9]{64}$/);assert.equal(calls,1);
+ const result=await c.write(manager,'createDecisionProblem',input);assert.equal(result.ref.logical_id,'problem-1');assert.match(result.request_sha256,/^[a-f0-9]{64}$/);assert.match(result.wire_body_sha256,/^[a-f0-9]{64}$/);assert.equal(result.idempotency_key,'same-key');assert.equal(calls,1);
  await assert.rejects(c.write({...manager},'createDecisionProblem',input),/MANAGER_AUTHORITY_DENIED/);assert.equal(calls,1);
  await assert.rejects(c.write(manager,'createDecisionProblem',{...input,resource:{contract_version:'wrong'}}),/ADR_REQUEST_CONTRACT_INVALID/);assert.equal(calls,1);
+ await assert.rejects(c.write(manager,'createDecisionProblem',{...input,resource:{...input.resource,invalid:Infinity}}),/ADR_REQUEST_JSON_INVALID/);assert.equal(calls,1);
 });
 test('absent, expired, wrong-field or wrong-request binding cannot transmit',async()=>{
  const {authority}=setup();const manager=await authority.authorize('fixture-manager','field-1','REQUEST_CROP_REVIEW');

@@ -85,6 +85,7 @@ try{
  const asked=await req('POST',reviewPath,intent);assert.equal(asked.statusCode,200,asked.body);const saved=asked.json();
  assert.equal(saved.result.status,'PENDING_NATIVE_ASSESSMENT');assert.equal(saved.result.action_authority,false);assert.equal(saved.basis.documents[0].candidates[0].epistemic_class,'ASSERTION');
  assert.equal(saved.basis.documents[0].confirmation_fact_id,confirmed.json().confirmation_fact_id);
+ assert.match(saved.result.basis_sha256,/^[a-f0-9]{64}$/);assert.equal(saved.basis.audit.credential_ref,undefined);assert.equal(saved.result.qualification_gaps_not_evaluated,true);
  const repeated=await req('POST',reviewPath,{...intent,crop_codes:['SOYBEAN','CORN']});assert.equal(repeated.statusCode,200,repeated.body);assert.equal(repeated.json().idempotent_replay,true);
  assert.equal((await req('POST',reviewPath,{...intent,target_end_date:'2027-11-01'})).statusCode,409);
  assert.equal((await req('GET',reviewPath)).statusCode,403);

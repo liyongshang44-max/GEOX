@@ -29,9 +29,10 @@ function parseIntent(b:unknown){
 function projection(row:any){
  if(!row||!obj(row.basis)||!obj(row.result)||digest(row.result)!==row.result_sha256||
   digest({scope:row.basis.scope,actor_id:row.actor_id,intent:row.basis.intent})!==row.intent_sha256||
-  row.basis.intent?.review_id!==row.review_id||row.result.action_authority!==false||
+  row.basis.intent?.review_id!==row.review_id||row.result.basis_sha256!==digest(row.basis)||row.result.action_authority!==false||
   row.result.status!=='PENDING_NATIVE_ASSESSMENT')throw new Hold(409,'CROP_REVIEW_HISTORY_INTEGRITY');
- return {review_id:row.review_id,actor_id:row.actor_id,intent_sha256:row.intent_sha256,basis:row.basis,result:row.result,result_sha256:row.result_sha256,created_at:row.created_at};
+ const {credential_ref:_credential,...audit}=row.basis.audit;
+ return {review_id:row.review_id,actor_id:row.actor_id,intent_sha256:row.intent_sha256,basis:{...row.basis,audit},result:row.result,result_sha256:row.result_sha256,created_at:row.created_at};
 }
 export function registerManagerCropReviewsV1(app:FastifyInstance,pool:Pool,authority:ManagerAuthorizerV1){
  const path='/api/v1/manager/fields/:field_id/crop-reviews';
@@ -83,7 +84,7 @@ export function registerManagerCropReviewsV1(app:FastifyInstance,pool:Pool,autho
    documents.push({document_id:r.document_id,revision:r.revision,original_name:r.original_name,source_label:r.source_label,original_sha256:r.original_sha256,candidate_sha256:r.candidate_sha256,boundary_sha256:r.boundary_sha256,upload_fact_id:r.upload_fact_id,uploaded_at:new Date(r.uploaded_at).toISOString(),confirmation_fact_id:confirmed.confirmation_fact_id,confirmed_by:confirmed.confirmed_by,confirmed_at:new Date(confirmed.confirmed_at).toISOString(),candidates:r.candidates,epistemic_class:'ASSERTION',scientific_qualification:'NOT_ESTABLISHED'});
   }
   const basis={schema_version:'geox.manager-crop-review-basis.v1',scope,intent,boundary,boundary_sha256,evidence_cutoff:cutoff,documents,authority_ceiling:'MANAGER_CONFIRMED_REPORT_ASSERTION_ONLY',audit:{grant_source_ref:a.grant_source_ref,mapping_version:a.mapping_version,credential_ref:a.credential_ref}};
-  const result={schema_version:'geox.manager-crop-review-intent.v1',status:'PENDING_NATIVE_ASSESSMENT',scientific_qualification:'NOT_ESTABLISHED',assessment_ref:null,action_authority:false,missing_context:documents.length?[]:['NO_CONFIRMED_SOIL_DOCUMENT_SELECTED']};
+  const result={schema_version:'geox.manager-crop-review-intent.v1',status:'PENDING_NATIVE_ASSESSMENT',basis_sha256:digest(basis),scientific_qualification:'NOT_ESTABLISHED',assessment_ref:null,action_authority:false,qualification_gaps_not_evaluated:true,missing_context:documents.length?[]:['NO_CONFIRMED_SOIL_DOCUMENT_SELECTED']};
   const saved=(await c.query('INSERT INTO '+reviews+'(tenant_id,project_id,group_id,field_id,review_id,actor_id,intent_sha256,basis,result,result_sha256,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10,$11::timestamptz) RETURNING '+cols,[...s,intent.review_id,a.actor_id,intent_sha256,JSON.stringify(basis),JSON.stringify(result),digest(result),cutoff])).rows[0];
   return {ok:true,idempotent_replay:false,...projection(saved)};
  }));
