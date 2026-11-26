@@ -44,7 +44,7 @@ export type ManagerApi=ReturnType<typeof managerApi>;
 export function parsePolygon(text:string):Geometry {
  const x=JSON.parse(text);
  if(x?.type!=='Polygon'||!Array.isArray(x.coordinates)||x.coordinates.length!==1||!Array.isArray(x.coordinates[0]))throw Error('POLYGON_REQUIRED');
- const ring=x.coordinates[0];if(ring.length<4||ring.length>5000||!ring.every((p:unknown)=>Array.isArray(p)&&p.length===2&&p.every(Number.isFinite)&&Math.abs(p[0])<=180&&Math.abs(p[1])<=90)||JSON.stringify(ring[0])!==JSON.stringify(ring.at(-1)))throw Error('POLYGON_REQUIRED');
+ const ring=x.coordinates[0];if(ring.length<4||ring.length>5000||!ring.every((p:unknown)=>Array.isArray(p)&&p.length===2&&p.every(Number.isFinite)&&Math.abs(p[0])<=180&&Math.abs(p[1])<=90)||JSON.stringify(ring[0])!==JSON.stringify(ring[ring.length-1]))throw Error('POLYGON_REQUIRED');
  return {type:'Polygon',coordinates:[ring]};
 }
 export function documentRef(d:SoilDoc):DocumentRef{return {document_id:d.document_id,revision:d.revision,candidate_sha256:d.candidate_sha256};}

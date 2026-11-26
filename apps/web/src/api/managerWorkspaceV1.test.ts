@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {managerApi,ManagerApiError,parsePolygon,documentRef} from './managerWorkspaceV1.ts';
+import {managerApi,ManagerApiError,parsePolygon,documentRef} from './managerWorkspaceV1.js';
 test('exact native paths, no caller scope or implicit retry',async()=>{
  const calls:{path:string;init:RequestInit}[]=[];
  const api=managerApi(async(path,init)=>{calls.push({path,init});return new Response(JSON.stringify({ok:true}),{status:200});});
