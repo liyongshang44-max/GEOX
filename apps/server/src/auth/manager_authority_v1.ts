@@ -1,7 +1,7 @@
 // P6-B: consume FDW formal identity, never issue or exchange credentials.
  // No default production provider. A GEOX directory owner must supply the exact land grant.
 export type ExternalRefV1 = {issuer:string;id:string;version:string};
-export type ManagerActionV1 = "CREATE_FIELD"|"READ_SOIL_DOCUMENT"|"UPLOAD_SOIL_DOCUMENT"|"CONFIRM_SOIL_DOCUMENT";
+export type ManagerActionV1 = "CREATE_FIELD"|"UPDATE_FIELD"|"READ_FIELD_GEOMETRY"|"READ_SOIL_DOCUMENT"|"UPLOAD_SOIL_DOCUMENT"|"CONFIRM_SOIL_DOCUMENT";
 type VerifiedAssertion = {issuer:string;subject:string;principal_kind:string;canonical_tenant_ref:ExternalRefV1;membership_ref:ExternalRefV1;membership_status:string;mapping_version:string;credential_ref:string;valid_until:string};
 export type FormalIdentityPortV1 = {
  readonly kind:"FORMAL_PROVIDER_NEUTRAL_IDENTITY";
@@ -27,7 +27,7 @@ const id=(v:unknown):v is string=>typeof v==="string"&&/^[A-Za-z0-9][A-Za-z0-9_.
 const ref=(v:ExternalRefV1|undefined)=>!!v&&[v.issuer,v.id,v.version].every(x=>typeof x==="string"&&x.trim()===x&&x.length>0&&x.length<=512);
 const same=(a:ExternalRefV1,b:ExternalRefV1)=>ref(a)&&ref(b)&&a.issuer===b.issuer&&a.id===b.id&&a.version===b.version;
 const denied=()=>new ManagerAuthorityErrorV1(403,"MANAGER_AUTHORITY_DENIED");
-const actions=new Set<ManagerActionV1>(["CREATE_FIELD","READ_SOIL_DOCUMENT","UPLOAD_SOIL_DOCUMENT","CONFIRM_SOIL_DOCUMENT"]);
+const actions=new Set<ManagerActionV1>(["CREATE_FIELD","UPDATE_FIELD","READ_FIELD_GEOMETRY","READ_SOIL_DOCUMENT","UPLOAD_SOIL_DOCUMENT","CONFIRM_SOIL_DOCUMENT"]);
 export function createManagerAuthorizerV1(config:{
  identity:FormalIdentityPortV1; canonicalTenantRef:ExternalRefV1; issuer:string;
  resolveLandGrant(input:{assertion:VerifiedAssertion;field_id:string|null;action:ManagerActionV1}):Promise<GeoxLandGrantV1|null>;
