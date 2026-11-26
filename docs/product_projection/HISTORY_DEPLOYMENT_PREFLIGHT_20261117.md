@@ -1,0 +1,11 @@
+# WP-A deployment preflight / no production authorization granted
+
+Base: PR #3774 ac3d8aef44c3074805966a61cdc38a181e415429. Keep Draft; protected main and production resources unchanged.
+
+Source existence is not customer display permission. The existing KBS provider explicitly declares raw_value_publication_authorized:false; earlier research inventory and PR #3671 do not override it. No accepted owner-signed permission for the exact scope/dataset/use-policy has been supplied in this task. No legal permission was invented or issued. Current result: DISPLAY_AUTHORIZATION_NOT_ESTABLISHED. This is the critical remaining WP-A blocker, independent of WP-D.
+
+Before an allowed deployment, source owner must approve the exact canonical numeric display use separately from private raw evidence redistribution. Runtime configuration must bind tenant/project/group/field, dataset, source use-policy ref, approval ref, customer-visible canonical permission and expiry. Configure a server-only cursor key; never send it or the Product API bearer to Site. The service already validates auth/resource scope, fact identity/hash, point support, original time and non-authoritative history semantics. All loader queries are SELECT; production DB role must independently be accepted as read-only. Frozen-main merge window and deployment remain unexercised.
+
+Added regression tests prove a display grant expiring between pages stops all fact reads, returns UNAVAILABLE and does not reuse previously granted numeric data. Missing signing key also returns explicit UNAVAILABLE. Existing tests prove wrong field/tenant denial, policy mismatch, corrupt digest, assumptions exclusion and cursor scope binding. Nine tests pass locally; the established CI runs the same file. No new rights service, upstream object or scientific calculation is introduced.
+
+Site consumption remains GET /api/product/fields/:fieldRef/observations, only limit/cursor forwarded. AVAILABLE empty history differs from UNAVAILABLE permission/runtime/configuration and HTTP errors. Neither 404 nor lack of current MCFT Runtime establishes absence of historical data. Existing Site V12 contract remains unchanged. A successful human FDW session does not grant this dataset display rights; the two admissions must remain separate.
