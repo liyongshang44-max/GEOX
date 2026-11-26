@@ -27,3 +27,6 @@ jobs:
 
       - name: Exact restricted parent mapping contracts (fixtures only)
         run: node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RESTRICTED_PARENT_V3.test.cjs
+
+      - name: Exact formal budget successor contracts (no real delay or data plane)
+        run: node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_FORMAL_BUDGET_V4.test.cjs

@@ -188,7 +188,17 @@ async function main(): Promise<void> {
     const fencedPromotion = new PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1(
       pool,
       retentionDelegate,
-      { scope: MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1, epoch_id: epoch, subject_sha: subject },
+      {
+        scope: MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
+        epoch_id: epoch,
+        subject_sha: subject,
+        retention_authority: {
+          mode: "ISOLATED_QUALIFICATION_ONLY",
+          run_id: currentTargets.bucket.replace(/^mcft-cap09-requal-/, ""),
+          subject_sha: subject,
+          bucket,
+        },
+      },
     );
     const capturePromotion = new ExternalFormalPrivateCandidateCapturePromotionV1({
       subject_sha: subject,

@@ -2704,8 +2704,104 @@ function main() {
     caseBOtherProofs.set(id,proof);return proof;
   }
 
+  // Exact Timing successor: qualify this source delta, never reissue old science.
+  const timingSuccessor = stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+    args.base === "27dd160877d81446faaa857b0c80428eb80735c0" && authority.checks.length === 74
+    ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs")
+      .verifyTimingSuccessor({ROOT,args,authority,plan,changed,stage}) : null;
+  const trustSubjectSuccessor = stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+    args.base === "37dfa24ee6e60891995836f7a142a898c445d9df" && authority.checks.length === 74
+    ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs")
+      .verifyTrustSubjectSuccessor({ROOT,args,authority,plan,changed,stage}) : null;
+  // BEGIN PR3778 EXACT LOADER PROOF
+  const loaderSuccessor = stage === "SUCCESSOR_SUBJECT_PRE_MERGE" && args.base === "f74a5677b6ecd784e283c25d71e7253897df15a1"
+    ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs").verifyLoaderSuccessor({ROOT,args,authority,plan,changed,stage}) : null;
+  // END PR3778 EXACT LOADER PROOF
+  // BEGIN PR3779 EXACT PHYSICAL PROOF
+  const physicalSuccessor = stage === "SUCCESSOR_SUBJECT_PRE_MERGE" && args.base === "d97f4b6dadcfa894025fd1634bd69c1c01a8761c"
+    ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs").verifyPhysicalSuccessor({ROOT,args,authority,plan,changed,stage}) : null;
+  // END PR3779 EXACT PHYSICAL PROOF
+  // BEGIN PR3780 EXACT MCADMIN SUCCESSOR PROOF
+  const mcAdminSuccessor=stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&
+    args.base==="a12831a457b9bb47941a8873b7faa0ba880d6f81"
+    ? require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs")
+      .verifyProducerAdminSuccessor({ROOT,args,authority,plan,changed,stage}):null;
+  // END PR3780 EXACT MCADMIN SUCCESSOR PROOF
+  // Exact budget successor only; prior PR source qualification is unchanged.
+  const budgetSuccessor=stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base==="16fe4dbd03e75acf0209ca3daa906d8c2956b01f"
+    ? require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").verify({ROOT,args,authority,plan,changed,stage}):null;
   for (const decision of plan.decisions) {
     let result;
+    if(budgetSuccessor&&require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").SCOPED.includes(decision.check_id)){
+      const row=budgetSuccessor.rows?.[decision.check_id];const ok=budgetSuccessor.status==="PASS"&&!!row;
+      result=ok?row:{check_id:decision.check_id,applicability:decision.status,status:"FAIL",reason_code:budgetSuccessor.reason_code,current_source:budgetSuccessor,permit_consumed:false,stages:0};
+      if(!ok)blockers.push({blocker_class:"FORMAL_BUDGET_EXACT_SOURCE_HOLD",check_id:decision.check_id,detail:budgetSuccessor});
+      results.push(result);continue;
+    }
+    // BEGIN PR3780 EXACT MCADMIN SUCCESSOR ROUTE
+    if(mcAdminSuccessor&&
+      (decision.check_id==="CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_SOURCE_V1"||
+       require("./VERIFY_MCFT_CAP09_R4285_TRUST_V2_SOURCE_V1.cjs")
+         .MC_ADMIN_SCOPED_IDS.includes(decision.check_id))){
+      const row=mcAdminSuccessor.rows?.[decision.check_id];
+      const ok=mcAdminSuccessor.status==="PASS"&&!!row;
+      result=ok?row:{
+        check_id:decision.check_id,applicability:decision.status,status:"FAIL",
+        reason_code:mcAdminSuccessor.reason_code||"HOLD_MCADMIN_SUCCESSOR_SOURCE_INVALID",
+        current_source:mcAdminSuccessor,prior_historical_evidence_promoted:false,
+        permit_consumed:false,host_started:false,stages:0};
+      if(!ok)blockers.push({blocker_class:"MCADMIN_EXACT_SOURCE_SUCCESSOR_HOLD",
+        check_id:decision.check_id,detail:mcAdminSuccessor});
+      results.push(result);continue;
+    }
+    // END PR3780 EXACT MCADMIN SUCCESSOR ROUTE
+    // BEGIN PR3778 EXACT LOADER ROUTE
+    if (loaderSuccessor) {
+      const row = loaderSuccessor.rows?.[decision.check_id];
+      const ok = loaderSuccessor.status === "PASS" && !!row;
+      result = ok ? row : {check_id:decision.check_id,applicability:decision.status,status:"FAIL",reason_code:loaderSuccessor.reason_code,current_source:loaderSuccessor};
+      if (!ok) blockers.push({blocker_class:"EXACT_NODE20_LOADER_SOURCE_HOLD",check_id:decision.check_id,detail:loaderSuccessor});
+      results.push(result);continue;
+    }
+    // END PR3778 EXACT LOADER ROUTE
+    // BEGIN PR3779 EXACT PHYSICAL ROUTE
+    if (physicalSuccessor) {
+      const row = physicalSuccessor.rows?.[decision.check_id];
+      const ok = physicalSuccessor.status === "PASS" && !!row;
+      result = ok ? row : {check_id:decision.check_id,applicability:decision.status,status:"FAIL",reason_code:physicalSuccessor.reason_code,current_source:physicalSuccessor};
+      if (!ok) blockers.push({blocker_class:"EXACT_NODE20_PHYSICAL_SOURCE_HOLD",check_id:decision.check_id,detail:physicalSuccessor});
+      results.push(result);continue;
+    }
+    // END PR3779 EXACT PHYSICAL ROUTE
+    if (trustSubjectSuccessor) {
+      const current = decision.check_id === "CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_SOURCE_V1";
+      const ok = trustSubjectSuccessor.status === "PASS";
+      result = {check_id:decision.check_id,applicability:decision.status,
+        status:ok?(current?"PASS":"NOT_APPLICABLE"):"FAIL",
+        execution:"EXACT_TRUST_SUBJECT_SUCCESSOR_SOURCE_DELTA_ONLY",
+        reason_code:ok?(current?"TRUST_REGISTRATION_SUCCESSOR_SEPARATION_SOURCE_PASS":
+          "HISTORICAL_QUALIFICATION_NOT_REISSUED_FOR_PROVEN_TRUST_GATE_DELTA"):trustSubjectSuccessor.reason_code,
+        current_source:trustSubjectSuccessor,historical_qualification_reissued:false,
+        signatures_transferred:false,permit_issued:false,permit_consumed:false,
+        execute_authorized:false,production_authorized:false,original_six_stages_executed:0};
+      if (!ok) blockers.push({blocker_class:"TRUST_SUBJECT_SUCCESSOR_SOURCE_HOLD",check_id:decision.check_id,detail:trustSubjectSuccessor});
+      results.push(result);continue;
+    }
+    if (timingSuccessor) {
+      const current = decision.check_id === "CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_SOURCE_V1";
+      const ok = timingSuccessor.status === "PASS";
+      result = {check_id:decision.check_id,applicability:decision.status,
+        status:ok?(current?"PASS":"NOT_APPLICABLE"):"FAIL",
+        execution:"EXACT_TIMING_SUCCESSOR_SOURCE_DELTA_ONLY",
+        reason_code:ok?(current?"TIMING_BINDING_AND_EXACT_SOURCE_NEGATIVES_PASS":
+          "HISTORICAL_QUALIFICATION_NOT_REISSUED_FOR_PROVEN_TIMING_DELTA"):timingSuccessor.reason_code,
+        current_source:timingSuccessor,historical_qualification_reissued:false,
+        signatures_transferred:false,permit_issued:false,permit_consumed:false,
+        execute_authorized:false,production_authorized:false,original_six_stages_executed:0};
+      if (!ok) blockers.push({blocker_class:"TIMING_SUCCESSOR_SOURCE_HOLD",check_id:decision.check_id,detail:timingSuccessor});
+      results.push(result);continue;
+    }
+
     // One exact successor only: preserve original REQUIRED/REQUALIFY
     // diagnostics while recording source-only N/A, not a scientific PASS.
     if(stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base===CASEB_BASE&&

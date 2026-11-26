@@ -3,6 +3,7 @@
 // execution-purpose signatures may reach atomic consumption and the original scheduler.
 const fs=require("node:fs"),path=require("node:path");
 const {setTimeout:delay}=require("node:timers/promises");
+const budget=require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs");
 const s=require("./MCFT_CAP09_R4285_SCOPE_V3.cjs"),c=require("../cap09_adoption_v1/contract.cjs");
 const factory=require("./MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs");
 const resource=require("../governance_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_V3.cjs");
@@ -61,6 +62,8 @@ async function acceptPreparedState(state){factory.requireReceiver(state);s.check
   inventory_observation_sha256:built.resEnv.payload.inventory_observation_sha256};
  for(const k of ["plan_sha256","observations_sha256","installed_material_digest","release_binding_sha256","scope_id","source_approval_sha256"]){
   const expected=k==="installed_material_digest"?ctx.material_digest:ctx[k];s.check(built.permitEnv.payload[k]===expected,"V3_PREPARED_PERMIT_CONTEXT_DRIFT");}
+ const revision=budget.select(built.plan,ctx.run_id);
+ if(revision===budget.SUCCESSOR){s.check(state.budgetVersion===revision.id,"V4_PREPARE_BUDGET_DRIFT");s.check(s.utc(built.permitEnv.payload.expires_at)<=s.utc(state.credential_expires_at),"V4_PERMIT_OUTLIVES_FD3");}
  admission.checkActualPermit(built.permitProof,built.permitEnv,built.resEnv,built.readback,built.observed,ctx);
  const report=await host.verifyDynamicReadOnly({preparedState:state,stable:state.stable,intent:state.intent,ctx,nativeInput:state.ni,
   sourceRoot:i.source_root,releaseRoot:i.release_root,environment:state.environment,
@@ -84,7 +87,7 @@ async function finishAtAcceptance(result,state){
  const {final,built,ctx}=bound,i=state.i;
  let steps=[],consumed;
  try{
- // Resolve only the frozen original six scripts, from this installed release.
+ // Resolve the signed budget revision's six exact scripts, from this installed release.
  steps=historical.resolveStages({input:i,profile:state.profile,permitPayload:built.permitEnv.payload,
   trust:state.trust,plan:built.plan,observed:built.observed,env:state.environment,executionRun:ctx.run_id});
  const prepared=atomic.prepare({nativeAdoption:state.adoption,permitProof:built.permitProof,
@@ -119,8 +122,58 @@ async function finishAtAcceptance(result,state){
  }finally{for(const step of steps)for(const k of Object.keys(step.env))delete step.env[k];}
 }
 function parse(argv){s.check(Array.isArray(argv)&&argv.length===3&&argv[0]==="--session-execute-test-only"&&argv[1]==="--input"&&path.isAbsolute(argv[2]),"V3_ONLY_PHYSICAL_TEST_ONLY_SESSION_ALLOWED");return argv[2];}
-async function run(argv=process.argv.slice(2)){const i=s.readJson(parse(argv));const capability=await factory.prepareExecution(i);return factory.consume(capability);}
+// Producer options are data only; no verifier, signer or callback is accepted.
+// Signed observation inputs are staged separately: completeProducer alone
+// publishes the control/inventory envelopes and native readback.
+function producerArgs(argv){
+ s.check(Array.isArray(argv)&&argv.length===5&&argv[3]==="--producer-options"&&path.isAbsolute(argv[4]),"V3_PHYSICAL_PRODUCER_OPTIONS_REQUIRED");
+ return {input_file:parse(argv.slice(0,3)),options_file:argv[4]};
+}
+function producerFiles(i,optionsFile,options){
+ s.exact(options,["existing_mc_alias","parent_access_key_id","protected_directory","control_envelope_file","inventory_envelope_file"],"V3_PRODUCER_OPTIONS");
+ const files={control_payload:options.control_envelope_file+".payload.json",inventory_payload:options.inventory_envelope_file+".payload.json",
+  control_input:options.control_envelope_file+".incoming.json",inventory_input:options.inventory_envelope_file+".incoming.json"};
+ const outputs=[options.protected_directory,options.control_envelope_file,options.inventory_envelope_file,...Object.values(files)];
+ for(const file of [optionsFile,...outputs,...[i.source_root,i.release_root,i.output_root]])s.check(typeof file==="string"&&path.isAbsolute(file),"V3_PRODUCER_CLI_ABSOLUTE_PATH");
+ const existing=Object.entries(i).filter(([key])=>key.endsWith("_file")||key==="output_root").map(([,value])=>path.resolve(value).toLowerCase());
+ s.check(new Set([...existing,path.resolve(optionsFile).toLowerCase(),...outputs.map(file=>path.resolve(file).toLowerCase())]).size===existing.length+1+outputs.length,"V3_PRODUCER_CLI_PATH_ALIAS");
+ for(const file of [optionsFile,...outputs]){
+  s.check(typeof file==="string"&&path.isAbsolute(file),"V3_PRODUCER_CLI_ABSOLUTE_PATH");
+  for(const root of [i.source_root,i.release_root,i.output_root]){const rel=path.relative(root,file);s.check(rel===".."||rel.startsWith(".."+path.sep)||path.isAbsolute(rel),"V3_PRODUCER_CLI_OUTPUT_INSIDE_RUNTIME");}
+ }
+ for(const file of outputs){c.noLinks(path.dirname(file));s.check(!fs.existsSync(file),"V3_PRODUCER_CLI_OUTPUT_EXISTS");}
+ return files;
+}
+async function run(argv=process.argv.slice(2)){
+ const args=producerArgs(argv),i=s.readJson(args.input_file),optionsRaw=s.bytes(args.options_file),options=s.wire(optionsRaw),files=producerFiles(i,args.options_file,options);
+ let capability,pending,settled,receiverError;
+ try{
+  capability=await factory.prepareExecution(i);
+  s.check(s.sha(s.bytes(args.options_file))===s.sha(optionsRaw),"V3_PRODUCER_CLI_OPTIONS_DRIFT");
+  factory.prepareProducer(capability,options);
+  pending=factory.consumeWithProducer(capability);
+  // Observe rejection immediately; source capture/signing can fail while the
+  // genuine receiver is already waiting. Never leave an unhandled receiver.
+  settled=pending.then(value=>({value}),error=>{receiverError=error;return {error};});
+  const captured=factory.captureProducer(capability);
+  const deadline=Math.min(s.utc(captured.control.observed_at),s.utc(captured.inventory.observed_at))+120000;
+  s.check(Date.now()<deadline,"V3_OWNER_WINDOW_EXHAUSTED");
+  c.writeOnce(files.control_payload,captured.control);c.writeOnce(files.inventory_payload,captured.inventory);
+  console.log(JSON.stringify({status:"V3_PHYSICAL_CLI_AWAIT_SIGNED_OBSERVATIONS",control_payload_file:files.control_payload,inventory_payload_file:files.inventory_payload,
+   control_signed_input_file:files.control_input,inventory_signed_input_file:files.inventory_input,owner_deadline_utc:new Date(deadline).toISOString(),permit_consumed:false,stage_count:0}));
+  while(!fs.existsSync(files.control_input)||!fs.existsSync(files.inventory_input)){
+   if(receiverError)throw receiverError;s.check(Date.now()<deadline,"V3_OWNER_WINDOW_EXHAUSTED");await delay(25);
+  }
+  if(receiverError)throw receiverError;s.check(Date.now()<deadline,"V3_OWNER_WINDOW_EXHAUSTED");
+  await factory.completeProducer(capability,{control:s.readJson(files.control_input),inventory:s.readJson(files.inventory_input)});
+  return await pending;
+ }catch(error){
+  if(capability){try{factory.revoke(capability);}catch{/* Preserve the first failure. */}}
+  if(settled)await settled;
+  throw error;
+ }
+}
 function safeReason(error){if(["ENOENT","EEXIST","EACCES","EPERM","ENOTDIR","EISDIR","EMFILE","ENFILE"].includes(error?.code))return "V3_IO_"+error.code;
  return /^(?:V3|R4285|OWNER|HOLD|V2|MATERIAL|INSTALLED|TOOL|NODE|UNDECLARED|SEARCH|EXECUTION|LOADER|PYTHON|CAP09|SYMLINK|INPUT)_[A-Z0-9_]+/.exec(error?.message||"")?.[0]||"V3_UNCLASSIFIED_RUNTIME_FAILURE";}
 if(require.main===module)run().then(result=>console.log(JSON.stringify(result))).catch(error=>{console.error(JSON.stringify({status:"HOLD_R4285_V3_PHYSICAL_EXECUTION_NO_RETRY",reason_code:safeReason(error),...outcome,retry_automatically:false}));process.exitCode=2;});
-module.exports={parse,run,acceptPreparedState,finishAtAcceptance,safeReason};
+module.exports={parse,producerArgs,run,acceptPreparedState,finishAtAcceptance,safeReason};

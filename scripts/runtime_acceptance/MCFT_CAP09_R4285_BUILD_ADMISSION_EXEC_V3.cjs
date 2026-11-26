@@ -17,6 +17,12 @@ const permit=require("./MCFT_CAP09_R4285_PERMIT_EXEC_V3.cjs");
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
 const RUN=executionIdentity.LEGACY;
 const EXECUTION_SOURCES=Object.freeze([
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_CONTROLLED_DELAY_V2.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_CHILD_STAGE_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_CREDENTIAL_DELIVERY_V3.cjs",
+  "scripts/runtime_acceptance/MCFT_CAP09_R4285_PREPARE_LIVE_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_EXECUTION_IDENTITY_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_ADMISSION_EXEC_V3.cjs",
   "scripts/runtime_acceptance/MCFT_CAP09_R4285_BUILD_ADMISSION_EXEC_V3.cjs",

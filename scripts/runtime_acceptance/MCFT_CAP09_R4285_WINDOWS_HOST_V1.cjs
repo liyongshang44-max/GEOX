@@ -20,6 +20,7 @@ const approval=require("./MCFT_CAP09_R4285_EXECUTION_APPROVAL_V1.cjs");
 const atomic=require("./MCFT_CAP09_R4285_PERMIT_ATOMIC_V1.cjs");
 const stages=require("./MCFT_CAP09_R4285_STAGE_CAPABILITY_V1.cjs");
 const child=require("./MCFT_CAP09_R4285_CHILD_STAGE_V1.cjs");
+const budget=require("./MCFT_CAP09_R4285_FORMAL_BUDGET_V4.cjs");
 const dispatch=require("./MCFT_CAP09_R4285_PARENT_STAGE_DISPATCH_V1.cjs");
 const scheduler=require("./MCFT_CAP09_SIX_STAGE_SCHEDULER_V1.cjs");
 const receipts=require("./MCFT_CAP09_R4285_STAGE_RECEIPTS_V1.cjs");
@@ -169,6 +170,8 @@ function resolveStages({input,profile,permitPayload,trust,plan,observed,env,exec
  const index=new Map(profile.files.map(f=>[f.path,f.sha256]));
  assert.equal(index.size,profile.files.length,"R4285_HOST_DUPLICATE_MATERIAL");
  const code=path.join(input.release_root,"scripts","runtime_acceptance");
+ const revision=executionRun===RUN?budget.LEGACY:budget.select(plan,executionRun);
+ if(executionRun===RUN)assert.notEqual(plan.stages[4].timeout_ms,budget.SUCCESSOR.timeouts[4],"V4_DELAY_ROUTE_LEGACY_FORBIDDEN");
  const baseEnv={...env,MCFT_R4285_CHILD:"1",MCFT_SUBJECT_SHA:permitPayload.subject_sha,
   MCFT_GOVERNED_RETRY_RUN_ID:executionRun,MCFT_R4285_LEDGER_ROOT:trust.ledger_root,
   MCFT_R4285_NONCE:permitPayload.nonce,MCFT_R4285_PERMIT_ENVELOPE_SHA256:"",
@@ -183,7 +186,8 @@ function resolveStages({input,profile,permitPayload,trust,plan,observed,env,exec
   MCFT_TIMING_JOB_START_SETUP_MS:"0",MCFT_TIMING_LOCAL_LAUNCH_AT_MS:String(Date.now()),
   MCFT_GOVERNED_RETRY_DELAY_TIMEOUT_MS:String(plan.stages[4].timeout_ms)};
  return scheduler.STAGES.map((id,i)=>{
-  const script=path.join(code,child.SCRIPT[id]),rel="scripts/runtime_acceptance/"+child.SCRIPT[id];
+  const name=id==="CONTROLLED_DELAY"?revision.delayScript:child.SCRIPT[id];
+  const script=path.join(code,name),rel="scripts/runtime_acceptance/"+name;
   assert.equal(path.resolve(script),script);
   assert.equal(sha(fileBytes(script)),index.get(rel),"R4285_HOST_UNSIGNED_STAGE_SOURCE:"+id);
   const args=script.endsWith(".cjs")?[script]:["--import","tsx",script];
