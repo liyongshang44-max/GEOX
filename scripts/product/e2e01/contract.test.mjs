@@ -72,3 +72,13 @@ test('diagnostic wrapper preserves actual port results and errors without creden
  assert.equal(events.find(x=>x.stage==='FDW_CREATE_CAPABILITY').code,'RESOURCE_ACCESS_DENIED');
  assert(!JSON.stringify(events).includes('private'));assert(!JSON.stringify(events).includes(subject));assert(!JSON.stringify(events).includes('a'.repeat(64)));
 });
+
+test('A07 evidence is exact GET only; native assessment preserves POST',()=>{
+ const r='/api/v1/manager/fields/'+field+'/crop-reviews/review-1';
+ for(const suffix of ['/scientific-result','/knowledge-evidence']){
+  assert(managerRoute('GET',r+suffix));
+  for(const method of ['POST','PUT','PATCH','DELETE','HEAD'])assert(!managerRoute(method,r+suffix));
+  for(const path of [r+suffix+'/extra',r+suffix+'?tenant_id=x',r+suffix+'%2f',r+suffix+'x',r.replace(field,'other')+suffix,r.replace('review-1','..')+suffix])assert(!managerRoute('GET',path));
+ }
+ assert(managerRoute('GET',r+'/native-assessment'));assert(managerRoute('POST',r+'/native-assessment'));
+});

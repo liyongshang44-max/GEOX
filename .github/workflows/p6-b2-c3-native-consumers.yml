@@ -34,6 +34,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @geox/server typecheck
+      - run: node --check scripts/product/e2e01/contract.mjs
       - run: node --test scripts/product/e2e01/contract.test.mjs
       - run: node scripts/product/e2e01/build-web.mjs
       - run: pnpm exec tsx --test apps/server/src/domain/agronomy/adr_review_consumer_v1.test.ts apps/server/src/domain/agronomy/adr_native_review_workflow_v1.test.ts apps/server/test/manager_historical_forecast_v1.test.ts
