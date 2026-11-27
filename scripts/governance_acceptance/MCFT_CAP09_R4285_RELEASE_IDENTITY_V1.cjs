@@ -25,23 +25,41 @@ function checkCurrent(repo,branch,ruleset,policy){
  assert(branch?.name==='main'&&branch.protected===true&&H.test(branch.commit?.sha),'RELEASE_PROTECTED_MAIN_UNAVAILABLE');
  checkRuleset(ruleset,policy.ruleset);return branch.commit.sha;
 }
+function freezeDelta(rows){return Object.freeze(rows.map(row=>Object.freeze({...row,before:row.before===null?null:Object.freeze({...row.before}),after:row.after===null?null:Object.freeze({...row.after})})));}
+function verifyReviewEvidence(evidence,claimedDigest,proof){
+ exact(evidence,['schema_version','assessments'],'RELEASE_REVIEW_EVIDENCE_FIELDS');
+ assert.equal(evidence.schema_version,'MCFT_CAP09_R4285_NONINTERFERENCE_EVIDENCE_V1','RELEASE_REVIEW_EVIDENCE_SCHEMA');
+ assert(Array.isArray(proof.delta_rows)&&proof.delta_rows.length>0&&proof.review_required===true&&proof.delta_count===proof.delta_rows.length,'RELEASE_REVIEW_DELTA_REQUIRED');
+ assert.equal(digest(proof.delta_rows),proof.binding.delta_sha256,'RELEASE_REVIEW_DELTA_DRIFT');
+ assert.equal(digest(evidence),claimedDigest,'RELEASE_REVIEW_EVIDENCE_DIGEST');
+ assert(Array.isArray(evidence.assessments)&&evidence.assessments.length===proof.delta_rows.length,'RELEASE_REVIEW_COVERAGE');
+ for(const [i,a] of evidence.assessments.entries()){
+  exact(a,['delta_row_sha256','decision','basis'],'RELEASE_REVIEW_ASSESSMENT_FIELDS');
+  assert.equal(a.delta_row_sha256,digest(proof.delta_rows[i]),'RELEASE_REVIEW_ROW_BINDING');
+  assert.equal(a.decision,'NO_EXECUTION_DEPENDENCY_OR_EXTERNAL_EFFECT','RELEASE_REVIEW_ROW_DECISION');
+  assert(typeof a.basis==='string'&&a.basis.trim()===a.basis&&a.basis.length>0&&a.basis.length<=512&&!/[\x00-\x1f\x7f]/.test(a.basis),'RELEASE_REVIEW_BASIS');
+ }
+ return true;
+}
 function corridor({root,subject,main,policy,policySha}){
  assert(H.test(subject)&&H.test(main)&&S.test(policySha),'RELEASE_IDENTITY_FIELDS');
  assert(Array.isArray(policy.revoked_subjects)&&policy.revoked_subjects.every(x=>H.test(x))&&!policy.revoked_subjects.includes(subject),'RELEASE_REVOKED_OR_INVALID_POLICY');
  const result=audit.inspect(root,subject,main,policy.protected_paths);
  assert.equal(result.relevant.length,0,'RELEASE_RELEVANT_CHANGE');
  const binding=Object.freeze({subject_sha:subject,observed_main_sha:main,dependency_policy_sha256:policySha,delta_sha256:digest(result.unreviewed)});
- return Object.freeze({binding,review_required:result.unreviewed.length>0,delta_count:result.unreviewed.length,first_parent_hops:result.first_parent_hops,execution_authorized:false,permit_authorized:false});
+ return Object.freeze({binding,delta_rows:freezeDelta(result.unreviewed),review_required:result.unreviewed.length>0,delta_count:result.unreviewed.length,first_parent_hops:result.first_parent_hops,execution_authorized:false,permit_authorized:false});
 }
-function inspectOwnerReview(reply,id,binding,now=Date.now()){
+function inspectOwnerReview(reply,id,proof,now=Date.now()){
+ const binding=proof.binding;
  assert(Number.isSafeInteger(id)&&id>0&&reply?.id===id&&reply.url===API+'/issues/comments/'+id&&reply.issue_url===API+'/issues/'+AUTHORITY_PR,'RELEASE_IMPACT_NATIVE_COMMENT_ID');
  assert(reply.user?.login===OWNER&&reply.author_association==='OWNER'&&reply.created_at===reply.updated_at&&Number.isFinite(Date.parse(reply.created_at))&&Date.parse(reply.created_at)<=now,'RELEASE_IMPACT_NATIVE_OWNER');
- assert(typeof reply.body==='string'&&Buffer.byteLength(reply.body)<=8192,'RELEASE_IMPACT_BODY');
+ assert(typeof reply.body==='string'&&Buffer.byteLength(reply.body)<=60000,'RELEASE_IMPACT_BODY');
  const p=JSON.parse(reply.body);assert.equal(reply.body,audit.canonical(p),'RELEASE_IMPACT_NONCANONICAL');
- exact(p,['schema_version','subject_sha','observed_main_sha','dependency_policy_sha256','delta_sha256','review_evidence_sha256','decision','execution_authorized','permit_authorized'],'RELEASE_IMPACT_FIELDS');
+ exact(p,['schema_version','subject_sha','observed_main_sha','dependency_policy_sha256','delta_sha256','review_evidence_sha256','review_evidence','decision','execution_authorized','permit_authorized'],'RELEASE_IMPACT_FIELDS');
  assert.equal(p.schema_version,'MCFT_CAP09_R4285_RELEASE_NONINTERFERENCE_V1');
  for(const k of Object.keys(binding))assert.equal(p[k],binding[k],'RELEASE_IMPACT_BINDING:'+k);
  assert(S.test(p.review_evidence_sha256)&&p.decision==='ACCEPT_EXACT_DELTA_NO_EXECUTION_DEPENDENCY_OR_EXTERNAL_EFFECT'&&p.execution_authorized===false&&p.permit_authorized===false,'RELEASE_IMPACT_DECISION');
+ verifyReviewEvidence(p.review_evidence,p.review_evidence_sha256,proof);
  return sha(Buffer.from(reply.body));
 }
 function git(root,...args){return cp.execFileSync('git',['--no-replace-objects','-C',root,...args],{encoding:'buffer',timeout:20000,maxBuffer:64*1024*1024,windowsHide:true});}
@@ -79,7 +97,7 @@ function prepare({source_root,subject_sha,impact_review_comment_id=null}){
  nativeOnly();const {policy,sha256}=readPolicy(source_root,subject_sha),main=nativeCurrent(policy);
  const proof=corridor({root:source_root,subject:subject_sha,main,policy,policySha:sha256});
  if(proof.review_required)assert(Number.isSafeInteger(impact_review_comment_id)&&impact_review_comment_id>0,'RELEASE_IMPACT_REVIEW_REQUIRED');
- const review=proof.review_required?inspectOwnerReview(get('/issues/comments/'+impact_review_comment_id),impact_review_comment_id,proof.binding):null;
+ const review=proof.review_required?inspectOwnerReview(get('/issues/comments/'+impact_review_comment_id),impact_review_comment_id,proof):null;
  if(!proof.review_required)assert.equal(impact_review_comment_id,null,'RELEASE_UNNECESSARY_REVIEW');
  const tip=get('/branches/main');assert(tip.name==='main'&&tip.protected===true&&tip.commit?.sha===main,'RELEASE_MAIN_CHANGED_DURING_REVIEW');
  live.set(proof,{root:source_root,subject:subject_sha,policySha:sha256,main,id:impact_review_comment_id,review});return proof;
@@ -88,7 +106,7 @@ function requireCurrent(proof,root,subject){
  nativeOnly();const p=live.get(proof);assert(p&&p.root===root&&p.subject===subject,'RELEASE_LIVE_IDENTITY_REQUIRED');
  const {policy,sha256}=readPolicy(root,subject);assert.equal(sha256,p.policySha,'RELEASE_POLICY_DRIFT');
  assert.equal(nativeCurrent(policy),p.main,'RELEASE_IMPACT_RECHECK_REQUIRED');
- if(p.review!==null)assert.equal(inspectOwnerReview(get('/issues/comments/'+p.id),p.id,proof.binding),p.review,'RELEASE_IMPACT_REVIEW_CHANGED');
+ if(p.review!==null)assert.equal(inspectOwnerReview(get('/issues/comments/'+p.id),p.id,proof),p.review,'RELEASE_IMPACT_REVIEW_CHANGED');
  const tip=get('/branches/main');assert(tip.protected===true&&tip.commit?.sha===p.main,'RELEASE_MAIN_CHANGED_DURING_REFRESH');return true;
 }
-module.exports={POLICY,rulesetProjection,checkRuleset,checkCurrent,checkPolicy,corridor,inspectOwnerReview,prepare,requireCurrent,isLiveIdentity:x=>live.has(x)};
+module.exports={freezeDelta,verifyReviewEvidence,POLICY,rulesetProjection,checkRuleset,checkCurrent,checkPolicy,corridor,inspectOwnerReview,prepare,requireCurrent,isLiveIdentity:x=>live.has(x)};
