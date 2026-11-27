@@ -29,7 +29,175 @@ const reviewedFiles = Object.freeze({
 const PATHS=Object.freeze([...WIRING, ...Object.keys(reviewedFiles)].sort());
 const CURRENT_V13_WORKFLOW_BLOB="fc60f5b79392f080c349f39b7c72b1115b5246dd";
 const DA9_REVIEW="DA9_SIGNED_COMPOSER_V2_PHASE3_FROZEN_RUNTIME_REVIEW_ONLY";
-const SCOPED=Object.freeze([...new Set([...require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").SCOPED,DA9_REVIEW])]);
+
+const V13_SOURCE="8db035e1b1ea67bd22614a4dc01275e70e72c564";
+const V13_WORKFLOW=".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml";
+const V13_RUN=45968221052;
+const V13_ROWS=Object.freeze({
+ V13_AUTONOMOUS_FORCING_FOUNDATION:{job:140402624535,artifact:15183069210,zip:"2ee7a9aced328238e6c87f23ee87f334aff2fc04379607294135d25e0c48358e",tests:[["MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION","REAL_POSTGRESQL_V13_AUTONOMOUS_FORCING_FOUNDATION",["forcing_base_claim_lease_fencing_verified","stale_fencing_token_rejected","post_commit_fresh_transaction_fact_readback_verified","exact_weather_et0_72_point_base_binding_verified"],["production_workflow_wiring_changed","formal_v4_mutation_performed","mcft_cap09_completed"]]]},
+ V13_HOLISTIC_SCHEMA:{job:140402624557,artifact:15184176543,zip:"0ffc93d3b067cd28fd452ffff271f2d7a95d23bf94a1fe0b6dca1c9738b8bb08",tests:[["MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES","REAL_POSTGRES_HOLISTIC_V13_SCHEMA",["canonical_facts_schema_unchanged","all_new_relations_zero_state","columns_observed_from_pg_catalog","constraints_observed_from_pg_catalog","indexes_observed_from_pg_indexes","exact_head_fingerprint_candidate_generated"],["production_workflow_effect","formal_v4_mutation_performed","mcft_cap09_completed"]]]},
+ V13_NEXT_TICK_VIABILITY:{job:140402624571,artifact:15183139072,zip:"3671bc4612a063fc62ffe2a043f29c33afe95e288fe62fe8ae51c9541cd496c2",tests:[["MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES","REAL_POSTGRES_V13_NEXT_TICK_FORCING_VIABILITY",["successor_claim_forbidden_when_next_tick_viable_false","predecessor_terminalization_immediately_adjudicates_successor","physical_attestation_before_base_required"],["canonical_tick_core_changed","production_workflow_effect","mcft_cap09_completed"]],["MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY","V13_POST_COMMIT_SUCCESSOR_ADJUDICATION_BOUNDARY",["post_commit_adjudication_failure_propagated_from_v5","post_commit_adjudication_failure_does_not_reterminalize_current_slot"],["frozen_v3_runner_modified","canonical_tick_core_changed","production_workflow_effect","mcft_cap09_completed"]]]}
+});
+const AM19="LEGACY_AM19_PERSISTENT_24T";
+const SELF="scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_ONE_TIME_CUTOVER_V1.cjs";
+const SCIENCE_ROOT="apps/server/src/external_evidence/provider/";
+const GFS_FILES=["gfs_raw_bundle_evidence_decoder_v1.ts","python/mcft_cap09_gfs_raw_bundle_decoder_v1.py","python/mcft_cap09_gfs_scientific_core_v1.py","run_scientific_python_v1.ts"].map(p=>SCIENCE_ROOT+p);
+// Accepted Windows receipt pair. Original bytes were re-read and SHA-256
+// checked outside CI; only non-sensitive exact identities are registered here.
+// CI rechecks the source lease, not a signature or a fresh Windows run.
+const GATE1=Object.freeze({
+ source:"06df6eb057e7cac43864fb5999c8310325cc12ef",base:BASE,
+ v2_sha256:"4f45e57b47a1153afc681742daa45c917f9d2f06311ae20a91d83955b49f5910",
+ addendum_sha256:"c1b1e45a83562bc83f13e2899809929941586a46984bc4f7c86d9f81effe2777",
+ status:"PASS_WINDOWS_NATIVE_SCIENCE_EQUIVALENCE_COMPOSITE",
+ retained_gfs_tar_sha256:"0cd08bd2cd6f4c92d86ab5133f1c6cd1a04c2474e63d4bbed9619f639594830c",
+ gfs_target:"2026-10-12T09:00:00.000Z",gfs_available_at:"2026-10-12T00:38:28.053Z",normalize_et0:true,
+ gfs_semantic_sha256:"f04b78e7adc88738538aea94cc89bd27350bbb288a9f8c7ef492997be414b554",
+ gfs_old_output_sha256:"4e409ff9a65e249bd52265bfb34bf35f56f3720cd2aac18c85d5a3e8a146c2e9",
+ gfs_new_output_sha256:"0d32d7c229192f14a7da5abb333745e8ddc1952b4bb052240124e8c571ccc2a0",
+ gfs_point_counts:[72,72],
+ kbs_semantic_sha256:"38e6a1654ec0e56afe923ba1bc1dbae6a305dbaaf602ea137b4691eb90809c8b",
+ python_version:"3.12.10",python_sha256:"0b471133e110cfb53a061cad528ce8e517d7b9ac41a0a396c39ad795a487fc14",
+ provider_requests:0,database_mutations:0,s3_mutations:0,permit_consumed:false,physical_stages_executed:0,
+ source_blobs:{
+  "gfs_raw_bundle_evidence_decoder_v1.ts":["345e1faf6c873a8e434166df7f90b6cf1e22af29","5e558f4f1474da89e48c2eaccfc9e63a733136b6"],
+  "https_external_evidence_transport_v1.ts":["cd83fe05c0d44908a102c53c03cb9a9cbe897afc","cd83fe05c0d44908a102c53c03cb9a9cbe897afc"],
+  "python/mcft_cap09_gfs_raw_bundle_decoder_v1.py":["beebf349630562a5de4c4c6b14ece216746c5b73","a8fc2fda2af3259e6ba8106d5e060985fdcf8832"],
+  "python/mcft_cap09_gfs_scientific_core_v1.py":["389c2d5ab1ecf985f5ba430c85a46942357649fe","389c2d5ab1ecf985f5ba430c85a46942357649fe"],
+  "run_scientific_python_v1.ts":[null,"a6b374b3e1e82e60730c268b94be4b5d87188989"],
+  "kbs_raw_hourly_live_provider_v1.ts":["4d5d14f82ba2cb5eb9f235d9b0393ee842901e89","4ace3d0b008535967bf7f4b83878d438c37386c0"],
+  "kbs_raw_hourly_publication_comparison_v1.ts":["9ee83b7c317253a459c1942d06c2f7ae2ad4fd8d","0347849d88ec743a46004947bcf82e549c7f0951"],
+  "kbs_raw_hourly_publication_snapshot_v1.ts":["26609a99b69ed175451a6fec668afb749108d348","6bae6158f7d1311b008d1fe95cf531614cae4165"],
+  "python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py":["d97c13907da782e411dbe993bb401af69869dd2c","d97c13907da782e411dbe993bb401af69869dd2c"]
+ }
+});
+function verifyGate1({git,catalog,head,headTree}){
+ assert.equal(git("merge-base",GATE1.source,head),GATE1.source,"CUTOVER_GATE1_SOURCE_ANCESTRY");
+ const a=catalog(GATE1.base),b=catalog(GATE1.source);
+ for(const [rel,[oldBlob,newBlob]] of Object.entries(GATE1.source_blobs)){
+  const p=SCIENCE_ROOT+rel;
+  assert.equal(a.get(p)??null,oldBlob?"100644 blob "+oldBlob:null,"CUTOVER_GATE1_OLD_BLOB:"+p);
+  assert.equal(b.get(p),"100644 blob "+newBlob,"CUTOVER_GATE1_NATIVE_BLOB:"+p);
+  assert.equal(headTree.get(p),b.get(p),"CUTOVER_GATE1_SUCCESSOR_BLOB:"+p);
+ }
+ assert(GFS_FILES.every(p=>Object.hasOwn(GATE1.source_blobs,p.slice(SCIENCE_ROOT.length))));
+ return {...GATE1,original_receipts_sha256_verified_at_registration:true,ci_raw_receipts_reverified:false,exact_scientific_source_projection:true,historical_producer_equivalence_claim:false};
+}
+function readZipMembers(api,id,zipDigest,names){
+ const zip=api("actions/artifacts/"+id+"/zip",true);
+ assert.equal(sha(zip),zipDigest,"CUTOVER_V13_ARTIFACT_SHA");
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-v13-proof-"));
+ try{
+  const file=path.join(dir,"proof.zip");fs.writeFileSync(file,zip);
+  const actual=cp.execFileSync("unzip",["-Z1",file],{encoding:"utf8",timeout:10000}).trim().split(/\r?\n/).sort();
+  assert.deepEqual(actual,[...names].sort(),"CUTOVER_V13_ARTIFACT_MEMBERS");
+  return Object.fromEntries(names.map(name=>{
+   assert(/^[A-Z0-9_]+\.json$/.test(name));
+   const raw=cp.execFileSync("unzip",["-p",file,name],{timeout:10000,maxBuffer:8*1024*1024});
+   return [name,{document:JSON.parse(raw.toString("utf8")),sha256:sha(raw)}];
+  }));
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+}
+function verifyV13Successor({api,git,root,planner,before,now,head,headTree,catalog,def,decision,id,previous}){
+ const n=V13_ROWS[id],resolver="V13_RUNTIME_SEMANTIC_CLOSURE";
+ assert(n&&["PASS","NOT_APPLICABLE"].includes(previous.status));
+ assert.deepEqual(def.resolver_ids,[resolver]);
+ const old=before.resolved[resolver].paths,paths=now.resolved[resolver].paths;
+ assert.equal(old.length,108,"CUTOVER_V13_HISTORICAL_COUNT");
+ assert.equal(paths.length,109,"CUTOVER_V13_CURRENT_COUNT");
+ assert.deepEqual(paths.filter(p=>!old.includes(p)),[SCIENCE_ROOT+"run_scientific_python_v1.ts"],"CUTOVER_V13_NEW_DEPENDENCY");
+ assert.deepEqual(old.filter(p=>!paths.includes(p)),[],"CUTOVER_V13_REMOVED_DEPENDENCY");
+ assert.equal(git("merge-base",V13_SOURCE,head),V13_SOURCE);
+ assert.deepEqual(git("diff","--name-only",V13_SOURCE,head).split(/\r?\n/).filter(Boolean),[SELF],"CUTOVER_V13_SUCCESSOR_DELTA");
+ const nativeTree=catalog(V13_SOURCE);
+ assert.equal(nativeTree.get(Q),headTree.get(Q));
+ assert.equal(nativeTree.get(V13_WORKFLOW),headTree.get(V13_WORKFLOW));
+ const run=api("actions/runs/"+V13_RUN);
+ assert(run.id===V13_RUN&&run.head_sha===V13_SOURCE&&run.run_attempt===1&&run.event==="pull_request"&&run.path===V13_WORKFLOW&&run.status==="completed"&&run.conclusion==="success","CUTOVER_V13_NATIVE_RUN");
+ const jobs=api("actions/runs/"+V13_RUN+"/attempts/1/jobs?per_page=100").jobs;
+ const historical=jobs.find(j=>j.id===140401958111);
+ assert(historical?.name==="qualification-contract"&&historical.conclusion==="success");
+ for(const step of ["Verify registered qualification runs and artifact identities","Execute unchanged Frozen V13 acceptance in its original qualified source"])
+  assert(historical.steps.some(s=>s.name===step&&s.conclusion==="success"),"CUTOVER_V13_HISTORICAL_CONTRACT_STEP:"+step);
+ const job=jobs.find(j=>j.id===n.job);
+ assert(job?.name==="R4285 current "+id&&job.conclusion==="success","CUTOVER_V13_NATIVE_JOB");
+ for(const step of ["Reject production credentials and prove isolated exact source","Install exact dependencies","Run current exact-source isolated V13 acceptance","Bind current V13 native results to exact dependency projection","Run actions/upload-artifact@v4"])
+  assert(job.steps.some(s=>s.name===step&&s.conclusion==="success"),"CUTOVER_V13_NATIVE_STEP:"+step);
+ const art=api("actions/artifacts/"+n.artifact);
+ assert(art.id===n.artifact&&!art.expired&&art.digest==="sha256:"+n.zip&&art.name==="r4285-current-v13-"+id+"-"+V13_SOURCE&&art.workflow_run.id===V13_RUN&&art.workflow_run.head_sha===V13_SOURCE,"CUTOVER_V13_ARTIFACT");
+ assert(Date.parse(job.started_at)<=Date.parse(art.created_at)&&Date.parse(art.created_at)<=Date.parse(job.completed_at),"CUTOVER_V13_ARTIFACT_TIME");
+ const proofName="R4285_CURRENT_V13_"+id+".json";
+ const names=n.tests.map(t=>t[0]+"_RESULT.json");
+ const docs=readZipMembers(api,n.artifact,n.zip,[proofName,...names]),d=docs[proofName].document;
+ assert(d.schema_version==="MCFT_CAP09_R4285_CURRENT_V13_ISOLATED_V1"&&d.status==="PASS"&&d.check_id===id&&d.subject_sha===V13_SOURCE&&d.base_sha===BASE&&d.dependency_digest===decision.dependency_digest&&d.dependency_count===109&&d.actual_isolated_postgres_tests_executed===true&&d.historical_frozen_zero_drift_claim===false&&d.historical_qualification_reissued===false&&d.production_authorized===false&&d.permit_consumed===false&&d.formal_six_stages===0,"CUTOVER_V13_MACHINE_BINDING");
+ const testClosure=planner.buildImportClosure(root,n.tests.map(t=>"scripts/runtime_acceptance/ACCEPTANCE_"+t[0]+".ts"));
+ assert.deepEqual(testClosure.missing,[]);
+ const projection=[...new Set([...paths,...testClosure.paths,SCIENCE_ROOT+"python/mcft_cap09_gfs_raw_bundle_decoder_v1.py",SCIENCE_ROOT+"python/mcft_cap09_gfs_scientific_core_v1.py",SCIENCE_ROOT+"python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py",V13_WORKFLOW,"pnpm-lock.yaml","package.json","apps/server/package.json"])].sort().map(p=>{
+  assert(nativeTree.has(p)&&nativeTree.get(p)===headTree.get(p),"CUTOVER_V13_PROJECTION_DRIFT:"+p);
+  return [p,headTree.get(p)];
+ });
+ assert.deepEqual(d.projection,projection,"CUTOVER_V13_COMPLETE_PROJECTION");
+ assert.equal(d.projection_sha256,sha(Buffer.from(JSON.stringify(projection))));
+ const receipts=n.tests.map(([stem,mode,pos,neg])=>{
+  const name=stem+"_RESULT.json",a=docs[name],m=a.document;
+  assert.equal(m.status,"PASS");assert.equal(m.acceptance_mode,mode);
+  for(const k of pos)assert.equal(m[k],true,k);
+  for(const k of neg)assert.equal(m[k],false,k);
+  return {name,sha256:a.sha256};
+ });
+ assert.deepEqual(d.native_receipts,receipts,"CUTOVER_V13_RECEIPT_DIGEST");
+ return {historical_subject:C6D,historical_dependency_count:108,historical_qcp_run:PRIOR.qcp,native_source_subject:V13_SOURCE,native_run:V13_RUN,native_job:n.job,native_artifact:n.artifact,native_zip_sha256:n.zip,native_receipt_sha256:docs[proofName].sha256,machine_receipts:receipts,current_dependency_count:109,dependency_projection_sha256:d.projection_sha256,native_source_projection_exact:true,historical_frozen_zero_drift_claim:false,historical_qualification_reissued:false};
+}
+function verifyAm19Successor({git,catalog,head,headTree,planner,root,partition,previous}){
+ assert.equal(previous.status,"PASS");
+ assert.equal(previous.reason_code,"AM19_T0_VERIFIED_DELIVERY_GRADUATION_CARRY_FORWARD_VALID");
+ const prior=previous.t0_graduation_carry_forward;
+ assert(prior?.status==="PASS"&&prior.evidence_id==="MCFT_CAP09_AM19_HISTORICAL_LOGICAL_SUCCESSOR_VERIFIED_DELIVERY_4EE4989F_V1"&&prior.subject_sha==="4ee4989fc4f40cc52a3819be282c1d192b58a9b2"&&prior.dependency_digest==="sha256:2ec59117bc25b8848fed8acaeccfe0f20a20fcc0db87ecb7258722bc320263f0"&&prior.t0_closure_subject_sha==="18fa562804124f69f5a64f0fa549bdf69c656ea3","CUTOVER_AM19_PRIOR_NATIVE_DELIVERY");
+ assert(prior.checks?.registration_13_of_13===true&&prior.checks?.registration_verifier_1_pass===true&&prior.checks?.registration_verifier_2_pass===true&&prior.checks?.post_t0_complete_check_surface_preserved===true&&Object.values(prior.checks).every(x=>x===true),"CUTOVER_AM19_PRIOR_CHECKS");
+ const t0=prior.t0_closure_subject_sha,old=catalog(t0);
+ const persistent=partition.controlled_persistent_partition,rehydration=partition.current_ordinary_rehydration_partition;
+ assert.equal(persistent.historical_count,90);assert.equal(persistent.current_count,90);
+ for(const k of ["missing_historical","missing_current","added","removed","changed"])assert.deepEqual(persistent[k],[],"CUTOVER_AM19_PERSISTENT_PARTITION:"+k);
+ for(const k of ["missing_historical","missing_current","added","removed"])assert.deepEqual(rehydration[k],[],"CUTOVER_AM19_REHYDRATION_PARTITION:"+k);
+ assert.equal(rehydration.current_count,25);
+ assert.deepEqual([...rehydration.changed].sort(),[...GFS_FILES].sort(),"CUTOVER_AM19_SCIENCE_CHANGE_SCOPE");
+ assert.deepEqual([...partition.full_qcp_changed].sort(),[SCIENCE_ROOT+"gfs_raw_bundle_evidence_decoder_v1.ts",SCIENCE_ROOT+"run_scientific_python_v1.ts"].sort());
+ assert.deepEqual(partition.historical_control_changed,[]);
+ const contractPath="scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1.json",c=JSON.parse(git("show",head+":"+contractPath));
+ const sourceRunner="scripts/qualification/RUN_GEOX_AM19_PERSISTENT_24T_QUALIFICATION_V1.cjs";
+ const core="scripts/qualification/qualification_core_v1.cjs",inner="scripts/qualification/PROVISION_MCFT_CAP09_AM19_RUN_SCOPED_DATABASES_INNER_V1.cjs";
+ for(const p of [sourceRunner,core,inner,c.rehydration_provider_helper_ref,c.rehydration_ea4_dependency_ref])assert(old.has(p)&&old.get(p)===headTree.get(p),"CUTOVER_AM19_ADDITIONAL_CONTROL_DRIFT:"+p);
+ const lastAccepted=catalog(C6D);
+ for(const p of ["pnpm-lock.yaml","package.json","apps/server/package.json"])assert(lastAccepted.has(p)&&lastAccepted.get(p)===headTree.get(p),"CUTOVER_AM19_PACKAGE_DRIFT:"+p);
+ const producer=c.historical_producer_subject_sha,bridgeSubject="f1c43c5c7379748c5609184cd8acc86ff9b1608e";
+ const pt=catalog(producer),bt=catalog(bridgeSubject);
+ const entries=[[c.rehydration_source_ref,c.rehydration_source_blob_sha],[c.rehydration_provider_helper_ref,c.rehydration_provider_helper_blob_sha],[c.rehydration_ea4_dependency_ref,c.rehydration_ea4_dependency_blob_sha]];
+ for(const [p,b] of entries)assert.equal(pt.get(p),"100644 blob "+b,"CUTOVER_AM19_PRODUCER_BLOB:"+p);
+ for(const [p,b] of entries.slice(1))assert.equal(bt.get(p),"100644 blob "+b,"CUTOVER_AM19_BRIDGE_AUTHORITY_BLOB:"+p);
+ const source=(ref,p)=>git("show",ref+":"+p);
+ function includes(s,needles){for(const n of needles)assert(s.includes(n),"CUTOVER_AM19_EXECUTION_EDGE:"+n);}
+ const outer=source(head,c.qualification_runner_ref),runner=source(head,sourceRunner),adapter=source(head,c.rehydration_ref),bridge=source(head,c.rehydration_host_compatibility_bridge_ref);
+ includes(outer,["const SOURCE_PATH = '"+sourceRunner+"'","buildGeneratedRunner(repoRoot, generatedPath)","spawnSync(process.execPath, childArgs","'--contract', path.relative(repoRoot, contractPath)","'--subject', subject"]);
+ includes(runner,["['exec', 'tsx', contract.rehydration_ref, 'run']","['exec', 'tsx', contract.controlled_adapter_ref, 'run']","['exec', 'tsx', contract.persistence_free_ref]","cwd: workspaceDir","['worktree', 'add', '--detach', workspaceDir, subjectSha]"]);
+ includes(adapter,['const PRODUCER_SHA = "'+producer+'"','["worktree", "add", "--detach", "--force", worktree, PRODUCER_SHA]','generatedText = exactReplace(generatedText, SOURCE_PROVIDER_BINDING, BRIDGE_PROVIDER_BINDING','cwd: ws.worktree','executeHistoricalSource(ws, d, "run")','materializeBridge(repoRoot, worktree)']);
+ includes(bridge,["const HISTORICAL_COMMIT = '"+bridgeSubject+"'","const HELPER_BLOB = '"+c.rehydration_provider_helper_blob_sha+"'","const EA4_BLOB = '"+c.rehydration_ea4_dependency_blob_sha+"'","QMIG_V5_BRIDGE_HELPER_EA4_REBIND_CARDINALITY","QUALIFICATION_LOCAL_FILE_HANDLE_IO_ONLY"]);
+ const producerSource=source(producer,c.rehydration_source_ref),helper=source(producer,c.rehydration_provider_helper_ref);
+ includes(producerSource,['const PROVIDER_SCRIPT = path.resolve("'+c.rehydration_provider_helper_ref+'");','execFileAsync(PYTHON, [PROVIDER_SCRIPT, "decode-gfs-v2"','decoder: new PythonGfsRawBundleDecoderV2(']);
+ includes(helper,['EA4_PATH = ROOT / "'+c.rehydration_ea4_dependency_ref+'"','SPEC.loader.exec_module(ea4)','("decode-gfs-v2", True)','decode_gfs.set_defaults(handler=command_decode_gfs','ea4.decode_pgrb2(']);
+ assert(!producerSource.includes("GfsRawBundleEvidenceDecoderV1")&&!producerSource.includes("runScientificPythonV1"),"CUTOVER_AM19_CURRENT_DECODER_IN_HISTORICAL_PRODUCER");
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-am19-exact-producer-"));let added=false,producerProjection;
+ try{
+  git("worktree","add","--detach",dir,producer);added=true;
+  assert.equal(cp.execFileSync("git",["rev-parse","HEAD"],{cwd:dir,encoding:"utf8"}).trim(),producer);
+  const closure=planner.buildImportClosure(dir,[c.rehydration_source_ref]);assert.deepEqual(closure.missing,[]);
+  assert(!closure.paths.some(p=>GFS_FILES.includes(p)),"CUTOVER_AM19_PRODUCER_USES_CURRENT_GFS");
+  producerProjection=[...new Set([...closure.paths,...entries.map(x=>x[0])])].sort().map(p=>{assert(pt.has(p));return [p,pt.get(p)];});
+ }finally{if(added)git("worktree","remove","--force",dir);else fs.rmdirSync(dir);}
+ const science=verifyGate1({git,catalog,head,headTree});
+ return {historical_delivery_subject:prior.subject_sha,historical_delivery_evidence_id:prior.evidence_id,historical_delivery_dependency_digest:prior.dependency_digest,historical_qcp_run:PRIOR.qcp,historical_13_of_13_verified:true,controlled_persistent_partition:persistent,current_ordinary_rehydration_partition:rehydration,historical_producer_subject:producer,historical_producer_projection_count:producerProjection.length,historical_producer_projection_sha256:sha(Buffer.from(JSON.stringify(producerProjection))),historical_bridge_subject:bridgeSubject,historical_producer_actual_python_entry:"decode-gfs-v2 -> command_decode_gfs -> pinned EA4",historical_rehydration_execution:"DETACHED_PINNED_PRODUCER_WORKTREE_PLUS_EXISTING_FILE_HANDLE_BRIDGE",current_ordinary_rehydration_in_historical_execution:false,gate1_scientific_equivalence:science,current_source_persistent_24t_executed:false,historical_qualification_reissued:false,current_crop_admission:false};
+}
+
+const SCOPED=Object.freeze([...new Set([...require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").SCOPED,DA9_REVIEW,...Object.keys(V13_ROWS),AM19])]);
 // Fresh native execution evidence for the reviewed isolation candidate. The
 // final control-plane successor must prove the exact same dependency bytes;
 // neither the older historical digest nor an unrelated workflow is accepted.
@@ -217,6 +385,16 @@ function verify({ROOT:root,args,authority,plan,changed,stage}){
    assert(def&&decision&&previous&&["PASS","NOT_APPLICABLE"].includes(previous.status),"CUTOVER_PRIOR_ROW:"+id);
    const deps=[...new Set(def.resolver_ids.flatMap(r=>now.resolved[r].paths))].sort();
    const changedRuntime = [...new Set(def.resolver_ids.flatMap(r=>changedResolvers.get(r) || []))].sort();
+   if(Object.hasOwn(V13_ROWS,id)){
+    const proof=verifyV13Successor({api,git,root,planner,before,now,head:args.head,headTree,catalog,def,decision,id,previous});
+    rows[id]={check_id:id,applicability:decision.status,status:"PASS",reason_code:"CURRENT_V13_NATIVE_ISOLATED_109_EXACT_SUCCESSOR_HISTORICAL_108_PRESERVED",source_base:BASE,source_head:args.head,dependency_digest:decision.dependency_digest,...proof,signatures_transferred:false,permit_consumed:false,host_started:false,formal_six_stages:0};
+    continue;
+   }
+   if(id===AM19){
+    const proof=verifyAm19Successor({git,catalog,head:args.head,headTree,planner,root,partition:am19Partition,previous});
+    rows[id]={check_id:id,applicability:decision.status,status:"PASS",reason_code:"AM19_HISTORICAL_DELIVERY_UNCHANGED_PERSISTENT_EXECUTION_PLUS_CURRENT_SCIENCE_EQUIVALENCE",source_base:BASE,source_head:args.head,dependency_digest:decision.dependency_digest,...proof,signatures_transferred:false,permit_consumed:false,host_started:false,formal_six_stages:0};
+    continue;
+   }
    if(Object.hasOwn(NATIVE_ROWS,id)){
     const proof=verifyNativeArtifact({api,git,root,def,id,native:nativeTree,head:args.head,now,headTree});
     rows[id]={check_id:id,applicability:decision.status,status:"PASS",reason_code:"CURRENT_ISOLATION_SOURCE_NATIVE_PROOF_EXACT_DEPENDENCY_SUCCESSOR",source_base:BASE,source_head:args.head,dependency_digest:decision.dependency_digest,...proof,historical_qualification_reissued:false,signatures_transferred:false,permit_consumed:false,host_started:false,formal_six_stages:0};
@@ -250,6 +428,12 @@ function verify({ROOT:root,args,authority,plan,changed,stage}){
     qualification_wiring_delta:deps.filter(p=>WIRING.has(p)&&c6.get(p)!==headTree.get(p)),
     tests:AFFECTED.has(id)?tests:[],historical_qualification_reissued:false,signatures_transferred:false,permit_consumed:false,host_started:false,formal_six_stages:0};
   }
+  // A V13 successor is never a replacement for the separate historical DA9
+  // review. AM19 also requires current native GFS/Phase3 integration evidence.
+  assert(rows[DA9_REVIEW]?.status==="PASS"&&rows[DA9_REVIEW].historical_review?.old_frozen_gate_still_fails===true,"CUTOVER_V13_HISTORICAL_REVIEW_REQUIRED");
+  assert(Object.keys(V13_ROWS).every(id=>rows[id]?.status==="PASS"),"CUTOVER_V13_ALL_THREE_REQUIRED");
+  assert(rows[AM19]?.status==="PASS"&&rows.PHASE3_EVIDENCE_RUNTIME_FOUNDATION?.status==="PASS"&&rows.PHASE3_EVIDENCE_RUNTIME_FOUNDATION.native_source_projection_exact===true,"CUTOVER_AM19_CURRENT_NATIVE_GFS_INTEGRATION_REQUIRED");
+  rows[AM19].current_native_gfs_integration_artifact=rows.PHASE3_EVIDENCE_RUNTIME_FOUNDATION.native_artifact;
   sameMain();assert.equal(git("diff","--name-only"),"");assert.equal(git("diff","--cached","--name-only"),"");
   return {status:"PASS",rows,native_checks:nativeChecks,am19_partition_review:am19Partition,source_head_sha:args.head,base_sha:BASE,source_only:true,physical_stages:0};
  }catch(e){return {status:"FAIL",reason_code:"HOLD_ONE_TIME_R4285_EXACT_SOURCE",detail:String(e.message||e).slice(0,2000),am19_partition_review:am19Partition,permit_consumed:false,physical_stages:0};}
