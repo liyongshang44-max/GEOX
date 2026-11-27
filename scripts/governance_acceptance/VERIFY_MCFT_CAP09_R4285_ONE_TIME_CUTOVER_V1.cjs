@@ -27,7 +27,7 @@ const reviewedFiles = Object.freeze({
   "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs": "100644 blob 167c3e51ac0fd02164ba7b0006174a506f1c3940"
 });
 const PATHS=Object.freeze([...WIRING, ...Object.keys(reviewedFiles)].sort());
-const CURRENT_V13_WORKFLOW_BLOB="d5a628cb921a746b3d95859d486040af6ef9cd1c";
+const CURRENT_V13_WORKFLOW_BLOB="fc60f5b79392f080c349f39b7c72b1115b5246dd";
 const DA9_REVIEW="DA9_SIGNED_COMPOSER_V2_PHASE3_FROZEN_RUNTIME_REVIEW_ONLY";
 const SCOPED=Object.freeze([...new Set([...require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").SCOPED,DA9_REVIEW])]);
 // Fresh native execution evidence for the reviewed isolation candidate. The
@@ -93,7 +93,39 @@ function verifyNativeArtifact({api,git,root,def,id,native,head,now,headTree}){
 }
 const AFFECTED=new Set(["CAP09_R4285_HOST_EXACT_SOURCE_ADMISSION_V1","CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1",CURRENT]);
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
+
+function auditAm19SourcePartition({root,head,git,catalog,planner,now,headTree}){
+ const t0="18fa562804124f69f5a64f0fa549bdf69c656ea3",contractPath="scripts/qualification/contracts/MCFT_CAP09_AM19_PERSISTENT_24T_HISTORICAL_LOGICAL_V1.json";
+ const historic=catalog(t0),contract=JSON.parse(git("show",t0+":"+contractPath)),current=JSON.parse(git("show",head+":"+contractPath));
+ assert.deepEqual(current,contract,"CUTOVER_AM19_HISTORICAL_CONTRACT_CHANGED");
+ assert.equal(contract.github_actions_execution,"FORBIDDEN");
+ assert.equal(contract.historical_producer_subject_sha,"91d2f518efc5c4c7796c398dabd12801949a9289");
+ const controlled=[contract.historical_runner_ref,contract.controlled_adapter_ref,contract.persistence_free_ref];
+ const original=[contract.rehydration_source_ref];
+ const historicalControl=[contractPath,contract.rehydration_ref,contract.historical_logical_epoch_descriptor_ref,contract.rehydration_host_compatibility_bridge_ref,contract.qualification_runner_ref,contract.database_provisioner_ref,contract.successor_profile_ref,contract.reconciliation_verifier_ref,contract.successor_preflight_ref,contract.design_reconciliation_binding_ref,contract.crop_preflight_ref,contract.historical_crop_preflight_source_ref].filter(Boolean);
+ const scientific=["apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py","apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py","apps/server/src/external_evidence/provider/run_scientific_python_v1.ts"];
+ const oldRoot=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-am19-partition-"));
+ let added=false;
+ const compare=(a,b,extra=[])=>{
+  const ap=[...new Set([...a.paths,...extra])].sort(),bp=[...new Set([...b.paths,...extra])].sort();
+  const projection=bp.map(p=>[p,headTree.get(p)??null]);
+  return {historical_count:ap.length,current_count:bp.length,missing_historical:a.missing,missing_current:b.missing,added:bp.filter(p=>!ap.includes(p)),removed:ap.filter(p=>!bp.includes(p)),changed:bp.filter(p=>historic.get(p)!==headTree.get(p)),current_projection_sha256:sha(Buffer.from(JSON.stringify(projection)))};
+ };
+ try{
+  git("worktree","add","--detach",oldRoot,t0);added=true;
+  assert.equal(cp.execFileSync("git",["rev-parse","HEAD"],{cwd:oldRoot,encoding:"utf8"}).trim(),t0);
+  const control=compare(planner.buildImportClosure(oldRoot,controlled),planner.buildImportClosure(root,controlled));
+  const rehydration=compare(planner.buildImportClosure(oldRoot,original),planner.buildImportClosure(root,original),scientific);
+  const historicalControlChanged=historicalControl.filter(p=>!historic.has(p)||historic.get(p)!==headTree.get(p));
+  const full=now.resolved.LEGACY_AM19_PERSISTENT_24T.paths;
+  const producerTree=catalog(contract.historical_producer_subject_sha);
+  const producerRefs=[contract.rehydration_source_ref,contract.rehydration_provider_helper_ref,contract.rehydration_ea4_dependency_ref,"apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts","apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py"];
+  return {status:"DEPENDENCY_PARTITION_REVIEW_ONLY",historical_t0_subject:t0,current_subject:head,controlled_persistent_partition:control,current_ordinary_rehydration_partition:rehydration,full_qcp_changed:full.filter(p=>historic.get(p)!==headTree.get(p)),historical_control_changed:historicalControlChanged,historical_producer_subject:contract.historical_producer_subject_sha,historical_producer_source_entries:producerRefs.map(p=>[p,producerTree.get(p)??null]),historical_rehydration_execution:"DETACHED_PINNED_PRODUCER_WORKTREE",github_historical_execution_authorized:false,current_source_persistent_24t_executed:false,qualification_pass:false};
+ }finally{if(added)git("worktree","remove","--force",oldRoot);else fs.rmdirSync(oldRoot);}
+}
+
 function verify({ROOT:root,args,authority,plan,changed,stage}){
+ let am19Partition=null;
  const git=(...a)=>cp.execFileSync("git",a,{cwd:root,encoding:"utf8",timeout:60000,maxBuffer:32*1024*1024}).trim();
  const bytes=(ref,p)=>cp.execFileSync("git",["show",ref+":"+p],{cwd:root,timeout:60000,maxBuffer:32*1024*1024});
  const api=(p,binary=false)=>{const b=cp.execFileSync("gh",["api","repos/"+REPO+"/"+p],{cwd:root,timeout:90000,maxBuffer:32*1024*1024});return binary?b:JSON.parse(b);};
@@ -164,6 +196,8 @@ function verify({ROOT:root,args,authority,plan,changed,stage}){
     if(!WIRING.has(p) && !Object.hasOwn(reviewedFiles,p))assert.equal(c6.get(p),headTree.get(p),"CUTOVER_EXECUTION_DEPENDENCY_CHANGED:"+p);
    }
   }
+  am19Partition=auditAm19SourcePartition({root,head:args.head,git,catalog,planner,now,headTree});
+  console.log("R4285_AM19_PARTITION_REVIEW="+JSON.stringify(am19Partition));
   const nativeJob=api("actions/runs/"+process.env.GITHUB_RUN_ID+"/jobs?per_page=100").jobs.find(x=>x.name==="applicability-and-blocker-inventory");
   for(const n of ["Prove central applicability semantics","Prove generation, durable-anchor, and dependency-digest semantics","Resolve immutable qualification evidence references","Attest exact QCP source identity after historical diagnostics"])
    assert(nativeJob?.steps.some(s=>s.name===n&&s.conclusion==="success"),"CUTOVER_CONTROL_STEP:"+n);
@@ -217,7 +251,7 @@ function verify({ROOT:root,args,authority,plan,changed,stage}){
     tests:AFFECTED.has(id)?tests:[],historical_qualification_reissued:false,signatures_transferred:false,permit_consumed:false,host_started:false,formal_six_stages:0};
   }
   sameMain();assert.equal(git("diff","--name-only"),"");assert.equal(git("diff","--cached","--name-only"),"");
-  return {status:"PASS",rows,native_checks:nativeChecks,source_head_sha:args.head,base_sha:BASE,source_only:true,physical_stages:0};
- }catch(e){return {status:"FAIL",reason_code:"HOLD_ONE_TIME_R4285_EXACT_SOURCE",detail:String(e.message||e).slice(0,2000),permit_consumed:false,physical_stages:0};}
+  return {status:"PASS",rows,native_checks:nativeChecks,am19_partition_review:am19Partition,source_head_sha:args.head,base_sha:BASE,source_only:true,physical_stages:0};
+ }catch(e){return {status:"FAIL",reason_code:"HOLD_ONE_TIME_R4285_EXACT_SOURCE",detail:String(e.message||e).slice(0,2000),am19_partition_review:am19Partition,permit_consumed:false,physical_stages:0};}
 }
 module.exports={BASE,BRANCH,SCOPED,PATHS,verify};

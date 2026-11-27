@@ -333,7 +333,7 @@ jobs:
           assert.equal(git('rev-parse','HEAD'),head);assert.equal(git('merge-base',base,head),base);
           assert.equal(git('diff','--name-only'),'');assert.equal(git('diff','--cached','--name-only'),'');
           const q=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'));
-          const planner=require('./scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs');
+          const planner=require(require('node:path').resolve(process.cwd(),'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'));
           const resolver='V13_RUNTIME_SEMANTIC_CLOSURE';
           const resolved=planner.resolveDependencyResolvers(process.cwd(),{dependency_resolvers:{[resolver]:q.dependency_resolvers[resolver]}});
           assert.deepEqual(resolved.errors,[]);
