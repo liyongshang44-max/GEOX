@@ -1432,8 +1432,21 @@
     "Complete actual dynamic call-site and Python environment review; candidate paths are intentionally conservative, not a certified minimal closure.",
     "Validate actual isolated PG schema/ACL and external product writer noninterference, without new provisioning.",
     "Bind exact Owner impact evidence contents and integrate common live identity into current active callers only.",
-    "Measure native refresh latency/API budget and preserve all original 120/15-second checks; do not enable before exact successor QCP/CI."
+    "Measure native refresh latency/API budget and preserve all original 120/15-second checks; do not enable before exact successor QCP/CI.",
+    "Machine effect rules are candidate-only, exact source anchors and structural changes for two real customer presentation surfaces; no generic product path exemption. Broader resource/writer/deployment noninterference and native incremental refresh remain HOLD."
   ],
   "execution_authorized": false,
-  "permit_authorized": false
+  "permit_authorized": false,
+  "machine_effect_rules": [
+    {
+      "rule_id": "CSS_NUMERIC_PRESENTATION_V1",
+      "path": "apps/web/src/styles/customerDashboard.css",
+      "anchor_blob": "b3cd7f427fc01d4cbb8fcc35f8486d91da8ad2ed"
+    },
+    {
+      "rule_id": "CUSTOMER_DASHBOARD_TITLE_COPY_V1",
+      "path": "apps/web/src/lib/productCopy/customerLocale.ts",
+      "anchor_blob": "333deb7a2e01a9a5af4fc5c2cac788318303c3f9"
+    }
+  ]
 }

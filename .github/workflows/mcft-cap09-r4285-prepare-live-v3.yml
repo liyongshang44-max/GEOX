@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'scripts/**/*V3*.cjs'
+      - 'scripts/governance_acceptance/*MCFT_CAP09_R4285_RELEASE_*V1*.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-R4285-RELEASE-DEPENDENCY-POLICY-V1.json'
       - 'scripts/cap09_adoption_v1/MCFT_CAP09_R4285_ADOPTION_V5_V3.cjs'
       - '.github/workflows/mcft-cap09-r4285-prepare-live-v3.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP09-R4285-PREPARE-LIVE-V3.md'
@@ -30,3 +32,6 @@ jobs:
 
       - name: Exact formal budget successor contracts (no real delay or data plane)
         run: node --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_FORMAL_BUDGET_V4.test.cjs
+
+      - name: Release identity incremental impact contracts (nonlive candidate only)
+        run: node --test scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RELEASE_IDENTITY_V1.test.cjs scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RELEASE_IMPACT_AUDIT_V1.test.cjs

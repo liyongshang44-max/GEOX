@@ -64,6 +64,122 @@ function inspectOwnerReview(reply,id,proof,now=Date.now()){
 }
 function git(root,...args){return cp.execFileSync('git',['--no-replace-objects','-C',root,...args],{encoding:'buffer',timeout:20000,maxBuffer:64*1024*1024,windowsHide:true});}
 const gitText=(root,...args)=>git(root,...args).toString('utf8').trim();
+
+// Candidate effect classes are deliberately narrow and anchored to reviewed
+// source objects. Neither a product directory nor a changed-file list proves
+// noninterference. Unrecognised edits to these exact surfaces must HOLD.
+const MACHINE_RULES=Object.freeze({
+ CSS_NUMERIC_PRESENTATION_V1:'apps/web/src/styles/customerDashboard.css',
+ CUSTOMER_DASHBOARD_TITLE_COPY_V1:'apps/web/src/lib/productCopy/customerLocale.ts'
+});
+function machineRules(root,subject,policy){
+ const rules=policy.machine_effect_rules??[];
+ assert(Array.isArray(rules)&&rules.length<=Object.keys(MACHINE_RULES).length,'RELEASE_MACHINE_RULES');
+ const byPath=new Map();
+ for(const rule of rules){
+  exact(rule,['path','rule_id','anchor_blob'],'RELEASE_MACHINE_RULE_FIELDS');
+  assert(Object.hasOwn(MACHINE_RULES,rule.rule_id)&&MACHINE_RULES[rule.rule_id]===rule.path&&H.test(rule.anchor_blob),'RELEASE_MACHINE_RULE_IDENTITY');
+  assert(!byPath.has(rule.path)&&!policy.protected_paths.includes(rule.path),'RELEASE_MACHINE_RULE_OVERLAP');
+  assert.equal(gitText(root,'ls-tree',subject,'--',rule.path),'100644 blob '+rule.anchor_blob+'\t'+rule.path,'RELEASE_MACHINE_ANCHOR_CHANGED');
+  byPath.set(rule.path,rule);
+ }
+ return byPath;
+}
+function blobText(root,oid){
+ assert(H.test(oid),'RELEASE_MACHINE_BLOB_ID');
+ const b=git(root,'cat-file','blob',oid);
+ assert(b.length>0&&b.length<=1024*1024&&!b.includes(0),'RELEASE_MACHINE_BLOB_SIZE');
+ return new TextDecoder('utf-8',{fatal:true}).decode(b);
+}
+function numericPresentation(before,after){
+ const a=before.split('\n'),b=after.split('\n');
+ if(a.length!==b.length)return false;
+ const re=/^([ \t]+(?:gap|row-gap|column-gap|margin-top|margin-bottom|padding-top|padding-bottom|font-size|border-radius): )([0-9]{1,3})px(;[ \t]*)$/;
+ let changed=0;
+ for(let i=0;i<a.length;i++)if(a[i]!==b[i]){
+  const x=re.exec(a[i]),y=re.exec(b[i]);
+  if(!x||!y||x[1]!==y[1]||x[3]!==y[3]||Number(x[2])>128||Number(y[2])>128)return false;
+  changed++;
+ }
+ return changed>0;
+}
+function dashboardTitleCopy(before,after){
+ const a=before.split('\n'),b=after.split('\n');
+ if(a.length!==b.length)return false;
+ const header='export const CUSTOMER_DASHBOARD_COPY = {';
+ const i=a.indexOf(header)+2;
+ if(i<2||a.indexOf(header)!==a.lastIndexOf(header)||a[i-2]!==header)return false;
+ const re=/^  title: \{ zh: "([\p{L}\p{N}\p{M}\p{Zs}.,!?、，。！？：()-]{1,80})", en: "([\p{L}\p{N}\p{M}\p{Zs}.,!?、，。！？：()-]{1,80})" \},$/u;
+ if(!re.test(a[i])||!re.test(b[i])||a[i]===b[i])return false;
+ return a.every((line,j)=>j===i||line===b[j]);
+}
+function classifyMachine(root,row,rule){
+ assert(row.before?.type==='blob'&&row.after?.type==='blob'&&row.before.mode==='100644'&&row.after.mode==='100644','RELEASE_MACHINE_FILE_IDENTITY');
+ const before=blobText(root,row.before.oid),after=blobText(root,row.after.oid);
+ const ok=rule.rule_id==='CSS_NUMERIC_PRESENTATION_V1'?numericPresentation(before,after):dashboardTitleCopy(before,after);
+ assert(ok,'RELEASE_MACHINE_EFFECT_UNPROVEN:'+row.path);
+ return Object.freeze({rule_id:rule.rule_id,delta_row_sha256:digest(row)});
+}
+// All results here are engineering candidates; this function cannot create
+// the native in-process capability or substitute for qualified closure.
+function planIncremental({root,subject,main,policy,policySha}){
+ const proof=corridor({root,subject,main,policy,policySha});
+ const chain=Object.freeze([subject,...(subject===main?[]:gitText(root,'rev-list','--first-parent','--reverse',subject+'..'+main).split(/\r?\n/))]);
+ assert.equal(chain.length,proof.first_parent_hops+1,'RELEASE_INCREMENTAL_CHAIN_LENGTH');
+ assert.equal(chain.at(-1),main,'RELEASE_INCREMENTAL_CHAIN_TIP');
+ assert(chain.every(x=>H.test(x))&&new Set(chain).size===chain.length,'RELEASE_INCREMENTAL_CHAIN');
+ const rules=machineRules(root,subject,policy),machine=[],unknown=[];
+ for(const row of proof.delta_rows){
+  const i=chain.indexOf(row.head);
+  assert(i>0&&chain[i-1]===row.parent,'RELEASE_INCREMENTAL_PARENT');
+  const rule=rules.get(row.path);
+  if(rule)machine.push(classifyMachine(root,row,rule));else unknown.push(row);
+ }
+ return Object.freeze({binding:proof.binding,chain,delta_rows:proof.delta_rows,machine_rows:Object.freeze(machine),unknown_rows:freezeDelta(unknown),execution_authorized:false,permit_authorized:false});
+}
+function segmentDraft(plan,from,through){
+ const a=plan.chain.indexOf(from),b=plan.chain.indexOf(through);
+ assert(a>=0&&b>a,'RELEASE_SEGMENT_NOT_FORWARD_CORRIDOR');
+ const inSegment=row=>{const i=plan.chain.indexOf(row.head);return i>a&&i<=b;};
+ const all=plan.delta_rows.filter(inSegment),rows=freezeDelta(plan.unknown_rows.filter(inSegment));
+ const binding=Object.freeze({subject_sha:plan.binding.subject_sha,from_main_sha:from,through_main_sha:through,dependency_policy_sha256:plan.binding.dependency_policy_sha256,segment_delta_sha256:digest(all),delta_sha256:digest(rows)});
+ return Object.freeze({binding,delta_rows:rows,delta_count:rows.length,review_required:rows.length>0,execution_authorized:false,permit_authorized:false});
+}
+function inspectSegmentReview(reply,id,segment,now){
+ assert(Number.isSafeInteger(id)&&id>0&&reply?.id===id&&reply.url===API+'/issues/comments/'+id&&reply.issue_url===API+'/issues/'+AUTHORITY_PR,'RELEASE_SEGMENT_NATIVE_COMMENT_ID');
+ assert(reply.user?.login===OWNER&&reply.author_association==='OWNER'&&reply.created_at===reply.updated_at&&Number.isFinite(Date.parse(reply.created_at))&&Date.parse(reply.created_at)<=now,'RELEASE_SEGMENT_NATIVE_OWNER');
+ assert(typeof reply.body==='string'&&Buffer.byteLength(reply.body)<=60000,'RELEASE_SEGMENT_BODY');
+ const p=JSON.parse(reply.body);assert.equal(reply.body,audit.canonical(p),'RELEASE_SEGMENT_NONCANONICAL');
+ exact(p,['schema_version',...Object.keys(segment.binding),'review_evidence_sha256','review_evidence','decision','execution_authorized','permit_authorized'],'RELEASE_SEGMENT_FIELDS');
+ assert.equal(p.schema_version,'MCFT_CAP09_R4285_RELEASE_NONINTERFERENCE_SEGMENT_V1');
+ for(const k of Object.keys(segment.binding))assert.equal(p[k],segment.binding[k],'RELEASE_SEGMENT_BINDING:'+k);
+ assert(S.test(p.review_evidence_sha256)&&p.decision==='ACCEPT_EXACT_DELTA_NO_EXECUTION_DEPENDENCY_OR_EXTERNAL_EFFECT'&&p.execution_authorized===false&&p.permit_authorized===false,'RELEASE_SEGMENT_DECISION');
+ verifyReviewEvidence(p.review_evidence,p.review_evidence_sha256,segment);
+ return sha(Buffer.from(reply.body));
+}
+// Replies are deliberately supplied only to this pure evidence evaluator.
+// The future native wrapper must fetch every referenced comment itself and
+// refresh protection/trust/revocation; fixtures cannot mint authority.
+function evaluateIncremental(input,segments=[],now=Date.now()){
+ const plan=planIncremental(input);
+ assert(Array.isArray(segments)&&segments.length<=64,'RELEASE_SEGMENT_CARDINALITY');
+ const ids=new Set(),accepted=[];let cursor=input.subject;
+ for(const item of segments){
+  exact(item,['id','reply'],'RELEASE_SEGMENT_INPUT_FIELDS');
+  assert(!ids.has(item.id),'RELEASE_SEGMENT_DUPLICATE_ID');ids.add(item.id);
+  assert(typeof item.reply?.body==='string'&&Buffer.byteLength(item.reply.body)<=60000,'RELEASE_SEGMENT_BODY');
+  const p=JSON.parse(item.reply.body);
+  assert.equal(p.from_main_sha,cursor,'RELEASE_SEGMENT_GAP_OR_OVERLAP');
+  const segment=segmentDraft(plan,cursor,p.through_main_sha);
+  assert(segment.review_required,'RELEASE_SEGMENT_UNNECESSARY_REVIEW');
+  const review_sha256=inspectSegmentReview(item.reply,item.id,segment,now);
+  accepted.push(Object.freeze({comment_id:item.id,review_sha256,from_main_sha:cursor,through_main_sha:p.through_main_sha,delta_count:segment.delta_count}));
+  cursor=p.through_main_sha;
+ }
+ const pending=plan.unknown_rows.filter(row=>plan.chain.indexOf(row.head)>plan.chain.indexOf(cursor));
+ return Object.freeze({status:pending.length?'HOLD_UNREVIEWED_INCREMENT':'CANDIDATE_INCREMENTAL_NONINTERFERENCE_PASS_NOT_ADMISSION',binding:plan.binding,reviewed_through:cursor,reviewed_segments:Object.freeze(accepted),machine_rows:plan.machine_rows,pending_rows:freezeDelta(pending),execution_authorized:false,permit_authorized:false});
+}
+
 function verifyLocal(root,subject){
  assert(path.isAbsolute(root)&&H.test(subject),'RELEASE_LOCAL_ID');
  assert(!Object.keys(process.env).some(k=>/^GIT_/i.test(k)),'RELEASE_GIT_ENV_INJECTION');
@@ -109,4 +225,4 @@ function requireCurrent(proof,root,subject){
  if(p.review!==null)assert.equal(inspectOwnerReview(get('/issues/comments/'+p.id),p.id,proof),p.review,'RELEASE_IMPACT_REVIEW_CHANGED');
  const tip=get('/branches/main');assert(tip.protected===true&&tip.commit?.sha===p.main,'RELEASE_MAIN_CHANGED_DURING_REFRESH');return true;
 }
-module.exports={freezeDelta,verifyReviewEvidence,POLICY,rulesetProjection,checkRuleset,checkCurrent,checkPolicy,corridor,inspectOwnerReview,prepare,requireCurrent,isLiveIdentity:x=>live.has(x)};
+module.exports={planIncremental,segmentDraft,evaluateIncremental,freezeDelta,verifyReviewEvidence,POLICY,rulesetProjection,checkRuleset,checkCurrent,checkPolicy,corridor,inspectOwnerReview,prepare,requireCurrent,isLiveIdentity:x=>live.has(x)};
