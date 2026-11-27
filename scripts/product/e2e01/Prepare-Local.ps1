@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$Subject,[Parameter(Mandatory=$true)][string]$ManagerSubject,[Parameter(Mandatory=$true)][string]$PgContainerId,[Parameter(Mandatory=$true)][string]$MigrationSubject,[Parameter(Mandatory=$true)][string]$MigrationSource,[Parameter(Mandatory=$true)][string]$MigrationPhysical)
+param([Parameter(Mandatory=$true)][string]$Subject,[Parameter(Mandatory=$true)][string]$ManagerSubject,[Parameter(Mandatory=$true)][string]$PgContainerId,[Parameter(Mandatory=$true)][string]$MigrationSubject,[Parameter(Mandatory=$true)][string]$MigrationSource,[Parameter(Mandatory=$true)][string]$MigrationPhysical,[switch]$ResumeAfterWebBuild)
 $ErrorActionPreference='Stop'
 $Repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $Kit='D:\gptdown\FDW-LOCAL-KEYCLOAK-POSTGRES-20261117\FDW-LOCAL-KEYCLOAK-POSTGRES-20261117'
@@ -45,8 +45,17 @@ Push-Location $Repo
 try{
  & $Node --test scripts/product/e2e01/contract.test.mjs
  if($LASTEXITCODE -ne 0){throw 'HOLD_CONTRACT_TEST'}
- & $Node scripts/product/e2e01/build-web.mjs
- if($LASTEXITCODE -ne 0){throw 'HOLD_WEB_BUILD'}
+ if($ResumeAfterWebBuild){
+  $priorWeb='f07df587180949549246f90d33b91c22c89fada2'
+  $changed=@(git diff --name-only $priorWeb HEAD -- apps/web packages pnpm-lock.yaml package.json pnpm-workspace.yaml scripts/product/e2e01/build-web.mjs)
+  if($LASTEXITCODE -ne 0 -or $changed.Count){throw 'HOLD_WEB_SOURCE_CHANGED'}
+  $dist=Join-Path $Repo 'apps\web\.local-manager-e2e01\dist'
+  if(-not(Test-Path -LiteralPath (Join-Path $dist 'index.html') -PathType Leaf)){throw 'HOLD_PRIOR_WEB_BUILD_MISSING'}
+  Write-Host 'PRIOR_WEB_BUILD_REUSED=PASS'
+ }else{
+  & $Node scripts/product/e2e01/build-web.mjs
+  if($LASTEXITCODE -ne 0){throw 'HOLD_WEB_BUILD'}
+ }
  & $Node scripts/product/e2e01/prepare-gateway.mjs $Kit
  if($LASTEXITCODE -ne 0){throw 'HOLD_GATEWAY_PREPARATION'}
  & $Node --check $derived

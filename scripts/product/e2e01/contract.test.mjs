@@ -26,3 +26,24 @@ test('explicit local owner grants independent of creation; revocation and cross 
  assert.equal(await get(a,'other','UPDATE_FIELD'),null);
  policy={...policy,field_grants:[],revision:4};assert.equal(await get(a,field,'UPDATE_FIELD'),null);
 });
+
+import {deriveGateway} from './gateway-derive.mjs';
+test('gateway derivation preserves literal replacement bytes and imports actual route contract',()=>{
+ const source=[
+ "const fdwService='http://127.0.0.1:14174';",
+ "const url=new URL(req.url,gatewayBase),path=url.pathname,method=req.method;",
+ "location:'/auth/complete'",
+ "!safeForward(path,method)",
+ "['POST','PATCH'].includes(method)",
+ "['POST','PATCH'].includes(method)",
+ "const headers={authorization:'Bearer '+item.session.token,'x-fdw-tenant-ref':JSON.stringify({issuer,id:'fdw-local-tenant-a',version:'1'})};",
+ "fetch(fdwService+path+url.search,"
+ ].join('\n');
+ const result=deriveGateway(source,{'/manager':"C:/test/$'/$&/index.html"},'file:///C:/test/contract.mjs');
+ assert(result.includes(JSON.stringify({'/manager':"C:/test/$'/$&/index.html"})));
+ assert(result.includes('import {managerRoute} from "file:///C:/test/contract.mjs";'));
+ assert(!result.includes("['POST','PATCH'].includes(method)"));
+ assert.equal(result.split("['POST','PATCH','PUT'].includes(method)").length,3);
+ assert(result.includes('fetch((isManager?managerService:fdwService)+path+url.search,'));
+ assert.throws(()=>deriveGateway(source.replace("location:'/auth/complete'",""),{},'file:///contract.mjs'),/GATEWAY_SOURCE_ANCHOR_MISMATCH/);
+});
