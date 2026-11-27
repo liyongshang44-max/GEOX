@@ -14,8 +14,8 @@ test('source coverage and exact day support; no promotion of manager assertion',
  assert.throws(()=>prepareNativeReviewPlanV1(request,{...raw,basis_sha256:'other'}),/ADR_FORMAL_PLAN_BASIS_MISMATCH/);
  assert.throws(()=>prepareNativeReviewPlanV1(request,null),/ADR_FORMAL_PLAN_REQUIRED/);
 });
-function setup(mode:'success'|'unknown'|'wrong-authority'|'miss'|'wrong-manifest'){
- const plan=prepareNativeReviewPlanV1(request,raw);
+function setup(mode:'success'|'unknown'|'wrong-authority'|'miss'|'wrong-manifest',noSoil=false){
+ const plan=prepareNativeReviewPlanV1(noSoil?{...request,basis:{...request.basis,documents:[]}}:request,noSoil?{...raw,datum_bindings:[]}:raw);
  const manager:ManagerAuthorityV1={actor_id:'manager',tenant_id:'t',project_id:'p',group_id:'g',field_id:'f',action:'REQUEST_CROP_REVIEW',credential_ref:'e'.repeat(64),grant_source_ref:{issuer:'fixture',id:'grant',version:'1'},mapping_version:'1',valid_until_ms:Date.now()+40000};
  const authority:ManagerAuthorizerV1={async authorize(){return manager;},assertCurrent(a,f,act){assert.equal(a,manager);assert.equal(f,'f');assert.equal(act,'REQUEST_CROP_REVIEW');}};
  let calls=0,credentials=0;const candidate=R('QualifiedKnowledge','knowledge');
@@ -50,4 +50,21 @@ test('unknown, mismatched graph and A07/A08 authority mismatch stop without retr
   assert.equal(events.at(-1)?.details.status,'OUTCOME_RECONCILIATION_REQUIRED');assert.equal(events.at(-1)?.details.assessment_refs.length,0);
   assert.equal(x.calls(),mode==='unknown'?5:mode==='wrong-authority'?4:3);assert.equal(x.credentials(),x.calls());
  }
+});
+
+test('no selected soil documents: native A01/A07 only, never A02/A04/A08',async()=>{
+ for(const mode of ['success','miss'] as const){
+  const x=setup(mode,true),events:{event:string;details:Record<string,any>}[]=[];
+  assert.deepEqual(x.plan.datums,[]);
+  await executeNativeReviewPlanV1(x.manager,x.plan,x.c,async(event,details)=>{events.push({event,details});});
+  assert.equal(x.calls(),2);
+  assert.deepEqual(events.filter(e=>e.event==='WRITE_RECEIPT').map(e=>e.details.operation),['createDecisionProblem','executeKnowledgeRetrieval']);
+  assert.equal(events.at(-1)?.details.status,'NATIVE_RETRIEVAL_RECORDED_CONTEXT_REQUIRED');
+  assert.equal(events.at(-1)?.details.error_code,'NO_CONFIRMED_SOIL_DOCUMENT_SELECTED');
+  assert.equal(events.at(-1)?.details.retrieved_candidate_count,mode==='success'?1:0);
+  assert.deepEqual(events.at(-1)?.details.assessment_refs,[]);
+  assert.equal(events.at(-1)?.details.action_authority,false);
+ }
+ assert.throws(()=>prepareNativeReviewPlanV1({...request,basis:{...request.basis,documents:[{...request.basis.documents[0],candidates:[]}]}},{...raw,datum_bindings:[]}),/ADR_CONTEXT_SOURCE_COVERAGE_REQUIRED/);
+ assert.throws(()=>prepareNativeReviewPlanV1({...request,basis:{...request.basis,documents:[]}},raw),/ADR_CONTEXT_SOURCE_COVERAGE_REQUIRED/);
 });

@@ -44,6 +44,12 @@ const assignment=publishRoleAssignment({ledger:env.ledger,logicalId:'role.geox-p
 const decision=authorizeDecisionProblemCreation({principal:actor,roleAssignments:[assignment],authorizationScope:{...scope,resourceId:plan.problem.logical_id}});
 assert.equal(decision.allowed,true);
 const problemAuth=recordAuthorizationDecision({ledger:env.ledger,decision,audit:audit(actor,'geox-fixture-problem-auth')}).ref;
+const emptyBasis={...basis,documents:[]};
+const emptyRequest={...request,basis:emptyBasis,basis_sha256:digest(emptyBasis),attempt_id:'geox-native-empty-fixture'};
+const emptyPlan=prepareNativeReviewPlanV1(emptyRequest,{basis_sha256:emptyRequest.basis_sha256,target_binding_ref:'TEST_ONLY:target',decision_mapping_ref:'TEST_ONLY:decision',target_ref:target,deployment_ref:toWireRef(deployment.ref),knowledge_release_ref:toWireRef(env.release.ref),decision_type:decisionType,objective_code:'FIXTURE_TRANSPORT_ONLY',use_purpose:'CORN_IRRIGATION_APPLICABILITY',use_class:'ADVISORY',decision_authority_mode:'RUNTIME_ONLY',decision_horizon:{duration:'P12D'},decision_deadline:'2026-08-21T00:00:00Z',crop_action_bindings:basis.intent.crop_codes.map(crop_code=>({crop_code,action_code:crop_code})),datum_bindings:[]});
+const emptyDecision=authorizeDecisionProblemCreation({principal:actor,roleAssignments:[assignment],authorizationScope:{...scope,resourceId:emptyPlan.problem.logical_id}});
+assert.equal(emptyDecision.allowed,true);
+const emptyProblemAuth=recordAuthorizationDecision({ledger:env.ledger,decision:emptyDecision,audit:audit(actor,'geox-fixture-empty-problem-auth')}).ref;
 const datumAuth=writeAuthorization(env.ledger,plan.datums[0].logical_id,'CONTEXT_DATUM',actor).recorded.ref;
 const manifestAuth=writeAuthorization(env.ledger,plan.attempt_id+':manifest','CONTEXT_MANIFEST',actor).recorded.ref;
 const retrievalAuth=createRuntimeReadAuthorization(env,deployment.ref.logicalId,{deployment:deployment.semanticPayload}).recorded.ref;
@@ -66,9 +72,9 @@ try{
  const ready=await (await fetch(base+'/ready')).json();assert.equal(ready.bootstrapMode,'TEST_ONLY_NATIVE_GEOX_CONTRACT');
  const manager=await authority.authorize('fixture-manager','fixture-field','REQUEST_CROP_REVIEW');
  const events=[],httpStatuses=[];
- const consumer=createAdrReviewConsumerV1({baseUrl:'https://adr.fixture.invalid/',authority,async resolveBinding({manager:a,operation,request_sha256}){
+ const consumer=createAdrReviewConsumerV1({baseUrl:'https://adr.fixture.invalid/',authority,async resolveBinding({manager:a,operation,request_sha256,request}){
   const isRuntime=operation==='executeKnowledgeRetrieval'||operation==='createApplicabilityAssessment';
-  return {request_sha256,authority_scope:{actor_id:a.actor_id,tenant_id:a.tenant_id,project_id:a.project_id,group_id:a.group_id,field_id:a.field_id,mapping_version:a.mapping_version,credential_ref:a.credential_ref},principal:wirePrincipal(isRuntime?runtimeActor:actor),authorization_ref:toWireRef(auths[operation]),credential_ref:isRuntime?'fixture-runtime-only':'fixture-context-only',valid_until_ms:a.valid_until_ms};
+  return {request_sha256,authority_scope:{actor_id:a.actor_id,tenant_id:a.tenant_id,project_id:a.project_id,group_id:a.group_id,field_id:a.field_id,mapping_version:a.mapping_version,credential_ref:a.credential_ref},principal:wirePrincipal(isRuntime?runtimeActor:actor),authorization_ref:toWireRef(operation==='createDecisionProblem'&&request.logical_id===emptyPlan.problem.logical_id?emptyProblemAuth:auths[operation]),credential_ref:isRuntime?'fixture-runtime-only':'fixture-context-only',valid_until_ms:a.valid_until_ms};
  },async getCredential(ref){assert.ok(Object.hasOwn(tokenMap,ref));return ref;},async transport(url,init){
   // Only the fixture transport converts the pinned dummy HTTPS origin to the
   // native host's loopback address. Production Consumer keeps default TLS.
@@ -98,6 +104,14 @@ try{
  }
  const wrong=await buildManagerScientificResultV1(j,'fixture-review',request.basis_sha256,manager,async(x)=>({...await display(x),request_sha256:'0'.repeat(64)}));assert.equal(wrong.display_status,'DISPLAY_PERMISSION_NOT_ESTABLISHED');
  console.log('PASS REAL_ADR_A08_RIGHTS_GATED_PRODUCT_PROJECTION_TEST_ONLY');
+ const emptyEvents=[],priorCalls=httpStatuses.length;
+ await executeNativeReviewPlanV1(manager,emptyPlan,consumer,async(event,details)=>{emptyEvents.push({event,details});});
+ assert.equal(httpStatuses.length-priorCalls,2);
+ assert.deepEqual(emptyEvents.filter(x=>x.event==='WRITE_RECEIPT').map(x=>x.details.operation),['createDecisionProblem','executeKnowledgeRetrieval']);
+ assert.equal(emptyEvents.at(-1).details.status,'NATIVE_RETRIEVAL_RECORDED_CONTEXT_REQUIRED');
+ assert.deepEqual(emptyEvents.at(-1).details.assessment_refs,[]);
+ assert.equal(emptyEvents.at(-1).details.action_authority,false);
+ console.log('PASS ACTUAL_ADR_A01_A07_WITHOUT_SOIL_CONTEXT_TEST_ONLY');
  const persisted=JSON.parse(await readFile(statePath,'utf8'));assert.equal(persisted.metadata.mode,'TEST_ONLY_NATIVE_GEOX_CONTRACT');assert.equal(Object.keys(persisted.metadata.idempotency).length,httpStatuses.length);
  await new Promise((resolve,reject)=>server.close(e=>e?reject(e):resolve()));server=undefined;
  const restored=await initializePilotRuntime({statePath,snapshotDir,allowSyntheticBootstrap:false});assert.equal(restored.ready,true);

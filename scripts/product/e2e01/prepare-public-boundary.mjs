@@ -1,0 +1,25 @@
+// Public-source read only. Does not write the GEOX DB or change land grants.
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {createHash} from 'node:crypto';
+import {validManagerPolygonV1} from '../../../apps/server/src/domain/field/manager_polygon_v1.ts';
+const root=process.argv[2];
+if(!root)throw Error('OUTPUT_DIRECTORY_REQUIRED');
+const id='25281db9-db71-5965-94f3-e591ada7c278';
+const url='https://api.pdok.nl/rvo/gewaspercelen/ogc/v1/collections/brpgewas/items/'+id;
+const sha=b=>createHash('sha256').update(b).digest('hex');
+const response=await fetch(url,{headers:{Accept:'application/geo+json'},redirect:'error',signal:AbortSignal.timeout(30000)});
+if(response.status!==200)throw Error('PUBLIC_BOUNDARY_HTTP_'+response.status);
+const raw=Buffer.from(await response.arrayBuffer());
+if(raw.length>1000000)throw Error('PUBLIC_BOUNDARY_SIZE');
+const f=JSON.parse(raw.toString('utf8')),p=f.properties;
+if(f.type!=='Feature'||f.id!==id||p?.category!=='Bouwland'||p.gewascode!==259||p.jaar!==2025||p.status!=='Definitief')throw Error('PUBLIC_BOUNDARY_IDENTITY_MISMATCH');
+if(!validManagerPolygonV1(f.geometry))throw Error('PUBLIC_BOUNDARY_NATIVE_GEOMETRY_DENIED');
+const polygon=JSON.stringify(f.geometry);
+const receipt={source:'RVO BRP Gewaspercelen / PDOK',source_url:url,license:'Public Domain Mark 1.0',source_field_id:id,source_year:p.jaar,crop:p.gewas,crop_code:p.gewascode,source_status:p.status,retrieved_at:new Date().toISOString(),raw_sha256:sha(raw),geometry_sha256:sha(polygon),geox_field_id:'field_geox_e2e01_001',binding_kind:'LOCAL_PUBLIC_HISTORICAL_REFERENCE_FIELD_ONLY',scientific_qualification:'NOT_ESTABLISHED',coordinate_order:'longitude,latitude',native_polygon_validation:'PASS',p2_soil_source:'UNBOUND',ownership_or_current_crop_claim:false};
+mkdirSync(root,{recursive:false});
+writeFileSync(join(root,'PDOK-ORIGINAL.geojson'),raw,{flag:'wx'});
+writeFileSync(join(root,'POLYGON.json'),polygon,{flag:'wx'});
+writeFileSync(join(root,'SOURCE-RECEIPT.json'),JSON.stringify(receipt,null,2),{flag:'wx'});
+console.log(JSON.stringify(receipt,null,2));
+console.log('PUBLIC_BOUNDARY_SOURCE_READY=PASS');

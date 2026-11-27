@@ -64,8 +64,9 @@ export function prepareNativeReviewPlanV1(req:NativeReviewPlanRequestV1,raw:unkn
    insist(!rows.has(key),'ADR_SOURCE_DUPLICATE');rows.set(key,{d,row});
   }
  }
- // Nonempty is a native A04 condition. No silent truncation or fabricated datum.
- insist(rows.size>0&&rows.size<=100&&p.datum_bindings.length===rows.size,'ADR_CONTEXT_SOURCE_COVERAGE_REQUIRED');
+ // A04 requires nonempty data; a truly empty selected-document set can use A01/A07 only.
+ // A malformed selected document or an incomplete mapping still fails closed.
+ insist((rows.size>0||req.basis.documents.length===0)&&rows.size<=100&&p.datum_bindings.length===rows.size,'ADR_CONTEXT_SOURCE_COVERAGE_REQUIRED');
  const datums:AdrWriteInputV1[]=[],mapping_refs:string[]=[],seen=new Set<string>();
  for(const m of p.datum_bindings){
   insist(exact(m,['document_id','revision','row_number','mapping_ref','semantic_id','geometry_ref','sample_day_start','sample_day_end'])&&text(m.mapping_ref)&&text(m.semantic_id)&&text(m.geometry_ref),'ADR_SOURCE_MAPPING_INVALID');
@@ -127,15 +128,18 @@ export async function executeNativeReviewPlanV1(manager:ManagerAuthorityV1,plan:
      insist(same(r.resource[k],datum.resource[k]),'ADR_DATUM_RECEIPT_MISMATCH');
    });datums.push(d.ref);
   }
-  const manifest=await write('createContextManifest',input(attempt,'manifest',{contract_version:'adr.context-manifest.v1',decision_problem_ref:problem.ref,evidence_cutoff:plan.evaluation_time,datum_refs:datums,resolved_reference_receipt_refs:[]}),r=>{
+  const manifest=datums.length?await write('createContextManifest',input(attempt,'manifest',{contract_version:'adr.context-manifest.v1',decision_problem_ref:problem.ref,evidence_cutoff:plan.evaluation_time,datum_refs:datums,resolved_reference_receipt_refs:[]}),r=>{
    const expected=datums.map(d=>({datum_id:d.logical_id,semantic_hash:d.semantic_hash})).sort((a,b)=>a.datum_id.localeCompare(b.datum_id));
    const returned=r.resource.datum_refs;
    insist(sameRef(r.resource.decision_problem_ref,problem.ref)&&r.resource.evidence_cutoff===plan.evaluation_time&&same(r.resource.target_ref,plan.target)&&Array.isArray(returned)&&same([...returned].sort((a,b)=>String(a.datum_id).localeCompare(String(b.datum_id))),expected)&&Array.isArray(r.resource.resolved_reference_receipts)&&r.resource.resolved_reference_receipts.length===0,'ADR_MANIFEST_RECEIPT_MISMATCH');
-  });
+  }):null;
   const retrieval=await write('executeKnowledgeRetrieval',input(attempt,'retrieval',{contract_version:'adr.knowledge-retrieval-result.v1',decision_problem_ref:problem.ref,deployment_ref:plan.deployment_ref,config:{}}),r=>{
    insist(sameRef(r.resource.decision_problem_ref,problem.ref)&&sameRef(r.resource.deployment_ref,plan.deployment_ref)&&sameRef(r.resource.knowledge_release_ref,plan.knowledge_release_ref)&&Array.isArray(r.resource.candidate_refs)&&r.resource.candidate_refs.every(c=>ref(c)&&['QualifiedKnowledge','DerivedKnowledge'].includes(c.kind))&&new Set(r.resource.candidate_refs.map(c=>digest(c))).size===r.resource.candidate_refs.length,'ADR_RETRIEVAL_RECEIPT_MISMATCH');
   });
   const candidates=retrieval.resource.candidate_refs as AdrRefV1[];
+  if(!manifest){
+   await append('FINISHED',{status:'NATIVE_RETRIEVAL_RECORDED_CONTEXT_REQUIRED',error_code:'NO_CONFIRMED_SOIL_DOCUMENT_SELECTED',retrieval_ref:retrieval.ref,retrieved_candidate_count:candidates.length,assessment_refs:[],action_authority:false});return;
+  }
   // All retrieved candidates are evaluated, never a local top-K scientific filter.
   if(candidates.length>32){
    await append('FINISHED',{status:'HOLD_RETRIEVAL_CANDIDATE_LIMIT',retrieval_ref:retrieval.ref,assessment_refs:[],action_authority:false});return;
