@@ -6,7 +6,7 @@ import {pathToFileURL} from 'node:url';
 import {execFileSync} from 'node:child_process';
 import {createDatabasePool} from '../../../apps/server/src/infra/database.ts';
 import {registerManagerPilotModuleV1} from '../../../apps/server/src/modules/product/registerManagerPilotModuleV1.ts';
-import {managerRoute,createBodyAllowed,directory,validatePolicy,field,scope,tenant,issuer} from './contract.mjs';
+import {managerRoute,createBodyAllowed,directory,validatePolicy,field,scope,tenant,issuer,hash} from './contract.mjs';
 const must=(v,c)=>{if(!v)throw Error(c)};
 const root=resolve(process.cwd());
 const cfg=JSON.parse(readFileSync(process.env.GEOX_E2E01_CONFIG,'utf8'));
@@ -16,6 +16,8 @@ const expected='526138b81d35688b28c9184d665b6e972899a0c0';
 must(fdw.expectedHead===expected&&fdw.keycloakUserAndGroupsConfirmed===true&&fdw.revocationEvidenceConfirmed===true&&fdw.keycloakClientSecret,'FDW_CONFIG');
 must(execFileSync('git',['-C',fdw.fdwCheckout,'rev-parse','HEAD'],{encoding:'utf8'}).trim()===expected,'FDW_SUBJECT');
 must(execFileSync('git',['-C',fdw.fdwCheckout,'status','--porcelain','--untracked-files=no'],{encoding:'utf8'}).trim()==='','FDW_TRACKED_DRIFT');
+const sourceDigests=JSON.parse(readFileSync(new URL('./fdw-source-digests.json',import.meta.url),'utf8'));
+must(hash(readFileSync(join(kit,'keycloak-identity.mjs'),'utf8').replace(/\r\n/g,'\n').trimEnd())===sourceDigests.identity,'FDW_ADAPTER_DIGEST');
 const {createIdentity}=await import(pathToFileURL(join(kit,'keycloak-identity.mjs')).href);
 const identity=await createIdentity({formalIdentityModuleUrl:pathToFileURL(join(fdw.fdwCheckout,'src','formal-identity.mjs')).href,issuer,audience:'fdw-business',siteClientId:'fdw-site',siteClientSecret:fdw.keycloakClientSecret,providerConfigVersion:'fdw-local-mapping-v1',mode:'customer',tenants:{acceptance:{canonicalTenantRef:tenant,organizationRef:{issuer,id:'fdw-local-organization-a',version:'1'},requiredGroup:'/fdw-manager-a',resourceGrants:[],capabilities:['CREATE_FIELD']}}});
 const url=new URL(process.env.GEOX_E2E01_DATABASE_URL);
@@ -32,6 +34,8 @@ const acl=await pool.query("SELECT c.relname, has_table_privilege(current_user,c
 must(acl.rowCount===6&&acl.rows.every(x=>x.r&&!x.forbidden&&x.i===(x.relname!=='migration_ledger_v1')),'DATABASE_ACL');
 const exists=async()=>{const r=await pool.query('SELECT field_id FROM public.field_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4',[scope.tenant_id,scope.project_id,scope.group_id,field]);return r.rowCount===1};
 const grants=directory(readPolicy,cfg.subject,exists);
+must(cfg.writeAdmitted===false||cfg.writeAdmitted===true,'EXPLICIT_WRITE_ADMISSION_REQUIRED');
+let authority;
 const app=Fastify({logger:false,bodyLimit:100000,exposeHeadRoutes:false});
 app.addHook('onRequest',async(req,reply)=>{
  if(req.headers.host!=='127.0.0.1:14175')return reply.code(403).send({ok:false,error:'LOCAL_HOST_REQUIRED'});
@@ -39,9 +43,17 @@ app.addHook('onRequest',async(req,reply)=>{
 });
 app.addHook('preHandler',async(req,reply)=>{
  if(req.method==='POST'&&req.raw.url==='/api/v1/manager/fields'&&!createBodyAllowed(req.body))return reply.code(403).send({ok:false,error:'E2E01_CREATE_TARGET_DENIED'});
+ if(req.method!=='GET'&&!cfg.writeAdmitted){
+  if(req.method==='POST'&&req.raw.url==='/api/v1/manager/fields'){
+   const token=/^Bearer ([^\s]+)$/i.exec(String(req.headers.authorization??''))?.[1];
+   if(!token)return reply.code(401).send({ok:false,error:'MANAGER_CREDENTIAL_REQUIRED'});
+   try{const a=await authority.authorize(token,null,'CREATE_FIELD');authority.assertCurrent(a,null,'CREATE_FIELD');return reply.code(403).send({ok:false,error:'E2E01_PREWRITE_CREATE_AUTHORIZED_NO_WRITE'});}catch(e){return reply.code([401,403,503].includes(e.status)?e.status:503).send({ok:false,error:[401,403,503].includes(e.status)?e.message:'MANAGER_AUTHORITY_UNAVAILABLE'});}
+  }
+  return reply.code(403).send({ok:false,error:'E2E01_WRITE_NOT_ADMITTED'});
+ }
 });
-registerManagerPilotModuleV1(app,pool,{identity,issuer,canonicalTenantRef:tenant,...grants});
+authority=registerManagerPilotModuleV1(app,pool,{identity,issuer,canonicalTenantRef:tenant,...grants});
 // No ADR credentials/plan synthesized. A07/A08 remains unavailable until supplied by its Owner.
 await app.listen({host:'127.0.0.1',port:14175});
-console.log('E2E01_MANAGER_LOCAL_READY / DB_ROLE_AND_LEDGER_ACL_PASS / ADR_NOT_CONFIGURED');
+console.log('E2E01_MANAGER_LOCAL_READY / DB_ROLE_AND_LEDGER_ACL_PASS / ADR_NOT_CONFIGURED / WRITE_ADMITTED='+cfg.writeAdmitted);
 for(const sig of ['SIGINT','SIGTERM'])process.once(sig,()=>{void app.close().then(()=>pool.end()).then(()=>process.exit(0));});

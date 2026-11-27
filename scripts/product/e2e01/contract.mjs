@@ -28,7 +28,7 @@ export function validatePolicy(p,subject){
  if(!p||p.schema!=='geox.local-owner-land-grants.e2e01.v1'||p.decision!=='AUTHORIZE_BOUNDED_MANAGER_INTEGRATION'||p.subject!==subject||
  !['REVOKED','ACTIVE'].includes(p.create_status)||!Number.isSafeInteger(p.revision)||p.revision<1||
  !Array.isArray(p.field_grants)||new Set(p.field_grants).size!==p.field_grants.length||!p.field_grants.every(a=>fieldActions.includes(a))||
- !['PREWRITE','CREATE','FIELD'].includes(p.phase)||p.phase==='PREWRITE'&&(p.create_status!=='REVOKED'||p.field_grants.length)||
+ !['PREWRITE','CREATE','FIELD'].includes(p.phase)||p.phase==='PREWRITE'&&p.field_grants.length||
  p.phase==='CREATE'&&(p.create_status!=='ACTIVE'||p.field_grants.length)||p.phase==='FIELD'&&p.create_status!=='REVOKED')throw Error('E2E01_OWNER_POLICY_INVALID');
  return p;
 }
@@ -43,7 +43,7 @@ export function directory(readPolicy,subject,fieldExists,clock=Date.now){
  return {
   async resolveLandGrant({assertion,field_id,action}){
    const d=load(assertion);if(!d)return null;
-   if(action==='CREATE_FIELD')return field_id===null&&d.p.phase==='CREATE'&&d.p.create_status==='ACTIVE'?grant(d,action,null):null;
+   if(action==='CREATE_FIELD')return field_id===null&&['PREWRITE','CREATE'].includes(d.p.phase)&&d.p.create_status==='ACTIVE'?grant(d,action,null):null;
    return field_id===field&&d.p.phase==='FIELD'&&d.p.field_grants.includes(action)&&await fieldExists()?grant(d,action,field):null;
   },
   async resolveLandInventory({assertion}){

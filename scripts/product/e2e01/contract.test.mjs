@@ -14,10 +14,12 @@ test('explicit local owner grants independent of creation; revocation and cross 
  const get=(assertion,field_id,action)=>d.resolveLandGrant({assertion,field_id,action});
  assert.equal(await get(a,null,'CREATE_FIELD'),null);
  assert.deepEqual((await d.resolveLandInventory({assertion:a})).grants,[]);
- policy={...policy,phase:'CREATE',create_status:'ACTIVE',revision:2};
+ policy={...policy,phase:'PREWRITE',create_status:'ACTIVE',revision:2};
  const g=await get(a,null,'CREATE_FIELD');assert.equal(g.tenant_id,scope.tenant_id);
  assert.equal(await get({...a,canonical_tenant_ref:{...tenant,id:'other'}},null,'CREATE_FIELD'),null);
  assert.equal(await get({...a,subject:'other'},null,'CREATE_FIELD'),null);
+ policy={...policy,create_status:'REVOKED',revision:3};assert.equal(await get(a,null,'CREATE_FIELD'),null);
+ policy={...policy,phase:'CREATE',create_status:'ACTIVE',revision:4};
  exists=true;assert.equal(await get(a,field,'READ_FIELD_GEOMETRY'),null);
  policy={...policy,phase:'FIELD',create_status:'REVOKED',field_grants:[...fieldActions],revision:3};
  assert.equal(await get(a,null,'CREATE_FIELD'),null);assert.equal((await get(a,field,'UPDATE_FIELD')).field_id,field);

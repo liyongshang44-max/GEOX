@@ -1,11 +1,13 @@
 // Patch a separate copy of the existing FDW gateway, preserving original login/CSRF/session/revocation.
 import {readFileSync,writeFileSync,existsSync,readdirSync} from 'node:fs';
 import {resolve,join} from 'node:path';
-import {managerRoute} from './contract.mjs';
+import {managerRoute,hash} from './contract.mjs';
 const kit=resolve(process.argv[2]), root=process.cwd(), dist=resolve(root,'apps/web/.local-manager-e2e01/dist');
 const src=join(kit,'oidc-session-gateway.mjs'), dst=join(kit,'oidc-session-gateway-e2e01.mjs');
 if(existsSync(dst))throw Error('GATEWAY_COPY_EXISTS');
 let s=readFileSync(src,'utf8').replace(/\r\n/g,'\n');
+const expected=JSON.parse(readFileSync(new URL('./fdw-source-digests.json',import.meta.url),'utf8'));
+if(hash(s.trimEnd())!==expected.gateway)throw Error('GATEWAY_SOURCE_DIGEST_MISMATCH');
 function once(a,b){if(s.split(a).length!==2)throw Error('GATEWAY_SOURCE_ANCHOR_MISMATCH');s=s.replace(a,b);}
 const assets=readdirSync(join(dist,'assets')).filter(x=>/^[A-Za-z0-9_.-]+\.(js|css|woff2?|png|svg)$/.test(x));
 if(!assets.some(x=>x.endsWith('.js'))||!existsSync(join(dist,'index.html')))throw Error('WEB_BUILD_REQUIRED');
