@@ -51,5 +51,5 @@ export async function buildManagerAdrEvidenceV1(j:{attempt:string;events:Obj[];p
  });
  need(new Set(items.map(i=>digest(i.knowledge_ref))).size===req.candidate_refs.length);
  const coverage_crops=[...new Set(items.map(i=>i.crop_code))].sort();need(same(raw.coverage_crops,coverage_crops));
- return {...base,display_status:'AUTHORIZED_RECORDED_EVIDENCE',approval_ref:raw.approval_ref,valid_until:raw.valid_until,retrieval_ref:req.retrieval_ref,knowledge_release_ref:req.knowledge_release_ref,items,question_crops,coverage_crops,missing_crops:question_crops.filter(c=>!coverage_crops.includes(c))};
+ return {...base,display_status:'AUTHORIZED_RECORDED_EVIDENCE',approval_ref:raw.approval_ref,valid_until:new Date(Math.min(until,a.valid_until_ms)).toISOString(),retrieval_ref:req.retrieval_ref,knowledge_release_ref:req.knowledge_release_ref,items,question_crops,coverage_crops,missing_crops:question_crops.filter(c=>!coverage_crops.includes(c))};
 }
