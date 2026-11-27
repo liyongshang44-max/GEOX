@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$Subject,[Parameter(Mandatory=$true)][string]$ManagerSubject,[Parameter(Mandatory=$true)][string]$PgContainerId,[Parameter(Mandatory=$true)][string]$MigrationSubject,[Parameter(Mandatory=$true)][string]$MigrationSource,[Parameter(Mandatory=$true)][string]$MigrationPhysical,[switch]$ResumeAfterWebBuild,[switch]$ResumeAfterGatewayCopy)
+param([Parameter(Mandatory=$true)][string]$Subject,[Parameter(Mandatory=$true)][string]$ManagerSubject,[Parameter(Mandatory=$true)][string]$PgContainerId,[Parameter(Mandatory=$true)][string]$MigrationSubject,[Parameter(Mandatory=$true)][string]$MigrationSource,[Parameter(Mandatory=$true)][string]$MigrationPhysical,[switch]$ResumeAfterWebBuild,[switch]$ResumeAfterGatewayCopy,[switch]$ResumeAfterBaseline)
 $ErrorActionPreference='Stop'
 $Repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $Kit='D:\gptdown\FDW-LOCAL-KEYCLOAK-POSTGRES-20261117\FDW-LOCAL-KEYCLOAK-POSTGRES-20261117'
@@ -8,12 +8,16 @@ $Pg='geox-product-e2e01-postgres'
 $OldPg='geox-v1-postgres'
 if($Subject -notmatch '^[a-f0-9]{40}$' -or (git -C $Repo rev-parse HEAD) -cne $Subject -or @(git -C $Repo status --porcelain --untracked-files=no).Count){throw 'HOLD_EXACT_PRODUCT_SOURCE'}
 if($ManagerSubject -notmatch '^[a-f0-9-]{36}$' -or $PgContainerId -notmatch '^[a-f0-9]{64}$' -or $MigrationSubject -notmatch '^[a-f0-9]{40}$' -or $MigrationSource -notmatch '^[a-f0-9]{64}$' -or $MigrationPhysical -notmatch '^[a-f0-9]{64}$'){throw 'HOLD_INPUT_IDENTITY'}
+if($ResumeAfterBaseline -and -not $ResumeAfterGatewayCopy){throw 'HOLD_RESUME_GATEWAY_REQUIRED'}
 if($ResumeAfterGatewayCopy){
  if(-not $ResumeAfterWebBuild){throw 'HOLD_RESUME_WEB_REQUIRED'}
  if(-not(Test-Path -LiteralPath $Local -PathType Container)){throw 'HOLD_RESUME_LOCAL_CONFIG_MISSING'}
- if(Test-Path -LiteralPath (Join-Path $Local 'prewrite-db-before.json')){throw 'HOLD_BASELINE_ALREADY_EXISTS'}
+ $baselineFile=Join-Path $Local 'prewrite-db-before.json'
+ if([bool]$ResumeAfterBaseline -ne (Test-Path -LiteralPath $baselineFile -PathType Leaf)){throw 'HOLD_BASELINE_STATE'}
  $entries=@(Get-ChildItem -LiteralPath $Local -Force | Select-Object -ExpandProperty Name)
- if($entries.Count -ne 2 -or 'config.json' -cnotin $entries -or 'owner-land-grants.json' -cnotin $entries){throw 'HOLD_RESUME_LOCAL_STATE'}
+ $expectedEntries=@('config.json','owner-land-grants.json')
+ if($ResumeAfterBaseline){$expectedEntries+='prewrite-db-before.json'}
+ if($entries.Count -ne $expectedEntries.Count -or @($entries|Where-Object{$_ -cnotin $expectedEntries}).Count){throw 'HOLD_RESUME_LOCAL_STATE'}
 }else{
  if(Test-Path -LiteralPath $Local){throw 'HOLD_LOCAL_CONFIG_ALREADY_EXISTS'}
 }
@@ -86,7 +90,12 @@ try{
   [IO.File]::WriteAllText($policyFile,$policyJson,$utf8)
   [IO.File]::WriteAllText($cfgFile,$cfgJson,$utf8)
  }
- & (Join-Path $PSScriptRoot 'Read-DatabaseProof.ps1') -Stage Before
+ if($ResumeAfterBaseline){
+  & (Join-Path $PSScriptRoot 'Read-DatabaseProof.ps1') -Stage After
+  Write-Host 'PRIOR_PREWRITE_DB_BASELINE_PRESERVED=PASS'
+ }else{
+  & (Join-Path $PSScriptRoot 'Read-DatabaseProof.ps1') -Stage Before
+ }
  function Start-Visible([string]$Command){
   $enc=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Command))
   Start-Process powershell.exe -ArgumentList @('-NoProfile','-NoExit','-EncodedCommand',$enc) -WindowStyle Normal

@@ -1,6 +1,7 @@
 // Local-only composition. Never imported by Commercial Server, MCFT or a deployment entry.
 import Fastify from 'fastify';
 import {readFileSync} from 'node:fs';
+import {qualifyAcceptedAdapter} from './fdw-adapter-binding.mjs';
 import {resolve,join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {execFileSync} from 'node:child_process';
@@ -17,7 +18,8 @@ must(fdw.expectedHead===expected&&fdw.keycloakUserAndGroupsConfirmed===true&&fdw
 must(execFileSync('git',['-C',fdw.fdwCheckout,'rev-parse','HEAD'],{encoding:'utf8'}).trim()===expected,'FDW_SUBJECT');
 must(execFileSync('git',['-C',fdw.fdwCheckout,'status','--porcelain','--untracked-files=no'],{encoding:'utf8'}).trim()==='','FDW_TRACKED_DRIFT');
 const sourceDigests=JSON.parse(readFileSync(new URL('./fdw-source-digests.json',import.meta.url),'utf8'));
-must(hash(readFileSync(join(kit,'keycloak-identity.mjs'),'utf8').replace(/\r\n/g,'\n').trimEnd())===sourceDigests.identity,'FDW_ADAPTER_DIGEST');
+must(qualifyAcceptedAdapter(readFileSync(join(kit,'keycloak-identity.mjs'),'utf8'),sourceDigests.identity),'FDW_ACCEPTED_ADAPTER_DIGEST');
+console.log('FDW_PHASE4_ACCEPTED_ADAPTER_EXACT=PASS');
 const {createIdentity}=await import(pathToFileURL(join(kit,'keycloak-identity.mjs')).href);
 const identity=await createIdentity({formalIdentityModuleUrl:pathToFileURL(join(fdw.fdwCheckout,'src','formal-identity.mjs')).href,issuer,audience:'fdw-business',siteClientId:'fdw-site',siteClientSecret:fdw.keycloakClientSecret,providerConfigVersion:'fdw-local-mapping-v1',mode:'customer',tenants:{acceptance:{canonicalTenantRef:tenant,organizationRef:{issuer,id:'fdw-local-organization-a',version:'1'},requiredGroup:'/fdw-manager-a',resourceGrants:[],capabilities:['CREATE_FIELD']}}});
 const url=new URL(process.env.GEOX_E2E01_DATABASE_URL);

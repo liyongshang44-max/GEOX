@@ -47,3 +47,15 @@ test('gateway derivation preserves literal replacement bytes and imports actual 
  assert(result.includes('fetch((isManager?managerService:fdwService)+path+url.search,'));
  assert.throws(()=>deriveGateway(source.replace("location:'/auth/complete'",""),{},'file:///contract.mjs'),/GATEWAY_SOURCE_ANCHOR_MISMATCH/);
 });
+
+import {qualifyAcceptedAdapter} from './fdw-adapter-binding.mjs';
+import {hash as sourceHash} from './contract.mjs';
+test('accept only the exact previously qualified FDW membership fix',()=>{
+ const before="prefix\nif (!proof.groups.includes(group)) throw denied('MEMBERSHIP_DENIED');\nsuffix";
+ const after="prefix\nif (!proof.groups.includes(group)) return {status:'DENIED'};\nsuffix";
+ assert(qualifyAcceptedAdapter(after,sourceHash(before)));
+ assert(qualifyAcceptedAdapter(after.replaceAll('\n','\r\n')+'\r\n',sourceHash(before)));
+ assert(!qualifyAcceptedAdapter(before,sourceHash(before)));
+ assert(!qualifyAcceptedAdapter(after.replace('suffix','changed'),sourceHash(before)));
+ assert(!qualifyAcceptedAdapter(after+'\n'+after,sourceHash(before)));
+});
