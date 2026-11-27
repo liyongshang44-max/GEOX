@@ -1,6 +1,7 @@
 import React from 'react';
+import HistoricalForecastPanelV1 from './HistoricalForecastPanelV1';
 import {ProductPageShell,ProductPageHeader,ProductSectionCard} from '../../design-system/product';
-import {managerApi,ManagerApiError,parsePolygon,csvBase64,documentRef,type ManagerTransport,type ManagedField,type ScientificResult,type ObservationPage,type Boundary,type SoilDoc,type Review,type Assessment,type Followup} from '../../api/managerWorkspaceV1';
+import {managerApi,ManagerApiError,parsePolygon,csvBase64,documentRef,type ManagerTransport,type ManagedField,type ScientificResult,type HistoricalForecast,type ObservationPage,type Boundary,type SoilDoc,type Review,type Assessment,type Followup} from '../../api/managerWorkspaceV1';
 type Language='zh'|'en';
 type Props={language:Language;sessionKey:string;transport:ManagerTransport};
 // Explicit composition only. sessionKey MUST change at logout, principal or tenant
@@ -18,6 +19,7 @@ function Workspace({language,transport}:Props){
  const [selected,setSelected]=React.useState<string[]>([]),[reviewId,setReviewId]=React.useState(''),[start,setStart]=React.useState(''),[end,setEnd]=React.useState('');
  const [review,setReview]=React.useState(''),[assessment,setAssessment]=React.useState<Assessment|null>(null),[followups,setFollowups]=React.useState<Followup[]>([]),[followupId,setFollowupId]=React.useState(''),[successor,setSuccessor]=React.useState('');
  const [scientific,setScientific]=React.useState<ScientificResult|null>(null),[observations,setObservations]=React.useState<ObservationPage|null>(null);
+ const [forecast,setForecast]=React.useState<HistoricalForecast|null>(null),[forecastRun,setForecastRun]=React.useState('');
  const [busy,setBusy]=React.useState(false),[notice,setNotice]=React.useState(''),[error,setError]=React.useState(''),[detail,setDetail]=React.useState('');
  const locked=React.useRef(false),alive=React.useRef(true);
  React.useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
@@ -35,7 +37,7 @@ function Workspace({language,transport}:Props){
   try{await fn();}catch(e){if(!alive.current)return;const x=e instanceof ManagerApiError?e:null;if(x?.status===401){setLands(null);clearField();setField('');}setError(x?.unknownWrite?tr('提交结果不确定。请重新读取服务端记录，勿重复提交。','Write outcome unknown. Read server records before any resubmission.'):x?.status===401?tr('正式登录已失效，请重新登录。','Formal session expired; sign in again.'):x?.status===403?tr('当前身份缺少该操作的独立授权。','This operation requires an independent grant.'):x?.status===409?tr('资料或版本冲突，请重新读取后核对。','Evidence or version conflict; reload and verify.'):tr('操作未完成，请检查服务端状态。','Operation incomplete; inspect server state.'));setDetail(x?.code??(e instanceof Error?e.message:'UNKNOWN'));}
   finally{locked.current=false;if(alive.current)setBusy(false);}
  };
- const clearField=()=>{setScientific(null);setObservations(null);setBoundary(null);setPolygon('');setDocs([]);setReviews([]);setMore(false);setSelected([]);setReview('');setAssessment(null);setFollowups([]);setDocId('');setSource('');setFile(null);setReviewId('');setFollowupId('');setSuccessor('');};
+ const clearField=()=>{setForecast(null);setForecastRun('');setScientific(null);setObservations(null);setBoundary(null);setPolygon('');setDocs([]);setReviews([]);setMore(false);setSelected([]);setReview('');setAssessment(null);setFollowups([]);setDocId('');setSource('');setFile(null);setReviewId('');setFollowupId('');setSuccessor('');};
  const loadLands=async()=>{setLands(null);try{const result=await api.lands();if(!alive.current)return;setLands(result.fields);if(field&&!result.fields.some(x=>x.field_id===field)){clearField();setField('');}}catch(e){if(alive.current){clearField();setField('');}throw e;}};
  const openLand=async(id:string)=>{clearField();setField('');const b=await api.boundary(id);if(alive.current){setField(b.field_id);setFieldInput(b.field_id);setBoundary(b);setPolygon(b.geometry?JSON.stringify(b.geometry,null,2):'');}};
  React.useEffect(()=>{void run(loadLands);},[]); // fresh server read for each sessionKey mount
@@ -108,7 +110,8 @@ function Workspace({language,transport}:Props){
    {observations&&observations.status==='AVAILABLE'&&!observations.items.length&&<p>{tr('授权范围内没有观测记录。','No observation records in the authorized scope.')}</p>}
    {observations&&observations.items.length>0&&<><p>{tr('当前已读记录','Records loaded')}: {observations.items.length}</p><div style={{overflowX:'auto'}}><table><thead><tr>{[tr('观测时间','Observed at'),tr('含水量（体积分数）','Water content (fraction)'),tr('深度 mm','Depth mm'),tr('数据集','Dataset'),tr('质量','Quality'),tr('来源记录','Source record')].map(s=><th key={s}>{s}</th>)}</tr></thead><tbody>{observations.items.map(o=><tr key={o.fact_id}><td>{o.time.observed_at}</td><td>{o.measurement.value}</td><td>{o.measurement.measurement_depth_mm}</td><td>{o.dataset_id}</td><td>{o.quality.status==='PASS'?tr('通过','Pass'):tr('受限','Limited')}</td><td>{o.source_record_id}</td></tr>)}</tbody></table></div></>}
    {observations?.next_cursor&&button('下一页','Next page',async()=>{const x=await api.observations(field,observations.next_cursor!);if(alive.current)setObservations(x);})}
-   <p>{tr('72 小时预测与情景：历史原始数据尚未接入此工作台，不使用占位曲线。','72-hour forecast and scenarios: original historical data not yet connected to this workspace. No placeholder curves.')}</p>
+   {button('读取历史72小时预测及情景','Read historical 72-hour forecasts and scenarios',async()=>{setForecast(null);setForecastRun('');const x=await api.historicalForecast(field);if(alive.current){setForecast(x);setForecastRun(x.runs[0]?.forecast_ref.object_id??'');}},!field)}
+   {forecast&&<HistoricalForecastPanelV1 language={language} forecast={forecast} runId={forecastRun} onRunChange={setForecastRun}/>} 
   </ProductSectionCard>}
  </ProductPageShell>;
 }

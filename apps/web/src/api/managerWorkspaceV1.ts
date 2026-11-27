@@ -15,6 +15,9 @@ export type ScientificAssessment={assessment_ref:NativeRef;response_sha256:strin
 export type ScientificResult={status:string;display_status:string;semantics:string;action_authority:false;assessments:ScientificAssessment[]};
 export type HistoricalObservation={fact_id:string;dataset_id:string;scope:{season_id:string;zone_id:string};time:{observed_at:string};measurement:{value:number;unit:'fraction';measurement_depth_mm:number;spatial_support:string;direct_field_equivalence:false;direct_root_zone_equivalence:false};source_record_id:string;source_record_hash:string;quality:{status:string}};
 export type ObservationPage={status:'AVAILABLE'|'UNAVAILABLE';items:HistoricalObservation[];next_cursor:string|null;limitation_reason_codes:string[];current_condition_effect:'NO_PROMOTION'};
+export type ForecastPoint={horizon_hour:number;target_time:string;storage_mean_mm:string;storage_variance_mm2:string;available_water_fraction:string;determinism_hash:string};
+export type HistoricalForecastRun={forecast_ref:{object_id:string;fact_id:string;determinism_hash:string};issued_at:string;status:'COMPLETED'|'BLOCKED';source_posterior_ref:string;reason_codes:string[];points:ForecastPoint[];scenarios:{options:{option_id:string;requested_irrigation_mm:string;execution_status:'NOT_EXECUTED';points:ForecastPoint[]}[]}|null};
+export type HistoricalForecast={status:'AVAILABLE'|'UNAVAILABLE';runs:HistoricalForecastRun[];action_authority:false;current_condition_effect:'NO_PROMOTION'};
 export type Followup={followup_id:string;result:{baseline_review_id:string;successor_review_id:string;status:string;action_authority:false}};
 const ident=(x:string)=>{if(!/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(x))throw new Error('INVALID_IDENTIFIER');return encodeURIComponent(x);};
 export class ManagerApiError extends Error{constructor(readonly code:string,readonly status:number,readonly unknownWrite:boolean){super(code);}}
@@ -44,6 +47,7 @@ export function managerApi(transport:ManagerTransport){
   assess:(id:string,r:string)=>call<Assessment>('POST',review(id,r)+'/native-assessment',{}),
   scientificResult:(id:string,r:string)=>call<ScientificResult>('GET',review(id,r)+'/scientific-result'),
   observations:(id:string,cursor?:string)=>call<ObservationPage>('GET',field(id)+'/observations?limit=100'+(cursor?'&cursor='+encodeURIComponent(cursor):'')),
+  historicalForecast:(id:string)=>call<HistoricalForecast>('GET',field(id)+'/historical-forecast'),
   followups:(id:string,r:string)=>call<{followups:Followup[];more_history_available:boolean}>('GET',review(id,r)+'/followups'),
   linkFollowup:(id:string,r:string,body:{followup_id:string;successor_review_id:string})=>call<unknown>('POST',review(id,r)+'/followups',body)
  };
