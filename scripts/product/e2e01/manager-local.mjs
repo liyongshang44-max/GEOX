@@ -43,7 +43,7 @@ app.addHook('onRequest',async(req,reply)=>{
 });
 app.addHook('preHandler',async(req,reply)=>{
  if(req.method==='POST'&&req.raw.url==='/api/v1/manager/fields'&&!createBodyAllowed(req.body))return reply.code(403).send({ok:false,error:'E2E01_CREATE_TARGET_DENIED'});
- if(req.method!=='GET'&&!cfg.writeAdmitted){
+ if(req.method!=='GET'&&(!cfg.writeAdmitted||validatePolicy(readPolicy(),cfg.subject).phase==='PREWRITE')){
   if(req.method==='POST'&&req.raw.url==='/api/v1/manager/fields'){
    const token=/^Bearer ([^\s]+)$/i.exec(String(req.headers.authorization??''))?.[1];
    if(!token)return reply.code(401).send({ok:false,error:'MANAGER_CREDENTIAL_REQUIRED'});

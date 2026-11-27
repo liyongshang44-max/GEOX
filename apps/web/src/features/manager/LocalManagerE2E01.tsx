@@ -20,7 +20,7 @@ function LocalManager(){
     {body:{field_id:'field_geox_e2e01_001',tenant_id:'tenant_forbidden',name:'DENY ONLY'},code:'E2E01_CREATE_TARGET_DENIED'}
    ];
    // Both target and caller-supplied scope are denied before native write.
-   const out=[];
+   const out:string[]=[];
    for(const p of paths){const r=await transport('/api/v1/manager/fields',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(p.body)});const x=await r.json();out.push(r.status+':'+String(x.error??'UNEXPECTED'));if(r.status!==403||x.error!==p.code)break;}
    setProof(out.join(' / '));
   }catch{setProof('TRANSPORT_ERROR');}
