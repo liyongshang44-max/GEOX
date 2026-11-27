@@ -27,7 +27,69 @@ const reviewedFiles = Object.freeze({
   "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs": "100644 blob 167c3e51ac0fd02164ba7b0006174a506f1c3940"
 });
 const PATHS=Object.freeze([...WIRING, ...Object.keys(reviewedFiles)].sort());
-const SCOPED=require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").SCOPED;
+const DA9_REVIEW="DA9_SIGNED_COMPOSER_V2_PHASE3_FROZEN_RUNTIME_REVIEW_ONLY";
+const SCOPED=Object.freeze([...new Set([...require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").SCOPED,DA9_REVIEW])]);
+// Fresh native execution evidence for the reviewed isolation candidate. The
+// final control-plane successor must prove the exact same dependency bytes;
+// neither the older historical digest nor an unrelated workflow is accepted.
+const NATIVE_SOURCE="3ba47200ad8a20263b4c8e7b134198f1657e18f9";
+const NATIVE_ROWS=Object.freeze({
+ PHASE2_EVIDENCE_PROVIDER_MODULES:{
+  run:45963683265,job:140387182171,artifact:15181492721,zip:"315bf8444fb833220ab86c43764522599c7027fe514aad081cd3d6fc747e0d6b",name:"mcft-cap-09-ea5c2b1-",jobName:"ea5c2b1-live-kbs-soil-ingress-executor",
+  steps:["Install exact repository dependencies","Validate Phase2 successor boundary without rewriting historical EA5C2B1 authority","Prove KBS Raw Hourly product core preserves Amendment-11 late authority","Prove focused KBS Raw Hourly product adapter and decoder boundary","Prove post-COMMIT visibility gates EvidenceSupplyCursor advance","Execute live KBS source through frozen EA3 and EA5C1 pipeline against CI-only stores","Verify CI raw store remains private","Verify EA5C2B1 nonclaims"]
+ },
+ PHASE3_EVIDENCE_RUNTIME_FOUNDATION:{
+  run:45963683049,job:140387180795,artifact:15182166865,zip:"c357ae78e289020d1a6ff829799d9e2ae0b951bd95c714bf59f22935d1722a2c",name:"mcft-cap09-phase3-evidence-persistence-",jobName:"postgres-evidence-persistence",
+  steps:["Install exact repository dependencies","Install pinned GFS scientific stack and prove product decoder","Apply Phase3 Evidence persistence schema only","Prove durable Evidence lease and supply cursor semantics","Prove retained KBS snapshot historical-prefix comparison","Prove reusable verified retained-raw replay primitive","Prove product GFS raw bundle composition","Prove durable private candidate and retained-raw I/O","Prove Evidence Runtime database ACL separation","Prove deployable Evidence Runtime composition","Prove scientific subprocess isolation and cleanup","Prove Phase3 persistence boundary has no Twin runtime or cadence ownership","Upload Phase3 Evidence persistence proof"]
+ },
+ PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION:{
+  run:45963683204,job:140387182029,artifact:15182625900,zip:"09dbd7d80372478c72e90d68ce7d0702f52782415af0578d189f52fa2be34f13",name:"mcft-cap09-phase7-candidate-promotion-composition-",jobName:"candidate-promotion-composition",
+  steps:["Checkout exact subject","Require exact stacked predecessor and zero production activation","Typecheck candidate/promotion composition graph","Prove reusable verified retained-raw replay primitive","Run real private candidate to PostgreSQL fenced promotion qualification","Validate composition machine proof","Upload Phase7 candidate/promotion composition proof"]
+ }
+});
+function verifyNativeArtifact({api,git,root,def,id,native,head,now,headTree}){
+ const n=NATIVE_ROWS[id];assert(n);
+ assert.equal(git("merge-base",NATIVE_SOURCE,head),NATIVE_SOURCE,"CUTOVER_NATIVE_ANCESTRY");
+ const nativeAuthority=JSON.parse(git("show",NATIVE_SOURCE+":"+Q));
+ assert.deepEqual(def,nativeAuthority.checks.find(x=>x.check_id===id),"CUTOVER_NATIVE_CHECK_DEFINITION_CHANGED:"+id);
+ for(const resolver of def.resolver_ids)assert.deepEqual(nativeAuthority.dependency_resolvers[resolver],JSON.parse(git("show",head+":"+Q)).dependency_resolvers[resolver],"CUTOVER_NATIVE_RESOLVER_CHANGED:"+resolver);
+ // The only additional change admitted by this evidence route is this
+ // verifier itself. Later candidates must explicitly re-evaluate this lease.
+ assert.deepEqual(git("diff","--name-only",NATIVE_SOURCE,head).split(/\r?\n/).filter(Boolean),["scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_ONE_TIME_CUTOVER_V1.cjs"],"CUTOVER_NATIVE_NON_QUALIFICATION_DELTA");
+ const helper="apps/server/src/external_evidence/provider/run_scientific_python_v1.ts";
+ const depPaths=[...new Set([...def.resolver_ids.flatMap(x=>now.resolved[x].paths),helper,def.execution_workflow])].sort();
+ const projection=depPaths.map(p=>{assert(native.has(p)&&native.get(p)===headTree.get(p),"CUTOVER_NATIVE_DEPENDENCY_CHANGED:"+p);return [p,headTree.get(p)];});
+ const run=api("actions/runs/"+n.run);
+ assert(run.id===n.run&&run.head_sha===NATIVE_SOURCE&&run.run_attempt===1&&run.event==="pull_request"&&run.path===def.execution_workflow&&run.status==="completed"&&run.conclusion==="success","CUTOVER_NATIVE_RUN:"+id);
+ const job=api("actions/runs/"+n.run+"/attempts/1/jobs?per_page=100").jobs.find(x=>x.id===n.job);
+ assert(job&&job.name===n.jobName&&job.conclusion==="success","CUTOVER_NATIVE_JOB:"+id);
+ for(const name of n.steps)assert(job.steps.some(x=>x.name===name&&x.conclusion==="success"),"CUTOVER_NATIVE_STEP:"+id+":"+name);
+ const art=api("actions/artifacts/"+n.artifact);
+ assert(art.id===n.artifact&&!art.expired&&art.digest==="sha256:"+n.zip&&art.name===n.name+NATIVE_SOURCE&&art.workflow_run.id===n.run&&art.workflow_run.head_sha===NATIVE_SOURCE,"CUTOVER_NATIVE_ARTIFACT:"+id);
+ assert(Date.parse(job.started_at)<=Date.parse(art.created_at)&&Date.parse(art.created_at)<=Date.parse(job.completed_at),"CUTOVER_NATIVE_ARTIFACT_TIME:"+id);
+ const zip=api("actions/artifacts/"+n.artifact+"/zip",true);assert.equal(sha(zip),n.zip,"CUTOVER_NATIVE_ZIP:"+id);
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-native-source-"));let receipts=[];
+ try{
+  const file=path.join(dir,"proof.zip");fs.writeFileSync(file,zip);
+  const names=cp.execFileSync("unzip",["-Z1",file],{encoding:"utf8",timeout:10000}).trim().split(/\r?\n/);
+  assert.equal(names.length,{PHASE2_EVIDENCE_PROVIDER_MODULES:4,PHASE3_EVIDENCE_RUNTIME_FOUNDATION:20,PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION:2}[id]);
+  assert.equal(new Set(names).size,names.length);
+  const docs={};
+  for(const name of names){assert(/^MCFT_CAP_09_[A-Z0-9_]+\.json$/.test(name),"CUTOVER_NATIVE_ZIP_MEMBER");const raw=cp.execFileSync("unzip",["-p",file,name],{timeout:10000,maxBuffer:1024*1024});const d=JSON.parse(raw.toString("utf8"));assert.equal(d.status,"PASS","CUTOVER_NATIVE_MACHINE_STATUS:"+name);docs[name]=d;receipts.push({name,sha256:sha(raw)});}
+  if(id==="PHASE2_EVIDENCE_PROVIDER_MODULES"){
+   const d=docs["MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1_RESULT.json"];
+   assert(d&&d.candidate_sha===NATIVE_SOURCE&&d.governed_base_sha===BASE&&d.later_provider_evolution_requalified_by_current_workflow===true&&d.formal_database_mutation===false&&d.formal_v5_armed===false);
+   const k=docs["MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1_RESULT.json"];
+   assert(k&&k.exact_t_decode_proved===true&&k.rainfall_evidence_draft_proved===true&&k.historical_et0_evidence_draft_proved===true&&k.formal_v5_armed===false);
+  }else if(id==="PHASE3_EVIDENCE_RUNTIME_FOUNDATION"){
+   for(const name of ["MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1_RESULT.json","MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1_RESULT.json","MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1_RESULT.json","MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1_RESULT.json"])assert(docs[name]&&docs[name].formal_v5_armed===false);
+  }else{
+   const d=docs["MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1_RESULT.json"];
+   assert(d&&d.subject_sha===NATIVE_SOURCE&&d.real_postgres_fenced_promotion===true&&d.exact_three_facts_single_fenced_transaction===true&&d.promotion_did_not_advance_cursor===true&&d.cursor_advanced_only_after_attestation===true&&d.production_owner_activation===false&&d.formal_v5_armed===false&&d.o00_started===false);
+  }
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+ return {native_source_subject:NATIVE_SOURCE,native_run:n.run,native_job:n.job,native_artifact:n.artifact,native_zip_sha256:n.zip,machine_receipts:receipts,dependency_count:projection.length,dependency_projection_sha256:sha(Buffer.from(JSON.stringify(projection))),native_source_projection_exact:true,historical_digest_reused:false};
+}
 const AFFECTED=new Set(["CAP09_R4285_HOST_EXACT_SOURCE_ADMISSION_V1","CAP09_R4285_PREPARE_LIVE_V3_EXACT_SOURCE_REVIEW_V1",CURRENT]);
 const sha=b=>crypto.createHash("sha256").update(b).digest("hex");
 function verify({ROOT:root,args,authority,plan,changed,stage}){
@@ -82,7 +144,7 @@ function verify({ROOT:root,args,authority,plan,changed,stage}){
   }finally{if(added)git("worktree","remove","--force",previousRoot);else fs.rmdirSync(previousRoot);}
   const now=planner.resolveDependencyResolvers(root,authority);
   assert.deepEqual(before.errors,[],"CUTOVER_PRIOR_RESOLVER_ERRORS");assert.deepEqual(now.errors,[],"CUTOVER_CURRENT_RESOLVER_ERRORS");
-  const c6=catalog(C6D),baseTree=catalog(BASE),headTree=catalog(args.head);
+  const c6=catalog(C6D),baseTree=catalog(BASE),headTree=catalog(args.head),nativeTree=catalog(NATIVE_SOURCE);
   for(const [p,entry] of Object.entries(reviewedFiles)){
    assert.equal(headTree.get(p),entry,"CUTOVER_REVIEWED_FILE_CHANGED:"+p);
   }
@@ -119,6 +181,27 @@ function verify({ROOT:root,args,authority,plan,changed,stage}){
    assert(def&&decision&&previous&&["PASS","NOT_APPLICABLE"].includes(previous.status),"CUTOVER_PRIOR_ROW:"+id);
    const deps=[...new Set(def.resolver_ids.flatMap(r=>now.resolved[r].paths))].sort();
    const changedRuntime = [...new Set(def.resolver_ids.flatMap(r=>changedResolvers.get(r) || []))].sort();
+   if(Object.hasOwn(NATIVE_ROWS,id)){
+    const proof=verifyNativeArtifact({api,git,root,def,id,native:nativeTree,head:args.head,now,headTree});
+    rows[id]={check_id:id,applicability:decision.status,status:"PASS",reason_code:"CURRENT_ISOLATION_SOURCE_NATIVE_PROOF_EXACT_DEPENDENCY_SUCCESSOR",source_base:BASE,source_head:args.head,dependency_digest:decision.dependency_digest,...proof,historical_qualification_reissued:false,signatures_transferred:false,permit_consumed:false,host_started:false,formal_six_stages:0};
+    continue;
+   }
+   if(id===DA9_REVIEW){
+    assert.equal(previous.status,"PASS","CUTOVER_DA9_PRIOR_REVIEW_REQUIRED");
+    assert.equal(changedRuntime.length,0,"CUTOVER_DA9_OWN_SCOPE_CHANGED");
+    const historical=fs.mkdtempSync(path.join(os.tmpdir(),"r4285-da9-historical-"));let added=false,output;
+    try{
+     git("worktree","add","--detach",historical,C6D);added=true;
+     assert.equal(cp.execFileSync("git",["rev-parse","HEAD"],{cwd:historical,encoding:"utf8"}).trim(),C6D);
+     const rel="scripts/governance_acceptance/VERIFY_MCFT_CAP09_DA9_SIGNED_V2_QCP_TECHNICAL_ENROLLMENT_V1.cjs";
+     const exec=cp.spawnSync(process.execPath,[rel],{cwd:historical,encoding:"utf8",timeout:150000,maxBuffer:8*1024*1024});
+     assert.equal(exec.status,0,"CUTOVER_DA9_HISTORICAL_REVIEW:"+String(exec.stderr||"").slice(-700));
+     output=JSON.parse(String(exec.stdout).trim());
+     assert(output.status==="PASS_CTO_TECHNICAL_SUCCESSOR_QCP_REGISTRATION_ONLY"&&output.negative_tests_pass===10&&output.old_frozen_gate_still_fails===true&&output.formal_qcp_qualified===false&&output.permit===false&&output.production===false);
+    }finally{if(added)git("worktree","remove","--force",historical);else fs.rmdirSync(historical);}
+    rows[id]={check_id:id,applicability:decision.status,status:"PASS",reason_code:"HISTORICAL_DA9_TECHNICAL_REVIEW_RECOMPUTED_IN_ACCEPTED_94_108_SCOPE_ONLY",source_base:BASE,source_head:args.head,historical_review_subject:C6D,dependency_digest:decision.dependency_digest,historical_review:output,current_frozen_runtime_qualified:false,historical_qualification_reissued:false,signatures_transferred:false,permit_consumed:false,host_started:false,formal_six_stages:0};
+    continue;
+   }
    if(changedRuntime.length){
     nativeChecks.push(id);
     continue;
