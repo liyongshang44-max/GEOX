@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$Subject,[Parameter(Mandatory=$true)][string]$ManagerSubject,[Parameter(Mandatory=$true)][string]$PgContainerId,[Parameter(Mandatory=$true)][string]$MigrationSubject,[Parameter(Mandatory=$true)][string]$MigrationSource,[Parameter(Mandatory=$true)][string]$MigrationPhysical,[switch]$ResumeAfterWebBuild)
+param([Parameter(Mandatory=$true)][string]$Subject,[Parameter(Mandatory=$true)][string]$ManagerSubject,[Parameter(Mandatory=$true)][string]$PgContainerId,[Parameter(Mandatory=$true)][string]$MigrationSubject,[Parameter(Mandatory=$true)][string]$MigrationSource,[Parameter(Mandatory=$true)][string]$MigrationPhysical,[switch]$ResumeAfterWebBuild,[switch]$ResumeAfterGatewayCopy)
 $ErrorActionPreference='Stop'
 $Repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $Kit='D:\gptdown\FDW-LOCAL-KEYCLOAK-POSTGRES-20261117\FDW-LOCAL-KEYCLOAK-POSTGRES-20261117'
@@ -8,7 +8,15 @@ $Pg='geox-product-e2e01-postgres'
 $OldPg='geox-v1-postgres'
 if($Subject -notmatch '^[a-f0-9]{40}$' -or (git -C $Repo rev-parse HEAD) -cne $Subject -or @(git -C $Repo status --porcelain --untracked-files=no).Count){throw 'HOLD_EXACT_PRODUCT_SOURCE'}
 if($ManagerSubject -notmatch '^[a-f0-9-]{36}$' -or $PgContainerId -notmatch '^[a-f0-9]{64}$' -or $MigrationSubject -notmatch '^[a-f0-9]{40}$' -or $MigrationSource -notmatch '^[a-f0-9]{64}$' -or $MigrationPhysical -notmatch '^[a-f0-9]{64}$'){throw 'HOLD_INPUT_IDENTITY'}
-if(Test-Path -LiteralPath $Local){throw 'HOLD_LOCAL_CONFIG_ALREADY_EXISTS'}
+if($ResumeAfterGatewayCopy){
+ if(-not $ResumeAfterWebBuild){throw 'HOLD_RESUME_WEB_REQUIRED'}
+ if(-not(Test-Path -LiteralPath $Local -PathType Container)){throw 'HOLD_RESUME_LOCAL_CONFIG_MISSING'}
+ if(Test-Path -LiteralPath (Join-Path $Local 'prewrite-db-before.json')){throw 'HOLD_BASELINE_ALREADY_EXISTS'}
+ $entries=@(Get-ChildItem -LiteralPath $Local -Force | Select-Object -ExpandProperty Name)
+ if($entries.Count -ne 2 -or 'config.json' -cnotin $entries -or 'owner-land-grants.json' -cnotin $entries){throw 'HOLD_RESUME_LOCAL_STATE'}
+}else{
+ if(Test-Path -LiteralPath $Local){throw 'HOLD_LOCAL_CONFIG_ALREADY_EXISTS'}
+}
 if((docker inspect --format '{{.Id}}' $Pg) -cne $PgContainerId -or
  (docker inspect --format '{{.State.Status}}' $Pg) -cne 'running' -or
  (docker inspect --format '{{.State.Status}}' $OldPg) -cne 'exited' -or
@@ -29,7 +37,7 @@ if($fdwCfg.expectedHead -cne '526138b81d35688b28c9184d665b6e972899a0c0' -or (git
 Remove-Variable fdwCfg
 $original=Join-Path $Kit 'oidc-session-gateway.mjs'
 $derived=Join-Path $Kit 'oidc-session-gateway-e2e01.mjs'
-if(Test-Path -LiteralPath $derived){throw 'HOLD_GATEWAY_COPY_EXISTS'}
+if($ResumeAfterGatewayCopy -ne (Test-Path -LiteralPath $derived -PathType Leaf)){throw 'HOLD_GATEWAY_COPY_STATE'}
 $originalHash=(Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash
 $oldServer=@(docker inspect geox-v1-server | ConvertFrom-Json)[0]
 if($oldServer.State.Status -cne 'exited'){throw 'HOLD_OLD_SERVER_STATE'}
@@ -56,17 +64,28 @@ try{
   & $Node scripts/product/e2e01/build-web.mjs
   if($LASTEXITCODE -ne 0){throw 'HOLD_WEB_BUILD'}
  }
- & $Node scripts/product/e2e01/prepare-gateway.mjs $Kit
+ if($ResumeAfterGatewayCopy){
+  & $Node scripts/product/e2e01/prepare-gateway.mjs $Kit --verify-existing
+ }else{
+  & $Node scripts/product/e2e01/prepare-gateway.mjs $Kit
+ }
  if($LASTEXITCODE -ne 0){throw 'HOLD_GATEWAY_PREPARATION'}
  & $Node --check $derived
  if($LASTEXITCODE -ne 0){throw 'HOLD_GATEWAY_SYNTAX'}
- New-Item -ItemType Directory -Path $Local|Out-Null
  $policyFile=Join-Path $Local 'owner-land-grants.json'
  $cfgFile=Join-Path $Local 'config.json'
  $policy=[ordered]@{schema='geox.local-owner-land-grants.e2e01.v1';decision='AUTHORIZE_BOUNDED_MANAGER_INTEGRATION';subject=$ManagerSubject;revision=1;phase='PREWRITE';create_status='ACTIVE';field_grants=@()}
  $cfg=[ordered]@{fdwKit=$Kit;ownerPolicy=$policyFile;subject=$ManagerSubject;writeAdmitted=$false;pgContainerId=$PgContainerId;migrationSubject=$MigrationSubject;migrationSource=$MigrationSource;migrationPhysical=$MigrationPhysical}
- [IO.File]::WriteAllText($policyFile,($policy|ConvertTo-Json -Depth 4 -Compress),$utf8)
- [IO.File]::WriteAllText($cfgFile,($cfg|ConvertTo-Json -Depth 4 -Compress),$utf8)
+ $policyJson=$policy|ConvertTo-Json -Depth 4 -Compress
+ $cfgJson=$cfg|ConvertTo-Json -Depth 4 -Compress
+ if($ResumeAfterGatewayCopy){
+  if([IO.File]::ReadAllText($policyFile) -cne $policyJson -or [IO.File]::ReadAllText($cfgFile) -cne $cfgJson){throw 'HOLD_PREWRITE_CONFIG_CHANGED'}
+  Write-Host 'PRIOR_PREWRITE_CONFIG_REUSED=PASS'
+ }else{
+  New-Item -ItemType Directory -Path $Local|Out-Null
+  [IO.File]::WriteAllText($policyFile,$policyJson,$utf8)
+  [IO.File]::WriteAllText($cfgFile,$cfgJson,$utf8)
+ }
  & (Join-Path $PSScriptRoot 'Read-DatabaseProof.ps1') -Stage Before
  function Start-Visible([string]$Command){
   $enc=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Command))
