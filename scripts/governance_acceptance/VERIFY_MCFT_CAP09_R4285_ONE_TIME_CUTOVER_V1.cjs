@@ -27,6 +27,7 @@ const reviewedFiles = Object.freeze({
   "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs": "100644 blob 167c3e51ac0fd02164ba7b0006174a506f1c3940"
 });
 const PATHS=Object.freeze([...WIRING, ...Object.keys(reviewedFiles)].sort());
+const CURRENT_V13_WORKFLOW_BLOB="d5a628cb921a746b3d95859d486040af6ef9cd1c";
 const DA9_REVIEW="DA9_SIGNED_COMPOSER_V2_PHASE3_FROZEN_RUNTIME_REVIEW_ONLY";
 const SCOPED=Object.freeze([...new Set([...require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").SCOPED,DA9_REVIEW])]);
 // Fresh native execution evidence for the reviewed isolation candidate. The
@@ -55,7 +56,7 @@ function verifyNativeArtifact({api,git,root,def,id,native,head,now,headTree}){
  for(const resolver of def.resolver_ids)assert.deepEqual(nativeAuthority.dependency_resolvers[resolver],JSON.parse(git("show",head+":"+Q)).dependency_resolvers[resolver],"CUTOVER_NATIVE_RESOLVER_CHANGED:"+resolver);
  // The only additional change admitted by this evidence route is this
  // verifier itself. Later candidates must explicitly re-evaluate this lease.
- assert.deepEqual(git("diff","--name-only",NATIVE_SOURCE,head).split(/\r?\n/).filter(Boolean),["scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_ONE_TIME_CUTOVER_V1.cjs"],"CUTOVER_NATIVE_NON_QUALIFICATION_DELTA");
+ assert.deepEqual(git("diff","--name-only",NATIVE_SOURCE,head).split(/\r?\n/).filter(Boolean),[".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml","scripts/governance_acceptance/VERIFY_MCFT_CAP09_R4285_ONE_TIME_CUTOVER_V1.cjs"],"CUTOVER_NATIVE_NON_QUALIFICATION_DELTA");
  const helper="apps/server/src/external_evidence/provider/run_scientific_python_v1.ts";
  const depPaths=[...new Set([...def.resolver_ids.flatMap(x=>now.resolved[x].paths),helper,def.execution_workflow])].sort();
  const projection=depPaths.map(p=>{assert(native.has(p)&&native.get(p)===headTree.get(p),"CUTOVER_NATIVE_DEPENDENCY_CHANGED:"+p);return [p,headTree.get(p)];});
@@ -116,6 +117,7 @@ function verify({ROOT:root,args,authority,plan,changed,stage}){
   const pre="scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs";
   assert.equal(bytes(args.head,pre).toString("utf8").replace("  // BEGIN ONE_TIME_R4285_CUTOVER_PROOF\n  const cutoverModule=stage===\"SUCCESSOR_SUBJECT_PRE_MERGE\"&&args.base===\"8facaba79eaf42d9b9c854c091ae3a7319d455f8\"&&process.env.GITHUB_HEAD_REF===\"mcft/r4285-one-time-physical-cutover-20261127\"\n    ? require(\"./VERIFY_MCFT_CAP09_R4285_ONE_TIME_CUTOVER_V1.cjs\"):null;\n  const cutoverProof=cutoverModule?cutoverModule.verify({ROOT,args,authority,plan,changed,stage}):null;\n  // END ONE_TIME_R4285_CUTOVER_PROOF\n","").replace("    // BEGIN ONE_TIME_R4285_CUTOVER_ROUTE\n    if(cutoverProof&&cutoverModule.SCOPED.includes(decision.check_id)&&!cutoverProof.native_checks?.includes(decision.check_id)){\n      const row=cutoverProof.rows?.[decision.check_id];const ok=cutoverProof.status===\"PASS\"&&!!row;\n      result=ok?row:{check_id:decision.check_id,applicability:decision.status,status:\"FAIL\",reason_code:cutoverProof.reason_code,current_source:cutoverProof,permit_consumed:false,stages:0};\n      if(!ok)blockers.push({blocker_class:\"ONE_TIME_R4285_EXACT_SOURCE_HOLD\",check_id:decision.check_id,detail:cutoverProof});\n      results.push(result);continue;\n    }\n    // END ONE_TIME_R4285_CUTOVER_ROUTE\n",""),bytes(BASE,pre).toString("utf8"),"CUTOVER_OTHER_PREFLIGHT_CHANGE");
   for(const f of [".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml"]){
+   if(f===".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml"){assert.equal(git("rev-parse",args.head+":"+f),CURRENT_V13_WORKFLOW_BLOB,"CUTOVER_CURRENT_V13_WORKFLOW_CHANGED");continue;}
    assert.equal(bytes(args.head,f).toString("utf8").split(" || (github.event.pull_request.base.sha == '8facaba79eaf42d9b9c854c091ae3a7319d455f8' && github.head_ref == 'mcft/r4285-one-time-physical-cutover-20261127' && github.event.pull_request.head.repo.full_name == github.repository)").join("").split(" || { [ \"${{ github.event.pull_request.base.sha }}\" = \"8facaba79eaf42d9b9c854c091ae3a7319d455f8\" ] && [ \"${{ github.head_ref }}\" = \"mcft/r4285-one-time-physical-cutover-20261127\" ] && [ \"${{ github.event.pull_request.head.repo.full_name }}\" = \"${{ github.repository }}\" ]; }").join(""),bytes(BASE,f).toString("utf8"),"CUTOVER_OTHER_WORKFLOW_CHANGE:"+f);
   }
   // Native historical evidence; the historical Subject is not represented as current main.
