@@ -1976,6 +1976,19 @@
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_EXEC_V3.cjs",
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_WINDOWS_HOST_V1.cjs"
       ]
+    },
+    "CAP09_R4285_RELEASE_IDENTITY_SUCCESSOR_V1_EXACT_PATHS": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap09-r4285-prepare-live-v3.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-R4285-QUALIFIED-RELEASE-IDENTITY-AUDIT-V1.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-R4285-RELEASE-DEPENDENCY-POLICY-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RELEASE_IDENTITY_V1.test.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP09_R4285_RELEASE_IMPACT_AUDIT_V1.test.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_R4285_RELEASE_IDENTITY_V1.cjs",
+        "scripts/governance_acceptance/MCFT_CAP09_R4285_RELEASE_IMPACT_AUDIT_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -4150,7 +4163,8 @@
       ],
       "resolver_ids": [
         "CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_PATHS_V1",
-        "CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4_EXACT_PATHS_V1"
+        "CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4_EXACT_PATHS_V1",
+        "CAP09_R4285_RELEASE_IDENTITY_SUCCESSOR_V1_EXACT_PATHS"
       ],
       "historical_evidence_policy": "HISTORIC_23_SOURCE_BLOBS_AND_TRUST_V1_IMMUTABLE_NO_REPLAY",
       "execution_workflow": ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
@@ -4159,7 +4173,8 @@
       "carry_forward_policy": "NONE_PRIOR_QCP73_NOT_REISSUED",
       "requalification_triggers": [
         "CAP09_R4285_TRUST_V2_NATIVE_ADOPTION_V4_EXACT_PATHS_V1",
-        "CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4_EXACT_PATHS_V1"
+        "CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4_EXACT_PATHS_V1",
+        "CAP09_R4285_RELEASE_IDENTITY_SUCCESSOR_V1_EXACT_PATHS"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",
