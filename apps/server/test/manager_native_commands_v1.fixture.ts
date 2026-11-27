@@ -55,12 +55,12 @@ try{
 
  let nativeCalls=0,planEnabled=false;
  const target={organization_id:'fixture-adr-org',tenant_id:'fixture-adr-tenant',field_id:'fixture-adr-field'};
- const deployment=authorityRef('Deployment','fixture-deployment'),release=authorityRef('KnowledgeRelease','fixture-release'),candidate=authorityRef('QualifiedKnowledge','fixture-knowledge');
+ const deployment=authorityRef('Deployment','fixture-deployment'),release=authorityRef('KnowledgeRelease','fixture-release'),profile=authorityRef('RuntimeProfile','fixture-profile'),candidate=authorityRef('QualifiedKnowledge','fixture-knowledge');
  let problemRef:AdrRefV1|null=null;
  authorityConfig.adrNativeReview={
   async resolvePlan(x){
    if(!planEnabled)return null;
-   return {basis_sha256:x.basis_sha256,target_binding_ref:'fixture-target',decision_mapping_ref:'fixture-decision',target_ref:target,deployment_ref:deployment,knowledge_release_ref:release,decision_type:'FIXTURE_REVIEW',objective_code:'FIXTURE',use_purpose:'FIXTURE',use_class:'FIXTURE',decision_authority_mode:'EXTERNAL_POLICY',decision_horizon:{duration:'P1Y'},decision_deadline:new Date(Date.now()+86400000).toISOString(),crop_action_bindings:x.basis.intent.crop_codes.map((crop_code:string)=>({crop_code,action_code:crop_code})),datum_bindings:x.basis.documents.flatMap((d:any)=>d.candidates.map((row:any)=>({document_id:d.document_id,revision:d.revision,row_number:row.row_number,mapping_ref:'fixture-mapping',semantic_id:'fixture.soil.ph',geometry_ref:'fixture-point',sample_day_start:row.sampled_on+'T00:00:00Z',sample_day_end:row.sampled_on+'T23:59:59.999Z'})))};
+   return {basis_sha256:x.basis_sha256,target_binding_ref:'fixture-target',decision_mapping_ref:'fixture-decision',target_ref:target,deployment_ref:deployment,runtime_profile_ref:profile,knowledge_release_ref:release,decision_type:'FIXTURE_REVIEW',objective_code:'FIXTURE',use_purpose:'FIXTURE',use_class:'FIXTURE',decision_authority_mode:'EXTERNAL_POLICY',decision_horizon:{duration:'P1Y'},decision_deadline:new Date(Date.now()+86400000).toISOString(),crop_action_bindings:x.basis.intent.crop_codes.map((crop_code:string)=>({crop_code,action_code:crop_code})),datum_bindings:x.basis.documents.flatMap((d:any)=>d.candidates.map((row:any)=>({document_id:d.document_id,revision:d.revision,row_number:row.row_number,mapping_ref:'fixture-mapping',semantic_id:'fixture.soil.ph',geometry_ref:'fixture-point',sample_day_start:row.sampled_on+'T00:00:00Z',sample_day_end:row.sampled_on+'T23:59:59.999Z'})))};
   },
   consumer:{baseUrl:'https://adr.fixture.invalid/',async resolveBinding(x){
    const a=x.manager;
@@ -74,7 +74,7 @@ try{
    if(path==='/v1/decision-problems'){kind='DecisionProblem';problemRef=authorityRef(kind,b.logical_id);}
    else if(path==='/v1/context-data')kind='ContextDatum';
    else if(path==='/v1/context-manifests'){kind='ContextManifest';const d=res.decision_problem_ref;res.decision_problem_ref={kind:d.kind,logicalId:d.logical_id,version:d.version,semanticHash:d.semantic_hash};res.target_ref=target;res.datum_refs=res.datum_refs.map((d:AdrRefV1)=>({datum_id:d.logical_id,semantic_hash:d.semantic_hash}));res.resolved_reference_receipts=[];}
-   else if(path==='/v1/knowledge-retrieval-results'){kind='KnowledgeRetrievalResult';res.knowledge_release_ref=release;res.candidate_refs=[candidate];}
+   else if(path==='/v1/knowledge-retrieval-results'){kind='KnowledgeRetrievalResult';res.knowledge_release_ref=release;res.runtime_profile_ref=profile;res.authority_class='RETRIEVAL_EVIDENCE_NON_SCIENTIFIC';res.query_semantics={decision_type:'FIXTURE_REVIEW',use_purpose:'FIXTURE',use_class:'FIXTURE',decision_authority_mode:'EXTERNAL_POLICY',objective_code:'FIXTURE'};res.candidate_refs=[candidate];res.miss_diagnostics=[];}
    else {assert.equal(path,'/v1/applicability-assessments');kind='ApplicabilityAssessment';res.decision_problem_ref=problemRef;res.authority_class='SOURCE_TARGET_TRANSPORT_AUTHORITY';res.transport_status='UNRESOLVED';res.scientific_use_status='UNQUALIFIED';}
    return new Response(JSON.stringify({ref:authorityRef(kind,b.logical_id),resource:res}),{status:201});
   }}
@@ -208,6 +208,16 @@ try{
  assert.deepEqual((await req('GET',nativePath)).json(),executed.json());
  assert.deepEqual((await req('POST',successorNative,{})).json(),successorEvaluation.json());assert.equal(nativeCalls,11);
  proof('P4_SUCCESSOR_REASSESSMENT_REUSES_NATIVE_CHAIN_AND_PRESERVES_BASELINE_TEST_ONLY');
+ const noSoil=await req('POST',reviewPath,{...intent,review_id:'review-no-soil',documents:[]});assert.equal(noSoil.statusCode,200,noSoil.body);
+ const noSoilPath=reviewPath+'/review-no-soil/native-assessment';
+ const noSoilResult=await req('POST',noSoilPath,{});assert.equal(noSoilResult.statusCode,200,noSoilResult.body);
+ const nr=noSoilResult.json();assert.equal(nr.status,'NATIVE_RETRIEVAL_RECORDED_CONTEXT_REQUIRED');assert.deepEqual(nr.assessment_refs,[]);assert.equal(nr.action_authority,false);
+ assert.deepEqual(nr.receipts.map((v:any)=>v.operation),['createDecisionProblem','executeKnowledgeRetrieval']);
+ assert.equal(nr.retrieval.candidate_count,1);assert.equal(nr.retrieval.authority_class,'RETRIEVAL_EVIDENCE_NON_SCIENTIFIC');
+ assert.equal(nativeCalls,13);assert.deepEqual((await req('POST',noSoilPath,{})).json(),nr);assert.equal(nativeCalls,13);
+ grants.delete('READ_CROP_REVIEW');assert.equal((await req('GET',noSoilPath)).statusCode,403);grants.add('READ_CROP_REVIEW');
+ assert.deepEqual((await req('GET',noSoilPath)).json(),nr);
+ proof('P3P_NO_SOIL_DURABLE_A01_A07_REPLAY_AND_READ_AUTH_TEST_ONLY');
 
 
 
@@ -216,9 +226,9 @@ try{
  assert.equal((await req('POST',soil+'/doc/confirm',confirm)).statusCode,409);
  assert.equal((await req('POST',reviewPath,{...intent,review_id:'new-after-boundary-change'})).statusCode,409);
  const oldReview=await req('GET',reviewPath+'/review-1');assert.equal(oldReview.statusCode,200,oldReview.body);assert.deepEqual(oldReview.json().basis,saved.basis);
- assert.equal(await reviewCount(),3);
+ assert.equal(await reviewCount(),4);
  proof('P3_CHANGED_BOUNDARY_REJECTS_NEW_BASIS_PRESERVES_HISTORY');
- const oldNative=await req('GET',nativePath);assert.equal(oldNative.statusCode,200,oldNative.body);assert.deepEqual(oldNative.json(),executed.json());assert.equal(nativeCalls,11);
+ const oldNative=await req('GET',nativePath);assert.equal(oldNative.statusCode,200,oldNative.body);assert.deepEqual(oldNative.json(),executed.json());assert.equal(nativeCalls,13);
  const historicalFollow=await req('GET',followPath);assert.deepEqual(historicalFollow.json(),followRead.json());
  active=false;assert.equal((await req('GET',soil)).statusCode,403);assert.equal((await req('GET',followPath)).statusCode,403);
  assert.deepEqual(await cnt(),{fields:1,facts:7,revisions:2,confirmations:2});
