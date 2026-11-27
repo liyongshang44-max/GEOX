@@ -1,6 +1,7 @@
 // Real upstream ADR HTTP host, ledger, and native scientific engine, with TEST_ONLY
 // authority fixtures. No production endpoint, data, token or scientific entitlement.
 import assert from 'node:assert/strict';
+import {buildManagerScientificResultV1} from '../src/product_projection/customer/manager_scientific_result_v1.ts';
 import {execFileSync} from 'node:child_process';
 import {mkdtemp,rm,readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -84,6 +85,19 @@ try{
  const datum=receipts.find(x=>x.details.operation==='createContextDatum').details.receipt.resource;assert.equal(datum.epistemic_class,'ASSERTION');assert.equal(datum.provenance_class,'USER');assert.equal(datum.spatial_support.type,'POINT');assert.equal(datum.uncertainty.type,'UNKNOWN');
  const final=receipts.filter(x=>x.details.operation==='createApplicabilityAssessment');assert.ok(final.every(x=>x.details.receipt.resource.authority_class==='SOURCE_TARGET_TRANSPORT_AUTHORITY'));
  assert.ok(final.every(x=>!['DIRECTLY_APPLICABLE','APPLICABLE_WITH_GOVERNED_TRANSFORM'].includes(x.details.receipt.resource.transport_status)),'fixture missing crop context must not become direct applicability');
+ const j={attempt:plan.attempt_id,events,prev:digest(events)};
+ const hidden=await buildManagerScientificResultV1(j,'fixture-review',request.basis_sha256,manager);assert.equal(hidden.display_status,'DISPLAY_PERMISSION_NOT_ESTABLISHED');assert.deepEqual(hidden.assessments,[]);
+ const display=async({request_sha256})=>({permission:'ADR_A08_BOUNDED_DISPLAY',request_sha256,approval_ref:'TEST_ONLY:display',checked_at:new Date().toISOString(),valid_until:new Date(Date.now()+10000).toISOString()});
+ const visible=await buildManagerScientificResultV1(j,'fixture-review',request.basis_sha256,manager,display);
+ assert.equal(visible.display_status,'AUTHORIZED_RECORDED_RESULT');assert.equal(visible.action_authority,false);assert.equal(visible.assessments.length,final.length);
+ for(const [index,item] of visible.assessments.entries()){
+  const raw=final[index].details.receipt.resource;
+  assert.equal(item.transport_status,raw.transport_status);assert.equal(item.scientific_use_status,raw.scientific_use_status);assert.equal(item.runtime_use,raw.runtime_use);
+  assert.deepEqual(item.missing_context_semantic_ids,raw.missing_context_semantic_ids);
+  assert.ok(item.conditions.every(c=>Object.keys(c).sort().join(',')==='semantic_id,status'));
+ }
+ const wrong=await buildManagerScientificResultV1(j,'fixture-review',request.basis_sha256,manager,async(x)=>({...await display(x),request_sha256:'0'.repeat(64)}));assert.equal(wrong.display_status,'DISPLAY_PERMISSION_NOT_ESTABLISHED');
+ console.log('PASS REAL_ADR_A08_RIGHTS_GATED_PRODUCT_PROJECTION_TEST_ONLY');
  const persisted=JSON.parse(await readFile(statePath,'utf8'));assert.equal(persisted.metadata.mode,'TEST_ONLY_NATIVE_GEOX_CONTRACT');assert.equal(Object.keys(persisted.metadata.idempotency).length,httpStatuses.length);
  await new Promise((resolve,reject)=>server.close(e=>e?reject(e):resolve()));server=undefined;
  const restored=await initializePilotRuntime({statePath,snapshotDir,allowSyntheticBootstrap:false});assert.equal(restored.ready,true);

@@ -11,6 +11,10 @@ export type ReviewIntent={review_id:string;crop_codes:string[];target_start_date
 export type Review={review_id:string;created_at:string;intent:ReviewIntent;status:string;action_authority:false};
 export type NativeRef={kind:string;logical_id:string;version:string;semantic_hash:string};
 export type Assessment={attempt_id:string;status:string;error_code:string|null;assessment_refs:NativeRef[];receipts:{operation:string;ref:NativeRef;response_sha256:string}[];action_authority:false;scientific_result_content_display_authority:string};
+export type ScientificAssessment={assessment_ref:NativeRef;response_sha256:string;transport_status:string;scientific_use_status:string;decision_relevance:string;runtime_use:string;conditions:{semantic_id:string;status:string}[];missing_context_semantic_ids:string[];required_calibration_codes:string[];unsupported_constraint_codes:string[]};
+export type ScientificResult={status:string;display_status:string;semantics:string;action_authority:false;assessments:ScientificAssessment[]};
+export type HistoricalObservation={fact_id:string;dataset_id:string;scope:{season_id:string;zone_id:string};time:{observed_at:string};measurement:{value:number;unit:'fraction';measurement_depth_mm:number;spatial_support:string;direct_field_equivalence:false;direct_root_zone_equivalence:false};source_record_id:string;source_record_hash:string;quality:{status:string}};
+export type ObservationPage={status:'AVAILABLE'|'UNAVAILABLE';items:HistoricalObservation[];next_cursor:string|null;limitation_reason_codes:string[];current_condition_effect:'NO_PROMOTION'};
 export type Followup={followup_id:string;result:{baseline_review_id:string;successor_review_id:string;status:string;action_authority:false}};
 const ident=(x:string)=>{if(!/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(x))throw new Error('INVALID_IDENTIFIER');return encodeURIComponent(x);};
 export class ManagerApiError extends Error{constructor(readonly code:string,readonly status:number,readonly unknownWrite:boolean){super(code);}}
@@ -38,6 +42,8 @@ export function managerApi(transport:ManagerTransport){
   createReview:(id:string,body:ReviewIntent)=>call<unknown>('POST',reviews(id),body),
   assessment:(id:string,r:string)=>call<Assessment>('GET',review(id,r)+'/native-assessment'),
   assess:(id:string,r:string)=>call<Assessment>('POST',review(id,r)+'/native-assessment',{}),
+  scientificResult:(id:string,r:string)=>call<ScientificResult>('GET',review(id,r)+'/scientific-result'),
+  observations:(id:string,cursor?:string)=>call<ObservationPage>('GET',field(id)+'/observations?limit=100'+(cursor?'&cursor='+encodeURIComponent(cursor):'')),
   followups:(id:string,r:string)=>call<{followups:Followup[];more_history_available:boolean}>('GET',review(id,r)+'/followups'),
   linkFollowup:(id:string,r:string,body:{followup_id:string;successor_review_id:string})=>call<unknown>('POST',review(id,r)+'/followups',body)
  };

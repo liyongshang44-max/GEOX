@@ -31,3 +31,8 @@ test('my land is a scope-free read of server-authorized inventory',async()=>{
  const seen:string[]=[];const api=managerApi(async(path,init)=>{seen.push(path);assert.equal(init.method,'GET');assert.equal(init.body,undefined);return new Response(JSON.stringify({ok:true,fields:[]}));});
  assert.deepEqual(await api.lands(),{ok:true,fields:[]});assert.deepEqual(seen,['/api/v1/manager/fields']);
 });
+
+test('scientific and observation reads send no caller scope or write',async()=>{
+ const calls:string[]=[];const api=managerApi(async(path,init)=>{calls.push(path);assert.equal(init.method,'GET');return new Response(JSON.stringify({ok:true}));});
+ await api.scientificResult('f1','r1');await api.observations('f1','x+y');assert.deepEqual(calls,['/api/v1/manager/fields/f1/crop-reviews/r1/scientific-result','/api/v1/manager/fields/f1/observations?limit=100&cursor=x%2By']);
+});

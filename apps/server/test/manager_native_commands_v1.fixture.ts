@@ -168,6 +168,15 @@ try{
  assert.equal(journal.rowCount,12);assert.equal(journal.rows[0].result.event,'STARTED');assert.equal(journal.rows.at(-1)?.result.event,'FINISHED');
  assert.ok(!JSON.stringify(journal.rows).includes('fixture-only-adr-secret'));
  proof('P3P_DURABLE_NATIVE_WIRE_ORCHESTRATION_FIXTURE_NO_SCIENTIFIC_AUTHORITY');
+ const sci=reviewPath+'/review-1/scientific-result';
+ const hidden=await req('GET',sci);assert.equal(hidden.statusCode,200,hidden.body);assert.equal(hidden.json().display_status,'DISPLAY_PERMISSION_NOT_ESTABLISHED');assert.deepEqual(hidden.json().assessments,[]);
+ grants.delete('READ_CROP_REVIEW');assert.equal((await req('GET',sci)).statusCode,403);grants.add('READ_CROP_REVIEW');
+ const obsPath=base+'/'+f+'/observations';
+ const unavailable=await req('GET',obsPath);assert.equal(unavailable.statusCode,200,unavailable.body);assert.equal(unavailable.json().status,'UNAVAILABLE');assert.deepEqual(unavailable.json().items,[]);
+ assert.equal((await req('GET',obsPath+'?tenant_id=other')).statusCode,400);
+ grants.delete('READ_FIELD_GEOMETRY');assert.equal((await req('GET',obsPath)).statusCode,403);grants.add('READ_FIELD_GEOMETRY');
+ assert.equal(nativeCalls,5);
+ proof('SCIENTIFIC_AND_HISTORICAL_PRODUCT_READS_FAIL_CLOSED_WITHOUT_OWNER_DISPLAY_GRANT');
 
  // P4 links a confirmed supplemental document to a completed native baseline.
  const followPath=reviewPath+'/review-1/followups';
