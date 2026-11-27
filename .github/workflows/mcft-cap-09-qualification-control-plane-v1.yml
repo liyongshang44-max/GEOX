@@ -281,11 +281,11 @@ jobs:
           node-version: '24.19.0'
 
       - uses: pnpm/action-setup@v4
-        if: github.event_name == 'pull_request' && (github.event.pull_request.number == 3757 || github.event.pull_request.number == 3771 || github.event.pull_request.number == 3776)
+        if: github.event_name == 'pull_request' && (github.event.pull_request.number == 3757 || github.event.pull_request.number == 3771 || github.event.pull_request.number == 3776 || (github.event.pull_request.base.sha == '8facaba79eaf42d9b9c854c091ae3a7319d455f8' && github.head_ref == 'mcft/r4285-one-time-physical-cutover-20261127' && github.event.pull_request.head.repo.full_name == github.repository))
         with:
           version: 9.15.4
       - name: Install QCP72 candidate runtime dependencies
-        if: github.event_name == 'pull_request' && (github.event.pull_request.number == 3757 || github.event.pull_request.number == 3771 || github.event.pull_request.number == 3776)
+        if: github.event_name == 'pull_request' && (github.event.pull_request.number == 3757 || github.event.pull_request.number == 3771 || github.event.pull_request.number == 3776 || (github.event.pull_request.base.sha == '8facaba79eaf42d9b9c854c091ae3a7319d455f8' && github.head_ref == 'mcft/r4285-one-time-physical-cutover-20261127' && github.event.pull_request.head.repo.full_name == github.repository))
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Require governed successor predecessor and zero production bindings

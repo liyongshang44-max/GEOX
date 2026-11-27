@@ -14,6 +14,7 @@ const WIRING=new Set([
 ]);
 // Each additional non-wiring file is reviewed and bound as a Git tree entry.
 const reviewedFiles = Object.freeze({
+  ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml": "100644 blob 50e1532dc62e2f087d24a8f1d23bf13b40d167b9",
   "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts": "100644 blob 5e558f4f1474da89e48c2eaccfc9e63a733136b6",
   "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts": "100644 blob 4ace3d0b008535967bf7f4b83878d438c37386c0",
   "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts": "100644 blob 0347849d88ec743a46004947bcf82e549c7f0951",

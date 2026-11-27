@@ -1981,6 +1981,7 @@
       "kind": "EXACT_PATH_SET",
       "paths": [
         ".github/workflows/mcft-cap-09-frozen-v13-isolated-requalification-v1.yml",
+        ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
         ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
         ".github/workflows/mcft-cap09-adoption-v2-attempt3-engineering-v1.yml",
         "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts",
