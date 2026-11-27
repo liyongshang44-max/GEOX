@@ -4,11 +4,10 @@
 // No raw retention, governed ingress, scheduler/lease ownership, runtime tick cursor,
 // Twin state mutation, GitHub identity, or production cadence ownership is defined here.
 
-import { execFile } from "node:child_process";
+import { runScientificPythonV1 } from "./run_scientific_python_v1.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
 
 import type {
   ExternalEvidenceDecoderInputV1,
@@ -19,8 +18,6 @@ import type {
   GovernedDecodedEvidenceDraftV1,
 } from "../mcft_cap09_external_collector_canonicalizer_v1.js";
 import { HttpsExternalEvidenceTransportV1 } from "./https_external_evidence_transport_v1.js";
-
-const execFileAsync = promisify(execFile);
 
 export type KbsRawHourlyScientificSubprocessErrorV1 = Error & {
   code: "MCFT_CAP09_KBS_SCIENTIFIC_SUBPROCESS_FAILED";
@@ -240,7 +237,7 @@ export class KbsRawHourlyExactIntervalDecoderV1 implements ExternalEvidenceDecod
     try {
       fs.writeFileSync(rawPath, Buffer.from(input.raw_bytes));
       try {
-        await execFileAsync(this.pythonExecutable, [
+        await runScientificPythonV1(this.pythonExecutable, [
           this.scientificCorePath,
           "decode-exact",
           "--target", this.target,
@@ -253,7 +250,7 @@ export class KbsRawHourlyExactIntervalDecoderV1 implements ExternalEvidenceDecod
           "--station-longitude", String(STATION_LONGITUDE),
           "--wind-10m-to-2m-factor", String(WIND_10M_TO_2M_FACTOR),
         ], {
-          cwd: process.cwd(),
+          cwd: temp,
           maxBuffer: 4 * 1024 * 1024,
           timeout: 120_000,
         });

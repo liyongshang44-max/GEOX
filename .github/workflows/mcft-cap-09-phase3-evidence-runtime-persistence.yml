@@ -44,6 +44,8 @@ on:
       - 'apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts'
       - 'apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts'
       - 'apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts'
+      - 'apps/server/src/external_evidence/provider/run_scientific_python_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_SCIENTIFIC_CHILD_ISOLATION_V1.ts'
       - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py'
       - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.ts'
@@ -276,6 +278,8 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts
       - name: Prove deployable Evidence Runtime composition
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts
+      - name: Prove scientific subprocess isolation and cleanup
+        run: pnpm exec tsx --test scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP09_SCIENTIFIC_CHILD_ISOLATION_V1.ts
       - name: Prove Phase3 persistence boundary has no Twin runtime or cadence ownership
         shell: python
         run: |
@@ -338,8 +342,20 @@ jobs:
           for marker in decoder_forbidden:
               if marker in decoder_text:
                   raise SystemExit(f"PHASE3_EVIDENCE_DECODER_FORBIDDEN_DEPENDENCY:{marker}")
-          if 'from "node:child_process"' not in decoder_text:
-              raise SystemExit("PHASE3_EVIDENCE_DECODER_PRODUCT_PYTHON_BRIDGE_REQUIRED")
+          provider_dir = decoder_file.parent
+          helper_text = (provider_dir / "run_scientific_python_v1.ts").read_text(encoding="utf-8")
+          # Keep child-process ownership at the shared product bridge. Only this bridge
+          # may resolve the configured executable and set the child environment.
+          for marker in ['from "node:child_process"', '["-I", "-B", ...args]', 'execFileAsync(interpreterPath(executable)', '{ ...options, env }', 'TMPDIR: options.cwd, TMP: options.cwd, TEMP: options.cwd']:
+              if marker not in helper_text:
+                  raise SystemExit(f"PHASE3_SCIENTIFIC_ISOLATED_BRIDGE_REQUIRED:{marker}")
+          for marker in ["setInterval(", "setTimeout(", "scripts/runtime_acceptance", "INSERT INTO", "UPDATE ", "DELETE FROM", "RuntimeTickCursor", "...process.env"]:
+              if marker in helper_text:
+                  raise SystemExit(f"PHASE3_SCIENTIFIC_BRIDGE_FORBIDDEN_DEPENDENCY:{marker}")
+          for name in ["gfs_raw_bundle_evidence_decoder_v1.ts", "kbs_raw_hourly_live_provider_v1.ts", "kbs_raw_hourly_publication_comparison_v1.ts", "kbs_raw_hourly_publication_snapshot_v1.ts"]:
+              bridge_text = (provider_dir / name).read_text(encoding="utf-8")
+              if 'from "./run_scientific_python_v1.js"' not in bridge_text or "await runScientificPythonV1(" not in bridge_text or "node:child_process" in bridge_text:
+                  raise SystemExit(f"PHASE3_PRODUCT_SCIENTIFIC_BRIDGE_REQUIRED:{name}")
           if "mcft_cap09_gfs_raw_bundle_decoder_v1.py" not in decoder_text:
               raise SystemExit("PHASE3_EVIDENCE_DECODER_PRODUCT_DRIVER_BINDING_REQUIRED")
 
@@ -356,7 +372,7 @@ jobs:
           for marker in kbs_comparison_forbidden:
               if marker in kbs_comparison_text:
                   raise SystemExit(f"PHASE3_KBS_COMPARISON_BRIDGE_FORBIDDEN_DEPENDENCY:{marker}")
-          if 'from "node:child_process"' not in kbs_comparison_text:
+          if 'from "./run_scientific_python_v1.js"' not in kbs_comparison_text:
               raise SystemExit("PHASE3_KBS_COMPARISON_PRODUCT_PYTHON_BRIDGE_REQUIRED")
           if "MCFT_CAP09_KBS_RAW_HOURLY_SCIENTIFIC_CORE_RELATIVE_PATH_V1" not in kbs_comparison_text:
               raise SystemExit("PHASE3_KBS_COMPARISON_PRODUCT_CORE_AUTHORITY_BINDING_REQUIRED")

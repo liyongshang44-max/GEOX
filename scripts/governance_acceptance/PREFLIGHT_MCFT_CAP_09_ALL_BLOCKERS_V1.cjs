@@ -2730,8 +2730,21 @@ function main() {
   // Exact budget successor only; prior PR source qualification is unchanged.
   const budgetSuccessor=stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base==="16fe4dbd03e75acf0209ca3daa906d8c2956b01f"
     ? require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").verify({ROOT,args,authority,plan,changed,stage}):null;
+  // BEGIN ONE_TIME_R4285_CUTOVER_PROOF
+  const cutoverModule=stage==="SUCCESSOR_SUBJECT_PRE_MERGE"&&args.base==="8facaba79eaf42d9b9c854c091ae3a7319d455f8"&&process.env.GITHUB_HEAD_REF==="mcft/r4285-one-time-physical-cutover-20261127"
+    ? require("./VERIFY_MCFT_CAP09_R4285_ONE_TIME_CUTOVER_V1.cjs"):null;
+  const cutoverProof=cutoverModule?cutoverModule.verify({ROOT,args,authority,plan,changed,stage}):null;
+  // END ONE_TIME_R4285_CUTOVER_PROOF
   for (const decision of plan.decisions) {
     let result;
+    // BEGIN ONE_TIME_R4285_CUTOVER_ROUTE
+    if(cutoverProof&&cutoverModule.SCOPED.includes(decision.check_id)&&!cutoverProof.native_checks?.includes(decision.check_id)){
+      const row=cutoverProof.rows?.[decision.check_id];const ok=cutoverProof.status==="PASS"&&!!row;
+      result=ok?row:{check_id:decision.check_id,applicability:decision.status,status:"FAIL",reason_code:cutoverProof.reason_code,current_source:cutoverProof,permit_consumed:false,stages:0};
+      if(!ok)blockers.push({blocker_class:"ONE_TIME_R4285_EXACT_SOURCE_HOLD",check_id:decision.check_id,detail:cutoverProof});
+      results.push(result);continue;
+    }
+    // END ONE_TIME_R4285_CUTOVER_ROUTE
     if(budgetSuccessor&&require("./VERIFY_MCFT_CAP09_R4285_FORMAL_BUDGET_SUCCESSOR_V4.cjs").SCOPED.includes(decision.check_id)){
       const row=budgetSuccessor.rows?.[decision.check_id];const ok=budgetSuccessor.status==="PASS"&&!!row;
       result=ok?row:{check_id:decision.check_id,applicability:decision.status,status:"FAIL",reason_code:budgetSuccessor.reason_code,current_source:budgetSuccessor,permit_consumed:false,stages:0};

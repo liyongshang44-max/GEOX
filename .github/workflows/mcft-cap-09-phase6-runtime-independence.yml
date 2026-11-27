@@ -995,7 +995,72 @@ jobs:
           NODE
           fi
 
+      - name: Verify immutable accepted cutover successor receipt
+        id: accepted_cutover
+        if: github.event.pull_request.number == 3789 && github.event.pull_request.base.sha == '8facaba79eaf42d9b9c854c091ae3a7319d455f8' && github.head_ref == 'mcft/r4285-one-time-physical-cutover-20261127' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          script: |
+            const assert=require('node:assert/strict'),cp=require('node:child_process'),crypto=require('node:crypto'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+            const {owner,repo}=context.repo;
+            const head='8544c0ac45ccca0456eeb2fa7eb18a3944d796fd',base='16fe4dbd03e75acf0209ca3daa906d8c2956b01f',merge='c6d666b4addaf71610bf3135c9380bb2b6ee5069';
+            const runId=45460125318,jobId=138680116845,artifactId=14953120077,digest='a08eb5bd8e72a6ffcf0c61d14a4d6ef4ea04893235a96398a754b3ef684566a4';
+            const wf='.github/workflows/mcft-cap-09-phase6-runtime-independence.yml',blob='f94bcbca670e9e11ecee8a246848fdff2ae0cc31';
+            const git=(...a)=>cp.execFileSync('git',a,{encoding:'utf8',timeout:30000}).trim();
+            assert.equal(context.repo.owner+'/'+context.repo.repo,'liyongshang44-max/GEOX');
+            assert.equal(context.payload.pull_request.head.sha,process.env.SUBJECT_SHA);
+            assert.equal(git('rev-parse','HEAD'),process.env.SUBJECT_SHA);
+            assert.equal(git('rev-parse',head+':'+wf),blob);
+            assert.equal(git('rev-parse',merge+':'+wf),blob);
+            assert.equal(git('rev-parse',process.env.BASE_SHA+':'+wf),blob);
+            assert.equal(git('merge-base',merge,process.env.BASE_SHA),merge);
+            const pr=(await github.rest.pulls.get({owner,repo,pull_number:3781})).data;
+            assert(pr.merged===true&&pr.merge_commit_sha===merge&&pr.head.sha===head&&pr.base.sha===base&&pr.head.repo.full_name===owner+'/'+repo);
+            assert.equal(git('rev-list','--parents','-n','1',merge),merge+' '+base+' '+head);
+            assert.equal(git('rev-parse',merge+'^{tree}'),git('rev-parse',head+'^{tree}'));
+            const run=(await github.rest.actions.getWorkflowRun({owner,repo,run_id:runId})).data;
+            assert(run.id===runId&&run.head_sha===head&&run.run_attempt===1&&run.event==='pull_request'&&run.path===wf&&run.status==='completed'&&run.conclusion==='success');
+            const job=(await github.rest.actions.getJobForWorkflowRun({owner,repo,job_id:jobId})).data;
+            assert(job.run_id===runId&&job.name==='accepted-phase6-successor-sentinel'&&job.conclusion==='success');
+            for(const name of ['Checkout exact Phase6 successor subject','Require accepted successor ancestry and classify current delta','Verify immutable accepted successor predecessor','Verify immutable accepted Phase6 runtime artifact','Require retired owner audit still passes','Emit zero-effect Phase6 successor carry-forward proof','Upload Phase6 successor carry-forward proof']){
+              assert(job.steps.some(s=>s.name===name&&s.conclusion==='success'),'PHASE6_RETAINED_SUCCESSOR_STEP:'+name);
+            }
+            // The old run identities remain verifiable. The old ZIPs are not
+            // reopened or represented as currently available by this route.
+            for(const [id,subject] of [[33146391000,process.env.PHASE6_ACCEPTED_HEAD],[33168990431,process.env.PHASE7_ACCEPTED_PREDECESSOR_HEAD],[33168990430,process.env.PHASE7_ACCEPTED_PREDECESSOR_HEAD],[33168990454,process.env.PHASE7_ACCEPTED_PREDECESSOR_HEAD],[33168990490,process.env.PHASE7_ACCEPTED_PREDECESSOR_HEAD]]){
+              const old=(await github.rest.actions.getWorkflowRun({owner,repo,run_id:id})).data;
+              assert(old.id===id&&old.head_sha===subject&&old.conclusion==='success');
+            }
+            const artifact=(await github.rest.actions.getArtifact({owner,repo,artifact_id:artifactId})).data;
+            assert(artifact.id===artifactId&&!artifact.expired&&artifact.digest==='sha256:'+digest&&artifact.name==='mcft-cap09-phase6-successor-carry-forward-'+head&&artifact.workflow_run.id===runId&&artifact.workflow_run.head_sha===head);
+            assert(Date.parse(job.started_at)<=Date.parse(artifact.created_at)&&Date.parse(artifact.created_at)<=Date.parse(job.completed_at));
+            const temp=fs.mkdtempSync(path.join(os.tmpdir(),'phase6-retained-successor-'));
+            try{
+              const zip=cp.execFileSync('gh',['api','repos/'+owner+'/'+repo+'/actions/artifacts/'+artifactId+'/zip'],{timeout:90000,maxBuffer:1024*1024});
+              assert.equal(crypto.createHash('sha256').update(zip).digest('hex'),digest);
+              const file=path.join(temp,'proof.zip');fs.writeFileSync(file,zip);
+              const name='MCFT_CAP_09_PHASE6_SUCCESSOR_CARRY_FORWARD.json';
+              assert.equal(cp.execFileSync('unzip',['-Z1',file],{encoding:'utf8'}).trim(),name);
+              const proof=JSON.parse(cp.execFileSync('unzip',['-p',file,name],{encoding:'utf8',maxBuffer:1024*1024}));
+              assert.deepEqual(proof,{
+                schema_version:'geox_mcft_cap09_phase6_successor_carry_forward_v1',status:'PASS',subject_sha:head,base_sha:base,
+                accepted_phase6_head:process.env.PHASE6_ACCEPTED_HEAD,accepted_successor_predecessor_head:process.env.PHASE7_ACCEPTED_PREDECESSOR_HEAD,
+                accepted_runtime_run_id:33146391000,accepted_runtime_artifact_id:9676455831,protected_runtime_delta_count:0,protected_runtime_delta_paths:[],
+                successor_runtime_delta_governed_by_central_plan:true,accepted_predecessor_phase7_foundation_unwired_verified:true,
+                phase7_evidence_foundation_delta_count:0,phase7_evidence_foundation_requires_phase3_requalification:true,
+                phase7_candidate_promotion_composition_delta_count:0,phase7_candidate_promotion_requires_dedicated_requalification:true,
+                production_process_graph_wiring:false,accepted_predecessor_machine_evidence_verified:true,qualification_support_delta_count:0,
+                phase5_requalification_required_on_qualification_delta:true,allowed_evidence_acl_delta_count:0,phase3_phase5_acl_requalification_required_on_acl_delta:true,
+                phase6_runtime_reexecuted:false,immutable_phase6_evidence_verified:true,retired_owner_audit_passed:true,formal_v5_armed:false,production_effect:false,mcft_cap09_completed:false
+              });
+              core.setOutput('verified','true');
+              core.info('PHASE6_RETAINED_ACCEPTED_SUCCESSOR_VERIFIED:'+artifactId+':'+digest);
+            }finally{fs.rmSync(temp,{recursive:true,force:true});}
+
       - name: Verify immutable accepted successor predecessor
+        if: steps.accepted_cutover.outputs.verified != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -1026,6 +1091,7 @@ jobs:
             }
 
       - name: Verify immutable accepted Phase6 runtime artifact
+        if: steps.accepted_cutover.outputs.verified != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -1041,6 +1107,8 @@ jobs:
         run: node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce
 
       - name: Emit zero-effect Phase6 successor carry-forward proof
+        env:
+          PHASE6_RETAINED_SUCCESSOR_VERIFIED: ${{ steps.accepted_cutover.outputs.verified }}
         shell: node {0}
         run: |
           const fs=require('node:fs'),cp=require('node:child_process');
@@ -1101,6 +1169,12 @@ jobs:
             production_effect:false,
             mcft_cap09_completed:false
           };
+          if(process.env.PHASE6_RETAINED_SUCCESSOR_VERIFIED==='true'){
+            out.historical_evidence_verification_mode='EXACT_ACCEPTED_SUCCESSOR_ARTIFACT';
+            out.historical_artifacts_reopened=false;
+            out.retained_successor_artifact_id=14953120077;
+            out.retained_successor_artifact_digest='sha256:a08eb5bd8e72a6ffcf0c61d14a4d6ef4ea04893235a96398a754b3ef684566a4';
+          }
           fs.writeFileSync(
             'acceptance-output/MCFT_CAP_09_PHASE6_SUCCESSOR_CARRY_FORWARD.json',
             JSON.stringify(out,null,2)+'\n'
