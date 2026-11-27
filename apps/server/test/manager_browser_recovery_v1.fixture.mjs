@@ -4,7 +4,7 @@ import {createServer} from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
-import {pathToFileURL} from 'node:url';
+import {chromium} from '@playwright/test';
 
 export async function exerciseManagerBrowserRecovery(app,field,nativePath){
  assert.equal(process.env.P6_TEST_ONLY,'1');
@@ -12,9 +12,6 @@ export async function exerciseManagerBrowserRecovery(app,field,nativePath){
  assert.equal(process.env.RUNNER_ENVIRONMENT,'github-hosted');
  assert.equal(process.env.GITHUB_EVENT_NAME,'pull_request');
  assert.equal(field,'p6_native_f');
- const modulePath=process.env.P6_PLAYWRIGHT_MODULE;
- assert.ok(modulePath && modulePath.startsWith(process.env.RUNNER_TEMP+'/'));
- const {chromium}=await import(pathToFileURL(modulePath).href);
  const dist=resolve('apps/web/.local-manager-e2e01/dist');
  const sessions=new Map();
  const json=(res,status,body)=>{res.writeHead(status,{'content-type':'application/json','cache-control':'no-store'});res.end(JSON.stringify(body));};

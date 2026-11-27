@@ -50,7 +50,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec tsx apps/server/test/manager_soil_documents_v1.fixture.ts
   native-manager-commands:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -64,9 +64,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
       - run: node scripts/product/e2e01/build-web.mjs
-      - name: Install isolated browser fixture dependency
-        run: |
-          npm install --prefix "$RUNNER_TEMP/geox-p6-browser" --no-audit --no-fund --save-exact playwright@1.56.1
-          "$RUNNER_TEMP/geox-p6-browser/node_modules/.bin/playwright" install --with-deps chromium
-          echo "P6_PLAYWRIGHT_MODULE=$RUNNER_TEMP/geox-p6-browser/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
+      - name: Install Chromium using locked repository Playwright
+        run: pnpm exec playwright install --with-deps chromium
       - run: bash scripts/acceptance/p6-bc-native-commands.sh
