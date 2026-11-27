@@ -59,3 +59,16 @@ test('accept only the exact previously qualified FDW membership fix',()=>{
  assert(!qualifyAcceptedAdapter(after.replace('suffix','changed'),sourceHash(before)));
  assert(!qualifyAcceptedAdapter(after+'\n'+after,sourceHash(before)));
 });
+
+import {diagnosticPorts} from './authority-diagnostic.mjs';
+test('diagnostic wrapper preserves actual port results and errors without credentials',async()=>{
+ const events=[], ctx={}, error=Object.assign(new Error('private'),{code:'RESOURCE_ACCESS_DENIED'});
+ const ident={kind:'FORMAL_PROVIDER_NEUTRAL_IDENTITY',async verify(){return ctx},authorize(){return {...a,credential_ref:'a'.repeat(64),valid_until:new Date(Date.now()+10000).toISOString()}},authorizeResource(){throw error},invalidate(x){assert.equal(x,ctx)}};
+ const grants={async resolveLandGrant(){return null},async resolveLandInventory(){return {grants:[]}}};
+ const d=diagnosticPorts(ident,grants,subject,()=>p,x=>events.push(x));
+ assert.equal(await d.identity.verify('private',tenant),ctx);assert.equal(d.identity.authorize(ctx).subject,subject);
+ assert.throws(()=>d.identity.authorizeResource(ctx,{action:'CREATE_FIELD'}),x=>x===error);
+ assert.equal(await d.grants.resolveLandGrant({}),null);d.identity.invalidate(ctx);
+ assert.equal(events.find(x=>x.stage==='FDW_CREATE_CAPABILITY').code,'RESOURCE_ACCESS_DENIED');
+ assert(!JSON.stringify(events).includes('private'));assert(!JSON.stringify(events).includes(subject));assert(!JSON.stringify(events).includes('a'.repeat(64)));
+});

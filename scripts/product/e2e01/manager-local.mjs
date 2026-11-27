@@ -1,5 +1,7 @@
 // Local-only composition. Never imported by Commercial Server, MCFT or a deployment entry.
 import Fastify from 'fastify';
+import {AsyncLocalStorage} from 'node:async_hooks';
+import {diagnosticPorts} from './authority-diagnostic.mjs';
 import {readFileSync} from 'node:fs';
 import {qualifyAcceptedAdapter} from './fdw-adapter-binding.mjs';
 import {resolve,join} from 'node:path';
@@ -49,12 +51,16 @@ app.addHook('preHandler',async(req,reply)=>{
   if(req.method==='POST'&&req.raw.url==='/api/v1/manager/fields'){
    const token=/^Bearer ([^\s]+)$/i.exec(String(req.headers.authorization??''))?.[1];
    if(!token)return reply.code(401).send({ok:false,error:'MANAGER_CREDENTIAL_REQUIRED'});
-   try{const a=await authority.authorize(token,null,'CREATE_FIELD');authority.assertCurrent(a,null,'CREATE_FIELD');return reply.code(403).send({ok:false,error:'E2E01_PREWRITE_CREATE_AUTHORIZED_NO_WRITE'});}catch(e){return reply.code([401,403,503].includes(e.status)?e.status:503).send({ok:false,error:[401,403,503].includes(e.status)?e.message:'MANAGER_AUTHORITY_UNAVAILABLE'});}
+   return trace.run(req.id,async()=>{
+    try{const a=await authority.authorize(token,null,'CREATE_FIELD');authority.assertCurrent(a,null,'CREATE_FIELD');console.log(JSON.stringify({event:'E2E01_AUTHORITY_TRACE',request:req.id,stage:'NATIVE_CREATE',result:'PASS'}));return reply.code(403).send({ok:false,error:'E2E01_PREWRITE_CREATE_AUTHORIZED_NO_WRITE'});}catch(e){console.log(JSON.stringify({event:'E2E01_AUTHORITY_TRACE',request:req.id,stage:'NATIVE_CREATE',result:'DENIED'}));return reply.code([401,403,503].includes(e.status)?e.status:503).send({ok:false,error:[401,403,503].includes(e.status)?e.message:'MANAGER_AUTHORITY_UNAVAILABLE'});}
+   });
   }
   return reply.code(403).send({ok:false,error:'E2E01_WRITE_NOT_ADMITTED'});
  }
 });
-authority=registerManagerPilotModuleV1(app,pool,{identity,issuer,canonicalTenantRef:tenant,...grants});
+const trace=new AsyncLocalStorage();
+const ports=diagnosticPorts(identity,grants,cfg.subject,readPolicy,record=>{const request=trace.getStore();if(request)console.log(JSON.stringify({event:'E2E01_AUTHORITY_TRACE',request,...record}));});
+authority=registerManagerPilotModuleV1(app,pool,{identity:ports.identity,issuer,canonicalTenantRef:tenant,...ports.grants});
 // No ADR credentials/plan synthesized. A07/A08 remains unavailable until supplied by its Owner.
 await app.listen({host:'127.0.0.1',port:14175});
 console.log('E2E01_MANAGER_LOCAL_READY / DB_ROLE_AND_LEDGER_ACL_PASS / ADR_NOT_CONFIGURED / WRITE_ADMITTED='+cfg.writeAdmitted);
