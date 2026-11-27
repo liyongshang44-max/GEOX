@@ -13,7 +13,11 @@ import { registerManagerContextFollowupV1 } from '../../routes/manager_context_f
 
 import { registerManagerLandInventoryV1 } from '../../routes/manager_land_inventory_v1.js';
 
-export type ManagerPilotCompositionV1 = Parameters<typeof createManagerAuthorizerV1>[0] & { adrNativeReview?: ManagerNativeReviewConfigV1 };
+import { registerManagerScientificResultV1 } from '../../routes/manager_scientific_result_v1.js';
+import type { ScientificResultDisplayResolverV1 } from '../../product_projection/customer/manager_scientific_result_v1.js';
+import { registerManagerObservationHistoryV1, type ManagerObservationHistoryConfigV1 } from '../../routes/manager_observation_history_v1.js';
+
+export type ManagerPilotCompositionV1 = Parameters<typeof createManagerAuthorizerV1>[0] & { adrNativeReview?: ManagerNativeReviewConfigV1; resolveScientificResultDisplay?: ScientificResultDisplayResolverV1; observationHistory?: ManagerObservationHistoryConfigV1 };
 
 // Trusted composition only. No environment switch or legacy credential fallback.
 export function registerManagerPilotModuleV1(app: FastifyInstance, pool: Pool, config: ManagerPilotCompositionV1) {
@@ -24,6 +28,8 @@ export function registerManagerPilotModuleV1(app: FastifyInstance, pool: Pool, c
   registerManagerCropReviewsV1(app, pool, authority);
   registerManagerNativeReviewV1(app, pool, authority, config.adrNativeReview);
   registerManagerContextFollowupV1(app, pool, authority);
+  registerManagerScientificResultV1(app, pool, authority, config.resolveScientificResultDisplay);
+  registerManagerObservationHistoryV1(app, pool, authority, config.observationHistory);
   return authority;
 }
 
