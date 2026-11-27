@@ -20,7 +20,7 @@ export function createCustomerEvidenceHttpResolverV1(config:{baseUrl:string;reso
   const b=await config.resolveCredential({request:structuredClone(request),manager,principal:structuredClone(principal)});
   const current=()=>!!b&&b.request_sha256===d&&same(b.principal,principal)&&Number.isFinite(b.valid_until_ms)&&b.valid_until_ms>Date.now()&&b.valid_until_ms<=manager.valid_until_ms;
   if(!current()||!b||!txt(b.credential,32768)||/\s/.test(b.credential))return null;
-  const response=await (config.transport??fetch)(new URL('/v1/customer-evidence/resolve',origin),{method:'POST',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(5000),headers:{authorization:'Bearer '+b.credential,'content-type':'application/json'},body:JSON.stringify(request)});
+  const response=await (config.transport??fetch)(new URL('/v1/customer-evidence/resolve',origin),{method:'POST',redirect:'error',signal:AbortSignal.timeout(5000),headers:{authorization:'Bearer '+b.credential,'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(request)});
   if(!response.ok||!current())return null;
   const raw=await response.text();need(raw.length<=500000);return current()?JSON.parse(raw):null;
  };
