@@ -11,6 +11,8 @@ export type ReviewIntent={review_id:string;crop_codes:string[];target_start_date
 export type Review={review_id:string;created_at:string;intent:ReviewIntent;status:string;action_authority:false};
 export type NativeRef={kind:string;logical_id:string;version:string;semantic_hash:string};
 export type Assessment={retrieval?:{authority_class:string;candidate_count:number;ref:NativeRef;runtime_profile_ref:NativeRef;knowledge_release_ref:NativeRef;deployment_ref:NativeRef}|null;attempt_id:string;status:string;error_code:string|null;assessment_refs:NativeRef[];receipts:{operation:string;ref:NativeRef;response_sha256:string}[];action_authority:false;scientific_result_content_display_authority:string};
+export type AdrEvidenceItem={knowledge_ref:NativeRef;source_ref:NativeRef;artifact_ref:NativeRef;claim_ref:NativeRef;qualification_ref:NativeRef;artifact_sha256:string;crop_code:string;source_title:string;publication:Record<string,string>;summary:string;allowed_use:string;limitations:string[];conditions:string[];inspection_ref:NativeRef;rights_policy_ref:NativeRef;rights_grant_refs:NativeRef[];rights_checked_at:string};
+export type AdrEvidence={display_status:string;authority_class:'RETRIEVAL_EVIDENCE_NON_SCIENTIFIC';action_authority:false;applicability_authority:false;items:AdrEvidenceItem[];question_crops:string[];coverage_crops:string[];missing_crops:string[];approval_ref?:string;valid_until?:string;retrieval_ref?:NativeRef;knowledge_release_ref?:NativeRef};
 export type ScientificAssessment={assessment_ref:NativeRef;response_sha256:string;transport_status:string;scientific_use_status:string;decision_relevance:string;runtime_use:string;conditions:{semantic_id:string;status:string}[];missing_context_semantic_ids:string[];required_calibration_codes:string[];unsupported_constraint_codes:string[]};
 export type ScientificResult={status:string;display_status:string;semantics:string;action_authority:false;assessments:ScientificAssessment[]};
 export type HistoricalObservation={fact_id:string;dataset_id:string;scope:{season_id:string;zone_id:string};time:{observed_at:string};measurement:{value:number;unit:'fraction';measurement_depth_mm:number;spatial_support:string;direct_field_equivalence:false;direct_root_zone_equivalence:false};source_record_id:string;source_record_hash:string;quality:{status:string}};
@@ -45,6 +47,7 @@ export function managerApi(transport:ManagerTransport){
   createReview:(id:string,body:ReviewIntent)=>call<unknown>('POST',reviews(id),body),
   assessment:(id:string,r:string)=>call<Assessment>('GET',review(id,r)+'/native-assessment'),
   assess:(id:string,r:string)=>call<Assessment>('POST',review(id,r)+'/native-assessment',{}),
+  knowledgeEvidence:(id:string,r:string)=>call<AdrEvidence>('GET',review(id,r)+'/knowledge-evidence'),
   scientificResult:(id:string,r:string)=>call<ScientificResult>('GET',review(id,r)+'/scientific-result'),
   observations:(id:string,cursor?:string)=>call<ObservationPage>('GET',field(id)+'/observations?limit=100'+(cursor?'&cursor='+encodeURIComponent(cursor):'')),
   historicalForecast:(id:string)=>call<HistoricalForecast>('GET',field(id)+'/historical-forecast'),

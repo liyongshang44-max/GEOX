@@ -70,6 +70,11 @@ export async function exerciseManagerBrowserRecovery(app,field,nativePath){
    const a=await page.getByText(/^createDecisionProblem · /).innerText();
    const b=await page.getByText(/^executeKnowledgeRetrieval · /).innerText();
    assert.equal(await page.getByRole('button',{name:'申请原生科学评价'}).isDisabled(),true);
+   await page.getByRole('button',{name:'查看农业知识证据'}).click();
+   await page.getByRole('heading',{name:'TEST_ONLY soybean source'}).waitFor();
+   await page.getByText('TEST_ONLY bounded source assertion',{exact:true}).waitFor();
+   await page.getByText('TEST_ONLY regional model limitation',{exact:true}).waitFor();
+   await page.getByText('玉米知识尚未纳入本次发布；双作物证据不完整。',{exact:true}).waitFor();
    return [a,b];
   };
   await page.goto(origin+'/manager');
@@ -97,6 +102,7 @@ export async function exerciseManagerBrowserRecovery(app,field,nativePath){
   assert.deepEqual(await receipt(),first);
   const recovered=await page.evaluate(p=>fetch(p).then(r=>r.json()),nativePath);
   assert.deepEqual(recovered,persisted);
+  console.log('PASS A07_CUSTOMER_EVIDENCE_BROWSER_FRESH_SESSION_TEST_ONLY');
   console.log('PASS P3P_BROWSER_NATIVE_NO_SOIL_SUBMISSION_LOGOUT_FRESH_SESSION_HISTORY_TEST_ONLY');
  }finally{await browser?.close();await new Promise(ok=>server.close(ok));}
 }

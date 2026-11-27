@@ -1,7 +1,8 @@
 import React from 'react';
+import AdrEvidencePanelV1 from './AdrEvidencePanelV1';
 import HistoricalForecastPanelV1 from './HistoricalForecastPanelV1';
 import {ProductPageShell,ProductPageHeader,ProductSectionCard} from '../../design-system/product';
-import {managerApi,ManagerApiError,parsePolygon,csvBase64,documentRef,type ManagerTransport,type ManagedField,type ScientificResult,type HistoricalForecast,type ObservationPage,type Boundary,type SoilDoc,type Review,type Assessment,type Followup} from '../../api/managerWorkspaceV1';
+import {managerApi,ManagerApiError,parsePolygon,csvBase64,documentRef,type ManagerTransport,type ManagedField,type AdrEvidence,type ScientificResult,type HistoricalForecast,type ObservationPage,type Boundary,type SoilDoc,type Review,type Assessment,type Followup} from '../../api/managerWorkspaceV1';
 type Language='zh'|'en';
 type Props={language:Language;sessionKey:string;transport:ManagerTransport};
 // Explicit composition only. sessionKey MUST change at logout, principal or tenant
@@ -18,6 +19,7 @@ function Workspace({language,transport}:Props){
  const [docId,setDocId]=React.useState(''),[source,setSource]=React.useState(''),[file,setFile]=React.useState<File|null>(null);
  const [selected,setSelected]=React.useState<string[]>([]),[reviewId,setReviewId]=React.useState(''),[start,setStart]=React.useState(''),[end,setEnd]=React.useState('');
  const [review,setReview]=React.useState(''),[assessment,setAssessment]=React.useState<Assessment|null>(null),[followups,setFollowups]=React.useState<Followup[]>([]),[followupId,setFollowupId]=React.useState(''),[successor,setSuccessor]=React.useState('');
+ const [evidence,setEvidence]=React.useState<AdrEvidence|null>(null);
  const [scientific,setScientific]=React.useState<ScientificResult|null>(null),[observations,setObservations]=React.useState<ObservationPage|null>(null);
  const [forecast,setForecast]=React.useState<HistoricalForecast|null>(null),[forecastRun,setForecastRun]=React.useState('');
  const [busy,setBusy]=React.useState(false),[notice,setNotice]=React.useState(''),[error,setError]=React.useState(''),[detail,setDetail]=React.useState('');
@@ -37,7 +39,7 @@ function Workspace({language,transport}:Props){
   try{await fn();}catch(e){if(!alive.current)return;const x=e instanceof ManagerApiError?e:null;if(x?.status===401){setLands(null);clearField();setField('');}setError(x?.unknownWrite?tr('提交结果不确定。请重新读取服务端记录，勿重复提交。','Write outcome unknown. Read server records before any resubmission.'):x?.status===401?tr('正式登录已失效，请重新登录。','Formal session expired; sign in again.'):x?.status===403?tr('当前身份缺少该操作的独立授权。','This operation requires an independent grant.'):x?.status===409?tr('资料或版本冲突，请重新读取后核对。','Evidence or version conflict; reload and verify.'):tr('操作未完成，请检查服务端状态。','Operation incomplete; inspect server state.'));setDetail(x?.code??(e instanceof Error?e.message:'UNKNOWN'));}
   finally{locked.current=false;if(alive.current)setBusy(false);}
  };
- const clearField=()=>{setForecast(null);setForecastRun('');setScientific(null);setObservations(null);setBoundary(null);setPolygon('');setDocs([]);setReviews([]);setMore(false);setSelected([]);setReview('');setAssessment(null);setFollowups([]);setDocId('');setSource('');setFile(null);setReviewId('');setFollowupId('');setSuccessor('');};
+ const clearField=()=>{setForecast(null);setForecastRun('');setScientific(null);setEvidence(null);setObservations(null);setBoundary(null);setPolygon('');setDocs([]);setReviews([]);setMore(false);setSelected([]);setReview('');setAssessment(null);setFollowups([]);setDocId('');setSource('');setFile(null);setReviewId('');setFollowupId('');setSuccessor('');};
  const loadLands=async()=>{setLands(null);try{const result=await api.lands();if(!alive.current)return;setLands(result.fields);if(field&&!result.fields.some(x=>x.field_id===field)){clearField();setField('');}}catch(e){if(alive.current){clearField();setField('');}throw e;}};
  const openLand=async(id:string)=>{clearField();setField('');const b=await api.boundary(id);if(alive.current){setField(b.field_id);setFieldInput(b.field_id);setBoundary(b);setPolygon(b.geometry?JSON.stringify(b.geometry,null,2):'');}};
  React.useEffect(()=>{void run(loadLands);},[]); // fresh server read for each sessionKey mount
@@ -84,11 +86,13 @@ function Workspace({language,transport}:Props){
     {!eligible.length&&<p>{tr('尚无已读取的合格资料；可以保存问题，但评价可能被阻断。','No eligible evidence loaded; a question may be saved but assessment may be blocked.')}</p>}
     <button type="submit" className="customerButton" disabled={docSelection.length>10}>{tr('保存问题','Save question')}</button></fieldset></form>
    {more&&<p>{tr('这里只列最近100条历史问题。','Only the most recent 100 questions are listed.')}</p>}
-   {reviews.map(r=><article key={r.review_id}><h3>{r.review_id}</h3><p>{r.intent.target_start_date} – {r.intent.target_end_date} · {status(r.status)}</p>{button('查看评价进度','Read assessment status',async()=>{setReview(r.review_id);setAssessment(null);setScientific(null);setFollowups([]);await loadAssessment(field,r.review_id);})}</article>)}
+   {reviews.map(r=><article key={r.review_id}><h3>{r.review_id}</h3><p>{r.intent.target_start_date} – {r.intent.target_end_date} · {status(r.status)}</p>{button('查看评价进度','Read assessment status',async()=>{setReview(r.review_id);setAssessment(null);setScientific(null);setEvidence(null);setFollowups([]);await loadAssessment(field,r.review_id);})}</article>)}
    {review&&<article><h3>{tr('当前问题','Current question')}: {review}</h3>
     {assessment&&<><p>{status(assessment.status)}</p><p>{tr('原生评价引用数','Native assessment reference count')}: {assessment.assessment_refs.length}</p>{assessment.retrieval&&<p>{tr('知识候选数（非科学适用性结论）','Knowledge candidates (not a scientific applicability result)')}: {assessment.retrieval.candidate_count}</p>}<details><summary>{tr('原生引用及诊断','Native references and diagnostics')}</summary>{assessment.error_code&&<code>{assessment.error_code}</code>}<ul>{assessment.receipts.map(r=><li key={r.ref.logical_id}>{r.operation} · {r.ref.logical_id} · {r.ref.version} · {r.ref.semantic_hash}</li>)}{assessment.assessment_refs.map(ref=><li key={ref.semantic_hash}>{ref.logical_id} · {ref.version} · {ref.semantic_hash}</li>)}</ul></details></>}
-    {button('申请原生科学评价','Request native scientific assessment',async()=>{setAssessment(null);setScientific(null);const a=await api.assess(field,review);if(alive.current)setAssessment(a);},!assessment||assessment.status!=='NOT_REQUESTED')}
-    {button('查看科学适用性及证据缺口','Read scientific applicability and evidence gaps',async()=>{setScientific(null);const x=await api.scientificResult(field,review);if(alive.current)setScientific(x);})}
+    {button('申请原生科学评价','Request native scientific assessment',async()=>{setAssessment(null);setScientific(null);setEvidence(null);const a=await api.assess(field,review);if(alive.current)setAssessment(a);},!assessment||assessment.status!=='NOT_REQUESTED')}
+    {button('查看农业知识证据','Read agricultural knowledge evidence',async()=>{setEvidence(null);const x=await api.knowledgeEvidence(field,review);if(alive.current)setEvidence(x);})}
+    {evidence&&<AdrEvidencePanelV1 key={review+':'+evidence.valid_until} language={language} evidence={evidence}/>}
+    {button('查看科学适用性及证据缺口','Read scientific applicability and evidence gaps',async()=>{setScientific(null);setEvidence(null);const x=await api.scientificResult(field,review);if(alive.current)setScientific(x);})}
     {scientific&&<section aria-label={tr('科学评价','Scientific assessment')}>
      <p>{tr('以下为历史评价记录，不是当前资格证明、作物排名或种植建议。','Recorded assessment only; not current qualification, a crop ranking or planting advice.')}</p>
      {scientific.display_status==='DISPLAY_PERMISSION_NOT_ESTABLISHED'?<p>{tr('评价内容尚未获展示授权。','Assessment content display is not authorized.')}</p>:scientific.display_status==='NO_COMPLETED_ASSESSMENTS'?<p>{status(scientific.status)}</p>:scientific.display_status==='AUTHORIZED_RECORDED_RESULT'?scientific.assessments.map(a=><article key={a.assessment_ref.semantic_hash}>

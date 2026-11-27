@@ -80,6 +80,13 @@ try{
   }}
  };
 
+ let evidenceActive=true;
+ authorityConfig.resolveAdrCustomerEvidence=async(request,a,principal)=>{
+  assert.equal(process.env.P6_TEST_ONLY,'1');assert.equal(a.tenant_id,t);assert.equal(principal.principal_id,'fixture-adr-principal');
+  if(!evidenceActive||request.review_id!=='review-no-soil')return null;
+  const now=Date.now();
+  return {contract_version:'geox.adr-a07-customer-evidence.v1',authority_class:'RETRIEVAL_EVIDENCE_NON_SCIENTIFIC',display_status:'AUTHORIZED_RECORDED_EVIDENCE',approval_ref:'TEST_ONLY_FIXTURE_DISPLAY',valid_until:new Date(now+30000).toISOString(),request,items:[{knowledge_ref:candidate,source_ref:authorityRef('Source','fixture-source'),artifact_ref:authorityRef('SourceArtifact','fixture-artifact'),claim_ref:authorityRef('Claim','fixture-claim'),qualification_ref:authorityRef('ScientificQualificationDecision','fixture-qualification'),artifact_sha256:'sha256:'+'a'.repeat(64),crop_code:'SOYBEAN',source_title:'TEST_ONLY soybean source',publication:{year:'2024',citation:'TEST_ONLY synthetic knowledge'},summary:'TEST_ONLY bounded source assertion',allowed_use:'FIXTURE',limitations:['TEST_ONLY regional model limitation'],conditions:['TEST_ONLY target conditions not verified'],inspection_ref:authorityRef('AuthorizationDecisionAudit','fixture-inspection'),rights_policy_ref:authorityRef('RightsPolicy','fixture-policy'),rights_grant_refs:[authorityRef('RightsGrant','fixture-rights')],rights_checked_at:new Date(now).toISOString()}],coverage_crops:['SOYBEAN'],action_authority:false,applicability_authority:false};
+ };
  registerManagerPilotModuleV1(app,runtime,authorityConfig);await app.ready();
  const create={field_id:f,name:'native fixture land',area_ha:2};
  assert.equal((await req('POST',base,create,'')).statusCode,401);
@@ -213,6 +220,12 @@ try{
  // and reads the exact persisted receipt under a fresh isolated fixture session.
  const {exerciseManagerBrowserRecovery}=await import('./manager_browser_recovery_v1.fixture.mjs');
  await exerciseManagerBrowserRecovery(app, f, noSoilPath);
+ const evidencePath=noSoilPath.replace('/native-assessment','/knowledge-evidence');
+ const evidenceResult=await req('GET',evidencePath);assert.equal(evidenceResult.statusCode,200,evidenceResult.body);assert.equal(evidenceResult.json().display_status,'AUTHORIZED_RECORDED_EVIDENCE');assert.deepEqual(evidenceResult.json().missing_crops,['CORN']);
+ evidenceActive=false;const revoked=await req('GET',evidencePath);assert.equal(revoked.statusCode,200);assert.equal(revoked.json().display_status,'DISPLAY_PERMISSION_NOT_ESTABLISHED');assert.deepEqual(revoked.json().items,[]);assert.ok(!revoked.body.includes('TEST_ONLY soybean source'));
+ grants.delete('READ_CROP_REVIEW');assert.equal((await req('GET',evidencePath)).statusCode,403);grants.add('READ_CROP_REVIEW');
+ wrongGroup=true;assert.equal((await req('GET',evidencePath)).statusCode,404);wrongGroup=false;
+ proof('A07_CUSTOMER_EVIDENCE_PERMISSION_REVOKED_AND_SCOPE_DENIED_TEST_ONLY');
  const noSoilResult=await req('GET',noSoilPath);assert.equal(noSoilResult.statusCode,200,noSoilResult.body);
  const nr=noSoilResult.json();assert.equal(nr.status,'NATIVE_RETRIEVAL_RECORDED_CONTEXT_REQUIRED');assert.deepEqual(nr.assessment_refs,[]);assert.equal(nr.action_authority,false);
  assert.deepEqual(nr.receipts.map((v:any)=>v.operation),['createDecisionProblem','executeKnowledgeRetrieval']);
