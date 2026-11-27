@@ -208,9 +208,12 @@ try{
  assert.deepEqual((await req('GET',nativePath)).json(),executed.json());
  assert.deepEqual((await req('POST',successorNative,{})).json(),successorEvaluation.json());assert.equal(nativeCalls,11);
  proof('P4_SUCCESSOR_REASSESSMENT_REUSES_NATIVE_CHAIN_AND_PRESERVES_BASELINE_TEST_ONLY');
- const noSoil=await req('POST',reviewPath,{...intent,review_id:'review-no-soil',documents:[]});assert.equal(noSoil.statusCode,200,noSoil.body);
  const noSoilPath=reviewPath+'/review-no-soil/native-assessment';
- const noSoilResult=await req('POST',noSoilPath,{});assert.equal(noSoilResult.statusCode,200,noSoilResult.body);
+ // Browser creates the no-document question, invokes native orchestration, logs out,
+ // and reads the exact persisted receipt under a fresh isolated fixture session.
+ const {exerciseManagerBrowserRecovery}=await import('./manager_browser_recovery_v1.fixture.mjs');
+ await exerciseManagerBrowserRecovery(app, f, noSoilPath);
+ const noSoilResult=await req('GET',noSoilPath);assert.equal(noSoilResult.statusCode,200,noSoilResult.body);
  const nr=noSoilResult.json();assert.equal(nr.status,'NATIVE_RETRIEVAL_RECORDED_CONTEXT_REQUIRED');assert.deepEqual(nr.assessment_refs,[]);assert.equal(nr.action_authority,false);
  assert.deepEqual(nr.receipts.map((v:any)=>v.operation),['createDecisionProblem','executeKnowledgeRetrieval']);
  assert.equal(nr.retrieval.candidate_count,1);assert.equal(nr.retrieval.authority_class,'RETRIEVAL_EVIDENCE_NON_SCIENTIFIC');

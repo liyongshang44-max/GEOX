@@ -8,6 +8,10 @@ on:
       - 'apps/server/src/routes/manager_soil_documents_v1.ts'
       - 'apps/server/src/routes/manager_field_commands_v1.ts'
       - 'apps/server/test/manager_native_commands_v1.fixture.ts'
+      - 'apps/server/test/manager_browser_recovery_v1.fixture.mjs'
+      - 'apps/web/src/features/manager/**'
+      - 'apps/web/src/api/managerWorkspaceV1.ts'
+      - 'scripts/product/e2e01/build-web.mjs'
       - 'scripts/acceptance/p6-bc-native-commands.sh'
       - 'apps/server/test/manager_soil_documents_v1.fixture.ts'
       - '.github/workflows/p6-b-c1-manager-soil.yml'
@@ -59,4 +63,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
+      - run: node scripts/product/e2e01/build-web.mjs
+      - name: Install isolated browser fixture dependency
+        run: |
+          npm install --prefix "$RUNNER_TEMP/geox-p6-browser" --no-audit --no-fund --save-exact playwright@1.56.1
+          "$RUNNER_TEMP/geox-p6-browser/node_modules/.bin/playwright" install --with-deps chromium
+          echo "P6_PLAYWRIGHT_MODULE=$RUNNER_TEMP/geox-p6-browser/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
       - run: bash scripts/acceptance/p6-bc-native-commands.sh
