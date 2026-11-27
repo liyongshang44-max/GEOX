@@ -6,7 +6,7 @@ import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {chromium} from '@playwright/test';
 
-export async function exerciseManagerBrowserRecovery(app,field,nativePath){
+export async function exerciseManagerBrowserRecovery(app,field,nativePath,joint){
  assert.equal(process.env.P6_TEST_ONLY,'1');
  assert.equal(process.env.GITHUB_ACTIONS,'true');
  assert.equal(process.env.RUNNER_ENVIRONMENT,'github-hosted');
@@ -71,6 +71,14 @@ export async function exerciseManagerBrowserRecovery(app,field,nativePath){
    const b=await page.getByText(/^executeKnowledgeRetrieval · /).innerText();
    assert.equal(await page.getByRole('button',{name:'申请原生科学评价'}).isDisabled(),true);
    await page.getByRole('button',{name:'查看农业知识证据'}).click();
+   if(joint){
+    await page.getByRole('heading',{name:joint.item.source_title}).waitFor();
+    await page.getByText(joint.item.summary,{exact:true}).waitFor();
+    await page.getByText('大豆知识尚未纳入本次发布；双作物证据不完整。',{exact:true}).waitFor();
+    const evidence=await page.evaluate(p=>fetch(p).then(r=>r.json()),nativePath.replace('/native-assessment','/knowledge-evidence'));
+    assert.equal(evidence.display_status,'AUTHORIZED_RECORDED_EVIDENCE');assert.deepEqual(evidence.items[0].knowledge_ref,joint.item.knowledge_ref);
+    return [a,b,evidence.retrieval_ref,evidence.knowledge_release_ref,evidence.items[0].knowledge_ref];
+   }
    await page.getByRole('heading',{name:'TEST_ONLY soybean source'}).waitFor();
    await page.getByText('TEST_ONLY bounded source assertion',{exact:true}).waitFor();
    await page.getByText('TEST_ONLY regional model limitation',{exact:true}).waitFor();
@@ -80,10 +88,12 @@ export async function exerciseManagerBrowserRecovery(app,field,nativePath){
   await page.goto(origin+'/manager');
   await open();
   const firstSession=await page.evaluate(()=>fetch('/api/session').then(r=>r.json()));
+  if(joint?.alreadySaved){await page.getByRole('button',{name:'读取历史问题'}).click();}else{
   await page.getByLabel('问题标识').fill('review-no-soil');
   await page.getByLabel('目标开始日期').fill('2027-04-01');
   await page.getByLabel('目标结束日期').fill('2027-10-01');
   await page.getByRole('button',{name:'保存问题',exact:true}).click();
+  }
   await selectReview();
   await page.getByText('未申请评价',{exact:true}).waitFor();
   const nativeResponse=page.waitForResponse(r=>r.url()===origin+nativePath&&r.request().method()==='POST');
@@ -102,6 +112,19 @@ export async function exerciseManagerBrowserRecovery(app,field,nativePath){
   assert.deepEqual(await receipt(),first);
   const recovered=await page.evaluate(p=>fetch(p).then(r=>r.json()),nativePath);
   assert.deepEqual(recovered,persisted);
+  if(joint){
+   const path=nativePath.replace('/native-assessment','/knowledge-evidence');
+   for(const which of ['expired','restore','revoked']){
+    await joint.negative(which);
+    await page.getByRole('button',{name:'查看农业知识证据'}).click();
+    if(which==='restore'){await page.getByText(joint.item.summary,{exact:true}).waitFor();continue;}
+    await page.getByText('知识内容展示权限尚未建立或已失效，请重新读取。',{exact:true}).waitFor();
+    assert.equal(await page.getByText(joint.item.summary,{exact:true}).count(),0);
+    const result=await page.evaluate(p=>fetch(p).then(r=>r.json()),path);
+    assert.equal(result.display_status,'DISPLAY_PERMISSION_NOT_ESTABLISHED');assert.deepEqual(result.items,[]);
+   }
+   return;
+  }
   console.log('PASS A07_CUSTOMER_EVIDENCE_BROWSER_FRESH_SESSION_TEST_ONLY');
   console.log('PASS P3P_BROWSER_NATIVE_NO_SOIL_SUBMISSION_LOGOUT_FRESH_SESSION_HISTORY_TEST_ONLY');
  }finally{await browser?.close();await new Promise(ok=>server.close(ok));}

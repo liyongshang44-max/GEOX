@@ -71,5 +71,10 @@ node -e 'const r=JSON.parse(process.argv[1]);if(r.status!=="PASS"||r.action!=="A
 test "$(snapshot)" = "$before"
 echo PASS NATIVE_ROWS_PRESERVED_ON_PRODUCT_UPGRADE
 # Run actual P1/P2 HTTP command flow on the unmodified native bootstrap schema.
-P6_TEST_ONLY=1 P6_TEST_DATABASE_URL="$admin_url" P6_TEST_RUNTIME_URL="$runtime_url" pnpm exec tsx apps/server/test/manager_native_commands_v1.fixture.ts
+case "${1:-}" in
+  "") fixture=apps/server/test/manager_native_commands_v1.fixture.ts ;;
+  --a07-joint-test-only) fixture=apps/server/test/manager_a07_native_joint_v1.fixture.ts ;;
+  *) exit 2 ;;
+esac
+P6_TEST_ONLY=1 P6_TEST_DATABASE_URL="$admin_url" P6_TEST_RUNTIME_URL="$runtime_url" pnpm exec tsx "$fixture"
 echo P6_B_C_NATIVE_COMMANDS=PASS
