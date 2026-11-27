@@ -2,19 +2,16 @@
 // Compares previous/current already-retained complete-table bytes in the product scientific core.
 // No provider request, raw-store mutation, database access, canonical Evidence write, or runtime activation.
 
-import { execFile } from "node:child_process";
+import { runScientificPythonV1 } from "./run_scientific_python_v1.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
 
 import {
   MCFT_CAP09_KBS_RAW_HOURLY_SCIENTIFIC_CORE_RELATIVE_PATH_V1,
   normalizeKbsRawHourlyScientificSubprocessErrorV1,
   type KbsRawHourlyDecoderConfigV1,
 } from "./kbs_raw_hourly_live_provider_v1.js";
-
-const execFileAsync = promisify(execFile);
 
 export const MCFT_CAP09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_ID_V1 =
   "MCFT_CAP09_KBS_RAW_HOURLY_PUBLICATION_SNAPSHOT_COMPARISON_V1" as const;
@@ -208,7 +205,7 @@ export class KbsRawHourlyPublicationSnapshotComparisonV1 {
       fs.writeFileSync(previousPath, Buffer.from(input.previous_raw_bytes));
       fs.writeFileSync(currentPath, Buffer.from(input.current_raw_bytes));
       try {
-        await execFileAsync(this.pythonExecutable, [
+        await runScientificPythonV1(this.pythonExecutable, [
           this.scientificCorePath,
           "compare-snapshots",
           "--previous-input", previousPath,
@@ -218,7 +215,7 @@ export class KbsRawHourlyPublicationSnapshotComparisonV1 {
           "--baseline-latest-event-time", baseline,
           "--output", outputPath,
         ], {
-          cwd: process.cwd(),
+          cwd: temp,
           maxBuffer: 4 * 1024 * 1024,
           timeout: 120_000,
         });

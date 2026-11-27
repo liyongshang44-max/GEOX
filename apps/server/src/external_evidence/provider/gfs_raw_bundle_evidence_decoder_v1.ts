@@ -3,11 +3,10 @@
 // No qualification-script dependency, provider fetch, raw retention, database, scheduler,
 // online runtime-cursor authority, Twin state, environment, timer, or production activation.
 
-import { execFile } from "node:child_process";
+import { runScientificPythonV1 } from "./run_scientific_python_v1.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
 
 import type {
   ExternalEvidenceDecoderInputV1,
@@ -16,8 +15,6 @@ import type {
   ExternalEvidenceFileDecoderPortV1,
   GovernedDecodedEvidenceDraftV1,
 } from "../mcft_cap09_external_collector_canonicalizer_v1.js";
-
-const execFileAsync = promisify(execFile);
 
 export type GfsRawBundleScientificSubprocessErrorV1 = Error & {
   code: "MCFT_CAP09_GFS_SCIENTIFIC_SUBPROCESS_FAILED";
@@ -144,13 +141,13 @@ export class GfsRawBundleEvidenceDecoderV1
         "decode-bundle",
         "--target", this.target,
         "--available-at", availableAt,
-        "--input", input.raw_file_path,
+        "--input", path.resolve(input.raw_file_path),
         "--output", outputPath,
       ];
       if (this.normalizeEt0) args.push("--normalize-et0");
       try {
-        await execFileAsync(this.pythonExecutable, args, {
-          cwd: process.cwd(),
+        await runScientificPythonV1(this.pythonExecutable, args, {
+          cwd: temp,
           maxBuffer: 32 * 1024 * 1024,
           timeout: 20 * 60_000,
         });

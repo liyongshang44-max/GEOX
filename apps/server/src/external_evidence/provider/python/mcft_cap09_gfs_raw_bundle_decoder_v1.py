@@ -10,8 +10,7 @@ import tarfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-ROOT = Path.cwd()
-CORE_PATH = ROOT / "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py"
+CORE_PATH = Path(__file__).resolve().with_name("mcft_cap09_gfs_scientific_core_v1.py")
 SPEC = importlib.util.spec_from_file_location("mcft_cap09_gfs_scientific_core_v1", CORE_PATH)
 if SPEC is None or SPEC.loader is None:
     raise RuntimeError("MCFT_CAP09_GFS_PRODUCT_CORE_LOAD_FAILED")
