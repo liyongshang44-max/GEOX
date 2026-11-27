@@ -2738,7 +2738,7 @@ function main() {
   for (const decision of plan.decisions) {
     let result;
     // BEGIN ONE_TIME_R4285_CUTOVER_ROUTE
-    if(cutoverProof&&cutoverModule.SCOPED.includes(decision.check_id)){
+    if(cutoverProof&&cutoverModule.SCOPED.includes(decision.check_id)&&!cutoverProof.native_checks?.includes(decision.check_id)){
       const row=cutoverProof.rows?.[decision.check_id];const ok=cutoverProof.status==="PASS"&&!!row;
       result=ok?row:{check_id:decision.check_id,applicability:decision.status,status:"FAIL",reason_code:cutoverProof.reason_code,current_source:cutoverProof,permit_consumed:false,stages:0};
       if(!ok)blockers.push({blocker_class:"ONE_TIME_R4285_EXACT_SOURCE_HOLD",check_id:decision.check_id,detail:cutoverProof});

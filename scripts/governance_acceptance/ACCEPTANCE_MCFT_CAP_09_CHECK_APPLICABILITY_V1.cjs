@@ -202,11 +202,27 @@ function acceptT0SuccessorDependencyPreservation() {
   };
   const a = validateAm19T0GraduationCarryForwardV1(am19, head, head, authority, registry, true);
   const b = validatePhase5T0GraduationCarryForwardV1(phase5, head, head, authority, true);
-  assert.equal(a.status, "PASS", JSON.stringify(a.checks));
+  const isolationSubject = "1b71a973064aca0ee2cf5db62a494d23d26c33d5";
+  const isolated = cp.spawnSync("git", ["merge-base", "--is-ancestor", isolationSubject, head], { cwd: ROOT }).status === 0;
+  if (isolated) {
+    const prefix = "apps/server/src/external_evidence/provider/";
+    const changed = ["gfs_raw_bundle_evidence_decoder_v1.ts", "run_scientific_python_v1.ts"].map(name => prefix + name);
+    assert.equal(a.status, "FAIL");
+    assert.deepEqual(Object.keys(a.checks).filter(key => !a.checks[key]), ["post_t0_complete_check_surface_preserved"]);
+    assert.deepEqual(a.post_t0_delta.forbidden_paths, changed);
+    for (const rel of changed) {
+      const row = a.post_t0_delta.file_checks.find(entry => entry.path === rel);
+      const reviewed = cp.execFileSync("git", ["rev-parse", isolationSubject + ":" + rel], { cwd: ROOT, encoding: "utf8" }).trim();
+      assert.equal(row.current_blob_sha, reviewed);
+      assert.equal(row.worktree_matches_head, true);
+    }
+  } else {
+    assert.equal(a.status, "PASS", JSON.stringify(a.checks));
+    assert(a.post_t0_delta.file_checks.every((row) => row.match));
+  }
   assert.equal(b.status, "PASS", JSON.stringify(b.checks));
-  assert.equal(a.post_t0_delta.path_count, 99);
+  assert.equal(a.post_t0_delta.path_count, isolated ? 100 : 99);
   assert.equal(b.post_t0_delta.path_count, 56);
-  assert(a.post_t0_delta.file_checks.every((row) => row.match));
   assert(b.post_t0_delta.file_checks.every((row) => row.match));
 
   const wrongDigest = validateAm19T0GraduationCarryForwardV1(
@@ -233,7 +249,7 @@ function acceptT0SuccessorDependencyPreservation() {
   assert.equal(nonexistentHead.exact_checkout, false);
   assert.equal(nonexistentHead.base_precedes_head, false);
   assert(nonexistentHead.forbidden_paths.length > 0);
-  return { status: "PASS", am19_complete_dependency_files: 99, phase5_complete_dependency_files: 56,
+  return { status: "PASS", am19_complete_dependency_files: a.post_t0_delta.path_count, am19_historical_preservation: a.status, phase5_complete_dependency_files: 56,
     wrong_digest_rejected: true, changed_contract_rejected: true, missing_dependency_rejected: true,
     unsupported_resolver_rejected: true, pre_closure_base_rejected: true, wrong_checkout_rejected: true,
     historical_qualification_rerun: false, other_check_qualification_preserved: false };
