@@ -48,8 +48,8 @@ export async function readCustomerNativeRuntimeSnapshotV1(context:PostgresFieldT
       iso((record(record(result.rows[1].record_json)?.payload))?.logical_time))fail("CUSTOMER_NATIVE_READ_LATEST_AMBIGUOUS");
     return {row:result.rows[0],payload:validateFact(result.rows[0],type,context.scope,runtimeChainId)};
   };
-  const [stateResult,forecastResult]=await Promise.all([
-    readType("mcft_customer_native_state_fact_v1"),readType("mcft_customer_native_forecast_fact_v1")]);
+  const stateResult=await readType("mcft_customer_native_state_fact_v1");
+  const forecastResult=await readType("mcft_customer_native_forecast_fact_v1");
   if(!stateResult||!forecastResult)fail("CUSTOMER_NATIVE_RUNTIME_NOT_FOUND");
   const statePayload=stateResult.payload;const forecastPayload=forecastResult.payload;
   const state=record(statePayload.state);const forecast=record(forecastPayload.forecast);
