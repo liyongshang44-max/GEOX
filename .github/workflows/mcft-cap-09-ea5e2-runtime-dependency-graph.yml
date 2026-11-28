@@ -53,8 +53,14 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
 
-      - name: Generate central applicability plan
+      - name: Classify centrally approved product regression scope
         if: github.event_name == 'pull_request'
+        id: product
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs
+      - name: Generate central applicability plan
+        if: github.event_name == 'pull_request' && steps.product.outputs.mode != 'product-shared-regression'
         run: >-
           node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
           --base '${{ github.event.pull_request.base.sha }}'
@@ -64,6 +70,7 @@ jobs:
           --out acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json
 
       - name: Route EA5E2 from central planner
+        if: steps.product.outputs.mode != 'product-shared-regression'
         id: route
         shell: node {0}
         env:
@@ -162,6 +169,10 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `action=${proof.action}\n`);
           process.stdout.write(JSON.stringify(proof,null,2)+'\n');
 
+      - name: Verify product dependency graph without historical promotion
+        if: steps.product.outputs.mode == 'product-shared-regression'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
+
       - name: Run full EA5E2 runtime dependency qualification
         if: steps.route.outputs.action == 'FULL'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
@@ -193,6 +204,8 @@ jobs:
         with:
           name: mcft-cap09-ea5e2-planner-route-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
+            acceptance-output/MCFT_PV02_PRODUCT_CI_ROUTE.json
+            acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json
             acceptance-output/MCFT_CAP_09_EA5E2_PLANNER_ROUTE_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json
           if-no-files-found: warn

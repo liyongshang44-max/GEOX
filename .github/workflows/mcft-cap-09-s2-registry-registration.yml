@@ -63,8 +63,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
+      - name: Classify centrally approved product regression scope
+        id: product
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs
       - name: Classify CAP-09 Registry lifecycle
-        if: steps.adoption.outputs.active != '1'
+        if: steps.adoption.outputs.active != '1' && steps.product.outputs.mode != 'product-shared-regression'
         id: lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
@@ -87,9 +92,10 @@ jobs:
           MCFT_EVENT_NAME: ${{ github.event_name }}
           MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ github.token }}
-          MCFT_S2_REGISTRATION_MODE: ${{ steps.lifecycle.outputs.mode }}
+          MCFT_S2_REGISTRATION_MODE: ${{ steps.lifecycle.outputs.mode || steps.product.outputs.mode }}
         run: |
           case "$MCFT_S2_REGISTRATION_MODE" in
+            product-shared-regression) test -s acceptance-output/MCFT_PV02_PRODUCT_CI_ROUTE.json ;;
             s6-simulation-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s6-simulation-lifecycle-repair ;;
             s6-simulation-qualification) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s6-simulation-route-only ;;
             s6-candidate-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s6-candidate-lifecycle-repair ;;
@@ -131,6 +137,7 @@ jobs:
         with:
           name: mcft-cap-09-s2-registry-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
+            acceptance-output/MCFT_PV02_PRODUCT_CI_ROUTE.json
             acceptance-output/MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json
             acceptance-output/MCFT_CAP_09_S2_REGISTRY_REGISTRATION_RESULT.json
             acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json

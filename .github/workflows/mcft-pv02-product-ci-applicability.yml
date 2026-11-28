@@ -1,0 +1,21 @@
+name: MCFT PV02 centralized product CI applicability
+on:
+  pull_request:
+    paths:
+      - 'scripts/governance_acceptance/MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs'
+      - '.github/workflows/mcft-pv02-product-ci-applicability.yml'
+permissions:
+  contents: read
+jobs:
+  route-contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs
