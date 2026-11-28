@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdirSync,writeFileSync } from "node:fs";
+import { assimilateCustomerScalarTestV1,type CustomerScalarObservationV1,type SyntheticRootZoneOperatorV1 } from "../../apps/server/src/domain/soil_water/customer_scalar_assimilation_v1.js";
+import { executeCustomerPure72hForecastV1,type CustomerForecastForcingPointV1 } from "../../apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.js";
 import { validateCustomerScalarRuntimeConfigV1,type CustomerScalarRuntimeConfigV1 } from "../../apps/server/src/domain/twin_runtime/customer_scalar_runtime_config_v1.js";
 import { executeCustomerHourlyWaterBalanceV1,executeHourlyWaterBalanceV1,type CustomerHourlyWaterBalanceInputV1 } from "../../apps/server/src/domain/soil_water/hourly_water_balance_v1.js";
 const start="2026-11-01T00:00:00.000Z",end="2026-11-01T01:00:00.000Z";
@@ -41,7 +43,39 @@ const legacy=make("300.000000","0.300000","0.120000","0.450000"),il=input(legacy
 const old=executeHourlyWaterBalanceV1({config:validateCustomerScalarRuntimeConfigV1(legacy).math_config,interval_start_exclusive:start,interval_end_inclusive:end,previous_storage_mm_decimal:il.previous.storage_mm,previous_variance_basis:{basis_origin:"CARRIED_FROM_PREVIOUS_CONTINUATION_STATE",previous_state_ref:il.previous.state_ref,previous_storage_variance_mm2_decimal:il.previous.storage_variance_mm2},gross_rainfall_mm_decimal:il.gross_rainfall_mm_decimal,historical_et0_mm_decimal:il.historical_et0_mm_decimal,crop_stage_code:il.crop_stage_code,kc_decimal:il.kc_decimal,executed_irrigation_candidates:[]});
 const same=executeCustomerHourlyWaterBalanceV1(il);
 assert.deepEqual(same.published_state,old.published_state);assert.deepEqual(same.mass_balance_trace,old.mass_balance_trace);assert.deepEqual(same.uncertainty_budget,old.uncertainty_budget);
+
+// Distinct synthetic full-root-zone mean case, NOT the I1 150 mm point.
+const fcConfig={...a,effective_until:"2026-11-05T00:00:00.000Z"};
+const prior=executeCustomerHourlyWaterBalanceV1(input(fcConfig,"120.000000"));
+const obs:CustomerScalarObservationV1={test_only:true,scope:fcConfig.scope,source_record_id:"test:root-mean-001",binding_id:"test:customer-binding-001",
+  observed_at:end,available_at:end,value_fraction:0.313,quality_status:"PASS",support:{kind:"SYNTHETIC_ROOT_ZONE_MEAN",root_zone_depth_mm:"400.000000",support_ref:fcConfig.support.support_ref}};
+const operator:SyntheticRootZoneOperatorV1={test_only:true,kind:"SYNTHETIC_ROOT_ZONE_MEAN_H1_V1",binding_id:obs.binding_id,support_ref:fcConfig.support.support_ref,
+  observation_variance:0.0001,variance_source_ref:"test:controlled-root-mean-variance",effective_from:start,effective_until:fcConfig.effective_until};
+const point=assimilateCustomerScalarTestV1({customer_config:fcConfig,prior,observation:{...obs,support:{kind:"POINT_SUPPORT",measurement_depth_mm:150}},operator});
+assert.equal(point.reason,"POINT_TO_ROOT_ZONE_MAPPING_NOT_ESTABLISHED");assert.equal(point.applied_state,null);
+const invalid=assimilateCustomerScalarTestV1({customer_config:fcConfig,prior,observation:obs,operator:{...operator,binding_id:"test:other"}});
+assert.equal(invalid.applied_state,null);
+const update=assimilateCustomerScalarTestV1({customer_config:fcConfig,prior,observation:obs,operator});
+assert.equal(update.status,"APPLIED_SYNTHETIC_ROOT_ZONE_MEAN");assert.ok(update.applied_state);
+assert.ok(update.applied_state.root_zone_vwc_fraction>0.312&&update.applied_state.root_zone_vwc_fraction<0.313);
+assert.ok(Number(update.applied_state.storage_variance_mm2)<Number(prior.uncertainty_budget.next_storage_variance_mm2));
+const forcing:CustomerForecastForcingPointV1[]=Array.from({length:72},(_,i)=>({
+  horizon_hour:i+1,interval_start:new Date(Date.parse(end)+i*3600000).toISOString(),
+  interval_end:new Date(Date.parse(end)+(i+1)*3600000).toISOString(),target_time:new Date(Date.parse(end)+(i+1)*3600000).toISOString(),
+  precipitation_assumption_mm:i===5?"5.000000":"0.000000",et0_assumption_mm:"0.100000",crop_stage_code:fcConfig.crop_stage_code,kc:fcConfig.kc_decimal,
+  weather_source_ref:"test:forecast-rain-"+i,et0_source_ref:"test:forecast-et0-"+i,issued_at:end,available_at:end}));
+const predicted=executeCustomerPure72hForecastV1({customer_config:fcConfig,source:update.applied_state,forcing});
+const openLoop=executeCustomerPure72hForecastV1({customer_config:fcConfig,source:prior,forcing});
+assert.equal(predicted.points.length,72);assert.equal(openLoop.points.length,72);
+assert.equal(predicted.source_state_kind,"SYNTHETIC_ROOT_ZONE_MEAN_ASSIMILATED");assert.equal(openLoop.source_state_kind,"PRIOR_DRIVEN_NO_ASSIMILATION");
+for(const r of [predicted,openLoop]){assert.ok(r.points.every(p=>p.mass_balance_error_mm==="0.000000"));assert.equal(r.formal_eligible,false);}
+assert.deepEqual(predicted,executeCustomerPure72hForecastV1({customer_config:fcConfig,source:update.applied_state,forcing}));
+assert.throws(()=>executeCustomerPure72hForecastV1({customer_config:fcConfig,source:prior,forcing:forcing.slice(1)}),/EXACT_72_POINTS/);
+assert.throws(()=>executeCustomerPure72hForecastV1({customer_config:fcConfig,source:prior,forcing:forcing.map((p,i)=>i===0?{...p,available_at:"2026-11-01T01:01:00.000Z"}:p)}),/FUTURE_KNOWLEDGE/);
+assert.throws(()=>executeCustomerPure72hForecastV1({customer_config:fcConfig,source:prior,forcing:forcing.map((p,i)=>i===0?{...p,target_time:p.interval_start}:p)}),/FORCING_TIME_MISMATCH/);
+
 mkdirSync("acceptance-output",{recursive:true});
-const receipt={status:"PASS",test_only:true,production:false,model:"CUSTOMER_SCALAR_V1",results:[ra,rb],continuation:next,legacy_numerical_equivalence:true,negative_cases:5};
+const receipt={status:"PASS",test_only:true,production:false,model:"CUSTOMER_SCALAR_V1",results:[ra,rb],continuation:next,legacy_numerical_equivalence:true,negative_cases:5,customer_assimilation:{point,invalid,update},customer_forecast:{predicted,open_loop:openLoop},forecast_negative_cases:3};
 writeFileSync("acceptance-output/MCFT_PV02_I2_AB.json",JSON.stringify(receipt,null,2)+"\n");
-console.log(JSON.stringify(receipt));
+console.log(JSON.stringify({status:receipt.status,test_only:true,results:receipt.results,continuation:receipt.continuation,legacy_numerical_equivalence:true,negative_cases:5,customer_assimilation:receipt.customer_assimilation,
+forecast_summary:{predicted:{count:predicted.points.length,first:predicted.points[0],last:predicted.points[71],aggregates:predicted.aggregates,hash:predicted.forecast_hash},open_loop:{count:openLoop.points.length,first:openLoop.points[0],last:openLoop.points[71],aggregates:openLoop.aggregates,hash:openLoop.forecast_hash}},forecast_negative_cases:3}));

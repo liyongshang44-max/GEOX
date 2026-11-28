@@ -3,6 +3,8 @@
 // Boundary: pure fixed-point Domain math only; no Evidence selection, observation update, Scenario math, persistence, canonical append, migration, projection, route, scheduler, filesystem, network, environment, or wall clock.
 
 import { semanticHashV1 } from "./canonical_identity_v1.js";
+import { validateCustomerScalarRuntimeConfigV1,type CustomerScalarRuntimeConfigV1 } from "./customer_scalar_runtime_config_v1.js";
+import { readCustomerScalarStateV1,type CustomerScalarStateV1 } from "../soil_water/customer_scalar_assimilation_v1.js";
 import {
   attachCap04CanonicalCompletedForecastAuthorityV1,
   type Cap04ForecastCanonicalAggregatesV1,
@@ -106,28 +108,18 @@ function sortedUniqueV1(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
-export function executeCap04Pure72hForecastMathV1(
-  input: Cap04Pure72hForecastMathInputV1,
-): Cap04Pure72hForecastMathResultV1 {
-  validateCap04RuntimeConfigPayloadV1(input.runtime_config.payload);
-  validateCap04ForecastForcingWindowV1(input.forcing_window);
-  const config = input.runtime_config.payload;
-  const issuedAt = canonicalHourV1(input.source_posterior.logical_time, "CAP04_FORECAST_SOURCE_POSTERIOR_LOGICAL_TIME_INVALID");
-  if (issuedAt !== input.forcing_window.logical_time) throw new Error("CAP04_FORECAST_POSTERIOR_FORCING_TIME_MISMATCH");
-  if (config.effective_logical_time !== issuedAt) throw new Error("CAP04_FORECAST_CONFIG_EFFECTIVE_TIME_MISMATCH");
-  const runtimeConfigRef = requiredStringV1(input.runtime_config.ref, "CAP04_FORECAST_RUNTIME_CONFIG_REF_REQUIRED");
-  const runtimeConfigHash = requiredStringV1(input.runtime_config.hash, "CAP04_FORECAST_RUNTIME_CONFIG_HASH_REQUIRED");
-  if (input.forcing_window.runtime_config_ref !== runtimeConfigRef || input.forcing_window.runtime_config_hash !== runtimeConfigHash) throw new Error("CAP04_FORECAST_FORCING_CONFIG_IDENTITY_MISMATCH");
-  if (input.forcing_window.crop_stage_context_ref !== config.crop_stage_context.context_ref || input.forcing_window.crop_stage_context_hash !== config.crop_stage_context.context_hash) throw new Error("CAP04_FORECAST_CROP_STAGE_CONTEXT_MISMATCH");
+// Shared numerical trajectory; the legacy wrapper retains all canonical validators and wire.
+type CoreForcingPointV1 = { horizon_hour:number; interval_start:string; interval_end:string; target_time:string; precipitation_assumption_mm: number|string; et0_assumption_mm:number|string; crop_stage_code:string; kc:number|string };
+function calculateCap04TrajectoryCoreV1(
+  source: {storage_mean_mm_decimal:string;storage_variance_mm2_decimal:string},
+  hydraulic: {wilting_point_storage_mm:unknown;field_capacity_storage_mm:unknown;saturation_storage_mm:unknown},
+  dynamics: {runoff_fraction:unknown;drainage_coefficient_per_hour:unknown},
+  uncertainty: {rainfall_relative_stddev:unknown;crop_et_relative_stddev:unknown;structural_process_stddev_mm_per_hour:unknown},
+  forcingPoints: readonly CoreForcingPointV1[],
+) {
+  let previousStorageUnits = nonNegativeAmountV1(source.storage_mean_mm_decimal, "CAP04_FORECAST_SOURCE_STORAGE_REQUIRED");
+  let previousVarianceUnits = nonNegativeVarianceV1(source.storage_variance_mm2_decimal, "CAP04_FORECAST_SOURCE_VARIANCE_REQUIRED");
 
-  const sourcePosteriorRef = requiredStringV1(input.source_posterior.ref, "CAP04_FORECAST_SOURCE_POSTERIOR_REF_REQUIRED");
-  const sourcePosteriorHash = requiredStringV1(input.source_posterior.hash, "CAP04_FORECAST_SOURCE_POSTERIOR_HASH_REQUIRED");
-  let previousStorageUnits = nonNegativeAmountV1(input.source_posterior.computation_basis.storage_mean_mm_decimal, "CAP04_FORECAST_SOURCE_STORAGE_REQUIRED");
-  let previousVarianceUnits = nonNegativeVarianceV1(input.source_posterior.computation_basis.storage_variance_mm2_decimal, "CAP04_FORECAST_SOURCE_VARIANCE_REQUIRED");
-
-  const hydraulic = config.soil_hydraulic_snapshot;
-  const dynamics = config.dynamics_parameters;
-  const uncertainty = config.process_uncertainty;
   const wiltingStorageUnits = nonNegativeAmountV1(hydraulic.wilting_point_storage_mm, "CAP04_FORECAST_WILTING_STORAGE_REQUIRED");
   const fieldCapacityUnits = nonNegativeAmountV1(hydraulic.field_capacity_storage_mm, "CAP04_FORECAST_FIELD_CAPACITY_REQUIRED");
   const saturationStorageUnits = nonNegativeAmountV1(hydraulic.saturation_storage_mm, "CAP04_FORECAST_SATURATION_STORAGE_REQUIRED");
@@ -155,7 +147,7 @@ export function executeCap04Pure72hForecastMathV1(
   let totalOverflowUnits = 0n;
   let minimumAwfUnits = 1_000_000n;
 
-  for (const forcing of input.forcing_window.points) {
+  for (const forcing of forcingPoints) {
     const grossPrecipitationUnits = nonNegativeAmountV1(forcing.precipitation_assumption_mm, "CAP04_FORECAST_PRECIPITATION_REQUIRED");
     const referenceEt0Units = nonNegativeAmountV1(forcing.et0_assumption_mm, "CAP04_FORECAST_ET0_REQUIRED");
     const kcUnits = nonNegativeAmountV1(forcing.kc, "CAP04_FORECAST_KC_REQUIRED");
@@ -259,17 +251,6 @@ export function executeCap04Pure72hForecastMathV1(
     previousVarianceUnits = nextVarianceUnits;
   }
 
-  const limitations = sortedUniqueV1([
-    "CONTROLLED_SYNTHETIC",
-    "NO_CALIBRATED_FORECAST_PROBABILITY",
-    "NO_NEW_IRRIGATION_ASSUMPTION",
-    "NO_OBSERVATION_UPDATE_APPLIED",
-    "NORMALITY_NOT_FIELD_VALIDATED",
-    "NOT_DECISION",
-    "NOT_FIELD_CALIBRATED",
-    "NOT_RECOMMENDATION",
-    "WEATHER_ENSEMBLE_UNCERTAINTY_NOT_MODELED",
-  ]);
   const trajectoryHash = computeCap04ForecastTrajectoryHashV1(points);
   const aggregates: Cap04ForecastCanonicalAggregatesV1 = {
     final_storage_mm: points[71].storage_mean_mm,
@@ -281,6 +262,39 @@ export function executeCap04Pure72hForecastMathV1(
     total_drainage_mm: formatAmount(totalDrainageUnits),
     total_overflow_mm: formatAmount(totalOverflowUnits),
   };
+  return {points,pointTraces,trajectoryHash,aggregates};
+}
+
+export function executeCap04Pure72hForecastMathV1(
+  input: Cap04Pure72hForecastMathInputV1,
+): Cap04Pure72hForecastMathResultV1 {
+  validateCap04RuntimeConfigPayloadV1(input.runtime_config.payload);
+  validateCap04ForecastForcingWindowV1(input.forcing_window);
+  const config = input.runtime_config.payload;
+  const issuedAt = canonicalHourV1(input.source_posterior.logical_time, "CAP04_FORECAST_SOURCE_POSTERIOR_LOGICAL_TIME_INVALID");
+  if (issuedAt !== input.forcing_window.logical_time) throw new Error("CAP04_FORECAST_POSTERIOR_FORCING_TIME_MISMATCH");
+  if (config.effective_logical_time !== issuedAt) throw new Error("CAP04_FORECAST_CONFIG_EFFECTIVE_TIME_MISMATCH");
+  const runtimeConfigRef = requiredStringV1(input.runtime_config.ref, "CAP04_FORECAST_RUNTIME_CONFIG_REF_REQUIRED");
+  const runtimeConfigHash = requiredStringV1(input.runtime_config.hash, "CAP04_FORECAST_RUNTIME_CONFIG_HASH_REQUIRED");
+  if (input.forcing_window.runtime_config_ref !== runtimeConfigRef || input.forcing_window.runtime_config_hash !== runtimeConfigHash) throw new Error("CAP04_FORECAST_FORCING_CONFIG_IDENTITY_MISMATCH");
+  if (input.forcing_window.crop_stage_context_ref !== config.crop_stage_context.context_ref || input.forcing_window.crop_stage_context_hash !== config.crop_stage_context.context_hash) throw new Error("CAP04_FORECAST_CROP_STAGE_CONTEXT_MISMATCH");
+
+  const sourcePosteriorRef = requiredStringV1(input.source_posterior.ref, "CAP04_FORECAST_SOURCE_POSTERIOR_REF_REQUIRED");
+  const sourcePosteriorHash = requiredStringV1(input.source_posterior.hash, "CAP04_FORECAST_SOURCE_POSTERIOR_HASH_REQUIRED");
+  const {points,pointTraces,trajectoryHash,aggregates}=calculateCap04TrajectoryCoreV1(
+    input.source_posterior.computation_basis,config.soil_hydraulic_snapshot,
+    config.dynamics_parameters,config.process_uncertainty,input.forcing_window.points);
+  const limitations = sortedUniqueV1([
+    "CONTROLLED_SYNTHETIC",
+    "NO_CALIBRATED_FORECAST_PROBABILITY",
+    "NO_NEW_IRRIGATION_ASSUMPTION",
+    "NO_OBSERVATION_UPDATE_APPLIED",
+    "NORMALITY_NOT_FIELD_VALIDATED",
+    "NOT_DECISION",
+    "NOT_FIELD_CALIBRATED",
+    "NOT_RECOMMENDATION",
+    "WEATHER_ENSEMBLE_UNCERTAINTY_NOT_MODELED",
+  ]);
   const uncertaintyBasis: Cap04ForecastCanonicalUncertaintyBasisV1 = {
     method_id: "ADDITIVE_STORAGE_VARIANCE_ZERO_COVARIANCE_V1",
     interval_method_id: "NORMAL_95_PERCENT_Z_1_96_V1",
@@ -340,4 +354,49 @@ export function executeCap04Pure72hForecastMathV1(
   };
   validateCap04Pure72hForecastMathResultV1(result);
   return result;
+}
+
+
+// Test-only successor. It uses the same 72-hour numerical trajectory, not the
+// historical canonical Forecast authority or a new predictor.
+export type CustomerForecastForcingPointV1 = {
+  horizon_hour:number; interval_start:string; interval_end:string; target_time:string;
+  precipitation_assumption_mm:string; et0_assumption_mm:string; crop_stage_code:string; kc:string;
+  weather_source_ref:string; et0_source_ref:string; available_at:string; issued_at:string;
+};
+export function executeCustomerPure72hForecastV1(input:{
+  customer_config:CustomerScalarRuntimeConfigV1; source:CustomerScalarStateV1;
+  forcing:readonly CustomerForecastForcingPointV1[];
+}) {
+  const {config,math_config,config_hash}=validateCustomerScalarRuntimeConfigV1(input.customer_config);
+  const source=readCustomerScalarStateV1(input.source,config_hash);
+  const issuedAt=canonicalHourV1(source.logical_time,"CUSTOMER_FORECAST_SOURCE_HOUR_INVALID");
+  if(issuedAt<config.effective_from||new Date(Date.parse(issuedAt)+72*3600000).toISOString()>config.effective_until)
+    throw new Error("CUSTOMER_FORECAST_CONFIG_WINDOW_INVALID");
+  if(input.forcing.length!==72)throw new Error("CUSTOMER_FORECAST_EXACT_72_POINTS_REQUIRED");
+  const forcing=structuredClone(input.forcing);
+  for(let i=0;i<forcing.length;i++){
+    const f=forcing[i],start=new Date(Date.parse(issuedAt)+i*3600000).toISOString(),end=new Date(Date.parse(start)+3600000).toISOString();
+    if(f.horizon_hour!==i+1||f.interval_start!==start||f.interval_end!==end||f.target_time!==end)
+      throw new Error("CUSTOMER_FORECAST_FORCING_TIME_MISMATCH");
+    for(const t of [f.issued_at,f.available_at]){
+      if(!Number.isFinite(Date.parse(t))||new Date(t).toISOString()!==t||t>issuedAt)throw new Error("CUSTOMER_FORECAST_FUTURE_KNOWLEDGE");
+    }
+    if(f.issued_at>f.available_at)throw new Error("CUSTOMER_FORECAST_FORCING_TIME_MISMATCH");
+    for(const r of [f.weather_source_ref,f.et0_source_ref])if(typeof r!=="string"||!r.startsWith("test:")||r.length<=5)throw new Error("CUSTOMER_FORECAST_TEST_SOURCE_REQUIRED");
+    for(const value of [f.precipitation_assumption_mm,f.et0_assumption_mm])
+      if(typeof value!=="string"||!/^(0|[1-9][0-9]*)\.[0-9]{6}$/.test(value))throw new Error("CUSTOMER_FORECAST_NONNEGATIVE_DECIMAL_REQUIRED");
+    if(f.kc!==config.kc_decimal||f.crop_stage_code!==config.crop_stage_code)throw new Error("CUSTOMER_FORECAST_CROP_CONTEXT_MISMATCH");
+  }
+  const {points,pointTraces,trajectoryHash,aggregates}=calculateCap04TrajectoryCoreV1(
+    {storage_mean_mm_decimal:source.storage_mm,storage_variance_mm2_decimal:source.storage_variance_mm2},
+    math_config,math_config,math_config,forcing);
+  const result={schema_version:"mcft_customer_pure_72h_forecast_v1" as const,test_only:true as const,
+    formal_eligible:false as const,is_simulated:true as const,scenario_eligible:false as const,
+    scope:config.scope,config_hash,root_zone_depth_mm:math_config.root_zone_depth_mm,
+    issued_at:issuedAt,source_state_ref:source.state_ref,source_state_kind:source.state_kind,
+    forcing,forcing_hash:semanticHashV1(forcing),points,point_traces:pointTraces,trajectory_hash:trajectoryHash,aggregates,
+    parameter_uncertainty:config.parameter_uncertainty,
+    limitations:["CONTROLLED_SYNTHETIC","NO_FIELD_CALIBRATION","LEGACY_ET_STORAGE_LIMIT_ONLY","PARAMETER_UNCERTAINTY_NOT_PROPAGATED","NO_WEATHER_ENSEMBLE","NO_ACTION_AUTHORITY"]};
+  return {...result,forecast_hash:semanticHashV1(result)};
 }
