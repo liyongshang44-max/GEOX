@@ -158,7 +158,8 @@ jobs:
         if: failure()
         run: |
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" ps || true
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" logs --tail=100 telemetry-ingest server database-platform-bootstrap mcft-cap07-migration bline-commercial-principal-bootstrap postgres || true
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" logs --tail=100 telemetry-ingest server database-platform-bootstrap mcft-cap07-migration bline-commercial-principal-bootstrap || true
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" logs --tail=1500 postgres || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
