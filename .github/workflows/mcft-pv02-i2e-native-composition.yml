@@ -1,0 +1,178 @@
+name: MCFT PV02 I2E native customer composition
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/runtime/twin_runtime/customer_native_runtime_composer_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_PV02_I2E_NATIVE_COMPOSITION.ts'
+      - '.github/workflows/mcft-pv02-i2e-native-composition.yml'
+      - 'apps/server/src/runtime/twin_runtime/customer_soil_evidence_ingress_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_evidence_ingress_adapter_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_PV02_I1_NATIVE_MQTT.ts'
+      - '.github/workflows/mcft-pv02-i1-native-mqtt.yml'
+permissions:
+  contents: read
+jobs:
+  native-mqtt-to-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Prepare commercial compose env
+        run: |
+          ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) { console.error('missing active admin security.admin token'); process.exit(1); } console.log(t.token)")"
+          mapfile -t ACCEPTANCE_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) process.exit(1); for (const k of ['tenant_id','project_id','group_id','actor_id']) { const v=String(t[k]||'').trim(); if(!v) { console.error('missing acceptance identity '+k); process.exit(1); } console.log(v); }")
+          mapfile -t EXECUTOR_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='executor_token' && x.role==='executor' && x.scopes.includes('action.task.dispatch') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) { console.error('missing active dedicated executor acceptance token'); process.exit(1); } for (const k of ['token','actor_id']) { const v=String(t[k]||'').trim(); if(!v) { console.error('missing dedicated executor identity '+k); process.exit(1); } console.log(v); }")
+          TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); process.stdout.write(JSON.stringify(f))")"
+          cat > .env.ci <<EOF_INNER
+          GEOX_RUNTIME_ENV=pilot
+          GEOX_TOKENS_JSON='$TOKENS_JSON'
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=ci-pilot-postgres-strong-2026
+          POSTGRES_DB=geox_pv02_i1_test
+          GEOX_MCFT_MIGRATOR_PASSWORD=ci-pilot-mcft-migrator-strong-2026
+          GEOX_RUNTIME_DATABASE_PASSWORD=ci-pilot-runtime-database-strong-2026
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=$(git rev-parse HEAD)
+          GEOX_AO_ACT_TOKEN=$ACCEPTANCE_TOKEN
+          GEOX_ACCEPTANCE_TENANT_ID=${ACCEPTANCE_IDENTITY[0]}
+          GEOX_ACCEPTANCE_PROJECT_ID=${ACCEPTANCE_IDENTITY[1]}
+          GEOX_ACCEPTANCE_GROUP_ID=${ACCEPTANCE_IDENTITY[2]}
+          GEOX_ACCEPTANCE_ACTOR_ID=${ACCEPTANCE_IDENTITY[3]}
+          GEOX_EXECUTOR_TOKEN=${EXECUTOR_IDENTITY[0]}
+          GEOX_EXECUTOR_ID=${EXECUTOR_IDENTITY[1]}
+          GEOX_EXECUTOR_ACTOR_ID=${EXECUTOR_IDENTITY[1]}
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=ci-pilot-minio-strong-2026
+          MQTT_AUTH_REQUIRED=1
+          GEOX_MQTT_AUTH_REQUIRED=1
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=ci-pilot-mqtt-strong-2026
+          CORS_ORIGINS=https://pilot-ci.geox.invalid
+          GEOX_ALLOWED_ORIGINS=https://pilot-ci.geox.invalid
+          APP_SECRET=ci-pilot-app-secret-strong-2026
+          GEOX_APP_SECRET=ci-pilot-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://pilot-ci.geox.invalid
+          GEOX_PUBLIC_BASE_URL=https://pilot-ci.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=ci-controlled-pilot-runtime-security-baseline
+          GEOX_DEVTOOLS_ENABLED=0
+          EOF_INNER
+
+      - name: Materialize qualification object-store images from immutable mirrors
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SERVER_DIGEST="sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e"
+          MC_DIGEST="sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727"
+
+          SERVER_MIRROR="ghcr.io/datalens-tech/minio:25.09@${SERVER_DIGEST}"
+          MC_MIRROR="docker.io/apecloud/mc:RELEASE.2025-08-13T08-35-41Z@${MC_DIGEST}"
+
+          LOCAL_SERVER="geox/mcft-cap09-qualification-minio:server-14cea493d9a3"
+          LOCAL_MC="geox/mcft-cap09-qualification-minio:mc-a7fe349ef4bd"
+
+          server_remote="$(
+            docker buildx imagetools inspect "$SERVER_MIRROR" |
+              awk '$1 == "Digest:" && !seen { digest=$2; seen=1 } END { if (!seen) exit 2; print digest }'
+          )"
+
+          mc_remote="$(
+            docker buildx imagetools inspect "$MC_MIRROR" |
+              awk '$1 == "Digest:" && !seen { digest=$2; seen=1 } END { if (!seen) exit 2; print digest }'
+          )"
+
+          test "$server_remote" = "$SERVER_DIGEST"
+          test "$mc_remote" = "$MC_DIGEST"
+
+          echo "SERVER_MIRROR_INDEX_DIGEST=$server_remote"
+          echo "MC_MIRROR_INDEX_DIGEST=$mc_remote"
+
+          docker pull "$SERVER_MIRROR"
+          docker pull "$MC_MIRROR"
+
+          docker tag "$SERVER_MIRROR" "$LOCAL_SERVER"
+          docker tag "$MC_MIRROR" "$LOCAL_MC"
+
+          docker image inspect "$LOCAL_SERVER" >/dev/null
+          docker image inspect "$LOCAL_MC" >/dev/null
+
+          cat > "$RUNNER_TEMP/mcft-qualification-minio.yml" <<YAML
+          services:
+            minio:
+              image: $LOCAL_SERVER
+              pull_policy: never
+            minio-init:
+              image: $LOCAL_MC
+              pull_policy: never
+          YAML
+
+          {
+            echo "GEOX_CI_MINIO_IMAGE=$LOCAL_SERVER"
+            echo "GEOX_CI_MC_IMAGE=$LOCAL_MC"
+          } >> "$GITHUB_ENV"
+      - name: Validate commercial compose rendering
+        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" config > /tmp/commercial-compose.rendered.yml
+
+      - name: Start existing native services in isolated test database
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" up -d postgres mqtt server telemetry-ingest
+          timeout 180 bash -c 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+      - name: MCFT I1 native customer MQTT to evidence ingress
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          if ! timeout 90 bash -c 'until docker logs geox-v1-telemetry-ingest 2>&1 | grep -F "[telemetry-ingest] subscribed telemetry/+/+" >/dev/null; do sleep 2; done'; then
+            docker logs --tail=100 geox-v1-telemetry-ingest
+            exit 1
+          fi
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export MCFT_I1_READ_DATABASE_URL="postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export MCFT_I1_TEST_ONLY=1
+          export MCFT_I1_MQTT_URL=mqtt://127.0.0.1:1883
+          # Existing broker write-only principal, solely for the isolated acceptance fixture.
+          export MCFT_I1_MQTT_USERNAME="${GEOX_EXECUTOR_MQTT_USERNAME:-geox_executor_v1}"
+          export MCFT_I1_MQTT_PASSWORD="$(docker exec geox-v1-mqtt cat /run/geox/executor/mqtt_password)"
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_PV02_I2E_NATIVE_COMPOSITION.ts
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" stop telemetry-ingest
+
+      - name: Existing QC and durable-raw regression tests
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm exec tsx --test apps/telemetry-ingest/src/mqtt_observation_input_v1.test.ts apps/telemetry-ingest/src/mqtt_durable_raw_v1.test.ts apps/server/src/evidence/physical_qc_v1.test.ts apps/server/src/evidence/stage1_physical_qc_consumption_guard_v1.test.ts
+      - name: Runtime diagnostics on failure
+        if: failure()
+        run: |
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" ps || true
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" logs --tail=100 telemetry-ingest server database-platform-bootstrap mcft-cap07-migration bline-commercial-principal-bootstrap || true
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" logs --tail=1500 postgres || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-pv02-i2e-native-composition
+          path: |
+            acceptance-output/MCFT_PV02_I1_NATIVE_MQTT.json
+            acceptance-output/MCFT_PV02_I2E_NATIVE_COMPOSITION.json
+          if-no-files-found: warn
+      - name: Stop isolated services
+        if: always()
+        run: |
+          if [ -f .env.ci ] && [ -f "$RUNNER_TEMP/mcft-qualification-minio.yml" ]; then
+            docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" down -v
+          fi
