@@ -3,6 +3,12 @@ on:
   pull_request:
     paths:
       - 'apps/server/src/runtime/twin_runtime/customer_native_runtime_composer_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/customer_native_parameter_source_resolver_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_customer_native_runtime_repository_v1.ts'
+      - 'apps/server/src/repositories/field_twin_read_model/postgres_customer_native_runtime_read_repository_v1.ts'
+      - 'apps/server/src/services/mcft_field_twin_read_api_v1.ts'
+      - 'apps/server/src/routes/v1/mcft_field_twin_read_v1.ts'
+      - 'apps/server/src/routes/openapi_mcft_field_twin_read_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_PV02_I2E_NATIVE_COMPOSITION.ts'
       - '.github/workflows/mcft-pv02-i2e-native-composition.yml'
       - 'apps/server/src/runtime/twin_runtime/customer_soil_evidence_ingress_v1.ts'

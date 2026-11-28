@@ -1,9 +1,13 @@
 // I1 end-to-end integration: real MQTT worker, real PostgreSQL, actual native
 // Evidence Ingress. Fixture provisioning only; never seed a telemetry/evidence fact.
 import assert from "node:assert/strict";
+import Fastify from "fastify";
+import { persistCustomerNativeRuntimeTestOnlyV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_customer_native_runtime_repository_v1.js";
+import { PostgresMcftFieldTwinReadApiV1 } from "../../apps/server/src/services/mcft_field_twin_read_api_v1.js";
+import { registerMcftFieldTwinReadRoutesV1 } from "../../apps/server/src/routes/v1/mcft_field_twin_read_v1.js";
 import { composeCustomerNativeRuntimeV1 } from "../../apps/server/src/runtime/twin_runtime/customer_native_runtime_composer_v1.js";
 import type { CustomerScalarRuntimeConfigV1 } from "../../apps/server/src/domain/twin_runtime/customer_scalar_runtime_config_v1.js";
-import type { CustomerScalarObservationV1,SyntheticRootZoneOperatorV1 } from "../../apps/server/src/domain/soil_water/customer_scalar_assimilation_v1.js";
+import type { CustomerScalarObservationV1,SyntheticRootZoneOperatorV1,CustomerScalarStateV1 } from "../../apps/server/src/domain/soil_water/customer_scalar_assimilation_v1.js";
 import type { CustomerForecastForcingPointV1 } from "../../apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.js";
 import { createHash, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
@@ -34,6 +38,7 @@ async function main(){
   const good="i1_test_sensor_"+tag, unbound="i1_test_unbound_"+tag;
   const fixtures=new Map<string,{secret:string}>();
   const pool=new Pool({connectionString:readUrl});
+  const fixturePool=new Pool({connectionString:fixtureUrl});
   let broker:ReturnType<typeof mqtt.connect>|undefined;
   try {
     for(const id of [good,unbound]) fixtures.set(id,await provisionDeviceIdentityFixture({databaseUrl:fixtureUrl,tenant:scope,deviceId:id,fieldId:scope.field_id}));
@@ -41,7 +46,7 @@ async function main(){
     assert.equal(bind.length,1);
     const b:CustomerSoilMeasurementBindingV1={scope,device_id:good,binding_id:"i1_test_measurement_"+tag,dataset_id:"i1_test_dataset_"+tag,
       installation_ref:"i1_test_installation_"+tag,location_ref:"i1_test_point_"+tag,field_bound_ts_ms:Number(bind[0].bound_ts_ms),
-      effective_from:new Date(Number(bind[0].bound_ts_ms)).toISOString(),effective_until:new Date(Date.now()+3600000).toISOString(),
+      effective_from:new Date(Number(bind[0].bound_ts_ms)).toISOString(),effective_until:new Date(Date.now()+4*3600000).toISOString(),
       measurement_depth_mm:150,test_only:true};
     const who=(await pool.query("SELECT current_user AS name")).rows[0].name;
     assert.equal(who,"geox_runtime_v1","native evidence read uses existing runtime role, not DB owner");
@@ -61,6 +66,38 @@ async function main(){
     for(const key of ["schema_create","database_create","superuser","bypassrls","can_truncate","grant_select"])assert.equal(acl[key],false,key);
     for(const key of ["can_select","can_insert","can_update","can_delete"])assert.equal(acl[key],true,key);
     assert.notEqual(acl.relation_owner,who);
+
+    // Source fixtures exercise existing field, crop-context and hydraulic-profile stores.
+    // They are isolated configuration facts, not telemetry or observation facts.
+    const sourceOccurredAt=new Date(Date.now()-3600000).toISOString();
+    const cropFactId="fact_crop_context_"+tag;
+    const soilFactId="fact_soil_hydraulic_profile_"+tag;
+    const profileId="soil_profile_"+tag;
+    const cropPayload={tenant_id:scope.tenant_id,project_id:scope.project_id,group_id:scope.group_id,
+      field_id:scope.field_id,season_id:scope.season_id,status:"PLANTED_CONFIRMED",crop_code:"CORN",
+      variety_code:"TEST_VARIETY",crop_stage:"V6",planting_date:"2026-05-01",confidence:0.9,source:"USER_DECLARED"};
+    const profilePayload={profile_id:profileId,tenant_id:scope.tenant_id,project_id:scope.project_id,group_id:scope.group_id,
+      field_id:scope.field_id,zone_id:scope.zone_id,layer_depth_cm:15,texture_class:"test-loam",
+      theta_r:0.05,theta_s:0.45,alpha_per_kpa:0.04,n:1.6,m:0.375,parameter_source:"FIELD_LAB",
+      calibration_status:"PARTIALLY_CALIBRATED",confidence_level:"MEDIUM",confidence_score:0.65,
+      evidence_refs:["test:soil-lab:"+tag],created_at:sourceOccurredAt};
+    const profileTable=(await fixturePool.query("SELECT to_regclass('public.soil_hydraulic_profile_index_v1') AS relation")).rows[0].relation;
+    assert.ok(profileTable,"existing Soil Hydraulic Profile index migration must be present");
+    await fixturePool.query("INSERT INTO public.facts(fact_id,occurred_at,source,record_json) VALUES($1,$2,'system',$3::jsonb)",
+      [cropFactId,sourceOccurredAt,JSON.stringify({type:"crop_context_v1",payload:cropPayload})]);
+    await fixturePool.query("INSERT INTO public.facts(fact_id,occurred_at,source,record_json) VALUES($1,$2,'system',$3::jsonb)",
+      [soilFactId,sourceOccurredAt,JSON.stringify({type:"soil_hydraulic_profile_v1",payload:profilePayload})]);
+    await fixturePool.query(
+      `INSERT INTO public.soil_hydraulic_profile_index_v1(
+        profile_id,tenant_id,project_id,group_id,field_id,zone_id,layer_depth_cm,texture_class,
+        theta_r,theta_s,alpha_per_kpa,n,m,parameter_source,calibration_status,confidence_level,
+        confidence_score,evidence_refs_json,source_fact_id,created_at,updated_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::jsonb,$19,$20,$21)`,
+      [profilePayload.profile_id,profilePayload.tenant_id,profilePayload.project_id,profilePayload.group_id,
+       profilePayload.field_id,profilePayload.zone_id,profilePayload.layer_depth_cm,profilePayload.texture_class,
+       profilePayload.theta_r,profilePayload.theta_s,profilePayload.alpha_per_kpa,profilePayload.n,profilePayload.m,
+       profilePayload.parameter_source,profilePayload.calibration_status,profilePayload.confidence_level,
+       profilePayload.confidence_score,JSON.stringify(profilePayload.evidence_refs),soilFactId,sourceOccurredAt,new Date().toISOString()]);
 
     broker=mqtt.connect(mqttUrl,{username:needed("MCFT_I1_MQTT_USERNAME"),password:needed("MCFT_I1_MQTT_PASSWORD"),
       reconnectPeriod:0,connectTimeout:10000});
@@ -169,16 +206,142 @@ async function main(){
     assert.equal(bRun.assimilation?.status,"APPLIED_SYNTHETIC_ROOT_ZONE_MEAN");
     assert.equal(bRun.forecast.source_state_kind,"SYNTHETIC_ROOT_ZONE_MEAN_ASSIMILATED");
     for(const run of [a,bRun]){assert.equal(run.forecast.points.length,72);assert.ok(run.forecast.points.every(p=>p.mass_balance_error_mm==="0.000000"));assert.equal(run.formal_eligible,false);}
-    const continuation=await composeCustomerNativeRuntimeV1({...base,boundary:{...base.boundary,logical_time:nextHour,scheduler_wall_clock_observed_at:nextHour},initialization:{kind:"CONTINUATION",previous:bRun.state},historical:historical(hourEnd,nextHour),future:future(nextHour)});
-    assert.equal(continuation.previous.state_ref,bRun.state.state_ref);
-    await assert.rejects(()=>composeCustomerNativeRuntimeV1({...base,boundary:{...base.boundary,logical_time:nextHour,scheduler_wall_clock_observed_at:nextHour},initialization:{kind:"CONTINUATION",previous:{...bRun.state,state_ref:"test:tampered"}},historical:historical(hourEnd,nextHour),future:future(nextHour)}),/STATE_IDENTITY_MISMATCH/);
-    await assert.rejects(()=>composeCustomerNativeRuntimeV1({...base,future:[]}),/EXACT_72_POINTS/);
-    const composed={status:"PASS_I2E_MQTT_NATIVE_COMPOSER_TEST_ONLY",a,b:bRun,continuation};
-    mkdirSync("acceptance-output",{recursive:true});writeFileSync("acceptance-output/MCFT_PV02_I2E_NATIVE_COMPOSITION.json",JSON.stringify(composed,null,2)+"\n");
-    console.log(JSON.stringify({status:composed.status,observations:a.retained_observations.map(x=>({ref:x.source_record_id,value:x.value_fraction,depth:x.measurement_depth_mm,reason:x.reason})),
+    assert.equal(a.parameter_source_resolution.status,"SOURCE_CONTEXT_RESOLVED_PARAMETERS_INCOMPLETE");
+    assert.equal(a.parameter_source_resolution.field.status,"EXACT");
+    assert.equal(a.parameter_source_resolution.crop_context.source_fact_ref,cropFactId);
+    assert.equal(a.parameter_source_resolution.crop_context.crop_stage,"V6");
+    assert.equal(a.parameter_source_resolution.soil_hydraulic_profiles.status,"EXACT_SOURCE_FACTS");
+    assert.equal(a.parameter_source_resolution.soil_hydraulic_profiles.records[0].source_fact_ref,soilFactId);
+    assert.equal(a.parameter_source_resolution.soil_hydraulic_profiles.records[0].source_fact_status,"EXACT");
+    assert.equal(a.parameter_source_resolution.device_binding.status,"EXACT_FIELD_BINDING");
+    assert.equal(a.parameter_source_resolution.device_binding.installation_authority,"NOT_ESTABLISHED_IN_CURRENT_SCHEMA");
+    assert.equal(a.parameter_source_resolution.runtime_config_buildable,false);
+    for(const blocker of ["ROOT_ZONE_DEPTH_SOURCE_MISSING","FIELD_CAPACITY_SOURCE_MISSING","WILTING_POINT_SOURCE_MISSING",
+      "SENSOR_INSTALLATION_AUTHORITY_NOT_ESTABLISHED","CROP_KC_SOURCE_MISSING"])assert.ok(a.parameter_source_resolution.blocking_reasons.includes(blocker),blocker);
+    assert.equal(a.parameter_source_resolution.parameter_availability.field_capacity_fraction,"MISSING");
+    assert.equal(a.parameter_source_resolution.prediction_authorized_from_these_sources,false);
+    const obs:CustomerScalarObservationV1={test_only:true,scope:config.scope,source_record_id:"test:synthetic-root-mean",binding_id:"test:synthetic-root-binding",
+      observed_at:hourEnd,available_at:hourEnd,value_fraction:Number(a.propagated.published_state.root_zone_vwc_fraction.mean)+0.001,
+      quality_status:"PASS",support:{kind:"SYNTHETIC_ROOT_ZONE_MEAN",root_zone_depth_mm:"400.000000",support_ref:config.support.support_ref}};
+    const operator:SyntheticRootZoneOperatorV1={test_only:true,kind:"SYNTHETIC_ROOT_ZONE_MEAN_H1_V1",binding_id:obs.binding_id,
+      support_ref:config.support.support_ref,observation_variance:0.0001,variance_source_ref:"test:controlled-variance",effective_from:hourStart,effective_until:until};
+    const bRun=await composeCustomerNativeRuntimeV1({...base,synthetic_root_mean:{observation:obs,operator}});
+    assert.equal(bRun.assimilation?.status,"APPLIED_SYNTHETIC_ROOT_ZONE_MEAN");
+    assert.equal(bRun.forecast.source_state_kind,"SYNTHETIC_ROOT_ZONE_MEAN_ASSIMILATED");
+    for(const run of [a,bRun]){assert.equal(run.forecast.points.length,72);assert.ok(run.forecast.points.every(p=>p.mass_balance_error_mm==="0.000000"));assert.equal(run.formal_eligible,false);}
+    assert.equal(bRun.parameter_source_resolution.runtime_config_buildable,false);
+
+    const chainA="test:chain-a-"+tag;
+    const chainB="test:chain-b-"+tag;
+    const persistenceInput=(run:any,chain:string,previousRef:string|null=null,previousHash:string|null=null)=>({
+      pool,scope:config.scope,runtime_chain_id:chain,state:run.state,forecast:run.forecast,
+      parameter_sources:run.parameter_source_resolution,selected_evidence_refs:run.selected_evidence_refs,
+      previous_state_record_ref:previousRef,previous_state_record_hash:previousHash,
+    });
+    const persistA=await persistCustomerNativeRuntimeTestOnlyV1(persistenceInput(a,chainA));
+    const persistB=await persistCustomerNativeRuntimeTestOnlyV1(persistenceInput(bRun,chainB));
+    assert.equal(persistA.visibility_metadata,"CAP07_FACT_INSERT_TRIGGER_VERIFIED");
+    assert.equal(persistB.status,"INSERTED");
+    const idempotentB=await persistCustomerNativeRuntimeTestOnlyV1(persistenceInput(bRun,chainB));
+    assert.equal(idempotentB.status,"EXISTING_IDEMPOTENT_SUCCESS");
+
+    const priorTokens=process.env.GEOX_TOKENS_JSON;
+    const token="i2e-read-token-"+tag;
+    const app=Fastify({logger:false});
+    let readInitialBody:any;
+    let readFinalBody:any;
+    let apiChecks:Record<string,number>={};
+    try{
+      process.env.GEOX_TOKENS_JSON=JSON.stringify({tokens:[{
+        token,revoked:false,actor_id:"mcft-i2e-test",token_id:"mcft-i2e-token-"+tag,
+        tenant_id:scope.tenant_id,project_id:scope.project_id,group_id:scope.group_id,
+        role:"viewer",scopes:["fields.read"],allowed_field_ids:[scope.field_id],
+      }]});
+      registerMcftFieldTwinReadRoutesV1(app,pool,{readApi:new PostgresMcftFieldTwinReadApiV1(pool)});
+      await app.ready();
+      const urlFor=(chain:string,overrides:Record<string,string>={})=>{
+        const params=new URLSearchParams({tenant_id:scope.tenant_id,project_id:scope.project_id,group_id:scope.group_id,
+          season_id:scope.season_id,zone_id:scope.zone_id,runtime_chain_id:chain,...overrides});
+        return "/api/v1/operator/twin/fields/"+encodeURIComponent(scope.field_id)+"/runtime/customer-native?"+params.toString();
+      };
+      const countBefore=(await pool.query(
+        "SELECT count(*)::text AS count FROM public.facts WHERE record_json->>'type' LIKE 'mcft_customer_native_%_fact_v1' AND record_json#>>'{payload,scope,field_id}'=$1",
+        [scope.field_id])).rows[0].count;
+      const initialResponse=await app.inject({method:"GET",url:urlFor(chainB),headers:{authorization:"Bearer "+token}});
+      assert.equal(initialResponse.statusCode,200,initialResponse.body);
+      readInitialBody=initialResponse.json();
+      assert.equal(readInitialBody.status,"TEST_ONLY_NOT_FOR_OPERATIONAL_USE");
+      assert.equal(readInitialBody.state_record.object_ref,persistB.state_record.object_ref);
+      assert.equal(readInitialBody.forecast_record.object_ref,persistB.forecast_record.object_ref);
+      assert.equal(readInitialBody.forecast.points.length,72);
+      assert.equal(readInitialBody.forecast.points[0].horizon_hour,1);
+      assert.equal(readInitialBody.forecast.points[71].horizon_hour,72);
+      assert.equal(readInitialBody.parameter_source_resolution.runtime_config_buildable,false);
+      const countAfter=(await pool.query(
+        "SELECT count(*)::text AS count FROM public.facts WHERE record_json->>'type' LIKE 'mcft_customer_native_%_fact_v1' AND record_json#>>'{payload,scope,field_id}'=$1",
+        [scope.field_id])).rows[0].count;
+      assert.equal(countAfter,countBefore,"GET customer-native read must not mutate facts");
+      apiChecks.valid_get=initialResponse.statusCode;
+      const forbidden=await app.inject({method:"GET",url:urlFor(chainB,{tenant_id:"other_"+tag}),headers:{authorization:"Bearer "+token}});
+      assert.equal(forbidden.statusCode,403);apiChecks.cross_tenant=forbidden.statusCode;
+      const unknownQuery=await app.inject({method:"GET",url:urlFor(chainB,{unexpected:"1"}),headers:{authorization:"Bearer "+token}});
+      assert.equal(unknownQuery.statusCode,400);apiChecks.unknown_query=unknownQuery.statusCode;
+      const noChainParams=new URLSearchParams({tenant_id:scope.tenant_id,project_id:scope.project_id,group_id:scope.group_id,season_id:scope.season_id,zone_id:scope.zone_id});
+      const missingChain=await app.inject({method:"GET",url:"/api/v1/operator/twin/fields/"+encodeURIComponent(scope.field_id)+"/runtime/customer-native?"+noChainParams.toString(),
+        headers:{authorization:"Bearer "+token}});
+      assert.equal(missingChain.statusCode,400);apiChecks.missing_chain=missingChain.statusCode;
+      const missingRuntime=await app.inject({method:"GET",url:urlFor("test:missing-chain-"+tag),headers:{authorization:"Bearer "+token}});
+      assert.equal(missingRuntime.statusCode,404);apiChecks.missing_runtime=missingRuntime.statusCode;
+      const noWrite=await app.inject({method:"POST",url:urlFor(chainB),headers:{authorization:"Bearer "+token}});
+      assert.equal(noWrite.statusCode,404);apiChecks.post_not_registered=noWrite.statusCode;
+
+      const continuation=await composeCustomerNativeRuntimeV1({...base,
+        boundary:{...base.boundary,logical_time:nextHour,scheduler_wall_clock_observed_at:nextHour},
+        initialization:{kind:"CONTINUATION",previous:readInitialBody.state as CustomerScalarStateV1},
+        historical:historical(hourEnd,nextHour),future:future(nextHour)});
+      assert.equal(continuation.previous.state_ref,readInitialBody.state.state_ref);
+      const persistContinuation=await persistCustomerNativeRuntimeTestOnlyV1(persistenceInput(
+        continuation,chainB,readInitialBody.state_record.object_ref,readInitialBody.state_record.object_hash));
+      assert.equal(persistContinuation.status,"INSERTED");
+      await assert.rejects(()=>persistCustomerNativeRuntimeTestOnlyV1(persistenceInput(
+        continuation,chainB,"test:wrong-predecessor","sha256:"+sha("wrong-predecessor"))),/CUSTOMER_NATIVE_CHAIN_PREDECESSOR_MISMATCH/);
+      await assert.rejects(()=>composeCustomerNativeRuntimeV1({...base,
+        boundary:{...base.boundary,logical_time:nextHour,scheduler_wall_clock_observed_at:nextHour},
+        initialization:{kind:"CONTINUATION",previous:{...bRun.state,state_ref:"test:tampered"}},
+        historical:historical(hourEnd,nextHour),future:future(nextHour)}),/STATE_IDENTITY_MISMATCH/);
+      await assert.rejects(()=>composeCustomerNativeRuntimeV1({...base,future:[]}),/EXACT_72_POINTS/);
+
+      const finalResponse=await app.inject({method:"GET",url:urlFor(chainB),headers:{authorization:"Bearer "+token}});
+      assert.equal(finalResponse.statusCode,200,finalResponse.body);
+      readFinalBody=finalResponse.json();
+      assert.equal(readFinalBody.state.logical_time,nextHour);
+      assert.equal(readFinalBody.state_record.object_ref,persistContinuation.state_record.object_ref);
+      assert.equal(readFinalBody.forecast_record.object_ref,persistContinuation.forecast_record.object_ref);
+      assert.equal(readFinalBody.previous_state_record_ref,persistB.state_record.object_ref);
+      assert.equal(readFinalBody.forecast.points.length,72);
+      assert.equal(readFinalBody.forecast.source_state_ref,readFinalBody.state.state_ref);
+      const finalCount=(await pool.query(
+        "SELECT count(*)::text AS count FROM public.facts WHERE record_json->>'type' LIKE 'mcft_customer_native_%_fact_v1' AND record_json#>>'{payload,scope,field_id}'=$1",
+        [scope.field_id])).rows[0].count;
+      assert.equal(finalCount,countAfter,"GET after continuation must remain read-only");
+      apiChecks.final_get=finalResponse.statusCode;
+    }finally{
+      await app.close();
+      if(priorTokens===undefined)delete process.env.GEOX_TOKENS_JSON;
+      else process.env.GEOX_TOKENS_JSON=priorTokens;
+    }
+    const composed={status:"PASS_I2E_E2_E7_E8_CUSTOMER_RUNTIME_TEST_ONLY",a,b:bRun,continuation:null,
+      persistence:{a:persistA,b:persistB,idempotent_b:idempotentB,continuation:readFinalBody?.state_record??null},
+      read_api:{initial:readInitialBody,final:readFinalBody,checks:apiChecks}};
+    mkdirSync("acceptance-output",{recursive: true});
+    writeFileSync("acceptance-output/MCFT_PV02_I2E_NATIVE_COMPOSITION.json",JSON.stringify(composed,null,2)+"\n");
+    console.log(JSON.stringify({status:composed.status,
+      observations:a.retained_observations.map(x=>({ref:x.source_record_id,value:x.value_fraction,depth:x.measurement_depth_mm,reason:x.reason})),
+      parameter_sources:{status:a.parameter_source_resolution.status,blockers:a.parameter_source_resolution.blocking_reasons},
       a:{storage:a.propagated.published_state.root_zone_storage_mm.mean,points:a.forecast.points.length,final:a.forecast.aggregates.final_storage_mm,hash:a.composition_hash},
       b:{storage:bRun.state.schema_version==="mcft_customer_assimilated_scalar_state_v1"?bRun.state.storage_mm:null,points:bRun.forecast.points.length,final:bRun.forecast.aggregates.final_storage_mm,hash:bRun.composition_hash},
-      continuation:{prior:continuation.previous.state_ref,storage:continuation.propagated.published_state.root_zone_storage_mm.mean},persisted:false}));
+      persistence:{a:persistA.status,b:persistB.status,idempotent:idempotentB.status,continuation:readFinalBody.state_record.object_ref},
+      api_checks:apiChecks,production_eligible:false}));
     const report={status:"PASS_CUSTOMER_MQTT_TO_NATIVE_EVIDENCE_INGRESS_TEST_ONLY",scope,binding:b,read_role:who,
       cases:results,native_ingress:receipt,projection_acl:acl,other_tenant_selected:0,physical_started:false,root_zone_prediction:false};
     mkdirSync("acceptance-output",{recursive:true});
@@ -187,6 +350,7 @@ async function main(){
   } finally {
     if(broker)broker.end(true);
     await pool.end();
+    await fixturePool.end();
   }
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});
