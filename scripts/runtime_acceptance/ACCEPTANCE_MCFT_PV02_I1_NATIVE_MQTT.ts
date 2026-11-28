@@ -41,6 +41,23 @@ async function main(){
       measurement_depth_mm:150,test_only:true};
     const who=(await pool.query("SELECT current_user AS name")).rows[0].name;
     assert.equal(who,"geox_runtime_v1","native evidence read uses existing runtime role, not DB owner");
+    const acl=(await pool.query(`SELECT has_schema_privilege(current_user,'public','CREATE') AS schema_create,
+      has_database_privilege(current_user,current_database(),'CREATE') AS database_create,
+      r.rolsuper AS superuser,r.rolbypassrls AS bypassrls,
+      pg_get_userbyid(c.relowner) AS relation_owner,
+      has_table_privilege(current_user,c.oid,'SELECT') AS can_select,
+      has_table_privilege(current_user,c.oid,'INSERT') AS can_insert,
+      has_table_privilege(current_user,c.oid,'UPDATE') AS can_update,
+      has_table_privilege(current_user,c.oid,'DELETE') AS can_delete,
+      has_table_privilege(current_user,c.oid,'TRUNCATE') AS can_truncate,
+      has_table_privilege(current_user,c.oid,'SELECT WITH GRANT OPTION') AS grant_select
+      FROM pg_roles r CROSS JOIN pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE r.rolname=current_user AND n.nspname='public' AND c.relname='field_sensing_summary_stage1_v1'`)).rows[0];
+    assert.ok(acl);
+    for(const key of ["schema_create","database_create","superuser","bypassrls","can_truncate","grant_select"])assert.equal(acl[key],false,key);
+    for(const key of ["can_select","can_insert","can_update","can_delete"])assert.equal(acl[key],true,key);
+    assert.notEqual(acl.relation_owner,who);
+
     broker=mqtt.connect(mqttUrl,{username:needed("MCFT_I1_MQTT_USERNAME"),password:needed("MCFT_I1_MQTT_PASSWORD"),
       reconnectPeriod:0,connectTimeout:10000});
     await new Promise<void>((resolve,reject)=>{broker!.once("connect",resolve);broker!.once("error",reject);});
@@ -110,7 +127,7 @@ async function main(){
     assert.equal(other.rejected.length,0);
     await assert.rejects(()=>freezeCustomerSoilEvidenceV1({pool,boundary:{...boundary,scope:{...scope,tenant_id:"other_"+tag}},bindings:[b],test_only:true}),/CUSTOMER_MEASUREMENT_BINDING_INVALID/);
     const report={status:"PASS_CUSTOMER_MQTT_TO_NATIVE_EVIDENCE_INGRESS_TEST_ONLY",scope,binding:b,read_role:who,
-      cases:results,native_ingress:receipt,other_tenant_selected:0,physical_started:false,root_zone_prediction:false};
+      cases:results,native_ingress:receipt,projection_acl:acl,other_tenant_selected:0,physical_started:false,root_zone_prediction:false};
     mkdirSync("acceptance-output",{recursive:true});
     writeFileSync("acceptance-output/MCFT_PV02_I1_NATIVE_MQTT.json",JSON.stringify(report,null,2)+"\n");
     console.log(JSON.stringify(report));
