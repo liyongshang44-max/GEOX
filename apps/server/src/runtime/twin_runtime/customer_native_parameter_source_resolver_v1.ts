@@ -78,6 +78,12 @@ export async function resolveCustomerNativeParameterSourcesV1(input:{
         deviceStatus=rows.rows[0].field_id===scope.field_id&&boundTs===Number(binding.field_bound_ts_ms)?"EXACT_FIELD_BINDING":"MISMATCH";}
     }
     if(deviceStatus!=="EXACT_FIELD_BINDING")blockers.add("DEVICE_TO_FIELD_BINDING_NOT_EXACT");
+    if(binding){
+      const effectiveFrom=Date.parse(binding.effective_from);
+      const effectiveUntil=Date.parse(binding.effective_until);
+      if(!Number.isFinite(effectiveFrom)||!Number.isFinite(effectiveUntil)||targetMs<effectiveFrom||targetMs>=effectiveUntil)
+        blockers.add("DEVICE_BINDING_NOT_EFFECTIVE_AT_LOGICAL_TIME");
+    }
     if(!binding||!Number.isFinite(Number(binding.measurement_depth_mm))||Number(binding.measurement_depth_mm)<=0)blockers.add("MEASUREMENT_DEPTH_NOT_VERIFIED");
     else blockers.add("MEASUREMENT_DEPTH_CALLER_SUPPLIED_NOT_INSTALLATION_VERIFIED");
     blockers.add("SENSOR_INSTALLATION_AUTHORITY_NOT_ESTABLISHED");

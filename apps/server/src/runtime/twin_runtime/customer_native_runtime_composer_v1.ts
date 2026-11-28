@@ -79,8 +79,8 @@ export async function composeCustomerNativeRuntimeV1(input:Inputs){
     initialization,previous,parameter_source_resolution,retained_observations:retained,excluded_observations:evidence.rejected,
     selected_evidence_refs:evidence.frozen.selected.map(r=>r.evidence_ref),
     propagated,assimilation:update,state:selected,forecast,
-    persistence_status:"NOT_PERSISTED_CANONICAL_SUCCESSOR_REQUIRED" as const,
-    product_read_status:"IN_PROCESS_TEST_RESULT_ONLY" as const,
+    persistence_status:"NOT_PERSISTED_BY_COMPOSER" as const,
+    product_read_status:"NOT_READ_BY_COMPOSER" as const,
     limitations:["TEST_PARAMETER_SOURCES_ONLY","CUSTOMER_PARAMETER_SOURCES_INCOMPLETE","POINT_SUPPORT_NOT_ROOT_ZONE","PARAMETER_UNCERTAINTY_NOT_PROPAGATED","LEGACY_ET_STORAGE_LIMIT_ONLY","NO_PRODUCTION_OR_ACTION_AUTHORITY"]};
   return {...result,composition_hash:semanticHashV1(result)};
 }

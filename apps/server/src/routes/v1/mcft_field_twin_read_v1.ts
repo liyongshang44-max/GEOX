@@ -200,6 +200,7 @@ export function mapMcftFieldTwinReadErrorV1(error: unknown): McftFieldTwinReadAp
   if (code === "MCFT_RUNTIME_NOT_ESTABLISHED" || code === "MCFT_EXACT_RESOURCE_NOT_FOUND") {
     return new McftFieldTwinReadApiErrorV1(code, 404);
   }
+  if (/CUSTOMER_NATIVE_RUNTIME_CHAIN_ID_REQUIRED|CUSTOMER_NATIVE_RUNTIME_CHAIN_ID_INVALID/.test(code)) return new McftFieldTwinReadApiErrorV1(code, 400);
   if (code.startsWith("CUSTOMER_NATIVE_") && /MISMATCH|INVALID|AMBIGUOUS|CONTRACT/.test(code)) return new McftFieldTwinReadApiErrorV1(code, 409);
   if (code === "MCFT_CURSOR_VISIBILITY_EPOCH_MISMATCH" || /DIVERGENCE|MISMATCH|CARDINALITY|INCOMPLETE|POINTER|RECORD_SET|AUTHORITY|CANONICAL|ROLE_UNRESOLVED|SOURCE_.*INVALID/.test(code)) {
     return new McftFieldTwinReadApiErrorV1(code, 409);
