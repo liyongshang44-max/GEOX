@@ -20,6 +20,8 @@ async function main(){
   const readUrl=needed("MCFT_I1_READ_DATABASE_URL");
   const mqttUrl=needed("MCFT_I1_MQTT_URL");
   assert.equal(new URL(fixtureUrl).hostname,"127.0.0.1");
+  assert.equal(new URL(fixtureUrl).pathname,"/geox_pv02_i1_test");
+  assert.equal(new URL(readUrl).pathname,"/geox_pv02_i1_test");
   assert.equal(new URL(readUrl).hostname,"127.0.0.1");
   assert.equal(new URL(mqttUrl).hostname,"127.0.0.1");
   const tag=randomUUID().replace(/-/g,"");
