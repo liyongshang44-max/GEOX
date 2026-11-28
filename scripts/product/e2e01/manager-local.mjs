@@ -39,13 +39,19 @@ must(acl.rowCount===6&&acl.rows.every(x=>x.r&&!x.forbidden&&x.i===(x.relname!=='
 const exists=async()=>{const r=await pool.query('SELECT field_id FROM public.field_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4',[scope.tenant_id,scope.project_id,scope.group_id,field]);return r.rowCount===1};
 const grants=directory(readPolicy,cfg.subject,exists);
 must(cfg.writeAdmitted===false||cfg.writeAdmitted===true,'EXPLICIT_WRITE_ADMISSION_REQUIRED');
-let authority;
+let authority,formal;
+const formalArgs=process.argv.slice(2);
+must(formalArgs.length===0||['--formal-run','--formal-recover-readonly'].includes(formalArgs[0]),'FORMAL_MODE_INVALID');
 const app=Fastify({logger:false,bodyLimit:100000,exposeHeadRoutes:false});
 app.addHook('onRequest',async(req,reply)=>{
  if(req.headers.host!=='127.0.0.1:14175')return reply.code(403).send({ok:false,error:'LOCAL_HOST_REQUIRED'});
  if(!managerRoute(req.method,req.raw.url))return reply.code(403).send({ok:false,error:'E2E01_ROUTE_OR_SCOPE_DENIED'});
 });
 app.addHook('preHandler',async(req,reply)=>{
+ if(formal){
+  if(!await formal.current())return reply.code(503).send({ok:false,error:'FORMAL_RUN_APPROVAL_NOT_CURRENT'});
+  if(req.method!=='GET'&&(formal.recovery||req.method!=='POST'||req.raw.url!=='/api/v1/manager/fields/field_geox_e2e01_001/crop-reviews/review_geox_e2e01_001/native-assessment'))return reply.code(403).send({ok:false,error:'FORMAL_WRITE_SCOPE_DENIED'});
+ }
  if(req.method==='POST'&&req.raw.url==='/api/v1/manager/fields'&&!createBodyAllowed(req.body))return reply.code(403).send({ok:false,error:'E2E01_CREATE_TARGET_DENIED'});
  if(req.method!=='GET'&&(!cfg.writeAdmitted||validatePolicy(readPolicy(),cfg.subject).phase==='PREWRITE')){
   if(req.method==='POST'&&req.raw.url==='/api/v1/manager/fields'){
@@ -60,8 +66,17 @@ app.addHook('preHandler',async(req,reply)=>{
 });
 const trace=new AsyncLocalStorage();
 const ports=diagnosticPorts(identity,grants,cfg.subject,readPolicy,record=>{const request=trace.getStore();if(request)console.log(JSON.stringify({event:'E2E01_AUTHORITY_TRACE',request,...record}));});
-authority=registerManagerPilotModuleV1(app,pool,{identity:ports.identity,issuer,canonicalTenantRef:tenant,...ports.grants});
-// No ADR credentials/plan synthesized. A07/A08 remains unavailable until supplied by its Owner.
-await app.listen({host:'127.0.0.1',port:14175});
-console.log('E2E01_MANAGER_LOCAL_READY / DB_ROLE_AND_LEDGER_ACL_PASS / ADR_NOT_CONFIGURED / WRITE_ADMITTED='+cfg.writeAdmitted);
-for(const sig of ['SIGINT','SIGTERM'])process.once(sig,()=>{void app.close().then(()=>pool.end()).then(()=>process.exit(0));});
+if(formalArgs.length){
+ must(cfg.writeAdmitted===true&&cfg.subject==='2bb8822d-1b7f-4ad5-9cc7-9dd99aee2083','FORMAL_MANAGER_CONFIG');
+ const {prepareFormalRuntime}=await import('./adr-formal-runtime.mjs');
+ formal=await prepareFormalRuntime({pool,authority:()=>authority,policyPath,kit,geoxRoot:root,args:formalArgs});
+}
+let stopping=false,timer;
+async function shutdown(){if(stopping)return;stopping=true;clearTimeout(timer);try{await app.close();if(formal)await formal.stop();await pool.end();process.exitCode=0;}catch{await pool.end().catch(()=>{});console.error('HOLD_FORMAL_STOP_RECONCILIATION_REQUIRED');process.exitCode=2;}}
+try{
+ authority=registerManagerPilotModuleV1(app,pool,{identity:ports.identity,issuer,canonicalTenantRef:tenant,...ports.grants,...formal?.composition});
+ await app.listen({host:'127.0.0.1',port:14175});
+ console.log('E2E01_MANAGER_LOCAL_READY / DB_ROLE_AND_LEDGER_ACL_PASS / '+(formal?'FORMAL_ADR_BOUND':'ADR_NOT_CONFIGURED')+' / WRITE_ADMITTED='+cfg.writeAdmitted);
+ for(const sig of ['SIGINT','SIGTERM'])process.once(sig,()=>void shutdown());
+ if(formal){timer=setTimeout(()=>void shutdown(),Math.max(1,formal.validUntilMs-Date.now()));timer.unref?.();}
+}catch(e){await shutdown();throw e;}
