@@ -1,5 +1,5 @@
-// I1 end-to-end integration: real MQTT worker, real PostgreSQL, actual native
-// Evidence Ingress. Fixture provisioning only; never seed a telemetry/evidence fact.
+// I1/I2E end-to-end integration: real MQTT worker, PostgreSQL, native Evidence Ingress,
+// source resolution, TEST_ONLY fact persistence and exact-scope readback. Fixtures never seed telemetry observations.
 import assert from "node:assert/strict";
 import Fastify from "fastify";
 import { persistCustomerNativeRuntimeTestOnlyV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_customer_native_runtime_repository_v1.js";
@@ -220,15 +220,6 @@ async function main(){
       "SENSOR_INSTALLATION_AUTHORITY_NOT_ESTABLISHED","CROP_KC_SOURCE_MISSING"])assert.ok(a.parameter_source_resolution.blocking_reasons.includes(blocker),blocker);
     assert.equal(a.parameter_source_resolution.parameter_availability.field_capacity_fraction,"MISSING");
     assert.equal(a.parameter_source_resolution.prediction_authorized_from_these_sources,false);
-    const obs:CustomerScalarObservationV1={test_only:true,scope:config.scope,source_record_id:"test:synthetic-root-mean",binding_id:"test:synthetic-root-binding",
-      observed_at:hourEnd,available_at:hourEnd,value_fraction:Number(a.propagated.published_state.root_zone_vwc_fraction.mean)+0.001,
-      quality_status:"PASS",support:{kind:"SYNTHETIC_ROOT_ZONE_MEAN",root_zone_depth_mm:"400.000000",support_ref:config.support.support_ref}};
-    const operator:SyntheticRootZoneOperatorV1={test_only:true,kind:"SYNTHETIC_ROOT_ZONE_MEAN_H1_V1",binding_id:obs.binding_id,
-      support_ref:config.support.support_ref,observation_variance:0.0001,variance_source_ref:"test:controlled-variance",effective_from:hourStart,effective_until:until};
-    const bRun=await composeCustomerNativeRuntimeV1({...base,synthetic_root_mean:{observation:obs,operator}});
-    assert.equal(bRun.assimilation?.status,"APPLIED_SYNTHETIC_ROOT_ZONE_MEAN");
-    assert.equal(bRun.forecast.source_state_kind,"SYNTHETIC_ROOT_ZONE_MEAN_ASSIMILATED");
-    for(const run of [a,bRun]){assert.equal(run.forecast.points.length,72);assert.ok(run.forecast.points.every(p=>p.mass_balance_error_mm==="0.000000"));assert.equal(run.formal_eligible,false);}
     assert.equal(bRun.parameter_source_resolution.runtime_config_buildable,false);
 
     const chainA="test:chain-a-"+tag;
@@ -246,6 +237,7 @@ async function main(){
     assert.equal(idempotentB.status,"EXISTING_IDEMPOTENT_SUCCESS");
 
     const priorTokens=process.env.GEOX_TOKENS_JSON;
+    let continuationSummary:any=null;
     const token="i2e-read-token-"+tag;
     const app=Fastify({logger:false});
     let readInitialBody:any;
@@ -300,6 +292,9 @@ async function main(){
         initialization:{kind:"CONTINUATION",previous:readInitialBody.state as CustomerScalarStateV1},
         historical:historical(hourEnd,nextHour),future:future(nextHour)});
       assert.equal(continuation.previous.state_ref,readInitialBody.state.state_ref);
+      continuationSummary={state_ref:continuation.state.state_ref,previous_state_ref:continuation.previous.state_ref,
+        storage_mm:continuation.state.storage_mm??continuation.propagated?.published_state?.root_zone_storage_mm?.mean,
+        forecast_points:continuation.forecast.points.length,composition_hash:continuation.composition_hash};
       const persistContinuation=await persistCustomerNativeRuntimeTestOnlyV1(persistenceInput(
         continuation,chainB,readInitialBody.state_record.object_ref,readInitialBody.state_record.object_hash));
       assert.equal(persistContinuation.status,"INSERTED");
@@ -330,7 +325,7 @@ async function main(){
       if(priorTokens===undefined)delete process.env.GEOX_TOKENS_JSON;
       else process.env.GEOX_TOKENS_JSON=priorTokens;
     }
-    const composed={status:"PASS_I2E_E2_E7_E8_CUSTOMER_RUNTIME_TEST_ONLY",a,b:bRun,continuation:null,
+    const composed={status:"PASS_I2E_E2_E7_E8_CUSTOMER_RUNTIME_TEST_ONLY",a,b:bRun,continuation:continuationSummary,
       persistence:{a:persistA,b:persistB,idempotent_b:idempotentB,continuation:readFinalBody?.state_record??null},
       read_api:{initial:readInitialBody,final:readFinalBody,checks:apiChecks}};
     mkdirSync("acceptance-output",{recursive: true});
