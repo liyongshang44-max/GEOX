@@ -1,6 +1,7 @@
 // Isolated L2 persistence for customer-native TEST_ONLY outputs.
-// Uses the existing append-only public.facts ledger and CAP-07 visibility trigger;
-// these are not CAP-09 canonical Twin objects and this writer cannot run outside the I1 test lane.
+// Uses the existing public.facts table and CAP-07 visibility trigger. This writer issues INSERT only,
+// but geox_runtime_v1 has broader UPDATE/DELETE privileges; it is not a production writer authority.
+// These are not CAP-09 canonical Twin objects and this writer cannot run outside the I1 test lane.
 import type { Pool, PoolClient } from "pg";
 import { canonicalJsonV1 } from "../../domain/twin_runtime/canonical_json_v1.js";
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
@@ -23,7 +24,8 @@ export type PersistCustomerNativeRuntimeResultV1 = {
   status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS"; test_only: true; production_eligible: false; runtime_chain_id: string;
   state_record: CustomerNativeRuntimeRecordRefV1; forecast_record: CustomerNativeRuntimeRecordRefV1;
   previous_state_record_ref: string | null; visibility_metadata: "CAP07_FACT_INSERT_TRIGGER_VERIFIED";
-  database_identity: { session_user: string; current_user: string; facts_insert: true; schema_create: false; superuser: false };
+  writer_authority: "TEST_ONLY_GENERAL_RUNTIME_ROLE_NOT_PRODUCTION_RESTRICTED";
+  database_identity: { session_user: string; current_user: string; facts_insert: true; facts_update: boolean; facts_delete: boolean; schema_create: false; superuser: false };
 };
 function fail(code: string): never { throw new Error(code); }
 function parseRecord(value: unknown): Record<string, unknown> | null {
@@ -94,10 +96,12 @@ export async function persistCustomerNativeRuntimeTestOnlyV1(input:PersistCustom
   const client=await input.pool.connect();let status:"INSERTED"|"EXISTING_IDEMPOTENT_SUCCESS"="INSERTED";
   try{
     await client.query("BEGIN");
-    const identity=await client.query<{session_user:string;current_user:string;superuser:boolean;schema_create:boolean;facts_insert:boolean}>(
+    const identity=await client.query<{session_user:string;current_user:string;superuser:boolean;schema_create:boolean;facts_insert:boolean;facts_update:boolean;facts_delete:boolean}>(
       `SELECT session_user::text AS session_user,current_user::text AS current_user,role.rolsuper AS superuser,
         pg_catalog.has_schema_privilege(current_user,'public','CREATE') AS schema_create,
-        pg_catalog.has_table_privilege(current_user,'public.facts','INSERT') AS facts_insert
+        pg_catalog.has_table_privilege(current_user,'public.facts','INSERT') AS facts_insert,
+        pg_catalog.has_table_privilege(current_user,'public.facts','UPDATE') AS facts_update,
+        pg_catalog.has_table_privilege(current_user,'public.facts','DELETE') AS facts_delete
        FROM pg_catalog.pg_roles role WHERE role.rolname=current_user`);
     const db=identity.rows[0];
     if(!db||db.session_user!=="geox_runtime_v1"||db.current_user!=="geox_runtime_v1"||db.superuser||db.schema_create||!db.facts_insert)
@@ -146,7 +150,9 @@ export async function persistCustomerNativeRuntimeTestOnlyV1(input:PersistCustom
     return {status,test_only:true,production_eligible:false,runtime_chain_id:input.runtime_chain_id,
       state_record:stateFact.ref,forecast_record:forecastFact.ref,previous_state_record_ref:input.previous_state_record_ref,
       visibility_metadata:"CAP07_FACT_INSERT_TRIGGER_VERIFIED",
-      database_identity:{session_user:db.session_user,current_user:db.current_user,facts_insert:true,schema_create:false,superuser:false}};
+      writer_authority:"TEST_ONLY_GENERAL_RUNTIME_ROLE_NOT_PRODUCTION_RESTRICTED",
+      database_identity:{session_user:db.session_user,current_user:db.current_user,facts_insert:true,facts_update:db.facts_update,
+        facts_delete:db.facts_delete,schema_create:false,superuser:false}};
   }catch(error){await client.query("ROLLBACK").catch(()=>undefined);throw error;}
   finally{client.release();}
 }
