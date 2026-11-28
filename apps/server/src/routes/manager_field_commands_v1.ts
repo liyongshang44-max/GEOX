@@ -96,6 +96,10 @@ export function registerManagerFieldCommandsV1(app:FastifyInstance,pool:Pool,aut
    if(!row)throw new Hold(404,'NOT_FOUND');
    let geometry=row.polygon_geojson_json;
    if(typeof geometry==='string'){try{geometry=JSON.parse(geometry);}catch{throw new Hold(422,'FIELD_GEOMETRY_INVALID');}}
+   // An authorized newly registered field has no polygon yet. Return its
+   // actual optimistic-concurrency version so a manager can confirm the first
+   // boundary without an admin DB query. Existing invalid geometry still fails.
+   if(geometry==null&&row.updated_ts_ms==null)return {ok:true,field_id:fid,geometry:null,geometry_updated_ts_ms:null,field_updated_ts_ms:Number(row.field_updated_ts_ms)};
    if(!validManagerPolygonV1(geometry))throw new Hold(422,'EMPTY_OR_UNSUPPORTED_PILOT_GEOMETRY');
    return {ok:true,field_id:fid,geometry,geometry_updated_ts_ms:Number(row.updated_ts_ms),field_updated_ts_ms:Number(row.field_updated_ts_ms)};
   });

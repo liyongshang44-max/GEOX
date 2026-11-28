@@ -2,8 +2,12 @@ name: P6-B2 C3 native consumer
 on:
   pull_request:
     paths:
+      - 'scripts/product/e2e01/**'
       - 'apps/server/src/auth/manager_authority_v1.ts'
       - 'apps/server/src/modules/product/**'
+      - 'apps/server/src/product_projection/customer/manager_*'
+      - 'apps/server/src/routes/manager_historical_forecast_v1.ts'
+      - 'apps/server/test/manager_historical_forecast_v1.test.ts'
       - 'apps/server/src/routes/manager_crop_reviews_v1.ts'
       - 'apps/server/src/routes/manager_native_review_v1.ts'
       - 'apps/server/src/routes/manager_context_followup_v1.ts'
@@ -30,7 +34,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @geox/server typecheck
-      - run: pnpm exec tsx --test apps/server/src/domain/agronomy/adr_review_consumer_v1.test.ts apps/server/src/domain/agronomy/adr_native_review_workflow_v1.test.ts
+      - run: node --check scripts/product/e2e01/contract.mjs
+      - run: node --test scripts/product/e2e01/contract.test.mjs
+      - run: node scripts/product/e2e01/build-web.mjs
+      - run: pnpm exec tsx --test apps/server/src/domain/agronomy/adr_review_consumer_v1.test.ts apps/server/src/domain/agronomy/adr_native_review_workflow_v1.test.ts apps/server/test/manager_historical_forecast_v1.test.ts
   native-adr-host-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -20,6 +20,7 @@ const member={...tenant,id:'member'}, issuer='https://idp.fixture.invalid';
 const t='p6_native_t',p='p6_native_p',g='p6_native_g',f='p6_native_f';
 const issued=new WeakSet<object>();let active=true,allowCreate=false,wrongGroup=false;
 const grants=new Set<ManagerActionV1>();
+let inventoryMode:'normal'|'unavailable'|'stale'|'other-subject'|'duplicate'|'wrong-action'='normal';
 const identity:FormalIdentityPortV1={kind:'FORMAL_PROVIDER_NEUTRAL_IDENTITY',
  async verify(token,requested){assert.deepEqual(requested,tenant);if(token!=='fixture-native'||!active)throw Error('deny');const ctx={};issued.add(ctx);return ctx;},
  authorize(ctx){assert.ok(issued.has(ctx as object));return {issuer,subject:'human-native',principal_kind:'HUMAN',canonical_tenant_ref:tenant,membership_ref:member,membership_status:'ACTIVE',mapping_version:'1',credential_ref:'3'.repeat(64),valid_until:new Date(Date.now()+30000).toISOString()};},
@@ -30,6 +31,13 @@ const authorityConfig:ManagerPilotCompositionV1={identity,issuer,canonicalTenant
  if(action==='CREATE_FIELD'?!allowCreate:field_id!==f||!grants.has(action))return null;
  const now=Date.now();return {status:'ACTIVE',issuer,subject:'human-native',canonical_tenant_ref:tenant,membership_ref:member,mapping_version:'1',source_ref:{...tenant,id:'grant'},actor_id:'p6_native_actor',tenant_id:t,project_id:p,group_id:wrongGroup?'other':g,field_id,action,checked_at:new Date(now).toISOString(),valid_until:new Date(now+30000).toISOString()} as GeoxLandGrantV1;
 }};
+authorityConfig.resolveLandInventory=async({assertion})=>{
+ if(inventoryMode==='unavailable')throw Error('directory unavailable');
+ const now=Date.now(),checked=inventoryMode==='stale'?now-70000:now;
+ const grant=await authorityConfig.resolveLandGrant({assertion,field_id:f,action:'READ_FIELD_GEOMETRY'});
+ const items=grant?[{...grant,action:inventoryMode==='wrong-action'?'UPDATE_FIELD' as const:grant.action}]:[];
+ return {purpose:'LIST_MANAGED_FIELDS',status:'ACTIVE',issuer,subject:inventoryMode==='other-subject'?'other':'human-native',canonical_tenant_ref:tenant,membership_ref:member,mapping_version:'1',source_ref:{...tenant,id:'inventory'},checked_at:new Date(checked).toISOString(),valid_until:new Date(checked+30000).toISOString(),grants:inventoryMode==='duplicate'?[...items,...items]:items};
+};
 const base='/api/v1/manager/fields',soil='/api/v1/fields/'+f+'/soil-documents';
  // Explicit TEST_ONLY native wire transport fixture, not scientific qualification.
  // Real PostgreSQL and manager HTTP routes persist the orchestration journal.
@@ -47,12 +55,12 @@ try{
 
  let nativeCalls=0,planEnabled=false;
  const target={organization_id:'fixture-adr-org',tenant_id:'fixture-adr-tenant',field_id:'fixture-adr-field'};
- const deployment=authorityRef('Deployment','fixture-deployment'),release=authorityRef('KnowledgeRelease','fixture-release'),candidate=authorityRef('QualifiedKnowledge','fixture-knowledge');
+ const deployment=authorityRef('Deployment','fixture-deployment'),release=authorityRef('KnowledgeRelease','fixture-release'),profile=authorityRef('RuntimeProfile','fixture-profile'),candidate=authorityRef('QualifiedKnowledge','fixture-knowledge');
  let problemRef:AdrRefV1|null=null;
  authorityConfig.adrNativeReview={
   async resolvePlan(x){
    if(!planEnabled)return null;
-   return {basis_sha256:x.basis_sha256,target_binding_ref:'fixture-target',decision_mapping_ref:'fixture-decision',target_ref:target,deployment_ref:deployment,knowledge_release_ref:release,decision_type:'FIXTURE_REVIEW',objective_code:'FIXTURE',use_purpose:'FIXTURE',use_class:'FIXTURE',decision_authority_mode:'EXTERNAL_POLICY',decision_horizon:{duration:'P1Y'},decision_deadline:new Date(Date.now()+86400000).toISOString(),crop_action_bindings:x.basis.intent.crop_codes.map((crop_code:string)=>({crop_code,action_code:crop_code})),datum_bindings:x.basis.documents.flatMap((d:any)=>d.candidates.map((row:any)=>({document_id:d.document_id,revision:d.revision,row_number:row.row_number,mapping_ref:'fixture-mapping',semantic_id:'fixture.soil.ph',geometry_ref:'fixture-point',sample_day_start:row.sampled_on+'T00:00:00Z',sample_day_end:row.sampled_on+'T23:59:59.999Z'})))};
+   return {basis_sha256:x.basis_sha256,target_binding_ref:'fixture-target',decision_mapping_ref:'fixture-decision',target_ref:target,deployment_ref:deployment,runtime_profile_ref:profile,knowledge_release_ref:release,decision_type:'FIXTURE_REVIEW',objective_code:'FIXTURE',use_purpose:'FIXTURE',use_class:'FIXTURE',decision_authority_mode:'EXTERNAL_POLICY',decision_horizon:{duration:'P1Y'},decision_deadline:new Date(Date.now()+86400000).toISOString(),crop_action_bindings:x.basis.intent.crop_codes.map((crop_code:string)=>({crop_code,action_code:crop_code})),datum_bindings:x.basis.documents.flatMap((d:any)=>d.candidates.map((row:any)=>({document_id:d.document_id,revision:d.revision,row_number:row.row_number,mapping_ref:'fixture-mapping',semantic_id:'fixture.soil.ph',geometry_ref:'fixture-point',sample_day_start:row.sampled_on+'T00:00:00Z',sample_day_end:row.sampled_on+'T23:59:59.999Z'})))};
   },
   consumer:{baseUrl:'https://adr.fixture.invalid/',async resolveBinding(x){
    const a=x.manager;
@@ -66,12 +74,19 @@ try{
    if(path==='/v1/decision-problems'){kind='DecisionProblem';problemRef=authorityRef(kind,b.logical_id);}
    else if(path==='/v1/context-data')kind='ContextDatum';
    else if(path==='/v1/context-manifests'){kind='ContextManifest';const d=res.decision_problem_ref;res.decision_problem_ref={kind:d.kind,logicalId:d.logical_id,version:d.version,semanticHash:d.semantic_hash};res.target_ref=target;res.datum_refs=res.datum_refs.map((d:AdrRefV1)=>({datum_id:d.logical_id,semantic_hash:d.semantic_hash}));res.resolved_reference_receipts=[];}
-   else if(path==='/v1/knowledge-retrieval-results'){kind='KnowledgeRetrievalResult';res.knowledge_release_ref=release;res.candidate_refs=[candidate];}
+   else if(path==='/v1/knowledge-retrieval-results'){kind='KnowledgeRetrievalResult';res.knowledge_release_ref=release;res.runtime_profile_ref=profile;res.authority_class='RETRIEVAL_EVIDENCE_NON_SCIENTIFIC';res.query_semantics={decision_type:'FIXTURE_REVIEW',use_purpose:'FIXTURE',use_class:'FIXTURE',decision_authority_mode:'EXTERNAL_POLICY',objective_code:'FIXTURE'};res.candidate_refs=[candidate];res.miss_diagnostics=[];}
    else {assert.equal(path,'/v1/applicability-assessments');kind='ApplicabilityAssessment';res.decision_problem_ref=problemRef;res.authority_class='SOURCE_TARGET_TRANSPORT_AUTHORITY';res.transport_status='UNRESOLVED';res.scientific_use_status='UNQUALIFIED';}
    return new Response(JSON.stringify({ref:authorityRef(kind,b.logical_id),resource:res}),{status:201});
   }}
  };
 
+ let evidenceActive=true;
+ authorityConfig.resolveAdrCustomerEvidence=async(request,a,principal)=>{
+  assert.equal(process.env.P6_TEST_ONLY,'1');assert.equal(a.tenant_id,t);assert.equal(principal.principal_id,'fixture-adr-principal');
+  if(!evidenceActive||request.review_id!=='review-no-soil')return null;
+  const now=Date.now();
+  return {contract_version:'geox.adr-a07-customer-evidence.v1',authority_class:'RETRIEVAL_EVIDENCE_NON_SCIENTIFIC',display_status:'AUTHORIZED_RECORDED_EVIDENCE',approval_ref:'TEST_ONLY_FIXTURE_DISPLAY',valid_until:new Date(now+30000).toISOString(),request,items:[{knowledge_ref:candidate,source_ref:authorityRef('Source','fixture-source'),artifact_ref:authorityRef('SourceArtifact','fixture-artifact'),claim_ref:authorityRef('Claim','fixture-claim'),qualification_ref:authorityRef('ScientificQualificationDecision','fixture-qualification'),artifact_sha256:'sha256:'+'a'.repeat(64),crop_code:'SOYBEAN',source_title:'TEST_ONLY soybean source',publication:{year:'2024',citation:'TEST_ONLY synthetic knowledge'},summary:'TEST_ONLY bounded source assertion',allowed_use:'FIXTURE',limitations:['TEST_ONLY regional model limitation'],conditions:['TEST_ONLY target conditions not verified'],inspection_ref:authorityRef('AuthorizationDecisionAudit','fixture-inspection'),rights_policy_ref:authorityRef('RightsPolicy','fixture-policy'),rights_grant_refs:[authorityRef('RightsGrant','fixture-rights')],rights_checked_at:new Date(now).toISOString()}],coverage_crops:['SOYBEAN'],action_authority:false,applicability_authority:false};
+ };
  registerManagerPilotModuleV1(app,runtime,authorityConfig);await app.ready();
  const create={field_id:f,name:'native fixture land',area_ha:2};
  assert.equal((await req('POST',base,create,'')).statusCode,401);
@@ -83,9 +98,29 @@ try{
  wrongGroup=true;assert.equal((await req('POST',base,create)).statusCode,404);wrongGroup=false;
  assert.deepEqual(await cnt(),{fields:1,facts:1,revisions:0,confirmations:0});
  proof('CREATE_NEW_FIELD_WITH_INDEPENDENT_GRANT_AND_EXACT_REPLAY');
+ assert.equal((await req('GET',base,undefined,'')).statusCode,401);
+ assert.equal((await req('GET',base+'?tenant_id=other')).statusCode,400);
+ assert.deepEqual((await req('GET',base)).json(),{ok:true,fields:[]}); // create does not grant enumeration
+ grants.add('READ_FIELD_GEOMETRY');
+ const listed=await req('GET',base);assert.equal(listed.statusCode,200,listed.body);
+ assert.deepEqual(listed.json().fields.map((x:any)=>[x.field_id,x.name,x.area_ha]),[[f,'native fixture land',2]]);
+ assert.deepEqual(Object.keys(listed.json().fields[0]).sort(),['area_ha','field_id','field_updated_ts_ms','name']);
+ wrongGroup=true;assert.equal((await req('GET',base)).statusCode,503);wrongGroup=false;
+ for(const mode of ['stale','other-subject','duplicate','wrong-action'] as const){inventoryMode=mode;assert.equal((await req('GET',base)).statusCode,403);}
+ inventoryMode='unavailable';assert.equal((await req('GET',base)).statusCode,503);inventoryMode='normal';
+ active=false;assert.equal((await req('GET',base)).statusCode,403);active=true;
+ grants.delete('READ_FIELD_GEOMETRY');assert.deepEqual((await req('GET',base)).json(),{ok:true,fields:[]});
+ assert.deepEqual(await cnt(),{fields:1,facts:1,revisions:0,confirmations:0});
+ proof('MANAGER_LAND_INVENTORY_EXACT_DIRECTORY_GRANTS_NO_IMPLICIT_ACCESS');
  const field=(await admin.query('SELECT tenant_id,project_id,group_id,updated_ts_ms FROM public.field_index_v1 WHERE tenant_id=$1 AND field_id=$2',[t,f])).rows[0];assert.equal(field.project_id,p);assert.equal(field.group_id,g);
  const geo={type:'Polygon',coordinates:[[[0,0],[2,0],[2,2],[0,2],[0,0]]]};
- const update={name:'updated native fixture',area_ha:3,polygon_geojson:geo,expected_updated_ts_ms:Number(field.updated_ts_ms)};
+ assert.equal((await req('GET',base+'/'+f+'/geometry')).statusCode,403);
+ grants.add('READ_FIELD_GEOMETRY');
+ const emptyBoundary=await req('GET',base+'/'+f+'/geometry');assert.equal(emptyBoundary.statusCode,200,emptyBoundary.body);
+ assert.equal(emptyBoundary.json().geometry,null);assert.equal(emptyBoundary.json().geometry_updated_ts_ms,null);
+ assert.equal(emptyBoundary.json().field_updated_ts_ms,Number(field.updated_ts_ms));
+ grants.delete('READ_FIELD_GEOMETRY');
+ const update={name:'updated native fixture',area_ha:3,polygon_geojson:geo,expected_updated_ts_ms:emptyBoundary.json().field_updated_ts_ms};
  assert.equal((await req('PUT',base+'/'+f,update)).statusCode,403);
  grants.add('UPDATE_FIELD');wrongGroup=true;assert.equal((await req('PUT',base+'/'+f,update)).statusCode,404);wrongGroup=false;
  const updated=await req('PUT',base+'/'+f,update);assert.equal(updated.statusCode,200,updated.body);
@@ -140,6 +175,15 @@ try{
  assert.equal(journal.rowCount,12);assert.equal(journal.rows[0].result.event,'STARTED');assert.equal(journal.rows.at(-1)?.result.event,'FINISHED');
  assert.ok(!JSON.stringify(journal.rows).includes('fixture-only-adr-secret'));
  proof('P3P_DURABLE_NATIVE_WIRE_ORCHESTRATION_FIXTURE_NO_SCIENTIFIC_AUTHORITY');
+ const sci=reviewPath+'/review-1/scientific-result';
+ const hidden=await req('GET',sci);assert.equal(hidden.statusCode,200,hidden.body);assert.equal(hidden.json().display_status,'DISPLAY_PERMISSION_NOT_ESTABLISHED');assert.deepEqual(hidden.json().assessments,[]);
+ grants.delete('READ_CROP_REVIEW');assert.equal((await req('GET',sci)).statusCode,403);grants.add('READ_CROP_REVIEW');
+ const obsPath=base+'/'+f+'/observations';
+ const unavailable=await req('GET',obsPath);assert.equal(unavailable.statusCode,200,unavailable.body);assert.equal(unavailable.json().status,'UNAVAILABLE');assert.deepEqual(unavailable.json().items,[]);
+ assert.equal((await req('GET',obsPath+'?tenant_id=other')).statusCode,400);
+ grants.delete('READ_FIELD_GEOMETRY');assert.equal((await req('GET',obsPath)).statusCode,403);grants.add('READ_FIELD_GEOMETRY');
+ assert.equal(nativeCalls,5);
+ proof('SCIENTIFIC_AND_HISTORICAL_PRODUCT_READS_FAIL_CLOSED_WITHOUT_OWNER_DISPLAY_GRANT');
 
  // P4 links a confirmed supplemental document to a completed native baseline.
  const followPath=reviewPath+'/review-1/followups';
@@ -171,6 +215,25 @@ try{
  assert.deepEqual((await req('GET',nativePath)).json(),executed.json());
  assert.deepEqual((await req('POST',successorNative,{})).json(),successorEvaluation.json());assert.equal(nativeCalls,11);
  proof('P4_SUCCESSOR_REASSESSMENT_REUSES_NATIVE_CHAIN_AND_PRESERVES_BASELINE_TEST_ONLY');
+ const noSoilPath=reviewPath+'/review-no-soil/native-assessment';
+ // Browser creates the no-document question, invokes native orchestration, logs out,
+ // and reads the exact persisted receipt under a fresh isolated fixture session.
+ const {exerciseManagerBrowserRecovery}=await import('./manager_browser_recovery_v1.fixture.mjs');
+ await exerciseManagerBrowserRecovery(app, f, noSoilPath);
+ const evidencePath=noSoilPath.replace('/native-assessment','/knowledge-evidence');
+ const evidenceResult=await req('GET',evidencePath);assert.equal(evidenceResult.statusCode,200,evidenceResult.body);assert.equal(evidenceResult.json().display_status,'AUTHORIZED_RECORDED_EVIDENCE');assert.deepEqual(evidenceResult.json().missing_crops,['CORN']);
+ evidenceActive=false;const revoked=await req('GET',evidencePath);assert.equal(revoked.statusCode,200);assert.equal(revoked.json().display_status,'DISPLAY_PERMISSION_NOT_ESTABLISHED');assert.deepEqual(revoked.json().items,[]);assert.ok(!revoked.body.includes('TEST_ONLY soybean source'));
+ grants.delete('READ_CROP_REVIEW');assert.equal((await req('GET',evidencePath)).statusCode,403);grants.add('READ_CROP_REVIEW');
+ wrongGroup=true;assert.equal((await req('GET',evidencePath)).statusCode,404);wrongGroup=false;
+ proof('A07_CUSTOMER_EVIDENCE_PERMISSION_REVOKED_AND_SCOPE_DENIED_TEST_ONLY');
+ const noSoilResult=await req('GET',noSoilPath);assert.equal(noSoilResult.statusCode,200,noSoilResult.body);
+ const nr=noSoilResult.json();assert.equal(nr.status,'NATIVE_RETRIEVAL_RECORDED_CONTEXT_REQUIRED');assert.deepEqual(nr.assessment_refs,[]);assert.equal(nr.action_authority,false);
+ assert.deepEqual(nr.receipts.map((v:any)=>v.operation),['createDecisionProblem','executeKnowledgeRetrieval']);
+ assert.equal(nr.retrieval.candidate_count,1);assert.equal(nr.retrieval.authority_class,'RETRIEVAL_EVIDENCE_NON_SCIENTIFIC');
+ assert.equal(nativeCalls,13);assert.deepEqual((await req('POST',noSoilPath,{})).json(),nr);assert.equal(nativeCalls,13);
+ grants.delete('READ_CROP_REVIEW');assert.equal((await req('GET',noSoilPath)).statusCode,403);grants.add('READ_CROP_REVIEW');
+ assert.deepEqual((await req('GET',noSoilPath)).json(),nr);
+ proof('P3P_NO_SOIL_DURABLE_A01_A07_REPLAY_AND_READ_AUTH_TEST_ONLY');
 
 
 
@@ -179,9 +242,9 @@ try{
  assert.equal((await req('POST',soil+'/doc/confirm',confirm)).statusCode,409);
  assert.equal((await req('POST',reviewPath,{...intent,review_id:'new-after-boundary-change'})).statusCode,409);
  const oldReview=await req('GET',reviewPath+'/review-1');assert.equal(oldReview.statusCode,200,oldReview.body);assert.deepEqual(oldReview.json().basis,saved.basis);
- assert.equal(await reviewCount(),3);
+ assert.equal(await reviewCount(),4);
  proof('P3_CHANGED_BOUNDARY_REJECTS_NEW_BASIS_PRESERVES_HISTORY');
- const oldNative=await req('GET',nativePath);assert.equal(oldNative.statusCode,200,oldNative.body);assert.deepEqual(oldNative.json(),executed.json());assert.equal(nativeCalls,11);
+ const oldNative=await req('GET',nativePath);assert.equal(oldNative.statusCode,200,oldNative.body);assert.deepEqual(oldNative.json(),executed.json());assert.equal(nativeCalls,13);
  const historicalFollow=await req('GET',followPath);assert.deepEqual(historicalFollow.json(),followRead.json());
  active=false;assert.equal((await req('GET',soil)).statusCode,403);assert.equal((await req('GET',followPath)).statusCode,403);
  assert.deepEqual(await cnt(),{fields:1,facts:7,revisions:2,confirmations:2});

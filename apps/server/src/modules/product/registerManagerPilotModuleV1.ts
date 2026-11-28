@@ -11,16 +11,33 @@ import { registerManagerNativeReviewV1, type ManagerNativeReviewConfigV1 } from 
 
 import { registerManagerContextFollowupV1 } from '../../routes/manager_context_followup_v1.js';
 
-export type ManagerPilotCompositionV1 = Parameters<typeof createManagerAuthorizerV1>[0] & { adrNativeReview?: ManagerNativeReviewConfigV1 };
+import { registerManagerLandInventoryV1 } from '../../routes/manager_land_inventory_v1.js';
+
+import { registerManagerScientificResultV1 } from '../../routes/manager_scientific_result_v1.js';
+import type { ScientificResultDisplayResolverV1 } from '../../product_projection/customer/manager_scientific_result_v1.js';
+import { registerManagerObservationHistoryV1, type ManagerObservationHistoryConfigV1 } from '../../routes/manager_observation_history_v1.js';
+
+import { registerManagerHistoricalForecastV1 } from '../../routes/manager_historical_forecast_v1.js';
+import type { HistoricalForecastConfigV1 } from '../../product_projection/customer/manager_historical_forecast_v1.js';
+
+import {registerManagerAdrEvidenceV1} from '../../routes/manager_adr_evidence_v1.js';
+import type {CustomerEvidenceResolverV1} from '../../product_projection/customer/manager_adr_evidence_v1.js';
+
+export type ManagerPilotCompositionV1 = Parameters<typeof createManagerAuthorizerV1>[0] & { adrNativeReview?: ManagerNativeReviewConfigV1; resolveAdrCustomerEvidence?: CustomerEvidenceResolverV1; resolveScientificResultDisplay?: ScientificResultDisplayResolverV1; observationHistory?: ManagerObservationHistoryConfigV1; historicalForecast?: HistoricalForecastConfigV1 };
 
 // Trusted composition only. No environment switch or legacy credential fallback.
 export function registerManagerPilotModuleV1(app: FastifyInstance, pool: Pool, config: ManagerPilotCompositionV1) {
   const authority = createManagerAuthorizerV1(config);
   registerManagerFieldCommandsV1(app, pool, authority);
+  registerManagerLandInventoryV1(app, pool, authority);
   registerManagerSoilDocumentsV1(app, pool, authority);
   registerManagerCropReviewsV1(app, pool, authority);
   registerManagerNativeReviewV1(app, pool, authority, config.adrNativeReview);
   registerManagerContextFollowupV1(app, pool, authority);
+  registerManagerScientificResultV1(app, pool, authority, config.resolveScientificResultDisplay);
+  registerManagerAdrEvidenceV1(app,pool,authority,config.resolveAdrCustomerEvidence);
+  registerManagerObservationHistoryV1(app, pool, authority, config.observationHistory);
+  registerManagerHistoricalForecastV1(app, authority, config.historicalForecast);
   return authority;
 }
 

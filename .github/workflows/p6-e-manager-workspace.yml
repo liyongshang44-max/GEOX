@@ -1,0 +1,27 @@
+name: P6-E manager workspace
+on:
+  pull_request:
+    paths:
+      - 'apps/web/src/api/managerWorkspaceV1*'
+      - 'apps/web/src/features/manager/**'
+      - 'apps/server/src/routes/manager_field_commands_v1.ts'
+      - '.github/workflows/p6-e-manager-workspace.yml'
+permissions:
+  contents: read
+jobs:
+  manager-workspace-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @geox/web typecheck
+      - run: pnpm exec tsx --test apps/web/src/api/managerWorkspaceV1.test.ts
+      - run: pnpm --filter @geox/web build

@@ -1,0 +1,10 @@
+import {resolve} from 'node:path';
+import {writeFileSync,mkdirSync,existsSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+const root=process.cwd(), web=resolve(root,'apps/web'), local=resolve(web,'.local-manager-e2e01'), dist=resolve(local,'dist');
+if(existsSync(local))throw Error('E2E01_WEB_BUILD_ALREADY_EXISTS');
+mkdirSync(local);
+writeFileSync(resolve(local,'index.html'),'<!doctype html><html lang="zh"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GEOX Manager</title><div id="root"></div><script type="module" src="../src/features/manager/LocalManagerE2E01.tsx"></script></html>');
+const {build}=await import(pathToFileURL(resolve(web,'node_modules/vite/dist/node/index.js')).href);
+await build({configFile:false,root:local,base:'/manager-assets/',esbuild:{jsx:'automatic'},resolve:{alias:{'@geox/contracts':resolve(root,'packages/contracts/src/index.ts')}},build:{outDir:dist,emptyOutDir:false}});
+console.log('E2E01_WEB_BUILT');

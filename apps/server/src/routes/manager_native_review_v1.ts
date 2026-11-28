@@ -62,7 +62,11 @@ function projection(j:{attempt:string;events:Obj[]}){
  const receipts=j.events.filter(e=>e.event==='WRITE_RECEIPT').map(e=>({operation:e.details.operation,ref:e.details.receipt.ref,response_sha256:e.details.receipt.response_sha256}));
  // Raw native payloads may include licensed knowledge. Do not expose them or
  // server credentials merely because the manager can read the question.
- return {attempt_id:j.attempt,status:terminal?.status??(last?'OUTCOME_RECONCILIATION_REQUIRED':'NOT_REQUESTED'),error_code:terminal?.error_code??null,assessment_refs:terminal?.assessment_refs??[],receipts,action_authority:false,scientific_result_content_display_authority:'NOT_ESTABLISHED'};
+ const retrieved=j.events.find(e=>e.event==='WRITE_RECEIPT'&&e.details.operation==='executeKnowledgeRetrieval')?.details.receipt;
+ const resource=retrieved?.resource;
+ // Only safe operational metadata; do not expose raw candidates or licensed content.
+ const retrieval=resource?.authority_class==='RETRIEVAL_EVIDENCE_NON_SCIENTIFIC'&&Array.isArray(resource.candidate_refs)?{authority_class:resource.authority_class,candidate_count:resource.candidate_refs.length,ref:retrieved.ref,runtime_profile_ref:resource.runtime_profile_ref,knowledge_release_ref:resource.knowledge_release_ref,deployment_ref:resource.deployment_ref}:null;
+ return {retrieval,attempt_id:j.attempt,status:terminal?.status??(last?'OUTCOME_RECONCILIATION_REQUIRED':'NOT_REQUESTED'),error_code:terminal?.error_code??null,assessment_refs:terminal?.assessment_refs??[],receipts,action_authority:false,scientific_result_content_display_authority:'NOT_ESTABLISHED'};
 }
 async function insert(c:PoolClient,s:string[],a:ManagerAuthorityV1,review:string,basis:string,attempt:string,seq:number,prev:string|null,event:NativeReviewEventTypeV1,details:Obj){
  const result={schema_version:'geox.native-assessment-attempt-event.v1',attempt_id:attempt,review_id:review,basis_sha256:basis,actor_id:a.actor_id,sequence:seq,previous_sha256:prev,event,details};

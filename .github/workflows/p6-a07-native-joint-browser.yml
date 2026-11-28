@@ -1,0 +1,47 @@
+name: P6 A07 native joint browser
+on:
+  pull_request:
+    paths:
+      - 'apps/server/test/manager_a07_native_joint_v1.fixture.ts'
+      - 'scripts/product/e2e01/adr-private-admission*.mjs'
+      - 'scripts/product/e2e01/adr-formal-*'
+      - 'scripts/product/e2e01/manager-local.mjs'
+      - 'apps/server/src/domain/agronomy/e2e01_native_review_admission_v1.ts'
+      - 'apps/server/test/manager_browser_recovery_v1.fixture.mjs'
+      - 'apps/server/src/product_projection/customer/manager_adr_evidence_v1.ts'
+      - 'apps/server/src/product_projection/customer/e2e01_customer_display_admission_v1.ts'
+      - 'apps/server/src/routes/manager_adr_evidence_v1.ts'
+      - 'apps/web/src/features/manager/**'
+      - 'scripts/acceptance/p6-bc-native-commands.sh'
+      - '.github/workflows/p6-a07-native-joint-browser.yml'
+permissions:
+  contents: read
+jobs:
+  native-joint-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
+      - run: node scripts/product/e2e01/build-web.mjs
+      - run: pnpm exec playwright install --with-deps chromium
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/checkout@v4
+        with:
+          repository: liyongshang44-max/agronomy-deployment-runtime
+          ref: a7a058a6d4b6cce97727af3553cc21d9d79d572b
+          path: adr-native-source
+          persist-credentials: false
+      - run: node --test scripts/product/e2e01/adr-private-admission.test.mjs scripts/product/e2e01/adr-formal-credential.test.mjs scripts/product/e2e01/adr-formal-run-admission.test.mjs
+      - run: node --check scripts/product/e2e01/adr-formal-runtime.mjs && node --check scripts/product/e2e01/manager-local.mjs
+      - run: ADR_NATIVE_SOURCE="$PWD/adr-native-source" bash scripts/acceptance/p6-bc-native-commands.sh --a07-joint-test-only

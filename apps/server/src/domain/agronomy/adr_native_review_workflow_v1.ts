@@ -20,7 +20,7 @@ export type NativeReviewConsumerV1=ReturnType<typeof createAdrReviewConsumerV1>;
 export type NativeReviewEventTypeV1='STARTED'|'WRITE_INTENT'|'WRITE_RECEIPT'|'FINISHED';
 export type NativeReviewAppendV1=(event:NativeReviewEventTypeV1,details:Obj)=>Promise<void>;
 export type NativeReviewPlanV1={
- target:Obj;target_binding_ref:string;decision_mapping_ref:string;deployment_ref:AdrRefV1;knowledge_release_ref:AdrRefV1;
+ target:Obj;target_binding_ref:string;decision_mapping_ref:string;deployment_ref:AdrRefV1;runtime_profile_ref:AdrRefV1;knowledge_release_ref:AdrRefV1;
  problem:AdrWriteInputV1;datums:AdrWriteInputV1[];mapping_refs:string[];evaluation_time:string;attempt_id:string;basis_sha256:string;
 };
 function input(attempt:string,suffix:string,resource:AdrWriteInputV1['resource']):AdrWriteInputV1{
@@ -45,10 +45,10 @@ function decimal(n:number):string{
 }
 export function prepareNativeReviewPlanV1(req:NativeReviewPlanRequestV1,raw:unknown):NativeReviewPlanV1{
  insist(object(raw),'ADR_FORMAL_PLAN_REQUIRED');const p=structuredClone(raw);
- insist(exact(p,['basis_sha256','target_binding_ref','decision_mapping_ref','target_ref','deployment_ref','knowledge_release_ref','decision_type','objective_code','use_purpose','use_class','decision_authority_mode','decision_horizon','decision_deadline','crop_action_bindings','datum_bindings'])&&p.basis_sha256===req.basis_sha256&&text(p.target_binding_ref)&&text(p.decision_mapping_ref),'ADR_FORMAL_PLAN_BASIS_MISMATCH');
+ insist(exact(p,['basis_sha256','target_binding_ref','decision_mapping_ref','target_ref','deployment_ref','runtime_profile_ref','knowledge_release_ref','decision_type','objective_code','use_purpose','use_class','decision_authority_mode','decision_horizon','decision_deadline','crop_action_bindings','datum_bindings'])&&p.basis_sha256===req.basis_sha256&&text(p.target_binding_ref)&&text(p.decision_mapping_ref),'ADR_FORMAL_PLAN_BASIS_MISMATCH');
  const t=p.target_ref;
  insist(object(t)&&Object.keys(t).every(k=>targetKeys.includes(k))&&Object.values(t).every(text)&&text(t.organization_id)&&text(t.tenant_id)&&text(t.field_id),'ADR_TARGET_CORRESPONDENCE_REQUIRED');
- insist(ref(p.deployment_ref,'Deployment')&&ref(p.knowledge_release_ref,'KnowledgeRelease'),'ADR_RELEASE_DEPLOYMENT_REQUIRED');
+ insist(ref(p.deployment_ref,'Deployment')&&ref(p.runtime_profile_ref,'RuntimeProfile')&&ref(p.knowledge_release_ref,'KnowledgeRelease'),'ADR_RELEASE_DEPLOYMENT_REQUIRED');
  insist([p.decision_type,p.objective_code,p.use_purpose,p.use_class].every(text)&&['ADR_POLICY','EXTERNAL_POLICY','RUNTIME_ONLY'].includes(p.decision_authority_mode)&&exact(p.decision_horizon,['duration'])&&text(p.decision_horizon.duration)&&instant(p.decision_deadline)&&Date.parse(p.decision_deadline)>=Date.parse(req.evaluation_time),'ADR_DECISION_MAPPING_INVALID');
  const intent=req.basis.intent;
  insist(object(intent)&&Array.isArray(intent.crop_codes)&&Array.isArray(p.crop_action_bindings)&&p.crop_action_bindings.length===intent.crop_codes.length,'ADR_CROP_ACTION_MAPPING_REQUIRED');
@@ -64,8 +64,9 @@ export function prepareNativeReviewPlanV1(req:NativeReviewPlanRequestV1,raw:unkn
    insist(!rows.has(key),'ADR_SOURCE_DUPLICATE');rows.set(key,{d,row});
   }
  }
- // Nonempty is a native A04 condition. No silent truncation or fabricated datum.
- insist(rows.size>0&&rows.size<=100&&p.datum_bindings.length===rows.size,'ADR_CONTEXT_SOURCE_COVERAGE_REQUIRED');
+ // A04 requires nonempty data; a truly empty selected-document set can use A01/A07 only.
+ // A malformed selected document or an incomplete mapping still fails closed.
+ insist((rows.size>0||req.basis.documents.length===0)&&rows.size<=100&&p.datum_bindings.length===rows.size,'ADR_CONTEXT_SOURCE_COVERAGE_REQUIRED');
  const datums:AdrWriteInputV1[]=[],mapping_refs:string[]=[],seen=new Set<string>();
  for(const m of p.datum_bindings){
   insist(exact(m,['document_id','revision','row_number','mapping_ref','semantic_id','geometry_ref','sample_day_start','sample_day_end'])&&text(m.mapping_ref)&&text(m.semantic_id)&&text(m.geometry_ref),'ADR_SOURCE_MAPPING_INVALID');
@@ -91,7 +92,7 @@ export function prepareNativeReviewPlanV1(req:NativeReviewPlanRequestV1,raw:unkn
   constraints:[{type:'GEOX_MANAGER_TARGET_DATE_INTERVAL',start_date:intent.target_start_date,end_date:intent.target_end_date}],
   use_purpose:p.use_purpose,use_class:p.use_class,decision_authority_mode:p.decision_authority_mode,decision_deadline:canonicalInstant(p.decision_deadline)
  });
- return {target:t,target_binding_ref:p.target_binding_ref,decision_mapping_ref:p.decision_mapping_ref,deployment_ref:p.deployment_ref,knowledge_release_ref:p.knowledge_release_ref,problem,datums,mapping_refs:[...new Set(mapping_refs)].sort(),evaluation_time:req.evaluation_time,attempt_id:req.attempt_id,basis_sha256:req.basis_sha256};
+ return {target:t,target_binding_ref:p.target_binding_ref,decision_mapping_ref:p.decision_mapping_ref,deployment_ref:p.deployment_ref,runtime_profile_ref:p.runtime_profile_ref,knowledge_release_ref:p.knowledge_release_ref,problem,datums,mapping_refs:[...new Set(mapping_refs)].sort(),evaluation_time:req.evaluation_time,attempt_id:req.attempt_id,basis_sha256:req.basis_sha256};
 }
 const coreRef=(v:unknown):AdrRefV1|null=>{
  // ADR A04 public materializer carries the DecisionProblem ref in native camel case.
@@ -118,7 +119,10 @@ export async function executeNativeReviewPlanV1(manager:ManagerAuthorityV1,plan:
  };
  try{
   const problem=await write('createDecisionProblem',plan.problem,r=>{
-   insist(same(r.resource.target_ref,plan.problem.resource.target_ref)&&r.resource.logical_time===plan.evaluation_time&&same(r.resource.action_space,plan.problem.resource.action_space),'ADR_PROBLEM_RECEIPT_MISMATCH');
+   // Compare the governed A01 decision semantics, not just its target and ID.
+   for(const k of ['target_ref','logical_time','action_space','decision_type','objective','use_purpose','use_class','decision_authority_mode','decision_horizon','decision_deadline','constraints']){
+    insist(same(r.resource[k],plan.problem.resource[k]),'ADR_PROBLEM_RECEIPT_MISMATCH');
+   }
   });
   const datums:AdrRefV1[]=[];
   for(const datum of plan.datums){
@@ -127,15 +131,22 @@ export async function executeNativeReviewPlanV1(manager:ManagerAuthorityV1,plan:
      insist(same(r.resource[k],datum.resource[k]),'ADR_DATUM_RECEIPT_MISMATCH');
    });datums.push(d.ref);
   }
-  const manifest=await write('createContextManifest',input(attempt,'manifest',{contract_version:'adr.context-manifest.v1',decision_problem_ref:problem.ref,evidence_cutoff:plan.evaluation_time,datum_refs:datums,resolved_reference_receipt_refs:[]}),r=>{
+  const manifest=datums.length?await write('createContextManifest',input(attempt,'manifest',{contract_version:'adr.context-manifest.v1',decision_problem_ref:problem.ref,evidence_cutoff:plan.evaluation_time,datum_refs:datums,resolved_reference_receipt_refs:[]}),r=>{
    const expected=datums.map(d=>({datum_id:d.logical_id,semantic_hash:d.semantic_hash})).sort((a,b)=>a.datum_id.localeCompare(b.datum_id));
    const returned=r.resource.datum_refs;
    insist(sameRef(r.resource.decision_problem_ref,problem.ref)&&r.resource.evidence_cutoff===plan.evaluation_time&&same(r.resource.target_ref,plan.target)&&Array.isArray(returned)&&same([...returned].sort((a,b)=>String(a.datum_id).localeCompare(String(b.datum_id))),expected)&&Array.isArray(r.resource.resolved_reference_receipts)&&r.resource.resolved_reference_receipts.length===0,'ADR_MANIFEST_RECEIPT_MISMATCH');
-  });
+  }):null;
   const retrieval=await write('executeKnowledgeRetrieval',input(attempt,'retrieval',{contract_version:'adr.knowledge-retrieval-result.v1',decision_problem_ref:problem.ref,deployment_ref:plan.deployment_ref,config:{}}),r=>{
-   insist(sameRef(r.resource.decision_problem_ref,problem.ref)&&sameRef(r.resource.deployment_ref,plan.deployment_ref)&&sameRef(r.resource.knowledge_release_ref,plan.knowledge_release_ref)&&Array.isArray(r.resource.candidate_refs)&&r.resource.candidate_refs.every(c=>ref(c)&&['QualifiedKnowledge','DerivedKnowledge'].includes(c.kind))&&new Set(r.resource.candidate_refs.map(c=>digest(c))).size===r.resource.candidate_refs.length,'ADR_RETRIEVAL_RECEIPT_MISMATCH');
+   insist(sameRef(r.resource.decision_problem_ref,problem.ref)&&sameRef(r.resource.deployment_ref,plan.deployment_ref)&&sameRef(r.resource.runtime_profile_ref,plan.runtime_profile_ref)&&sameRef(r.resource.knowledge_release_ref,plan.knowledge_release_ref)&&r.resource.authority_class==='RETRIEVAL_EVIDENCE_NON_SCIENTIFIC'&&Array.isArray(r.resource.candidate_refs)&&r.resource.candidate_refs.every(c=>ref(c)&&['QualifiedKnowledge','DerivedKnowledge'].includes(c.kind))&&new Set(r.resource.candidate_refs.map(c=>digest(c))).size===r.resource.candidate_refs.length,'ADR_RETRIEVAL_RECEIPT_MISMATCH');
+   const q=r.resource.query_semantics, p=plan.problem.resource;
+   insist(same(q,{decision_type:p.decision_type,use_purpose:p.use_purpose,use_class:p.use_class,decision_authority_mode:p.decision_authority_mode,objective_code:(p.objective as Obj).code}),'ADR_RETRIEVAL_QUERY_MISMATCH');
+   const miss=r.resource.miss_diagnostics;
+   insist(Array.isArray(miss)&&(r.resource.candidate_refs.length===0?same(miss,[{code:'NO_RELEASE_MEMBERS_OF_CONFIGURED_KIND',scope:'RETRIEVAL_ONLY_NON_SCIENTIFIC'}]):miss.length===0),'ADR_RETRIEVAL_DIAGNOSTIC_MISMATCH');
   });
   const candidates=retrieval.resource.candidate_refs as AdrRefV1[];
+  if(!manifest){
+   await append('FINISHED',{status:candidates.length?'NATIVE_RETRIEVAL_RECORDED_CONTEXT_REQUIRED':'NO_RETRIEVED_KNOWLEDGE',error_code:'NO_CONFIRMED_SOIL_DOCUMENT_SELECTED',retrieval_ref:retrieval.ref,retrieved_candidate_count:candidates.length,assessment_refs:[],action_authority:false});return;
+  }
   // All retrieved candidates are evaluated, never a local top-K scientific filter.
   if(candidates.length>32){
    await append('FINISHED',{status:'HOLD_RETRIEVAL_CANDIDATE_LIMIT',retrieval_ref:retrieval.ref,assessment_refs:[],action_authority:false});return;
