@@ -161,6 +161,14 @@ function selectCompatibilityOnlyDerivedState(rows: any[], compatibilityStateType
 export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promise<void> {
   if (!ensurePromise) {
     ensurePromise = (async () => {
+      // Commercial workload roles deliberately have no schema CREATE authority.
+      const authority = await db.query<{ can_create: boolean }>(
+        "SELECT pg_catalog.has_schema_privilege(current_user, 'public', 'CREATE') AS can_create"
+      );
+      if (authority.rows[0]?.can_create === false) {
+        await db.query("SELECT tenant_id, project_id, group_id, field_id, observed_at_ts_ms, freshness, confidence, soil_indicators_json, irrigation_need_level, sensor_quality_level, canopy_temp_status, evapotranspiration_risk, sensor_quality, irrigation_effectiveness, leak_risk, irrigation_action_hint, computed_at_ts_ms, source_observed_at_ts_ms, explanation_codes_json, source_observation_ids_json, updated_ts_ms FROM public.field_sensing_overview_v1 WHERE FALSE");
+        return;
+      }
       await db.query(
         `CREATE TABLE IF NOT EXISTS field_sensing_overview_v1 (
           tenant_id text NOT NULL,

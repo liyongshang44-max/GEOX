@@ -97,7 +97,7 @@ export type FrozenDatabaseShadowOnlineEvidenceV1 = FrozenShadowOnlineEvidenceV1 
   candidate_limit_reached: false;
 };
 
-type EvidenceFactRowV1 = {
+export type EvidenceFactRowV1 = {
   fact_id: string;
   occurred_at: string | Date;
   record_json: unknown;
@@ -105,6 +105,10 @@ type EvidenceFactRowV1 = {
 
 type ReadOnlyPoolV1 = Pick<Pool, "connect">;
 type ReadOnlyClientV1 = Pick<PoolClient, "query" | "release">;
+
+// Optional read-only projection of native facts into the existing evidence envelope.
+// Default callers retain the original canonical facts query unchanged.
+export type EvidenceRowsSourceV1 = (client: Pick<PoolClient, "query">, scope: TwinScopeKeyV1, queryStart: string, queryEnd: string, limit: number) => Promise<EvidenceFactRowV1[]>;
 
 type NormalizedEvidenceV1 = {
   fact_id: string;
@@ -327,6 +331,7 @@ export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
   public constructor(
     private readonly pool: ReadOnlyPoolV1,
     private readonly config: DatabaseEvidenceIngressConfigV1 = DATABASE_EVIDENCE_INGRESS_CONFIG_V1,
+    private readonly rowsSource?: EvidenceRowsSourceV1,
   ) {}
 
   public async freezeEligibleEvidence(input: {
@@ -350,6 +355,9 @@ export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
     let rows: EvidenceFactRowV1[];
     try {
       await client.query("BEGIN TRANSACTION READ ONLY");
+      if (this.rowsSource) {
+        rows = await this.rowsSource(client, scope, queryStart, queryEnd, this.config.max_candidate_records + 1);
+      } else {
       const result = await client.query(
         `SELECT fact_id, occurred_at, record_json
            FROM facts
@@ -378,6 +386,7 @@ export class PostgresEvidenceIngressAdapterV1 implements EvidenceIngressPortV1 {
         ],
       );
       rows = result.rows as EvidenceFactRowV1[];
+      }
       await client.query("COMMIT");
     } catch (error) {
       try {
