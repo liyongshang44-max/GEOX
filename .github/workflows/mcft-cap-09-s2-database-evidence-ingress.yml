@@ -56,7 +56,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
+      - name: Classify exact I1 product shared regression
+        id: product
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/CLASSIFY_MCFT_PV02_I1_SHARED_REGRESSION.cjs
       - name: Classify shared Evidence Ingress lifecycle
+        if: steps.product.outputs.mode != 'pv02-i1-shared-regression'
         id: lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
@@ -86,9 +92,10 @@ jobs:
           MCFT_EVENT_NAME: ${{ github.event_name }}
           MCFT_PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ github.token }}
-          MCFT_SHARED_INGRESS_MODE: ${{ steps.lifecycle.outputs.mode }}
+          MCFT_SHARED_INGRESS_MODE: ${{ steps.lifecycle.outputs.mode || steps.product.outputs.mode }}
         run: |
           case "$MCFT_SHARED_INGRESS_MODE" in
+            pv02-i1-shared-regression) test -s acceptance-output/MCFT_PV02_I1_SHARED_REGRESSION_ROUTE.json ;;
             s6-simulation-lifecycle-repair) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR.cjs --s6-simulation-lifecycle-repair ;;
             s6-simulation-qualification) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR.cjs ;;
             s2-postmerge-semantic-correction) node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS.cjs --postmerge-semantic-correction ;;
@@ -104,7 +111,7 @@ jobs:
         run: pnpm --filter @geox/server typecheck
       - name: Verify structured shared-ingress results
         env:
-          MCFT_SHARED_INGRESS_MODE: ${{ steps.lifecycle.outputs.mode }}
+          MCFT_SHARED_INGRESS_MODE: ${{ steps.lifecycle.outputs.mode || steps.product.outputs.mode }}
         run: |
           node - <<'NODE'
           const fs=require('node:fs');
@@ -127,6 +134,9 @@ jobs:
             if(g.exact_new_candidate_signal_count!==0||g.candidate_declaration_present) throw new Error('S2_CORRECTION_MUST_NOT_CREATE_CANDIDATE_SIGNAL');
             if(!g.canonical_epistemic_class_mapping_aligned||!g.canonical_cap04_future_forcing_compatible||!g.canonical_historical_et0_compatible) throw new Error('S2_EPISTEMIC_GOVERNANCE_PROOF_MISSING');
             if(g.database_write_performed||g.scheduler_loop_executed||g.canonical_write_performed||g.runtime_source_delta!==1||g.migration_delta!==0) throw new Error('S2_RUNTIME_BOUNDARY_INVALID');
+          }else if(mode==='pv02-i1-shared-regression'){
+            const route=JSON.parse(fs.readFileSync('acceptance-output/MCFT_PV02_I1_SHARED_REGRESSION_ROUTE.json','utf8'));
+            if(route.status!=='CLASSIFIED_PRODUCT_SHARED_REGRESSION'||route.shared_behavior_regression_required!==true||route.historical_qualification_claimed!==false||route.production_effect!==false) throw new Error('PV02_SHARED_INGRESS_ROUTE_INVALID');
           }else throw new Error(`UNSUPPORTED_SHARED_INGRESS_MODE:${mode}`);
           NODE
       - uses: actions/upload-artifact@v4
@@ -134,6 +144,7 @@ jobs:
         with:
           name: mcft-cap-09-s2-database-evidence-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
+            acceptance-output/MCFT_PV02_I1_SHARED_REGRESSION_ROUTE.json
             acceptance-output/MCFT_CAP_09_S2_DATABASE_EVIDENCE_INGRESS_RESULT.json
             acceptance-output/MCFT_CAP_09_S2_POSTGRESQL_ACCEPTANCE_RESULT.json
             acceptance-output/MCFT_CAP_09_S2_REGISTRY_CROSS_LIFECYCLE_REPAIR_RESULT.json

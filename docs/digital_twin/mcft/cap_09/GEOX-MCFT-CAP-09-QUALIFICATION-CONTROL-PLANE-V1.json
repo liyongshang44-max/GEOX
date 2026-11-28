@@ -84,6 +84,22 @@
         "scripts/runtime_acceptance/MCFT_CAP09_R4285_RESOURCE_OWNER_PRODUCER_V3.cjs"
       ]
     },
+    "PV02_I1_PRODUCT_INGRESS_EXACT_PATHS": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-pv02-i1-native-mqtt.yml",
+        "apps/server/src/infra/bline_stage1_schema_preprovision_v1.ts",
+        "apps/server/src/projections/field_fertility_state_v1.ts",
+        "apps/server/src/projections/field_sensing_overview_v1.ts",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts",
+        "apps/server/src/runtime/twin_runtime/customer_soil_evidence_ingress_v1.ts",
+        "apps/telemetry-ingest/src/main.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_PV02_I1_NATIVE_MQTT.ts"
+      ],
+      "owner": "MCFT_PV02_I1_PRODUCT_INGRESS",
+      "execution_workflow": ".github/workflows/mcft-pv02-i1-native-mqtt.yml",
+      "historical_qualification_carry_forward_authorized": false
+    },
     "CONTROL_PLANE_FILES": {
       "kind": "EXACT_PATH_SET",
       "paths": [
@@ -93,6 +109,9 @@
         ".github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json",
         "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+        ".github/workflows/mcft-cap-09-s2-database-evidence-ingress.yml",
+        ".github/workflows/mcft-cap-09-s6-production-equivalent-shadow-simulator.yml",
+        "scripts/governance_acceptance/CLASSIFY_MCFT_PV02_I1_SHARED_REGRESSION.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
         ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",

@@ -10,7 +10,8 @@ import { z } from "zod"; // Runtime schema validation for incoming telemetry pay
 import { updateAgronomySnapshot } from "../../server/src/projections/agronomy_signal_snapshot_v1.js"; // Refresh agronomy snapshot projection after telemetry commits.
 import { ensureDeviceObservationProjectionV1, writeObservationRunPipelineAndRefreshFieldV1 } from "../../server/src/services/device_observation_service_v1.js"; // raw_telemetry_v1 -> device_observation_v1 -> sensing pipeline -> read-model refresh.
 import { buildMqttObservationInputV1 } from "./mqtt_observation_input_v1.js"; // Source-preserving MQTT transport mapper.
-import { runMqttObservationProjectionV1 } from "./mqtt_durable_raw_v1.js"; // Narrow durable-raw transaction exception.
+import { runMqttObservationProjectionV1 } from "./mqtt_durable_raw_v1.js";
+import { buildIngressPhysicalQcSnapshotV1 } from "../../server/src/evidence/ingress_physical_qc_snapshot_v1.js"; // Narrow durable-raw transaction exception.
 
 const TelemetryPayloadSchema = z.object({ // Define minimal telemetry payload schema.
   metric: z.string().min(1), // Metric name (e.g., soil_moisture).
@@ -100,19 +101,22 @@ function toQualityFlags(value: unknown): string[] { // Derive basic quality flag
 } // End helper.
 
 
-async function resolveTelemetryObservationFieldId(clientConn: import("pg").PoolClient, tenant_id: string, device_id: string): Promise<string | null> { // Attach latest field dimension for observation indexing.
-  try {
-    const q = await clientConn.query(
-      `SELECT field_id FROM device_binding_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
-      [tenant_id, device_id]
-    );
-    if ((q.rows ?? []).length < 1) return null;
-    const field_id = q.rows[0]?.field_id;
-    return typeof field_id === "string" && field_id.trim().length > 0 ? field_id.trim() : null;
-  } catch {
-    return null;
-  }
-} // End helper.
+// Resolve the actual current field ownership; never invent project/group from process defaults.
+async function resolveTelemetryObservationScopeV1(clientConn: import("pg").PoolClient, tenant_id: string, device_id: string, observedAtMs: number) {
+  const q = await clientConn.query(
+    `SELECT b.field_id,b.bound_ts_ms,f.project_id,f.group_id
+       FROM device_binding_index_v1 b
+       JOIN field_index_v1 f ON f.tenant_id=b.tenant_id AND f.field_id=b.field_id
+      WHERE b.tenant_id=$1 AND b.device_id=$2 LIMIT 2`,
+    [tenant_id, device_id]
+  );
+  if (q.rows.length !== 1) return null;
+  const row = q.rows[0];
+  if (![row.field_id,row.project_id,row.group_id].every(v=>typeof v==="string" && v.trim().length>0)) return null;
+  const bound = Number(row.bound_ts_ms);
+  if (!Number.isSafeInteger(bound) || bound <= 0 || observedAtMs < bound) return null;
+  return { field_id: String(row.field_id), project_id: String(row.project_id), group_id: String(row.group_id), bound_ts_ms: bound };
+}
 
 /**
  * Data-layer contract:
@@ -241,7 +245,6 @@ record = { // Telemetry record.
       }; // End record.
     } // End kind branch.
 
-    const recordText = JSON.stringify(record); // Serialize record_json for ledger insert.
     const value_num = typeof (p as any).value === "number" && Number.isFinite((p as any).value) ? (p as any).value : null; // Numeric value if finite.
     const value_text = (p as any).value === undefined || (p as any).value === null ? null : String((p as any).value); // Text representation for projection.
 
@@ -269,8 +272,8 @@ record = { // Telemetry record.
       const credRow = await clientConn.query(
         `SELECT credential_hash, credential_id
            FROM device_credential_index_v1
-          WHERE tenant_id = $1 AND device_id = $2 AND status = 'ACTIVE'
-          ORDER BY issued_at DESC LIMIT 1`,
+          WHERE tenant_id = $1 AND device_id = $2 AND status = 'ACTIVE' AND revoked_ts_ms IS NULL
+          ORDER BY issued_ts_ms DESC LIMIT 1`,
         [parsed.tenant_id, parsed.device_id]
       ); // Fetch active credential for device.
       if ((credRow.rows ?? []).length < 1) { // No active credential.
@@ -296,7 +299,16 @@ record = { // Telemetry record.
       return;
     }
 
-    const field_id = await resolveTelemetryObservationFieldId(clientConn, parsed.tenant_id, parsed.device_id); // Resolve current field binding for observation projection.
+    const scope = parsed.kind === "telemetry" ? await resolveTelemetryObservationScopeV1(clientConn, parsed.tenant_id, parsed.device_id, p.ts_ms) : null;
+    const field_id = scope?.field_id ?? null;
+    if (parsed.kind === "telemetry") {
+      // Keep source semantics even when the numeric observation projection rejects a value.
+      record.payload.unit = typeof (p as any).unit === "string" ? (p as any).unit : null;
+      record.payload.ingested_at = new Date().toISOString();
+      record.payload.field_binding = scope;
+      record.payload.ingress_physical_qc = buildIngressPhysicalQcSnapshotV1({ source_fact_id: fact_id, metric: record.payload.metric, value: record.payload.value, unit: record.payload.unit });
+    }
+    const recordText = JSON.stringify(record);
     const valueNumForObservation = typeof (p as any).value === "number" && Number.isFinite((p as any).value) ? (p as any).value : null; // Numeric only for observation.value_num.
     const qualityFlags = toQualityFlags((p as any).value); // Normalize simple quality flags.
 
@@ -317,8 +329,8 @@ record = { // Telemetry record.
           clientConn,
           buildMqttObservationInputV1({
             tenant_id: parsed.tenant_id,
-            project_id: process.env.GEOX_PROJECT_ID || "projectA",
-            group_id: process.env.GEOX_GROUP_ID || "groupA",
+            project_id: scope?.project_id ?? "",
+            group_id: scope?.group_id ?? "",
             field_id,
             device_id: parsed.device_id,
             metric: String((p as any).metric ?? ""),

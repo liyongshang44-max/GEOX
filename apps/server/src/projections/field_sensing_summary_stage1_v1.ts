@@ -183,6 +183,14 @@ function pickStage1CustomerSummaryFields(source: Stage1SummarySourceOverviewLike
 export async function ensureFieldSensingSummaryStage1ProjectionV1(db: DbConn): Promise<void> {
   if (!ensurePromise) {
     ensurePromise = (async () => {
+      // Commercial workload roles deliberately have no schema CREATE authority.
+      const authority = await db.query<{ can_create: boolean }>(
+        "SELECT pg_catalog.has_schema_privilege(current_user, 'public', 'CREATE') AS can_create"
+      );
+      if (authority.rows[0]?.can_create === false) {
+        await db.query("SELECT tenant_id, project_id, group_id, field_id, freshness, confidence, canopy_temp_status, evapotranspiration_risk, sensor_quality_level, irrigation_effectiveness, leak_risk, official_soil_metrics_json, time_coverage_v1, evidence_sufficiency_v1, device_health_snapshot_v1, conflict_detection_v1, evidence_sufficiency, computed_at_ts_ms, updated_ts_ms FROM public.field_sensing_summary_stage1_v1 WHERE FALSE");
+        return;
+      }
       await db.query(
         `CREATE TABLE IF NOT EXISTS field_sensing_summary_stage1_v1 (
           tenant_id text NOT NULL,

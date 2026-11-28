@@ -5,6 +5,7 @@
 // never grants Runtime schema CREATE authority.
 
 import { Pool } from "pg";
+import { ensureFieldSensingSummaryStage1ProjectionV1 } from "../projections/field_sensing_summary_stage1_v1.js";
 
 const RUNTIME_ROLE_V1 = "geox_runtime_v1";
 const OVERVIEW_RELATION_V1 = "public.field_sensing_overview_v1";
@@ -184,6 +185,10 @@ export async function runBlineStage1SchemaPreprovisionV1(config: {
     }
 
     await ensureBlineStage1OverviewSchemaV1(pool);
+    // The summary is an existing projection, not a new evidence store.
+    // Provision it here with the existing platform identity, before workload startup.
+    await ensureFieldSensingSummaryStage1ProjectionV1(pool);
+    await pool.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.field_sensing_summary_stage1_v1 TO ${RUNTIME_ROLE_V1}`);
     await verifyBlineStage1OverviewSchemaV1(pool);
     return {
       status: "PASS",

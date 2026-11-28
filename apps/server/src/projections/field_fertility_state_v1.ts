@@ -143,6 +143,14 @@ export function composeFieldFertilityStateFromDerivedRowsV1(rows: DerivedStatePr
 export async function ensureFieldFertilityStateProjectionV1(db: DbConn): Promise<void> {
   if (!ensurePromise) {
     ensurePromise = (async () => {
+      // Commercial workload roles deliberately have no schema CREATE authority.
+      const authority = await db.query<{ can_create: boolean }>(
+        "SELECT pg_catalog.has_schema_privilege(current_user, 'public', 'CREATE') AS can_create"
+      );
+      if (authority.rows[0]?.can_create === false) {
+        await db.query("SELECT tenant_id, project_id, group_id, field_id, fertility_level, salinity_risk, recommendation_bias, confidence, computed_at_ts_ms, source_observed_at_ts_ms, explanation_codes_json, source_observation_ids_json, source_device_ids_json, updated_ts_ms FROM public.field_fertility_state_v1 WHERE FALSE");
+        return;
+      }
       await db.query(
         `CREATE TABLE IF NOT EXISTS field_fertility_state_v1 (
           tenant_id text NOT NULL,
