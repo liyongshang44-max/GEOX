@@ -46,7 +46,7 @@ import {resolve,join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {once} from 'node:events';
 import {digest} from '../src/domain/field/soil_csv_p2_v1.ts';
-import {createCustomerEvidenceHttpResolverV1} from '../src/product_projection/customer/manager_adr_evidence_v1.ts';
+import {createE2E01CustomerDisplayAdmissionV1} from '../src/product_projection/customer/e2e01_customer_display_admission_v1.ts';
 import {exerciseManagerBrowserRecovery} from './manager_browser_recovery_v1.fixture.mjs';
 assert.equal(process.env.GITHUB_EVENT_NAME,'pull_request');
 assert.equal(process.versions.node.split('.')[0],'24');
@@ -93,20 +93,6 @@ try{
  const native=await initializePilotRuntime({statePath:join(dir,'state.json'),snapshotDir:join(dir,'snapshots'),allowSyntheticBootstrap:false});
  delete process.env.ADR_PILOT_BOOTSTRAP_PACKAGE_B64;assert.equal(native.ready,true);
  let mode='active',boundRequest:any=null,readCount=0;const writes:any[]=[];
- native.resolveCustomerEvidenceGrant=async({request,principal,request_sha256}:any)=>{
-  assert.deepEqual(principal,runtimeActor);
-  assert.deepEqual(request.manager_scope,{tenant_id:t,project_id:p,group_id:g,field_id:f,actor_id:'p6_native_actor',mapping_version:'1'});
-  assert.equal(request.review_id,'review-no-soil');
-  // The owner fixture independently binds the actual persisted manager journal, not a fabricated receipt.
-  const rows=(await admin.query("SELECT result,result_sha256 FROM geox_manager_v1.field_native_assessment_p3p_v1 WHERE tenant_id=$1 AND result->>'review_id'=$2 ORDER BY analysis_id",[t,request.review_id])).rows;
-  assert.equal(rows.at(-1)?.result.event,'FINISHED');assert.equal(rows.at(-1)?.result_sha256,request.journal_sha256);assert.equal(rows[0].result.basis_sha256,request.basis_sha256);
-  const a07=rows.find(r=>r.result.event==='WRITE_RECEIPT'&&r.result.details.operation==='executeKnowledgeRetrieval').result.details.receipt;
-  assert.deepEqual(a07.ref,request.retrieval_ref);assert.deepEqual(a07.resource.candidate_refs,request.candidate_refs);
-  if(boundRequest)assert.deepEqual(request,boundRequest);else boundRequest=structuredClone(request);
-  assert.equal(request_sha256,customerEvidenceRequestHash(request,principal));readCount++;
-  const n=Date.now(),checked=mode==='expired'?n-61000:n;
-  return {status:'ACTIVE',permission:'ADR_A07_CUSTOMER_EVIDENCE_DISPLAY',request_sha256,approval_ref:'TEST_ONLY:joint-owner-display',checked_at:new Date(checked).toISOString(),valid_until:new Date(checked+30000).toISOString(),members:[{knowledge_ref:toWireRef(k),crop_code:'CORN',jurisdiction:'US',inspection_ref:toWireRef(inspection.recorded.ref),rights_policy_ref:toWireRef(policy.ref),evaluator_principal:owner,projection_sha256:customerEvidenceMemberHash(item)}]};
- };
  host=createPilotHttpServer(native);host.listen(0,'127.0.0.1');await once(host,'listening');
  const origin='http://127.0.0.1:'+host.address().port;
  assert.equal((await (await fetch(origin+'/ready')).json()).bootstrapMode,'TEST_ONLY_GEOX_JOINT_BROWSER');
@@ -133,11 +119,19 @@ try{
   }
   return {request_sha256,authority_scope:{actor_id:a.actor_id,tenant_id:a.tenant_id,project_id:a.project_id,group_id:a.group_id,field_id:a.field_id!,mapping_version:a.mapping_version,credential_ref:a.credential_ref},principal:wirePrincipal(isRuntime?runtimeActor:actor),authorization_ref:toWireRef(auth),credential_ref:isRuntime?'fixture-joint-a07':'fixture-joint-a01',valid_until_ms:a.valid_until_ms};
  },async getCredential(ref){assert.ok(Object.hasOwn(tokens,ref));return ref;},transport}};
- authorityConfig.resolveAdrCustomerEvidence=createCustomerEvidenceHttpResolverV1({baseUrl:'https://adr.fixture.invalid/',async resolveCredential({request,manager,principal}){
-  assert.deepEqual(principal,wirePrincipal(runtimeActor));
-  return {credential:'fixture-joint-a07',valid_until_ms:manager.valid_until_ms,request_sha256:digest({request,principal,credential_ref:manager.credential_ref}),principal};
- },transport});
- registerManagerPilotModuleV1(app,runtime,authorityConfig);await app.ready();
+ const binding={manager_scope:{tenant_id:t,project_id:p,group_id:g,field_id:f,actor_id:'p6_native_actor',mapping_version:'1'},review_id:'review-no-soil',principal:wirePrincipal(runtimeActor),deployment_ref:toWireRef(deployment.ref),runtime_profile_ref:toWireRef(env.profile.ref),knowledge_release_ref:toWireRef(env.release.ref),member:{knowledge_ref:toWireRef(k),crop_code:'CORN' as const,jurisdiction:'US',inspection_ref:toWireRef(inspection.recorded.ref),rights_policy_ref:toWireRef(policy.ref),evaluator_principal:owner,projection_sha256:customerEvidenceMemberHash(item)}};
+ let managerAuthority:ReturnType<typeof registerManagerPilotModuleV1>;
+ const ownerEnd=new Date(Date.now()+600000).toISOString();
+ const admission=createE2E01CustomerDisplayAdmissionV1({pool:runtime,authority:()=>managerAuthority,binding,baseUrl:'https://adr.fixture.invalid/',transport,nativeRequestHash:customerEvidenceRequestHash,async getCredential(){return 'fixture-joint-a07';},async readOwnerApproval(){
+  return mode==='expired'?null:{status:'ACTIVE',permission:'ADR_A07_CUSTOMER_EVIDENCE_DISPLAY',approval_ref:'TEST_ONLY:joint-owner-display',valid_until:ownerEnd,binding};
+ }});
+ native.resolveCustomerEvidenceGrant=async(input:any)=>{
+  const grant=await admission.resolveGrant(input);
+  if(grant){if(boundRequest)assert.deepEqual(input.request,boundRequest);else boundRequest=structuredClone(input.request);readCount++;}
+  return grant;
+ };
+ authorityConfig.resolveAdrCustomerEvidence=admission.resolve;
+ managerAuthority=registerManagerPilotModuleV1(app,runtime,authorityConfig);await app.ready();
  allowCreate=true;let made=await req('POST',base,{field_id:f,name:'TEST_ONLY joint field',area_ha:2});assert.equal(made.statusCode,200,made.body);allowCreate=false;
  for(const a of ['READ_FIELD_GEOMETRY','UPDATE_FIELD','REQUEST_CROP_REVIEW','READ_CROP_REVIEW'] as const)grants.add(a);
  const boundary=await req('GET',base+'/'+f+'/geometry');assert.equal(boundary.statusCode,200,boundary.body);
@@ -147,12 +141,17 @@ try{
   if(which==='expired'){mode='expired';return;}
   if(which==='restore'){mode='active';return;}
   if(which==='revoked'){
+   assert.ok(boundRequest);
+   const replay=await fetch(origin+'/v1/customer-evidence/resolve',{method:'POST',headers:{authorization:'Bearer fixture-joint-a07','content-type':'application/json'},body:JSON.stringify(boundRequest)});
+   assert.equal(replay.status,403);assert.ok(!(await replay.text()).includes(item.summary));
+   const forged=await admission.resolve(boundRequest,{...binding.manager_scope,action:'READ_CROP_REVIEW',valid_until_ms:Date.now()+10000} as any,binding.principal);
+   assert.equal(forged,null);
    const at=new Date().toISOString();publishRightsRevocation({ledger:native.ledger,logicalId:'revoke.geox-joint-test-only',version:'1',rightsGrantRef:rights.ref,effectiveAt:at,reasonCodes:['TEST_ONLY'],revokerPrincipal:owner,audit:ownerAudit('joint-rights-revoke',at)});return;
   }
   throw Error('unexpected negative mode');
  }});
  assert.deepEqual(writes,[{path:'/v1/decision-problems',status:201},{path:'/v1/knowledge-retrieval-results',status:201}]);
- assert.ok(readCount>=4&&boundRequest);
+ assert.ok(readCount>=2&&boundRequest);
  const foreign=await fetch(origin+'/v1/customer-evidence/resolve',{method:'POST',headers:{authorization:'Bearer fixture-joint-other','content-type':'application/json'},body:JSON.stringify(boundRequest)});
  assert.equal(foreign.status,403);assert.ok(!(await foreign.text()).includes(item.summary));
  wrongGroup=true;const denied=await req('GET',evidencePath);assert.equal(denied.statusCode,404);assert.ok(!denied.body.includes(item.summary));wrongGroup=false;
