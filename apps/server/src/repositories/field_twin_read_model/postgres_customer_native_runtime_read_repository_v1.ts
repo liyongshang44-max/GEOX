@@ -73,5 +73,5 @@ export async function readCustomerNativeRuntimeSnapshotV1(context:PostgresFieldT
   const contentHash=semanticHashV1(content);
   return {...content,customer_native_content_hash:contentHash,
     response_instance_hash:semanticHashV1({content_hash:contentHash,response_started_at:context.response_started_at,
-      visibility_snapshot_hash:context.canonical_visibility_snapshot.visibility_snapshot_hash})};
+      canonical_visibility_snapshot:context.canonical_visibility_snapshot})};
 }

@@ -110,6 +110,7 @@ export async function resolveCustomerNativeParameterSourcesV1(input:{
       else{cropStatus=text(latest[0].payload?.crop_code)&&text(latest[0].payload?.crop_stage)?"EXACT":"INVALID";cropRow=latest[0].row;cropPayload=latest[0].payload;}
     }
     if(cropStatus!=="EXACT")blockers.add(cropStatus==="AMBIGUOUS"?"CROP_CONTEXT_AMBIGUOUS":"EXACT_SEASON_CROP_STAGE_NOT_AVAILABLE");
+    if(cropRow)blockers.add("CROP_CONTEXT_EFFECTIVE_INTERVAL_NOT_DECLARED");
     const cropContext={
       status:cropStatus,source_fact_ref:cropRow?.fact_id??null,occurred_at:cropRow?iso(cropRow.occurred_at):null,
       time_basis:cropRow?"FACT_OCCURRED_AT_ONLY" as const:"NOT_AVAILABLE" as const,
