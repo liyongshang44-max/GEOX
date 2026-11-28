@@ -4,6 +4,7 @@ on:
     paths:
       - 'apps/server/test/manager_a07_native_joint_v1.fixture.ts'
       - 'scripts/product/e2e01/adr-private-admission*.mjs'
+      - 'scripts/product/e2e01/adr-formal-*'
       - 'apps/server/src/domain/agronomy/e2e01_native_review_admission_v1.ts'
       - 'apps/server/test/manager_browser_recovery_v1.fixture.mjs'
       - 'apps/server/src/product_projection/customer/manager_adr_evidence_v1.ts'
@@ -40,5 +41,5 @@ jobs:
           ref: a7a058a6d4b6cce97727af3553cc21d9d79d572b
           path: adr-native-source
           persist-credentials: false
-      - run: node --test scripts/product/e2e01/adr-private-admission.test.mjs
+      - run: node --test scripts/product/e2e01/adr-private-admission.test.mjs scripts/product/e2e01/adr-formal-credential.test.mjs
       - run: ADR_NATIVE_SOURCE="$PWD/adr-native-source" bash scripts/acceptance/p6-bc-native-commands.sh --a07-joint-test-only

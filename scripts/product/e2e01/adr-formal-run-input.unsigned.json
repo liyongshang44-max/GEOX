@@ -1,0 +1,154 @@
+{
+  "schema": "geox.e2e01.formal-run-input.unsigned.v1",
+  "status": "UNSIGNED_PREPARATION_ONLY_NO_RUN_AUTHORITY",
+  "task": "PRODUCT-E2E01-T06-T09",
+  "source_predecessors": {
+    "geox_p3_proof": "6322a797115bb321591f291a5cde94969bba8697",
+    "geox_a01_a07_qualified": "6d0c7f0862b00a1da4f4105f1ccd53d7912f917f",
+    "adr": "a7a058a6d4b6cce97727af3553cc21d9d79d572b",
+    "geox_stacked_base": "7213026ee25ae675b35ff450fdfa4989f912d103"
+  },
+  "native_checkpoint": {
+    "sha256": "sha256:9a89440e8d044223232dc72faca88d03ce95418881ee2c0f46a8fce44dd91b54",
+    "records": 83,
+    "audits": 91,
+    "lineage": 8
+  },
+  "owner_display": {
+    "approval_ref": "sha256:168120b811c1fe22e5bc9830e4dda7824bdff78b46cb0b4f11de5efcfcdc120b",
+    "file_sha256": "sha256:cc2ff4750c26e0a1501731fac1c73342c29f9d2f0d33e8fd457b9108b8b2e606",
+    "manager_policy_sha256": "sha256:5ae9318a4885cd9fa3d1637246c6e575fcefe943803c2f434b99520ccdeb7c38",
+    "viewer_jurisdiction": "CN",
+    "rights_end": "2026-12-05T10:44:58.383Z",
+    "conditional_only": true
+  },
+  "business_basis": {
+    "receipt": "boundary-p3-persistence-1795865144719.json",
+    "evidence_grade": "OWNER_PROVIDED_NATIVE_WINDOWS_RECEIPT",
+    "observed_at_utc": "2026-11-28T11:25:44.707Z",
+    "database_container_id": "46af2e6fdd7be1a1b09ce641a7b311f99fb93c1b6ea201bd08edcc23d34d6179",
+    "manager_scope": {
+      "tenant_id": "tenant_geox_e2e01",
+      "project_id": "project_geox_e2e01",
+      "group_id": "group_geox_e2e01",
+      "field_id": "field_geox_e2e01_001",
+      "actor_id": "fdw_2bb8822d-1b7f-4ad5-9cc7-9dd99aee2083",
+      "mapping_version": "fdw-local-mapping-v1"
+    },
+    "intent": {
+      "review_id": "review_geox_e2e01_001",
+      "question_type": "CROP_SUITABILITY_REVIEW",
+      "crop_codes": [
+        "CORN",
+        "SOYBEAN"
+      ],
+      "target_start_date": "2027-04-01",
+      "target_end_date": "2027-10-01",
+      "documents": []
+    },
+    "basis_sha256": "705fe9e14b8beb136fa3def8efe7b3a6359d63e55964faaea7a507addc36c0c2",
+    "boundary_sha256": "01b4daebb9ac9bcebe1a7001efc46088de3e998649d3018314744336fefaec3d",
+    "result_sha256": "73d7dc95aa7b0f57789d2a868f107c21a8ff9fb8321dccdd77feaaa61cfa44a2",
+    "historical_reference": {
+      "id": "25281db9-db71-5965-94f3-e591ada7c278",
+      "region": "NL",
+      "raw_sha256": "c0c90cffb60894fef08f2a72d0980f267736a2fc45686c46bda319ca76c5e133",
+      "geometry_sha256": "8d4202262136ccbff713cef151349888f516031342bb1da38a7deda90384497f",
+      "meaning": "LOCAL_PUBLIC_HISTORICAL_REFERENCE_FIELD_ONLY_NOT_ACTUAL_OWNED_LAND"
+    }
+  },
+  "proposed_mapping": {
+    "status": "OWNER_AND_CTO_RUN_APPROVAL_REQUIRED",
+    "target_ref": {
+      "organization_id": "org_geox",
+      "tenant_id": "tenant_geox_e2e01",
+      "field_id": "field_geox_e2e01_001"
+    },
+    "program_id": "program_geox_e2e01",
+    "decision_type": "CROP_SUITABILITY_REVIEW",
+    "objective_code": "COMPARE_CROP_SUITABILITY",
+    "use_purpose": "CROP_SUITABILITY_EVIDENCE_RETRIEVAL",
+    "use_class": "ADVISORY",
+    "decision_authority_mode": "RUNTIME_ONLY",
+    "decision_horizon": {
+      "duration": "P1Y"
+    },
+    "decision_deadline": "2027-03-31T00:00:00.000Z",
+    "decision_deadline_note": "PROPOSED planning cutoff before target period, not a biological inference; must be explicitly approved",
+    "crop_action_bindings": [
+      {
+        "crop_code": "CORN",
+        "action_code": "CORN"
+      },
+      {
+        "crop_code": "SOYBEAN",
+        "action_code": "SOYBEAN"
+      }
+    ],
+    "datum_bindings": []
+  },
+  "formal_refs": {
+    "deployment": {
+      "kind": "Deployment",
+      "logical_id": "deployment.geox.e2e01.soy.evidence-only",
+      "version": "1",
+      "semantic_hash": "sha256:85de87a1c1379944f7866467ef41eba37ae69be438896d32232c01dfe917a8a0"
+    },
+    "profile": {
+      "kind": "RuntimeProfile",
+      "logical_id": "runtime-profile.geox.e2e01.soy.evidence-only",
+      "version": "1",
+      "semantic_hash": "sha256:550abfc4e284546e3a632f912d9c6d44a919b3f402580d9b69c5e86e1a0161bf"
+    },
+    "release": {
+      "kind": "KnowledgeRelease",
+      "logical_id": "release.geox.e2e01.soy.model-limit.program-e2e01",
+      "version": "1",
+      "semantic_hash": "sha256:e6c58adc9152c5fe7bccfaf27f03cb3d47fdd3e1883c0ac0964211a790486248"
+    },
+    "runtime_authorization": {
+      "kind": "AuthorizationDecisionAudit",
+      "logical_id": "sha256:a36e8d7cf1afa5ce24aea16fba64bcccb8c511c5147d6ed0d0a855bdfe782ff9",
+      "version": "1",
+      "semantic_hash": "sha256:9d4a7fd7f1cae9bcf2b90048c4710bbba976c6c0c6a3de92e0773bbc77fce36a"
+    },
+    "a01_role": {
+      "kind": "RoleAssignment",
+      "logical_id": "role.geox.e2e01.a01-create",
+      "version": "1",
+      "semantic_hash": "sha256:53e39cb6efcbcb75b962dd37b7d44cc59b8e137ce9612b5ad6779781ed955bb9"
+    }
+  },
+  "services": {
+    "A01": {
+      "client_id": "geox-adr-e2e01-a01-local-v1",
+      "internal_client_id": "e4daff7f-71ce-443d-be96-f04544cd5408",
+      "subject": "7d227ff8-f193-44ca-b56e-20fec0988f7f",
+      "operations": [
+        "createDecisionProblem"
+      ]
+    },
+    "A07": {
+      "client_id": "geox-adr-e2e01-a07-local-v1",
+      "internal_client_id": "ee6ba793-9de0-4557-b662-ec37307f123a",
+      "subject": "857c0705-3019-4628-b4f8-aba6bcfe8d23",
+      "operations": [
+        "executeKnowledgeRetrieval",
+        "resolveCustomerEvidence"
+      ]
+    }
+  },
+  "formal_run_approval": null,
+  "credential_issuance_authorized": false,
+  "pilot_authorized": false,
+  "manager_execution_authorized": false,
+  "production_authorized": false,
+  "action_authority": false,
+  "remaining": [
+    "exact final source qualification",
+    "independent formal run permit and target/decision mapping",
+    "explicit authorized service-client activation/secret handoff with readback and containment",
+    "actual local launcher and durable recovery qualification",
+    "actual manager browser A01/A07 execution"
+  ]
+}
