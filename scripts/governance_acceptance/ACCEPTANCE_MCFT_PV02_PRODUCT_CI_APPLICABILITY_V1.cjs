@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const {classify,GROUPS}=require('./MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs');
+const {classify,GROUPS,CONTROL_PATHS}=require('./MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs');
 for(const [key,paths] of Object.entries(GROUPS)){
  const r=classify(paths);assert.equal(r.mode,'product-shared-regression');assert.equal(r.unknown.length,0);
  assert(r.required_regressions.includes('MAIN_CI'));assert(r.required_regressions.includes('BLINE_AUTHORITY_UNCHANGED'));
@@ -15,5 +15,10 @@ assert.equal(classify([...GROUPS.ingress,...GROUPS.math,...GROUPS.composer,...GR
 for(const p of ['unknown.ts','apps/server/src/runtime/twin_runtime/unregistered.ts','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json','docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json','scripts/governance_acceptance/MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs','.github/workflows/mcft-cap-09-s2-registry-registration.yml']){
  const r=classify([...GROUPS.ingress,p]);assert.equal(r.mode,'historical');assert.deepEqual(r.unknown,[p]);
 }
+for(const p of ['.github/workflows/mcft-pv02-i1-native-mqtt.yml','.github/workflows/mcft-pv02-i2-customer-scalar.yml',
+ '.github/workflows/mcft-pv02-i2e-native-composition.yml','.github/workflows/mcft-pv02-product-ci-applicability.yml',
+ 'scripts/governance_acceptance/MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs',
+ 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json',
+ 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'])assert(CONTROL_PATHS.includes(p),p);
 assert.equal(classify([]).mode,'historical');
 console.log('PASS: exact I1/I2/I2E/E2/E7/E8 product groups, source resolution, fact visibility, predecessor/idempotency, S4 read auth, unknown/authority/mixed change fail-closed. No historical qualification claimed.');

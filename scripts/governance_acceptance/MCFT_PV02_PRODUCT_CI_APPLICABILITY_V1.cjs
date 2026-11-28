@@ -44,6 +44,15 @@ const GROUPS={
 };
 const CLASSIFIER='scripts/governance_acceptance/MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs';
 const WORKFLOWS=['.github/workflows/mcft-cap-09-s2-registry-registration.yml','.github/workflows/mcft-cap-09-s2-database-evidence-ingress.yml','.github/workflows/mcft-cap-09-s6-production-equivalent-shadow-simulator.yml','.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'];
+const PRODUCT_WORKFLOWS=[
+  '.github/workflows/mcft-pv02-i1-native-mqtt.yml',
+  '.github/workflows/mcft-pv02-i2-customer-scalar.yml',
+  '.github/workflows/mcft-pv02-i2e-native-composition.yml',
+  '.github/workflows/mcft-pv02-product-ci-applicability.yml'
+];
+const CONTROL_PATHS=[CLASSIFIER,...WORKFLOWS,...PRODUCT_WORKFLOWS,
+  'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json',
+  'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'];
 const KNOWN=new Set(Object.values(GROUPS).flat());
 function classify(paths){
   const changed=[...new Set(paths)].sort();
@@ -72,8 +81,7 @@ function main(){
   let result=classify(diff.map(row=>row[1]));
   // No delete/rename and no candidate-self authorization. All controlling paths
   // must have the same blob as the approved base, otherwise historical gates run.
-  const control=[CLASSIFIER,...WORKFLOWS,'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json','docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'];
-  const controlExact=control.every(p=>{const b=blob(base,p);return b&&b===blob(head,p);});
+  const controlExact=CONTROL_PATHS.every(p=>{const b=blob(base,p);return b&&b===blob(head,p);});
   if(!controlExact||diff.some(row=>!['A','M'].includes(row[0]))||git('merge-base',base,head)!==base)result={...result,mode:'historical'};
   const proof={schema_version:'MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1',status:result.mode==='product-shared-regression'?'PRODUCT_REGRESSION_REQUIRED_NO_HISTORICAL_QUALIFICATION':'HISTORICAL_OR_UNCLASSIFIED_USE_EXISTING_GATES',
     base_sha:base,head_sha:head,control_exact:controlExact,...result,production_authorized:false,historical_qualification_claimed:false};
@@ -83,4 +91,4 @@ function main(){
   console.log(JSON.stringify(proof));
 }
 if(require.main===module)main();
-module.exports={classify,GROUPS};
+module.exports={classify,GROUPS,CONTROL_PATHS};
