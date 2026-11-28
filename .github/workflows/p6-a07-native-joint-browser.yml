@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: liyongshang44-max/agronomy-deployment-runtime
-          ref: 118df952cfc95e7b8327b6ed5f0d7eb591326cb7
+          ref: a7a058a6d4b6cce97727af3553cc21d9d79d572b
           path: adr-native-source
           persist-credentials: false
       - run: ADR_NATIVE_SOURCE="$PWD/adr-native-source" bash scripts/acceptance/p6-bc-native-commands.sh --a07-joint-test-only

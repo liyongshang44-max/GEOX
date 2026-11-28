@@ -74,6 +74,9 @@ export async function exerciseManagerBrowserRecovery(app,field,nativePath,joint)
    if(joint){
     await page.getByRole('heading',{name:joint.item.source_title}).waitFor();
     await page.getByText(joint.item.summary,{exact:true}).waitFor();
+    await page.getByText(joint.item.publication.attribution,{exact:true}).waitFor();
+    await page.getByText(joint.item.publication.modification_notice,{exact:true}).waitFor();
+    assert.equal(await page.getByRole('link',{name:'CC BY 4.0',exact:true}).getAttribute('href'),'https://creativecommons.org/licenses/by/4.0/');
     await page.getByText('大豆知识尚未纳入本次发布；双作物证据不完整。',{exact:true}).waitFor();
     const evidence=await page.evaluate(p=>fetch(p).then(r=>r.json()),nativePath.replace('/native-assessment','/knowledge-evidence'));
     assert.equal(evidence.display_status,'AUTHORIZED_RECORDED_EVIDENCE');assert.deepEqual(evidence.items[0].knowledge_ref,joint.item.knowledge_ref);

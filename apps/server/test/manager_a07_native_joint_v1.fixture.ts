@@ -52,18 +52,20 @@ assert.equal(process.env.GITHUB_EVENT_NAME,'pull_request');
 assert.equal(process.versions.node.split('.')[0],'24');
 assert.ok(!process.env.ADR_PILOT_BOOTSTRAP_PACKAGE_B64&&!process.env.ADR_PILOT_TOKEN_BINDINGS_JSON&&!process.env.ADR_PILOT_STATE_PATH&&!process.env.ADR_PILOT_SNAPSHOT_DIR);
 const root=resolve(process.env.ADR_NATIVE_SOURCE??'');
-assert.equal(execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),'118df952cfc95e7b8327b6ed5f0d7eb591326cb7');
+assert.equal(execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),'a7a058a6d4b6cce97727af3553cc21d9d79d572b');
 const imp=(p:string)=>import(pathToFileURL(join(root,p)).href);
 const {createDeploymentEnvironment,baseDeployment,publishAuthorizedDeployment,createRuntimeReadAuthorization}=await imp('acceptance/deployment/fixture.mjs');
 const {PERMISSIONS,publishRoleAssignment,publishBuiltinRoleAssignment,authorizeDecisionProblemCreation,recordAuthorizationDecision}=await imp('packages/authorization/src/index.mjs');
 const {audit}=await imp('acceptance/context-manifest/fixtures.mjs');
 const {createInspectionAuthorization}=await imp('acceptance/workbench/fixture.mjs');
 const {createAuthorityRecoveryCheckpoint}=await imp('packages/recovery-operations/src/index.mjs');
-const {publishRightsPolicy,publishRightsGrant,publishRightsRevocation}=await imp('packages/rights-authority/src/index.mjs');
+const {publishRightsGrant,publishRightsRevocation}=await imp('packages/rights-authority/src/index.mjs');
+const {licensedPublicationFixture}=await imp('acceptance/derived-knowledge/fixture.mjs');
 const {initializePilotRuntime,createPilotHttpServer}=await imp('deploy/adr-pilot-host/server.mjs');
 const {boundedMemberDisplay,customerEvidenceMemberHash,customerEvidenceRequestHash}=await imp('deploy/adr-pilot-host/customer-evidence.mjs');
 const {toWireRef}=await imp('acceptance/v0.3-pilot-release/fixture.mjs');
-const env=createDeploymentEnvironment('geox-joint-test-only');
+const owner={principalId:'fixture-joint-rights-owner',type:'USER',organizationId:'org-a',tenantId:'tenant-a'};
+const env=createDeploymentEnvironment('geox-joint-test-only',{},{sourceFixture:licensedPublicationFixture('geox-joint',owner)});
 const decisionType='FIXTURE_NATIVE_MANAGER_REVIEW',use='CORN_IRRIGATION_APPLICABILITY',original=baseDeployment(env);
 const deployment=publishAuthorizedDeployment(env,{logicalId:'deployment.geox-joint-test-only',deployment:{...original,effectiveInterval:{start:'2026-08-16T00:00:00Z',end:'2030-01-01T00:00:00Z'},deploymentScope:{...original.deploymentScope,decisionTypes:[decisionType]}}});
 const actor={principalId:'fixture-geox-joint-proxy',type:'SERVICE_ACCOUNT',organizationId:'org-a',tenantId:'tenant-a',programIds:['pilot-a']},runtimeActor=env.runtimePrincipal;
@@ -75,13 +77,12 @@ const retrievalAuth=createRuntimeReadAuthorization(env,deployment.ref.logicalId,
 const role=publishBuiltinRoleAssignment({ledger:env.ledger,logicalId:'role.geox-joint-test-only.inspect',version:'1',principal:runtimeActor,role:'AGRONOMY_REVIEWER',scope:{organizationId:'org-a',tenantId:'tenant-a'},audit:audit(actor,'joint-inspection-role')});
 const q=env.qualified,k=q.knowledge.ref;
 const inspection=createInspectionAuthorization({env},{knowledgeRef:k,principal:runtimeActor,roleAssignments:[role]});assert.equal(inspection.decision.allowed,true);
-const owner={principalId:'fixture-joint-rights-owner',type:'USER',organizationId:'org-a',tenantId:'tenant-a'};
 const ownerAudit=(id:string,at:string)=>({eventId:id,occurredAt:at,actor:{id:owner.principalId,type:owner.type}});
 const stamp=new Date().toISOString();
-const policy=publishRightsPolicy({ledger:env.ledger,logicalId:'policy.geox-joint-test-only',version:'1',ownership:q.ownership,ownerPrincipal:owner,basis:{class:'INTERNAL_POLICY',evidenceRefs:[]},audit:ownerAudit('joint-rights-policy',stamp)});
-const rights=publishRightsGrant({ledger:env.ledger,logicalId:'grant.geox-joint-test-only',version:'1',rightsPolicyRef:policy.ref,subjectRef:q.artifact.ref,grantee:{organizationId:'org-a',tenantId:'tenant-a',principalId:runtimeActor.principalId,principalType:runtimeActor.type},rules:[{operation:'DISPLAY_EXCERPT',purposes:['GEOX_CUSTOMER_EVIDENCE'],jurisdictions:['US'],obligations:[]}],validFrom:stamp,validUntil:new Date(Date.now()+600000).toISOString(),grantorPrincipal:owner,audit:ownerAudit('joint-rights-grant',stamp)});
+const policy=env.ledger.resolve(q.artifact.semanticPayload.rightsSnapshot.policyRef);
+const rights=publishRightsGrant({ledger:env.ledger,logicalId:'grant.geox-joint-test-only',version:'1',rightsPolicyRef:policy.ref,subjectRef:q.artifact.ref,grantee:{organizationId:'org-a',tenantId:'tenant-a',principalId:runtimeActor.principalId,principalType:runtimeActor.type},rules:[{operation:'DISPLAY_EXCERPT',purposes:['GEOX_CUSTOMER_EVIDENCE'],jurisdictions:['US'],obligations:['RETAIN_SOURCE_ATTRIBUTION_LICENSE_ADAPTATION_NOTICE']}],validFrom:stamp,validUntil:new Date(Date.now()+600000).toISOString(),grantorPrincipal:owner,audit:ownerAudit('joint-rights-grant',stamp)});
 const item=boundedMemberDisplay(env.ledger,k,use,'CORN');
-const tokens={'fixture-joint-a01':wirePrincipal(actor),'fixture-joint-a07':wirePrincipal(runtimeActor),'fixture-joint-other':{...wirePrincipal(runtimeActor),tenant_id:'other'}};
+const tokens={'fixture-joint-a01':{principal:wirePrincipal(actor),allowed_operations:['createDecisionProblem']},'fixture-joint-a07':{principal:wirePrincipal(runtimeActor),allowed_operations:['executeKnowledgeRetrieval','resolveCustomerEvidence']},'fixture-joint-other':{principal:{...wirePrincipal(runtimeActor),tenant_id:'other'},allowed_operations:['resolveCustomerEvidence']}};
 const dir=await mkdtemp(join(tmpdir(),'geox-a07-joint-'));
 let host:any;
 const base='/api/v1/manager/fields',reviewPath=base+'/'+f+'/crop-reviews/review-no-soil',nativePath=reviewPath+'/native-assessment',evidencePath=reviewPath+'/knowledge-evidence';
@@ -109,6 +110,10 @@ try{
  host=createPilotHttpServer(native);host.listen(0,'127.0.0.1');await once(host,'listening');
  const origin='http://127.0.0.1:'+host.address().port;
  assert.equal((await (await fetch(origin+'/ready')).json()).bootstrapMode,'TEST_ONLY_GEOX_JOINT_BROWSER');
+ for(const path of ['/v1/applicability-assessments','/v1/decision-problems']){
+  const denied=await fetch(origin+path,{method:'POST',headers:{authorization:'Bearer fixture-joint-a07','content-type':'application/json'},body:'{}'});
+  assert.equal(denied.status,404);assert.equal((await denied.json()).code,'HTTP_OPERATION_NOT_ALLOWED');
+ }
  const transport:typeof fetch=async(url,init)=>{
   const u=new URL(String(url));assert.equal(u.origin,'https://adr.fixture.invalid');
   const r=await fetch(origin+u.pathname,init);
@@ -151,7 +156,7 @@ try{
  const foreign=await fetch(origin+'/v1/customer-evidence/resolve',{method:'POST',headers:{authorization:'Bearer fixture-joint-other','content-type':'application/json'},body:JSON.stringify(boundRequest)});
  assert.equal(foreign.status,403);assert.ok(!(await foreign.text()).includes(item.summary));
  wrongGroup=true;const denied=await req('GET',evidencePath);assert.equal(denied.statusCode,404);assert.ok(!denied.body.includes(item.summary));wrongGroup=false;
- console.log(JSON.stringify({status:'A07_JOINT_BROWSER_TEST_ONLY_PASS',adr_subject:'118df952cfc95e7b8327b6ed5f0d7eb591326cb7',geox_subject:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),retrieval_ref:boundRequest.retrieval_ref,knowledge_release_ref:boundRequest.knowledge_release_ref,basis_sha256:boundRequest.basis_sha256,journal_sha256:boundRequest.journal_sha256,knowledge_ref:item.knowledge_ref,rights_grant_ref:toWireRef(rights.ref),read_count:readCount,identity_mode:'TEST_ONLY_SESSION_AND_MANAGER_IDENTITY_PORT',action_authority:false,public_release:false}));
+ console.log(JSON.stringify({status:'A07_JOINT_BROWSER_TEST_ONLY_PASS',adr_subject:'a7a058a6d4b6cce97727af3553cc21d9d79d572b',geox_subject:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),retrieval_ref:boundRequest.retrieval_ref,knowledge_release_ref:boundRequest.knowledge_release_ref,basis_sha256:boundRequest.basis_sha256,journal_sha256:boundRequest.journal_sha256,knowledge_ref:item.knowledge_ref,rights_grant_ref:toWireRef(rights.ref),read_count:readCount,identity_mode:'TEST_ONLY_SESSION_AND_MANAGER_IDENTITY_PORT',action_authority:false,public_release:false}));
 }finally{
  if(host)await new Promise<void>(ok=>host.close(()=>ok()));
  delete process.env.ADR_PILOT_BOOTSTRAP_PACKAGE_B64;delete process.env.ADR_PILOT_TOKEN_BINDINGS_JSON;

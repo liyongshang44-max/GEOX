@@ -11,6 +11,17 @@ const hash=(v:unknown):v is string=>typeof v==='string'&&/^sha256:[a-f0-9]{64}$/
 const ref=(v:unknown,kind:string):v is AdrRefV1=>exact(v,['kind','logical_id','version','semantic_hash'])&&v.kind===kind&&txt(v.logical_id)&&txt(v.version)&&hash(v.semantic_hash);
 function need(v:unknown):asserts v{if(!v)throw Error('ADR_A07_EVIDENCE_INTEGRITY');}
 const same=(a:unknown,b:unknown)=>digest(a)===digest(b);
+const CC_BY_URL='https://creativecommons.org/licenses/by/4.0/';
+const LICENSE_KEYS=['attribution','license','license_url','modification_notice'];
+const MODIFICATION_NOTICE='The displayed claim summary is a paraphrase/adaptation of the cited publication; it is not the original article or a grant of underlying data or model rights.';
+export function validateEvidencePublicationV1(value:unknown,sourceTitle:string):Record<string,string>{
+ need(obj(value)&&Object.keys(value).every(k=>['doi','journal','citation','publisher','year','authors',...LICENSE_KEYS].includes(k)&&txt(value[k],700)));
+ const present=LICENSE_KEYS.filter(k=>Object.hasOwn(value,k));
+ if(present.length){
+  need(present.length===LICENSE_KEYS.length&&value.license==='CC-BY-4.0'&&value.license_url===CC_BY_URL&&value.attribution.includes(CC_BY_URL)&&value.attribution.includes(sourceTitle)&&value.modification_notice===MODIFICATION_NOTICE);
+ }
+ return value as Record<string,string>;
+}
 export type CustomerEvidenceRequestV1={retrieval_ref:AdrRefV1;decision_problem_ref:AdrRefV1;deployment_ref:AdrRefV1;runtime_profile_ref:AdrRefV1;knowledge_release_ref:AdrRefV1;candidate_refs:AdrRefV1[];manager_scope:{tenant_id:string;project_id:string;group_id:string;field_id:string;actor_id:string;mapping_version:string};question_crops:string[];basis_sha256:string;journal_sha256:string;review_id:string};
 export type CustomerEvidenceResolverV1=(request:CustomerEvidenceRequestV1,authority:ManagerAuthorityV1,principal:AdrPrincipalV1)=>Promise<unknown>;
 export function createCustomerEvidenceHttpResolverV1(config:{baseUrl:string;resolveCredential:(input:{request:CustomerEvidenceRequestV1;manager:ManagerAuthorityV1;principal:AdrPrincipalV1})=>Promise<{credential:string;valid_until_ms:number;request_sha256:string;principal:AdrPrincipalV1}|null>;transport?:typeof fetch}):CustomerEvidenceResolverV1{
@@ -46,8 +57,8 @@ export async function buildManagerAdrEvidenceV1(j:{attempt:string;events:Obj[];p
  const strings=(v:unknown)=>{need(Array.isArray(v)&&v.length<=64&&v.every(x=>txt(x,1000)));return [...v] as string[];};
  const items=raw.items.map((i:unknown)=>{
   need(exact(i,['knowledge_ref','source_ref','artifact_ref','claim_ref','qualification_ref','artifact_sha256','crop_code','source_title','publication','summary','allowed_use','limitations','conditions','inspection_ref','rights_policy_ref','rights_grant_refs','rights_checked_at'])&&ref(i.knowledge_ref,'QualifiedKnowledge')&&req.candidate_refs.some(r=>same(r,i.knowledge_ref))&&ref(i.source_ref,'Source')&&ref(i.artifact_ref,'SourceArtifact')&&ref(i.claim_ref,'Claim')&&ref(i.qualification_ref,'ScientificQualificationDecision')&&hash(i.artifact_sha256)&&question_crops.includes(i.crop_code)&&txt(i.source_title,500)&&txt(i.summary,1200)&&i.allowed_use===v.query_semantics?.use_purpose&&txt(i.allowed_use)&&ref(i.inspection_ref,'AuthorizationDecisionAudit')&&ref(i.rights_policy_ref,'RightsPolicy')&&Array.isArray(i.rights_grant_refs)&&i.rights_grant_refs.length>0&&i.rights_grant_refs.length<=32&&i.rights_grant_refs.every((r:unknown)=>ref(r,'RightsGrant'))&&Number.isFinite(Date.parse(i.rights_checked_at))&&Date.parse(i.rights_checked_at)<=now&&now-Date.parse(i.rights_checked_at)<=60000);
-  need(obj(i.publication)&&Object.keys(i.publication).every(k=>['doi','journal','citation','publisher','year','authors'].includes(k)&&txt(i.publication[k],700)));
-  return {knowledge_ref:i.knowledge_ref,source_ref:i.source_ref,artifact_ref:i.artifact_ref,claim_ref:i.claim_ref,qualification_ref:i.qualification_ref,artifact_sha256:i.artifact_sha256,crop_code:i.crop_code as string,source_title:i.source_title,publication:i.publication as Record<string,string>,summary:i.summary,allowed_use:i.allowed_use,limitations:strings(i.limitations),conditions:strings(i.conditions),inspection_ref:i.inspection_ref,rights_policy_ref:i.rights_policy_ref,rights_grant_refs:i.rights_grant_refs,rights_checked_at:i.rights_checked_at};
+  const publication=validateEvidencePublicationV1(i.publication,i.source_title);
+  return {knowledge_ref:i.knowledge_ref,source_ref:i.source_ref,artifact_ref:i.artifact_ref,claim_ref:i.claim_ref,qualification_ref:i.qualification_ref,artifact_sha256:i.artifact_sha256,crop_code:i.crop_code as string,source_title:i.source_title,publication,summary:i.summary,allowed_use:i.allowed_use,limitations:strings(i.limitations),conditions:strings(i.conditions),inspection_ref:i.inspection_ref,rights_policy_ref:i.rights_policy_ref,rights_grant_refs:i.rights_grant_refs,rights_checked_at:i.rights_checked_at};
  });
  need(new Set(items.map(i=>digest(i.knowledge_ref))).size===req.candidate_refs.length);
  const coverage_crops=[...new Set(items.map(i=>i.crop_code))].sort();need(same(raw.coverage_crops,coverage_crops));

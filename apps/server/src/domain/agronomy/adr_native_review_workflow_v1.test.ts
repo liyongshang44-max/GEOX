@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {validateEvidencePublicationV1} from '../../product_projection/customer/manager_adr_evidence_v1.js';
 import type {ManagerAuthorityV1,ManagerAuthorizerV1} from '../../auth/manager_authority_v1.js';
 import {createAdrReviewConsumerV1,type AdrRefV1,type AdrReviewBindingV1} from './adr_review_consumer_v1.js';
 import {prepareNativeReviewPlanV1,executeNativeReviewPlanV1,type NativeReviewPlanRequestV1} from './adr_native_review_workflow_v1.js';
@@ -81,4 +82,12 @@ test('A01 semantics and A07 profile/query/authority mismatches stop; missing bin
   assert.equal(events.filter(e=>e.event==='WRITE_RECEIPT').length,mode==='wrong-problem'||mode==='missing-auth'?0:1);
  }
  assert.throws(()=>prepareNativeReviewPlanV1(request,{...raw,runtime_profile_ref:R('KnowledgeRelease','bad')}),/ADR_RELEASE_DEPLOYMENT_REQUIRED/);
+});
+
+test('customer evidence publication rejects incomplete or altered CC BY presentation',()=>{
+ const title='TEST_ONLY publication',url='https://creativecommons.org/licenses/by/4.0/';
+ const publication={citation:'TEST_ONLY citation',license:'CC-BY-4.0',license_url:url,attribution:'TEST_ONLY authors, '+title+'. '+url,modification_notice:'The displayed claim summary is a paraphrase/adaptation of the cited publication; it is not the original article or a grant of underlying data or model rights.'};
+ assert.deepEqual(validateEvidencePublicationV1(publication,title),publication);
+ assert.deepEqual(validateEvidencePublicationV1({citation:'TEST_ONLY'},title),{citation:'TEST_ONLY'});
+ for(const changed of [{...publication,license_url:'https://other.invalid/'},{...publication,modification_notice:'Original article'},{...publication,attribution:'Unknown'},{citation:'TEST_ONLY',license:'CC-BY-4.0'}])assert.throws(()=>validateEvidencePublicationV1(changed,title),/ADR_A07_EVIDENCE_INTEGRITY/);
 });
