@@ -40,7 +40,8 @@ authorityConfig.resolveLandInventory=async({assertion})=>{
 };
 
 import {execFileSync} from 'node:child_process';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdtemp,rm,writeFile} from 'node:fs/promises';
+import {sha as privateSha,sealOwnerDisplayApproval,ownerDisplaySchema,createOwnerDisplayApprovalLoader,createIsolatedPrivateCredentialBinding,createPrivateLoopbackTransport} from '../../../scripts/product/e2e01/adr-private-admission.mjs';
 import {tmpdir} from 'node:os';
 import {resolve,join} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -82,27 +83,28 @@ const stamp=new Date().toISOString();
 const policy=env.ledger.resolve(q.artifact.semanticPayload.rightsSnapshot.policyRef);
 const rights=publishRightsGrant({ledger:env.ledger,logicalId:'grant.geox-joint-test-only',version:'1',rightsPolicyRef:policy.ref,subjectRef:q.artifact.ref,grantee:{organizationId:'org-a',tenantId:'tenant-a',principalId:runtimeActor.principalId,principalType:runtimeActor.type},rules:[{operation:'DISPLAY_EXCERPT',purposes:['GEOX_CUSTOMER_EVIDENCE'],jurisdictions:['US'],obligations:['RETAIN_SOURCE_ATTRIBUTION_LICENSE_ADAPTATION_NOTICE']}],validFrom:stamp,validUntil:new Date(Date.now()+600000).toISOString(),grantorPrincipal:owner,audit:ownerAudit('joint-rights-grant',stamp)});
 const item=boundedMemberDisplay(env.ledger,k,use,'CORN');
-const tokens={'fixture-joint-a01':{principal:wirePrincipal(actor),allowed_operations:['createDecisionProblem']},'fixture-joint-a07':{principal:wirePrincipal(runtimeActor),allowed_operations:['executeKnowledgeRetrieval','resolveCustomerEvidence']},'fixture-joint-other':{principal:{...wirePrincipal(runtimeActor),tenant_id:'other'},allowed_operations:['resolveCustomerEvidence']}};
+let privateCredentials:ReturnType<typeof createIsolatedPrivateCredentialBinding>|undefined;
 const dir=await mkdtemp(join(tmpdir(),'geox-a07-joint-'));
 let host:any;
 const base='/api/v1/manager/fields',reviewPath=base+'/'+f+'/crop-reviews/review-no-soil',nativePath=reviewPath+'/native-assessment',evidencePath=reviewPath+'/knowledge-evidence';
 const req=(method:'GET'|'POST'|'PUT',url:string,body?:any)=>app.inject({method,url,headers:{authorization:'Bearer fixture-native'},...(body===undefined?{}:{payload:body})});
 try{
- process.env.ADR_PILOT_TOKEN_BINDINGS_JSON=JSON.stringify(tokens);
  process.env.ADR_PILOT_BOOTSTRAP_PACKAGE_B64=Buffer.from(JSON.stringify({checkpoint:createAuthorityRecoveryCheckpoint({ledger:env.ledger,capturedAt:new Date().toISOString()}),metadata:{mode:'TEST_ONLY_GEOX_JOINT_BROWSER',idempotency:{},workbenchAccess:{}}})).toString('base64');
  const native=await initializePilotRuntime({statePath:join(dir,'state.json'),snapshotDir:join(dir,'snapshots'),allowSyntheticBootstrap:false});
  delete process.env.ADR_PILOT_BOOTSTRAP_PACKAGE_B64;assert.equal(native.ready,true);
+ privateCredentials=createIsolatedPrivateCredentialBinding({runtime:native,a01:actor,a07:runtimeActor,validUntilMs:Date.now()+600000});
  let mode='active',boundRequest:any=null,readCount=0;const writes:any[]=[];
  host=createPilotHttpServer(native);host.listen(0,'127.0.0.1');await once(host,'listening');
  const origin='http://127.0.0.1:'+host.address().port;
  assert.equal((await (await fetch(origin+'/ready')).json()).bootstrapMode,'TEST_ONLY_GEOX_JOINT_BROWSER');
  for(const path of ['/v1/applicability-assessments','/v1/decision-problems']){
-  const denied=await fetch(origin+path,{method:'POST',headers:{authorization:'Bearer fixture-joint-a07','content-type':'application/json'},body:'{}'});
+  const denied=await fetch(origin+path,{method:'POST',headers:{authorization:'Bearer '+privateCredentials!.getCredential('A07'),'content-type':'application/json'},body:'{}'});
   assert.equal(denied.status,404);assert.equal((await denied.json()).code,'HTTP_OPERATION_NOT_ALLOWED');
  }
+ const privateTransport=createPrivateLoopbackTransport({port:host.address().port,logicalOrigin:'https://adr.fixture.invalid'});
  const transport:typeof fetch=async(url,init)=>{
   const u=new URL(String(url));assert.equal(u.origin,'https://adr.fixture.invalid');
-  const r=await fetch(origin+u.pathname,init);
+  const r=await privateTransport(url,init);
   if(u.pathname!=='/v1/customer-evidence/resolve'){writes.push({path:u.pathname,status:r.status});if(r.status!==201)console.log('TEST_ONLY_NATIVE_HOST_REJECTION',r.status,(await r.clone().json()).code);}
   return r;
  };
@@ -117,14 +119,17 @@ try{
    const decision=authorizeDecisionProblemCreation({principal:actor,roleAssignments:[native.ledger.resolve(assignment.ref)],authorizationScope:{...scope,resourceId:request.logical_id}});assert.equal(decision.allowed,true);
    auth=recordAuthorizationDecision({ledger:native.ledger,decision,audit:audit(actor,'joint-actual-problem-auth')}).ref;
   }
-  return {request_sha256,authority_scope:{actor_id:a.actor_id,tenant_id:a.tenant_id,project_id:a.project_id,group_id:a.group_id,field_id:a.field_id!,mapping_version:a.mapping_version,credential_ref:a.credential_ref},principal:wirePrincipal(isRuntime?runtimeActor:actor),authorization_ref:toWireRef(auth),credential_ref:isRuntime?'fixture-joint-a07':'fixture-joint-a01',valid_until_ms:a.valid_until_ms};
- },async getCredential(ref){assert.ok(Object.hasOwn(tokens,ref));return ref;},transport}};
+  return {request_sha256,authority_scope:{actor_id:a.actor_id,tenant_id:a.tenant_id,project_id:a.project_id,group_id:a.group_id,field_id:a.field_id!,mapping_version:a.mapping_version,credential_ref:a.credential_ref},principal:wirePrincipal(isRuntime?runtimeActor:actor),authorization_ref:toWireRef(auth),credential_ref:isRuntime?'A07':'A01',valid_until_ms:a.valid_until_ms};
+ },async getCredential(ref){const token=privateCredentials!.getCredential(ref);assert.ok(token);return token;},transport}};
  const binding={manager_scope:{tenant_id:t,project_id:p,group_id:g,field_id:f,actor_id:'p6_native_actor',mapping_version:'1'},review_id:'review-no-soil',principal:wirePrincipal(runtimeActor),deployment_ref:toWireRef(deployment.ref),runtime_profile_ref:toWireRef(env.profile.ref),knowledge_release_ref:toWireRef(env.release.ref),member:{knowledge_ref:toWireRef(k),crop_code:'CORN' as const,jurisdiction:'US',inspection_ref:toWireRef(inspection.recorded.ref),rights_policy_ref:toWireRef(policy.ref),evaluator_principal:owner,projection_sha256:customerEvidenceMemberHash(item)}};
  let managerAuthority:ReturnType<typeof registerManagerPilotModuleV1>;
- const ownerEnd=new Date(Date.now()+600000).toISOString();
- const admission=createE2E01CustomerDisplayAdmissionV1({pool:runtime,authority:()=>managerAuthority,binding,baseUrl:'https://adr.fixture.invalid/',transport,nativeRequestHash:customerEvidenceRequestHash,async getCredential(){return 'fixture-joint-a07';},async readOwnerApproval(){
-  return mode==='expired'?null:{status:'ACTIVE',permission:'ADR_A07_CUSTOMER_EVIDENCE_DISPLAY',approval_ref:'TEST_ONLY:joint-owner-display',valid_until:ownerEnd,binding};
- }});
+ const ownerEnd=rights.semanticPayload.validUntil;
+ const approvalPath=join(dir,'test-only-owner-approval.json'),revocationPath=join(dir,'REVOKED'),managerPolicyPath=join(dir,'test-only-policy.json');
+ const policyBytes='TEST_ONLY_MANAGER_POLICY';await writeFile(managerPolicyPath,policyBytes);
+ const ownerMaterial=sealOwnerDisplayApproval({schema:ownerDisplaySchema,decision:'AUTHORIZE_BOUNDED_DISPLAY_ADMISSION',status:'ACTIVE',owner_subject:owner.principalId,owner_authentication_sha256:privateSha('TEST_ONLY_OWNER'),checkpoint_sha256:privateSha('TEST_ONLY_CHECKPOINT'),manager_policy_sha256:privateSha(policyBytes),binding,viewer_jurisdiction:'US',purpose:'GEOX_CUSTOMER_EVIDENCE',approved_at:new Date().toISOString(),valid_until:ownerEnd});
+ const bytes=JSON.stringify(ownerMaterial);await writeFile(approvalPath,bytes);
+ const loadApproval=createOwnerDisplayApprovalLoader({approvalPath,revocationPath,managerPolicyPath,expectedFileSha256:privateSha(bytes),managerPolicySha256:privateSha(policyBytes),checkpointSha256:privateSha('TEST_ONLY_CHECKPOINT'),ownerSubject:owner.principalId,binding,rightsEnd:ownerEnd});
+ const admission=createE2E01CustomerDisplayAdmissionV1({pool:runtime,authority:()=>managerAuthority,binding,baseUrl:'https://adr.fixture.invalid/',transport,nativeRequestHash:customerEvidenceRequestHash,async getCredential(){return privateCredentials!.getCredential('A07');},readOwnerApproval:loadApproval});
  native.resolveCustomerEvidenceGrant=async(input:any)=>{
   const grant=await admission.resolveGrant(input);
   if(grant){if(boundRequest)assert.deepEqual(input.request,boundRequest);else boundRequest=structuredClone(input.request);readCount++;}
@@ -138,11 +143,11 @@ try{
  const updated=await req('PUT',base+'/'+f,{polygon_geojson:{type:'Polygon',coordinates:[[[0,0],[2,0],[2,2],[0,2],[0,0]]]},expected_updated_ts_ms:boundary.json().field_updated_ts_ms});assert.equal(updated.statusCode,200,updated.body);
  const saved=await req('POST',base+'/'+f+'/crop-reviews',{review_id:'review-no-soil',crop_codes:['CORN','SOYBEAN'],target_start_date:'2027-04-01',target_end_date:'2027-10-01',documents:[]});assert.equal(saved.statusCode,200,saved.body);
  await exerciseManagerBrowserRecovery(app,f,nativePath,{item,alreadySaved:true,async negative(which:string){
-  if(which==='expired'){mode='expired';return;}
-  if(which==='restore'){mode='active';return;}
+  if(which==='expired'){await writeFile(revocationPath,'TEST_ONLY_REVOKED');return;}
+  if(which==='restore'){await rm(revocationPath);return;}
   if(which==='revoked'){
    assert.ok(boundRequest);
-   const replay=await fetch(origin+'/v1/customer-evidence/resolve',{method:'POST',headers:{authorization:'Bearer fixture-joint-a07','content-type':'application/json'},body:JSON.stringify(boundRequest)});
+   const replay=await fetch(origin+'/v1/customer-evidence/resolve',{method:'POST',headers:{authorization:'Bearer '+privateCredentials!.getCredential('A07'),'content-type':'application/json'},body:JSON.stringify(boundRequest)});
    assert.equal(replay.status,403);assert.ok(!(await replay.text()).includes(item.summary));
    const forged=await admission.resolve(boundRequest,{...binding.manager_scope,action:'READ_CROP_REVIEW',valid_until_ms:Date.now()+10000} as any,binding.principal);
    assert.equal(forged,null);
@@ -152,11 +157,12 @@ try{
  }});
  assert.deepEqual(writes,[{path:'/v1/decision-problems',status:201},{path:'/v1/knowledge-retrieval-results',status:201}]);
  assert.ok(readCount>=2&&boundRequest);
- const foreign=await fetch(origin+'/v1/customer-evidence/resolve',{method:'POST',headers:{authorization:'Bearer fixture-joint-other','content-type':'application/json'},body:JSON.stringify(boundRequest)});
- assert.equal(foreign.status,403);assert.ok(!(await foreign.text()).includes(item.summary));
+ const foreign=await fetch(origin+'/v1/customer-evidence/resolve',{method:'POST',headers:{authorization:'Bearer '+privateCredentials!.getCredential('A01'),'content-type':'application/json'},body:JSON.stringify(boundRequest)});
+ assert.equal(foreign.status,404);assert.ok(!(await foreign.text()).includes(item.summary));
  wrongGroup=true;const denied=await req('GET',evidencePath);assert.equal(denied.statusCode,404);assert.ok(!denied.body.includes(item.summary));wrongGroup=false;
  console.log(JSON.stringify({status:'A07_JOINT_BROWSER_TEST_ONLY_PASS',adr_subject:'a7a058a6d4b6cce97727af3553cc21d9d79d572b',geox_subject:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),retrieval_ref:boundRequest.retrieval_ref,knowledge_release_ref:boundRequest.knowledge_release_ref,basis_sha256:boundRequest.basis_sha256,journal_sha256:boundRequest.journal_sha256,knowledge_ref:item.knowledge_ref,rights_grant_ref:toWireRef(rights.ref),read_count:readCount,identity_mode:'TEST_ONLY_SESSION_AND_MANAGER_IDENTITY_PORT',action_authority:false,public_release:false}));
 }finally{
+ privateCredentials?.close();
  if(host)await new Promise<void>(ok=>host.close(()=>ok()));
  delete process.env.ADR_PILOT_BOOTSTRAP_PACKAGE_B64;delete process.env.ADR_PILOT_TOKEN_BINDINGS_JSON;
  await app.close();await runtime.end();await admin.end();await rm(dir,{recursive:true,force:true});
