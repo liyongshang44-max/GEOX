@@ -52,7 +52,7 @@ export async function freezeCustomerSoilEvidenceV1(input: {
         bindings.has(b.device_id)) throw new Error("CUSTOMER_MEASUREMENT_BINDING_INVALID");
     bindings.set(b.device_id, b);
   }
-  const records = new Map<string,CanonicalReplayEvidenceRecordV1>();
+  const records = new Map<string,CanonicalReplayEvidenceRecordV1 & Record<string,unknown>>();
   const rejected: Rejection[] = [];
   const source: EvidenceRowsSourceV1 = async (client,scope,start,end,limit) => {
     // Scope comes from the authenticated worker binding snapshot, not the MQTT message.

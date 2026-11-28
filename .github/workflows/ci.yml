@@ -412,6 +412,28 @@ jobs:
           docker run --rm --network host --entrypoint /bin/sh "$GEOX_CI_MC_IMAGE" -c 'set -eu; mc alias set local http://127.0.0.1:9000 geoxminio ci-pilot-minio-strong-2026; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" ps
 
+      - name: MCFT I1 native customer MQTT to evidence ingress
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" up -d telemetry-ingest
+          if ! timeout 90 bash -c 'until docker logs geox-v1-telemetry-ingest 2>&1 | grep -F "[telemetry-ingest] subscribed telemetry/+/+" >/dev/null; do sleep 2; done'; then
+            docker logs --tail=100 geox-v1-telemetry-ingest
+            exit 1
+          fi
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export MCFT_I1_READ_DATABASE_URL="postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export MCFT_I1_TEST_ONLY=1
+          export MCFT_I1_MQTT_URL=mqtt://127.0.0.1:1883
+          # Existing broker write-only principal, solely for the isolated acceptance fixture.
+          export MCFT_I1_MQTT_USERNAME="${GEOX_EXECUTOR_MQTT_USERNAME:-geox_executor_v1}"
+          export MCFT_I1_MQTT_PASSWORD="$(docker exec geox-v1-mqtt cat /run/geox/executor/mqtt_password)"
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_PV02_I1_NATIVE_MQTT.ts
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml -f "$RUNNER_TEMP/mcft-qualification-minio.yml" stop telemetry-ingest
+
       - name: B-Line root-zone exact scenario binding runtime
         timeout-minutes: 10
         run: |
@@ -722,6 +744,7 @@ jobs:
           name: acceptance-output
           path: |
             acceptance-output/report.json
+            acceptance-output/MCFT_PV02_I1_NATIVE_MQTT.json
             acceptance-output/report.html
             acceptance-output/BASE_CONTRACT_GATE_MATURITY_REPORT.md
             acceptance-output/CONTROLLED_PILOT_READINESS_REPORT.md
