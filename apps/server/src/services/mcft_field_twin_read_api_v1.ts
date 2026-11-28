@@ -47,6 +47,7 @@ import {
   type ResolvedRuntimeRootV1,
 } from "../repositories/field_twin_read_model/postgres_field_twin_s4_repository_v1.js";
 import { PostgresFieldTwinSnapshotRepositoryV1, type PostgresFieldTwinSnapshotContextV1 } from "../repositories/field_twin_read_model/postgres_field_twin_snapshot_repository_v1.js";
+import { readCustomerNativeRuntimeSnapshotV1 } from "../repositories/field_twin_read_model/postgres_customer_native_runtime_read_repository_v1.js";
 
 export type McftFieldTwinReadRequestV1 = {
   scope: FieldTwinScopeV1;
@@ -56,6 +57,7 @@ export type McftFieldTwinReadRequestV1 = {
   until_logical_time?: string | null;
   collection_kind?: FieldTwinCollectionKindV1 | null;
   root_object_ref?: string | null;
+  runtime_chain_id?: string | null;
 };
 
 export interface McftFieldTwinReadApiV1 {
@@ -69,6 +71,7 @@ export interface McftFieldTwinReadApiV1 {
   readActionLifecycle(request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>>;
   readModelGovernance(request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>>;
   readHealth(request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>>;
+  readCustomerNative?(request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>>;
 }
 
 export class McftFieldTwinReadApiErrorV1 extends Error {
@@ -363,6 +366,11 @@ export class PostgresMcftFieldTwinReadApiV1 implements McftFieldTwinReadApiV1 {
   readModelGovernance(request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> {
     if (!request.collection_kind || !["CALIBRATION_CANDIDATE", "SHADOW_EVALUATION", "MODEL_ACTIVATION"].includes(request.collection_kind)) throw new McftFieldTwinReadApiErrorV1("MCFT_CURSOR_COLLECTION_KIND_MISMATCH", 400, "MODEL_GOVERNANCE_KIND_REQUIRED");
     return this.readCollectionV1(request, request.collection_kind);
+  }
+  async readCustomerNative(request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> {
+    const runtimeChainId = exactTextV1(request.runtime_chain_id, "MCFT_CUSTOMER_NATIVE_RUNTIME_CHAIN_ID_REQUIRED");
+    return this.snapshots.withReadOnlyRequestSnapshot(request.scope, (context) =>
+      readCustomerNativeRuntimeSnapshotV1(context, runtimeChainId) as Promise<Record<string, unknown>>);
   }
   async readHealth(request: McftFieldTwinReadRequestV1): Promise<Record<string, unknown>> {
     return this.snapshots.withReadOnlyRequestSnapshot(request.scope, async (context) => {
