@@ -24,7 +24,7 @@ export function createBoundedNativeReviewAdmissionV1(config:{
  const current=(a:ManagerAuthorityV1,r:Admission)=>{
   config.authority().assertCurrent(a,r.mapping.manager_scope.field_id,'REQUEST_CROP_REVIEW');
   requireThat(same(scopeOf(a),r.mapping.manager_scope)&&Number.isFinite(r.valid_until_ms)&&r.valid_until_ms>Date.now()&&typeof r.approval_ref==='string'&&r.approval_ref.length>0);
-  requireThat(r.a01.type==='SERVICE_ACCOUNT'&&r.a07.type==='SERVICE_ACCOUNT'&&r.a01.principal_id!==r.a07.principal_id&&r.a01.organization_id===r.mapping.target_ref.organization_id&&r.a07.organization_id===r.a01.organization_id&&r.a01.tenant_id===a.tenant_id&&r.a07.tenant_id===a.tenant_id&&r.a01.program_ids.length===1&&same(r.a01.program_ids,r.a07.program_ids)&&wireRef(r.runtime_authorization_ref,'AuthorizationDecisionAudit'));
+  requireThat(r.a01.type==='SERVICE_ACCOUNT'&&r.a07.type==='SERVICE_ACCOUNT'&&r.a01.principal_id!==r.a07.principal_id&&r.a01.organization_id===r.mapping.target_ref.organization_id&&r.a07.organization_id===r.a01.organization_id&&r.a01.tenant_id===r.mapping.target_ref.tenant_id&&r.a07.tenant_id===r.a01.tenant_id&&r.a01.program_ids.length===1&&same(r.a01.program_ids,r.a07.program_ids)&&wireRef(r.runtime_authorization_ref,'AuthorizationDecisionAudit'));
  };
  const admission=async(a:ManagerAuthorityV1)=>{const r=await config.readRunAdmission();requireThat(r);current(a,r!);return structuredClone(r!);};
  const recheck=async(a:ManagerAuthorityV1,r:Admission)=>requireThat(same(await admission(a),r));
