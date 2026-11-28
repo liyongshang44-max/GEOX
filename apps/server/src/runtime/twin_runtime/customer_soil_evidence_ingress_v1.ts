@@ -9,6 +9,7 @@ import {
   PRODUCTION_EQUIVALENT_SIMULATION_EVIDENCE_INGRESS_CONFIG_V1,
   PostgresEvidenceIngressAdapterV1,
   type EvidenceRowsSourceV1,
+  type EvidenceFactRowV1,
 } from "./postgres_evidence_ingress_adapter_v1.js";
 import type { CanonicalReplayEvidenceRecordV1, ShadowOnlineBoundaryV1, TwinScopeKeyV1 } from "./ports.js";
 
@@ -76,7 +77,7 @@ export async function freezeCustomerSoilEvidenceV1(input: {
       [scope.tenant_id,scope.project_id,scope.group_id,scope.field_id,start,end,limit]
     );
     if (result.rows.length>=limit) throw new Error("EVIDENCE_CANDIDATE_LIMIT_REACHED");
-    const out=[];
+    const out: EvidenceFactRowV1[]=[];
     const seen = new Set<string>();
     for (const row of result.rows) {
       if (seen.has(row.raw_id)) throw new Error("CUSTOMER_RAW_OBSERVATION_CARDINALITY");
