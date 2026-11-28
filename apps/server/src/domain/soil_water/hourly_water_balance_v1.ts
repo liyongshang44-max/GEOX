@@ -2,6 +2,8 @@
 // Purpose: execute the transparent deterministic MCFT-CAP-02 single-zone hourly water-balance propagation from explicit fixed-point inputs.
 // Boundary: pure domain Dynamics only; no Evidence selection, persistence, Runtime orchestration, observation assimilation, Forecast success, recommendation, or action.
 
+import { validateCustomerScalarRuntimeConfigV1, type CustomerScalarRuntimeConfigV1 } from "../twin_runtime/customer_scalar_runtime_config_v1.js";
+import { semanticHashV1 } from "../twin_runtime/canonical_identity_v1.js";
 import {
   validateContinuationRuntimeConfigPayloadV1,
   type ContinuationRuntimeConfigPayloadV1,
@@ -62,7 +64,7 @@ export type HourlyWaterBalanceInputV1 = {
   config: HourlyWaterBalanceConfigV1;
 };
 
-export type HourlyWaterBalanceResultV1 = {
+export type HourlyWaterBalanceResultV1<Depth extends string = "300.000000"> = {
   schema_version: typeof HOURLY_WATER_BALANCE_SCHEMA_V1;
   model_id: typeof HOURLY_WATER_BALANCE_MODEL_ID_V1;
   model_version: 1;
@@ -81,7 +83,7 @@ export type HourlyWaterBalanceResultV1 = {
     storage_variance_mm2_decimal: { value: string; scale: 12 };
     source_posterior_ref?: string;
     source_vwc_variance?: string;
-    root_zone_depth_mm?: "300.000000";
+    root_zone_depth_mm?: Depth;
     previous_state_ref?: string;
   };
   published_state: {
@@ -145,6 +147,13 @@ function requireCropStageCodeV1(value: unknown): string {
 }
 
 export function executeHourlyWaterBalanceV1(input: HourlyWaterBalanceInputV1): HourlyWaterBalanceResultV1 {
+  return executeHourlyWaterBalanceCoreV1(input, "300.000000", true);
+}
+
+// One shared arithmetic core. V1 still requires its frozen root depth and emits its original wire.
+function executeHourlyWaterBalanceCoreV1<Depth extends string>(
+  input: HourlyWaterBalanceInputV1, depth: Depth, legacy: boolean,
+): HourlyWaterBalanceResultV1<Depth> {
   const previousStorageUnits = requireNonNegativeFixedUnitsV1(
     parseFixedDecimalV1(input.previous_storage_mm_decimal, WATER_AMOUNT_SCALE_V1, "DYNAMICS_PREVIOUS_STORAGE_REQUIRED"),
     "DYNAMICS_PREVIOUS_STORAGE_NEGATIVE",
@@ -165,7 +174,8 @@ export function executeHourlyWaterBalanceV1(input: HourlyWaterBalanceInputV1): H
     parseFixedDecimalV1(input.config.root_zone_depth_mm, WATER_AMOUNT_SCALE_V1, "DYNAMICS_ROOT_DEPTH_REQUIRED"),
     "DYNAMICS_ROOT_DEPTH_NEGATIVE",
   );
-  if (rootDepthUnits !== 300_000_000n) throw new Error("DYNAMICS_GOVERNED_ROOT_DEPTH_MUST_BE_300MM");
+  if (legacy && rootDepthUnits !== 300_000_000n) throw new Error("DYNAMICS_GOVERNED_ROOT_DEPTH_MUST_BE_300MM");
+  if (!legacy && (rootDepthUnits <= 0n || formatFixedDecimalV1(rootDepthUnits, 6) !== depth)) throw new Error("CUSTOMER_DYNAMICS_ROOT_DEPTH_MISMATCH");
   const wiltingStorageUnits = requireNonNegativeFixedUnitsV1(
     parseFixedDecimalV1(input.config.wilting_point_storage_mm, WATER_AMOUNT_SCALE_V1, "DYNAMICS_WILTING_STORAGE_REQUIRED"),
     "DYNAMICS_WILTING_STORAGE_NEGATIVE",
@@ -295,7 +305,7 @@ export function executeHourlyWaterBalanceV1(input: HourlyWaterBalanceInputV1): H
   );
   const depletionUnits = fieldCapacityUnits > nextStorageUnits ? fieldCapacityUnits - nextStorageUnits : 0n;
 
-  const computationBasis: HourlyWaterBalanceResultV1["computation_basis"] = {
+  const computationBasis: HourlyWaterBalanceResultV1<Depth>["computation_basis"] = {
     basis_origin: input.previous_variance_basis.basis_origin,
     previous_storage_mean_mm_decimal: { value: formatAmount(previousStorageUnits), scale: 6 },
     previous_storage_variance_mm2_decimal: {
@@ -314,7 +324,7 @@ export function executeHourlyWaterBalanceV1(input: HourlyWaterBalanceInputV1): H
       input.previous_variance_basis.source_vwc_variance,
       WATER_VARIANCE_SCALE_V1,
     );
-    computationBasis.root_zone_depth_mm = "300.000000";
+    computationBasis.root_zone_depth_mm = depth;
   } else {
     computationBasis.previous_state_ref = input.previous_variance_basis.previous_state_ref;
   }
@@ -360,4 +370,60 @@ export function executeHourlyWaterBalanceV1(input: HourlyWaterBalanceInputV1): H
       "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION",
     ],
   };
+}
+
+
+// Test-only successor, not a V1 canonical state or an operational promotion.
+export type CustomerHourlyWaterBalanceInputV1 = Omit<HourlyWaterBalanceInputV1,
+  "config" | "previous_storage_mm_decimal" | "previous_variance_basis" | "executed_irrigation_candidates"> & {
+  customer_config: CustomerScalarRuntimeConfigV1;
+  previous: { config_hash: string; logical_time: string; state_ref: string;
+    storage_mm: string; storage_variance_mm2: string };
+  rainfall_source_ref: string;
+  et0_source_ref: string;
+  irrigation_zero_source_ref: string;
+};
+
+export function executeCustomerHourlyWaterBalanceV1(input: CustomerHourlyWaterBalanceInputV1) {
+  const { config, math_config, config_hash } = validateCustomerScalarRuntimeConfigV1(input.customer_config);
+  const start = input.interval_start_exclusive;
+  const end = input.interval_end_inclusive;
+  if (!Number.isFinite(Date.parse(start)) || !Number.isFinite(Date.parse(end)) ||
+      new Date(start).toISOString() !== start || new Date(end).toISOString() !== end ||
+      Date.parse(end) - Date.parse(start) !== 3600000 ||
+      start < config.effective_from || end > config.effective_until) throw new Error("CUSTOMER_DYNAMICS_INTERVAL_INVALID");
+  if (input.previous.config_hash !== config_hash || input.previous.logical_time !== start)
+    throw new Error("CUSTOMER_DYNAMICS_PREVIOUS_STATE_CONFIG_OR_TIME_MISMATCH");
+  if (input.crop_stage_code !== config.crop_stage_code || input.kc_decimal !== config.kc_decimal)
+    throw new Error("CUSTOMER_DYNAMICS_CROP_CONTEXT_MISMATCH");
+  for (const ref of [input.previous.state_ref, input.rainfall_source_ref, input.et0_source_ref, input.irrigation_zero_source_ref])
+    if (typeof ref !== "string" || !ref.startsWith("test:") || ref.length <= 5) throw new Error("CUSTOMER_TEST_SOURCE_REF_REQUIRED");
+  if (parseFixedDecimalV1(input.previous.storage_variance_mm2, 12) <= 0n)
+    throw new Error("CUSTOMER_PREVIOUS_VARIANCE_MUST_BE_POSITIVE");
+  const result = executeHourlyWaterBalanceCoreV1({
+    interval_start_exclusive: start, interval_end_inclusive: end,
+    previous_storage_mm_decimal: input.previous.storage_mm,
+    previous_variance_basis: { basis_origin: "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE",
+      previous_state_ref: input.previous.state_ref,
+      previous_storage_variance_mm2_decimal: input.previous.storage_variance_mm2 },
+    gross_rainfall_mm_decimal: input.gross_rainfall_mm_decimal,
+    historical_et0_mm_decimal: input.historical_et0_mm_decimal,
+    crop_stage_code: input.crop_stage_code, kc_decimal: input.kc_decimal,
+    // First bounded case: explicit test evidence of zero irrigation; unknown is not zero.
+    executed_irrigation_candidates: [], config: math_config,
+  }, math_config.root_zone_depth_mm, false);
+  const state = {
+    ...result,
+    schema_version: "mcft_customer_hourly_water_balance_result_v1" as const,
+    model_id: "ROOT_ZONE_HOURLY_WATER_BALANCE_CUSTOMER_V1" as const,
+    config_hash, scope: config.scope, logical_time: end, test_only: true as const,
+    formal_eligible: false as const, is_simulated: true as const,
+    computation_basis: { ...result.computation_basis, root_zone_depth_mm: math_config.root_zone_depth_mm },
+    input_sources: { rainfall: input.rainfall_source_ref, et0: input.et0_source_ref,
+      irrigation_zero: input.irrigation_zero_source_ref, prior: input.previous.state_ref },
+    parameter_uncertainty: config.parameter_uncertainty,
+    scientific_limitations: ["PARAMETER_UNCERTAINTY_NOT_PROPAGATED", "NO_FIELD_CALIBRATION",
+      "NO_POINT_TO_ROOT_ZONE_ASSIMILATION", "LEGACY_ET_STORAGE_LIMIT_ONLY", "NO_ACTION_AUTHORITY"] as const,
+  };
+  return { ...state, state_ref: "test:" + semanticHashV1(state) };
 }

@@ -1,0 +1,37 @@
+name: MCFT PV02 I2 customer scalar calculation
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/domain/soil_water/hourly_water_balance_v1.ts'
+      - 'apps/server/src/domain/twin_runtime/customer_scalar_runtime_config_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_PV02_I2_AB.ts'
+      - '.github/workflows/mcft-pv02-i2-customer-scalar.yml'
+permissions:
+  contents: read
+jobs:
+  customer-scalar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Execute native customer calculation and negative cases
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_PV02_I2_AB.ts
+      - name: Frozen CAP02 numerical regression
+        run: |
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS.ts
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS_NEGATIVE.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-pv02-i2-ab-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_PV02_I2_AB.json
+          if-no-files-found: error
