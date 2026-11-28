@@ -9,10 +9,11 @@ import { executeCustomerHourlyWaterBalanceV1 } from "../../domain/soil_water/hou
 import { readCustomerScalarStateV1,assimilateCustomerScalarTestV1,type CustomerScalarStateV1,type CustomerScalarObservationV1,type SyntheticRootZoneOperatorV1 } from "../../domain/soil_water/customer_scalar_assimilation_v1.js";
 import { executeCustomerPure72hForecastV1,type CustomerForecastForcingPointV1 } from "../../domain/twin_runtime/pure_72h_forecast_math_v1.js";
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
+import { resolveCustomerNativeParameterSourcesV1 } from "./customer_native_parameter_source_resolver_v1.js";
 type HistoricalForcingV1={interval_start:string;interval_end:string;available_at:string;
   rainfall_mm:string;et0_mm:string;rainfall_source_ref:string;et0_source_ref:string;irrigation_zero_source_ref:string};
 type Inputs={
-  pool:Pick<Pool,"connect">; boundary:ShadowOnlineBoundaryV1;
+  pool:Pool; boundary:ShadowOnlineBoundaryV1;
   bindings:readonly CustomerSoilMeasurementBindingV1[];
   customer_config:CustomerScalarRuntimeConfigV1;
   initialization:{kind:"WEAK_BOOTSTRAP"}|{kind:"CONTINUATION";previous:CustomerScalarStateV1};
@@ -35,6 +36,7 @@ export async function composeCustomerNativeRuntimeV1(input:Inputs){
     throw Error("CUSTOMER_COMPOSER_HISTORICAL_FORCING_TIME_INVALID");
   for(const v of [h.rainfall_mm,h.et0_mm])if(typeof v!=="string"||!/^(0|[1-9][0-9]*)\.[0-9]{6}$/.test(v))
     throw Error("CUSTOMER_COMPOSER_HISTORICAL_FORCING_MISSING");
+  const parameter_source_resolution=await resolveCustomerNativeParameterSourcesV1({pool:input.pool,scope:config.scope,logical_time:end,bindings:input.bindings});
   const evidence=await freezeCustomerSoilEvidenceV1({pool:input.pool,boundary:input.boundary,bindings:input.bindings,test_only:true});
   const retained=evidence.records.map(r=>{
     if(!r||r.is_simulated!==true||r.formal_eligible!==false||!sameScope(config.scope,r))throw Error("CUSTOMER_COMPOSER_EVIDENCE_SCOPE_INVALID");
@@ -74,11 +76,11 @@ export async function composeCustomerNativeRuntimeV1(input:Inputs){
   const forecast=executeCustomerPure72hForecastV1({customer_config:config,source:selected,forcing:input.future});
   const result={schema_version:"mcft_customer_native_runtime_composition_v1" as const,test_only:true as const,
     production:false as const,formal_eligible:false as const,scope:config.scope,config_hash,logical_time:end,
-    initialization,previous,retained_observations:retained,excluded_observations:evidence.rejected,
+    initialization,previous,parameter_source_resolution,retained_observations:retained,excluded_observations:evidence.rejected,
     selected_evidence_refs:evidence.frozen.selected.map(r=>r.evidence_ref),
     propagated,assimilation:update,state:selected,forecast,
     persistence_status:"NOT_PERSISTED_CANONICAL_SUCCESSOR_REQUIRED" as const,
     product_read_status:"IN_PROCESS_TEST_RESULT_ONLY" as const,
-    limitations:["TEST_PARAMETER_SOURCES_ONLY","POINT_SUPPORT_NOT_ROOT_ZONE","PARAMETER_UNCERTAINTY_NOT_PROPAGATED","LEGACY_ET_STORAGE_LIMIT_ONLY","NO_PRODUCTION_OR_ACTION_AUTHORITY"]};
+    limitations:["TEST_PARAMETER_SOURCES_ONLY","CUSTOMER_PARAMETER_SOURCES_INCOMPLETE","POINT_SUPPORT_NOT_ROOT_ZONE","PARAMETER_UNCERTAINTY_NOT_PROPAGATED","LEGACY_ET_STORAGE_LIMIT_ONLY","NO_PRODUCTION_OR_ACTION_AUTHORITY"]};
   return {...result,composition_hash:semanticHashV1(result)};
 }

@@ -98,6 +98,19 @@ export const MCFT_FIELD_TWIN_OPENAPI_SCHEMAS_V1 = {
     properties: { schema_version: { const: "field_twin_trace_graph_v1" }, request_scope: scopeSchema, response_started_at: instantSchema, nodes: { type: "array", items: { type: "object" } }, edges: { type: "array", items: { type: "object" } }, trace_graph_content_hash: hashSchema, response_instance_hash: hashSchema },
   },
   McftFieldTwinCollectionPageV1: collectionPageSchema,
+  McftCustomerNativeRuntimeResponseV1: {
+    type: "object", additionalProperties: true,
+    required: ["schema_version","request_scope","runtime_chain_id","status","test_only","formal_eligible","production_eligible","state_record","forecast_record","state","forecast","parameter_source_resolution","canonical_visibility_snapshot","response_started_at","customer_native_content_hash","response_instance_hash"],
+    properties: {
+      schema_version: { const: "mcft_customer_native_runtime_read_v1" }, request_scope: scopeSchema,
+      runtime_chain_id: { type: "string", minLength: 8 }, status: { const: "TEST_ONLY_NOT_FOR_OPERATIONAL_USE" },
+      test_only: { const: true }, formal_eligible: { const: false }, production_eligible: { const: false },
+      state_record: { type: "object" }, forecast_record: { type: "object" }, state: { type: "object" },
+      forecast: { type: "object", required: ["issued_at","points"], properties: { issued_at: instantSchema, points: { type: "array", minItems: 72, maxItems: 72, items: { type: "object" } } } },
+      parameter_source_resolution: { type: "object" }, canonical_visibility_snapshot: visibilitySchema,
+      response_started_at: instantSchema, customer_native_content_hash: hashSchema, response_instance_hash: hashSchema,
+    },
+  },
   McftFieldTwinHealthResponseV1: {
     type: "object", additionalProperties: true,
     required: ["schema_version", "request_scope", "response_started_at", "terminal_record_set_health", "latest_operational_runtime_health", "health_relationship", "health_content_hash", "response_instance_hash"],
@@ -125,6 +138,7 @@ export const MCFT_FIELD_TWIN_OPENAPI_PATHS_V1 = {
   "/api/v1/operator/twin/fields/{field_id}/runtime/action-lifecycle": { get: operation("getMcftFieldTwinActionLifecycleV1", "Read bounded validated Field Twin action-feedback collection", "McftFieldTwinCollectionPageV1", cursorParameters) },
   "/api/v1/operator/twin/fields/{field_id}/runtime/model-governance": { get: operation("getMcftFieldTwinModelGovernanceV1", "Read one bounded validated model-governance collection", "McftFieldTwinCollectionPageV1", [...cursorParameters, { name: "collection_kind", in: "query", required: false, description: "Required on the first page; optional when an authenticated cursor carries the exact collection kind.", schema: { enum: ["CALIBRATION_CANDIDATE", "SHADOW_EVALUATION", "MODEL_ACTIVATION"] } }]) },
   "/api/v1/operator/twin/fields/{field_id}/runtime/health": { get: operation("getMcftFieldTwinHealthV1", "Read terminal record-set and latest operational Runtime Health", "McftFieldTwinHealthResponseV1") },
+  "/api/v1/operator/twin/fields/{field_id}/runtime/customer-native": { get: operation("getMcftCustomerNativeRuntimeV1", "Read exact test-only customer-native state and complete 72-hour numeric forecast", "McftCustomerNativeRuntimeResponseV1", [{ name: "runtime_chain_id", in: "query", required: true, schema: { type: "string", minLength: 8 } }]) },
 } as const;
 
 let installed = false;

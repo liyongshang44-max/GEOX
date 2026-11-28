@@ -30,7 +30,8 @@ type EndpointV1 =
   | "residuals"
   | "action-lifecycle"
   | "model-governance"
-  | "health";
+  | "health"
+  | "customer-native";
 
 export type RegisterMcftFieldTwinReadRoutesOptionsV1 = {
   readApi?: McftFieldTwinReadApiV1;
@@ -99,6 +100,7 @@ function allowedQueryKeysV1(endpoint: EndpointV1): ReadonlySet<string> {
     keys.add("until");
   }
   if (endpoint === "trace") keys.add("root_object_ref");
+  if (endpoint === "customer-native") keys.add("runtime_chain_id");
   if (endpoint === "model-governance") keys.add("collection_kind");
   return keys;
 }
@@ -145,6 +147,7 @@ function buildReadRequestV1(request: FastifyRequest, endpoint: EndpointV1): Mcft
     ...(endpoint === "timeline" ? { from_logical_time: from, until_logical_time: until } : {}),
     ...(endpoint === "model-governance" ? { collection_kind: parseModelGovernanceKindV1(query, cursor) } : {}),
     ...(endpoint === "trace" ? { root_object_ref: query.root_object_ref === undefined ? null : strictSingleTextV1(query.root_object_ref, "root_object_ref") } : {}),
+    ...(endpoint === "customer-native" ? { runtime_chain_id: strictSingleTextV1(query.runtime_chain_id, "runtime_chain_id", true) } : {}),
   };
 }
 
@@ -163,7 +166,7 @@ function responseHashV1(body: Record<string, unknown>): string | null {
 }
 
 function contentHashV1(body: Record<string, unknown>): string | null {
-  for (const key of ["root_graph_content_hash", "timeline_page_content_hash", "trace_graph_content_hash", "collection_page_content_hash", "health_content_hash"]) {
+  for (const key of ["root_graph_content_hash", "timeline_page_content_hash", "trace_graph_content_hash", "collection_page_content_hash", "health_content_hash", "customer_native_content_hash"]) {
     const value = body[key];
     if (typeof value === "string" && value.startsWith("sha256:")) return value;
   }
@@ -193,13 +196,15 @@ export function mapMcftFieldTwinReadErrorV1(error: unknown): McftFieldTwinReadAp
   if (code === "MCFT_CURSOR_SIGNING_KEY_UNAVAILABLE" || /UNAVAILABLE|PREPROVISION|REQUIRED_READ_SCHEMA|VISIBILITY_METADATA_NOT_ESTABLISHED/.test(code) || /^[0-9A-Z]{5}$/.test(code)) {
     return new McftFieldTwinReadApiErrorV1(code, 503);
   }
+  if (code === "CUSTOMER_NATIVE_RUNTIME_NOT_FOUND") return new McftFieldTwinReadApiErrorV1(code, 404);
   if (code === "MCFT_RUNTIME_NOT_ESTABLISHED" || code === "MCFT_EXACT_RESOURCE_NOT_FOUND") {
     return new McftFieldTwinReadApiErrorV1(code, 404);
   }
+  if (code.startsWith("CUSTOMER_NATIVE_") && /MISMATCH|INVALID|AMBIGUOUS|CONTRACT/.test(code)) return new McftFieldTwinReadApiErrorV1(code, 409);
   if (code === "MCFT_CURSOR_VISIBILITY_EPOCH_MISMATCH" || /DIVERGENCE|MISMATCH|CARDINALITY|INCOMPLETE|POINTER|RECORD_SET|AUTHORITY|CANONICAL|ROLE_UNRESOLVED|SOURCE_.*INVALID/.test(code)) {
     return new McftFieldTwinReadApiErrorV1(code, 409);
   }
-  if (/CURSOR|FILTER|LIMIT|QUERY|SCOPE_INVALID|HISTORICAL_RUNTIME|COLLECTION_KIND|TIMELINE/.test(code)) {
+  if (/CUSTOMER_NATIVE_RUNTIME_CHAIN_ID_REQUIRED|CUSTOMER_NATIVE_RUNTIME_CHAIN_ID_INVALID|CURSOR|FILTER|LIMIT|QUERY|SCOPE_INVALID|HISTORICAL_RUNTIME|COLLECTION_KIND|TIMELINE/.test(code)) {
     return new McftFieldTwinReadApiErrorV1(code, 400);
   }
   return new McftFieldTwinReadApiErrorV1("MCFT_READ_SURFACE_UNAVAILABLE", 503, code);
@@ -227,6 +232,10 @@ function invokeReadV1(endpoint: EndpointV1, api: McftFieldTwinReadApiV1, request
   if (endpoint === "residuals") return api.readResiduals(request);
   if (endpoint === "action-lifecycle") return api.readActionLifecycle(request);
   if (endpoint === "model-governance") return api.readModelGovernance(request);
+  if (endpoint === "customer-native") {
+    if (!api.readCustomerNative) throw new McftFieldTwinReadApiErrorV1("MCFT_CUSTOMER_NATIVE_READ_UNAVAILABLE", 503);
+    return api.readCustomerNative(request);
+  }
   return api.readHealth(request);
 }
 
@@ -264,4 +273,5 @@ export function registerMcftFieldTwinReadRoutesV1(
   app.get(`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/action-lifecycle`, handlerV1("action-lifecycle", readApi, authorizeScope));
   app.get(`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/model-governance`, handlerV1("model-governance", readApi, authorizeScope));
   app.get(`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/health`, handlerV1("health", readApi, authorizeScope));
+  app.get(`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/customer-native`, handlerV1("customer-native", readApi, authorizeScope));
 }
