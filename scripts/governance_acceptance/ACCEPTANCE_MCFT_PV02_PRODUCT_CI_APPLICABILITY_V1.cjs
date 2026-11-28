@@ -4,7 +4,7 @@ for(const [key,paths] of Object.entries(GROUPS)){
  const r=classify(paths);assert.equal(r.mode,'product-shared-regression');assert.equal(r.unknown.length,0);
  assert(r.required_regressions.includes('MAIN_CI'));assert(r.required_regressions.includes('BLINE_AUTHORITY_UNCHANGED'));
  if(key!=='math')assert(r.required_regressions.includes('S2_REAL_PG_SHARED_INGRESS'));
- if(key!=='ingress')assert(r.required_regressions.includes('CAP02_03_04_FROZEN_SCIENCE'));
+ if(key==='math'||key==='composer')assert(r.required_regressions.includes('CAP02_03_04_FROZEN_SCIENCE'));
 }
 for(const [key,obligation] of [["parameter_sources","I2E_PARAMETER_SOURCE_RESOLUTION"],["persistence","I2E_FACT_PERSISTENCE_VISIBILITY"],["read_api","CAP07_S4_CUSTOMER_NATIVE_READ_API"]]){
  const r=classify(GROUPS[key]);assert.equal(r.mode,'product-shared-regression');assert(r.required_regressions.includes("I2E_NATIVE_COMPOSITION"));assert(r.required_regressions.includes(obligation));
