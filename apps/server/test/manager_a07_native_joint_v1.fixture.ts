@@ -47,6 +47,8 @@ import {resolve,join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {once} from 'node:events';
 import {digest} from '../src/domain/field/soil_csv_p2_v1.ts';
+import {assertCompletedRecovery} from '../../../scripts/product/e2e01/adr-formal-run-admission.mjs';
+import {readManagerNativeReviewJournalV1} from '../src/routes/manager_native_review_v1.ts';
 import {createBoundedNativeReviewAdmissionV1} from '../src/domain/agronomy/e2e01_native_review_admission_v1.ts';
 import {createE2E01CustomerDisplayAdmissionV1} from '../src/product_projection/customer/e2e01_customer_display_admission_v1.ts';
 import {exerciseManagerBrowserRecovery} from './manager_browser_recovery_v1.fixture.mjs';
@@ -60,7 +62,7 @@ const {createDeploymentEnvironment,baseDeployment,publishAuthorizedDeployment,cr
 const {PERMISSIONS,publishRoleAssignment,publishBuiltinRoleAssignment,authorizeDecisionProblemCreation,recordAuthorizationDecision}=await imp('packages/authorization/src/index.mjs');
 const {audit}=await imp('acceptance/context-manifest/fixtures.mjs');
 const {createInspectionAuthorization}=await imp('acceptance/workbench/fixture.mjs');
-const {createAuthorityRecoveryCheckpoint}=await imp('packages/recovery-operations/src/index.mjs');
+const {createAuthorityRecoveryCheckpoint,restoreAuthorityRecoveryCheckpoint}=await imp('packages/recovery-operations/src/index.mjs');
 const {publishRightsGrant,publishRightsRevocation}=await imp('packages/rights-authority/src/index.mjs');
 const {licensedPublicationFixture}=await imp('acceptance/derived-knowledge/fixture.mjs');
 const {initializePilotRuntime,createPilotHttpServer}=await imp('deploy/adr-pilot-host/server.mjs');
@@ -90,7 +92,8 @@ let host:any;
 const base='/api/v1/manager/fields',reviewPath=base+'/'+f+'/crop-reviews/review-no-soil',nativePath=reviewPath+'/native-assessment',evidencePath=reviewPath+'/knowledge-evidence';
 const req=(method:'GET'|'POST'|'PUT',url:string,body?:any)=>app.inject({method,url,headers:{authorization:'Bearer fixture-native'},...(body===undefined?{}:{payload:body})});
 try{
- process.env.ADR_PILOT_BOOTSTRAP_PACKAGE_B64=Buffer.from(JSON.stringify({checkpoint:createAuthorityRecoveryCheckpoint({ledger:env.ledger,capturedAt:new Date().toISOString()}),metadata:{mode:'TEST_ONLY_GEOX_JOINT_BROWSER',idempotency:{},workbenchAccess:{}}})).toString('base64');
+ const initialCheckpoint=createAuthorityRecoveryCheckpoint({ledger:env.ledger,capturedAt:new Date().toISOString()});
+ process.env.ADR_PILOT_BOOTSTRAP_PACKAGE_B64=Buffer.from(JSON.stringify({checkpoint:initialCheckpoint,metadata:{mode:'TEST_ONLY_GEOX_JOINT_BROWSER',idempotency:{},workbenchAccess:{}}})).toString('base64');
  const native=await initializePilotRuntime({statePath:join(dir,'state.json'),snapshotDir:join(dir,'snapshots'),allowSyntheticBootstrap:false});
  delete process.env.ADR_PILOT_BOOTSTRAP_PACKAGE_B64;assert.equal(native.ready,true);
  privateCredentials=createIsolatedPrivateCredentialBinding({runtime:native,a01:actor,a07:runtimeActor,validUntilMs:Date.now()+600000});
@@ -147,6 +150,17 @@ try{
    assert.equal(replay.status,403);assert.ok(!(await replay.text()).includes(item.summary));
    const forged=await admission.resolve(boundRequest,{...binding.manager_scope,action:'READ_CROP_REVIEW',valid_until_ms:Date.now()+10000} as any,binding.principal);
    assert.equal(forged,null);
+   // Reopen actual persisted ADR state before Rights revocation. The formal
+   // recovery validator sees the real product journal and native ledger delta.
+   const saved=JSON.parse(await (await import('node:fs/promises')).readFile(join(dir,'state.json'),'utf8'));
+   restoreAuthorityRecoveryCheckpoint(saved.checkpoint);
+   const pc=await runtime.connect();try{
+    await pc.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    const jr=await readManagerNativeReviewJournalV1(pc,[t,p,g,f],'review-no-soil',basisRow.result.basis_sha256);
+    const proof=assertCompletedRecovery({frozen:initialCheckpoint,restored:saved.checkpoint,journal:jr,expectedMember:toWireRef(k),coreRef:(r:any)=>({kind:r.kind,logicalId:r.logical_id,version:r.version,semanticHash:r.semantic_hash})});
+    assert.equal(proof.retrieval_ref.logical_id,boundRequest.retrieval_ref.logical_id);
+    await pc.query('COMMIT');
+   }finally{pc.release();}
    const at=new Date().toISOString();publishRightsRevocation({ledger:native.ledger,logicalId:'revoke.geox-joint-test-only',version:'1',rightsGrantRef:rights.ref,effectiveAt:at,reasonCodes:['TEST_ONLY'],revokerPrincipal:owner,audit:ownerAudit('joint-rights-revoke',at)});return;
   }
   throw Error('unexpected negative mode');

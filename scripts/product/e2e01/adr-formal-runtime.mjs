@@ -8,7 +8,7 @@ import {once} from 'node:events';
 import {createHash} from 'node:crypto';
 import {createFormalPrivateCredentialBinding,formalMode} from './adr-formal-credential.mjs';
 import {createOwnerDisplayApprovalLoader,createPrivateLoopbackTransport,canonical,sha} from './adr-private-admission.mjs';
-import {createFormalRunApprovalLoader,exactFile,assertCompletedRecovery} from './adr-formal-run-admission.mjs';
+import {createFormalRunApprovalLoader,buildFormalScope,exactFile,assertCompletedRecovery} from './adr-formal-run-admission.mjs';
 import {createBoundedNativeReviewAdmissionV1} from '../../../apps/server/src/domain/agronomy/e2e01_native_review_admission_v1.ts';
 import {createE2E01CustomerDisplayAdmissionV1} from '../../../apps/server/src/product_projection/customer/e2e01_customer_display_admission_v1.ts';
 import {loadManagerNativeReviewBasisV1,readManagerNativeReviewJournalV1} from '../../../apps/server/src/routes/manager_native_review_v1.ts';
@@ -43,7 +43,7 @@ export async function prepareFormalRuntime({pool,authority,policyPath,kit,geoxRo
  need(sha(exactFile(displayPath))===plan.owner_display.file_sha256&&display.approval_ref===plan.owner_display.approval_ref&&sha(exactFile(policyPath))===plan.owner_display.manager_policy_sha256,'FORMAL_OWNER_MATERIAL_DRIFT');
  const binding=display.binding;
  need(same(binding.manager_scope,b.manager_scope)&&binding.review_id===b.intent.review_id&&same(binding.deployment_ref,f.deployment)&&same(binding.runtime_profile_ref,f.profile)&&same(binding.knowledge_release_ref,f.release)&&binding.member.crop_code==='SOYBEAN'&&binding.member.jurisdiction==='CN','FORMAL_DISPLAY_SCOPE');
- const expectedScope={geox_subject:geoxHead,adr_subject:adrHead,run_input_sha256:sha(exactFile(planPath)),checkpoint_sha256:frozen.checkpointHash,checkpoint_file_sha256:sha(cpBytes),owner_display_file_sha256:plan.owner_display.file_sha256,owner_display_approval_ref:display.approval_ref,manager_policy_sha256:plan.owner_display.manager_policy_sha256,basis_sha256:b.basis_sha256,boundary_sha256:b.boundary_sha256,result_sha256:b.result_sha256,deployment_ref:f.deployment,allowed_operations:{A01:plan.services.A01.operations,A07:plan.services.A07.operations},manager_scope:b.manager_scope,review_id:b.intent.review_id,viewer_jurisdiction:'CN',mapping:m,allow_readonly_recovery:true,production_authorized:false,action_authority:false};
+ const expectedScope=buildFormalScope({plan,geoxHead,adrHead,runInputBytes:exactFile(planPath),checkpointBytes:cpBytes,display});
  const loadPermit=createFormalRunApprovalLoader({runDir,expectedFileSha256:pin,expectedScope,rightsEnd:plan.owner_display.rights_end});
  const permit=await loadPermit();need(permit,'FORMAL_RUN_APPROVAL_REQUIRED');
  const loadDisplay=createOwnerDisplayApprovalLoader({approvalPath:displayPath,expectedFileSha256:plan.owner_display.file_sha256,revocationPath:join(root,'display-admission-preparation-v1','REVOKED'),managerPolicyPath:policyPath,managerPolicySha256:plan.owner_display.manager_policy_sha256,checkpointSha256:frozen.checkpointHash,ownerSubject:display.owner_subject,binding,rightsEnd:plan.owner_display.rights_end});
@@ -78,7 +78,7 @@ export async function prepareFormalRuntime({pool,authority,policyPath,kit,geoxRo
  need(!['ADR_PILOT_TOKEN_BINDINGS_JSON','ADR_PILOT_BOOTSTRAP_PACKAGE_B64','ADR_PILOT_SYNTHETIC_BOOTSTRAP'].some(k=>Object.hasOwn(process.env,k)),'FORMAL_ENV_OVERRIDE_FORBIDDEN');
  let credentials,host,native,closed=false;
  if(recovery){
-  need(existsSync(started)&&existsSync(stopped)&&existsSync(statePath),'FORMAL_RECOVERY_REQUIRES_CLEAN_STOP');
+  need(existsSync(started)&&existsSync(stopped)&&existsSync(statePath)&&!existsSync(join(runDir,'RECOVERY-READONLY-COMPLETE.json')),'FORMAL_RECOVERY_REQUIRES_CLEAN_STOP');
   const saved=read(statePath),stop=read(stopped);
   need(saved.metadata.mode===formalMode&&saved.metadata.runAdmissionRef===permit.approval_ref&&stop.state_file_sha256===sha(exactFile(statePath))&&stop.approval_ref===permit.approval_ref,'FORMAL_RECOVERY_STATE_PIN');
   restoreAuthorityRecoveryCheckpoint(saved.checkpoint);
@@ -121,6 +121,6 @@ export async function prepareFormalRuntime({pool,authority,policyPath,kit,geoxRo
    const {unlinkSync}=await import('node:fs');unlinkSync(lock);
    console.log(JSON.stringify({status:'FORMAL_RUNTIME_STOPPED_RECONCILED',recovery,...proof}));
   };
-  return {composition:{adrNativeReview:review,resolveAdrCustomerEvidence:admission.resolve},recovery,current,stop,validUntilMs:Date.parse(permit.valid_until)};
+  return {composition:{adrNativeReview:review,resolveAdrCustomerEvidence:admission.resolve},recovery,current,stop,stopRequested:()=>existsSync(join(runDir,recovery?'STOP_RECOVERY_REQUESTED':'STOP_REQUESTED')),validUntilMs:Date.parse(permit.valid_until)};
  }catch(e){credentials?.close();if(host)await new Promise(ok=>host.close(ok));throw e;}
 }

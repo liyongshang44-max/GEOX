@@ -69,14 +69,14 @@ const ports=diagnosticPorts(identity,grants,cfg.subject,readPolicy,record=>{cons
 if(formalArgs.length){
  must(cfg.writeAdmitted===true&&cfg.subject==='2bb8822d-1b7f-4ad5-9cc7-9dd99aee2083','FORMAL_MANAGER_CONFIG');
  const {prepareFormalRuntime}=await import('./adr-formal-runtime.mjs');
- formal=await prepareFormalRuntime({pool,authority:()=>authority,policyPath,kit,geoxRoot:root,args:formalArgs});
+ try{formal=await prepareFormalRuntime({pool,authority:()=>authority,policyPath,kit,geoxRoot:root,args:formalArgs});}catch(e){await pool.end();throw e;}
 }
-let stopping=false,timer;
-async function shutdown(){if(stopping)return;stopping=true;clearTimeout(timer);try{await app.close();if(formal)await formal.stop();await pool.end();process.exitCode=0;}catch{await pool.end().catch(()=>{});console.error('HOLD_FORMAL_STOP_RECONCILIATION_REQUIRED');process.exitCode=2;}}
+let stopping=false,timer,poll,polling=false;
+async function shutdown(){if(stopping)return;stopping=true;clearTimeout(timer);clearInterval(poll);try{await app.close();if(formal)await formal.stop();await pool.end();process.exitCode=0;}catch{await pool.end().catch(()=>{});console.error('HOLD_FORMAL_STOP_RECONCILIATION_REQUIRED');process.exitCode=2;}}
 try{
  authority=registerManagerPilotModuleV1(app,pool,{identity:ports.identity,issuer,canonicalTenantRef:tenant,...ports.grants,...formal?.composition});
  await app.listen({host:'127.0.0.1',port:14175});
  console.log('E2E01_MANAGER_LOCAL_READY / DB_ROLE_AND_LEDGER_ACL_PASS / '+(formal?'FORMAL_ADR_BOUND':'ADR_NOT_CONFIGURED')+' / WRITE_ADMITTED='+cfg.writeAdmitted);
  for(const sig of ['SIGINT','SIGTERM'])process.once(sig,()=>void shutdown());
- if(formal){timer=setTimeout(()=>void shutdown(),Math.max(1,formal.validUntilMs-Date.now()));timer.unref?.();}
+ if(formal){timer=setTimeout(()=>void shutdown(),Math.max(1,formal.validUntilMs-Date.now()));timer.unref?.();poll=setInterval(async()=>{if(polling||stopping)return;polling=true;try{if(formal.stopRequested()||!await formal.current())await shutdown();}catch{await shutdown();}finally{polling=false;}},1000);poll.unref?.();}
 }catch(e){await shutdown();throw e;}
