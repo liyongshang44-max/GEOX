@@ -4,6 +4,7 @@ on:
     paths:
       - 'apps/server/test/manager_a07_native_joint_v1.fixture.ts'
       - 'scripts/product/e2e01/adr-private-admission*.mjs'
+      - 'apps/server/src/domain/agronomy/e2e01_native_review_admission_v1.ts'
       - 'apps/server/test/manager_browser_recovery_v1.fixture.mjs'
       - 'apps/server/src/product_projection/customer/manager_adr_evidence_v1.ts'
       - 'apps/server/src/product_projection/customer/e2e01_customer_display_admission_v1.ts'

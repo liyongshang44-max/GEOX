@@ -47,6 +47,7 @@ import {resolve,join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {once} from 'node:events';
 import {digest} from '../src/domain/field/soil_csv_p2_v1.ts';
+import {createBoundedNativeReviewAdmissionV1} from '../src/domain/agronomy/e2e01_native_review_admission_v1.ts';
 import {createE2E01CustomerDisplayAdmissionV1} from '../src/product_projection/customer/e2e01_customer_display_admission_v1.ts';
 import {exerciseManagerBrowserRecovery} from './manager_browser_recovery_v1.fixture.mjs';
 assert.equal(process.env.GITHUB_EVENT_NAME,'pull_request');
@@ -108,19 +109,12 @@ try{
   if(u.pathname!=='/v1/customer-evidence/resolve'){writes.push({path:u.pathname,status:r.status});if(r.status!==201)console.log('TEST_ONLY_NATIVE_HOST_REJECTION',r.status,(await r.clone().json()).code);}
   return r;
  };
- authorityConfig.adrNativeReview={async resolvePlan(x){
-  assert.equal(x.basis.documents.length,0);
-  return {basis_sha256:x.basis_sha256,target_binding_ref:'TEST_ONLY:joint-target',decision_mapping_ref:'TEST_ONLY:joint-decision',target_ref:target,deployment_ref:toWireRef(deployment.ref),runtime_profile_ref:toWireRef(env.profile.ref),knowledge_release_ref:toWireRef(env.release.ref),decision_type:decisionType,objective_code:'FIXTURE_TRANSPORT_ONLY',use_purpose:use,use_class:'ADVISORY',decision_authority_mode:'RUNTIME_ONLY',decision_horizon:{duration:'P1Y'},decision_deadline:new Date(Date.now()+86400000).toISOString(),crop_action_bindings:x.basis.intent.crop_codes.map((crop_code:string)=>({crop_code,action_code:crop_code})),datum_bindings:[]};
- },consumer:{baseUrl:'https://adr.fixture.invalid/',async resolveBinding({manager:a,operation,request_sha256,request}){
-  assert.ok(['createDecisionProblem','executeKnowledgeRetrieval'].includes(operation));
-  const isRuntime=operation==='executeKnowledgeRetrieval';
-  let auth=retrievalAuth;
-  if(!isRuntime){
-   const decision=authorizeDecisionProblemCreation({principal:actor,roleAssignments:[native.ledger.resolve(assignment.ref)],authorizationScope:{...scope,resourceId:request.logical_id}});assert.equal(decision.allowed,true);
-   auth=recordAuthorizationDecision({ledger:native.ledger,decision,audit:audit(actor,'joint-actual-problem-auth')}).ref;
-  }
-  return {request_sha256,authority_scope:{actor_id:a.actor_id,tenant_id:a.tenant_id,project_id:a.project_id,group_id:a.group_id,field_id:a.field_id!,mapping_version:a.mapping_version,credential_ref:a.credential_ref},principal:wirePrincipal(isRuntime?runtimeActor:actor),authorization_ref:toWireRef(auth),credential_ref:isRuntime?'A07':'A01',valid_until_ms:a.valid_until_ms};
- },async getCredential(ref){const token=privateCredentials!.getCredential(ref);assert.ok(token);return token;},transport}};
+ let runAdmission:any=null;
+ authorityConfig.adrNativeReview=createBoundedNativeReviewAdmissionV1({pool:runtime,authority:()=>managerAuthority,async readRunAdmission(){return runAdmission;},baseUrl:'https://adr.fixture.invalid/',transport,async createA01Authorization({request,request_sha256,approval_ref,basis_sha256}){
+  const decision=authorizeDecisionProblemCreation({principal:actor,roleAssignments:[native.ledger.resolve(assignment.ref)],authorizationScope:{...scope,resourceId:request.logical_id}});assert.equal(decision.allowed,true);
+  const ref=recordAuthorizationDecision({ledger:native.ledger,decision,audit:{...audit(actor,'joint-actual-problem-auth'),details:{request_sha256,approval_ref,basis_sha256}}}).ref;
+  native.persist();return toWireRef(ref);
+ },async getCredential(ref){const token=privateCredentials!.getCredential(ref);assert.ok(token);return token;}});
  const binding={manager_scope:{tenant_id:t,project_id:p,group_id:g,field_id:f,actor_id:'p6_native_actor',mapping_version:'1'},review_id:'review-no-soil',principal:wirePrincipal(runtimeActor),deployment_ref:toWireRef(deployment.ref),runtime_profile_ref:toWireRef(env.profile.ref),knowledge_release_ref:toWireRef(env.release.ref),member:{knowledge_ref:toWireRef(k),crop_code:'CORN' as const,jurisdiction:'US',inspection_ref:toWireRef(inspection.recorded.ref),rights_policy_ref:toWireRef(policy.ref),evaluator_principal:owner,projection_sha256:customerEvidenceMemberHash(item)}};
  let managerAuthority:ReturnType<typeof registerManagerPilotModuleV1>;
  const ownerEnd=rights.semanticPayload.validUntil;
@@ -142,6 +136,8 @@ try{
  const boundary=await req('GET',base+'/'+f+'/geometry');assert.equal(boundary.statusCode,200,boundary.body);
  const updated=await req('PUT',base+'/'+f,{polygon_geojson:{type:'Polygon',coordinates:[[[0,0],[2,0],[2,2],[0,2],[0,0]]]},expected_updated_ts_ms:boundary.json().field_updated_ts_ms});assert.equal(updated.statusCode,200,updated.body);
  const saved=await req('POST',base+'/'+f+'/crop-reviews',{review_id:'review-no-soil',crop_codes:['CORN','SOYBEAN'],target_start_date:'2027-04-01',target_end_date:'2027-10-01',documents:[]});assert.equal(saved.statusCode,200,saved.body);
+ const basisRow=(await admin.query("SELECT basis,result FROM geox_manager_v1.field_crop_review_p3_v1 WHERE tenant_id=$1 AND review_id=$2",[t,'review-no-soil'])).rows[0];
+ runAdmission={approval_ref:'TEST_ONLY:joint-run',valid_until_ms:Date.parse(ownerEnd),a01:wirePrincipal(actor),a07:wirePrincipal(runtimeActor),runtime_authorization_ref:toWireRef(retrievalAuth),mapping:{manager_scope:binding.manager_scope,review_id:binding.review_id,basis_sha256:basisRow.result.basis_sha256,intent:basisRow.basis.intent,target_binding_ref:'TEST_ONLY:joint-target',decision_mapping_ref:'TEST_ONLY:joint-decision',target_ref:target,deployment_ref:binding.deployment_ref,runtime_profile_ref:binding.runtime_profile_ref,knowledge_release_ref:binding.knowledge_release_ref,decision_type:decisionType,objective_code:'FIXTURE_TRANSPORT_ONLY',use_purpose:use,decision_horizon:{duration:'P1Y'},decision_deadline:new Date(Date.now()+86400000).toISOString(),crop_action_bindings:basisRow.basis.intent.crop_codes.map((crop_code:string)=>({crop_code,action_code:crop_code}))}};
  await exerciseManagerBrowserRecovery(app,f,nativePath,{item,alreadySaved:true,async negative(which:string){
   if(which==='expired'){await writeFile(revocationPath,'TEST_ONLY_REVOKED');return;}
   if(which==='restore'){await rm(revocationPath);return;}
