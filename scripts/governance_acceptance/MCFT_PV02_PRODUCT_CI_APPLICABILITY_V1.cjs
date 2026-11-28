@@ -28,6 +28,18 @@ const GROUPS={
     "apps/server/src/runtime/twin_runtime/customer_native_runtime_composer_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_PV02_I2E_NATIVE_COMPOSITION.ts",
     ".github/workflows/mcft-pv02-i2e-native-composition.yml"
+  ],
+  "parameter_sources": [
+    "apps/server/src/runtime/twin_runtime/customer_native_parameter_source_resolver_v1.ts"
+  ],
+  "persistence": [
+    "apps/server/src/persistence/twin_runtime/postgres_customer_native_runtime_repository_v1.ts"
+  ],
+  "read_api": [
+    "apps/server/src/repositories/field_twin_read_model/postgres_customer_native_runtime_read_repository_v1.ts",
+    "apps/server/src/services/mcft_field_twin_read_api_v1.ts",
+    "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+    "apps/server/src/routes/openapi_mcft_field_twin_read_v1.ts"
   ]
 };
 const CLASSIFIER='scripts/governance_acceptance/MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs';
@@ -38,10 +50,17 @@ function classify(paths){
   const unknown=changed.filter(p=>!KNOWN.has(p));
   if(!changed.length||unknown.length)return {mode:'historical',unknown,changed,required_regressions:[]};
   const ingress=changed.some(p=>GROUPS.ingress.includes(p)),math=changed.some(p=>GROUPS.math.includes(p)),composer=changed.some(p=>GROUPS.composer.includes(p));
+  const parameterSources=changed.some(p=>GROUPS.parameter_sources.includes(p));
+  const persistence=changed.some(p=>GROUPS.persistence.includes(p));
+  const readApi=changed.some(p=>GROUPS.read_api.includes(p));
+  const customerRuntime=composer||parameterSources||persistence||readApi;
   const required=['MAIN_CI','BLINE_AUTHORITY_UNCHANGED','EA5E2_GRAPH_BEHAVIOR'];
-  if(ingress||composer)required.push('I1_NATIVE_MQTT','S2_REAL_PG_SHARED_INGRESS','S6_SIMULATION_BEHAVIOR');
+  if(ingress||customerRuntime)required.push('I1_NATIVE_MQTT','S2_REAL_PG_SHARED_INGRESS','S6_SIMULATION_BEHAVIOR');
   if(math||composer)required.push('I2_NATIVE_MATH','CAP02_03_04_FROZEN_SCIENCE');
-  if(composer)required.push('I2E_NATIVE_COMPOSITION');
+  if(customerRuntime)required.push('I2E_NATIVE_COMPOSITION');
+  if(parameterSources)required.push('I2E_PARAMETER_SOURCE_RESOLUTION');
+  if(persistence)required.push('I2E_FACT_PERSISTENCE_VISIBILITY','STATE_PREDECESSOR_AND_IDEMPOTENCY');
+  if(readApi)required.push('CAP07_S4_CUSTOMER_NATIVE_READ_API','EXACT_SCOPE_AUTHORIZATION','FACT_VISIBILITY_SNAPSHOT');
   return {mode:'product-shared-regression',unknown,changed,required_regressions:required};
 }
 function git(...args){return cp.execFileSync('git',args,{encoding:'utf8'}).trim();}
