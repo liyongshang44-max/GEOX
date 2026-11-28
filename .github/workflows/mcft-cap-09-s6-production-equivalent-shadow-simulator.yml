@@ -53,7 +53,13 @@ jobs:
           node-version: 20.11.1
           cache: pnpm
       - run: pnpm install --no-frozen-lockfile
+      - name: Classify centrally approved product regression scope
+        id: product
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/governance_acceptance/MCFT_PV02_PRODUCT_CI_APPLICABILITY_V1.cjs
       - name: Validate exact simulation qualification boundary
+        if: steps.product.outputs.mode != 'product-shared-regression'
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR.cjs
@@ -77,6 +83,7 @@ jobs:
         with:
           name: mcft-cap-09-s6-simulator-qualification-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
+            acceptance-output/MCFT_PV02_PRODUCT_CI_ROUTE.json
             acceptance-output/MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR_ACCEPTANCE.json
             acceptance-output/MCFT_CAP_09_S6_PRODUCTION_EQUIVALENT_SIMULATOR_GOVERNANCE.json
           if-no-files-found: error
